@@ -1,0 +1,236 @@
+EL JARDÍN DE LOS DESEOS — GUÍA DE TEXTURAS, SPRITES Y ANIMACIONES
+Actualización 1.2 · 6 de noviembre de 2026
+
+QUÉ SE REVISÓ Y QUÉ CAMBIÓ
+
+Se conectó esta carpeta, que estaba vacía, con lugal3/valeteamo y se trajo
+main con git fetch y git pull --ff-only. La base recibida fue df2377a:
+"Improve mobile garden framing, animations and combat feedback".
+Ya tenía seis salas, cámara adaptable, controles a dos dedos, disparo,
+bombas, Brimstone, Holy Mantle, tienda, jefe y sprites generados por código.
+
+Esta versión añade:
+- Portada con "Feliz cumpleaños Valentina" y selección entre Kitty y Louis.
+- Louis Tomlinson jugable: pelo castaño, camiseta a rayas y pantalón rojo,
+  inspirado en su etapa de One Direction. Es una interpretación diminuta
+  en pixel art; la semejanza está limitada por sus 16 x 20 píxeles.
+- Entrada inspirada en un RPG de consola portátil: marco doble, personaje
+  animado y barra con el nombre real del juego. No usa gráficos de Pokémon.
+- Carga diferida de Phaser y de la escena: la portada puede aparecer antes
+  de descargar el motor. La barra refleja etapas reales, no un temporizador
+  que aparenta descargar archivos. Marca 100% cuando la escena está creada;
+  queda visible 400 ms para cerrar la transición. No mide bytes individuales.
+- Ventana para TODOS los objetos: equipo, monedas, llaves y corazones.
+  Explica qué hacen, muestra el precio y permite Recoger/Comprar o Dejarlo
+  aquí. No cobra ni aplica efectos hasta aceptar. Si faltan monedas,
+  Comprar queda desactivado. Un corazón con vida completa queda en el suelo.
+- Mientras decides se congelan reloj, enemigos, balas, bombas, efectos e
+  invulnerabilidad. Los botones de combate también quedan bloqueados.
+  Puedes usar Tab, Mayús+Tab y Enter; Escape deja el objeto. Si la ventana
+  pierde foco, aparece la pausa y al continuar vuelve la decisión pendiente.
+- Rechazar no vuelve a abrir la ventana hasta alejarte más de 42 unidades
+  y regresar. Los objetos restantes se guardan por sala durante esa partida,
+  incluso si sales y vuelves. Reiniciar o recargar la página borra la partida.
+- Cuatro pasos alternos, polvo al pisar, sonido de paso muy tenue, pequeño
+  balanceo al caminar, parpadeo breve, retroceso visual al disparar y rayo.
+- Daño con pose propia, tinte rosa, deformación y sacudida visual; la muerte
+  tiene caída, giro y desvanecimiento. Los enemigos también se deforman al
+  recibir impactos; el jefe conserva su resistencia al empuje.
+- Objetos especiales flotantes, pétalos al recoger, polen ambiental y una
+  transición breve al entrar en sala. Hay zona muerta táctil de 5 px para
+  movimiento y 7 px para apuntar, para evitar acciones por temblores del dedo.
+
+CÓMO SE DIBUJA REALMENTE EL JUEGO
+
+El motor es Phaser 3 dentro de una interfaz React y TypeScript. Vite compila
+el proyecto. El motor no inventa animaciones ni convierte automáticamente
+una ilustración en un personaje animado.
+
+1. src/art.ts contiene KITTY, LOUIS y PATTERNS.
+   Cada cadena representa una fila de píxeles. Cada letra elige un color
+   de COLORS; el punto es transparente. Por ejemplo, h es pelo castaño,
+   s piel, n azul de las rayas y t rojo del pantalón de Louis.
+
+2. buildArt() crea canvas de 16 x 20 píxeles, pinta rectángulos de 1 x 1
+   y registra esas imágenes en el gestor de texturas de Phaser. Esto se
+   hace al iniciar la escena; no vuelve a dibujar cada píxel en cada frame.
+
+3. Las variantes de caminar, mirar y disparar se construyen cambiando
+   píxeles concretos: pies alternos, brazos, ojos y orientación. Son dibujos
+   discretos. Gran parte del contorno se comparte entre fotogramas.
+
+4. src/animation.ts elige qué textura mostrar. Para caminar recorre
+   fotogramas 1, 2, 3 y 4 cada 115 ms: ciclo de 460 ms a velocidad completa.
+   Con joystick parcial el reloj de pasos avanza más lento. Cuando te
+   detienes, se reinicia el reloj de pasos. El reposo usa 0 y parpadea con 5
+   unos 160 ms cada 3,6 segundos. Izquierda refleja la imagen de derecha.
+
+5. Los estados tienen esta prioridad:
+   muerte > daño > carga > disparo > caminar > reposo.
+   Caminar y apuntar siguen coexistiendo. La carga utiliza la pose de
+   disparo y añade un indicador circular; no tiene una hoja de carga propia.
+   Daño y muerte tienen una pose base cada uno; el giro, la deformación y
+   el fundido los añade la escena. No son secuencias de varios dibujos.
+
+6. src/game.ts aplica movimiento, colisiones y transformaciones visuales.
+   La reacción inicial al daño dura 300 ms; el parpadeo de protección real
+   dura 1.400 ms. Holy Mantle usa su propio destello y 750 ms de protección.
+   La muerte termina a los 650 ms. No se empuja físicamente al jugador al
+   recibir daño; conserva el control de desplazamiento y apuntado.
+
+7. src/effects.ts dibuja partículas, polvo, ondas e impactos. Son geometría
+   y rectángulos coloreados, no imágenes de una explosión precocinada.
+   src/garden-art.ts dibuja suelo, caminos, flores, vallas y puertas con
+   Graphics. El escenario actual no utiliza un tileset PNG ni un tilemap.
+
+8. src/audio.ts sintetiza música y sonidos con Web Audio. No usa MP3 ni
+   canciones de One Direction. Se activa al pulsar Comenzar aventura.
+
+POR QUÉ PUEDE NO CONVENCERTE TODAVÍA EL ARTE
+
+La resolución original es pequeña. A 16 x 20, pelo, cara, manos y ropa
+compiten por muy pocos píxeles. El estilo depende sobre todo del contorno,
+la silueta y la paleta, más que de detalles del rostro.
+
+Las animaciones actuales reutilizan mucha información del dibujo base.
+Para lograr una caminata con más personalidad necesitas dibujar poses
+distintas: apoyo, paso, contacto y paso opuesto, con cambios en brazos,
+cadera y silueta. Deformar el sprite por código mejora la respuesta, pero
+no sustituye esos dibujos. La pose de daño y la muerte siguen siendo una
+imagen cada una con efectos encima: ese sería un buen siguiente trabajo.
+
+El personaje tiene escala lógica 1,65. La cámara aplica además un zoom
+uniforme para que quepa la sala completa en cada pantalla. pixelArt:true,
+antialias:false y roundPixels:true mantienen bordes duros. Si el zoom o
+la escala no son enteros, algunos píxeles pueden verse de diferente ancho;
+también las deformaciones visuales modifican su proporción brevemente.
+El radio de colisión sigue fijo en 10 unidades: no cambia con el dibujo,
+el balanceo ni la deformación. El origen del sprite es (0,5; 0,6).
+
+SÍ, PUEDES TRABAJAR HOY EN SPRITES SIN REHACER EL JUEGO
+
+Incluí estas plantillas PNG con los píxeles que usa realmente el juego:
+  public/sprites/templates/kitty.png
+  public/sprites/templates/louis.png
+
+Puedes abrirlas en un editor de píxeles, ampliar la vista al 800% o más y
+editar con lápiz de borde duro. Trabaja al tamaño original; ampliar la
+vista no significa aumentar la resolución del archivo. Conserva alfa
+transparente; no añadas fondo blanco ni suavizado.
+
+COPIA la plantilla a public/sprites/kitty.png o public/sprites/louis.png
+antes de trabajar. npm run sprites regenera y SOBRESCRIBE las plantillas,
+pero no modifica esas copias. No trabajes en dist/: es salida compilada.
+
+FORMATO EXACTO QUE EL CARGADOR YA ACEPTA
+
+PNG de 96 x 160 píxeles, 6 columnas y 8 filas.
+Cada celda mide 16 x 20 píxeles. Sin margen ni separación entre celdas.
+Las filas y columnas de esta explicación empiezan en 0.
+
+Fila 0: abajo             [reposo][paso1][paso2][paso3][paso4][parpadeo]
+Fila 1: abajo disparando  [reposo][paso1][paso2][paso3][paso4][parpadeo]
+Fila 2: arriba            [reposo][paso1][paso2][paso3][paso4][parpadeo]
+Fila 3: arriba disparando [reposo][paso1][paso2][paso3][paso4][parpadeo]
+Fila 4: derecha           [reposo][paso1][paso2][paso3][paso4][parpadeo]
+Fila 5: derecha disparo   [reposo][paso1][paso2][paso3][paso4][parpadeo]
+Fila 6: daño              [se usa columna 0; el resto se ignora]
+Fila 7: muerte            [se usa columna 0; el resto se ignora]
+
+Las plantillas repiten daño y muerte en toda su fila por comodidad, pero
+solo se lee la primera celda. Puedes usar el resto para explorar variantes.
+Izquierda se refleja: un accesorio asimétrico también cambiará de lado.
+
+ACTIVAR TU PNG EN EL JUEGO
+
+Abre src/characters.ts. En la entrada de Louis cambia:
+  spriteSheet:null
+por:
+  spriteSheet:'./sprites/louis.png'
+
+Para Kitty sería './sprites/kitty.png'. Son rutas públicas relativas:
+el archivo físico está en public/sprites/, pero la URL no lleva public/.
+
+Garden.preload() carga la hoja; buildArt() recorta sus celdas y reemplaza
+las texturas procedurales con los mismos nombres. Por eso funciona con las
+animaciones existentes. La hoja debe tener todas las celdas necesarias.
+Una celda vacía producirá un personaje invisible en esa pose: no se detecta
+automáticamente si olvidaste dibujar un fotograma.
+
+Si el archivo falla al cargar o no mide exactamente 96 x 160, conserva el
+arte generado como respaldo. El problema aparece en la consola técnica.
+Si deseas volver al arte original, restaura spriteSheet:null.
+
+Los retratos de la portada y la carga salen de characterPreview() en
+src/art.ts. Siguen mostrando el dibujo procedural aunque cambies el PNG
+del juego; para que coincidan también habría que adaptar esa vista previa.
+
+LO QUE PUEDES ENTREGARME COMO GUÍA
+
+- Lo mínimo útil: una pose de frente, una de espalda y una de perfil,
+  con una nota de paleta y proporciones. Puede ser un boceto grande si
+  todavía estás decidiendo estilo; no lo importaría sin adaptarlo.
+- Lo ideal para integrar directamente hoy: la hoja PNG completa según la
+  cuadrícula anterior, más una captura ampliada para revisar la intención.
+- Para explicar la caminata: dibuja los cuatro pasos y especifica qué pie
+  apoya en cada uno. Mantén los pies sobre la misma línea entre celdas.
+  Si el dibujo sube o baja entre frames, parecerá que salta.
+- Para daño: muestra dónde quieres que se incline, cierre los ojos o se
+  proteja. Para muerte: indica si prefieres caída, sentarse o desvanecerse.
+- Si quieres 32 x 40 o más detalle, entrégalo en esa resolución y anótalo.
+  El cargador actual espera 16 x 20 y hay recortes de ese tamaño en art.ts:
+  no basta con cambiar el tamaño del PNG. Hay que adaptar las constantes,
+  recortes, escala y plantillas. Las colisiones se pueden conservar aparte.
+- Para escenario: ahora es dibujo por código. Un futuro tileset debería
+  definir tamaño de tile, piezas de borde/esquina, fondo y elementos altos.
+  Cambiar sprites de personajes no cambia automáticamente las flores.
+
+No necesitas dibujar todas las animaciones para transmitir tu idea. Una
+buena silueta frontal y cuatro pasos suelen aclarar más que una portada
+compleja. Conserva referencias de qué te gusta, qué no y qué debe cambiar.
+
+ARCHIVOS QUE CONTROLAN CADA COSA
+
+src/characters.ts   nombres, descripción y ruta opcional de cada hoja PNG.
+src/art.ts          paleta, dibujos, variantes, importación y retratos.
+src/animation.ts    estado, orientación y tiempo de cambio de fotograma.
+src/game.ts         reglas, combate, inventario, decisiones y transformaciones.
+src/config.ts       velocidad, hitbox, daño, cadencia, objetos y zona muerta.
+src/garden-art.ts   escenario y puertas dibujados por código.
+src/effects.ts      polvo, pétalos, ondas e impactos.
+src/audio.ts        sonidos y música sintetizada.
+src/main.tsx        portada, selección, carga, HUD, pausa y ventana de objeto.
+src/style.css       disposición original del juego y controles adaptables.
+src/birthday.css    portada, carga, diálogos y sus animaciones CSS.
+scripts/export-sprites.cjs  exporta los dibujos actuales a las plantillas PNG.
+public/sprites/README.md    tabla rápida del formato de las hojas.
+
+CÓMO PROBAR TUS DIBUJOS
+
+En una terminal dentro de esta carpeta:
+  npm ci
+  npm run dev
+
+Abre la dirección que muestre Vite, elige personaje y comienza. Editar
+fuentes puede provocar recarga y reiniciar la partida durante desarrollo.
+Para jugar sin recargas automáticas:
+  npm run build
+  npm run preview -- --port 5173 --strictPort
+
+Después de cambiar sprites en una versión compilada, vuelve a compilar
+y recarga. El juego no tiene guardado permanente ni funcionamiento offline.
+Las plantillas se regeneran con npm run sprites.
+
+COMPROBACIONES
+
+La versión incluye pruebas de lógica en npm test: ambas familias de
+sprites, recorrido de seis salas, economía, compra/aceptación/rechazo,
+recursos, congelación del diálogo, objetos al volver de sala, resize,
+entrada táctil, jefe, daño, muerte y reinicio. npm run build valida tipos y
+compila. También se revisó la interfaz y los diálogos en Edge sin ventana,
+con tamaños de escritorio y teléfono; eso no sustituye probar Safari y
+dos dedos en un iPhone físico. Detalles en VALIDACION.md.
+
+Documentación oficial de referencia para carga y hojas de Phaser:
+https://docs.phaser.io/phaser/concepts/loader
+La descripción de arriba corresponde al código concreto de este proyecto.

@@ -4,6 +4,7 @@ export const CONFIG = {
   invulnerabilityMs: 1400, activeRooms: 1,
   roomArea: 92000, wallMargin: 18, // 38% of the previous 786×308 playable area.
   playerRadius: 10, playerScale: 1.65,
+  moveDeadzone: 5, aimDeadzone: 7,
   bombDamage: 22, bombRadius: 92, bombFuseMs: 1500,
   beamChargeMs: 850, beamDamage: 9, beamWidth: 16,
   bossHp: 85, enemyBulletSpeed: 82, enemyAttackMs: 2700,
@@ -21,4 +22,10 @@ export const ITEMS = {
  brim:{name:'Brimstone',description:'Mantén la dirección: carga un rayo de amor que atraviesa enemigos.'},
  mantle:{name:'Holy Mantle',description:'Una burbuja bloquea el primer golpe de cada sala.'},
  head:{name:'Kitty Cat’s head',description:'Activo: cuatro estrellas perseguidoras. Se recarga al limpiar una sala.'}
+};
+export const PICKUPS = {
+ ...ITEMS,
+ coin:{name:'Moneda del jardín',description:'Añade una moneda para comprar regalos en la boutique de My Melody.'},
+ key:{name:'Llave de los deseos',description:'Abre la puerta del tesoro. Se consume al abrirla por primera vez.'},
+ heart:{name:'Corazón de pétalos',description:'Recupera dos puntos de vida, hasta un máximo de seis.'}
 };

@@ -10,6 +10,7 @@ export class Effects {
   if(this.petals.length>180)this.petals.splice(0,this.petals.length-180);
  }
  ring(x:number,y:number,radius:number,color:number){this.rings.push({x,y,radius,color,life:450,max:450});}
+ dust(x:number,y:number){for(let i=0;i<2;i++)this.petals.push({x:x+(i?5:-5),y,vx:(i?1:-1)*8,vy:-6,life:230,max:230,color:0xf8efd2,size:2});}
  resize(old:Layout,next:Layout){for(const p of [...this.petals,...this.rings])Object.assign(p,remap(p,old,next));this.beam=undefined;}
  update(dt:number){for(const p of this.petals){p.life-=dt;p.x+=p.vx*dt/1000;p.y+=p.vy*dt/1000;p.vy+=18*dt/1000;}this.petals=this.petals.filter(p=>p.life>0);for(const r of this.rings)r.life-=dt;this.rings=this.rings.filter(r=>r.life>0);if(this.beam){this.beam.life-=dt;if(this.beam.life<=0)this.beam=undefined;}}
  draw(g:Phaser.GameObjects.Graphics){

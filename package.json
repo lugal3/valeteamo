@@ -1,13 +1,14 @@
 {
   "name": "sanrio-garden",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "node tests/smoke.cjs"
+    "test": "node tests/smoke.cjs",
+    "sprites": "node scripts/export-sprites.cjs"
   },
   "dependencies": {
     "phaser": "^3.90.0",

@@ -5,7 +5,7 @@ Versión 1.1: sala compacta, animaciones e impactos. Se conserva el recorrido de
 1. Conecta el iPhone a la misma Wi-Fi del PC.
 2. Mantén el PC encendido. La entrega deja un servidor **estable** en segundo plano.
 3. Abre en Safari: **http://192.168.1.15:5173/** (dirección del PC comprobada al preparar esta entrega).
-4. Pulsa Entrar al jardín y gira a horizontal.
+4. Pulsa Comenzar aventura y gira a horizontal.
 5. Arrastra a la izquierda para moverte y a la derecha para apuntar/disparar. Botones pequeños de bomba y activo abajo a la derecha.
 
 Si ya tenías abierta la versión anterior, recarga una vez para cargar la nueva. Después, cambiar de app solo pausa; pulsa Continuar al regresar. No hay guardado al recargar.
