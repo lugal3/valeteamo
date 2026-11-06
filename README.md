@@ -1,74 +1,98 @@
 # Kitty · El jardín de los deseos
 
-Prototipo local de cumpleaños · 4 de diciembre de 2026. React + TypeScript + Vite + Phaser. Inspiración libre de juegos de salas; no es una reproducción exacta de Isaac. Ilustraciones pixeladas y audio originales generados por código. No requiere servicios, cuentas ni assets remotos. Solo juego: no incluye álbum, preguntas ni correo.
+Prototipo 1.1 · Regalo de cumpleaños del 4 de diciembre de 2026. React + TypeScript + Vite + Phaser. Código: [lugal3/valeteamo](https://github.com/lugal3/valeteamo). Solo el juego: seis salas, sin álbum, preguntas ni correo. Arte pixelado y música originales generados por código, sin servicios ni assets remotos.
 
-## Ejecutar en Windows
-Instala Node.js 20.19+ (o 22.12+), abre una terminal en esta carpeta y ejecuta:
+## Iniciar en Windows
+
+Con Node.js 20.19+ o 22.12+ instalado, abre una terminal en esta carpeta:
 
 ```powershell
 npm install
 npm run dev
 ```
 
-Abre la dirección Local que imprime Vite (normalmente http://localhost:5173).
+Abre la dirección que indica Vite, normalmente `http://localhost:5173`.
 
-### Desde iPhone por la misma Wi-Fi
-1. Mantén el servidor encendido en el PC.
-2. Ejecuta `ipconfig` y busca la dirección IPv4 del adaptador Wi-Fi, por ejemplo `192.168.1.35`.
-3. En Safari del iPhone abre `http://192.168.1.35:5173` (sustituye la IP). **localhost en el iPhone es el propio teléfono**, no tu PC.
-4. Si Windows pregunta por acceso de Node a la red, permite redes privadas. Evita Wi-Fi de invitados que aísla dispositivos. No requiere túneles ni publicación.
-5. Pulsa Jugar y gira a horizontal. Puedes ocultar las barras con Añadir a pantalla de inicio; fullscreen es opcional y Safari puede no admitirlo.
+### Probar una partida estable, sin reinicios por editar archivos
 
 ```powershell
 npm run build
-npm run preview
+npm run preview -- --port 5173 --strictPort
 ```
-Preview normalmente usa el puerto 4173. `dev` y `preview` ya escuchan en `0.0.0.0`.
 
-## Controles
-- Táctil: toca y arrastra en la mitad izquierda para moverte; en la derecha para apuntar/disparar libremente. Dos dedos independientes, círculos invisibles hasta tocar. Desplaza el dedo unos píxeles para dar dirección.
-- Botones inferiores: bomba y activo. Botones superiores: pausa y música/sonido.
-- PC: WASD mueve; ratón pulsado apunta/dispara o flechas disparan; B bomba, Espacio activo, Esc pausa.
-- Se pausa al cambiar de aplicación/perder foco o girar a vertical. Al volver, pulsa Continuar. Soltar, cancelar un toque, pausar o cambiar de sala limpia las entradas.
+Cierra el servidor de desarrollo de ese puerto antes de usar preview. `dev` y `preview` ya escuchan en `0.0.0.0`. Preview sirve los archivos compilados y no tiene HMR: editar fuentes no reinicia la partida ni cambia el juego hasta volver a compilar. Recargar explícitamente la página sí reinicia; no hay guardado persistente.
 
-## Recorrido y economía
-Exactamente seis salas fijas en una sola ruta lineal en zigzag, sin bifurcaciones:
+### Desde iPhone 14/15 o un teléfono de otro tamaño
 
-```
+1. PC y teléfono en la misma Wi-Fi, con el PC encendido y el servidor funcionando.
+2. Ejecuta `ipconfig` en el PC y busca la IPv4 de su adaptador Wi-Fi.
+3. En Safari abre `http://IP-DEL-PC:5173`, por ejemplo `http://192.168.1.15:5173` si esa sigue siendo su dirección. **localhost en el iPhone es el propio iPhone**, no el PC.
+4. Si Windows solicita permiso de red para Node, permite redes privadas. Una red de invitados puede aislar dispositivos.
+5. Pulsa Entrar al jardín y gira a horizontal. Jugar no requiere instalar nada.
+
+La sala se adapta al viewport dinámico que Safari deja disponible. El juego no puede quitar las barras del navegador a la fuerza. El botón de pantalla completa aparece únicamente cuando el navegador declara soporte real de la API; permite entrar y salir y gestiona el rechazo sin impedir jugar.
+
+**Opcional, sin barras de Safari:** Compartir → Añadir a pantalla de inicio. Activa «Abrir como app web» si aparece y abre ese icono. Se incluyen manifest, iconos 192/512 y metadatos Apple; no hay service worker ni promesa de funcionamiento offline. La disponibilidad y el nombre de las opciones dependen de iOS. [Guía de Apple](https://support.apple.com/en-lamr/guide/iphone/iphea86e5236/ios), [limitación de fullscreen registrada por WebKit](https://bugs.webkit.org/show_bug.cgi?id=206854).
+
+## Controles y estados
+
+- Táctil: toque/arrastre izquierdo para moverte y derecho para apuntar/disparar en cualquier dirección. Dos dedos independientes. Los joysticks solo aparecen al usarlos, muy tenues. Mueve unos píxeles para indicar dirección.
+- Botones inferiores: bomba de lazo y objeto activo. El activo muestra LISTO o las salas que le faltan de recarga. HUD superior: tres tipos de corazón, monedas, bombas, llaves, minimapa, pausa y sonido. ✧ indica Holy Mantle listo.
+- PC: WASD mueve, ratón pulsado o flechas disparan, **B coloca bomba**, Espacio usa activo, Esc pausa. Las teclas se muestran solo en interfaces con puntero fino.
+- Cambiar de app, perder foco o girar a vertical pausa y limpia las entradas; volver no reinicia la escena. Pulsa Continuar. Cancelar un toque o redimensionar tampoco deja movimiento/disparo atascados.
+- Kitty tiene reposo/parpadeo, cuatro pasos alternos, orientación en cuatro direcciones, pose de disparo mientras camina, carga, reacción al golpe y caída al morir. Las animaciones no cambian su hitbox.
+- Golpe real: reacción rosa y parpadeo de invulnerabilidad. Bloqueo de Holy Mantle: destello dorado y sonido propio, sin restar vida.
+- Proyectiles y rayo tienen impactos con pétalos, estrellas, sonido y empuje corto. El jefe resiste más el empuje. Los enemigos aparecen con una señal y anticipan sus ataques con un halo rosa.
+
+## Seis salas en una ruta lineal en zigzag
+
+```text
 Inicio    → Combate 1
-                 ↓
+                ↓
 Combate 2 ← Tesoro
   ↓
 Tienda    → Jefe
 ```
 
-Las puertas de combate quedan bloqueadas hasta limpiar la sala. Se puede volver por el mapa. Recompensa y recarga solo una vez por sala. Empiezas con 12 monedas, 1 llave y **5 bombas**: las dos ofertas cuestan 5 y 7 monedas, así que ambos objetos son accesibles desde el principio. El tesoro usa una llave una sola vez. Enemigos dejan monedas; salas de combate añaden llave y curación. Recoge recompensas antes de salir (los pickups no recogidos desaparecen al cambiar de sala).
+Las puertas de combate se abren al limpiar. Puedes regresar; recompensa y recarga se conceden una sola vez por sala. Empiezas con **5 bombas**, 12 monedas y una llave. La llave abre el tesoro una sola vez; la tienda cuesta 5 + 7 monedas y ambas ofertas son asequibles. Los enemigos dejan monedas y las salas de combate añaden llave y curación. Recoge lo que quieras antes de salir: pickups y pilas no recogidos desaparecen al cambiar de sala.
 
-- Tesoro: **Brimstone**, mantener dirección carga 0,85 s y lanza rayo que atraviesa enemigos. Se repite mientras mantienes disparo.
-- Tienda: **Kitty Cat’s head**, interpretación del nombre pedido inspirada en Guppy’s Head. Reemplaza el activo por cuatro proyectiles aliados perseguidores. No vuelve a la pila en esta partida.
-- Tienda: **Holy Mantle**, bloquea un golpe por entrada a sala; combina con rayo y cabeza.
-- Activo inicial: pila temática de caca. Permanece en la sala, bloquea el avance enemigo y absorbe sus balas. No es un escudo personal. Una sala de combate limpia recarga el activo.
-- Bombas de lazo: 1,5 s, radio generoso y daño alto (22). Sin daño propio.
-- Tres corazones = seis impactos iniciales. Rojo/alma/oscuro son una representación visual simplificada; no aplican reglas separadas ni explosión de corazón oscuro. Curar recupera dos impactos, hasta seis.
-- Kuromi traviesa persigue y dispara dirigido; Cinnamoroll flota en ondas y lanza abanicos. El destello rosa anticipa el disparo.
-- Mega Kuromi alterna anillos de balas y tres círculos de eclipse que explotan tras 0,95 s. La barra inferior muestra su vida. Al derrotarla **camina hasta la escotilla dorada central** para completar; derrotarla no termina automáticamente.
+- **Brimstone, tesoro:** mantener dirección carga 0,85 s; después dispara un rayo que atraviesa enemigos hasta la pared. Se repite al mantener el disparo.
+- **Kitty Cat’s head, tienda (5):** interpretación del nombre pedido, inspirada en Guppy’s Head. Reemplaza la pila por cuatro estrellas perseguidoras; usa la misma recarga.
+- **Holy Mantle, tienda (7):** bloquea un golpe por entrada a sala; se combina con cabeza y rayo.
+- **Activo inicial, pila adorable de caca:** obstáculo que bloquea el avance enemigo y absorbe sus balas, no un escudo personal. Recarga al limpiar una sala de combate.
+- **Bombas:** fusible de 1,5 s, radio 92 unidades, daño 22 y sin daño propio. Se puede caminar mientras explotan.
+- **Vida:** tres corazones = seis impactos. Rojo, alma y oscuro tienen color y mitades visibles; son una aproximación visual, no sistemas separados de daño o explosión. Curar recupera dos puntos, hasta seis.
+- Kuromi traviesa persigue y dispara dirigido. Cinnamoroll flota en ondas y dispara un abanico. Mega Kuromi alterna anillos de balas y eclipses señalados durante 1,1 s.
+- Al derrotar al jefe, **pisa la escotilla dorada central**. El juego no termina solo al derrotarlo. Muerte y final permiten repetir todo.
 
-La ruta está pensada para aproximadamente 3–5 minutos, según exploración y puntería; no hay límite de tiempo. Muerte y final permiten reiniciar todo.
+Dificultad fácil/media, unos 3–5 minutos según exploración. No hay límite de tiempo.
 
-## Editar y extender
-- `src/config.ts`: estadísticas, economía, invulnerabilidad, nombres, mapa y textos de objetos. Velocidad/daño/alcance/cadencia se usan en el juego.
-- `src/game.ts`: escena y sistemas de combate, colisiones, puertas, pickups y controles. `src/art.ts` contiene matrices de píxeles de las texturas; cambia colores/letras o reemplaza el registro por sprites locales. `spawn()` ajusta vida de enemigos/jefe; `update()` contiene patrones y tiempos.
-- `src/audio.ts`: secuencia musical de ocho notas y síntesis de efectos; sin archivos de audio externos. El botón ♪ silencia todo. Si Web Audio no está disponible el juego continúa.
-- `src/main.tsx`: interfaz React, bienvenida, pausa, giro y final.
-- `src/style.css`: paleta, tamaños, safe areas y altura dinámica.
+## Sala compacta y parámetros editables
 
-El canvas lógico es 960×540 y se escala proporcionalmente; pueden quedar márgenes para preservar el encuadre en teléfonos muy anchos. Los botones respetan safe areas. El audio requiere el gesto Jugar. Prototipo de uso personal, con personajes de Sanrio como referencia temática; no afiliado a Sanrio.
+La sala anterior tenía aproximadamente `786 × 308 = 242 088` unidades de área jugable. Ahora `CONFIG.roomArea = 92 000`: **38% del área anterior**, equivalente a cerca de 62% de ancho y alto si se conserva la proporción. Se reduce la geometría del mundo, no solo se agranda a Kitty. Se recalcula la proporción de la sala según el viewport y se usa una cámara fija con zoom uniforme para mostrarla completa. No hay CSS cover, deformación ni cámara que persiga al personaje.
 
-## Pruebas y partida estable
+Los márgenes son únicamente la pared, safe areas y una franja superior compacta de HUD. Las puertas y el centro permanecen visibles. Las zonas inferiores de pulgares no contienen objetos esenciales. Un resize conserva vida, compras, salas limpias y posición relativa; reubica también enemigos, pickups y señales dentro de los nuevos límites.
 
-`npm test` ejecuta las pruebas de integración lógica. Para evitar reinicios mientras se editan archivos usa `npm run build` y `npm run preview`. El servidor de desarrollo de Vite recarga al cambiar código; cambiar de aplicación solo pausa. No hay persistencia al recargar la página.
+Velocidad 114 (antes 155), balas de jugador 245, balas enemigas base 82, alcance 290, eclipses de radio 31. Son ajustes para conservar espacio de esquiva. Sprite de Kitty a escala lógica 1,65 (antes 2,4), con textura mejor aprovechada de 16×20; se ve más grande respecto a la sala por el encuadre, sin duplicar únicamente su escala. Los controles físicos siguen siendo de 46–48 px y respetan safe areas.
+
+- `src/config.ts`: dificultad, área, movimiento, cadencia, alcance, bombas, rayo, jefe, economía y mapa.
+- `src/geometry.ts`: ajuste de área/proporción, cámara, puertas, límites, resize y recorte del rayo a la pared.
+- `src/animation.ts`: estados y selección de fotogramas; movimiento y disparo pueden coexistir.
+- `src/art.ts`: sprites originales, paleta y generación de pasos, direcciones y poses. Sustituye matrices o registra assets locales en `buildArt()`.
+- `src/garden-art.ts`: suelo, caminos, flores, vallas y puertas.
+- `src/effects.ts`: partículas, ondas e impactos; siguen el reloj de juego y se congelan en pausa.
+- `src/game.ts`: escena, patrones, colisiones, objetos, empuje y transiciones. El empuje decae, se limita a la sala y no desplaza al jugador.
+- `src/main.tsx` / `src/style.css`: HUD, corazones, controles, safe areas, fullscreen y overlays.
+- `src/audio.ts`: música y efectos Web Audio. Se desbloquean con el gesto Entrar; si fallan, el juego continúa.
+- `public/`: manifest e iconos propios para pantalla de inicio.
 
 ## Validación
-Consulta `VALIDACION.md` para los resultados concretos de esta entrega. No se ha probado en iPhone físico; comprobar Safari en ambos teléfonos es el siguiente paso recomendado.
 
+```powershell
+npm test
+npm run build
+```
 
+Pruebas de lógica con render simulado y comprobaciones geométricas de distintos tamaños. Los límites de la revisión visual y de Safari físico están detallados en [VALIDACION.md](VALIDACION.md). No se afirma haber probado en iPhone real.
+
+Repositorio de código público; sin GitHub Pages, túneles ni despliegue web. Prototipo personal inspirado libremente en juegos de salas; no reproducción exacta de Isaac ni afiliado a Sanrio.
