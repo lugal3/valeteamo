@@ -1,0 +1,1 @@
+Colocar aquí una copia de Gemini_Generated_Image_n3kra9n3kra9n3kr.jpeg como 005-portada-valeteamo.jpeg para reemplazar la portada temporal. Conservar el archivo original sin sobrescribirlo. Más información: docs/RECURSOS-DEMO.md.

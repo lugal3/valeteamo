@@ -59,3 +59,10 @@
 @media(max-width:670px){.lab-menu-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.lab-menu-card{min-height:104px;padding:13px}.lab-menu-card strong{font-size:14px}.lab-menu-card small{font-size:10px}}
 @media(max-width:380px){.lab-menu-grid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){#lab-menu *,#lab3d *{animation:none!important;transition:none!important}}
+
+/* Rescue demo: one contextual button and a compact HUD */
+#lab3d .lab-buttons [hidden]{display:none!important}
+#lab3d .lab-buttons{grid-template-columns:repeat(2,minmax(66px,auto));align-items:end}
+#lab3d #lab-interact{min-width:116px;min-height:60px;aspect-ratio:auto;gap:3px;grid-column:1/-1;border-color:#ffe5ca;background:#9b5873ef}
+#lab3d #lab-interact small{font-size:11px;letter-spacing:.01em}
+#lab3d .lab-paw.lab-hidden,#lab3d .lab-diagnostics.lab-hidden{display:none!important}

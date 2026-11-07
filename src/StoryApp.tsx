@@ -5,6 +5,8 @@ import {advance,goTo,initialProgress,readProgress,writeProgress,type StoryProgre
 import {StoryGame} from './StoryGame';
 import {Sound} from './audio';
 import {FullscreenControl} from './FullscreenControl';
+import {Splash} from './demo/Splash';
+import {RescueDemo} from './demo/RescueDemo';
 import './story.css';
 
 function Portrait({character}:{character:CharacterId}){
@@ -29,13 +31,17 @@ export function StoryApp({ClassicApp}:{ClassicApp:ComponentType}){
  const container=useRef<HTMLDivElement>(null);
  const audio=useRef<Sound>(new Sound());
  const [progress,setProgress]=useState<StoryProgress>(()=>readProgress(STORY.length));
- const [screen,setScreen]=useState<'cover'|'story'|'game'|'classic'>('cover');const [saved,setSaved]=useState(progress.started);const [storageOK,setStorageOK]=useState(true);
+ const [screen,setScreen]=useState<'splash'|'cover'|'story'|'game'|'classic'|'rescue'|'tests'>('splash');
+ const nextAfterSplash=useRef<'cover'|'rescue'>('cover');
+ const [demoEntry,setDemoEntry]=useState<'garden'|'abduction'|'trail'|'house'|'drawer'|'lock'|'rescue'>('garden');
+ const [demoTrial,setDemoTrial]=useState(false);const [saved,setSaved]=useState(progress.started);const [storageOK,setStorageOK]=useState(true);
  const [audioNotice,setAudioNotice]=useState('');
  const [comicOpen,setComicOpen]=useState(false);
  const chapter=STORY[progress.index];
  const answer=progress.answers[chapter.id]??null;
  useEffect(()=>{container.current?.scrollTo({top:0,behavior:'auto'});},[progress.index,screen]);
  useEffect(()=>{audio.current.setTheme(screen==='game'&&chapter.kind==='game'?(chapter.level===3?'final':chapter.level===2?'battle':'garden'):'story');},[progress.index,screen]);
+ useEffect(()=>{if(screen==='rescue'||screen==='tests')audio.current.suspend();},[screen]);
  useEffect(()=>{const visibility=()=>{if(document.hidden)audio.current.suspend();};document.addEventListener('visibilitychange',visibility);const sound=audio.current;return()=>{document.removeEventListener('visibilitychange',visibility);sound.destroy();};},[]);
  const save=(next:StoryProgress)=>{setProgress(next);setSaved(next.started);setStorageOK(writeProgress(next));};
  const next=()=>{save(advance(progress,STORY.length));setScreen('story');};
@@ -45,19 +51,30 @@ export function StoryApp({ClassicApp}:{ClassicApp:ComponentType}){
  const tryAudio=()=>{audio.current.muted=false;void audio.current.start().then(ok=>{if(!audio.current.muted)setAudioNotice(ok?'':'El navegador bloqueó el audio. Toca Activar sonido y comprueba el volumen.');});};
  const toggleAudio=()=>{const muted=!progress.muted;audio.current.muted=muted;save({...progress,muted});setAudioNotice('');if(muted)audio.current.suspend();else tryAudio();};
  const unlockAudio=()=>{if(!progress.muted)tryAudio();};
+ const openDemo=(entry:typeof demoEntry,trial:boolean)=>{setDemoEntry(entry);setDemoTrial(trial);nextAfterSplash.current='rescue';setScreen('splash');};
+ if(screen==='splash')return <Splash muted={progress.muted} onStart={()=>{unlockAudio();setScreen(nextAfterSplash.current);}}/>;
+ if(screen==='rescue')return <RescueDemo key={demoEntry+(demoTrial?'-trial':'-story')} entry={demoEntry} test={demoTrial} onExit={()=>{setScreen('cover');unlockAudio();}}/>;
+ if(screen==='tests')return <section className="rescue-test-menu" aria-label="Menú de pruebas"><div>
+  <span>VALETEAMO · SOLO DESARROLLO</span><h1>Pruebas de la demo</h1><p>Estos accesos usan estados aislados; no cambian tu partida normal ni el regalo original.</p>
+  <div className="rescue-test-grid">{([
+   ['garden','Inicio 2D'],['abduction','Secuestro visible'],['trail','Pista y llegada a casa'],['house','Casa 3D'],['drawer','Pista del cajón'],['lock','Llave y dormitorio'],['rescue','Rescate']
+  ] as [typeof demoEntry,string][]).map(([key,label])=><button key={key} onClick={()=>openDemo(key,true)}>{label} ↗</button>)}</div>
+  <button className="back-to-birthday" onClick={()=>setScreen('cover')}>← Volver a Feliz cumpleaños</button></div>
+ </section>;
  if(screen==='classic')return <><ClassicApp/><button className="classic-return" onClick={()=>{unlockAudio();setScreen('cover');}}>← Volver a la historia</button></>;
  if(screen==='game'&&chapter.kind==='game')return <StoryGame level={chapter.level} character={progress.character} muted={progress.muted} audio={audio.current} audioNotice={audioNotice} onUnlockAudio={unlockAudio} onToggleAudio={toggleAudio} onComplete={next} onExit={()=>{unlockAudio();setScreen('story');}}/>;
  return <div className="story-app" ref={container} onPointerDownCapture={unlockAudio} onKeyDownCapture={e=>{if((e.key==='Enter'||e.key===' ')&&(e.target as HTMLElement).closest('button'))unlockAudio();}} onClickCapture={e=>{const button=(e.target as HTMLElement).closest('button');if(button&&!button.disabled&&!button.classList.contains('sound-toggle'))audio.current.ui();}}>
   <div className="story-atmosphere" aria-hidden="true"><span>✿</span><span>✧</span><span>♡</span><span>✦</span><span>✿</span><span>✧</span><span>♡</span><span>✦</span></div>
-  <header className="story-nav"><button className="story-brand" onClick={()=>setScreen('cover')} aria-label="Ir a la portada"><span>✿</span> EL JARDÍN DE LOS DESEOS</button><div><span className="nav-note">UN REGALO PARA VALE</span><button className="sound-toggle" aria-label={progress.muted?'Activar sonido':'Silenciar sonido'} onClick={toggleAudio}>{progress.muted?'♪ Activar sonido':'♪ Sonido activado'}</button><FullscreenControl compact/></div></header>
+  <header className="story-nav"><button className="story-brand" onClick={()=>setScreen('cover')} aria-label="Ir a la portada"><span>✿</span> EL JARDÍN DE LOS DESEOS</button><div><span className="nav-note">UN REGALO PARA VALE</span>{screen==='cover'&&<button className="rescue-test-link" onClick={()=>setScreen('tests')}>Pruebas</button>}<button className="sound-toggle" aria-label={progress.muted?'Activar sonido':'Silenciar sonido'} onClick={toggleAudio}>{progress.muted?'♪ Activar sonido':'♪ Sonido activado'}</button><FullscreenControl compact/></div></header>
   {!storageOK&&<div className="storage-warning" role="status">El navegador no permite guardar el avance. Puedes jugar, pero al cerrar la página se perderá.</div>}
   {audioNotice&&<div className="audio-warning" role="status">{audioNotice}</div>}
   {screen==='cover'?<main className="story-cover">
    <div className="cover-copy"><span className="story-kicker"><i/> UN PEQUEÑO REGALO PARA TI <i/></span><p className="cover-greeting">Feliz cumpleaños, Valentina</p><h1>Un jardín lleno<br/><em>de deseos.</em></h1><p className="cover-lead">Una pequeña aventura para recorrer despacio, guardar momentos y celebrar todo lo bonito que está por venir.</p>
     <fieldset className="story-characters"><legend>¿QUIÉN TE ACOMPAÑA?</legend>{(Object.keys(CHARACTERS) as CharacterId[]).map(id=><button key={id} className={progress.character===id?'story-character selected':'story-character'} aria-pressed={progress.character===id} onClick={()=>select(id)}><Portrait character={id}/><span>{CHARACTERS[id].name}<small>{id==='kitty'?'UN LAZO DE AMOR':'UN POCO DE MÚSICA'}</small></span><b>{progress.character===id?'♥':'♡'}</b></button>)}</fieldset>
     <div className="cover-actions"><button className="story-button" onClick={()=>{unlockAudio();save({...progress,started:true});setScreen('story');}}>{saved?'Continuar la historia':'Abrir mi regalo'} <span>↗</span></button>{saved&&<button className="text-button" onClick={reset}>Empezar de nuevo</button>}</div>
-    <p className="cover-footnote">UNA HISTORIA HECHA PARA TI <span>✦</span> A TU PROPIO RITMO</p>
+    <div className="rescue-cover-buttons"><button className="story-button rescue-new-link" onClick={()=>openDemo('garden',false)}>♥ Jugar la demo de rescate 2D → 3D</button></div><p className="cover-footnote">UNA HISTORIA HECHA PARA TI <span>✦</span> A TU PROPIO RITMO</p>
    </div><div className="cover-art" aria-hidden="true"><div className="art-orbit orbit-a"/><div className="art-orbit orbit-b"/><div className="art-card"><div className="art-garland"><i/><i/><i/><i/><i/><i/><i/></div><span className="art-sun">✳</span><span className="art-star a">✦</span><span className="art-star b">✧</span><div className="art-hill hill-back"/><div className="art-hill hill-front"/><div className="art-path"/><div className="art-tree tree-a"><i/><b/></div><div className="art-tree tree-b"><i/><b/></div><div className="art-avatar"><Portrait character={progress.character}/></div><span className="art-flower f1">✿</span><span className="art-flower f2">✿</span><span className="art-flower f3">✿</span><span className="art-stamp">HECHO CON<br/>MUCHO AMOR <b>♡</b></span></div><p>UN LUGAR PARA LOS MOMENTOS BONITOS <span>01 / 07</span></p></div>
+   
    <button className="classic-link" onClick={()=>{audio.current.suspend();setScreen('classic');}}>Jugar la aventura clásica ↗</button>
   </main>:<main className="story-page"><div className="chapter-top"><button className="back-link" onClick={back}>← {progress.index===0?'Portada':'Anterior'}</button><span>UNA HISTORIA PARA VALE</span><span>{String(progress.index+1).padStart(2,'0')} / {String(STORY.length).padStart(2,'0')}</span></div>
    <div className="chapter-progress" role="progressbar" aria-label="Avance de la historia" aria-valuemin={1} aria-valuemax={STORY.length} aria-valuenow={progress.index+1} aria-valuetext={`Capítulo ${progress.index+1} de ${STORY.length}`}><i style={{width:`${(progress.index+1)/STORY.length*100}%`}}/></div>
