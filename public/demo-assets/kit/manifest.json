@@ -1,0 +1,72 @@
+{
+  "name": "valeteamo-art-kit",
+  "version": 2,
+  "source": "reinterpretation of earlier user-provided illustrations",
+  "assets": [
+    {
+      "file": "kitty-poses.webp",
+      "columns": 4,
+      "rows": 2,
+      "roles": [
+        "front-idle",
+        "front-walk",
+        "left-walk",
+        "right-walk",
+        "back-idle",
+        "back-walk",
+        "paw-interaction",
+        "flashlight-pose"
+      ],
+      "status": "future atlas, verify trims"
+    },
+    {
+      "file": "iconos-aventura.webp",
+      "columns": 4,
+      "rows": 3,
+      "roles": [
+        "flashlight",
+        "cat-paw",
+        "blue-slime",
+        "pink-slime",
+        "ghost",
+        "lantern",
+        "potion",
+        "heart",
+        "coin",
+        "sparkles",
+        "key",
+        "cursor"
+      ],
+      "status": "future UI atlas, verify transparency"
+    },
+    {
+      "file": "casa-y-jardin.webp",
+      "columns": 5,
+      "rows": 4,
+      "roles": [
+        "stairs-up",
+        "stairs-down",
+        "exterior-door",
+        "interior-door",
+        "threshold",
+        "wood-floor",
+        "wall",
+        "window",
+        "rug",
+        "bed",
+        "table",
+        "bookshelf",
+        "plant",
+        "lantern",
+        "hedge",
+        "bench",
+        "path",
+        "tree",
+        "pergola",
+        "arch"
+      ],
+      "status": "illustrated module references, not 3D geometry"
+    }
+  ],
+  "productionCover": "../portada-v2.webp"
+}

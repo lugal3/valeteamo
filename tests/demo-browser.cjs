@@ -15,16 +15,22 @@ const {chromium}=require('playwright');
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.stack||e.message));
   await page.goto(url);
   await page.getByRole('button',{name:/Presiona cualquier botón para iniciar/}).waitFor({timeout:15000});
-  await page.waitForFunction(()=>{const image=document.querySelector('.splash-frame img');return image?.complete&&image.naturalWidth>=1200&&image.currentSrc.includes('005-portada-valeteamo.webp');});
+  await page.waitForFunction(()=>{const image=document.querySelector('.splash-frame img');return image?.complete&&image.naturalWidth>=1200&&image.currentSrc.includes('portada-v2.webp');});
   const assets=await page.evaluate(async()=>Promise.all(['001','005','014','019'].map(async id=>{const r=await fetch('/demo-assets/referencias/'+id+'.webp');return [id,r.status,r.headers.get('content-type')]})));
   for(const [id,status,mime] of assets){assert.equal(status,200,'Missing image '+id);assert(/image\/webp/.test(mime),'Incorrect MIME for '+id);}
 
+  console.log('Play overlay hit-test:',await page.evaluate(()=>{
+   const b=document.querySelector('.splash-start'),box=b.getBoundingClientRect();
+   const el=document.elementFromPoint(box.left+box.width/2,box.top+box.height/2);
+   return {rect:{x:box.x,y:box.y,w:box.width,h:box.height},target:el?.className,style:{z:getComputedStyle(b).zIndex,pointer:getComputedStyle(b).pointerEvents,display:getComputedStyle(b).display,position:getComputedStyle(b).position}};
+  }));
   await page.screenshot({path:path.join(folder,'01-portada.png')});
-  await page.getByRole('button',{name:/Presiona cualquier botón para iniciar/}).click();
+  // The title image itself is a click-to-start surface, as it is for the player.
+  await page.mouse.click(480,478);
   await page.getByText('Feliz cumpleaños, Valentina').waitFor();await page.waitForTimeout(1100);
   await page.screenshot({path:path.join(folder,'02-cumpleanos.png')});
   await page.getByRole('button',{name:/Jugar la demo de rescate 2D/}).click();
-  await page.getByRole('button',{name:/Presiona cualquier botón para iniciar/}).click();
+  await page.mouse.click(480,478);
   await page.locator('.rescue-stage canvas').waitFor({timeout:15000});
   await page.waitForTimeout(850);
   await page.screenshot({path:path.join(folder,'03-jardin-2d.png')});

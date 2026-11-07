@@ -48,11 +48,11 @@ export function StoryApp({ClassicApp}:{ClassicApp:ComponentType}){
  const back=()=>{if(progress.index===0)setScreen('cover');else{save(goTo(progress,progress.index-1));setScreen('story');}};
  const reset=()=>{if(!window.confirm('¿Quieres empezar la historia desde el principio? Se reiniciará el avance guardado en este dispositivo.'))return;save(initialProgress());setScreen('cover');};
  const select=(character:CharacterId)=>save({...progress,character});
- const tryAudio=()=>{audio.current.muted=false;void audio.current.start().then(ok=>{if(!audio.current.muted)setAudioNotice(ok?'':'El navegador bloqueó el audio. Toca Activar sonido y comprueba el volumen.');});};
+ const tryAudio=(welcome=false)=>{audio.current.muted=false;void audio.current.start().then(ok=>{if(ok&&welcome)audio.current.ui();if(!audio.current.muted)setAudioNotice(ok?'':'El navegador bloqueó el audio. Toca Activar sonido y comprueba el volumen.');});};
  const toggleAudio=()=>{const muted=!progress.muted;audio.current.muted=muted;save({...progress,muted});setAudioNotice('');if(muted)audio.current.suspend();else tryAudio();};
  const unlockAudio=()=>{if(!progress.muted)tryAudio();};
  const openDemo=(entry:typeof demoEntry,trial:boolean)=>{setDemoEntry(entry);setDemoTrial(trial);nextAfterSplash.current='rescue';setScreen('splash');};
- if(screen==='splash')return <Splash muted={progress.muted} onStart={()=>{unlockAudio();setScreen(nextAfterSplash.current);}}/>;
+ if(screen==='splash')return <Splash muted={progress.muted} onStart={()=>{if(!progress.muted)tryAudio(true);setScreen(nextAfterSplash.current);}}/>;
  if(screen==='rescue')return <RescueDemo key={demoEntry+(demoTrial?'-trial':'-story')} entry={demoEntry} test={demoTrial} onExit={()=>{setScreen('cover');unlockAudio();}}/>;
  if(screen==='tests')return <section className="rescue-test-menu" aria-label="Menú de pruebas"><div>
   <span>VALETEAMO · SOLO DESARROLLO</span><h1>Pruebas de la demo</h1><p>Estos accesos usan estados aislados; no cambian tu partida normal ni el regalo original.</p>

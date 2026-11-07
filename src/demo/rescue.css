@@ -29,3 +29,9 @@
 .rescue-test-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:20px 0}
 .rescue-test-grid button,.back-to-birthday{border:1px solid #ffdfdaaa;background:#ffffff17;color:#fff2ea;border-radius:12px;padding:15px;text-align:left;font:700 14px system-ui,sans-serif;cursor:pointer}
 .rescue-test-grid button:hover,.back-to-birthday:hover{background:#ffffff35}
+
+/* Analog stick for the 2D approach: thumb tracks the actual contact point. */
+.rescue-stick{border:3px solid #fff0e7;background:radial-gradient(circle,#ffe1e348,#ab6c94a6);box-shadow:0 4px 18px #3b264a8a;gap:0}
+.rescue-stick-thumb{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:linear-gradient(150deg,#fff0ec,#e7abc9);border:2px solid #fff8eb;color:#944c77;font-size:28px;box-shadow:0 3px 12px #532a5e5e;pointer-events:none;transition:transform .04s linear}
+.rescue-stick small{position:absolute;bottom:-18px;font:750 10px system-ui;color:#fff4e8;letter-spacing:.11em;text-shadow:0 2px 5px #2e2145;pointer-events:none}
+@media(prefers-reduced-motion:reduce){.rescue-stick-thumb{transition:none}}

@@ -1,6 +1,7 @@
 import {createHouse,HEIGHT,blocked,groundHeight,lineBlocked,setDoor,setDrawer} from './world.js';
 import {HouseRenderer,pickupGeometry} from './renderer.js';
 import {HouseSound} from './sound.js';
+import {navigate,smoothAxis,getStairDirection} from './navigation.js';
 import {createHousePuzzle,puzzleEvent,canOpenDrawer,canOpenBedroom,canRescue,PUZZLE_HINTS} from '../demo/house-puzzles.js';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -39,13 +40,19 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    <button data-act="pause" aria-label="Pausar">Ⅱ</button>
  </div>
  <div class="lab-focus" id="lab-focus" role="status"></div>
+  <div class="lab-objective" id="lab-objective">✿ Explora la casa · sigue las pistas</div>
+  <div class="lab-compass" id="lab-compass" aria-hidden="true">N ↑</div>
  <div class="lab-toast" id="lab-toast" role="status" aria-live="polite"></div>
  <div class="lab-power ${demo?'lab-hidden':''}"><span>☼ LINTERNA</span><div class="lab-powerbar"><i id="lab-charge"></i></div><strong id="lab-charge-text">100%</strong></div>
  <div class="lab-paw ${demo?'lab-hidden':''}" aria-hidden="true"><div class="lab-paw-base">◕ ◕<span>♥</span></div><div class="lab-torch">✦</div></div>
- <div class="lab-joystick" id="lab-joystick" aria-label="Joystick izquierdo, arrastrar para caminar"><div class="lab-stick-ring"><div id="lab-stick" class="lab-stick-thumb">✿</div></div><span>MOVER</span></div>
+  <div class="lab-hand-art ${demo?'':'lab-hidden'}" aria-hidden="true">
+   <div class="lab-kitty-sleeve"></div><div class="lab-kitty-mitt"><i class="lab-cat-digit first"></i><i class="lab-cat-digit second"></i><i class="lab-cat-digit third"></i><i class="lab-cat-thumb"></i><i class="lab-cat-pad"></i><i class="lab-cat-toe a"></i><i class="lab-cat-toe b"></i><i class="lab-cat-toe c"></i></div>
+   <div class="lab-real-torch"><i class="torch-grip"></i><i class="torch-switch"></i><i class="torch-barrel"></i><i class="torch-bezel"></i><i class="torch-lens"></i></div>
+  </div>
+ <div class="lab-joystick" id="lab-joystick" aria-label="Joystick izquierdo, arrastrar para caminar"><div class="lab-stick-ring"><div id="lab-stick" class="lab-stick-thumb">♡</div></div><span>CAMINAR</span></div>
  <div class="lab-look" id="lab-look" aria-label="Arrastrar para mirar"></div>
  <div class="lab-buttons">
-  <button data-act="interact" id="lab-interact" hidden><span>✋</span><small>USAR</small></button>
+  <button data-act="interact" id="lab-interact" hidden><span>🐾</span><small>USAR</small></button>
   <button data-act="crouch" id="lab-crouch" class="${demo?'lab-hidden':''}">♧<small>AGACHAR</small></button>
   <button data-act="flash">☼<small>LUZ</small></button>
   <button data-act="bag">▣<small>MOCHILA</small></button>
@@ -67,13 +74,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const controller=new AbortController(),signal=controller.signal;
  let renderer,world,puzzle=createHousePuzzle(config.entry),sound=new HouseSound(),s,raf=0,last=0,lastPaint=0,fps=0,elapsed=0,toastUntil=0,lookPointer=null,stickPointer=null;
  let active=true,ready=false,hasFocus=true,focus=null,lookLast={x:0,y:0},paused=false,modal='',intro=true,contextLost=false;
- const keys=new Set(),joystick={x:0,z:0};
+ const keys=new Set(),joystick={x:0,z:0},velocity={forward:0,side:0};
  const options={sensitivity:1,bob:true,quality:'medium'};
  const points={ground:'Planta baja',upstairs:'Planta alta',sound:'Iluminación / sonido',interactions:'Interacciones'};
  const say=(text,seconds=2.4)=>{$('lab-toast').textContent=text;toastUntil=performance.now()+seconds*1000;};
  const isPortrait=()=>window.innerHeight>window.innerWidth;
  const isPaused=()=>!ready||paused||!!modal||isPortrait()||document.hidden||!hasFocus||contextLost;
- const modalClose=()=>{modal='';dialog.classList.add('lab-hidden');dialog.innerHTML='';keys.clear();joystick.x=joystick.z=0;};
+ const modalClose=()=>{modal='';dialog.classList.add('lab-hidden');dialog.innerHTML='';keys.clear();joystick.x=joystick.z=0;velocity.forward=velocity.side=0;};
  function showModal(title,body,actions=[['Cerrar','close']]){
   modal=title;dialog.classList.remove('lab-hidden');
   dialog.innerHTML=`<section class="lab-paper" role="dialog" aria-modal="true" aria-label="${escapeHTML(title)}"><div class="lab-paper-mark">✿ ♡ ✿</div><h2>${escapeHTML(title)}</h2><div class="lab-paper-body">${body}</div><div class="lab-paper-actions">${actions.map(([label,act])=>`<button data-act="${escapeHTML(act)}">${escapeHTML(label)}</button>`).join('')}</div></section>`;
@@ -181,11 +188,30 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(isPaused())return;
   if(act==='interact')interact();if(act==='crouch')crouch();if(act==='flash')toggleFlash();
  }
+ function autoOpenDoors(){
+  if(!demo)return;
+  let changed=false;
+  for(const door of world.objects){
+   if(door.kind!=='door'||door.open)continue;
+   if(Math.abs(s.y-(door.y-1.1))>1.1)continue;
+   if(Math.hypot(door.x-s.x,door.z-s.z)>1.40)continue;
+   if(door.id==='dormitorio'&&!canOpenBedroom(puzzle))continue;
+   if(door.locked&&!s.inventory.key)continue;
+   setDoor(door,true);changed=true;
+   if(door.id==='dormitorio')puzzle=puzzleEvent(puzzle,'door');
+   play('door',door);say('La puerta se abre al acercarte',1.8);
+  }
+  if(changed)rebuild();
+ }
  function updateControls(){
   const cam=cameraOf(s),target=closestObject(world,s,focus);focus=target;
   const label=s.hidden?'ESCONDIDA · USAR PARA SALIR':s.lying?'ACOSTADA · USAR PARA LEVANTARTE':target?`${target.label} · USAR`:'';
   $('lab-focus').textContent=label;
   $('lab-floor').textContent=(s.y>1.8?'PLANTA ALTA':'PLANTA BAJA')+' · '+ctxRoom(s).toUpperCase();
+  root.classList.toggle('lab-flash-off',!s.flashlight);
+  $('lab-compass').textContent=(Math.abs(Math.sin(s.yaw))>Math.abs(Math.cos(s.yaw))?(Math.sin(s.yaw)>0?'E':'O'):(Math.cos(s.yaw)>0?'S':'N'))+' ↑';
+  $('lab-objective').textContent=demo?(puzzle.rescued?'♥ ¡Louis está a salvo!':!puzzle.note?'✉ Busca la nota del pasillo':!puzzle.key?'⚿ Abre el cajón del estudio y recoge la llave':!puzzle.symbol?'♡ Examina el cuadro del salón':!puzzle.door?'🚪 Sube y abre el dormitorio':'♡ Encuentra a Louis dentro del dormitorio'):'Explora libremente · E interactuar';
+  if(getStairDirection(s)==='Escaleras')$('lab-objective').textContent+=' · ↑↓ Escaleras';
   $('lab-charge').style.width=s.battery+'%';$('lab-charge-text').textContent=Math.ceil(s.battery)+'%';
   const interactButton=$('lab-interact');interactButton.hidden=!target&&!s.hidden&&!s.lying;
   interactButton.querySelector('small').textContent=s.hidden||s.lying?'Salir':!target?'Usar':target.kind==='door'?(target.open?'Cerrar puerta':'Abrir puerta'):target.kind==='key'?'Recoger llave':target.kind==='note'?'Leer nota':target.kind==='drawer'?(target.open?'Cerrar cajón':'Abrir cajón'):target.kind==='rescue'?'Rescatar':'Examinar';
@@ -202,21 +228,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   let side=(keys.has('d')||keys.has('D')?1:0)-(keys.has('a')||keys.has('A')?1:0)+joystick.x;
   if(s.hidden||s.lying){forward=side=0;}
   const length=Math.hypot(forward,side);if(length>1){forward/=length;side/=length;}
-  const speed=s.crouched?1.0:2.1;
-  const dx=(Math.sin(s.yaw)*forward+Math.cos(s.yaw)*side)*speed*dt;
-  const dz=(Math.cos(s.yaw)*forward-Math.sin(s.yaw)*side)*speed*dt;
-  const body=s.crouched?1.04:1.7;
-  let moved=0;
-  const substeps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.065));
-  for(let step=0;step<substeps;step++){
-   for(const [x,z] of [[s.x+dx/substeps,s.z],[s.x,s.z+dz/substeps]]){
-    const nextY=groundHeight(x,z,s.y);
-    if(Math.abs(nextY-s.y)>.27)continue;
-    if(!blocked(world.boxes,x,nextY,z,.2,body)){
-     moved+=Math.hypot(x-s.x,z-s.z);s.x=x;s.z=z;s.y=nextY;
-    }
-   }
-  }
+  velocity.forward=smoothAxis(velocity.forward,forward,dt,12);
+  velocity.side=smoothAxis(velocity.side,side,dt,12);
+  const speed=s.crouched?1.05:2.60;
+  const dx=(Math.sin(s.yaw)*velocity.forward+Math.cos(s.yaw)*velocity.side)*speed*dt;
+  const dz=(Math.cos(s.yaw)*velocity.forward-Math.sin(s.yaw)*velocity.side)*speed*dt;
+  const body=s.crouched?1.04:1.64;
+  const moved=navigate(s,world,dx,dz,body);
+  autoOpenDoors();
   s.eye+=( (s.crouched?1.03:1.63)-s.eye)*Math.min(1,dt*9);
   if(moved>.0001){s.bob+=moved*(s.crouched?5:8);s.distanceSteps+=moved;
    if(s.distanceSteps>.78){s.distanceSteps=0;play('footstep');}
@@ -240,20 +259,25 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   root.innerHTML=`<section class="lab-error"><h2>No se pudo abrir la casa 3D</h2><p>${escapeHTML(String(e.message||e))}</p><button data-act="exit">Volver a pruebas</button></section>`;
  }
  function pointerStick(e){if(!active||isPaused()||stickPointer!==null)return;stickPointer=e.pointerId;e.currentTarget.setPointerCapture(e.pointerId);moveStick(e);e.preventDefault();}
- function moveStick(e){if(e.pointerId!==stickPointer)return;
-  const r=$('lab-joystick').getBoundingClientRect(),cx=r.left+r.width*.5,cy=r.top+r.height*.48;
-  const dx=e.clientX-cx,dy=e.clientY-cy,dist=Math.max(1,Math.hypot(dx,dy)),amount=Math.min(1,dist/53);
-  joystick.x=dx/dist*amount;joystick.z=dy/dist*amount;
-  $('lab-stick').style.transform=`translate(${joystick.x*45}px,${joystick.z*45}px)`;
+ function moveStick(e){
+  if(e.pointerId!==stickPointer)return;
+  const r=$('lab-stick').parentElement.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+  const dx=e.clientX-cx,dy=e.clientY-cy,dist=Math.hypot(dx,dy);
+  const radius=Math.max(28,r.width*.45),normalized=Math.min(1,dist/radius),deadzone=.13;
+  const amount=normalized<=deadzone?0:(normalized-deadzone)/(1-deadzone);
+  const curved=amount*amount*(3-2*amount);
+  joystick.x=dist<.01?0:dx/dist*curved;joystick.z=dist<.01?0:dy/dist*curved;
+  const drawn=Math.min(1,normalized)*r.width*.30;
+  $('lab-stick').style.transform=`translate(${dist<.01?0:dx/dist*drawn}px,${dist<.01?0:dy/dist*drawn}px)`;
   e.preventDefault();
  }
  function endStick(e){if(e.pointerId!==stickPointer)return;stickPointer=null;joystick.x=0;joystick.z=0;$('lab-stick').style.transform='translate(0,0)';}
  function pointerLook(e){if(isPaused()||lookPointer!==null||e.target.closest('button,input,select,summary,.lab-diagnostics'))return;
   lookPointer=e.pointerId;lookLast={x:e.clientX,y:e.clientY};e.currentTarget.setPointerCapture(e.pointerId);e.preventDefault();}
  function moveLook(e){if(e.pointerId!==lookPointer)return;const dx=e.clientX-lookLast.x,dy=e.clientY-lookLast.y;
-  lookLast={x:e.clientX,y:e.clientY};const old=s.yaw;s.yaw-=dx*.0045*options.sensitivity;
+  lookLast={x:e.clientX,y:e.clientY};const old=s.yaw;s.yaw-=dx*.0038*options.sensitivity;
   if(s.hidden)s.yaw=clamp(s.yaw,s.hidden.yaw-.7,s.hidden.yaw+.7);
-  s.pitch=clamp(s.pitch-dy*.0045*options.sensitivity,-1.15,1.15);e.preventDefault();}
+  s.pitch=clamp(s.pitch-dy*.0038*options.sensitivity,-1.15,1.15);e.preventDefault();}
  function endLook(e){if(e.pointerId===lookPointer)lookPointer=null;}
  const stick=$('lab-joystick'),look=$('lab-look');
  if(stick&&look){
@@ -285,7 +309,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(e.key==='i'||e.key==='I')runAction('bag');
  },{signal});
  window.addEventListener('keyup',e=>keys.delete(e.key),{signal});
- window.addEventListener('blur',()=>{hasFocus=false;keys.clear();joystick.x=joystick.z=0;sound.pause();},{signal});
+ window.addEventListener('blur',()=>{hasFocus=false;keys.clear();joystick.x=joystick.z=0;velocity.forward=velocity.side=0;sound.pause();},{signal});
  window.addEventListener('focus',()=>{hasFocus=true;last=performance.now();if(ready&&!isPaused())sound.resume();},{signal});
  document.addEventListener('visibilitychange',()=>{last=performance.now();if(document.hidden)sound.pause();else if(ready&&!isPaused())sound.resume();},{signal});
  window.addEventListener('resize',()=>{last=performance.now();if(isPortrait())sound.pause();else if(ready&&!isPaused())sound.resume();},{signal});

@@ -5,7 +5,8 @@ export const MATERIAL = {
   wood: [0.47, 0.29, 0.30], floor: [0.48, 0.34, 0.38], tile: [0.38, 0.51, 0.52],
   velvet: [0.65, 0.33, 0.45], cream: [0.85, 0.76, 0.65], pink: [0.92, 0.59, 0.65],
   dark: [0.28, 0.24, 0.33], glass: [0.49, 0.63, 0.76], brass: [0.94, 0.68, 0.33],
-  paper: [0.91, 0.82, 0.65], foliage: [0.39, 0.50, 0.40], carpet: [0.54, 0.28, 0.43]
+  paper: [0.91, 0.82, 0.65], foliage: [0.39, 0.50, 0.40], carpet: [0.54, 0.28, 0.43],
+  glove: [0.98, 0.88, 0.84], pawpad: [0.96, 0.54, 0.62], torchmetal: [0.39, 0.47, 0.57], torchglass: [1.0, 0.93, 0.64], bow: [0.84, 0.23, 0.36]
 };
 const b = (id, x, y, z, w, h, d, mat, solid = true, extra = {}) => ({ id, x, y, z, w, h, d, mat, solid, ...extra });
 const thing = (id, kind, label, x, y, z, extra = {}) => ({ id, kind, label, x, y, z, ...extra });
@@ -41,9 +42,9 @@ export function createHouse(spawn = 'ground') {
       add('left-lintel-b',4.05,2.73,6.425,.2,.74,1.25,'wallpaper');
       wallX('right-part-a',7.65,0,1.85,0,'wall2');
       wallX('right-part-b',7.65,3.1,5.8,0,'wall2');
-      wallX('right-part-c',7.65,7.95,10,0,'wall2');
+      wallX('right-part-c',7.65,8.25,10,0,'wall2');
       add('right-lintel-a',7.65,2.73,2.475,.2,.74,1.25,'wall2');
-      add('right-lintel-b',7.65,2.73,6.875,.2,.74,2.15,'wall2');
+      add('right-lintel-b',7.65,2.73,7.025,.2,.74,2.45,'wall2');
     } else {
       wallX('upper-left-a',4.5,0,1.85,level,'wall2');
       wallX('upper-left-b',4.5,3.15,10,level,'wall2');
@@ -60,9 +61,9 @@ export function createHouse(spawn = 'ground') {
     const t=(i+.5)/12, z=stairZBottom-t*(stairZBottom-stairZTop), height=(i+1)*HEIGHT/12;
     add('step-'+i,9.75,height-.13,z,2.13,.26,(stairZBottom-stairZTop)/12+.03,'wood',false);
   }
-  add('rail-left',8.58,1.76,6.84,.15,3.5,3.6,'wood');
-  add('rail-right',10.92,1.76,6.84,.15,3.5,3.6,'wood');
-  add('upper-railing',8.36,3.66,7.2,.16,1.05,4.1,'brass');
+  add('rail-left',8.58,1.76,6.84,.15,3.5,3.6,'wood',false);
+  add('rail-right',10.92,1.76,6.84,.15,3.5,3.6,'wood',false);
+  add('upper-railing',8.36,3.66,7.2,.16,1.05,4.1,'brass',false);
   // Sliding doors move aside completely; their actual collision boxes move with them.
   function door(id, x,y,z,w,d,slideAxis,slideDistance,label,locked=false) {
     const shape=add('door-'+id,x,y+1.1,z,w,2.2,d,'wood',true,{door:id});
@@ -143,7 +144,8 @@ export function groundHeight(x,z,levelHint=0) {
   return levelHint>HEIGHT*.52?HEIGHT:0;
 }
 export function overlaps(box, x, footY, z, radius=.19, bodyHeight=1.65) {
-  if(!box.solid)return false;
+  // A slab is a walking surface/visual occluder, not a wall to trap a head at stair landings.
+  if(!box.solid||box.id.startsWith('floor-up-'))return false;
   return Math.abs(box.x-x)<box.w/2+radius && Math.abs(box.z-z)<box.d/2+radius
      && footY < box.y+box.h/2-.02 && footY+bodyHeight > box.y-box.h/2+.02;
 }
