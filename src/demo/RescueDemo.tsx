@@ -9,7 +9,8 @@ type Entry='garden'|'abduction'|'trail'|'house'|'drawer'|'lock'|'rescue';
 const initial=(entry:Entry,test:boolean):RescueState=>{
  if(!test)return loadRescue();
  let s={...START};
- if(entry!=='garden'){s=advanceRescue(s,'heart');s=advanceRescue(s,'abduction');}
+ if(entry!=='garden')s=advanceRescue(s,'heart');
+ if(entry!=='garden'&&entry!=='abduction')s=advanceRescue(s,'abduction');
  if(entry==='trail'||['house','drawer','lock','rescue'].includes(entry))s=advanceRescue(s,'trail');
  if(['house','drawer','lock','rescue'].includes(entry))s=advanceRescue(s,'house');
  return s;
@@ -42,7 +43,7 @@ export function RescueDemo({onExit,entry='garden',test=false}:{onExit:()=>void,e
     class GardenScene extends Engine.Scene{
      kitty!:Phaser.GameObjects.Image;louis!:Phaser.GameObjects.Image;shadow!:Phaser.GameObjects.Arc; 
      flowers!:Phaser.GameObjects.Arc;heart!:Phaser.GameObjects.Text;door!:Phaser.GameObjects.Rectangle;
-     abducting=false;timer=0;lastNear='';
+     abducting=false;interactHeld=false;lastNear='';keysMap!:Record<string,Phaser.Input.Keyboard.Key>;
      constructor(){super('rescue-garden');}
      preload(){
       this.load.image('kitty-reference-source',new URL('./sprites/kitty-reference-sheet.png',document.baseURI).href);
@@ -50,6 +51,7 @@ export function RescueDemo({onExit,entry='garden',test=false}:{onExit:()=>void,e
      }
      create(){
       this.cameras.main.setBackgroundColor('#a6d0b1');
+      this.keysMap=this.input.keyboard!.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,E') as Record<string,Phaser.Input.Keyboard.Key>;
       const g=this.add.graphics();
       g.fillStyle(0x91bc9f).fillRect(0,0,960,540);
       g.fillStyle(0xcce5bd).fillRoundedRect(25,38,910,464,45);
@@ -82,11 +84,11 @@ export function RescueDemo({onExit,entry='garden',test=false}:{onExit:()=>void,e
      }
      update(_time:number,delta:number){
       const dt=Math.min(delta,60)/1000;
-      const keys=this.input.keyboard;
-      const left=Boolean(keys?.addKey('A').isDown||keys?.addKey('LEFT').isDown);
-      const right=Boolean(keys?.addKey('D').isDown||keys?.addKey('RIGHT').isDown);
-      const up=Boolean(keys?.addKey('W').isDown||keys?.addKey('UP').isDown);
-      const down=Boolean(keys?.addKey('S').isDown||keys?.addKey('DOWN').isDown);
+      const keys=this.keysMap;
+      const left=Boolean(keys.A.isDown||keys.LEFT.isDown);
+      const right=Boolean(keys.D.isDown||keys.RIGHT.isDown);
+      const up=Boolean(keys.W.isDown||keys.UP.isDown);
+      const down=Boolean(keys.S.isDown||keys.DOWN.isDown);
       let dx=Number(right)-Number(left)+stick.current.x,dy=Number(down)-Number(up)+stick.current.y;
       const len=Math.hypot(dx,dy);if(len>1){dx/=len;dy/=len;}
       this.kitty.x=Math.max(35,Math.min(915,this.kitty.x+dx*225*dt));
@@ -102,9 +104,9 @@ export function RescueDemo({onExit,entry='garden',test=false}:{onExit:()=>void,e
       this.flowers.setVisible(p==='abduction'||p==='trail');
       if(!this.abducting&&!phaseRef.current.abducted)this.louis.setVisible(true);
       let prompt='';
-      if(p==='garden'&&Phaser.Math.Distance.Between(this.kitty.x,this.kitty.y,277,282)<85)prompt='Recoger corazón';
-      if(p==='abduction'&&Phaser.Math.Distance.Between(this.kitty.x,this.kitty.y,598,326)<85)prompt='Seguir pétalos';
-      if(p==='trail'&&Phaser.Math.Distance.Between(this.kitty.x,this.kitty.y,842,312)<105)prompt='Abrir puerta';
+      if(p==='garden'&&Engine.Math.Distance.Between(this.kitty.x,this.kitty.y,277,282)<85)prompt='Recoger corazón';
+      if(p==='abduction'&&Engine.Math.Distance.Between(this.kitty.x,this.kitty.y,598,326)<85)prompt='Seguir pétalos';
+      if(p==='trail'&&Engine.Math.Distance.Between(this.kitty.x,this.kitty.y,842,312)<105)prompt='Abrir puerta';
       if(prompt!==this.lastNear){this.lastNear=prompt;setNear(prompt);}
       actionRef.current=()=>{
        if(!this.lastNear||this.abducting)return;
@@ -112,8 +114,8 @@ export function RescueDemo({onExit,entry='garden',test=false}:{onExit:()=>void,e
        if(p==='abduction')emit('trail');
        if(p==='trail')setMode('threshold');
       };
-      if(keys?.addKey('E').isDown&&this.timer<=0){actionRef.current();this.timer=.35;}
-      this.timer=Math.max(0,this.timer-dt);
+      if(keys.E.isDown&&!this.interactHeld)actionRef.current();
+      this.interactHeld=keys.E.isDown;
      }
     }
     game=new Engine.Game({type:Engine.AUTO,parent:stage.current!,width:960,height:540,transparent:false,
