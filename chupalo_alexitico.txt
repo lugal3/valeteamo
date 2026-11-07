@@ -1,3 +1,5 @@
+NOTA DE LA VERSIÓN 1.3: esta guía describe el modo clásico. Para la nueva historia, fotos y plantillas chibi de 32 x 40 consulta HISTORIA.md.
+
 EL JARDÍN DE LOS DESEOS — GUÍA DE TEXTURAS, SPRITES Y ANIMACIONES
 Actualización 1.2 · 6 de noviembre de 2026
 

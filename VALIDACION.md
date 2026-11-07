@@ -1,35 +1,27 @@
-# Validación · versión 1.2
+# Validación · historia chibi/isométrica 1.3
 
-Fecha: 6 de noviembre de 2026. Repositorio: https://github.com/lugal3/valeteamo
-Base recibida: `df2377a`, después de conectar la carpeta local vacía y ejecutar fetch/pull de `main`.
+Base: `2eabfe19517a776785b5eed30e7d676b204ca071` en `lugal3/valeteamo`. Trabajo en la rama `demo/historia-cumpleanos-chibi`. La validación histórica de la versión 1.2 se conserva en `docs/VALIDACION-1.2.md`.
 
-## Compilación y pruebas de lógica
+## Automatización y compilación
 
-- `npm ci` completado; no se añadieron dependencias al proyecto.
-- `npm test` pasa con lógica real y un renderizador simulado: seis salas y enlaces recíprocos, puertas, llave, ruta completa, tienda/economía, recompensas únicas, bomba, pila, rayo, aliados, manto, jefe, escotilla, daño, invulnerabilidad, muerte y reinicio.
-- Nuevas comprobaciones: texturas de Kitty y Louis, pasos y orientación, daño/deformación, muerte del personaje elegido, parpadeo breve y zonas muertas táctiles sin afectar teclado.
-- Ofertas: aceptar, rechazar, regresar, compra sin fondos, recursos y corazones llenos; congelación efectiva de reloj, vida, movimiento, bombas y activo mientras hay diálogo; pausa y resize con una oferta pendiente; doble aceptación sin duplicar efectos; objetos conservados al salir y volver, sin duplicación, incluso tras resize; reinicio que vacía los objetos de la partida anterior.
-- Geometría comprobada a 844×390, 852×393, 932×430, 926×428, 734×235, 750×280, 760×206, 1120×680 y 330×760. Se conserva el área jugable de 92 000 unidades y el encuadre completo de sala.
-- `npm run sprites` genera los dos PNG editables de 96×160 con transparencia a partir de los dibujos reales del juego. Se inspeccionó visualmente la hoja de Louis.
-- `npm run build` pasa: TypeScript estricto y Vite. Phaser continúa en un chunk grande (~1,48 MB, ~340 KB gzip), ahora cargado al comenzar la aventura. Vite informa una advertencia de tamaño; no impide compilar.
-- `git diff --check` sin errores de espacios.
+- `npm test`: lógica de la aventura clásica y nueva, mapa y controles, selección y ciclos de personajes clásicos, combates y objetos; progreso de historia, datos guardados dañados, navegación reversible, respuesta seleccionada, proyección isométrica, pausa, luces, proyectiles, jefe, victoria y derrota con renderizadores simulados.
+- `npm run sprites`: genera las cuatro plantillas PNG, incluidas las chibi de 192 × 320.
+- `npm run build`: verifica TypeScript y compila con Vite. Phaser se carga por separado al abrir un tramo. Vite puede advertir del tamaño del chunk del motor.
 
-## Revisión en navegador
+## Navegador de escritorio sin ventana
 
-Se utilizó Edge en modo headless, sin abrir una ventana de escritorio, contra un servidor Vite temporal en 127.0.0.1:5178. Playwright se instaló fuera del repositorio para esta comprobación; no modifica package.json ni el lockfile del juego.
+Se usó Microsoft Edge headless y Playwright instalado fuera del repositorio. Se revisaron visualmente portada a 1440×900 y 390×844, primer recuerdo vertical, pregunta y dos desafíos a 844×390. Un recorrido automatizado pasó por todas las escenas, incluida la carta, y comprobó recarga y recuperación del capítulo. Para dirigir el recorrido a través de los niveles se expuso temporalmente la instancia de escena mediante interceptación de una respuesta de desarrollo; no existe ese acceso global en el código entregado. También se probó movimiento real con teclado.
 
-- Se capturaron e inspeccionaron portada a 1440×900, 844×390 y 390×844, carga, sala con Louis y ventana de Holy Mantle.
-- Se comprobó la portada y el alcance de los botones de pausa con viewport reducido de 734×235. El contenido puede desplazarse en pantallas de poca altura.
-- Selección real de Louis/Kitty, carga, un único canvas tras volver a la portada y comenzar de nuevo, y pausa automática al girar a vertical.
-- Ventana de objeto accesible por rol/nombre, foco inicial, Tab/Mayús+Tab, rechazo sin cobro y compra con cobro exacto. B y Espacio no consumen recursos durante el diálogo.
-- Ningún error JavaScript en la prueba principal.
-- Se activó temporalmente una hoja PNG válida mediante interceptación de la configuración de desarrollo: el cargador la reconoció y creó texturas de 16×20. También se comprobaron los respaldos con una imagen de dimensiones erróneas y una imagen ausente: ambos permiten iniciar con arte generado. Esos casos producen los avisos técnicos esperados.
-- La instrumentación para inspeccionar la escena existió solo en las respuestas interceptadas del navegador de pruebas; no hay una referencia de depuración global en el código entregado.
+Una prueba independiente simuló pantalla táctil y dos dedos mediante el protocolo del navegador: movimiento y disparo simultáneos, liberación de los dos toques, pausa al iniciar en vertical, giro y continuación. Se corrigió el ajuste del lienzo al girar y se repitió la prueba. Se verificó además el aviso de almacenamiento bloqueado y que la historia sigue accesible.
 
-## Límites y comportamiento
+Se configuraron temporalmente hojas chibi mediante interceptación de la configuración: un PNG válido de 192 × 320 se cargó; una imagen de otro tamaño y una inexistente conservaron el arte generado. No hubo errores JavaScript en el recorrido principal. Estos controles se hicieron en escritorio emulado, no en Safari físico.
 
-No se probó en un iPhone físico, Safari real ni con dos dedos sobre una pantalla capacitiva. La emulación de dimensiones y los tests no garantizan comportamiento idéntico de audio, safe areas, barras de Safari o fullscreen en iOS. Tampoco se evaluó el sonido con escucha física durante la prueba headless.
+La hoja de Kitty generada a partir de las referencias aportadas se cargó en Phaser: se verificaron texturas distintas para reposo, caminar, perfil y espalda, además de la pose de daño. Se comprobó que, si el PNG no está disponible, el personaje generado por código permite continuar. El asset tiene transparencia real y la escena lo adapta a celdas de 32 × 40 en memoria.
 
-Los objetos se conservan por sala en memoria de la partida. Recargar la página, el HMR o iniciar otra partida reinicia el progreso. No hay guardado persistente ni promesa de funcionamiento offline. Los retratos de portada/carga siguen el dibujo por código; cambiar un PNG del personaje solo cambia sus texturas dentro del juego, tal como explica la guía.
+## Pendiente y límites
 
-La publicación solicitada corresponde a un commit en GitHub. No se configura hosting ni GitHub Pages como parte de esta actualización. Para probar localmente se mantienen las instrucciones de README.md y PROBAR-IPHONE.md.
+- Probar en iPhone físico y Safari: tacto real, notch, barras dinámicas, audio, recarga y pantalla de inicio; no se ha hecho. Tampoco se ha evaluado el audio mediante escucha física.
+- Revisar con el autor el estilo de personajes, la perspectiva y el ritmo de cada desafío. Los sprites chibi son una primera versión; direcciones diagonales reutilizan las vistas existentes.
+- Fotos, textos, preguntas y carta son marcadores editables, sin contenido personal. La sustitución y su privacidad dependen del material que aporte el usuario.
+- El avance se guarda por capítulo en el navegador; recargar durante un nivel lo reinicia. Sin sincronización entre dispositivos ni garantía de conservación de datos del navegador.
+- `firebase.json` prepara una posible publicación. No se ha vinculado una cuenta de Firebase, desplegado un sitio ni verificado una URL pública de prueba.

@@ -1,29 +1,9 @@
-# Probar ahora en iPhone
+# Probar la aventura en iPhone
 
-Versión 1.1: sala compacta, animaciones e impactos. Se conserva el recorrido de seis salas.
+1. Conecta el PC y el iPhone a la misma Wi-Fi y mantén el PC encendido.
+2. En la carpeta del proyecto ejecuta `npm ci`, `npm run build` y `npm run preview -- --port 5173 --strictPort`.
+3. En el PC usa `ipconfig` para buscar la dirección IPv4 de la red Wi-Fi. En Safari del teléfono abre `http://IP-DEL-PC:5173/`. La IP puede cambiar; `localhost` en el teléfono apunta al teléfono, no al PC.
+4. La historia y las fotos están preparadas para vertical. Al iniciar un desafío gira a horizontal; al volver a él pulsa Continuar si aparece la pausa. Izquierda mueve y derecha apunta/dispara.
+5. Opcional: Safari → Compartir → Añadir a pantalla de inicio, si quieres abrirlo como app web. No es obligatorio y no garantiza uso sin conexión. Safari puede seguir mostrando sus barras en la pestaña normal.
 
-1. Conecta el iPhone a la misma Wi-Fi del PC.
-2. Mantén el PC encendido. La entrega deja un servidor **estable** en segundo plano.
-3. Abre en Safari: **http://192.168.1.15:5173/** (dirección del PC comprobada al preparar esta entrega).
-4. Pulsa Comenzar aventura y gira a horizontal.
-5. Arrastra a la izquierda para moverte y a la derecha para apuntar/disparar. Botones pequeños de bomba y activo abajo a la derecha.
-
-Si ya tenías abierta la versión anterior, recarga una vez para cargar la nueva. Después, cambiar de app solo pausa; pulsa Continuar al regresar. No hay guardado al recargar.
-
-Opcional para aprovechar más espacio: Safari → Compartir → Añadir a pantalla de inicio → «Abrir como app web», si aparece. Abre el icono creado. No es obligatorio y no ofrece juego offline. Las barras de Safari normal no se pueden quitar a la fuerza desde el juego.
-
-Si la IP cambia al reconectar Wi-Fi, consulta `ipconfig` en el PC y usa su nueva IPv4; no se ha cambiado la configuración de red. No hay túnel ni publicación web.
-
-## Volver a arrancarlo tras apagar el PC
-
-En la carpeta del proyecto:
-
-```powershell
-npm install
-npm run build
-npm run preview -- --port 5173 --strictPort
-```
-
-Si el puerto ya está ocupado por el servidor de esta entrega, no abras otro. Para desarrollar usa `npm run dev`; la recarga de Vite puede reiniciar partidas al editar fuentes.
-
-La revisión visual de esta mejora quedó parcial para evitar interferir con League of Legends. No se afirma que se haya probado en Safari de iPhone físico.
+Si llega un enlace por WhatsApp u otra app y el navegador interno da problemas, utiliza su opción para abrir en Safari. Firewall, aislamiento de la red Wi-Fi o un PC suspendido pueden impedir la conexión. No se ha comprobado esta versión en un iPhone físico.
