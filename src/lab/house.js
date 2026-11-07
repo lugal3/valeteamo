@@ -1,6 +1,7 @@
 import {createHouse,HEIGHT,blocked,groundHeight,lineBlocked,setDoor,setDrawer} from './world.js';
 import {HouseRenderer,pickupGeometry} from './renderer.js';
 import {HouseSound} from './sound.js';
+import {navigate,smoothAxis,getStairDirection} from './navigation.js';
 import {createHousePuzzle,puzzleEvent,canOpenDrawer,canOpenBedroom,canRescue,PUZZLE_HINTS} from '../demo/house-puzzles.js';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -39,13 +40,15 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    <button data-act="pause" aria-label="Pausar">Ⅱ</button>
  </div>
  <div class="lab-focus" id="lab-focus" role="status"></div>
+  <div class="lab-objective" id="lab-objective">✿ Explora la casa · sigue las pistas</div>
+  <div class="lab-compass" id="lab-compass" aria-hidden="true">N ↑</div>
  <div class="lab-toast" id="lab-toast" role="status" aria-live="polite"></div>
  <div class="lab-power ${demo?'lab-hidden':''}"><span>☼ LINTERNA</span><div class="lab-powerbar"><i id="lab-charge"></i></div><strong id="lab-charge-text">100%</strong></div>
  <div class="lab-paw ${demo?'lab-hidden':''}" aria-hidden="true"><div class="lab-paw-base">◕ ◕<span>♥</span></div><div class="lab-torch">✦</div></div>
- <div class="lab-joystick" id="lab-joystick" aria-label="Joystick izquierdo, arrastrar para caminar"><div class="lab-stick-ring"><div id="lab-stick" class="lab-stick-thumb">✿</div></div><span>MOVER</span></div>
+ <div class="lab-joystick" id="lab-joystick" aria-label="Joystick izquierdo, arrastrar para caminar"><div class="lab-stick-ring"><div id="lab-stick" class="lab-stick-thumb">♡</div></div><span>CAMINAR</span></div>
  <div class="lab-look" id="lab-look" aria-label="Arrastrar para mirar"></div>
  <div class="lab-buttons">
-  <button data-act="interact" id="lab-interact" hidden><span>✋</span><small>USAR</small></button>
+  <button data-act="interact" id="lab-interact" hidden><span>🐾</span><small>USAR</small></button>
   <button data-act="crouch" id="lab-crouch" class="${demo?'lab-hidden':''}">♧<small>AGACHAR</small></button>
   <button data-act="flash">☼<small>LUZ</small></button>
   <button data-act="bag">▣<small>MOCHILA</small></button>
@@ -67,13 +70,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const controller=new AbortController(),signal=controller.signal;
  let renderer,world,puzzle=createHousePuzzle(config.entry),sound=new HouseSound(),s,raf=0,last=0,lastPaint=0,fps=0,elapsed=0,toastUntil=0,lookPointer=null,stickPointer=null;
  let active=true,ready=false,hasFocus=true,focus=null,lookLast={x:0,y:0},paused=false,modal='',intro=true,contextLost=false;
- const keys=new Set(),joystick={x:0,z:0};
+ const keys=new Set(),joystick={x:0,z:0},velocity={forward:0,side:0};
  const options={sensitivity:1,bob:true,quality:'medium'};
  const points={ground:'Planta baja',upstairs:'Planta alta',sound:'Iluminación / sonido',interactions:'Interacciones'};
  const say=(text,seconds=2.4)=>{$('lab-toast').textContent=text;toastUntil=performance.now()+seconds*1000;};
  const isPortrait=()=>window.innerHeight>window.innerWidth;
  const isPaused=()=>!ready||paused||!!modal||isPortrait()||document.hidden||!hasFocus||contextLost;
- const modalClose=()=>{modal='';dialog.classList.add('lab-hidden');dialog.innerHTML='';keys.clear();joystick.x=joystick.z=0;};
+ const modalClose=()=>{modal='';dialog.classList.add('lab-hidden');dialog.innerHTML='';keys.clear();joystick.x=joystick.z=0;velocity.forward=velocity.side=0;};
  function showModal(title,body,actions=[['Cerrar','close']]){
   modal=title;dialog.classList.remove('lab-hidden');
   dialog.innerHTML=`<section class="lab-paper" role="dialog" aria-modal="true" aria-label="${escapeHTML(title)}"><div class="lab-paper-mark">✿ ♡ ✿</div><h2>${escapeHTML(title)}</h2><div class="lab-paper-body">${body}</div><div class="lab-paper-actions">${actions.map(([label,act])=>`<button data-act="${escapeHTML(act)}">${escapeHTML(label)}</button>`).join('')}</div></section>`;
