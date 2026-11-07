@@ -222,21 +222,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   let side=(keys.has('d')||keys.has('D')?1:0)-(keys.has('a')||keys.has('A')?1:0)+joystick.x;
   if(s.hidden||s.lying){forward=side=0;}
   const length=Math.hypot(forward,side);if(length>1){forward/=length;side/=length;}
-  const speed=s.crouched?1.0:2.1;
-  const dx=(Math.sin(s.yaw)*forward+Math.cos(s.yaw)*side)*speed*dt;
-  const dz=(Math.cos(s.yaw)*forward-Math.sin(s.yaw)*side)*speed*dt;
-  const body=s.crouched?1.04:1.7;
-  let moved=0;
-  const substeps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.065));
-  for(let step=0;step<substeps;step++){
-   for(const [x,z] of [[s.x+dx/substeps,s.z],[s.x,s.z+dz/substeps]]){
-    const nextY=groundHeight(x,z,s.y);
-    if(Math.abs(nextY-s.y)>.27)continue;
-    if(!blocked(world.boxes,x,nextY,z,.2,body)){
-     moved+=Math.hypot(x-s.x,z-s.z);s.x=x;s.z=z;s.y=nextY;
-    }
-   }
-  }
+  velocity.forward=smoothAxis(velocity.forward,forward,dt,12);
+  velocity.side=smoothAxis(velocity.side,side,dt,12);
+  const speed=s.crouched?1.05:2.60;
+  const dx=(Math.sin(s.yaw)*velocity.forward+Math.cos(s.yaw)*velocity.side)*speed*dt;
+  const dz=(Math.cos(s.yaw)*velocity.forward-Math.sin(s.yaw)*velocity.side)*speed*dt;
+  const body=s.crouched?1.04:1.64;
+  const moved=navigate(s,world,dx,dz,body);
+  autoOpenDoors();
   s.eye+=( (s.crouched?1.03:1.63)-s.eye)*Math.min(1,dt*9);
   if(moved>.0001){s.bob+=moved*(s.crouched?5:8);s.distanceSteps+=moved;
    if(s.distanceSteps>.78){s.distanceSteps=0;play('footstep');}
