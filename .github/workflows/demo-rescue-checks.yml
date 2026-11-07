@@ -26,6 +26,8 @@ jobs:
         run: npx playwright install chromium --with-deps
       - name: Probar recorrido en navegador y tomar capturas
         run: node tests/demo-browser.cjs
+      - name: Regresión de aventura original en Chromium
+        run: npm run test:browser
       - name: Guardar capturas y diagnóstico
         if: always()
         uses: actions/upload-artifact@v4
