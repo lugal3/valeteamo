@@ -30,3 +30,5 @@
 .splash-frame img{position:absolute;inset:0;object-fit:cover}
 .splash-fallback{position:absolute;inset:0}
 @media(orientation:portrait){.splash-frame img{object-fit:contain}}
+
+@media(orientation:portrait){.splash-start{top:calc(50% + min(17vw,80px));bottom:auto;height:clamp(42px,12vw,70px);width:72%}}
