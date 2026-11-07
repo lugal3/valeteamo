@@ -2,6 +2,7 @@
 // No additional packages, CDNs, runtime downloads or concurrent Phaser loops.
 import {MATERIAL} from './world.js';
 const VS = `
+precision mediump float;
 attribute vec3 aPos, aCol, aNormal;
 attribute vec2 aUV;
 attribute float aArt, aStyle;
