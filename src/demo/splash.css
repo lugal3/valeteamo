@@ -32,3 +32,7 @@
 @media(orientation:portrait){.splash-frame img{object-fit:contain}}
 
 @media(orientation:portrait){.splash-start{top:calc(50% + min(17vw,80px));bottom:auto;height:clamp(42px,12vw,70px);width:72%}}
+
+/* The illustration is atmospheric, not an interactive obstacle. */
+.splash-frame{pointer-events:none}
+.splash-start{pointer-events:auto}
