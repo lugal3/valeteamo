@@ -52,6 +52,7 @@ export function RescueDemo({onExit,entry='garden',test=false}:{onExit:()=>void,e
      create(){
       this.cameras.main.setBackgroundColor('#a6d0b1');
       this.keysMap=this.input.keyboard!.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,E') as Record<string,Phaser.Input.Keyboard.Key>;
+      if(import.meta.env.DEV)(window as Window&{__rescueScene?:GardenScene}).__rescueScene=this;
       const g=this.add.graphics();
       g.fillStyle(0x91bc9f).fillRect(0,0,960,540);
       g.fillStyle(0xcce5bd).fillRoundedRect(25,38,910,464,45);
