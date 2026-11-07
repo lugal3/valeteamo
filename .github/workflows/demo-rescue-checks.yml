@@ -1,0 +1,24 @@
+name: Validar demo de rescate (sin publicar)
+on:
+  push:
+    branches: [feature/demo-rescate-2d-3d]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Instalar
+        run: npm ci
+      - name: Ejecutar pruebas
+        run: npm test
+      - name: Compilar
+        run: npm run build
