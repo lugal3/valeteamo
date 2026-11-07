@@ -27,8 +27,8 @@ function closestObject(world,state,previous=null){
  candidates.sort((a,b)=>a.score-b.score);return candidates[0]?.o||null;
 }
 const ctxRoom=(state)=>state.y>1.7?'planta alta':state.x>7.65?'salón':'pasillo';
-export function launchHouse(onExit,checkpoint='ground',options={}){
- const demo=options.demo===true;
+export function launchHouse(onExit,checkpoint='ground',config={}){
+ const demo=config.demo===true;
  const root=document.createElement('div');root.id='lab3d';root.innerHTML=`
  <canvas id="lab-canvas" aria-label="Escenario tridimensional interactivo de la casa"></canvas>
  <div class="lab-vignette" aria-hidden="true"></div>
@@ -65,7 +65,7 @@ export function launchHouse(onExit,checkpoint='ground',options={}){
  document.body.appendChild(root);
  const $=id=>root.querySelector('#'+id),canvas=$('lab-canvas'),dialog=$('lab-dialog');
  const controller=new AbortController(),signal=controller.signal;
- let renderer,world,puzzle=createHousePuzzle(options.entry),sound=new HouseSound(),s,raf=0,last=0,lastPaint=0,fps=0,elapsed=0,toastUntil=0,lookPointer=null,stickPointer=null;
+ let renderer,world,puzzle=createHousePuzzle(config.entry),sound=new HouseSound(),s,raf=0,last=0,lastPaint=0,fps=0,elapsed=0,toastUntil=0,lookPointer=null,stickPointer=null;
  let active=true,ready=false,hasFocus=true,focus=null,lookLast={x:0,y:0},paused=false,modal='',intro=true,contextLost=false;
  const keys=new Set(),joystick={x:0,z:0};
  const options={sensitivity:1,bob:true,quality:'medium'};
@@ -81,7 +81,7 @@ export function launchHouse(onExit,checkpoint='ground',options={}){
  }
  function rebuild(){renderer.rebuild([...world.boxes,...pickupGeometry(world.objects)]);}
  function reset(){
-  world=createHouse(checkpoint);puzzle=createHousePuzzle(options.entry);
+  world=createHouse(checkpoint);puzzle=createHousePuzzle(config.entry);
   if(demo){
    const key=world.objects.find(o=>o.id==='key');key.taken=!puzzle.drawer||puzzle.key;
    world.objects.find(o=>o.id==='note-hall').text=PUZZLE_HINTS.note;
@@ -169,7 +169,7 @@ export function launchHouse(onExit,checkpoint='ground',options={}){
  function togglePause(){paused=!paused;if(paused){sound.pause();showModal('Pausa',`<p>El tiempo de la casa y sus sonidos se han detenido.</p>`,[['Continuar','resume'],['Volver a pruebas','exit']]);}else{modalClose();sound.resume();}}
  function runAction(act,node){
   if(act==='exit'){stop();onExit();return;}
-  if(act==='finish'){options.onRescue?.();return;}
+  if(act==='finish'){config.onRescue?.();return;}
   if(act==='close'){if(paused){paused=false;sound.resume();}modalClose();return;}
   if(act==='start'){intro=false;modalClose();ready=true;void sound.start().then(ok=>{if(!ok)say('No se pudo iniciar el sonido en este navegador');});try{screen.orientation?.lock?.('landscape').catch(()=>{});}catch{}return;}
   if(act==='pause'){togglePause();return;}
