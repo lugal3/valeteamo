@@ -1,0 +1,23 @@
+const assert=require('node:assert/strict');
+(async()=>{
+ const {applyLookDelta,followLook,MAX_PITCH,readCameraSettings,writeCameraSettings}=await import('../src/lab/camera-controls.js');
+ const original={yaw:1,pitch:0};
+ assert(applyLookDelta(original,80,0,1,false).yaw>original.yaw,'Drag right must turn right');
+ assert(applyLookDelta(original,80,0,1,true).yaw<original.yaw,'Invert must reverse horizontal direction');
+ let down={...original},up={...original};
+ for(let i=0;i<10;i++){down=applyLookDelta(down,0,100);up=applyLookDelta(up,0,-100);}
+ assert.equal(down.pitch,-MAX_PITCH,'Downward repeated swipes clamp to floor');
+ assert.equal(up.pitch,MAX_PITCH,'Upward repeated swipes clamp to ceiling');
+ const target=applyLookDelta(original,70,-35,.8);
+ let at30={...original},at60={...original};
+ for(let i=0;i<30;i++)at30=followLook(at30,target,1/30);
+ for(let i=0;i<60;i++)at60=followLook(at60,target,1/60);
+ assert(Math.abs(at30.yaw-at60.yaw)<1e-8,'Frame-rate independent yaw interpolation');
+ assert(Math.abs(at30.pitch-at60.pitch)<1e-8,'Frame-rate independent pitch interpolation');
+ const stable=followLook(target,target,1/30);assert.deepEqual(stable,target,'No drift after pointer release');
+ const m=new Map(),storage={getItem:k=>m.get(k),setItem:(k,v)=>m.set(k,v)};
+ assert(writeCameraSettings(storage,{sensitivity:1.25,invertX:true}));
+ assert.deepEqual(readCameraSettings(storage),{sensitivity:1.25,invertX:true});
+ assert.deepEqual(readCameraSettings({getItem:()=>'{bad'}),{sensitivity:.82,invertX:false});
+ console.log('PASS camera: horizontal sign, invert, pitch bounds, 30/60 fps, no drift, stored settings');
+})().catch(e=>{console.error(e);process.exitCode=1});

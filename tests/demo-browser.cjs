@@ -54,8 +54,25 @@ const {chromium}=require('playwright');
   await page.getByRole('button',{name:/Entrar a buscar a Louis/}).click();
   await page.locator('#lab3d canvas').waitFor({timeout:15000});
   await page.locator('#lab-dialog [data-act="start"]').click();
-  await page.waitForTimeout(650);
+  await page.locator('#lab-window-intro:not(.lab-hidden)').waitFor({timeout:8000});
+  await page.waitForTimeout(320);
+  await page.screenshot({path:path.join(folder,'06-entrada-ventana.png')});
+  await page.locator('#lab-window-intro [data-act="skip-intro"]').click();
+  await page.locator('#lab-window-intro').waitFor({state:'hidden',timeout:8000});
+  const landed=await page.evaluate(()=>window.__rescueHouse.snapshot().position);
+  assert(landed.z<9.6&&landed.z>9.2,'Window intro leaves player safely inside: '+JSON.stringify(landed));
+  await page.waitForTimeout(320);
   await page.screenshot({path:path.join(folder,'06-casa-3d.png')});
+  // Real browser pointer regression: swipe right -> look right (not inverted).
+  const initialCamera=await page.evaluate(()=>window.__rescueHouse.snapshot().camera);
+  await page.mouse.move(700,245);await page.mouse.down();
+  await page.mouse.move(790,245,{steps:6});await page.mouse.up();
+  await page.waitForTimeout(260);
+  const movedCamera=await page.evaluate(()=>window.__rescueHouse.snapshot().camera);
+  assert(movedCamera.yaw>initialCamera.yaw+.06,'Dragging right must rotate camera right, initial='+initialCamera.yaw+', actual='+movedCamera.yaw);
+  await page.waitForTimeout(340);
+  const stoppedCamera=await page.evaluate(()=>window.__rescueHouse.snapshot().camera);
+  assert(Math.abs(stoppedCamera.yaw-movedCamera.yaw)<.014,'Camera must settle after releasing pointer');
   // Development-only movement setup checks the real collision shapes and picking rays.
   // This is not equivalent to physically walking every corridor or Safari verification.
   const use=async id=>await page.evaluate(id=>window.__rescueHouse.interactWith(id),id);

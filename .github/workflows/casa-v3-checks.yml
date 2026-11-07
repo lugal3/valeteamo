@@ -1,0 +1,29 @@
+name: Validar Casa V3 (sin desplegar)
+on:
+  push:
+    branches: [feature/casa-unica-camara-cinematica-v3]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install chromium --with-deps
+      - run: node tests/demo-browser.cjs
+      - run: npm run test:browser
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: valeteamo-casa-v3-capturas
+          path: demo-screenshots/
+          if-no-files-found: ignore
