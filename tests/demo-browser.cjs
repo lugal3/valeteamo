@@ -25,7 +25,8 @@ const {chromium}=require('playwright');
    return {rect:{x:box.x,y:box.y,w:box.width,h:box.height},target:el?.className,style:{z:getComputedStyle(b).zIndex,pointer:getComputedStyle(b).pointerEvents,display:getComputedStyle(b).display,position:getComputedStyle(b).position}};
   }));
   await page.screenshot({path:path.join(folder,'01-portada.png')});
-  await page.getByRole('button',{name:/Presiona cualquier botón para iniciar/}).click();
+  // The title image itself is a click-to-start surface, as it is for the player.
+  await page.mouse.click(480,478);
   await page.getByText('Feliz cumpleaños, Valentina').waitFor();await page.waitForTimeout(1100);
   await page.screenshot({path:path.join(folder,'02-cumpleanos.png')});
   await page.getByRole('button',{name:/Jugar la demo de rescate 2D/}).click();
