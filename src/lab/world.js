@@ -20,10 +20,10 @@ export function createHouse(spawn = 'ground') {
   // Foundation and second-storey slab leave a physical opening for the staircase.
   add('base', 6, -.20, 5, 12.4, .4, 10.4, 'floor');
   for (const y of [HEIGHT]) {
-    add('floor-up-left', 4.25, y - .11, 5, 8.5, .22, 10, 'wood');
-    add('floor-up-right-front', 10.25, y - .11, 2.25, 3.5, .22, 4.5, 'wood');
-    add('floor-up-right-back', 10.25, y - .11, 9.62, 3.5, .22, .76, 'wood');
-    add('floor-up-right-rim', 8.75, y - .11, 7.05, .5, .22, 5.1, 'wood');
+    add('floor-up-left', 4.25, y - .11, 5, 8.5, .22, 10, 'wood',false);
+    add('floor-up-right-front', 10.25, y - .11, 2.25, 3.5, .22, 4.5, 'wood',false);
+    add('floor-up-right-back', 10.25, y - .11, 9.62, 3.5, .22, .76, 'wood',false);
+    add('floor-up-right-rim', 8.75, y - .11, 7.05, .5, .22, 5.1, 'wood',false);
   }
   add('roof', 6, 6.34, 5, 12.4, .23, 10.4, 'plaster');
   for (const level of [0, HEIGHT]) {
