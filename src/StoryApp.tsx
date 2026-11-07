@@ -41,6 +41,7 @@ export function StoryApp({ClassicApp}:{ClassicApp:ComponentType}){
  const answer=progress.answers[chapter.id]??null;
  useEffect(()=>{container.current?.scrollTo({top:0,behavior:'auto'});},[progress.index,screen]);
  useEffect(()=>{audio.current.setTheme(screen==='game'&&chapter.kind==='game'?(chapter.level===3?'final':chapter.level===2?'battle':'garden'):'story');},[progress.index,screen]);
+ useEffect(()=>{if(screen==='rescue'||screen==='tests')audio.current.suspend();},[screen]);
  useEffect(()=>{const visibility=()=>{if(document.hidden)audio.current.suspend();};document.addEventListener('visibilitychange',visibility);const sound=audio.current;return()=>{document.removeEventListener('visibilitychange',visibility);sound.destroy();};},[]);
  const save=(next:StoryProgress)=>{setProgress(next);setSaved(next.started);setStorageOK(writeProgress(next));};
  const next=()=>{save(advance(progress,STORY.length));setScreen('story');};
@@ -52,7 +53,7 @@ export function StoryApp({ClassicApp}:{ClassicApp:ComponentType}){
  const unlockAudio=()=>{if(!progress.muted)tryAudio();};
  const openDemo=(entry:typeof demoEntry,trial:boolean)=>{setDemoEntry(entry);setDemoTrial(trial);nextAfterSplash.current='rescue';setScreen('splash');};
  if(screen==='splash')return <Splash muted={progress.muted} onStart={()=>{unlockAudio();setScreen(nextAfterSplash.current);}}/>;
- if(screen==='rescue')return <RescueDemo key={demoEntry+(demoTrial?'-trial':'-story')} entry={demoEntry} test={demoTrial} onExit={()=>setScreen('cover')}/>;
+ if(screen==='rescue')return <RescueDemo key={demoEntry+(demoTrial?'-trial':'-story')} entry={demoEntry} test={demoTrial} onExit={()=>{setScreen('cover');unlockAudio();}}/>;
  if(screen==='tests')return <section className="rescue-test-menu" aria-label="Menú de pruebas"><div>
   <span>VALETEAMO · SOLO DESARROLLO</span><h1>Pruebas de la demo</h1><p>Estos accesos usan estados aislados; no cambian tu partida normal ni el regalo original.</p>
   <div className="rescue-test-grid">{([
