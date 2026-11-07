@@ -253,20 +253,25 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   root.innerHTML=`<section class="lab-error"><h2>No se pudo abrir la casa 3D</h2><p>${escapeHTML(String(e.message||e))}</p><button data-act="exit">Volver a pruebas</button></section>`;
  }
  function pointerStick(e){if(!active||isPaused()||stickPointer!==null)return;stickPointer=e.pointerId;e.currentTarget.setPointerCapture(e.pointerId);moveStick(e);e.preventDefault();}
- function moveStick(e){if(e.pointerId!==stickPointer)return;
-  const r=$('lab-joystick').getBoundingClientRect(),cx=r.left+r.width*.5,cy=r.top+r.height*.48;
-  const dx=e.clientX-cx,dy=e.clientY-cy,dist=Math.max(1,Math.hypot(dx,dy)),amount=Math.min(1,dist/53);
-  joystick.x=dx/dist*amount;joystick.z=dy/dist*amount;
-  $('lab-stick').style.transform=`translate(${joystick.x*45}px,${joystick.z*45}px)`;
+ function moveStick(e){
+  if(e.pointerId!==stickPointer)return;
+  const r=$('lab-stick').parentElement.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+  const dx=e.clientX-cx,dy=e.clientY-cy,dist=Math.hypot(dx,dy);
+  const radius=Math.max(28,r.width*.45),normalized=Math.min(1,dist/radius),deadzone=.13;
+  const amount=normalized<=deadzone?0:(normalized-deadzone)/(1-deadzone);
+  const curved=amount*amount*(3-2*amount);
+  joystick.x=dist<.01?0:dx/dist*curved;joystick.z=dist<.01?0:dy/dist*curved;
+  const drawn=Math.min(1,normalized)*r.width*.30;
+  $('lab-stick').style.transform=`translate(${dist<.01?0:dx/dist*drawn}px,${dist<.01?0:dy/dist*drawn}px)`;
   e.preventDefault();
  }
  function endStick(e){if(e.pointerId!==stickPointer)return;stickPointer=null;joystick.x=0;joystick.z=0;$('lab-stick').style.transform='translate(0,0)';}
  function pointerLook(e){if(isPaused()||lookPointer!==null||e.target.closest('button,input,select,summary,.lab-diagnostics'))return;
   lookPointer=e.pointerId;lookLast={x:e.clientX,y:e.clientY};e.currentTarget.setPointerCapture(e.pointerId);e.preventDefault();}
  function moveLook(e){if(e.pointerId!==lookPointer)return;const dx=e.clientX-lookLast.x,dy=e.clientY-lookLast.y;
-  lookLast={x:e.clientX,y:e.clientY};const old=s.yaw;s.yaw-=dx*.0045*options.sensitivity;
+  lookLast={x:e.clientX,y:e.clientY};const old=s.yaw;s.yaw-=dx*.0038*options.sensitivity;
   if(s.hidden)s.yaw=clamp(s.yaw,s.hidden.yaw-.7,s.hidden.yaw+.7);
-  s.pitch=clamp(s.pitch-dy*.0045*options.sensitivity,-1.15,1.15);e.preventDefault();}
+  s.pitch=clamp(s.pitch-dy*.0038*options.sensitivity,-1.15,1.15);e.preventDefault();}
  function endLook(e){if(e.pointerId===lookPointer)lookPointer=null;}
  const stick=$('lab-joystick'),look=$('lab-look');
  if(stick&&look){
@@ -298,7 +303,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(e.key==='i'||e.key==='I')runAction('bag');
  },{signal});
  window.addEventListener('keyup',e=>keys.delete(e.key),{signal});
- window.addEventListener('blur',()=>{hasFocus=false;keys.clear();joystick.x=joystick.z=0;sound.pause();},{signal});
+ window.addEventListener('blur',()=>{hasFocus=false;keys.clear();joystick.x=joystick.z=0;velocity.forward=velocity.side=0;sound.pause();},{signal});
  window.addEventListener('focus',()=>{hasFocus=true;last=performance.now();if(ready&&!isPaused())sound.resume();},{signal});
  document.addEventListener('visibilitychange',()=>{last=performance.now();if(document.hidden)sound.pause();else if(ready&&!isPaused())sound.resume();},{signal});
  window.addEventListener('resize',()=>{last=performance.now();if(isPortrait())sound.pause();else if(ready&&!isPaused())sound.resume();},{signal});
