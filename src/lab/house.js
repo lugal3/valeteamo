@@ -206,6 +206,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   $('lab-floor').textContent=(s.y>1.8?'PLANTA ALTA':'PLANTA BAJA')+' · '+ctxRoom(s).toUpperCase();
   $('lab-compass').textContent=(Math.abs(Math.sin(s.yaw))>Math.abs(Math.cos(s.yaw))?(Math.sin(s.yaw)>0?'E':'O'):(Math.cos(s.yaw)>0?'S':'N'))+' ↑';
   $('lab-objective').textContent=demo?(puzzle.rescued?'♥ ¡Louis está a salvo!':!puzzle.note?'✉ Busca la nota del pasillo':!puzzle.key?'⚿ Abre el cajón del estudio y recoge la llave':!puzzle.symbol?'♡ Examina el cuadro del salón':!puzzle.door?'🚪 Sube y abre el dormitorio':'♡ Encuentra a Louis dentro del dormitorio'):'Explora libremente · E interactuar';
+  if(getStairDirection(s)==='Escaleras')$('lab-objective').textContent+=' · ↑↓ Escaleras';
   $('lab-charge').style.width=s.battery+'%';$('lab-charge-text').textContent=Math.ceil(s.battery)+'%';
   const interactButton=$('lab-interact');interactButton.hidden=!target&&!s.hidden&&!s.lying;
   interactButton.querySelector('small').textContent=s.hidden||s.lying?'Salir':!target?'Usar':target.kind==='door'?(target.open?'Cerrar puerta':'Abrir puerta'):target.kind==='key'?'Recoger llave':target.kind==='note'?'Leer nota':target.kind==='drawer'?(target.open?'Cerrar cajón':'Abrir cajón'):target.kind==='rescue'?'Rescatar':'Examinar';
