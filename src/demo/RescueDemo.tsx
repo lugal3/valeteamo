@@ -99,7 +99,7 @@ export function RescueDemo({onExit,entry='garden',test=false}:{onExit:()=>void,e
       if(p==='heart'&&!this.abducting){
        this.abducting=true;this.shadow.setVisible(true);
        this.tweens.add({targets:this.shadow,x:this.louis.x,duration:1150,onComplete:()=>{
-        this.tweens.add({targets:[this.shadow,this.louis],alpha:0,scale:.15,duration:850,onComplete:()=>{this.shadow.setVisible(false);this.louis.setVisible(false);emit('abduction');}});
+        this.tweens.add({targets:[this.shadow,this.louis],alpha:0,scale:.15,duration:850,onComplete:()=>{this.shadow.setVisible(false);this.louis.setVisible(false);this.abducting=false;emit('abduction');}});
        }});
       }
       this.heart.setVisible(p==='garden');
@@ -111,7 +111,7 @@ export function RescueDemo({onExit,entry='garden',test=false}:{onExit:()=>void,e
       if(p==='trail'&&Engine.Math.Distance.Between(this.kitty.x,this.kitty.y,842,312)<105)prompt='Abrir puerta';
       if(prompt!==this.lastNear){this.lastNear=prompt;setNear(prompt);}
       actionRef.current=()=>{
-       if(!this.lastNear||this.abducting)return;
+       if(!this.lastNear||(p==='heart'&&this.abducting))return;
        if(p==='garden')emit('heart');
        if(p==='abduction')emit('trail');
        if(p==='trail')setMode('threshold');
