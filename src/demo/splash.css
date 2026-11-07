@@ -24,3 +24,9 @@
 /* Decorative layers must never capture PLAY hit-testing. */
 .splash-backdrop,.splash-frame img,.splash-fallback,.splash-particles,.splash-water{pointer-events:none!important}
 .splash-start{z-index:100!important}
+
+/* Anchor artwork to the viewport rather than CSS-grid implicit rows. */
+.splash-frame{display:block}
+.splash-frame img{position:absolute;inset:0;object-fit:cover}
+.splash-fallback{position:absolute;inset:0}
+@media(orientation:portrait){.splash-frame img{object-fit:contain}}
