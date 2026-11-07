@@ -34,8 +34,8 @@ export function Splash({onStart,muted}:{onStart:()=>void,muted:boolean}){
     {Array.from({length:22},(_,i)=><span key={i} className="splash-particle" style={{left:`${6+(i*47)%88}%`,top:`${10+(i*31)%78}%`,animationDelay:`${-(i*0.63)%8}s`,animationDuration:`${4.5+(i%5)*1.2}s`}}>{i%3===0?'✦':i%3===1?'✿':'·'}</span>)}
    </div>
    <span className="splash-water" aria-hidden="true"/>
-   <button className="splash-start" aria-label="Presiona cualquier botón para iniciar" onClick={e=>{e.stopPropagation();start();}}><span className="splash-hidden">Presiona cualquier botón para iniciar</span></button>
   </div>
+  <button className="splash-start" aria-label="Presiona cualquier botón para iniciar" onClick={e=>{e.stopPropagation();start();}}><span className="splash-hidden">Presiona cualquier botón para iniciar</span></button>
   <span className="splash-audio-hint">{muted?'Sonido desactivado':'Toca PLAY para comenzar ♡'}</span>
  </main>;
 }
