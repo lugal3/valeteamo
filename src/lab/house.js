@@ -275,7 +275,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(s.flashlight&&!demo){s.battery=Math.max(0,s.battery-dt*.72);if(!s.battery){s.flashlight=false;play('light');say('La linterna se ha apagado. Necesitas una pila.');}}
   if(performance.now()>toastUntil)$('lab-toast').textContent='';
  }
- let statsAt=performance.now(),frameCount=0;
+ let statsAt=performance.now(),frameCount=0,slowSeconds=0;
  function frame(now){
   if(!active)return;raf=requestAnimationFrame(frame);
   const limit=options.quality==='low'?1000/30:1000/60;
@@ -291,7 +291,20 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(progress>=1)finishWindowIntro();
   }else{tick(dt);elapsed+=isPaused()?0:dt;}
   try{renderer.render(view,torch,elapsed,hand);}catch(e){contextLost=true;showModal('Error de renderizado',`<p>${escapeHTML(String(e.message||e))}</p>`,[['Volver a pruebas','exit']]);}
-  frameCount++;if(now-statsAt>1000){fps=Math.round(frameCount*1000/(now-statsAt));frameCount=0;statsAt=now;}
+  frameCount++;
+  if(now-statsAt>1000){
+   fps=Math.round(frameCount*1000/(now-statsAt));
+   frameCount=0;statsAt=now;
+   // One-way adaptive budget; avoid quality oscillations on slower mobile GPUs.
+   if(ready&&!cinematic&&!isPaused()&&options.quality==='medium'){
+    slowSeconds=fps<37?slowSeconds+1:0;
+    if(slowSeconds>=3){
+     options.quality='low';renderer.quality='low';
+     $('lab-diagnostics').querySelector('[data-setting="quality"]').value='low';
+     say('Modo fluido activado para tu dispositivo',2.6);
+    }
+   }
+  }
   updateControls();
  }
  try{renderer=new HouseRenderer(canvas,options.quality);reset();}catch(e){
