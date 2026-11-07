@@ -20,7 +20,7 @@ npm run build
 
 Abre el enlace local de Vite. Aparece la portada común *VALETEAMO*; un clic, toque o tecla válida lleva a la interfaz original de **Feliz cumpleaños**. Pulsa **Jugar la demo de rescate 2D → 3D** para iniciar. La aventura clásica y todos los capítulos antiguos permanecen disponibles.
 
-> **Imagen de portada:** el componente ya tiene la ruta `public/demo-assets/005-portada-valeteamo.jpeg`. Aún debe copiarse el JPEG del catálogo 005 allí; mientras tanto se muestra una portada ilustrativa temporal sin bloquear el inicio. Las demás 18 imágenes siguen pendientes de adaptar. Ver [RECURSOS-DEMO.md](RECURSOS-DEMO.md).
+> **Imagen de portada:** el componente ya carga el WebP optimizado `public/demo-assets/005-portada-valeteamo.webp`. Se conservaron también el JPEG de portada y los 19 JPEG originales, además de 19 WebP de referencia. Los recursos secundarios aún necesitan preparación manual como sprites animados o texturas. Ver [RECURSOS-DEMO.md](RECURSOS-DEMO.md).
 
 ## Recorrido corto
 
@@ -46,7 +46,7 @@ El progreso de la demo usa `valeteamo-rescue-v2` en localStorage, independiente 
 - `npm run build`: valida TypeScript y empaqueta Vite.
 - CI de esta rama: **sin Firebase**; el pipeline de Hosting de `main` no se ejecuta por estos commits.
 - Pendiente de verificación con navegador real: interacción táctil simultánea, recarga, cambio de orientación, ciclo de pausa, audio real y recorridos con todos los muebles. Los tests de Node no prueban renderizado visual ni Safari.
-- Pendiente artístico: los 19 JPEG no se han transferido a GitHub, no son hojas de sprites listas para usar; el 2D provisional reutiliza las hojas ya presentes y la casa usa materiales simples existentes.
+- Pendiente artístico: los 19 JPEG y sus versiones WebP **sí están subidos a GitHub**, pero no son hojas de sprites listas para usar; el 2D provisional reutiliza las hojas ya presentes y la casa usa materiales simples existentes.
 - La salida 3D y la vuelta a la portada detienen el bucle y liberan el renderizador; no se inicia la pantalla de bienvenida del 3D de nuevo durante el cambio natural de modo, aunque sí aparece su mensaje contextual de entrada.
 
 ## Referencia de la interfaz
