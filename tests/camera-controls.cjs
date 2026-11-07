@@ -4,8 +4,10 @@ const assert=require('node:assert/strict');
  const original={yaw:1,pitch:0};
  assert(applyLookDelta(original,80,0,1,false).yaw>original.yaw,'Drag right must turn right');
  assert(applyLookDelta(original,80,0,1,true).yaw<original.yaw,'Invert must reverse horizontal direction');
- assert(applyLookDelta(original,0,10000).pitch===-MAX_PITCH);
- assert(applyLookDelta(original,0,-10000).pitch===MAX_PITCH);
+ let down={...original},up={...original};
+ for(let i=0;i<10;i++){down=applyLookDelta(down,0,100);up=applyLookDelta(up,0,-100);}
+ assert.equal(down.pitch,-MAX_PITCH,'Downward repeated swipes clamp to floor');
+ assert.equal(up.pitch,MAX_PITCH,'Upward repeated swipes clamp to ceiling');
  const target=applyLookDelta(original,70,-35,.8);
  let at30={...original},at60={...original};
  for(let i=0;i<30;i++)at30=followLook(at30,target,1/30);
