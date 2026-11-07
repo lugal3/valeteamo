@@ -20,3 +20,10 @@ jobs:
       - run: npx playwright install chromium --with-deps
       - run: node tests/demo-browser.cjs
       - run: npm run test:browser
+      - name: Guardar capturas de portada, casa y rescate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: valeteamo-v2-visual
+          path: demo-screenshots/
+          if-no-files-found: ignore
