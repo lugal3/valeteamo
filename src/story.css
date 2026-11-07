@@ -28,3 +28,28 @@
 .adventure-audio-notice{position:absolute;z-index:3;left:50%;top:calc(max(8px,env(safe-area-inset-top)) + 48px);transform:translateX(-50%);max-width:80vw;background:#fff8ebed;border:1px solid #d8c8b7;border-radius:8px;padding:7px 10px;color:#80616c;text-align:center;font:11px/1.4 system-ui;pointer-events:none}
 .audio-warning{position:fixed;z-index:20;top:calc(82px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:max-content;max-width:90vw;padding:8px 12px;background:#fff2e9ed;border:1px solid #d8b6b0;border-radius:8px;color:#805e68;text-align:center;font:11px/1.4 system-ui;pointer-events:none}
 .adventure-boss{left:max(10px,env(safe-area-inset-left));transform:none;width:min(190px,27vw);text-align:left}
+
+/* A gentle layer of life, kept away from interaction and readable content. */
+.story-atmosphere{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;color:#c791a2}
+.story-atmosphere span{position:absolute;top:-8%;font-size:16px;opacity:0;animation:garden-drift 18s linear infinite}
+.story-atmosphere span:nth-child(1){left:5%;animation-delay:-2s}.story-atmosphere span:nth-child(2){left:20%;animation-delay:-12s;font-size:11px}.story-atmosphere span:nth-child(3){left:34%;animation-delay:-6s}.story-atmosphere span:nth-child(4){left:50%;animation-delay:-16s;font-size:12px}.story-atmosphere span:nth-child(5){left:64%;animation-delay:-9s}.story-atmosphere span:nth-child(6){left:78%;animation-delay:-3s}.story-atmosphere span:nth-child(7){left:89%;animation-delay:-14s;font-size:12px}.story-atmosphere span:nth-child(8){left:96%;animation-delay:-7s}
+.story-nav,.story-cover,.story-page{position:relative;z-index:1}
+.story-app button,.adventure-wrap button{cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,background-color .18s ease,border-color .18s ease,filter .18s ease}
+.story-app button:active,.adventure-wrap button:active{transform:translateY(2px) scale(.97);filter:brightness(.96)}
+.story-button:active{box-shadow:0 1px 0 #6e4053}
+@media(hover:hover){.story-app button:hover,.adventure-wrap button:hover{filter:brightness(1.05)}.story-button:hover{transform:translateY(-2px);box-shadow:0 6px 0 #6e4053,0 10px 20px #92566d30}.story-character:hover,.answer-list button:hover{transform:translateY(-2px);border-color:#b87f90}.art-card:hover{transform:rotate(0deg) scale(1.015)}}
+.story-character.selected{animation:choice-pop .38s ease both}.story-character.selected b{animation:heart-beat 2.7s ease-in-out infinite}
+.cover-copy>*{animation:soft-entrance .7s both}.cover-copy>:nth-child(2){animation-delay:.08s}.cover-copy>:nth-child(3){animation-delay:.16s}.cover-copy>:nth-child(4){animation-delay:.24s}.cover-copy>:nth-child(5){animation-delay:.32s}.cover-copy>:nth-child(6){animation-delay:.4s}.cover-copy>:nth-child(7){animation-delay:.48s}
+.cover-art{animation:soft-entrance .9s .16s both}.art-card{transition:transform .45s ease,box-shadow .45s ease}.art-avatar,.postcard-avatar{animation:avatar-breathe 3.4s ease-in-out infinite;transform-origin:center bottom}.art-sun{animation:sun-turn 26s linear infinite}.art-star,.art-flower{animation:star-glow 3.2s ease-in-out infinite alternate}.art-star.b,.art-flower.f2{animation-delay:-1.4s}.art-flower.f3{animation-delay:-2.2s}
+.chapter-copy{animation:soft-entrance .6s both}.chapter-visual{animation:soft-entrance .8s .1s both}.chapter-progress i{transition:width .6s cubic-bezier(.2,.8,.2,1)}.photo-frame,.game-postcard,.question-art,.letter-art{transition:box-shadow .3s ease}.answer-list button.chosen{animation:choice-pop .35s ease both}.photo-placeholder span,.question-art>span,.letter-art>span{animation:heart-beat 3s ease-in-out infinite}
+.adventure-overlay,.item-backdrop,.fullscreen-help-backdrop{animation:overlay-in .2s ease both}.item-card,.fullscreen-help{animation:soft-entrance .3s ease both}.pixel-flower{animation:heart-beat 1.7s ease-in-out infinite}.adventure-shield{animation:star-glow 1.8s ease-in-out infinite alternate}.adventure-bomb{animation:bomb-glow 2.2s ease-in-out infinite}
+@keyframes soft-entrance{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes choice-pop{0%{transform:scale(.97)}65%{transform:scale(1.025)}100%{transform:scale(1)}}
+@keyframes heart-beat{0%,75%,100%{transform:scale(1)}80%{transform:scale(1.12)}86%{transform:scale(1)}92%{transform:scale(1.07)}}
+@keyframes avatar-breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes star-glow{from{opacity:.6}to{opacity:1}}
+@keyframes sun-turn{to{transform:rotate(360deg)}}
+@keyframes garden-drift{0%{opacity:0;transform:translate3d(0,-10px,0) rotate(0)}10%,85%{opacity:.32}100%{opacity:0;transform:translate3d(30px,105vh,0) rotate(90deg)}}
+@keyframes overlay-in{from{opacity:0}to{opacity:1}}
+@keyframes bomb-glow{0%,100%{box-shadow:0 3px 0 #a87483}50%{box-shadow:0 3px 0 #a87483,0 0 18px #ffe7a380}}
+@media(prefers-reduced-motion:reduce){.story-app *,.story-app *:before,.story-app *:after,.adventure-wrap *,.adventure-wrap *:before,.adventure-wrap *:after{animation:none!important;transition:none!important}.story-atmosphere{display:none}}

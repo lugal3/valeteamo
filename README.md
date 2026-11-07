@@ -30,6 +30,10 @@ El botón ⛶ activa la pantalla completa cuando el navegador lo permite. Safari
 
 El avance por capítulo, las respuestas elegidas, el personaje y el sonido se guardan localmente en ese navegador. Una recarga durante un desafío lo reinicia desde el principio. El guardado no se sincroniza entre dispositivos y puede perderse al borrar datos del navegador; si el almacenamiento no está disponible se muestra un aviso. No se suben respuestas a un servidor.
 
+La portada y los capítulos tienen entradas animadas y detalles ambientales; los botones ofrecen respuesta visual y sonora. El sonido se desactiva con el mismo control de la música, y se respeta la preferencia de movimiento reducido del dispositivo.
+
+El cómic de regalo [«jaja uno XD»](docs/comics/README.md) reúne a Kitty y Louis preparando una sorpresa de cumpleaños.
+
 ## Edición de contenidos y sprites
 
 - [HISTORIA.md](HISTORIA.md): pasos exactos para fotos, texto, preguntas, carta, privacidad, guardado, sprites chibi y preparación de Firebase.

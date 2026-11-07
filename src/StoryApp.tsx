@@ -41,7 +41,8 @@ export function StoryApp({ClassicApp}:{ClassicApp:ComponentType}){
  const unlockAudio=()=>{if(!progress.muted)tryAudio();};
  if(screen==='classic')return <><ClassicApp/><button className="classic-return" onClick={()=>{unlockAudio();setScreen('cover');}}>← Volver a la historia</button></>;
  if(screen==='game'&&chapter.kind==='game')return <StoryGame level={chapter.level} character={progress.character} muted={progress.muted} audio={audio.current} audioNotice={audioNotice} onUnlockAudio={unlockAudio} onToggleAudio={toggleAudio} onComplete={next} onExit={()=>{unlockAudio();setScreen('story');}}/>;
- return <div className="story-app" ref={container} onPointerDownCapture={unlockAudio}>
+ return <div className="story-app" ref={container} onPointerDownCapture={unlockAudio} onClickCapture={e=>{const button=(e.target as HTMLElement).closest('button');if(button&&!button.disabled&&!button.classList.contains('sound-toggle'))audio.current.ui();}}>
+  <div className="story-atmosphere" aria-hidden="true"><span>✿</span><span>✧</span><span>♡</span><span>✦</span><span>✿</span><span>✧</span><span>♡</span><span>✦</span></div>
   <header className="story-nav"><button className="story-brand" onClick={()=>setScreen('cover')} aria-label="Ir a la portada"><span>✿</span> EL JARDÍN DE LOS DESEOS</button><div><span className="nav-note">UN REGALO PARA VALE</span><button className="sound-toggle" aria-label={progress.muted?'Activar sonido':'Silenciar sonido'} onClick={toggleAudio}>{progress.muted?'♪ Activar sonido':'♪ Sonido activado'}</button><FullscreenControl compact/></div></header>
   {!storageOK&&<div className="storage-warning" role="status">El navegador no permite guardar el avance. Puedes jugar, pero al cerrar la página se perderá.</div>}
   {audioNotice&&<div className="audio-warning" role="status">{audioNotice}</div>}
