@@ -58,7 +58,7 @@ const {chromium}=require('playwright');
   await page.waitForTimeout(320);
   await page.screenshot({path:path.join(folder,'06-entrada-ventana.png')});
   await page.locator('#lab-window-intro [data-act="skip-intro"]').click();
-  await page.locator('#lab-window-intro.lab-hidden').waitFor({timeout:8000});
+  await page.locator('#lab-window-intro').waitFor({state:'hidden',timeout:8000});
   const landed=await page.evaluate(()=>window.__rescueHouse.snapshot().position);
   assert(landed.z<9.6&&landed.z>9.2,'Window intro leaves player safely inside: '+JSON.stringify(landed));
   await page.waitForTimeout(320);
