@@ -143,16 +143,29 @@ export class HouseRenderer {
   const stride=13*4,layout=[['aPos',3,0],['aCol',3,3],['aNormal',3,6],['aUV',2,9],['aArt',1,11],['aStyle',1,12]];
   for(const [name,size,start] of layout){const at=this.atrib[name];if(at<0)continue;gl.enableVertexAttribArray(at);gl.vertexAttribPointer(at,size,gl.FLOAT,false,stride,start*4);}
  }
- drawFirstPerson(camera,right,up,forward,time){
-  // Real mesh in camera space, separate depth pass so the torch/paw do not clip into walls.
-  const bob=matchMedia('(prefers-reduced-motion: reduce)').matches?0:Math.sin(time*5)*.009;
+ drawFirstPerson(camera,right,up,forward,time,flash){
+  // Camera-space mitt/paw and real flashlight silhouette. Soft pads, rounded
+  // approximated fingers, cuff, grip switch, reflector and luminous glass.
+  const bob=typeof matchMedia!=='undefined'&&matchMedia('(prefers-reduced-motion: reduce)').matches?0:Math.sin(time*4.4)*.013;
   const pieces=[
-   {id:'sleeve',x:.47,y:-.47+bob,z:.71,w:.3,h:.22,d:.25,mat:'wall2'},
-   {id:'paw',x:.39,y:-.35+bob,z:.82,w:.27,h:.25,d:.28,mat:'cream'},
-   {id:'thumb',x:.22,y:-.32+bob,z:.88,w:.12,h:.16,d:.13,mat:'pink'},
-   {id:'torch',x:.43,y:-.22+bob,z:.83,w:.12,h:.28,d:.14,mat:'brass'},
-   {id:'torch-ring',x:.43,y:-.07+bob,z:.84,w:.17,h:.09,d:.19,mat:'dark'},
-   {id:'torch-light',x:.43,y:-.015+bob,z:.84,w:.12,h:.04,d:.14,mat:'cream'}
+   {id:'sleeve',x:.41,y:-.51+bob,z:.66,w:.37,h:.22,d:.23,mat:'bow'},
+   {id:'cuff',x:.40,y:-.46+bob,z:.71,w:.36,h:.13,d:.25,mat:'glove'},
+   {id:'paw-palm',x:.38,y:-.37+bob,z:.79,w:.39,h:.27,d:.34,mat:'glove'},
+   {id:'paw-finger-l',x:.235,y:-.255+bob,z:.80,w:.14,h:.18,d:.22,mat:'glove'},
+   {id:'paw-finger-m',x:.37,y:-.225+bob,z:.82,w:.15,h:.20,d:.24,mat:'glove'},
+   {id:'paw-finger-r',x:.51,y:-.265+bob,z:.80,w:.14,h:.18,d:.22,mat:'glove'},
+   {id:'paw-thumb',x:.19,y:-.38+bob,z:.88,w:.17,h:.18,d:.22,mat:'glove'},
+   {id:'pad-main',x:.365,y:-.38+bob,z:.598,w:.18,h:.11,d:.019,mat:'pawpad'},
+   {id:'pad-l',x:.25,y:-.282+bob,z:.683,w:.077,h:.062,d:.02,mat:'pawpad'},
+   {id:'pad-m',x:.375,y:-.267+bob,z:.682,w:.075,h:.062,d:.02,mat:'pawpad'},
+   {id:'pad-r',x:.50,y:-.283+bob,z:.685,w:.077,h:.062,d:.02,mat:'pawpad'},
+   {id:'torch-body',x:.54,y:-.31+bob,z:.94,w:.20,h:.21,d:.48,mat:'torchmetal'},
+   {id:'torch-grip',x:.54,y:-.31+bob,z:.86,w:.23,h:.23,d:.17,mat:'dark'},
+   {id:'torch-switch',x:.54,y:-.18+bob,z:.85,w:.10,h:.045,d:.11,mat:'bow'},
+   {id:'torch-neck',x:.54,y:-.31+bob,z:1.18,w:.24,h:.24,d:.11,mat:'brass'},
+   {id:'torch-reflector',x:.54,y:-.31+bob,z:1.255,w:.31,h:.31,d:.06,mat:'dark'},
+   {id:'torch-lens-ring',x:.54,y:-.31+bob,z:1.289,w:.27,h:.27,d:.045,mat:'brass'},
+   {id:'torch-lens',x:.54,y:-.31+bob,z:1.317,w:.225,h:.225,d:.030,mat:flash?'torchglass':'glass'}
   ];
   const {vertices,indices}=geometry(pieces);
   for(let i=0;i<vertices.length;i+=13){
@@ -189,7 +202,7 @@ export class HouseRenderer {
   gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
   this.bind(this.vbo,this.ibo);
   gl.drawElements(gl.TRIANGLES,this.count,gl.UNSIGNED_SHORT,0);
-  if(showHand)this.drawFirstPerson(camera,right,up,forward,time);
+  if(showHand)this.drawFirstPerson(camera,right,up,forward,time,flash);
  }
  destroy(){const gl=this.gl;gl.deleteTexture(this.texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);gl.deleteProgram(this.program);this.canvas.width=1;this.canvas.height=1;}
 }
