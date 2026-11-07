@@ -1,0 +1,21 @@
+const assert=require('node:assert/strict');
+(async()=>{
+ const w=await import('../src/lab/world.js');
+ const {navigate,PLAYER_RADIUS,smoothAxis,getStairDirection}=await import('../src/lab/navigation.js');
+ const world=w.createHouse('ground');
+ for(const id of ['entrada','salon','estudio','habitación'])w.setDoor(world.objects.find(o=>o.id===id),true);
+ let s={x:9.75,z:9.40,y:0};
+ for(let i=0;i<90;i++)navigate(s,world,0,-.06);
+ assert(s.z<4.55,'Player must reach top of stairs, z='+s.z);
+ assert(Math.abs(s.y-w.HEIGHT)<.02,'Player must arrive on upper floor, y='+s.y);
+ assert(!w.blocked(world.boxes,s.x,s.y,s.z,PLAYER_RADIUS,1.64),'Upper floor reachable');
+ for(let i=0;i<90;i++)navigate(s,world,0,.06);
+ assert(s.z>9.15,'Player must descend stairs, z='+s.z);
+ assert(s.y<.05,'Player must return to lower floor, y='+s.y);
+ let p={x:6.25,y:0,z:6.7};
+ for(let i=0;i<30;i++)navigate(p,world,.07,0);
+ assert(p.x>8.0,'Hallway to staircase should be navigable: '+p.x);
+ assert(smoothAxis(0,1,.016)>0&&smoothAxis(0,1,.016)<1);
+ assert.equal(getStairDirection({x:9.75,z:7,y:1.5}),'Escaleras');
+ console.log('PASS house: passable hallway; stairs up/down; swept collision; smoothing');
+})().catch(e=>{console.error(e);process.exitCode=1});
