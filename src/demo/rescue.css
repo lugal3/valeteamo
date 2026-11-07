@@ -20,3 +20,12 @@
 .rescue-under-house{display:none}
 @media(max-height:430px){.rescue-story{top:13%;font-size:11px;padding:5px 10px}.rescue-stick{height:74px;width:74px;left:14px;bottom:8px}.rescue-help{display:none}.rescue-head button{padding:7px 8px}.rescue-act{bottom:12px}}
 @media(prefers-reduced-motion:reduce){.rescue-demo *{transition:none!important;animation:none!important}}
+
+.rescue-cover-buttons{display:flex;flex-wrap:wrap;gap:9px;margin:15px 0;align-items:center;justify-content:flex-start}
+.rescue-cover-buttons .rescue-new-link{width:auto!important;min-height:45px;font-size:clamp(11px,1.5vw,14px);padding:10px 17px}
+.rescue-test-link{background:transparent;border:1px solid #8e7081;color:#735368;padding:8px 12px;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer}
+.rescue-test-menu{position:fixed;inset:0;z-index:8700;overflow:auto;display:grid;place-items:center;padding:clamp(20px,6vw,60px);background:radial-gradient(circle at top left,#957a88,#38394e);color:#fff3eb;font-family:system-ui,sans-serif}
+.rescue-test-menu>div{max-width:740px;width:100%}.rescue-test-menu span{font-size:11px;letter-spacing:.19em;color:#f5ccda;font-weight:800}.rescue-test-menu h1{font:normal clamp(31px,6vw,58px) Georgia,serif;margin:12px 0}.rescue-test-menu p{line-height:1.5;font-size:15px;color:#ffe2dc}
+.rescue-test-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:20px 0}
+.rescue-test-grid button,.back-to-birthday{border:1px solid #ffdfdaaa;background:#ffffff17;color:#fff2ea;border-radius:12px;padding:15px;text-align:left;font:700 14px system-ui,sans-serif;cursor:pointer}
+.rescue-test-grid button:hover,.back-to-birthday:hover{background:#ffffff35}
