@@ -23,11 +23,11 @@ export class Sound {
  private playStep(){
   if(!this.ctx||this.muted||this.ctx.state!=='running')return;
   const melody=MELODIES[this.theme],index=this.step++%melody.length,note=melody[index];
-  this.tone(note,.28,.035,'triangle');if(index%4===0){this.tone(note/2,.58,.022,'sine');this.tone(note*1.5,.33,.009,'sine');}
+  this.tone(note,.28,.035,'triangle');if(index%4===0){this.tone(note/2,.58,.022,'sine');this.tone(note*1.5,.33,.009,'sine');}else if(index%4===2)this.tone(note*1.25,.24,.007,'sine');
  }
  resume(){try{if(this.ctx?.state==='suspended')void this.ctx.resume().catch(()=>{});}catch{}}
  suspend(){try{if(this.ctx?.state==='running')void this.ctx.suspend().catch(()=>{});}catch{}}
- tone(f=440,d=.1,v=.05,type:OscillatorType='sine'){try{if(!this.ctx||this.muted||this.ctx.state!=='running')return;const o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(v,this.ctx.currentTime);g.gain.exponentialRampToValueAtTime(.001,this.ctx.currentTime+d);o.connect(g);g.connect(this.ctx.destination);o.start();o.stop(this.ctx.currentTime+d);}catch{}}
+ tone(f=440,d=.1,v=.05,type:OscillatorType='sine'){try{if(!this.ctx||this.muted||this.ctx.state!=='running')return;const o=this.ctx.createOscillator(),g=this.ctx.createGain(),start=this.ctx.currentTime;o.type=type;o.frequency.value=f;g.gain.setValueAtTime(.001,start);g.gain.linearRampToValueAtTime(v,start+Math.min(.012,d/4));g.gain.exponentialRampToValueAtTime(.001,start+d);o.connect(g);g.connect(this.ctx.destination);o.start();o.stop(start+d);}catch{}}
  hit(){const now=this.ctx?.currentTime??0;if(now-this.lastHit<.06)return;this.lastHit=now;this.tone(520,.08,.026,'triangle');this.tone(780,.06,.015);}
  ui(){this.tone(660,.09,.018,'triangle');this.tone(990,.13,.009,'sine');}
  destroy(){if(this.timer!==undefined)clearInterval(this.timer);this.timer=undefined;const context=this.ctx;this.ctx=undefined;if(context&&context.state!=='closed')void context.close().catch(()=>{});}

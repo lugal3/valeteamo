@@ -39,7 +39,7 @@ Referencia: hoja nueva de Louis (`louis-reference-sheet.png`).
 
 ### Cómic «jaja uno XD»
 
-Archivo: `docs/comics/jaja uno XD.png`. Generado con la herramienta integrada de imágenes, utilizando las hojas de Kitty y Louis como referencias de personaje y estilo.
+Archivo: `public/comics/jaja-uno-xd.png`. Generado con la herramienta integrada de imágenes, utilizando las hojas de Kitty y Louis como referencias de personaje y estilo.
 
 ```text
 Use case: illustration-story. Create a polished complete four-panel birthday comic for a Spanish-language pixel-art game, using the provided Kitty and Louis character sheets only as visual style and character references. The four panels read left to right, top to bottom: Kitty finds a glowing invitation in a flower garden; Kitty and Louis prepare a decorated birthday cake together; they follow sparkling lights to a surprise celebration; Kitty and Louis present the cake and gifts beneath a warm sky full of flowers and stars. Chibi proportions, charming crisp pixel-art outlines, pastel pink, cream and green palette, warm joyful mood, consistent characters, distinct panel borders. No speech bubbles, no written text, no logos or watermarks; story must be visually clear. The image will be saved as a comic named 'jaja uno XD' in the game repository.

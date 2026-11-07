@@ -4,6 +4,8 @@ Versión 1.4 · React, TypeScript, Vite y Phaser 3. Una aventura de cumpleaños 
 
 **Las fotografías, preguntas y carta son contenido de muestra.** No contienen recuerdos personales reales. Para reemplazarlos, sigue [HISTORIA.md](HISTORIA.md); los textos de ejemplo se identifican como editables.
 
+Para retomar el proyecto en otro chat, consulta [CONTEXTO-PROYECTO.md](CONTEXTO-PROYECTO.md): reúne las tecnologías, rutas, decisiones y tareas pendientes.
+
 ## Iniciar
 
 ```powershell
@@ -32,7 +34,7 @@ El avance por capítulo, las respuestas elegidas, el personaje y el sonido se gu
 
 La portada y los capítulos tienen entradas animadas y detalles ambientales; los botones ofrecen respuesta visual y sonora. El sonido se desactiva con el mismo control de la música, y se respeta la preferencia de movimiento reducido del dispositivo.
 
-El cómic de regalo [«jaja uno XD»](docs/comics/README.md) reúne a Kitty y Louis preparando una sorpresa de cumpleaños.
+El cómic de regalo [«jaja uno XD»](docs/comics/README.md) reúne a Kitty y Louis preparando una sorpresa de cumpleaños. Se abre también desde la carta final de la historia.
 
 ## Edición de contenidos y sprites
 

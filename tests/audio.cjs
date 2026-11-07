@@ -5,7 +5,7 @@ class AudioContextMock{
  constructor(){this.state='suspended';this.currentTime=1;created++;}
  resume(){this.state='running';return Promise.resolve();}suspend(){this.state='suspended';return Promise.resolve();}close(){this.state='closed';return Promise.resolve();}
  createOscillator(){notes++;return {type:'',frequency:{value:0},connect(){},start(){},stop(){}};}
- createGain(){return {gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){}};}
+ createGain(){return {gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){}};}
 }
 const code=ts.transpileModule(fs.readFileSync('src/audio.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 const ctx={exports:{},window:{AudioContext:AudioContextMock,setInterval(fn){ticks.push(fn);return ticks.length;}},clearInterval:id=>cleared.push(id),Promise};vm.runInNewContext(code,ctx);
