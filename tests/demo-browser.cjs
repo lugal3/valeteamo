@@ -15,6 +15,10 @@ const {chromium}=require('playwright');
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.stack||e.message));
   await page.goto(url);
   await page.getByRole('button',{name:/Presiona cualquier botón para iniciar/}).waitFor({timeout:15000});
+  await page.waitForFunction(()=>{const image=document.querySelector('.splash-frame img');return image?.complete&&image.naturalWidth>=1200&&image.currentSrc.includes('005-portada-valeteamo.webp');});
+  const assets=await page.evaluate(async()=>Promise.all(['001','005','014','019'].map(async id=>{const r=await fetch('/demo-assets/referencias/'+id+'.webp');return [id,r.status,r.headers.get('content-type')]})));
+  for(const [id,status,mime] of assets){assert.equal(status,200,'Missing image '+id);assert(/image\/webp/.test(mime),'Incorrect MIME for '+id);}
+
   await page.screenshot({path:path.join(folder,'01-portada.png')});
   await page.getByRole('button',{name:/Presiona cualquier botón para iniciar/}).click();
   await page.getByText('Feliz cumpleaños, Valentina').waitFor();await page.waitForTimeout(1100);
