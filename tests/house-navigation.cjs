@@ -12,6 +12,17 @@ const assert=require('node:assert/strict');
  for(let i=0;i<90;i++)navigate(s,world,0,.06);
  assert(s.z>9.15,'Player must descend stairs, z='+s.z);
  assert(s.y<.05,'Player must return to lower floor, y='+s.y);
+ const entrances=[
+  {name:'estudio',x:5.1,z:6.42,y:0,dx:-.06,steps:35,minX:3.9},
+  {name:'salon',x:6.65,z:2.48,y:0,dx:.06,steps:36,maxX:8.0},
+  {name:'dormitorio',x:5.25,z:2.52,y:w.HEIGHT,dx:-.05,steps:32,minX:4.4}
+ ];
+ for(const item of entrances){
+  const player={x:item.x,y:item.y,z:item.z};
+  for(let step=0;step<item.steps;step++)navigate(player,world,item.dx,0);
+  if(item.minX!==undefined)assert(player.x<item.minX,item.name+' doorway blocked x='+player.x);
+  if(item.maxX!==undefined)assert(player.x>item.maxX,item.name+' doorway blocked x='+player.x);
+ }
  let p={x:6.25,y:0,z:6.7};
  for(let i=0;i<30;i++)navigate(p,world,.07,0);
  assert(p.x>8.0,'Hallway to staircase should be navigable: '+p.x);
