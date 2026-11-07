@@ -66,3 +66,37 @@
 #lab3d #lab-interact{min-width:116px;min-height:60px;aspect-ratio:auto;gap:3px;grid-column:1/-1;border-color:#ffe5ca;background:#9b5873ef}
 #lab3d #lab-interact small{font-size:11px;letter-spacing:.01em}
 #lab3d .lab-paw.lab-hidden,#lab3d .lab-diagnostics.lab-hidden{display:none!important}
+
+/* VALETEAMO v2: lean touch-first exploration HUD. */
+#lab3d .lab-vignette{box-shadow:inset 0 0 100px 15px #160b2560}
+#lab3d .lab-top{gap:8px;padding-inline:max(10px,env(safe-area-inset-left));background:linear-gradient(180deg,#1e192ce8,#1e192c10)}
+#lab3d .lab-title b{font-size:clamp(10px,1.8vw,15px);letter-spacing:.10em}
+#lab3d .lab-title small{font-size:clamp(8px,1.2vw,11px);letter-spacing:.08em}
+#lab3d .lab-compass{position:absolute;top:max(64px,calc(env(safe-area-inset-top) + 50px));right:max(20px,env(safe-area-inset-right));color:#f8ddc1;background:#403145a8;border:1px solid #f6c3d784;border-radius:50%;width:38px;height:38px;display:grid;place-items:center;font:bold 14px Georgia;z-index:6;pointer-events:none}
+#lab3d .lab-objective{position:absolute;z-index:7;top:max(66px,calc(env(safe-area-inset-top) + 50px));left:50%;transform:translateX(-50%);width:max-content;max-width:min(68vw,490px);padding:9px 18px;border:1px solid #ffd8ce8b;border-radius:18px;background:linear-gradient(110deg,#362b48e0,#66516acd);box-shadow:0 4px 18px #140c246e;backdrop-filter:blur(7px);color:#fff3e6;font:700 clamp(11px,1.5vw,14px)/1.3 system-ui;text-align:center;pointer-events:none}
+#lab3d .lab-cross{top:48%;width:15px;height:15px;border:1.5px solid #f9cbd9;border-radius:50%;color:transparent;opacity:.77;box-shadow:0 0 7px #fff6}
+#lab3d .lab-focus{top:53%;border:1px solid #f9d3e27b;border-radius:12px;background:#231b30ba;padding:7px 13px;min-width:80px;max-width:65vw;min-height:0;font-size:clamp(11px,1.5vw,14px);text-shadow:none}
+#lab3d .lab-focus:empty{display:none}
+#lab3d .lab-toast{top:28%;max-width:min(75vw,460px);padding:9px 16px;border:1px solid #f6cfdd82;border-radius:14px;background:#35263deb;box-shadow:0 4px 15px #211528aa}
+#lab3d .lab-toast:empty{display:none}
+#lab3d .lab-joystick{width:clamp(108px,20vw,164px);height:clamp(104px,26vh,150px);left:max(12px,env(safe-area-inset-left));bottom:max(5px,env(safe-area-inset-bottom));gap:6px;opacity:.97}
+#lab3d .lab-stick-ring{width:clamp(82px,18vh,112px);height:clamp(82px,18vh,112px);border:3px solid #ffdbedda;background:radial-gradient(circle,#ffdfeb22,#51334b98);box-shadow:0 4px 22px #0b051d78,inset 0 2px 18px #ffdedc1d}
+#lab3d .lab-stick-thumb{width:50%;height:50%;background:linear-gradient(160deg,#ffd6e9,#b8759d);border:3px solid #fff1e7;box-shadow:0 3px 11px #23132a7a;color:#602a54;font:bold 19px Georgia;will-change:transform;transition:transform 35ms linear}
+#lab3d .lab-joystick>span{font-size:10px;letter-spacing:.14em}
+#lab3d .lab-buttons{right:max(12px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));gap:7px;grid-template-columns:repeat(2,clamp(63px,10vw,81px))}
+#lab3d .lab-buttons button{border-radius:18px;background:#432e4bc9;border:2px solid #f9d4e4b0;min-height:52px;box-shadow:0 4px 13px #150c26a6;font-size:23px}
+#lab3d .lab-buttons button:active{transform:scale(.94);background:#a56b91}
+#lab3d #lab-interact{grid-column:1/-1;min-height:59px;min-width:unset;background:linear-gradient(135deg,#ad7194,#84517c);border-color:#ffe0dd;flex-direction:row;gap:9px;font-size:21px}
+#lab3d #lab-interact small{font:750 12px system-ui;letter-spacing:0}
+#lab3d .lab-buttons small{font-size:10px}
+#lab3d .lab-power{display:none}
+@media(max-height:430px){
+ #lab3d .lab-objective{top:40px;max-width:56vw;padding:5px 9px;font-size:10px}
+ #lab3d .lab-compass{top:42px;width:27px;height:27px;font-size:11px}
+ #lab3d .lab-buttons{grid-template-columns:repeat(2,57px);gap:5px}
+ #lab3d .lab-buttons button{min-height:39px;font-size:18px;border-radius:12px}
+ #lab3d #lab-interact{min-height:45px}
+ #lab3d .lab-joystick{height:91px;width:95px}
+ #lab3d .lab-stick-ring{width:76px;height:76px}
+}
+@media(prefers-reduced-motion:reduce){#lab3d .lab-stick-thumb{transition:none}}
