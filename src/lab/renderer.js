@@ -125,6 +125,7 @@ export class HouseRenderer {
   if(!gl)throw Error('El navegador no permite WebGL. Activa aceleración gráfica o prueba otro navegador.');
   this.gl=gl;this.program=program(gl);this.texture=createAtlas(gl);
   this.vbo=gl.createBuffer();this.ibo=gl.createBuffer();this.count=0;
+  this.handVbo=gl.createBuffer();this.handIbo=gl.createBuffer();
   this.atrib={};for(const key of ['aPos','aCol','aNormal','aUV','aArt','aStyle'])this.atrib[key]=gl.getAttribLocation(this.program,key);
   this.uniform={};for(const key of ['uEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime'])this.uniform[key]=gl.getUniformLocation(this.program,key);
   gl.useProgram(this.program);gl.enable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.clearColor(.14,.11,.19,1);
@@ -135,8 +136,39 @@ export class HouseRenderer {
   if(vertices.length/13>65530)throw Error('Demasiada geometría para WebGL1');
   gl.bindBuffer(gl.ARRAY_BUFFER,this.vbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.ibo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
+  this.bind(this.vbo,this.ibo);
+ }
+ bind(vertexBuffer,indexBuffer){
+  const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indexBuffer);
   const stride=13*4,layout=[['aPos',3,0],['aCol',3,3],['aNormal',3,6],['aUV',2,9],['aArt',1,11],['aStyle',1,12]];
   for(const [name,size,start] of layout){const at=this.atrib[name];if(at<0)continue;gl.enableVertexAttribArray(at);gl.vertexAttribPointer(at,size,gl.FLOAT,false,stride,start*4);}
+ }
+ drawFirstPerson(camera,right,up,forward,time){
+  // Real mesh in camera space, separate depth pass so the torch/paw do not clip into walls.
+  const bob=matchMedia('(prefers-reduced-motion: reduce)').matches?0:Math.sin(time*5)*.009;
+  const pieces=[
+   {id:'sleeve',x:.47,y:-.47+bob,z:.71,w:.3,h:.22,d:.25,mat:'wall2'},
+   {id:'paw',x:.39,y:-.35+bob,z:.82,w:.27,h:.25,d:.28,mat:'cream'},
+   {id:'thumb',x:.22,y:-.32+bob,z:.88,w:.12,h:.16,d:.13,mat:'pink'},
+   {id:'torch',x:.43,y:-.22+bob,z:.83,w:.12,h:.28,d:.14,mat:'brass'},
+   {id:'torch-ring',x:.43,y:-.07+bob,z:.84,w:.17,h:.09,d:.19,mat:'dark'},
+   {id:'torch-light',x:.43,y:-.015+bob,z:.84,w:.12,h:.04,d:.14,mat:'cream'}
+  ];
+  const {vertices,indices}=geometry(pieces);
+  for(let i=0;i<vertices.length;i+=13){
+   const x=vertices[i],y=vertices[i+1],z=vertices[i+2];
+   vertices[i]=camera.x+x*right[0]+y*up[0]+z*forward[0];
+   vertices[i+1]=camera.y+x*right[1]+y*up[1]+z*forward[1];
+   vertices[i+2]=camera.z+x*right[2]+y*up[2]+z*forward[2];
+   const nx=vertices[i+6],ny=vertices[i+7],nz=vertices[i+8];
+   vertices[i+6]=nx*right[0]+ny*up[0]+nz*forward[0];
+   vertices[i+7]=nx*right[1]+ny*up[1]+nz*forward[1];
+   vertices[i+8]=nx*right[2]+ny*up[2]+nz*forward[2];
+  }
+  const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,this.handVbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.DYNAMIC_DRAW);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.handIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.DYNAMIC_DRAW);
+  this.bind(this.handVbo,this.handIbo);gl.clear(gl.DEPTH_BUFFER_BIT);
+  gl.drawElements(gl.TRIANGLES,indices.length,gl.UNSIGNED_SHORT,0);
  }
  resize(){
   const scale=this.quality==='low'?.55:.80;
@@ -145,7 +177,7 @@ export class HouseRenderer {
   const h=Math.min(760,Math.max(1,Math.round(this.canvas.clientHeight*dpr)));
   if(w!==this.canvas.width||h!==this.canvas.height){this.canvas.width=w;this.canvas.height=h;this.gl.viewport(0,0,w,h);}
  }
- render(camera,flash,time){
+ render(camera,flash,time,showHand=false){
   this.resize();const gl=this.gl;gl.useProgram(this.program);
   const cy=Math.cos(camera.yaw),sy=Math.sin(camera.yaw),cp=Math.cos(camera.pitch),sp=Math.sin(camera.pitch);
   const right=[cy,0,-sy],forward=[sy*cp,sp,cy*cp],up=[-sy*sp,cp,-cy*sp];
@@ -155,10 +187,11 @@ export class HouseRenderer {
   gl.uniform1f(this.uniform.uNear,.07);gl.uniform1f(this.uniform.uFar,45);
   gl.uniform1f(this.uniform.uFlash,flash?1:0);gl.uniform1f(this.uniform.uTime,time);
   gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
-  gl.bindBuffer(gl.ARRAY_BUFFER,this.vbo);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.ibo);
+  this.bind(this.vbo,this.ibo);
   gl.drawElements(gl.TRIANGLES,this.count,gl.UNSIGNED_SHORT,0);
+  if(showHand)this.drawFirstPerson(camera,right,up,forward,time);
  }
- destroy(){const gl=this.gl;gl.deleteTexture(this.texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteProgram(this.program);this.canvas.width=1;this.canvas.height=1;}
+ destroy(){const gl=this.gl;gl.deleteTexture(this.texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);gl.deleteProgram(this.program);this.canvas.width=1;this.canvas.height=1;}
 }
 export function pickupGeometry(objects){
  return objects.filter(o=>!o.taken&&['battery','note','key'].includes(o.kind)).map(o=>({
