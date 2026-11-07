@@ -7,7 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "node tests/smoke.cjs && node tests/story.cjs && node tests/audio.cjs && node tests/lab.cjs && node tests/rescue.cjs",
+    "test": "node tests/smoke.cjs && node tests/story.cjs && node tests/audio.cjs && node tests/lab.cjs && node tests/rescue.cjs && node tests/house-navigation.cjs",
     "test:browser": "node tests/browser.cjs",
     "sprites": "node scripts/export-sprites.cjs"
   },
