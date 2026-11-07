@@ -1,27 +1,26 @@
-# Validación · historia chibi/isométrica 1.3
+# Validación · versión 1.4
 
-Base: `2eabfe19517a776785b5eed30e7d676b204ca071` en `lugal3/valeteamo`. Trabajo en la rama `demo/historia-cumpleanos-chibi`. La validación histórica de la versión 1.2 se conserva en `docs/VALIDACION-1.2.md`.
+Base de trabajo: `e999d2757d62d61f9806d28aa327dae4b7fe9454`. La validación anterior se conserva en `docs/VALIDACION-1.3.md`.
 
-## Automatización y compilación
+## Código y pruebas reproducibles
 
-- `npm test`: lógica de la aventura clásica y nueva, mapa y controles, selección y ciclos de personajes clásicos, combates y objetos; progreso de historia, datos guardados dañados, navegación reversible, respuesta seleccionada, proyección isométrica, pausa, luces, proyectiles, jefe, victoria y derrota con renderizadores simulados.
-- `npm run sprites`: genera las cuatro plantillas PNG, incluidas las chibi de 192 × 320.
-- `npm run build`: verifica TypeScript y compila con Vite. Phaser se carga por separado al abrir un tramo. Vite puede advertir del tamaño del chunk del motor.
+- `npm test`: lógica de la aventura clásica y de la historia, recorrido, combate, decisiones de objetos, manto, pausa, muerte, reinicio, proyección, guardado corrupto y navegación. `tests/audio.cjs` comprueba creación, reproducción, silencio, temas, suspensión, reanudación y limpieza de la sesión de audio con un contexto simulado.
+- `npm run test:browser`: levanta Vite localmente y usa Playwright con Chromium o Edge sin ventana. Comprueba la historia, guardado tras recarga, manto y decisión, dos toques simultáneos, giro, pausa, pantalla completa, alternativa en navegadores sin esa API, animaciones y recuperación cuando el almacenamiento se bloquea.
+- El test de navegador mide una señal de audio distinta de cero con un `AnalyserNode` real en el navegador; verifica que un único `AudioContext` sobrevive entre historia y juego y que pausa, silencio y reactivación cambian su estado. Phaser no crea otro contexto de audio.
+- Para avanzar rápidamente durante el recorrido se inserta una referencia de prueba a la escena en la respuesta local de Vite y se posiciona el jugador en objetivos o se crean proyectiles. Esta instrumentación no existe en el código entregado. El control por dos dedos sí se simula mediante eventos táctiles del navegador, sin mover el personaje por código durante esa comprobación.
+- Se comprueban fotogramas diferentes de caminar de lado y de espaldas para Kitty y Louis y se verifica que las hojas grandes de Phaser se liberan tras generar las texturas pequeñas. Una hoja ausente mantiene los sprites de respaldo.
+- `npm run build`: TypeScript y Vite. Phaser se descarga por separado al entrar en juego. Vite informa del tamaño del chunk del motor; no impide la compilación.
 
-## Navegador de escritorio sin ventana
+Para ejecutar la prueba de navegador en otro equipo instala Chromium con `npx playwright install chromium`, o indica una ruta con la variable de entorno `BROWSER_EXECUTABLE_PATH`. En Windows se detecta Edge cuando está en la ruta habitual. Playwright es dependencia de desarrollo; no se incluye en la página compilada.
 
-Se usó Microsoft Edge headless y Playwright instalado fuera del repositorio. Se revisaron visualmente portada a 1440×900 y 390×844, primer recuerdo vertical, pregunta y dos desafíos a 844×390. Un recorrido automatizado pasó por todas las escenas, incluida la carta, y comprobó recarga y recuperación del capítulo. Para dirigir el recorrido a través de los niveles se expuso temporalmente la instancia de escena mediante interceptación de una respuesta de desarrollo; no existe ese acceso global en el código entregado. También se probó movimiento real con teclado.
+## Pantalla y dispositivos
 
-Una prueba independiente simuló pantalla táctil y dos dedos mediante el protocolo del navegador: movimiento y disparo simultáneos, liberación de los dos toques, pausa al iniciar en vertical, giro y continuación. Se corrigió el ajuste del lienzo al girar y se repitió la prueba. Se verificó además el aviso de almacenamiento bloqueado y que la historia sigue accesible.
+En navegador de escritorio se comprobaron portada, recuerdos, pregunta, juego y diálogo; el canvas ocupa el viewport y se ajusta al girar sin deformar la sala. El modo fullscreen nativo se probó en Edge headless. Se simuló la falta de soporte para comprobar las instrucciones de pantalla de inicio y el cierre accesible del diálogo.
 
-Se configuraron temporalmente hojas chibi mediante interceptación de la configuración: un PNG válido de 192 × 320 se cargó; una imagen de otro tamaño y una inexistente conservaron el arte generado. No hubo errores JavaScript en el recorrido principal. Estos controles se hicieron en escritorio emulado, no en Safari físico.
+**No se ha probado en iPhone físico ni en Safari real.** No se puede afirmar que desaparezca la barra superior de Safari; el botón ofrece Añadir a pantalla de inicio cuando la API no está disponible. Los controles usan áreas seguras para el notch y el fondo alcanza la zona disponible. La escucha física y el comportamiento de audio en iPhone siguen pendientes.
 
-La hoja de Kitty generada a partir de las referencias aportadas se cargó en Phaser: se verificaron texturas distintas para reposo, caminar, perfil y espalda, además de la pose de daño. Se comprobó que, si el PNG no está disponible, el personaje generado por código permite continuar. El asset tiene transparencia real y la escena lo adapta a celdas de 32 × 40 en memoria.
+## Contenido y publicación
 
-## Pendiente y límites
+Los recuerdos, las fotos, la pregunta y la carta incluyen contenido provisional identificado como muestra; el usuario debe proporcionar y revisar las fotografías y palabras finales. El progreso se guarda por capítulo en el navegador; recargar durante un desafío lo reinicia. No hay sincronización ni garantía de persistencia si se borran los datos del navegador.
 
-- Probar en iPhone físico y Safari: tacto real, notch, barras dinámicas, audio, recarga y pantalla de inicio; no se ha hecho. Tampoco se ha evaluado el audio mediante escucha física.
-- Revisar con el autor el estilo de personajes, la perspectiva y el ritmo de cada desafío. Los sprites chibi son una primera versión; direcciones diagonales reutilizan las vistas existentes.
-- Fotos, textos, preguntas y carta son marcadores editables, sin contenido personal. La sustitución y su privacidad dependen del material que aporte el usuario.
-- El avance se guarda por capítulo en el navegador; recargar durante un nivel lo reinicia. Sin sincronización entre dispositivos ni garantía de conservación de datos del navegador.
-- `firebase.json` prepara una posible publicación. No se ha vinculado una cuenta de Firebase, desplegado un sitio ni verificado una URL pública de prueba.
+Las imágenes de referencia de los personajes y sus indicaciones se documentan en `docs/ASSETS.md`. El archivo `firebase.json` prepara Hosting, pero no se ha vinculado una cuenta ni se ha publicado un sitio. No se agregaron fotos personales ni secretos.

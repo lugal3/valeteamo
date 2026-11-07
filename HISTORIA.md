@@ -9,6 +9,7 @@ La historia incluye **textos, preguntas y espacios para fotos provisionales**. N
 3. Escribe una descripción en `alt` (para lectores de pantalla) y el pie en `caption`. Cambia el `title` y el `text` del recuerdo por tus propias palabras.
 4. Repite con las fotografías que quieras. El carrusel admite botones y deslizamiento táctil. Un array `photos:[]` no muestra galería. Si una imagen no carga se indica en su lugar.
 5. Edita la pregunta, sus respuestas, la carta final y su firma en el mismo archivo. La pregunta puede omitirse; las respuestas son opcionales y no determinan si la historia continúa.
+6. Cuando hayas sustituido todos los textos de muestra, cambia `CONTENT_IS_SAMPLE=true` por `CONTENT_IS_SAMPLE=false` en `src/story-content.ts` para ocultar el aviso de muestra. Los espacios sin foto seguirán identificándose.
 
 **Privacidad:** este repositorio es público. Una foto añadida al repositorio público queda accesible públicamente. Un sitio web público puede exponer sus archivos a quien tenga acceso a la dirección. No subas fotos personales hasta decidir dónde se alojarán y qué protección necesitas. No aparecer en buscadores no equivale a protección.
 
@@ -20,9 +21,9 @@ Se guarda en el navegador del dispositivo: capítulo actual y más avanzado, per
 
 ## Personajes chibi y perspectiva
 
-La historia usa sprites de **32 × 40 píxeles**. Kitty usa de forma predeterminada `public/sprites/kitty-reference-sheet.png`, una hoja nueva generada a partir de las cinco imágenes de referencia aportadas. Contiene frente, perfil derecho, espalda, parpadeo, dos pasos frontales, ataque frontal y daño. `src/kitty-reference.ts` recorta las celdas en memoria y las adapta a las texturas del juego; el PNG original se conserva intacto. La portada también usa esa hoja. Para perfil y espalda se reutilizan las poses base al caminar; todavía no tienen pasos específicos. Izquierda refleja el perfil derecho. El asset original mide 1774 × 887 y pesa aproximadamente 0,9 MB; conviene revisar el tiempo de carga en un iPhone real.
+La historia usa sprites de **32 × 40 píxeles**. Kitty utiliza `kitty-reference-sheet.png`, generada a partir de las cinco referencias aportadas, y `kitty-walk-sheet.png` para los pasos laterales y de espalda. Louis tiene sus hojas equivalentes `louis-reference-sheet.png` y `louis-walk-sheet.png`. Las hojas principales incluyen frente, perfil derecho, espalda, parpadeo, pasos frontales, ataque frontal y daño; las hojas de caminata incluyen cuatro pasos laterales y cuatro de espalda. Izquierda refleja el perfil derecho. `src/reference-characters.ts` recorta las celdas en memoria y libera las texturas grandes de Phaser; los PNG originales permanecen intactos. La portada usa las hojas principales como retratos. Cada PNG original mide 1774 × 887; conviene revisar el tiempo de carga en un iPhone real. Instrucciones de generación y archivos: [docs/ASSETS.md](docs/ASSETS.md).
 
-Louis y el respaldo de Kitty se dibujan por código en `src/chibi-art.ts`. Las plantillas editables `public/sprites/templates/chibi-kitty.png` y `chibi-louis.png` contienen esas versiones generadas por código, no una exportación de la hoja de referencia. Tienen 6 columnas × 8 filas, **192 × 320 píxeles** en total. Conserva transparencia, celdas alineadas y los pies en la misma posición.
+Los respaldos de Kitty y Louis se dibujan por código en `src/chibi-art.ts`. Las plantillas editables `public/sprites/templates/chibi-kitty.png` y `chibi-louis.png` contienen esas versiones generadas por código, no una exportación de las hojas de referencia. Tienen 6 columnas × 8 filas, **192 × 320 píxeles** en total. Conserva transparencia, celdas alineadas y los pies en la misma posición.
 
 | Fila, desde 0 | Fotogramas, de izquierda a derecha |
 | --- | --- |
@@ -35,13 +36,19 @@ Louis y el respaldo de Kitty se dibujan por código en `src/chibi-art.ts`. Las p
 | 6 | Recibir daño: solo se usa la primera celda |
 | 7 | Muerte: solo se usa la primera celda |
 
-Las filas 6 y 7 se repiten en las plantillas para facilitar el dibujo, pero se usa la primera celda. Actualmente izquierda se obtiene reflejando derecha, y las direcciones diagonales usan una de estas vistas; no hay ocho vistas dibujadas independientes. Mantén el anclaje de pies y dibuja la silueta completa dentro de cada celda.
+Las filas 6 y 7 se repiten en las plantillas para facilitar el dibujo, pero se usa la primera celda. Izquierda se obtiene reflejando derecha, y las direcciones diagonales usan una de estas vistas; no hay ocho vistas dibujadas independientes. Mantén el anclaje de pies y dibuja la silueta completa dentro de cada celda.
 
-Copia la plantilla a `public/sprites/chibi-kitty.png` o `chibi-louis.png`; edita la copia. En `src/characters.ts`, cambia `chibiSpriteSheet:null` por `chibiSpriteSheet:'./sprites/chibi-kitty.png'` o la ruta correspondiente a Louis. La hoja debe medir exactamente 192 × 320 y contener todas las poses. Una hoja personalizada tiene prioridad sobre la referencia predeterminada de Kitty. Si falta o tiene otro tamaño, la escena conserva el sprite generado por código. Una celda vacía no se detecta y hará invisible al personaje en esa pose. Los retratos de portada y tarjetas siguen mostrando la referencia de Kitty o el dibujo por código de Louis; cambiar una hoja personalizada no cambia esos retratos.
+Copia la plantilla a `public/sprites/chibi-kitty.png` o `chibi-louis.png`; edita la copia. En `src/characters.ts`, cambia `chibiSpriteSheet:null` por `chibiSpriteSheet:'./sprites/chibi-kitty.png'` o la ruta correspondiente a Louis. La hoja debe medir exactamente 192 × 320 y contener todas las poses. Una hoja personalizada tiene prioridad sobre la referencia predeterminada del personaje. Si falta o tiene otro tamaño, la escena conserva el sprite generado por código. Una celda vacía no se detecta y hará invisible al personaje en esa pose. Los retratos de portada y tarjetas siguen mostrando las hojas de referencia; cambiar una hoja personalizada no cambia esos retratos.
 
 `npm run sprites` regenera y **sobrescribe las cuatro plantillas**, no las copias fuera de `templates/`. Las plantillas clásicas de 16 × 20 y la aventura clásica siguen explicadas en `public/sprites/README.md` y `chupalo_alexitico.txt`.
 
 La sala proyecta coordenadas de un tablero 2D en forma de rombo (`src/isometric.ts`). La posición de los pies determina la profundidad de personajes, enemigos y árboles. Los árboles son decorativos y no bloquean el movimiento. `src/iso-game.ts` contiene los tres desafíos y `src/StoryGame.tsx` la capa de controles y pausa. El primer desafío recoge luces; el segundo resuelve tres enemigos; el tercero presenta un jefe.
+
+## Sonido y pantalla completa
+
+Las melodías son originales y sintetizadas en `src/audio.ts`. Se usan temas para la historia, el jardín, el combate y el final. El primer toque o clic desbloquea el audio; el botón de sonido aparece en la historia y en el juego. Se conserva la preferencia del navegador. Al volver de otra aplicación, continúa la partida o toca la pantalla para reanudarlo. Si el navegador bloquea el audio se muestra una indicación.
+
+El lienzo de juego ocupa el viewport disponible sin estirarse; los controles dejan espacio para notch y barras del sistema. ⛶ solicita pantalla completa si el navegador la admite. En Safari de iPhone la página no puede obligar a ocultar toda la interfaz del navegador: el botón explica cómo añadirla a pantalla de inicio y abrirla como app. La barra de estado del sistema puede permanecer visible. Véanse [Fullscreen API en MDN](https://developer.mozilla.org/en-US/docs/Web/API/Fullscreen_API) y [seguimiento de WebKit para iPhone](https://bugs.webkit.org/show_bug.cgi?id=206854).
 
 ## Firebase Hosting: preparación, no publicación
 
