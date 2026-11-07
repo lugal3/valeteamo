@@ -1,25 +1,9 @@
 import {useEffect,useRef,useState} from 'react';
 import './splash.css';
 
-function playWelcomeChime(){
- try{
-  const context=new AudioContext();
-  const gain=context.createGain();gain.gain.value=.055;gain.connect(context.destination);
-  const notes=[523.25,659.25,783.99];
-  for(let i=0;i<notes.length;i++){
-   const now=context.currentTime+i*.115,osc=context.createOscillator(),envelope=context.createGain();
-   osc.type='sine';osc.frequency.value=notes[i];
-   envelope.gain.setValueAtTime(.0001,now);
-   envelope.gain.exponentialRampToValueAtTime(.5,now+.025);
-   envelope.gain.exponentialRampToValueAtTime(.0001,now+.37);
-   osc.connect(envelope);envelope.connect(gain);osc.start(now);osc.stop(now+.4);
-  }
-  setTimeout(()=>{void context.close().catch(()=>{});},950);
- }catch{/* The game remains playable if a browser blocks audio. */}
-}
 export function Splash({onStart,muted}:{onStart:()=>void,muted:boolean}){
  const [hasPicture,setHasPicture]=useState(true),begun=useRef(false);
- const start=()=>{if(begun.current)return;begun.current=true;if(!muted)playWelcomeChime();onStart();};
+ const start=()=>{if(begun.current)return;begun.current=true;onStart();};
  useEffect(()=>{
   const key=(event:KeyboardEvent)=>{if(event.key==='Tab'||event.key==='Shift'||event.key==='Escape'||event.repeat)return;start();};
   window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);
