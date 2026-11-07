@@ -20,3 +20,7 @@
 @media(orientation:portrait){.splash-frame img{object-fit:contain;object-position:center center}.splash-start{width:70%;bottom:25%;height:12%}.splash-audio-hint{font-size:10px;bottom:8px}}
 @media(max-height:440px){.splash-start{height:18%;bottom:2%}.splash-audio-hint{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.splash-particle,.splash-water{animation:none!important}.splash-water{display:none}.splash-start{transition:none}}
+
+/* Decorative layers must never capture PLAY hit-testing. */
+.splash-backdrop,.splash-frame img,.splash-fallback,.splash-particles,.splash-water{pointer-events:none!important}
+.splash-start{z-index:100!important}
