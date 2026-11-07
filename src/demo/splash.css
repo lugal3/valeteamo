@@ -36,3 +36,17 @@
 /* The illustration is atmospheric, not an interactive obstacle. */
 .splash-frame{pointer-events:none}
 .splash-start{pointer-events:auto}
+
+/* V3: atmosphere is GPU-friendly and decorative, never over the PLAY hit target. */
+.splash-petals{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}
+.splash-petal{position:absolute;color:#ffe7ddc9;opacity:0;font-size:clamp(9px,1.8vw,17px);text-shadow:0 0 8px #fff0aa;animation:valeteamo-petal-drift 8s cubic-bezier(.3,.1,.65,.95) infinite;will-change:transform,opacity}
+@keyframes valeteamo-petal-drift{
+ 0%{transform:translate3d(-10px,35px,0) rotate(-40deg) scale(.8);opacity:0}
+ 25%{opacity:.63}75%{opacity:.41}
+ 100%{transform:translate3d(35px,-42px,0) rotate(90deg) scale(1.2);opacity:0}
+}
+.splash-frame img{animation:valeteamo-splash-breathe 14s ease-in-out infinite alternate}
+@keyframes valeteamo-splash-breathe{to{transform:scale(1.018)}}
+.splash-petals,.splash-petal{pointer-events:none!important}
+@media(prefers-reduced-motion:reduce){.splash-petal,.splash-frame img{animation:none!important}}
+@media(max-width:600px){.splash-petal{font-size:12px}.splash-frame img{animation:none}}
