@@ -56,7 +56,7 @@ function ClassicApp(){
    const [{default:Engine},{Garden:Scene}]=await Promise.all([import('phaser'),import('./game')]);if(cancelled)return;LP(60);
    const ready=()=>{LP(100);complete=setTimeout(()=>{if(!cancelled)L(false);},400);};
    const s=new Scene(H,E,P,audio.current,character,ready,LP);scene.current=s;
-   game=new Engine.Game({type:Engine.AUTO,parent:el,width:el.clientWidth,height:el.clientHeight,backgroundColor:'#f5e3d3',pixelArt:true,render:{antialias:false,roundPixels:true},scale:{mode:Engine.Scale.RESIZE,autoCenter:Engine.Scale.NO_CENTER,expandParent:false},scene:s,input:{activePointers:4}});
+   game=new Engine.Game({type:Engine.AUTO,parent:el,width:el.clientWidth,height:el.clientHeight,backgroundColor:'#f5e3d3',pixelArt:true,render:{antialias:false,roundPixels:true},audio:{noAudio:true},scale:{mode:Engine.Scale.RESIZE,autoCenter:Engine.Scale.NO_CENTER,expandParent:false},scene:s,input:{activePointers:4}});
    blur=()=>s.setPaused(true);vis=()=>{if(document.hidden)blur();};resize=()=>{s.clearInput();if(innerHeight>innerWidth)blur();if(el.clientWidth>0&&el.clientHeight>0)game?.scale.resize(el.clientWidth,el.clientHeight);};
    observer=new ResizeObserver(resize);observer.observe(el);window.addEventListener('blur',blur);document.addEventListener('visibilitychange',vis);window.addEventListener('orientationchange',blur);window.addEventListener('resize',resize);window.visualViewport?.addEventListener('resize',resize);
   }catch(error){if(cancelled)return;LE('No se pudo abrir el jardín. Comprueba la conexión y vuelve a intentarlo.');console.error(error);}};

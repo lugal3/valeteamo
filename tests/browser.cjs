@@ -1,0 +1,58 @@
+// Integration QA against a temporary local Vite server. Uses Chromium/Edge headless.
+// The test-only scene reference is injected into the served module and never ships in the app.
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const {chromium}=require('playwright');
+
+async function main(){
+ const {createServer}=await import('vite');
+ const server=await createServer({configFile:false,server:{host:'127.0.0.1',port:0,strictPort:true},logLevel:'silent'});
+ await server.listen();const port=server.httpServer.address().port,url=`http://127.0.0.1:${port}/`;
+ const edge='C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+ const executablePath=process.env.BROWSER_EXECUTABLE_PATH||(process.platform==='win32'&&fs.existsSync(edge)?edge:undefined);
+ let browser;
+ try{
+  browser=await chromium.launch({headless:true,executablePath});
+  const context=await browser.newContext({viewport:{width:844,height:390},hasTouch:true,isMobile:true});
+  const page=await context.newPage(),errors=[],loaded=new Set();page.on('pageerror',e=>{errors.push(e.stack||e.message);console.error('Browser error:',e.stack||e.message);});
+  page.on('response',r=>{if(r.ok()&&r.url().includes('/sprites/'))loaded.add(r.url().split('/').pop());});
+  await page.addInitScript(()=>{
+   const Base=window.AudioContext;window.__testContexts=[];
+   window.AudioContext=class extends Base{constructor(...args){super(...args);this.testAnalyser=this.createAnalyser();this.testAnalyser.fftSize=2048;this.testAnalyser.connect(this.destination);window.__testContexts.push(this);}createGain(){const gain=super.createGain(),connect=gain.connect.bind(gain);gain.connect=(destination,...args)=>{if(destination===this.destination)connect(this.testAnalyser);return connect(destination,...args);};return gain;}};
+  });
+  await page.route('**/src/iso-game.ts*',async route=>{const response=await route.fetch(),body=await response.text();assert(body.includes('buildArt(this);'));await route.fulfill({response,body:body.replace('buildArt(this);','globalThis.__testIso=this;buildArt(this);')});});
+  console.log('Browser: portada y audio');await page.goto(url);await page.getByRole('button',{name:/Abrir mi regalo/}).click();
+  await page.waitForFunction(()=>{const c=window.__testContexts[0];if(!c||c.state!=='running')return false;const samples=new Float32Array(c.testAnalyser.fftSize);c.testAnalyser.getFloatTimeDomainData(samples);return samples.some(v=>Math.abs(v)>.0005);});
+  await page.getByRole('button',{name:'Foto siguiente'}).click();assert(await page.getByText('Otro momento por añadir').isVisible());
+  console.log('Browser: primer desafío');await page.getByRole('button',{name:/Continuar/}).click();await page.getByRole('button',{name:/Jugar este capítulo/}).click();await page.waitForFunction(()=>window.__testIso?.keys);
+  assert.equal(await page.evaluate(()=>window.__testContexts.length),1);assert(loaded.has('kitty-reference-sheet.png')&&loaded.has('kitty-walk-sheet.png'));
+  const distinct=await page.evaluate(()=>{const t=window.__testIso.textures,key=n=>t.get(n).getSourceImage().toDataURL();return {side:key('chibi-kitty-right-1')!==key('chibi-kitty-right-2'),back:key('chibi-kitty-up-1')!==key('chibi-kitty-up-2'),released:!t.exists('kitty-reference-source')&&!t.exists('kitty-walk-source')};});assert(distinct.side&&distinct.back&&distinct.released);
+  const rect=await page.locator('canvas').boundingBox();assert.deepEqual([rect.x,rect.y,rect.width,rect.height],[0,0,844,390]);
+  await page.getByRole('button',{name:'Pausar aventura'}).click();await page.waitForFunction(()=>window.__testContexts[0].state==='suspended');await page.getByRole('button',{name:'Continuar',exact:true}).click();await page.waitForFunction(()=>window.__testContexts[0].state==='running');
+  await page.getByRole('button',{name:'Silenciar sonido'}).click();await page.waitForFunction(()=>window.__testContexts[0].state==='suspended');await page.getByRole('button',{name:'Activar sonido'}).click();await page.waitForFunction(()=>window.__testContexts[0].state==='running');
+  for(let i=0;i<3;i++){await page.evaluate(()=>{window.__testIso.p={...window.__testIso.collectibles[0].p};});await page.waitForTimeout(80);}
+  await page.getByRole('heading',{name:/Una pregunta para ti/}).waitFor();await page.reload();await page.getByRole('button',{name:/Continuar la historia/}).click();assert(await page.getByRole('heading',{name:/Una pregunta para ti/}).isVisible());
+  console.log('Browser: segundo desafío y objeto');await page.getByRole('button',{name:/Continuar sin responder/}).click();await page.getByRole('button',{name:/Jugar este capítulo/}).click();await page.waitForFunction(()=>window.__testIso?.level===2&&window.__testIso.keys);
+  await page.evaluate(()=>{window.__testIso.p={...window.__testIso.charm.p};});await page.getByRole('dialog',{name:'Manto de pétalos'}).waitFor();
+  const frozen=await page.evaluate(()=>({clock:window.__testIso.clock,bombs:window.__testIso.bombs}));await page.keyboard.press('b');await page.waitForTimeout(100);assert.deepEqual(await page.evaluate(()=>({clock:window.__testIso.clock,bombs:window.__testIso.bombs})),frozen);
+  await page.keyboard.press('Escape');await page.getByRole('dialog',{name:'Manto de pétalos'}).waitFor({state:'hidden'});assert(await page.evaluate(()=>!!window.__testIso.charm&&!window.__testIso.shield));await page.evaluate(()=>{window.__testIso.p={u:0,v:0};});await page.waitForFunction(()=>!window.__testIso.declinedCharm);await page.evaluate(()=>{window.__testIso.p={...window.__testIso.charm.p};});await page.getByRole('dialog',{name:'Manto de pétalos'}).waitFor();await page.getByRole('button',{name:'Recoger',exact:true}).click();assert(await page.evaluate(()=>window.__testIso.shield));
+  console.log('Browser: rotación y dos toques');await page.setViewportSize({width:390,height:844});await page.getByRole('heading',{name:'Gira tu teléfono'}).waitFor();assert(await page.evaluate(()=>window.__testIso.paused));await page.setViewportSize({width:844,height:390});await page.getByRole('button',{name:'Continuar',exact:true}).click();
+  const before=await page.evaluate(()=>({...window.__testIso.p})),cdp=await context.newCDPSession(page);await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:170,y:270,id:1},{x:640,y:220,id:2}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:210,y:270,id:1},{x:680,y:220,id:2}]});await page.waitForTimeout(420);const after=await page.evaluate(()=>({p:{...window.__testIso.p},shots:window.__testIso.shots.length,lastShot:window.__testIso.last,left:!!window.__testIso.left,right:!!window.__testIso.right}));assert.notDeepEqual(after.p,before);assert(after.left&&after.right&&after.lastShot>0);await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await page.waitForTimeout(100);assert.equal(await page.evaluate(()=>!!window.__testIso.left||!!window.__testIso.right),false);
+  await page.evaluate(()=>{for(const e of window.__testIso.enemies)for(let i=0;i<3;i++)window.__testIso.shoot({...e.p},0,0);});await page.getByRole('heading',{name:/Más páginas para llenar/}).waitFor();await page.getByRole('button',{name:/Continuar/}).click();await page.getByRole('button',{name:/Jugar este capítulo/}).click();await page.waitForFunction(()=>window.__testIso?.level===3&&window.__testIso.keys);await page.evaluate(()=>{for(let i=0;i<12;i++)window.__testIso.shoot({...window.__testIso.enemies[0].p},0,0);});await page.getByText('Firma por personalizar').waitFor();assert.deepEqual(errors,[]);await context.close();
+  console.log('Browser: sprites y respaldo');for(const [id,missing] of [['louis',false],['kitty',true]]){
+   const sprite=await browser.newPage({viewport:{width:844,height:390}}),seen=new Set(),problems=[];sprite.on('pageerror',e=>problems.push(e.message));sprite.on('response',r=>{if(r.ok()&&r.url().includes('/sprites/'))seen.add(r.url().split('/').pop());});
+   await sprite.addInitScript(character=>localStorage.setItem('valeteamo-story-v1',JSON.stringify({version:1,index:1,unlocked:1,character,muted:true,started:true,answers:{}})),id);
+   await sprite.route('**/src/iso-game.ts*',async route=>{const response=await route.fetch(),body=await response.text();await route.fulfill({response,body:body.replace('buildArt(this);','globalThis.__testIso=this;buildArt(this);')});});
+   if(missing)await sprite.route('**/sprites/kitty-reference-sheet.png',route=>route.abort());
+   await sprite.goto(url);await sprite.getByRole('button',{name:/Continuar la historia/}).click();await sprite.getByRole('button',{name:/Jugar este capítulo/}).click();await sprite.waitForFunction(()=>window.__testIso?.keys);
+   const sprites=await sprite.evaluate(character=>{const t=window.__testIso.textures,get=k=>t.get(k).getSourceImage().toDataURL();return {side:get('chibi-'+character+'-right-1')!==get('chibi-'+character+'-right-2'),back:get('chibi-'+character+'-up-1')!==get('chibi-'+character+'-up-2'),hurt:t.exists('chibi-'+character+'-hurt'),released:!t.exists(character+'-reference-source')&&!t.exists(character+'-walk-source')};},id);
+   assert(sprites.side&&sprites.back&&sprites.released);assert.equal(sprites.hurt,!missing);if(!missing)assert(seen.has(`${id}-reference-sheet.png`)&&seen.has(`${id}-walk-sheet.png`));assert.deepEqual(problems,[]);await sprite.close();
+  }
+  console.log('Browser: pantalla completa y recuperación');const full=await browser.newPage({viewport:{width:844,height:390}});await full.goto(url);await full.getByRole('button',{name:'Pantalla completa'}).click();await full.waitForFunction(()=>!!document.fullscreenElement);await full.getByRole('button',{name:'Salir de pantalla completa'}).click();await full.waitForFunction(()=>!document.fullscreenElement);await full.close();
+  const fallback=await browser.newPage({viewport:{width:390,height:844},hasTouch:true,isMobile:true});await fallback.addInitScript(()=>Object.defineProperty(document,'fullscreenEnabled',{configurable:true,value:false}));await fallback.goto(url);await fallback.getByRole('button',{name:'Pantalla completa'}).click();await fallback.getByRole('dialog',{name:'Abrir como app en iPhone'}).waitFor();await fallback.keyboard.press('Escape');assert.equal(await fallback.getByRole('dialog').count(),0);await fallback.close();
+  const blocked=await browser.newPage();await blocked.addInitScript(()=>Object.defineProperty(window,'localStorage',{get(){throw Error('blocked');}}));await blocked.goto(url);await blocked.getByRole('button',{name:/Abrir mi regalo/}).click();assert(await blocked.getByText(/no permite guardar el avance/).isVisible());await blocked.close();
+  const noAudio=await browser.newPage();await noAudio.addInitScript(()=>{Object.defineProperty(window,'AudioContext',{configurable:true,value:undefined});Object.defineProperty(window,'webkitAudioContext',{configurable:true,value:undefined});});await noAudio.goto(url);await noAudio.getByRole('button',{name:/Abrir mi regalo/}).click();await noAudio.getByText(/navegador bloqueó el audio/).waitFor();await noAudio.getByRole('heading',{name:/Una página para nosotros/}).waitFor();await noAudio.close();
+  console.log('PASS: browser story, sound signal, pause/mute, fullscreen/fallback, sprite animation, items, touch, rotation, save recovery and final.');
+ }finally{await browser?.close();await server.close();}
+}
+main().catch(e=>{console.error(e);process.exitCode=1;});
