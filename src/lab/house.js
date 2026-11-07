@@ -29,7 +29,16 @@ function closestObject(world,state,previous=null){
  }
  candidates.sort((a,b)=>a.score-b.score);return candidates[0]?.o||null;
 }
-const ctxRoom=(state)=>state.y>1.7?'planta alta':state.x>7.65?'salón':'pasillo';
+const ctxRoom=(state)=>{
+ if(getStairDirection(state)==='Escaleras')return 'escalera';
+ if(state.y>HEIGHT*.52){
+  if(state.x<4.45&&state.z<5.4)return 'dormitorio';
+  if(state.x>7.55&&state.z<4.45)return 'habitación de recuerdos';
+  return 'planta alta';
+ }
+ if(state.x<4.05)return state.z>6.4?'cocina':'estudio';
+ return state.x>7.65?'salón':'pasillo';
+};
 export function launchHouse(onExit,checkpoint='ground',config={}){
  const demo=config.demo===true;
  const root=document.createElement('div');root.id='lab3d';root.innerHTML=`
@@ -48,6 +57,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    <details class="lab-camera-settings" id="lab-camera-settings"><summary aria-label="Ajustes de cámara">⚙ Cámara</summary><div class="lab-camera-panel">
      <label>Velocidad de giro <input data-setting="sensitivity" aria-label="Sensibilidad de giro" type="range" min=".35" max="2" step=".05" value=".82"></label>
      <label class="lab-invert-label"><input data-setting="invertX" type="checkbox"> Invertir giro horizontal</label>
+     <label>Calidad de imagen <select data-setting="quality" aria-label="Calidad gráfica"><option value="medium">Detalles (auto)</option><option value="low">Modo fluido</option></select></label>
      <small>Arrastra a la derecha para mirar a la derecha.</small>
    </div></details>
    <button data-act="pause" aria-label="Pausar">Ⅱ</button>
@@ -300,7 +310,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     slowSeconds=fps<37?slowSeconds+1:0;
     if(slowSeconds>=3){
      options.quality='low';renderer.quality='low';
-     $('lab-diagnostics').querySelector('[data-setting="quality"]').value='low';
+     root.querySelectorAll('[data-setting="quality"]').forEach(el=>el.value='low');
      say('Modo fluido activado para tu dispositivo',2.6);
     }
    }
@@ -343,7 +353,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  root.addEventListener('click',e=>{const button=e.target.closest('[data-act]');if(button){e.preventDefault();runAction(button.dataset.act,button);}}, {signal});
  root.addEventListener('input',e=>{
   const field=e.target,key=field.dataset.setting;if(!key)return;
-  if(key==='quality'){options.quality=field.value;renderer.quality=field.value;}
+  if(key==='quality'){options.quality=field.value;renderer.quality=field.value;root.querySelectorAll('[data-setting="quality"]').forEach(el=>{if(el!==field)el.value=field.value;});}
   if(key==='sensitivity'){options.sensitivity=Number(field.value);root.querySelectorAll('[data-setting="sensitivity"]').forEach(el=>{if(el!==field)el.value=field.value;});saveCamera();}
   if(key==='invertX'){options.invertX=field.checked;saveCamera();}
   if(key==='bob'){options.bob=field.checked;if(s)s.reduceBob=!field.checked;}
@@ -375,6 +385,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   ambient.querySelector('[data-setting="mute"]').checked=sound.settings.muted;
   root.querySelectorAll('[data-setting="sensitivity"]').forEach(el=>el.value=options.sensitivity);
   root.querySelector('[data-setting="invertX"]').checked=options.invertX;
+  root.querySelectorAll('[data-setting="quality"]').forEach(el=>el.value=options.quality);
   showModal(demo?'Rescata a Louis':'Explora la casa',`<p>Modo ${escapeHTML(points[checkpoint]||'Planta baja')}. Camina con el joystick izquierdo, mira arrastrando a la derecha y pulsa USAR sobre objetos cercanos.</p><p>${demo?'Lee la nota del pasillo, busca el cajón del estudio y examina el cuadro del salón. Con la llave y el símbolo podrás entrar en el dormitorio. La linterna no se agota.':'Hay dos plantas, recuerdos, una linterna y secretos pequeños. Sin enemigo ni combate en esta prueba.'}</p>`,[['Entrar / activar sonido','start'],['Volver a pruebas','exit']]);
   raf=requestAnimationFrame(frame);
  }
