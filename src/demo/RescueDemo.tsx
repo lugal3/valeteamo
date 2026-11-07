@@ -31,6 +31,15 @@ export function RescueDemo({onExit,entry='garden',test=false}:{onExit:()=>void,e
  });
  const [near,setNear]=useState('');const [error,setError]=useState('');
  const stage=useRef<HTMLDivElement>(null),phaseRef=useRef(state),actionRef=useRef<()=>void>(()=>{}),stick=useRef({x:0,y:0}),stickId=useRef<number|null>(null);
+ const updateStick=(el:HTMLElement,x:number,y:number)=>{
+  const rect=el.getBoundingClientRect(),dx=x-rect.left-rect.width/2,dy=y-rect.top-rect.height/2;
+  const length=Math.hypot(dx,dy),radius=rect.width*.42,amount=Math.min(1,length/radius);
+  const dead=.12,strength=amount<=dead?0:(amount-dead)/(1-dead),smooth=strength*strength*(3-2*strength);
+  stick.current={x:length<.001?0:dx/length*smooth,y:length<.001?0:dy/length*smooth};
+  const thumb=el.querySelector<HTMLElement>('.rescue-stick-thumb'),distance=radius*.65*amount;
+  if(thumb)thumb.style.transform=`translate(${length<.001?0:dx/length*distance}px,${length<.001?0:dy/length*distance}px)`;
+ };
+ const resetStick=(el:HTMLElement)=>{stickId.current=null;stick.current={x:0,y:0};const thumb=el.querySelector<HTMLElement>('.rescue-stick-thumb');if(thumb)thumb.style.transform='translate(0,0)';};
  const emit=(event:'heart'|'abduction'|'trail'|'house'|'rescue')=>{
   const next=advanceRescue(phaseRef.current,event);phaseRef.current=next;setState(next);if(!test)saveRescue(next);
  };
@@ -44,7 +53,7 @@ export function RescueDemo({onExit,entry='garden',test=false}:{onExit:()=>void,e
     class GardenScene extends Engine.Scene{
      kitty!:Phaser.GameObjects.Image;louis!:Phaser.GameObjects.Image;shadow!:Phaser.GameObjects.Arc; 
      flowers!:Phaser.GameObjects.Arc;heart!:Phaser.GameObjects.Text;door!:Phaser.GameObjects.Rectangle;
-     abducting=false;interactHeld=false;lastNear='';keysMap!:Record<string,Phaser.Input.Keyboard.Key>;
+     abducting=false;interactHeld=false;vx=0;vy=0;lastNear='';keysMap!:Record<string,Phaser.Input.Keyboard.Key>;
      constructor(){super('rescue-garden');}
      preload(){
       this.load.image('kitty-reference-source',new URL('./sprites/kitty-reference-sheet.png',document.baseURI).href);
@@ -93,8 +102,9 @@ export function RescueDemo({onExit,entry='garden',test=false}:{onExit:()=>void,e
       const down=Boolean(keys.S.isDown||keys.DOWN.isDown);
       let dx=Number(right)-Number(left)+stick.current.x,dy=Number(down)-Number(up)+stick.current.y;
       const len=Math.hypot(dx,dy);if(len>1){dx/=len;dy/=len;}
-      this.kitty.x=Math.max(35,Math.min(915,this.kitty.x+dx*225*dt));
-      this.kitty.y=Math.max(120,Math.min(460,this.kitty.y+dy*225*dt));
+      this.vx+=(dx-this.vx)*(1-Math.exp(-12*dt));this.vy+=(dy-this.vy)*(1-Math.exp(-12*dt));
+      this.kitty.x=Math.max(35,Math.min(915,this.kitty.x+this.vx*225*dt));
+      this.kitty.y=Math.max(120,Math.min(460,this.kitty.y+this.vy*225*dt));
       const p=phaseRef.current.phase;
       if(p==='heart'&&!this.abducting){
        this.abducting=true;this.shadow.setVisible(true);
@@ -145,7 +155,11 @@ export function RescueDemo({onExit,entry='garden',test=false}:{onExit:()=>void,e
   {mode==='garden'&&<><header className="rescue-head"><b>VALETEAMO · LA BÚSQUEDA DE LOUIS</b><button onClick={onExit}>Salir a cumpleaños</button></header>
    <div className="rescue-stage" ref={stage}/>
    <div className="rescue-story" role="status">{descriptions[state.phase]}</div>
-   <div className="rescue-stick" aria-label="Joystick para moverse" onPointerDown={e=>{stickId.current=e.pointerId;e.currentTarget.setPointerCapture(e.pointerId);}} onPointerMove={e=>{if(e.pointerId!==stickId.current)return;const r=e.currentTarget.getBoundingClientRect();let x=(e.clientX-r.left-r.width/2)/(r.width/2),y=(e.clientY-r.top-r.height/2)/(r.height/2);const n=Math.max(1,Math.hypot(x,y));stick.current={x:x/n,y:y/n};}} onPointerUp={e=>{if(e.pointerId===stickId.current){stickId.current=null;stick.current={x:0,y:0};}}} onPointerCancel={()=>{stickId.current=null;stick.current={x:0,y:0};}}>✿<small>MOVER</small></div>
+   <div className="rescue-stick" aria-label="Joystick analógico para moverse"
+     onPointerDown={e=>{stickId.current=e.pointerId;e.currentTarget.setPointerCapture(e.pointerId);updateStick(e.currentTarget,e.clientX,e.clientY);}}
+     onPointerMove={e=>{if(e.pointerId===stickId.current)updateStick(e.currentTarget,e.clientX,e.clientY);}}
+     onPointerUp={e=>{if(e.pointerId===stickId.current)resetStick(e.currentTarget);}}
+     onPointerCancel={e=>resetStick(e.currentTarget)}><span className="rescue-stick-thumb">♡</span><small>CAMINAR</small></div>
    {near&&<button className="rescue-act" onClick={()=>actionRef.current?.()}>{near} · E</button>}
    <span className="rescue-help">WASD / flechas · E para interactuar</span>
   </>}
