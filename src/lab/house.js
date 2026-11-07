@@ -297,6 +297,31 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   showModal(demo?'Rescata a Louis':'Explora la casa',`<p>Modo ${escapeHTML(points[checkpoint]||'Planta baja')}. Camina con el joystick izquierdo, mira arrastrando a la derecha y pulsa USAR sobre objetos cercanos.</p><p>${demo?'Lee la nota del pasillo, busca el cajón del estudio y examina el cuadro del salón. Con la llave y el símbolo podrás entrar en el dormitorio. La linterna no se agota.':'Hay dos plantas, recuerdos, una linterna y secretos pequeños. Sin enemigo ni combate en esta prueba.'}</p>`,[['Entrar / activar sonido','start'],['Volver a pruebas','exit']]);
   raf=requestAnimationFrame(frame);
  }
- function stop(){if(!active)return;active=false;cancelAnimationFrame(raf);controller.abort();sound.destroy();renderer?.destroy();root.remove();}
+ // Browser-only diagnostic hook: exercise real contextual picking and puzzle rules from
+ // non-blocked player poses without altering the production build or saved game.
+ if(import.meta.env.DEV&&demo){
+  window.__rescueHouse={
+   snapshot:()=>({puzzle:{...puzzle},position:{x:s?.x,y:s?.y,z:s?.z},target:focus?.id??null}),
+   interactWith:(id)=>{
+    const o=world.objects.find(o=>o.id===id&&!o.taken);if(!o)throw Error('Not available: '+id);
+    modalClose();paused=false;ready=true;s.hidden=null;s.lying=false;s.crouched=false;s.eye=1.63;s.pitch=0;
+    const y=o.y>HEIGHT ? HEIGHT : 0;
+    let found=false;
+    for(const radius of [.65,.8,1.0,1.25,1.5,1.85,2.15]){
+     if(found)break;
+     for(let i=0;i<32;i++){
+      const a=i*Math.PI*2/32,x=o.x+Math.cos(a)*radius,z=o.z+Math.sin(a)*radius;
+      if(blocked(world.boxes,x,y,z,.2,1.7))continue;
+      s.x=x;s.y=y;s.z=z;s.yaw=Math.atan2(o.x-x,o.z-z);
+      s.pitch=Math.atan2(o.y-(y+s.eye),Math.hypot(o.x-x,o.z-z));
+      if(closestObject(world,s,null)?.id===o.id){found=true;break;}
+     }
+    }
+    if(!found)throw Error('No line-of-sight reachable pose for '+id);
+    interact();return {puzzle:{...puzzle},position:{x:s.x,y:s.y,z:s.z}};
+   }
+  };
+ }
+ function stop(){if(!active)return;active=false;cancelAnimationFrame(raf);controller.abort();sound.destroy();renderer?.destroy();if(window.__rescueHouse)delete window.__rescueHouse;root.remove();}
  return stop;
 }
