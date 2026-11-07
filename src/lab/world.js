@@ -5,7 +5,8 @@ export const MATERIAL = {
   wood: [0.47, 0.29, 0.30], floor: [0.48, 0.34, 0.38], tile: [0.38, 0.51, 0.52],
   velvet: [0.65, 0.33, 0.45], cream: [0.85, 0.76, 0.65], pink: [0.92, 0.59, 0.65],
   dark: [0.28, 0.24, 0.33], glass: [0.49, 0.63, 0.76], brass: [0.94, 0.68, 0.33],
-  paper: [0.91, 0.82, 0.65], foliage: [0.39, 0.50, 0.40], carpet: [0.54, 0.28, 0.43]
+  paper: [0.91, 0.82, 0.65], foliage: [0.39, 0.50, 0.40], carpet: [0.54, 0.28, 0.43],
+  glove: [0.98, 0.88, 0.84], pawpad: [0.96, 0.54, 0.62], torchmetal: [0.39, 0.47, 0.57], torchglass: [1.0, 0.93, 0.64], bow: [0.84, 0.23, 0.36]
 };
 const b = (id, x, y, z, w, h, d, mat, solid = true, extra = {}) => ({ id, x, y, z, w, h, d, mat, solid, ...extra });
 const thing = (id, kind, label, x, y, z, extra = {}) => ({ id, kind, label, x, y, z, ...extra });
