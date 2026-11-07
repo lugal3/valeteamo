@@ -1,9 +1,10 @@
 import {useEffect,useRef,useState} from 'react';
 import './splash.css';
+import {playWelcomeMelody} from './welcome-melody';
 
 export function Splash({onStart,muted}:{onStart:()=>void,muted:boolean}){
  const [hasPicture,setHasPicture]=useState(true),begun=useRef(false);
- const start=()=>{if(begun.current)return;begun.current=true;onStart();};
+ const start=()=>{if(begun.current)return;begun.current=true;playWelcomeMelody(muted);onStart();};
  useEffect(()=>{
   const key=(event:KeyboardEvent)=>{if(event.key==='Tab'||event.key==='Shift'||event.key==='Escape'||event.repeat)return;start();};
   window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);
@@ -16,6 +17,9 @@ export function Splash({onStart,muted}:{onStart:()=>void,muted:boolean}){
    </div>}
    <div className="splash-particles" aria-hidden="true">
     {Array.from({length:22},(_,i)=><span key={i} className="splash-particle" style={{left:`${6+(i*47)%88}%`,top:`${10+(i*31)%78}%`,animationDelay:`${-(i*0.63)%8}s`,animationDuration:`${4.5+(i%5)*1.2}s`}}>{i%3===0?'✦':i%3===1?'✿':'·'}</span>)}
+   </div>
+   <div className="splash-petals" aria-hidden="true">
+    {Array.from({length:12},(_,i)=><span key={i} className="splash-petal" style={{left:`${(11+i*31)%94}%`,top:`${(9+i*17)%80}%`,animationDelay:`${-i*.7}s`,animationDuration:`${7+(i%4)*1.6}s`}}>{i%2?'❀':'✿'}</span>)}
    </div>
    <span className="splash-water" aria-hidden="true"/>
   </div>
