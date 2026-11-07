@@ -2,6 +2,7 @@ import {createHouse,HEIGHT,blocked,groundHeight,lineBlocked,setDoor,setDrawer} f
 import {HouseRenderer,pickupGeometry} from './renderer.js';
 import {HouseSound} from './sound.js';
 import {applyLookDelta,followLook,readCameraSettings,writeCameraSettings,DEFAULT_CAMERA_SETTINGS} from './camera-controls.js';
+import {WINDOW_SHOT_SECONDS,WINDOW_LANDING,windowIntroCamera,shouldPlayWindowIntro} from './window-intro.js';
 import {navigate,smoothAxis,getStairDirection} from './navigation.js';
 import {createHousePuzzle,puzzleEvent,canOpenDrawer,canOpenBedroom,canRescue,PUZZLE_HINTS} from '../demo/house-puzzles.js';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -34,6 +35,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const root=document.createElement('div');root.id='lab3d';root.innerHTML=`
  <canvas id="lab-canvas" aria-label="Escenario tridimensional interactivo de la casa"></canvas>
  <div class="lab-vignette" aria-hidden="true"></div>
+ <div class="lab-window-intro lab-hidden" id="lab-window-intro" aria-label="Entrada cinematográfica por la ventana">
+   <div class="lab-intro-top"></div>
+   <div class="lab-intro-caption" id="lab-intro-caption">Una ventana entreabierta…</div>
+   <button data-act="skip-intro" aria-label="Saltar la animación de entrada">Saltar intro ↗</button>
+   <div class="lab-intro-bottom"></div>
+ </div>
  <div class="lab-cross" aria-hidden="true">+</div>
  <div class="lab-top">
    <button data-act="exit" class="lab-exit">← ${demo?'Cumpleaños':'Pruebas'}</button>
@@ -80,7 +87,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const controller=new AbortController(),signal=controller.signal;
  let renderer,world,puzzle=createHousePuzzle(config.entry),sound=new HouseSound(),s,raf=0,last=0,lastPaint=0,fps=0,elapsed=0,toastUntil=0,lookPointer=null,stickPointer=null;
  let active=true,ready=false,hasFocus=true,focus=null,lookLast={x:0,y:0},paused=false,modal='',intro=true,contextLost=false;
- let lookTarget={yaw:Math.PI,pitch:0};
+ let lookTarget={yaw:Math.PI,pitch:0},cinematic=null;
  const keys=new Set(),joystick={x:0,z:0},velocity={forward:0,side:0};
  const cameraSettings=(()=>{try{return readCameraSettings(window.localStorage)}catch{return {...DEFAULT_CAMERA_SETTINGS}}})();
  const options={sensitivity:cameraSettings.sensitivity,invertX:cameraSettings.invertX,bob:true,quality:'medium'};
@@ -88,7 +95,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const points={ground:'Planta baja',upstairs:'Planta alta',sound:'Iluminación / sonido',interactions:'Interacciones'};
  const say=(text,seconds=2.4)=>{$('lab-toast').textContent=text;toastUntil=performance.now()+seconds*1000;};
  const isPortrait=()=>window.innerHeight>window.innerWidth;
- const isPaused=()=>!ready||paused||!!modal||isPortrait()||document.hidden||!hasFocus||contextLost;
+ const isPaused=()=>!ready||paused||!!modal||!!cinematic||isPortrait()||document.hidden||!hasFocus||contextLost;
  const modalClose=()=>{modal='';dialog.classList.add('lab-hidden');dialog.innerHTML='';keys.clear();joystick.x=joystick.z=0;velocity.forward=velocity.side=0;};
  function showModal(title,body,actions=[['Cerrar','close']]){
   modal=title;dialog.classList.remove('lab-hidden');
@@ -96,6 +103,16 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   keys.clear();joystick.x=joystick.z=0;$('lab-stick').style.transform='translate(0,0)';
  }
  function rebuild(){renderer.rebuild([...world.boxes,...pickupGeometry(world.objects)]);}
+ function finishWindowIntro(){
+  cinematic=null;root.classList.remove('lab-intro-active');$('lab-window-intro').classList.add('lab-hidden');
+  Object.assign(s,WINDOW_LANDING);s.eye=WINDOW_LANDING.eye;s.bob=0;
+  lookTarget={yaw:s.yaw,pitch:s.pitch};velocity.forward=velocity.side=0;
+  last=performance.now();say('Kitty entra con cuidado por la ventana…',2.5);
+ }
+ function beginWindowIntro(){
+  cinematic={elapsed:0};root.classList.add('lab-intro-active');$('lab-window-intro').classList.remove('lab-hidden');
+  $('lab-intro-caption').textContent='Una ventana entreabierta…';
+ }
  function reset(){
   world=createHouse(checkpoint);puzzle=createHousePuzzle(config.entry);
   if(demo){
@@ -186,8 +203,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function runAction(act,node){
   if(act==='exit'){stop();onExit();return;}
   if(act==='finish'){config.onRescue?.();return;}
+  if(act==='skip-intro'){if(cinematic)finishWindowIntro();return;}
   if(act==='close'){if(paused){paused=false;sound.resume();}modalClose();return;}
-  if(act==='start'){intro=false;modalClose();ready=true;void sound.start().then(ok=>{if(!ok)say('No se pudo iniciar el sonido en este navegador');});try{screen.orientation?.lock?.('landscape').catch(()=>{});}catch{}return;}
+  if(act==='start'){intro=false;modalClose();ready=true;
+   void sound.start().then(ok=>{if(!ok)say('No se pudo iniciar el sonido en este navegador');});
+   const reduce=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true;
+   if(shouldPlayWindowIntro({demo,trial:config.trial,checkpoint,reducedMotion:reduce}))beginWindowIntro();
+   try{screen.orientation?.lock?.('landscape').catch(()=>{});}catch{}return;}
   if(act==='pause'){togglePause();return;}
   if(act==='resume'){paused=false;modalClose();sound.resume();return;}
   if(act==='recharge'){recharge();return;}
@@ -260,8 +282,15 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(now-lastPaint<limit-2)return;
   const dt=Math.min(.055,Math.max(0,(now-last)/1000||0));last=now;lastPaint=now;
   if(!s||!renderer)return;
-  tick(dt);elapsed+=isPaused()?0:dt;
-  try{renderer.render(cameraOf(s),s.flashlight&&!isPaused(),elapsed,demo);}catch(e){contextLost=true;showModal('Error de renderizado',`<p>${escapeHTML(String(e.message||e))}</p>`,[['Volver a pruebas','exit']]);}
+  let view=cameraOf(s),hand=demo,torch=s.flashlight&&!isPaused();
+  if(cinematic){
+   if(!isPortrait()&&!document.hidden&&hasFocus)cinematic.elapsed+=dt;
+   const progress=Math.min(1,cinematic.elapsed/WINDOW_SHOT_SECONDS);
+   view=windowIntroCamera(progress);hand=false;torch=true;
+   $('lab-intro-caption').textContent=progress<.35?'Una ventana entreabierta…':progress<.72?'Kitty se cuela sin hacer ruido…':'Un nuevo mundo por explorar ♡';
+   if(progress>=1)finishWindowIntro();
+  }else{tick(dt);elapsed+=isPaused()?0:dt;}
+  try{renderer.render(view,torch,elapsed,hand);}catch(e){contextLost=true;showModal('Error de renderizado',`<p>${escapeHTML(String(e.message||e))}</p>`,[['Volver a pruebas','exit']]);}
   frameCount++;if(now-statsAt>1000){fps=Math.round(frameCount*1000/(now-statsAt));frameCount=0;statsAt=now;}
   updateControls();
  }
