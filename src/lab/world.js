@@ -20,10 +20,10 @@ export function createHouse(spawn = 'ground') {
   // Foundation and second-storey slab leave a physical opening for the staircase.
   add('base', 6, -.20, 5, 12.4, .4, 10.4, 'floor');
   for (const y of [HEIGHT]) {
-    add('floor-up-left', 4.25, y - .11, 5, 8.5, .22, 10, 'wood',false);
-    add('floor-up-right-front', 10.25, y - .11, 2.25, 3.5, .22, 4.5, 'wood',false);
-    add('floor-up-right-back', 10.25, y - .11, 9.62, 3.5, .22, .76, 'wood',false);
-    add('floor-up-right-rim', 8.75, y - .11, 7.05, .5, .22, 5.1, 'wood',false);
+    add('floor-up-left', 4.25, y - .11, 5, 8.5, .22, 10, 'wood');
+    add('floor-up-right-front', 10.25, y - .11, 2.25, 3.5, .22, 4.5, 'wood');
+    add('floor-up-right-back', 10.25, y - .11, 9.62, 3.5, .22, .76, 'wood');
+    add('floor-up-right-rim', 8.75, y - .11, 7.05, .5, .22, 5.1, 'wood');
   }
   add('roof', 6, 6.34, 5, 12.4, .23, 10.4, 'plaster');
   for (const level of [0, HEIGHT]) {
@@ -144,7 +144,8 @@ export function groundHeight(x,z,levelHint=0) {
   return levelHint>HEIGHT*.52?HEIGHT:0;
 }
 export function overlaps(box, x, footY, z, radius=.19, bodyHeight=1.65) {
-  if(!box.solid)return false;
+  // A slab is a walking surface/visual occluder, not a wall to trap a head at stair landings.
+  if(!box.solid||box.id.startsWith('floor-up-'))return false;
   return Math.abs(box.x-x)<box.w/2+radius && Math.abs(box.z-z)<box.d/2+radius
      && footY < box.y+box.h/2-.02 && footY+bodyHeight > box.y-box.h/2+.02;
 }
