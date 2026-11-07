@@ -33,8 +33,9 @@ const {chromium}=require('playwright');
   await page.evaluate(()=>{window.__rescueScene.kitty.setPosition(594,325);});
   await page.getByRole('button',{name:/Seguir pétalos/}).waitFor({timeout:7000});
   await page.getByRole('button',{name:/Seguir pétalos/}).click();
-  await page.keyboard.down('d');await page.waitForTimeout(1040);await page.keyboard.up('d');
+  // Place the player at the 3D threshold after verifying the trail clue.
   await page.evaluate(()=>{window.__rescueScene.kitty.setPosition(838,310);});
+  console.log('At house:',await page.evaluate(()=>({phase:document.querySelector('.rescue-story')?.textContent,kittyX:window.__rescueScene.kitty.x,kittyY:window.__rescueScene.kitty.y,lastNear:window.__rescueScene.lastNear,buttons:[...document.querySelectorAll('.rescue-demo button')].map(b=>b.textContent)})));
   await page.getByRole('button',{name:/Abrir puerta/}).waitFor({timeout:7000});
   await page.getByRole('button',{name:/Abrir puerta/}).click();
   await page.getByRole('button',{name:/Entrar a buscar a Louis/}).waitFor({timeout:7000});
