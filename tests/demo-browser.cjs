@@ -45,9 +45,24 @@ const {chromium}=require('playwright');
   await page.locator('#lab-dialog [data-act="start"]').click();
   await page.waitForTimeout(650);
   await page.screenshot({path:path.join(folder,'06-casa-3d.png')});
-  await page.getByRole('button',{name:/Mochila/}).count(); // selection smoke check
+  // Development-only movement setup checks the real collision shapes and picking rays.
+  // This is not equivalent to physically walking every corridor or Safari verification.
+  const use=async id=>await page.evaluate(id=>window.__rescueHouse.interactWith(id),id);
+  let p=await use('dormitorio');assert.equal(p.puzzle.door,false,'Cannot open locked bedroom early');
+  p=await use('drawer');assert.equal(p.puzzle.drawer,false,'Must read the note first');
+  p=await use('note-hall');assert(p.puzzle.note,'Hall note found');
+  p=await use('drawer');assert(p.puzzle.drawer,'Drawer opens after note');
+  p=await use('key');assert(p.puzzle.key,'Key acquired');
+  p=await use('picture-stain');assert(p.puzzle.symbol,'Picture clue examined');
+  await page.screenshot({path:path.join(folder,'07-pista-cuadro.png')});
+  p=await use('dormitorio');assert(p.puzzle.door,'Bedroom unlocked with two clues');
+  p=await use('rescue-louis');assert(p.puzzle.rescued,'Louis rescue reached');
+  await page.screenshot({path:path.join(folder,'08-rescate.png')});
+  await page.locator('#lab-dialog [data-act="finish"]').click();
+  await page.getByRole('heading',{name:/Louis está a salvo/}).waitFor({timeout:7000});
+  await page.screenshot({path:path.join(folder,'09-final.png')});
   assert.deepEqual(errors,[],'Unexpected browser errors: '+errors.join(' | '));
-  console.log('PASS: interactive cover, birthday menu, Phaser route, transition and WebGL house');
+  console.log('PASS: birthday, 2D kidnapping, 3D puzzle interactions, rescue ending and WebGL');
   await context.close();
  }finally{await browser?.close();await server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});
