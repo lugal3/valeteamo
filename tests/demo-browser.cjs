@@ -30,7 +30,7 @@ const {chromium}=require('playwright');
   await page.getByText('Feliz cumpleaños, Valentina').waitFor();await page.waitForTimeout(1100);
   await page.screenshot({path:path.join(folder,'02-cumpleanos.png')});
   await page.getByRole('button',{name:/Jugar la demo de rescate 2D/}).click();
-  await page.getByRole('button',{name:/Presiona cualquier botón para iniciar/}).click();
+  await page.mouse.click(480,478);
   await page.locator('.rescue-stage canvas').waitFor({timeout:15000});
   await page.waitForTimeout(850);
   await page.screenshot({path:path.join(folder,'03-jardin-2d.png')});
