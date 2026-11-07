@@ -169,7 +169,10 @@ export class HouseRenderer {
   ];
   const {vertices,indices}=geometry(pieces);
   for(let i=0;i<vertices.length;i+=13){
-   const x=vertices[i],y=vertices[i+1],z=vertices[i+2];
+   const px=vertices[i],py=vertices[i+1],pz=vertices[i+2];
+   // Keep the paw at the lower-right, without covering the centre reticle.
+   // Smaller camera-space geometry remains steady on mobile portrait/landscape.
+   const x=.50+(px-.4)*.70,y=-.43+(py+.35)*.70,z=1.65+(pz-.83)*.70;
    vertices[i]=camera.x+x*right[0]+y*up[0]+z*forward[0];
    vertices[i+1]=camera.y+x*right[1]+y*up[1]+z*forward[1];
    vertices[i+2]=camera.z+x*right[2]+y*up[2]+z*forward[2];
@@ -181,6 +184,8 @@ export class HouseRenderer {
   const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,this.handVbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.DYNAMIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.handIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.DYNAMIC_DRAW);
   this.bind(this.handVbo,this.handIbo);gl.clear(gl.DEPTH_BUFFER_BIT);
+  // The torch illuminates the world, not its own reflective lens and mitten.
+  gl.uniform1f(this.uniform.uFlash,0);
   gl.drawElements(gl.TRIANGLES,indices.length,gl.UNSIGNED_SHORT,0);
  }
  resize(){
