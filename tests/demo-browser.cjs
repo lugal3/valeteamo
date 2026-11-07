@@ -24,12 +24,13 @@ const {chromium}=require('playwright');
   await page.locator('.rescue-stage canvas').waitFor({timeout:15000});
   await page.waitForTimeout(850);
   await page.screenshot({path:path.join(folder,'03-jardin-2d.png')});
-  await page.keyboard.down('d');await page.waitForTimeout(610);await page.keyboard.up('d');
+  await page.keyboard.down('d');await page.waitForFunction(()=>window.__rescueScene?.kitty?.x>160,{timeout:7000});await page.keyboard.up('d');
+  await page.evaluate(()=>window.__rescueScene.kitty.setPosition(277,282));
   await page.getByRole('button',{name:/Recoger corazón/}).waitFor({timeout:7000});
   await page.getByRole('button',{name:/Recoger corazón/}).click();
   await page.waitForTimeout(2400);
   await page.screenshot({path:path.join(folder,'04-secuestro.png')});
-  await page.keyboard.down('d');await page.waitForTimeout(1560);await page.keyboard.up('d');
+  // Do not rely on wall-clock movement timing in a headless CI runner.
   await page.evaluate(()=>{window.__rescueScene.kitty.setPosition(594,325);});
   await page.getByRole('button',{name:/Seguir pétalos/}).waitFor({timeout:7000});
   await page.getByRole('button',{name:/Seguir pétalos/}).click();
