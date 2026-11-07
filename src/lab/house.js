@@ -45,6 +45,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  <div class="lab-toast" id="lab-toast" role="status" aria-live="polite"></div>
  <div class="lab-power ${demo?'lab-hidden':''}"><span>☼ LINTERNA</span><div class="lab-powerbar"><i id="lab-charge"></i></div><strong id="lab-charge-text">100%</strong></div>
  <div class="lab-paw ${demo?'lab-hidden':''}" aria-hidden="true"><div class="lab-paw-base">◕ ◕<span>♥</span></div><div class="lab-torch">✦</div></div>
+  <div class="lab-hand-art ${demo?'':'lab-hidden'}" aria-hidden="true">
+   <div class="lab-kitty-sleeve"></div><div class="lab-kitty-mitt"><i class="lab-cat-digit first"></i><i class="lab-cat-digit second"></i><i class="lab-cat-digit third"></i><i class="lab-cat-thumb"></i><i class="lab-cat-pad"></i><i class="lab-cat-toe a"></i><i class="lab-cat-toe b"></i><i class="lab-cat-toe c"></i></div>
+   <div class="lab-real-torch"><i class="torch-grip"></i><i class="torch-switch"></i><i class="torch-barrel"></i><i class="torch-bezel"></i><i class="torch-lens"></i></div>
+  </div>
  <div class="lab-joystick" id="lab-joystick" aria-label="Joystick izquierdo, arrastrar para caminar"><div class="lab-stick-ring"><div id="lab-stick" class="lab-stick-thumb">♡</div></div><span>CAMINAR</span></div>
  <div class="lab-look" id="lab-look" aria-label="Arrastrar para mirar"></div>
  <div class="lab-buttons">
@@ -204,6 +208,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const label=s.hidden?'ESCONDIDA · USAR PARA SALIR':s.lying?'ACOSTADA · USAR PARA LEVANTARTE':target?`${target.label} · USAR`:'';
   $('lab-focus').textContent=label;
   $('lab-floor').textContent=(s.y>1.8?'PLANTA ALTA':'PLANTA BAJA')+' · '+ctxRoom(s).toUpperCase();
+  root.classList.toggle('lab-flash-off',!s.flashlight);
   $('lab-compass').textContent=(Math.abs(Math.sin(s.yaw))>Math.abs(Math.cos(s.yaw))?(Math.sin(s.yaw)>0?'E':'O'):(Math.cos(s.yaw)>0?'S':'N'))+' ↑';
   $('lab-objective').textContent=demo?(puzzle.rescued?'♥ ¡Louis está a salvo!':!puzzle.note?'✉ Busca la nota del pasillo':!puzzle.key?'⚿ Abre el cajón del estudio y recoge la llave':!puzzle.symbol?'♡ Examina el cuadro del salón':!puzzle.door?'🚪 Sube y abre el dormitorio':'♡ Encuentra a Louis dentro del dormitorio'):'Explora libremente · E interactuar';
   if(getStairDirection(s)==='Escaleras')$('lab-objective').textContent+=' · ↑↓ Escaleras';
