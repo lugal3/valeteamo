@@ -19,6 +19,11 @@ const {chromium}=require('playwright');
   const assets=await page.evaluate(async()=>Promise.all(['001','005','014','019'].map(async id=>{const r=await fetch('/demo-assets/referencias/'+id+'.webp');return [id,r.status,r.headers.get('content-type')]})));
   for(const [id,status,mime] of assets){assert.equal(status,200,'Missing image '+id);assert(/image\/webp/.test(mime),'Incorrect MIME for '+id);}
 
+  console.log('Play overlay hit-test:',await page.evaluate(()=>{
+   const b=document.querySelector('.splash-start'),box=b.getBoundingClientRect();
+   const el=document.elementFromPoint(box.left+box.width/2,box.top+box.height/2);
+   return {rect:{x:box.x,y:box.y,w:box.width,h:box.height},target:el?.className,style:{z:getComputedStyle(b).zIndex,pointer:getComputedStyle(b).pointerEvents,display:getComputedStyle(b).display,position:getComputedStyle(b).position}};
+  }));
   await page.screenshot({path:path.join(folder,'01-portada.png')});
   await page.getByRole('button',{name:/Presiona cualquier botón para iniciar/}).click();
   await page.getByText('Feliz cumpleaños, Valentina').waitFor();await page.waitForTimeout(1100);
