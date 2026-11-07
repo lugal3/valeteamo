@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
  const w=await import('../src/lab/world.js');
  const {navigate,PLAYER_RADIUS,smoothAxis,getStairDirection}=await import('../src/lab/navigation.js');
  const world=w.createHouse('ground');
- for(const id of ['entrada','salon','estudio','habitación'])w.setDoor(world.objects.find(o=>o.id===id),true);
+ for(const id of ['entrada','salon','estudio','habitación','dormitorio'])w.setDoor(world.objects.find(o=>o.id===id),true);
  let s={x:9.75,z:9.40,y:0};
  for(let i=0;i<90;i++)navigate(s,world,0,-.06);
  assert(s.z<4.55,'Player must reach top of stairs, z='+s.z);
