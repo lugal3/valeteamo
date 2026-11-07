@@ -41,9 +41,9 @@ export function createHouse(spawn = 'ground') {
       add('left-lintel-b',4.05,2.73,6.425,.2,.74,1.25,'wallpaper');
       wallX('right-part-a',7.65,0,1.85,0,'wall2');
       wallX('right-part-b',7.65,3.1,5.8,0,'wall2');
-      wallX('right-part-c',7.65,7.95,10,0,'wall2');
+      wallX('right-part-c',7.65,8.25,10,0,'wall2');
       add('right-lintel-a',7.65,2.73,2.475,.2,.74,1.25,'wall2');
-      add('right-lintel-b',7.65,2.73,6.875,.2,.74,2.15,'wall2');
+      add('right-lintel-b',7.65,2.73,7.025,.2,.74,2.45,'wall2');
     } else {
       wallX('upper-left-a',4.5,0,1.85,level,'wall2');
       wallX('upper-left-b',4.5,3.15,10,level,'wall2');
@@ -60,9 +60,9 @@ export function createHouse(spawn = 'ground') {
     const t=(i+.5)/12, z=stairZBottom-t*(stairZBottom-stairZTop), height=(i+1)*HEIGHT/12;
     add('step-'+i,9.75,height-.13,z,2.13,.26,(stairZBottom-stairZTop)/12+.03,'wood',false);
   }
-  add('rail-left',8.58,1.76,6.84,.15,3.5,3.6,'wood');
-  add('rail-right',10.92,1.76,6.84,.15,3.5,3.6,'wood');
-  add('upper-railing',8.36,3.66,7.2,.16,1.05,4.1,'brass');
+  add('rail-left',8.58,1.76,6.84,.15,3.5,3.6,'wood',false);
+  add('rail-right',10.92,1.76,6.84,.15,3.5,3.6,'wood',false);
+  add('upper-railing',8.36,3.66,7.2,.16,1.05,4.1,'brass',false);
   // Sliding doors move aside completely; their actual collision boxes move with them.
   function door(id, x,y,z,w,d,slideAxis,slideDistance,label,locked=false) {
     const shape=add('door-'+id,x,y+1.1,z,w,2.2,d,'wood',true,{door:id});
