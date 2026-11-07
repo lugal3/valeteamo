@@ -278,7 +278,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  let statsAt=performance.now(),frameCount=0,slowSeconds=0;
  function frame(now){
   if(!active)return;raf=requestAnimationFrame(frame);
-  const limit=options.quality==='low'?1000/30:1000/60;
+  const limit=(paused||!!modal||isPortrait()||!hasFocus)?1000/15:options.quality==='low'?1000/30:1000/60;
   if(now-lastPaint<limit-2)return;
   const dt=Math.min(.055,Math.max(0,(now-last)/1000||0));last=now;lastPaint=now;
   if(!s||!renderer)return;
