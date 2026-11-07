@@ -27,6 +27,9 @@ varying float vArt,vStyle,vDistance;
 uniform vec3 uEye,uForward;
 uniform sampler2D uAtlas;
 uniform float uFlash,uTime;
+float tinyHash(vec2 cell){return fract(sin(dot(floor(cell),vec2(12.9898,78.233)))*437.58);}
+vec2 surfaceUV(vec3 p,vec3 n){return abs(n.y)>.6?p.xz:abs(n.x)>.6?p.zy:p.xy;}
+float seam(float v,float size,float width){float f=fract(v*size);return 1.0-step(width,f);}
 void main(){
  vec3 delta=vWorld-uEye;
  float d=max(length(delta),.1);
@@ -39,15 +42,36 @@ void main(){
    + .33/(1.0+.15*pow(distance(vWorld,lamp2),2.0))
    + .24/(1.0+.12*pow(distance(vWorld,lamp3),2.0));
  float facing=.75+.25*max(0.0,dot(normalize(vNormal),normalize(vec3(.3,.8,.4))));
- float lighting=(.32+warmth+beam)*facing;
+ float lighting=(.41+warmth+beam)*facing;
  vec3 color=vColor;
- if(vStyle>1.5 && vStyle<2.5){
-   float seam=step(.95,fract(vWorld.x*1.6+vWorld.z*.37));
-   color*=1.0-seam*.18;
- }else if(vStyle>.5 && vStyle<1.5){
-   vec2 uv=abs(vNormal.y)>.5?vWorld.xz:vWorld.xy+vWorld.zy*.16;
-   float dotPattern=step(.94,fract(uv.x*2.4))*step(.88,fract(uv.y*2.2));
-   color=mix(color,vec3(.93,.73,.76),dotPattern*.23);
+ vec2 uv=surfaceUV(vWorld,normalize(vNormal));
+ // World-space anchored patterns remain stationary as the camera moves.
+ if(vStyle>.5 && vStyle<1.5){
+   float motif=step(.88,fract(uv.x*2.25))*step(.87,fract(uv.y*2.4));
+   float fleck=tinyHash(floor(uv*5.0))-.5;
+   color*=1.0+.035*fleck;
+   color=mix(color,vec3(.94,.70,.78),motif*.17);
+   color*=1.0-.045*seam(uv.y,.85,.028);
+ }else if(vStyle>1.5 && vStyle<2.5){
+   float plank=seam(uv.y,1.5,.025);
+   float grain=sin(uv.x*19.0+sin(uv.y*4.2)*1.5)*.035;
+   float knot=step(.95,tinyHash(floor(uv*1.7)))*.07;
+   color*=1.0+grain+knot;
+   color*=1.0-.22*plank;
+ }else if(vStyle>2.5 && vStyle<3.5){
+   float joints=max(seam(uv.x,2.65,.045),seam(uv.y,2.65,.045));
+   float stagger=step(.5,tinyHash(floor(uv*2.65)));
+   color*=1.0+stagger*.09-joints*.22;
+ }else if(vStyle>3.5 && vStyle<4.5){
+   float thread=sin(uv.x*32.0)*sin(uv.y*27.0)*.045;
+   color*=1.0+thread;
+ }else if(vStyle>4.5 && vStyle<5.5){
+   float speck=tinyHash(floor(uv*11.0));
+   color*=.93+.18*speck;
+ }else if(vStyle>5.5 && vStyle<6.5){
+   color*=.96+.065*sin(uv.x*17.0+uv.y*4.0);
+ }else if(vStyle>6.5 && vStyle<7.5){
+   color*=.99+.035*tinyHash(floor(uv*3.0));
  }
  if(vArt>.5) {
    vec4 painted=texture2D(uAtlas,vUV);
@@ -56,7 +80,7 @@ void main(){
  color*=lighting;
  // Coherent low-color-count pixel appearance even on ordinary 3D geometry.
  color=floor(color*24.0+.5)/24.0;
- float fog=clamp((vDistance-5.0)/17.0,0.0,.64);
+ float fog=clamp((vDistance-5.5)/20.0,0.0,.51);
  color=mix(color,vec3(.16,.13,.21),fog);
  gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);
 }`;
@@ -105,7 +129,10 @@ function geometry(boxes){
  const vertices=[],indices=[],colors=MATERIAL;let offset=0;
  for(const box of boxes){
   const color=colors[box.mat]||colors.cream;
-  const style=box.mat==='wallpaper'||box.mat==='wall2'?1:box.mat==='wood'||box.mat==='floor'?2:0;
+  const style=['wallpaper','wall2','plaster'].includes(box.mat)?1:
+   ['wood','floor','trim'].includes(box.mat)?2:box.mat==='tile'?3:
+   ['carpet','velvet','pink','glove','bow','pawpad'].includes(box.mat)?4:
+   box.mat==='foliage'?5:['brass','terracotta','torchmetal'].includes(box.mat)?6:7;
   for(const face of faces){
    const art=box.art!==undefined&&box.front===face.dir?box.art+1:0;
    face.corners.forEach(([dx,dy,dz],i)=>{
