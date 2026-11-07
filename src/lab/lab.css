@@ -100,3 +100,24 @@
  #lab3d .lab-stick-ring{width:76px;height:76px}
 }
 @media(prefers-reduced-motion:reduce){#lab3d .lab-stick-thumb{transition:none}}
+
+/* First-person illustrated mitten & working flashlight: crisp readable HUD silhouette. */
+#lab3d .lab-hand-art{position:absolute;z-index:4;pointer-events:none;bottom:-5px;right:clamp(148px,19vw,220px);width:144px;height:132px;transform:rotate(-8deg);filter:drop-shadow(0 9px 10px #0c0925ad)}
+#lab3d .lab-kitty-sleeve{position:absolute;left:30px;bottom:-18px;width:74px;height:85px;background:linear-gradient(90deg,#a72851,#e96383 50%,#ae3455);border:5px solid #36253b;border-radius:35px 35px 13px 13px;transform:rotate(-13deg)}
+#lab3d .lab-kitty-mitt{position:absolute;left:25px;bottom:26px;width:83px;height:70px;border:5px solid #4a304a;border-radius:47% 47% 40% 40%;background:linear-gradient(135deg,#fffdf4 15%,#ffe6da 65%,#ddc4d4);transform:rotate(7deg)}
+#lab3d .lab-cat-digit{position:absolute;top:-23px;width:24px;height:34px;border:4px solid #4a304a;border-bottom:0;background:#fff5e9;border-radius:16px 16px 6px 6px}
+#lab3d .lab-cat-digit.first{left:2px;transform:rotate(-12deg)}#lab3d .lab-cat-digit.second{left:26px;top:-29px}#lab3d .lab-cat-digit.third{left:49px;transform:rotate(13deg)}
+#lab3d .lab-cat-thumb{position:absolute;left:-17px;top:20px;width:29px;height:35px;background:#f7e7e5;border:4px solid #4a304a;border-radius:18px;transform:rotate(-27deg)}
+#lab3d .lab-cat-pad{position:absolute;left:23px;top:29px;width:28px;height:22px;background:#ee9cb4;border:2px solid #cb658c;border-radius:55% 55% 45% 45%;transform:rotate(8deg)}
+#lab3d .lab-cat-toe{position:absolute;top:8px;width:12px;height:14px;background:#f3a6bf;border:2px solid #d67a99;border-radius:50%}
+#lab3d .lab-cat-toe.a{left:13px;transform:rotate(-20deg)}#lab3d .lab-cat-toe.b{left:32px;top:4px}#lab3d .lab-cat-toe.c{left:51px;transform:rotate(20deg)}
+#lab3d .lab-real-torch{position:absolute;left:78px;bottom:60px;width:83px;height:31px;transform:rotate(-15deg)}
+#lab3d .torch-barrel{position:absolute;left:12px;top:6px;width:58px;height:23px;background:linear-gradient(#687a8a 0%,#29334c 30%,#5c6781 60%,#222a42 100%);border:3px solid #27213a;border-radius:8px 6px 6px 8px}
+#lab3d .torch-grip{position:absolute;left:4px;top:3px;width:30px;height:29px;border:3px solid #282039;border-radius:8px;background:repeating-linear-gradient(90deg,#354260 0 4px,#65748b 4px 6px)}
+#lab3d .torch-switch{position:absolute;left:29px;top:-2px;width:15px;height:10px;border:2px solid #342338;background:#e9a9b8;border-radius:5px;z-index:3}
+#lab3d .torch-bezel{position:absolute;right:1px;top:0;width:21px;height:34px;border:4px solid #28223a;border-radius:50% / 25%;background:linear-gradient(90deg,#b7a5ad,#5b6679);z-index:3}
+#lab3d .torch-lens{position:absolute;right:-1px;top:7px;width:14px;height:21px;border:2px solid #4d4d6c;border-radius:50%;background:radial-gradient(circle,#fff8d0,#f6cb63 74%,#ce815c);z-index:4;box-shadow:0 0 13px 4px #ffebac82}
+#lab3d.lab-flash-off .torch-lens{background:#718296;box-shadow:none}
+@media(max-height:440px){#lab3d .lab-hand-art{transform:scale(.72) rotate(-8deg);transform-origin:bottom right;right:140px}}
+@media(max-width:570px){#lab3d .lab-hand-art{transform:scale(.70) rotate(-8deg);transform-origin:bottom right;right:clamp(124px,23vw,170px)}}
+@media(prefers-reduced-motion:reduce){#lab3d .lab-hand-art{animation:none}}
