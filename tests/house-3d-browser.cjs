@@ -93,9 +93,9 @@ async function main(){
   const notes=(await snap()).notes;await page.keyboard.press('e');assert.equal((await snap()).notes,notes);
   await pose({x:5.87,y:0,z:9.06,yaw:0,pitch:0});
   await page.waitForFunction(()=>window.__rescueHouse.snapshot().doors.find(d=>d.id==='entrada').open);
-  await page.waitForTimeout(300);await page.keyboard.press('e');await page.waitForTimeout(450);
+  await page.waitForTimeout(300);await page.keyboard.press('e');await page.waitForFunction(()=>window.__rescueHouse.snapshot().doors.find(d=>d.id==='entrada').state==='closed');
   assert.equal((await snap()).doors.find(d=>d.id==='entrada').open,false,'A manually closed door stays closed nearby');
-  await page.keyboard.press('e');await page.waitForTimeout(300);
+  await page.keyboard.press('e');await page.waitForFunction(()=>window.__rescueHouse.snapshot().doors.find(d=>d.id==='entrada').state==='open');
   await pose({x:5.87,y:0,z:9.76,yaw:0,pitch:0});await page.keyboard.press('e');
   assert((await snap()).doors.find(d=>d.id==='entrada').open,'Closing cannot trap the body inside the door');
   await pose({x:11.2,y:0,z:7.4,yaw:Math.atan2(.2,-2.35),pitch:-.12});
@@ -105,7 +105,25 @@ async function main(){
   await page.evaluate(()=>window.__rescueHouse.interactWith('note-hall'));
   await page.getByRole('dialog',{name:'Nota doblada'}).waitFor();await screenshot('05-interaccion');
   await page.keyboard.press('Escape');
+  console.log('3D: real drawer opening, pause, closing and reduced motion');
+  await page.evaluate(()=>window.__rescueHouse.interactWith('drawer',false));
+  await page.waitForFunction(()=>window.__rescueHouse.snapshot().target==='drawer');
+  await page.locator('#lab-interact').click();
+  await page.waitForFunction(()=>{const d=window.__rescueHouse.snapshot().drawer;return d.state==='opening'&&d.amount>0&&d.amount<1;});
+  const opening=await snap();assert.equal(opening.drawer.contentsAvailable,false);
+  await page.keyboard.press('e'); // repeated input must not reverse an opening drawer
+  await page.keyboard.press('Escape');await page.getByRole('dialog',{name:'Pausa',exact:true}).waitFor();
+  const pausedDrawer=(await snap()).drawer;await page.waitForTimeout(300);assert.deepEqual((await snap()).drawer,pausedDrawer,'Drawer and key pause together');
+  await page.getByRole('button',{name:'Continuar',exact:true}).click();
+  await page.waitForFunction(()=>window.__rescueHouse.snapshot().drawer.state==='open');
+  assert((await snap()).drawer.contentsAvailable);
+  await screenshot('14-cajon-abierto');
   await page.evaluate(()=>window.__rescueHouse.interactWith('drawer'));
+  assert.equal((await snap()).drawer.state,'closed');assert((await snap()).drawer.contentsConcealed);
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.evaluate(()=>window.__rescueHouse.interactWith('drawer'));
+  assert.equal((await snap()).drawer.state,'open','Reduced motion completes the same action immediately');
+  await page.emulateMedia({reducedMotion:'no-preference'});
   await page.evaluate(()=>window.__rescueHouse.interactWith('key'));
   await page.evaluate(()=>window.__rescueHouse.interactWith('drawer')); // close
   await page.evaluate(()=>window.__rescueHouse.interactWith('drawer')); // reopen

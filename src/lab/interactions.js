@@ -5,7 +5,7 @@ export function interactionTarget(world,camera,previous=null){
  const direction={x:Math.sin(camera.yaw)*Math.cos(camera.pitch),y:Math.sin(camera.pitch),z:Math.cos(camera.yaw)*Math.cos(camera.pitch)};
  let best=null,bestScore=Infinity;
  for(const object of world.objects){
-  if(object.taken)continue;
+  if(object.taken||object.concealed||object.interactable===false)continue;
   const dx=object.x-camera.x,dy=object.y-camera.y,dz=object.z-camera.z;
   const distance=Math.hypot(dx,dy,dz),forward=dx*direction.x+dy*direction.y+dz*direction.z;
   if(forward<.18||distance>2.45)continue;

@@ -80,8 +80,9 @@ export function createHouse(spawn = 'ground') {
   add('upper-railing',8.36,3.66,7.2,.16,1.05,4.1,'brass',false);
   // Sliding doors move aside completely; their actual collision boxes move with them.
   function door(id, x,y,z,w,d,slideAxis,slideDistance,label,locked=false) {
-    const shape=add('door-'+id,x,y+1.1,z,w,2.2,d,'wood',true,{door:id});
-    obj(id,'door',label,x,y+1.1,z,{box:shape,origin:{x,z},slideAxis,slideDistance,open:false,locked});
+    const shape=add('door-'+id,x,y+1.1,z,w,2.2,d,'wood',true,{door:id,dynamic:true});
+    const handle=add('handle-'+id,x+(w>d?.38:.08),y+1.02,z+(w>d?-.08:.38),.10,.10,.10,'brass',false,{dynamic:true});
+    obj(id,'door',label,x,y+1.1,z,{box:shape,parts:[{box:handle,origin:{x:handle.x,z:handle.z}}],origin:{x,z},slideAxis,slideDistance,open:false,amount:0,state:'closed',locked});
   }
   door('entrada',5.87,0,9.96,1.2,.11,'x',1.4,'Puerta de entrada');
   door('salon',7.65,0,2.48,.11,1.18,'z',1.5,'Puerta del salón');
@@ -96,7 +97,11 @@ export function createHouse(spawn = 'ground') {
   add('lamp-base',11.25,.48,1.12,.4,.96,.4,'brass');
   add('lamp-shade',11.25,1.13,1.12,.66,.42,.66,'pink',false);
   add('kitchen-counter',1.2,.57,7.9,1.6,1.14,2.2,'tile');
-  add('study-desk',2.6,.47,3.4,1.35,.94,.65,'wood');
+  // Same desktop footprint, with a genuine cavity for the moving drawer.
+  add('study-desk',2.6,.89,3.4,1.35,.10,.65,'wood');
+  for(const x of [2.0,3.20])for(const z of [3.15,3.65])add('desk-leg-'+x+'-'+z,x,.42,z,.10,.84,.10,'wood');
+  add('desk-back',2.6,.65,3.67,1.20,.36,.06,'wood');
+  for(const x of [2.15,3.05])add('drawer-housing-'+x,x,.73,3.35,.10,.22,.55,'wood');
   add('study-chair',2.55,.36,4.35,.67,.72,.6,'velvet');
   add('shelf',.58,1.00,2.25,.75,2.0,1.4,'wood');
   for(let i=0;i<3;i++) add('shelf-layer-'+i,.58,.5+i*.54,2.25,.8,.12,1.43,'brass',false);
@@ -168,14 +173,22 @@ export function createHouse(spawn = 'ground') {
   add('study-inkpot',2.95,1.04,3.25,.14,.15,.14,'dark',false);
   add('living-side-table',11.05,.31,4.2,.47,.62,.47,'wood',false);
   add('living-photo-frame',11.05,.68,4.2,.33,.33,.10,'brass',false);
-  const drawer=add('drawer',2.6,.76,3.05,.76,.26,.38,'pink',false);
-  obj('drawer','drawer','Cajón del escritorio',2.6,.76,3.03,{box:drawer,open:false,origin:{z:3.05}});
+  const drawer=add('drawer',2.6,.73,3.065,.76,.22,.055,'pink',true,{dynamic:true,surface:'paint'});
+  const drawerParts=[
+    add('drawer-bottom',2.6,.64,3.31,.70,.035,.44,'wood',true,{dynamic:true}),
+    add('drawer-left',2.25,.73,3.31,.035,.18,.44,'wood',true,{dynamic:true}),
+    add('drawer-right',2.95,.73,3.31,.035,.18,.44,'wood',true,{dynamic:true}),
+    add('drawer-back',2.6,.73,3.53,.70,.18,.035,'wood',true,{dynamic:true}),
+    add('drawer-handle',2.6,.73,3.015,.19,.055,.055,'brass',false,{dynamic:true})
+  ];
+  const drawerObject=obj('drawer','drawer','Cajón del escritorio',2.6,.73,3.035,{box:drawer,parts:drawerParts.map(box=>({box,origin:{x:box.x,z:box.z}})),open:false,amount:0,state:'closed',origin:{x:2.6,z:3.065},slideAxis:'z',slideDistance:-.42});
   obj('note-hall','note','Nota doblada',5.95,.87,4.9,{text:'El jardín era precioso. Pero anoche la casa respiró como si supiera mi nombre.'});
   obj('note-upper','note','Carta en el dormitorio',3.65,HEIGHT+.83,2.05,{text:'No sigas todas las luces rosadas. Hay recuerdos que brillan incluso cuando nadie los enciende.'});
   obj('battery-hall','battery','Pila pequeña',6.25,.32,7.65);
   obj('battery-living','battery','Pila junto al sofá',10.6,.38,2.82);
   obj('battery-upper','battery','Pila en el dormitorio',3.65,HEIGHT+.83,2.5);
-  obj('key','key','Llave con lazo',2.58,.98,3.4);
+  const drawerKey=obj('key','key','Llave con lazo',2.58,.715,3.28,{dynamic:true,concealed:true,interactable:false});
+  drawerObject.contents=[{object:drawerKey,origin:{x:drawerKey.x,z:drawerKey.z}}];
   obj('bed','bed','Cama con lazo',2.1,HEIGHT+1.0,3.8,{returnX:3.6,returnZ:3.8});
   obj('underbed','hide','Esconderse bajo la cama',2.15,HEIGHT+.35,4.25,{hideType:'underbed',returnX:3.6,returnZ:4.2});
   obj('wardrobe','hide','Esconderse en el armario',1.12,HEIGHT+1.05,4.32,{hideType:'wardrobe',returnX:1.8,returnZ:4.35});
@@ -183,8 +196,8 @@ export function createHouse(spawn = 'ground') {
   const spawns = {
     ground:{x:5.95,z:8.65,y:0,yaw:Math.PI},
     upstairs:{x:6.35,z:3.75,y:HEIGHT,yaw:2.7,items:{key:1}},
-    sound:{x:10.1,z:3.75,y:0,yaw:2.8,items:{batteries:2}},
-    interactions:{x:2.55,z:4.1,y:0,yaw:3.12,items:{batteries:1,key:1}}
+    sound:{x:10.95,z:3.75,y:0,yaw:2.8,items:{batteries:2}},
+    interactions:{x:3.45,z:4.1,y:0,yaw:3.12,items:{batteries:1,key:1}}
   };
   return {boxes,objects,spawns,spawn:spawns[spawn]||spawns.ground};
 }
@@ -200,8 +213,9 @@ export function groundHeight(x,z,levelHint=0) {
 export function overlaps(box, x, footY, z, radius=.19, bodyHeight=1.65) {
   // A slab is a walking surface/visual occluder, not a wall to trap a head at stair landings.
   if(!box.solid||box.id.startsWith('floor-up-'))return false;
-  return Math.abs(box.x-x)<box.w/2+radius && Math.abs(box.z-z)<box.d/2+radius
-     && footY < box.y+box.h/2-.02 && footY+bodyHeight > box.y-box.h/2+.02;
+  if(!(footY < box.y+box.h/2-.02 && footY+bodyHeight > box.y-box.h/2+.02))return false;
+  const dx=Math.max(0,Math.abs(box.x-x)-box.w/2),dz=Math.max(0,Math.abs(box.z-z)-box.d/2);
+  return dx*dx+dz*dz<radius*radius-1e-10;
 }
 export function blocked(boxes,x,footY,z,radius=.19,bodyHeight=1.65) {
   return boxes.some(box=>overlaps(box,x,footY,z,radius,bodyHeight));
@@ -224,11 +238,20 @@ export function lineBlocked(boxes,from,to,ignore='') {
 }
 export function setDoor(obj,open) {
   if(obj.kind!=='door')return;
-  obj.open=Boolean(open); const {box,origin,slideAxis,slideDistance}=obj;
-  box[slideAxis]=origin[slideAxis]+(obj.open?slideDistance:0);
-  box.solid=!obj.open;
+  obj.motion=null;poseFurniture(obj,open?1:0);obj.open=!!open;obj.state=open?'open':'closed';
 }
 export function setDrawer(obj,open) {
   if(obj.kind!=='drawer')return;
-  obj.open=Boolean(open);obj.box.z=obj.origin.z+(obj.open?.33:0);
+  obj.motion=null;poseFurniture(obj,open?1:0);obj.open=!!open;obj.state=open?'open':'closed';
+}
+export function poseFurniture(obj,amount){
+ obj.amount=Math.max(0,Math.min(1,amount));
+ const axis=obj.slideAxis,offset=obj.slideDistance*obj.amount;
+ obj.box[axis]=obj.origin[axis]+offset;
+ if(obj.kind==='door')obj.box.solid=obj.amount<.999;
+ for(const part of obj.parts||[])part.box[axis]=part.origin[axis]+offset;
+ if(obj.kind==='drawer'){
+  obj.z=obj.box.z-.03;
+  for(const item of obj.contents||[]){item.object[axis]=item.origin[axis]+offset;item.object.concealed=obj.amount<.03;item.object.interactable=obj.amount>=.999&&!obj.motion;}
+ }
 }

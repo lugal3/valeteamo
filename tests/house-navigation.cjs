@@ -15,13 +15,16 @@ const assert=require('node:assert/strict');
  const entrances=[
   {name:'estudio',x:5.1,z:6.42,y:0,dx:-.06,steps:35,minX:3.9},
   {name:'salon',x:6.65,z:2.48,y:0,dx:.06,steps:36,maxX:8.0},
-  {name:'dormitorio',x:5.25,z:2.52,y:w.HEIGHT,dx:-.05,steps:32,minX:4.4}
+  {name:'dormitorio',x:5.25,z:2.52,y:w.HEIGHT,dx:-.05,steps:32,minX:4.4},
+  {name:'habitación',x:6.65,z:2.52,y:w.HEIGHT,dx:.05,steps:32,maxX:7.8},
+  {name:'entrada',x:5.87,z:8.75,y:0,dx:0,dz:.05,steps:30,minZ:10.0}
  ];
  for(const item of entrances){
   const player={x:item.x,y:item.y,z:item.z};
-  for(let step=0;step<item.steps;step++)navigate(player,world,item.dx,0);
+  for(let step=0;step<item.steps;step++)navigate(player,world,item.dx,item.dz||0);
   if(item.minX!==undefined)assert(player.x<item.minX,item.name+' doorway blocked x='+player.x);
   if(item.maxX!==undefined)assert(player.x>item.maxX,item.name+' doorway blocked x='+player.x);
+  if(item.minZ!==undefined)assert(player.z>item.minZ,item.name+' doorway blocked z='+player.z);
  }
  let p={x:6.25,y:0,z:6.7};
  for(let i=0;i<30;i++)navigate(p,world,.07,0);

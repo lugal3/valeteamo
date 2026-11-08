@@ -1,97 +1,11 @@
+import {VERTEX_SHADER as VS,FRAGMENT_SHADER as FS} from './material-shaders.js';
 // Minimal WebGL1 3D renderer: real perspective, depth buffer, world geometry and spotlight.
 // No additional packages, CDNs, runtime downloads or concurrent Phaser loops.
 import {MATERIAL} from './world.js';
+import {materialPixels,materialStyle,surfaceFrame,ATLAS_SIZE} from './materials.js';
 import {lightDepthField,LIGHT_DEPTH_SIZE,LIGHT_REACH,LIGHT_SPREAD} from './lighting.js';
-const VS = `
-precision mediump float;
-attribute vec3 aPos, aCol, aNormal;
-attribute vec2 aUV;
-attribute float aArt, aStyle;
-uniform vec3 uEye,uRight,uUp,uForward;
-uniform vec2 uProjection;
-uniform float uNear,uFar;
-varying vec3 vColor,vNormal,vWorld;
-varying vec2 vUV;
-varying float vArt,vStyle,vDistance;
-void main(){
- vec3 diff=aPos-uEye;
- float z=dot(diff,uForward);
- gl_Position=vec4(dot(diff,uRight)*uProjection.x,dot(diff,uUp)*uProjection.y,
-  z*(uFar+uNear)/(uFar-uNear)-2.0*uFar*uNear/(uFar-uNear),z);
- vColor=aCol;vNormal=aNormal;vWorld=aPos;vUV=aUV;vArt=aArt;vStyle=aStyle;vDistance=length(diff);
-}`;
-const FS = `
-precision mediump float;
-varying vec3 vColor,vNormal,vWorld;
-varying vec2 vUV;
-varying float vArt,vStyle,vDistance;
-uniform vec3 uEye,uLightEye,uForward,uRight,uUp;
-uniform sampler2D uAtlas,uLightDepth;
-uniform float uFlash,uTime,uOcclude;
-float tinyHash(vec2 cell){return fract(sin(dot(floor(cell),vec2(12.9898,78.233)))*437.58);}
-vec2 surfaceUV(vec3 p,vec3 n){return abs(n.y)>.6?p.xz:abs(n.x)>.6?p.zy:p.xy;}
-float seam(float v,float size,float width){float f=fract(v*size);return 1.0-step(width,f);}
-void main(){
- vec3 delta=vWorld-uLightEye;
- float d=max(length(delta),.1);
- vec3 direction=delta/d;
- float cone=dot(direction,uForward);
- float beam=pow(smoothstep(.65,.96,cone),1.3)*uFlash*1.6/(1.0+.055*d*d);
- if(beam>.01 && uOcclude>.5){
-  vec2 lightUV=vec2(dot(delta,uRight),dot(delta,uUp))/max(.001,dot(delta,uForward));
-  float wall=texture2D(uLightDepth,lightUV/${2*LIGHT_SPREAD}+.5).r*${LIGHT_REACH.toFixed(1)};
-  beam*=1.0-smoothstep(wall+.07,wall+.22,d);
- }
- // A few room-local lamps, softened by distance rather than costly dynamic shadows.
- vec3 lamp1=vec3(10.9,1.5,1.1), lamp2=vec3(6.1,4.7,4.1), lamp3=vec3(2.0,1.7,6.1);
- float warmth=.40/(1.0+.17*pow(distance(vWorld,lamp1),2.0))
-   + .33/(1.0+.15*pow(distance(vWorld,lamp2),2.0))
-   + .24/(1.0+.12*pow(distance(vWorld,lamp3),2.0));
- float facing=.75+.25*max(0.0,dot(normalize(vNormal),normalize(vec3(.3,.8,.4))));
- float lighting=(.53+warmth+beam)*facing;
- vec3 color=vColor;
- vec2 uv=surfaceUV(vWorld,normalize(vNormal));
- // World-space anchored patterns remain stationary as the camera moves.
- if(vStyle>.5 && vStyle<1.5){
-   float motif=step(.88,fract(uv.x*2.25))*step(.87,fract(uv.y*2.4));
-   float fleck=tinyHash(floor(uv*5.0))-.5;
-   color*=1.0+.035*fleck;
-   color=mix(color,vec3(.94,.70,.78),motif*.17);
-   color*=1.0-.045*seam(uv.y,.85,.028);
- }else if(vStyle>1.5 && vStyle<2.5){
-   float plank=seam(uv.y,1.5,.025);
-   float grain=sin(uv.x*19.0+sin(uv.y*4.2)*1.5)*.035;
-   float knot=step(.95,tinyHash(floor(uv*1.7)))*.07;
-   color*=1.0+grain+knot;
-   color*=1.0-.22*plank;
- }else if(vStyle>2.5 && vStyle<3.5){
-   float joints=max(seam(uv.x,2.65,.045),seam(uv.y,2.65,.045));
-   float stagger=step(.5,tinyHash(floor(uv*2.65)));
-   color*=1.0+stagger*.09-joints*.22;
- }else if(vStyle>3.5 && vStyle<4.5){
-   float thread=sin(uv.x*32.0)*sin(uv.y*27.0)*.045;
-   color*=1.0+thread;
- }else if(vStyle>4.5 && vStyle<5.5){
-   float speck=tinyHash(floor(uv*11.0));
-   color*=.93+.18*speck;
- }else if(vStyle>5.5 && vStyle<6.5){
-   color*=.96+.065*sin(uv.x*17.0+uv.y*4.0);
- }else if(vStyle>6.5 && vStyle<7.5){
-   color*=.99+.035*tinyHash(floor(uv*3.0));
- }
- if(vArt>.5) {
-   vec4 painted=texture2D(uAtlas,vUV);
-   color=mix(color,painted.rgb,painted.a*.96);
- }
- color*=lighting/(1.0+.35*lighting); // Compress highlights with one scalar reciprocal.
- // Coherent low-color-count pixel appearance even on ordinary 3D geometry.
- color=floor(color*64.0+.5)/64.0;
- float fog=clamp((vDistance-5.5)/20.0,0.0,.51);
- color=mix(color,vec3(.16,.13,.21),fog);
- gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);
-}`;
 function shader(gl,kind,source){const s=gl.createShader(kind);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){const msg=gl.getShaderInfoLog(s);gl.deleteShader(s);throw Error('Shader: '+msg);}return s;}
-function program(gl){const p=gl.createProgram(),v=shader(gl,gl.VERTEX_SHADER,VS),f=shader(gl,gl.FRAGMENT_SHADER,FS);gl.attachShader(p,v);gl.attachShader(p,f);gl.linkProgram(p);gl.deleteShader(v);gl.deleteShader(f);if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p)||'Shader linkage');return p;}
+function program(gl,low=false){const source=low?FS.replace('uniform float uFlash,uOcclude;','uniform float uFlash; const float uOcclude=0.0;'):FS;const p=gl.createProgram(),v=shader(gl,gl.VERTEX_SHADER,VS),f=shader(gl,gl.FRAGMENT_SHADER,source);gl.attachShader(p,v);gl.attachShader(p,f);gl.linkProgram(p);gl.deleteShader(v);gl.deleteShader(f);if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p)||'Shader linkage');return p;}
 function createAtlas(gl){
  const canvas=document.createElement('canvas');canvas.width=256;canvas.height=64;
  const g=canvas.getContext('2d');g.imageSmoothingEnabled=false;
@@ -131,14 +45,49 @@ const faces=[
  {normal:[0,0,1],corners:[[1,-1,1],[-1,-1,1],[-1,1,1],[1,1,1]],dir:'south'},
  {normal:[0,0,-1],corners:[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1]],dir:'north'}
 ];
+function createMaterials(gl){
+ const pixels=materialPixels(),textures=[];
+ gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+ for(const [i,data] of [pixels.color].entries()){
+  const texture=gl.createTexture();textures.push(texture);gl.activeTexture(gl.TEXTURE2+i);gl.bindTexture(gl.TEXTURE_2D,texture);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,ATLAS_SIZE,ATLAS_SIZE,0,gl.RGBA,gl.UNSIGNED_BYTE,data);
+  // Tile-local repeat uses gutters. Linear filtering avoids cross-tile mip bleed.
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+ }
+ return textures;
+}
 function geometry(boxes){
  const vertices=[],indices=[],colors=MATERIAL;let offset=0;
  for(const box of boxes){
   const color=colors[box.mat]||colors.cream;
-  const style=['wallpaper','wall2','plaster'].includes(box.mat)?1:
-   ['wood','floor','trim'].includes(box.mat)?2:box.mat==='tile'?3:
-   ['carpet','velvet','pink','glove','bow','pawpad'].includes(box.mat)?4:
-   box.mat==='foliage'?5:['brass','terracotta','torchmetal'].includes(box.mat)?6:7;
+  const style=materialStyle(box);
+  if(box.shape==='round'||box.shape==='cylinder'){
+   const segments=10,rings=box.shape==='round'?5:1;
+   const point=(u,v)=>{
+    const angle=u*Math.PI*2;
+    if(box.shape==='round'){const lat=(v-.5)*Math.PI;return [Math.cos(angle)*Math.cos(lat),Math.sin(lat),Math.sin(angle)*Math.cos(lat)];}
+    return [Math.cos(angle),Math.sin(angle),v*2-1];
+   };
+   for(let row=0;row<rings;row++)for(let column=0;column<segments;column++){
+    const coords=[[column/segments,row/rings],[(column+1)/segments,row/rings],[(column+1)/segments,(row+1)/rings],[column/segments,(row+1)/rings]];
+    for(const [u,v] of coords){
+     const p=point(u,v),n=box.shape==='round'?[p[0]/box.w,p[1]/box.h,p[2]/box.d]:[p[0],p[1],0],length=Math.hypot(...n)||1;
+     const tangent=box.shape==='round'?[-Math.sin(u*Math.PI*2),0,Math.cos(u*Math.PI*2)]:[-p[1],p[0],0];
+     vertices.push(box.x+p[0]*box.w/2,box.y+p[1]*box.h/2,box.z+p[2]*box.d/2,...color,...n.map(x=>x/length),u,v,0,style,...tangent);
+    }
+    if(box.shape==='cylinder')indices.push(offset,offset+2,offset+1,offset,offset+3,offset+2);
+    else indices.push(offset,offset+1,offset+2,offset,offset+2,offset+3);offset+=4;
+   }
+   if(box.shape==='cylinder')for(const sign of [-1,1])for(let i=0;i<segments;i++){
+    for(const angle of [null,i*Math.PI*2/segments,(i+1)*Math.PI*2/segments]){
+     const x=angle===null?0:Math.cos(angle),y=angle===null?0:Math.sin(angle);
+     vertices.push(box.x+x*box.w/2,box.y+y*box.h/2,box.z+sign*box.d/2,...color,0,0,sign,x*.5+.5,y*.5+.5,0,style,1,0,0);
+    }
+    if(sign>0)indices.push(offset,offset+2,offset+1);else indices.push(offset,offset+1,offset+2);offset+=3;
+   }
+   continue;
+  }
   if(box.shape==='leaf'){
    // Tapered, faceted leaves with actual depth; no alpha quads or blocking foliage.
    const points=[[0,-.5,0],[-.5,-.08,0],[0,.5,0],[.5,-.08,0],[0,0,.5],[0,0,-.5]];
@@ -150,17 +99,22 @@ function geometry(boxes){
     const [a,b,c]=triangle.map(i=>transformed[i]),ab=b.map((v,i)=>v-a[i]),ac=c.map((v,i)=>v-a[i]);
     const normal=[ab[1]*ac[2]-ab[2]*ac[1],ab[2]*ac[0]-ab[0]*ac[2],ab[0]*ac[1]-ab[1]*ac[0]];
     const length=Math.hypot(...normal)||1;
-    for(const p of [a,b,c])vertices.push(...p,...color,...normal.map(v=>v/length),0,0,0,5);
+    const n=normal.map(v=>-v/length),frame=surfaceFrame(box,n,style);
+    for(const index of triangle){const p=transformed[index],uv=points[index];vertices.push(...p,...color,...n,uv[0]+.5,uv[1]+.5,0,style,...frame.tangent);}
     indices.push(offset,offset+1,offset+2);offset+=3;
    }
    continue;
   }
   for(const face of faces){
    const art=box.art!==undefined&&box.front===face.dir?box.art+1:0;
+   const frame=surfaceFrame(box,face.normal,style);
    face.corners.forEach(([dx,dy,dz],i)=>{
     const u=(i===0||i===3)?0:1,v=i<2?0:1;
+    const position=[dx*box.w/2,dy*box.h/2,dz*box.d/2];
+    if(box.mat==='floor'||box.id.startsWith('floor-up-')){position[0]+=box.x;position[2]+=box.z;}
+    const uv=[frame.tangent,frame.bitangent].map((axis,j)=>axis.reduce((sum,a,k)=>sum+a*position[k],0)*frame.scale[j]);
     vertices.push(box.x+dx*box.w/2,box.y+dy*box.h/2,box.z+dz*box.d/2,
-     color[0],color[1],color[2],...face.normal,art?((art-1)+u)/4:0,v,art?1:0,style);
+     color[0],color[1],color[2],...face.normal,art?((art-1)+u)/4:uv[0],art?v:uv[1],art?1:0,style,...frame.tangent);
    });
    indices.push(offset,offset+1,offset+2,offset,offset+2,offset+3);offset+=4;
   }
@@ -172,32 +126,59 @@ export class HouseRenderer {
   this.canvas=canvas;this.quality=quality;
   const gl=canvas.getContext('webgl',{alpha:false,antialias:false,powerPreference:'low-power',preserveDrawingBuffer:false});
   if(!gl)throw Error('El navegador no permite WebGL. Activa aceleración gráfica o prueba otro navegador.');
-  this.gl=gl;this.program=program(gl);this.texture=createAtlas(gl);
+  this.gl=gl;this.programs={medium:program(gl),low:program(gl,true)};this.program=this.programs[quality==='low'?'low':'medium'];this.texture=createAtlas(gl);this.materialTextures=createMaterials(gl);
   this.vbo=gl.createBuffer();this.ibo=gl.createBuffer();this.count=0;
+  this.dynamicVbo=gl.createBuffer();this.dynamicIbo=gl.createBuffer();this.dynamicCount=0;this.dynamicBoxes=[];
   this.handVbo=gl.createBuffer();this.handIbo=gl.createBuffer();this.handGeometry={};this.handVertices=null;this.handIndexReady=false;
   this.lightPixels=new Uint8Array(LIGHT_DEPTH_SIZE*LIGHT_DEPTH_SIZE);this.occluders=[];this.lightPose='';
   this.lightTexture=gl.createTexture();gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,this.lightTexture);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.LUMINANCE,LIGHT_DEPTH_SIZE,LIGHT_DEPTH_SIZE,0,gl.LUMINANCE,gl.UNSIGNED_BYTE,this.lightPixels);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-  this.atrib={};for(const key of ['aPos','aCol','aNormal','aUV','aArt','aStyle'])this.atrib[key]=gl.getAttribLocation(this.program,key);
-  this.uniform={};for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude'])this.uniform[key]=gl.getUniformLocation(this.program,key);
-  gl.useProgram(this.program);gl.enable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.clearColor(.14,.11,.19,1);
+  this.locations={};
+  for(const [quality,p] of Object.entries(this.programs)){
+   const atrib={},uniform={};for(const key of ['aPos','aCol','aNormal','aUV','aArt','aStyle','aTangent'])atrib[key]=gl.getAttribLocation(p,key);
+   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials'])uniform[key]=gl.getUniformLocation(p,key);
+   this.locations[quality]={atrib,uniform};
+  }
+  Object.assign(this,this.locations[quality==='low'?'low':'medium']);
+  gl.useProgram(this.program);gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);gl.cullFace(gl.BACK);gl.disable(gl.BLEND);gl.clearColor(.14,.11,.19,1);
   gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);gl.uniform1i(this.uniform.uAtlas,0);
   gl.uniform1i(this.uniform.uLightDepth,1);
+  gl.uniform1i(this.uniform.uMaterials,2);
  }
  rebuild(boxes){
-  const gl=this.gl,{vertices,indices}=geometry(boxes);this.count=indices.length;
-  this.vertexCount=vertices.length/13;
+  const gl=this.gl,{vertices,indices}=geometry(boxes.filter(b=>!b.dynamic));this.count=indices.length;
+  this.dynamicBoxes=boxes.filter(b=>b.dynamic);
+  const dynamic=geometry(this.dynamicBoxes);this.dynamicCount=dynamic.indices.length;
+  this.dynamicTemplate=dynamic.vertices;this.dynamicVertices=new Float32Array(dynamic.vertices);
+  this.dynamicOrigins=this.dynamicBoxes.map(b=>[b.x,b.y,b.z]);this.dynamicPositions=this.dynamicOrigins.map(()=>[Infinity,Infinity,Infinity]);
+  gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamicVbo);gl.bufferData(gl.ARRAY_BUFFER,this.dynamicVertices,gl.DYNAMIC_DRAW);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.dynamicIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,dynamic.indices,gl.STATIC_DRAW);
+  this.vertexCount=(vertices.length+dynamic.vertices.length)/16;this.triangleCount=(indices.length+dynamic.indices.length)/3;
   this.occluders=boxes.filter(b=>b.solid);this.lightPose='';
-  if(vertices.length/13>65530)throw Error('Demasiada geometría para WebGL1');
+  if(vertices.length/16>65530)throw Error('Demasiada geometría para WebGL1');
   gl.bindBuffer(gl.ARRAY_BUFFER,this.vbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.ibo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
   this.bind(this.vbo,this.ibo);
  }
+ updateDynamic(){
+  const gl=this.gl;let changed=false;
+  gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamicVbo);
+  for(let i=0;i<this.dynamicBoxes.length;i++){
+   const box=this.dynamicBoxes[i],source=box.source;
+   if(source){const offset=box.sourceOffset||[0,0,0];box.x=source.x+offset[0];box.y=source.concealed?-100:source.y+offset[1];box.z=source.z+offset[2];}
+   const position=[box.x,box.y,box.z],old=this.dynamicPositions[i];
+   if(position.every((v,k)=>v===old[k]))continue;
+   const start=i*24*16,end=start+24*16,origin=this.dynamicOrigins[i];
+   for(let v=start;v<end;v+=16)for(let axis=0;axis<3;axis++)this.dynamicVertices[v+axis]=this.dynamicTemplate[v+axis]+position[axis]-origin[axis];
+   gl.bufferSubData(gl.ARRAY_BUFFER,start*4,this.dynamicVertices.subarray(start,end));this.dynamicPositions[i]=position;changed=true;
+  }
+  if(changed)this.lightPose='';
+ }
  bind(vertexBuffer,indexBuffer){
   const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indexBuffer);
-  const stride=13*4,layout=[['aPos',3,0],['aCol',3,3],['aNormal',3,6],['aUV',2,9],['aArt',1,11],['aStyle',1,12]];
+  const stride=16*4,layout=[['aPos',3,0],['aCol',3,3],['aNormal',3,6],['aUV',2,9],['aArt',1,11],['aStyle',1,12],['aTangent',3,13]];
   for(const [name,size,start] of layout){const at=this.atrib[name];if(at<0)continue;gl.enableVertexAttribArray(at);gl.vertexAttribPointer(at,size,gl.FLOAT,false,stride,start*4);}
  }
  drawFirstPerson(camera,right,up,forward,time,flash,motion={}){
@@ -224,11 +205,11 @@ export class HouseRenderer {
    {id:'torch-lens-ring',x:.54,y:-.31+bob,z:1.289,w:.27,h:.27,d:.045,mat:'brass'},
    {id:'torch-lens',x:.54,y:-.31+bob,z:1.317,w:.225,h:.225,d:.030,mat:flash?'torchglass':'glass'}
   ];
-  const {vertices:base,indices}=this.handGeometry[flash?'on':'off']??=geometry(pieces);
+  const {vertices:base,indices}=this.handGeometry[flash?'on':'off']??=geometry(pieces.map(piece=>({...piece,shape:['glove','pawpad'].includes(piece.mat)?'round':piece.id.startsWith('torch-')&&piece.id!=='torch-switch'?'cylinder':undefined})));
   const vertices=this.handVertices??=new Float32Array(base.length);vertices.set(base);
   const sway=motion.reduced?0:Math.sin(motion.bob||0)*.008;
   const action=motion.reduced?0:Math.sin(Math.PI*(motion.action||0))*.025;
-  for(let i=0;i<vertices.length;i+=13){
+  for(let i=0;i<vertices.length;i+=16){
    const px=vertices[i],py=vertices[i+1],pz=vertices[i+2];
    // Keep the paw at the lower-right, without covering the centre reticle.
    // Smaller camera-space geometry remains steady on mobile portrait/landscape.
@@ -240,6 +221,8 @@ export class HouseRenderer {
    vertices[i+6]=nx*right[0]+ny*up[0]+nz*forward[0];
    vertices[i+7]=nx*right[1]+ny*up[1]+nz*forward[1];
    vertices[i+8]=nx*right[2]+ny*up[2]+nz*forward[2];
+   const tx=vertices[i+13],ty=vertices[i+14],tz=vertices[i+15];
+   vertices[i+13]=tx*right[0]+ty*up[0]+tz*forward[0];vertices[i+14]=tx*right[1]+ty*up[1]+tz*forward[1];vertices[i+15]=tx*right[2]+ty*up[2]+tz*forward[2];
   }
   const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,this.handVbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.DYNAMIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.handIbo);if(!this.handIndexReady){gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);this.handIndexReady=true;}
@@ -256,7 +239,10 @@ export class HouseRenderer {
   if(w!==this.canvas.width||h!==this.canvas.height){this.canvas.width=w;this.canvas.height=h;this.gl.viewport(0,0,w,h);}
  }
  render(camera,flash,time,showHand=false,motion={}){
-  this.resize();const gl=this.gl;gl.useProgram(this.program);
+  this.resize();const gl=this.gl,quality=this.quality==='low'?'low':'medium';
+  this.program=this.programs[quality];Object.assign(this,this.locations[quality]);gl.useProgram(this.program);
+  gl.uniform1i(this.uniform.uAtlas,0);gl.uniform1i(this.uniform.uLightDepth,1);gl.uniform1i(this.uniform.uMaterials,2);
+  this.updateDynamic();
   const cy=Math.cos(camera.yaw),sy=Math.sin(camera.yaw),cp=Math.cos(camera.pitch),sp=Math.sin(camera.pitch);
   const right=[cy,0,-sy],forward=[sy*cp,sp,cy*cp],up=[-sy*sp,cp,-cy*sp];
   // Keep the light source inside the player's collision radius near walls.
@@ -282,13 +268,23 @@ export class HouseRenderer {
   gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
   this.bind(this.vbo,this.ibo);
   gl.drawElements(gl.TRIANGLES,this.count,gl.UNSIGNED_SHORT,0);
+  if(this.dynamicCount){this.bind(this.dynamicVbo,this.dynamicIbo);gl.drawElements(gl.TRIANGLES,this.dynamicCount,gl.UNSIGNED_SHORT,0);}
   if(showHand)this.drawFirstPerson(camera,right,up,forward,time,flash,motion);
  }
- destroy(){const gl=this.gl;gl.deleteTexture(this.texture);gl.deleteTexture(this.lightTexture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);gl.deleteProgram(this.program);this.canvas.width=1;this.canvas.height=1;}
+ destroy(){const gl=this.gl;gl.deleteTexture(this.texture);gl.deleteTexture(this.lightTexture);for(const texture of this.materialTextures)gl.deleteTexture(texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.dynamicVbo);gl.deleteBuffer(this.dynamicIbo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);for(const p of Object.values(this.programs))gl.deleteProgram(p);this.canvas.width=1;this.canvas.height=1;}
 }
 export function pickupGeometry(objects){
- return objects.filter(o=>!o.taken&&['battery','note','key'].includes(o.kind)).map(o=>({
+ return objects.filter(o=>!o.taken&&(!o.concealed||o.dynamic)&&['battery','note','key'].includes(o.kind)).flatMap(o=>{
+  if(o.kind==='key'){
+   const pieces=[];
+   const piece=(id,dx,dy,dz,w,h,d,mat='brass')=>({id:'pickup-'+o.id+'-'+id,x:o.x+dx,y:o.y+dy,z:o.z+dz,w,h,d,mat,solid:false,dynamic:!!o.dynamic,source:o,sourceOffset:[dx,dy,dz]});
+   for(let i=0;i<8;i++){const angle=i*Math.PI/4;pieces.push(piece('ring-'+i,Math.cos(angle)*.065,0,Math.sin(angle)*.065-.055,.045,.025,.045));}
+   pieces.push(piece('shaft',0,0,.08,.035,.025,.18),piece('tooth',.028,0,.13,.07,.025,.025),piece('bow-left',-.045,.025,-.055,.065,.035,.04,'pink'),piece('bow-right',.045,.025,-.055,.065,.035,.04,'pink'));
+   return pieces;
+  }
+  return [{
   id:'pickup-'+o.id,x:o.x,y:o.y,z:o.z,w:o.kind==='note'?.32:.21,h:o.kind==='note'?.10:.25,d:.22,
-  mat:o.kind==='note'?'paper':'brass',solid:false
- }));
+  mat:o.kind==='note'?'paper':'brass',solid:false,dynamic:!!o.dynamic,source:o
+  }];
+ });
 }
