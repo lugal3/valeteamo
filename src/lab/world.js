@@ -1,6 +1,6 @@
 // Deterministic, editable dollhouse layout. Metres: x/z horizontal, y upward.
-import {HEIGHT,STAIR,WORLD_BOUNDS,ROOMS,roomAt,buildHouse} from './house-layout.js';
-export {HEIGHT,STAIR,WORLD_BOUNDS,ROOMS,roomAt};
+import {HEIGHT,HOUSE,STAIR,WORLD_BOUNDS,ROOMS,roomAt,buildHouse} from './house-layout.js';
+export {HEIGHT,HOUSE,STAIR,WORLD_BOUNDS,ROOMS,roomAt};
 export const MATERIAL = {
   wallpaper: [0.75, 0.56, 0.65], wall2: [0.57, 0.61, 0.69], plaster: [0.68, 0.67, 0.72],
   wood: [0.47, 0.29, 0.30], floor: [0.48, 0.34, 0.38], tile: [0.38, 0.51, 0.52],
@@ -20,7 +20,7 @@ export function stairHeight(x,z) {
 export function groundHeight(x,z,levelHint=0) {
   const stair=stairHeight(x,z); if(stair!==null) return stair;
   if(x<WORLD_BOUNDS.minX||x>WORLD_BOUNDS.maxX||z<WORLD_BOUNDS.minZ||z>WORLD_BOUNDS.maxZ)return NaN;
-  if(x<0||x>12||z<0||z>10)return 0;
+  if(x<0||x>HOUSE.width||z<0||z>HOUSE.depth)return 0;
   if(levelHint>HEIGHT*.52&&x>STAIR.wellX&&z>STAIR.zTop&&z<STAIR.wellZ)return NaN;
   return levelHint>HEIGHT*.52?HEIGHT:0;
 }
@@ -71,7 +71,7 @@ export function poseFurniture(obj,amount){
  }
  if(obj.hinge){
   const angle=obj.swingAngle*obj.amount,c=Math.cos(angle),s=Math.sin(angle),place=(box,origin)=>{const dx=origin.x-obj.hinge.x,dz=origin.z-obj.hinge.z;box.x=obj.hinge.x+dx*c-dz*s;box.z=obj.hinge.z+dx*s+dz*c;box.yaw=angle;};
-  place(obj.box,obj.origin);obj.box.solid=true;for(const part of obj.parts||[])place(part.box,part.origin);obj.x=obj.box.x;obj.z=obj.box.z;return;
+  place(obj.box,obj.origin);obj.box.solid=obj.kind==='door';for(const part of obj.parts||[])place(part.box,part.origin);obj.x=obj.box.x;obj.z=obj.box.z;return;
  }
  const axis=obj.slideAxis,offset=obj.slideDistance*obj.amount;
  obj.box[axis]=obj.origin[axis]+offset;

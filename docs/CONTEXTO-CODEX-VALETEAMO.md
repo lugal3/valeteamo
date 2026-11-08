@@ -1,5 +1,5 @@
 # VALETEAMO — CONTEXTO MAESTRO PARA CODEX
-**Estado revisado:** casa V4 (8 de noviembre de 2026), desarrollada sobre `700e74c`; ver `docs/CASA-V4-ENTORNO-Y-ARMARIO.md`. El propietario autorizó rehacer la distribución y presentación del 3D; todo el 2D continúa protegido. Repo: https://github.com/lugal3/valeteamo · Web: https://valefc.web.app/. Para el estado de publicación exacto, comprobar `main` y su ejecución de Firebase en GitHub Actions.
+**Estado revisado:** casa V5 (8 de noviembre de 2026), desarrollada sobre `192fc34`; ver `docs/CASA-V5-ESPACIO-ATMOSFERA-Y-ENTRADA.md`. Escalera y descansillos ampliados, circulación auditada, ambiente por zonas y entrada animada por ventana. Todo el 2D continúa protegido. Repo: https://github.com/lugal3/valeteamo · Web: https://valefc.web.app/. Para el estado de publicación exacto, comprobar `main` y su ejecución de Firebase en GitHub Actions.
 
 > **MANDATO DEL PROPIETARIO: NO MODIFICAR, ELIMINAR, REEMPLAZAR, "LIMPIAR" NI REFAC­TORIZAR EL 2D SIN AUTORIZACIÓN EXPLÍCITA.** El 2D le gusta como está. La prioridad actual es entender y separar el proyecto, no combinarlo en un solo juego, no borrar pruebas y no rediseñar el 2D.
 
@@ -73,6 +73,7 @@ index.html → src/main.tsx → StoryApp.tsx → Splash (PLAY)
 - `src/lab/window-intro.js`: secuencia por la ventana, salto opcional y aterrizaje.
 - `src/lab/renderer.js`: WebGL1, geometría real, shaders de materiales, luces y linterna/mano 3D.
 - `src/lab/sound.js`: ambiente y efectos 3D con Web Audio.
+- `src/lab/atmosphere.js`: ambiente por zonas, crujidos, viento/grillos, tuberías y sonidos físicos procedimentales; exclusivo del 3D.
 - `src/demo/house-puzzles.js`: secuencia de pistas y condiciones de puertas/rescate.
 - `src/lab/lab.css`: HUD y controles de la casa. **Archivo también usado por RescueDemo**; revisar selectores para no afectar 2D.
 - `src/lab/index.js`: lanzador de pruebas anterior, actualmente **no es el punto de entrada activo**.
@@ -104,10 +105,10 @@ index.html → src/main.tsx → StoryApp.tsx → Splash (PLAY)
 
 ## 6. Publicación, ramas y seguridad
 - El workflow `.github/workflows/firebase-hosting-live.yml` ejecuta instalación, tests, build y despliega a Hosting `live` **solo con cambios en `main`** (o cuando se lo lanza manualmente según su configuración).
-- Referencia de despliegue anterior a V4: ejecución `42444831976` (**success**) para SHA `700e74cf7862d6e1e13d98d53ca62d5ef5c6dc84`. Ver: https://github.com/lugal3/valeteamo/actions/runs/42444831976. La publicación de V4 debe comprobarse con el SHA de su entrega; esta referencia no acredita una versión posterior.
+- Referencia de despliegue anterior a V5: ejecución `42484678611` (**success**) para SHA `192fc340c0461ceb691808ee9c487d8c284dc7a4`. Ver: https://github.com/lugal3/valeteamo/actions/runs/42484678611. La publicación de V5 debe comprobarse con el SHA de su entrega; esta referencia no acredita una versión posterior.
 - Otras acciones `demo-rescue-checks.yml`, `fix-nav-checks.yml`, `casa-v3-checks.yml` contienen filtros de ramas históricas; **no corresponden a otros juegos**.
 - Nunca subir secretos ni service account JSON a repositorio ni compartirlos en prompts.
-- Flujo recomendado a Codex: rama `docs/...` o `feature/...` desde `main` → diagnóstico sin cambios → cambios acotados al módulo autorizado → `npm test`, `npm run build`, browser tests si aplica → PR con resumen → aprobación explícita de cambios 2D si los toca → merge a `main` solo por solicitud del propietario → comprobar Firebase. **Para esta tarea documental no se publica código ni se altera producción.**
+- Flujo recomendado a Codex: rama `docs/...` o `feature/...` desde `main` → diagnóstico sin cambios → cambios acotados al módulo autorizado → `npm test`, `npm run build`, browser tests si aplica → PR con resumen → aprobación explícita de cambios 2D si los toca → merge a `main` solo por solicitud del propietario → comprobar Firebase. **La publicación requiere un encargo expreso; la entrega V5 sí se solicitó con publicación.**
 
 ## 7. Comandos en el PC (desde la raíz clonada)
 ```powershell
@@ -130,6 +131,7 @@ npm run test:browser
 ## 8. Índice de informes (y cómo leerlos)
 **ESTADO VIGENTE / código actual:**
 - `docs/CONTEXTO-CODEX-VALETEAMO.md` (ESTE ARCHIVO): fuente de orientación consolidada, sin sobreescribir detalles especializados.
+- `docs/CASA-V5-ESPACIO-ATMOSFERA-Y-ENTRADA.md`: análisis espacial de toda la casa, cotas comparables, plano, auditoría de rutas/alcance, ambiente por zonas, animación inicial y verificaciones. Base `192fc34`; datos y vídeo en `docs/capturas/casa-v5/`. Las distribuciones V3/V4 son referencias de entregas anteriores.
 - `docs/CASA-V4-ENTORNO-Y-ARMARIO.md`: nueva distribución autorizada del 3D, jardín y vecindario, ocho puertas con bisagra, armario animado, carteles y música de tensión. Base `700e74c`; evidencias en `docs/capturas/casa-v4/`.
 - `docs/AUTOPROMPT-CASA-V4.md`: especificación aplicada a los ocho comentarios visuales del propietario, manteniendo el 2D protegido.
 - `docs/CASA-V3-ANALISIS-Y-QA.md`: análisis técnico de cámara, render, escaleras, cinemática, pruebas y límites de la V3.

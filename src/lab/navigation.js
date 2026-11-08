@@ -1,4 +1,5 @@
 import {blocked,groundHeight,HEIGHT,STAIR} from './world.js';
+import {sweepClear} from './furniture-motion.js';
 
 /**
  * Small swept movement steps with separate axis collision. A small horizontal radius,
@@ -16,6 +17,9 @@ export function navigate(state,world,dx,dz,body=PLAYER_HEIGHT){
    const ny=groundHeight(nx,nz,state.y);
    if(!Number.isFinite(ny)||Math.abs(ny-state.y)>.35)return false;
    if(blocked(world.boxes,nx,ny,nz,PLAYER_RADIUS,body))return false;
+   // Reserve the remaining swing/slide while furniture moves, so the player
+   // cannot enter its future path and leave both movement and animation stuck.
+   if(world.objects?.some(o=>o.motion&&o.box&&!sweepClear(o,o.amount,o.motion.target,{x:nx,y:ny,z:nz,crouched:body<1.2})))return false;
    moved+=Math.hypot(nx-state.x,nz-state.z);
    state.x=nx;state.z=nz;state.y=ny;return true;
   };

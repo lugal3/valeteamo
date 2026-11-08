@@ -1,11 +1,11 @@
 // Dependency-free sanity tests for the new deterministic house and geometry.
 const assert=require('node:assert/strict');
 (async()=>{
- const {createHouse,HEIGHT,stairHeight,groundHeight,blocked,lineBlocked,setDoor,setDrawer}=await import('../src/lab/world.js');
+ const {createHouse,HEIGHT,STAIR,stairHeight,groundHeight,blocked,lineBlocked,setDoor,setDrawer}=await import('../src/lab/world.js');
  const g=createHouse('ground'),u=createHouse('upstairs');
  assert.equal(g.spawn.y,0);assert.equal(u.spawn.y,HEIGHT);
  assert(g.boxes.length>60);assert(g.objects.length>12);
- assert.equal(stairHeight(9.75,9.15),0);assert(Math.abs(stairHeight(9.75,4.55)-HEIGHT)<.0001);
+ assert.equal(stairHeight(STAIR.centerX,STAIR.zBottom),0);assert(Math.abs(stairHeight(STAIR.centerX,STAIR.zTop)-HEIGHT)<.0001);
  assert.equal(stairHeight(5,8),null);assert.equal(groundHeight(6,3,HEIGHT),HEIGHT);
  assert(blocked(g.boxes,-.02,0,5),'outside west wall solid');
  assert(!blocked(g.boxes,6,0,8.4),'entry corridor passable');

@@ -1,5 +1,5 @@
 import {ART_COUNT,createArtworkCanvas} from './artwork.js';
-import {flashlightPieces} from './first-person.js';
+import {flashlightPieces,climbingHandPieces} from './first-person.js';
 import {VERTEX_SHADER as VS,FRAGMENT_SHADER as FS} from './material-shaders.js';
 // Minimal WebGL1 3D renderer: real perspective, depth buffer, world geometry and spotlight.
 // No additional packages, CDNs, runtime downloads or concurrent Phaser loops.
@@ -45,8 +45,8 @@ function geometry(boxes){
   const color=colors[box.mat]||colors.cream;
   const style=materialStyle(box)+(box.glow?32:0),first=vertices.length;
   const rotateMesh=()=>{
-   if(!box.yaw)return;const c=Math.cos(box.yaw),s=Math.sin(box.yaw);
-   for(let i=first;i<vertices.length;i+=16){const x=vertices[i]-box.x,z=vertices[i+2]-box.z;vertices[i]=box.x+x*c-z*s;vertices[i+2]=box.z+x*s+z*c;for(const offset of [6,13]){const nx=vertices[i+offset],nz=vertices[i+offset+2];vertices[i+offset]=nx*c-nz*s;vertices[i+offset+2]=nx*s+nz*c;}}
+   if(!box.yaw&&!box.pitch)return;const c=Math.cos(box.yaw||0),s=Math.sin(box.yaw||0),cp=Math.cos(box.pitch||0),sp=Math.sin(box.pitch||0);
+   for(let i=first;i<vertices.length;i+=16){const x=vertices[i]-box.x,y=vertices[i+1]-box.y,z=vertices[i+2]-box.z,pz=y*sp+z*cp;vertices[i]=box.x+x*c-pz*s;vertices[i+1]=box.y+y*cp-z*sp;vertices[i+2]=box.z+x*s+pz*c;for(const offset of [6,13]){const nx=vertices[i+offset],ny=vertices[i+offset+1],nz=vertices[i+offset+2],rz=ny*sp+nz*cp;vertices[i+offset]=nx*c-rz*s;vertices[i+offset+1]=ny*cp-nz*sp;vertices[i+offset+2]=nx*s+rz*c;}}
   };
   if(box.shape==='gable'){
    const w=box.w/2,h=box.h/2,d=box.d/2;
@@ -146,7 +146,10 @@ export class HouseRenderer {
   gl.uniform1i(this.uniform.uMaterials,2);
  }
  rebuild(boxes){
-  const gl=this.gl,{vertices,indices}=geometry(boxes.filter(b=>!b.dynamic));this.count=indices.length;
+  // Opaque room walls write depth before furniture and the large exterior slabs.
+  // This avoids shading the garden and neighboring houses behind interior walls.
+  const order=b=>/^(west-|east-|north-|south-|music-west|music-south|kitchen-divider|bath-divider|stairwell-side)/.test(b.id)?0:/^(garden-|neighbor-|distant-|tree-|car-|moon|road|pavement|front-path)/.test(b.id)?4:/^(base|floor-up-|ceiling|roof)/.test(b.id)?3:1;
+  const gl=this.gl,{vertices,indices}=geometry(boxes.filter(b=>!b.dynamic).sort((a,b)=>order(a)-order(b)));this.count=indices.length;
   this.dynamicBoxes=boxes.filter(b=>b.dynamic);
   const dynamic=geometry(this.dynamicBoxes);this.dynamicCount=dynamic.indices.length;
   this.dynamicTemplate=dynamic.vertices;this.dynamicVertices=new Float32Array(dynamic.vertices);
@@ -191,7 +194,7 @@ export class HouseRenderer {
    const px=vertices[i],py=vertices[i+1],pz=vertices[i+2];
    // Keep the flashlight at the lower-right, clear of the centre reticle.
    // Smaller camera-space geometry remains steady on mobile portrait/landscape.
-   const x=px+sway,y=py+Math.abs(sway)-action*.5,z=pz-action*.5;
+   const x=px+sway+(motion.reduced?0:motion.swayX||0),y=py+Math.abs(sway)-action*.5+(motion.reduced?0:motion.swayY||0),z=pz-action*.5;
    vertices[i]=camera.x+x*right[0]+y*up[0]+z*forward[0];
    vertices[i+1]=camera.y+x*right[1]+y*up[1]+z*forward[1];
    vertices[i+2]=camera.z+x*right[2]+y*up[2]+z*forward[2];
@@ -203,11 +206,22 @@ export class HouseRenderer {
    vertices[i+13]=tx*right[0]+ty*up[0]+tz*forward[0];vertices[i+14]=tx*right[1]+ty*up[1]+tz*forward[1];vertices[i+15]=tx*right[2]+ty*up[2]+tz*forward[2];
   }
   const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,this.handVbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.DYNAMIC_DRAW);
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.handIbo);if(!this.handIndexReady){gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);this.handIndexReady=true;}
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.handIbo);if(this.handIndexKind!=='torch'){gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);this.handIndexKind='torch';}
   this.bind(this.handVbo,this.handIbo);gl.clear(gl.DEPTH_BUFFER_BIT);
   // The torch illuminates the world, not its own reflective lens and mitten.
   gl.uniform1f(this.uniform.uFlash,0);
   gl.drawElements(gl.TRIANGLES,indices.length,gl.UNSIGNED_SHORT,0);
+ }
+ drawClimbingHands(hands){
+  const gl=this.gl;gl.uniform1f(this.uniform.uFlash,0);
+  for(let side=0;side<2;side++){
+   const model=this.handGeometry['climb'+side]??=geometry(climbingHandPieces(side?-1:1));
+   const vertices=this.climbVertices??=new Float32Array(model.vertices.length);vertices.set(model.vertices);
+   for(let i=0;i<vertices.length;i+=16){vertices[i]+=hands[side].x;vertices[i+1]+=hands[side].y;vertices[i+2]+=hands[side].z;}
+   gl.bindBuffer(gl.ARRAY_BUFFER,this.handVbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.DYNAMIC_DRAW);
+   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.handIbo);if(this.handIndexKind!=='climb'){gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,model.indices,gl.STATIC_DRAW);this.handIndexKind='climb';}
+   this.bind(this.handVbo,this.handIbo);gl.drawElements(gl.TRIANGLES,model.indices.length,gl.UNSIGNED_SHORT,0);
+  }
  }
  resize(){
   const scale=this.quality==='low'?.55:.80;
@@ -245,9 +259,11 @@ export class HouseRenderer {
    }
   }
   gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  // Closed doors are useful depth occluders too. All these surfaces are opaque.
+  if(this.dynamicCount){this.bind(this.dynamicVbo,this.dynamicIbo);gl.drawElements(gl.TRIANGLES,this.dynamicCount,gl.UNSIGNED_SHORT,0);}
   this.bind(this.vbo,this.ibo);
   gl.drawElements(gl.TRIANGLES,this.count,gl.UNSIGNED_SHORT,0);
-  if(this.dynamicCount){this.bind(this.dynamicVbo,this.dynamicIbo);gl.drawElements(gl.TRIANGLES,this.dynamicCount,gl.UNSIGNED_SHORT,0);}
+  if(motion.introHands)this.drawClimbingHands(motion.introHands);
   if(showHand)this.drawFirstPerson(camera,right,up,forward,time,flash,motion);
  }
  destroy(){const gl=this.gl;gl.deleteTexture(this.texture);gl.deleteTexture(this.lightTexture);for(const texture of this.materialTextures)gl.deleteTexture(texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.dynamicVbo);gl.deleteBuffer(this.dynamicIbo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);for(const p of Object.values(this.programs))gl.deleteProgram(p);this.canvas.width=1;this.canvas.height=1;}

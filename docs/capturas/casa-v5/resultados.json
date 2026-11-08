@@ -1,0 +1,32 @@
+{
+  "browser": "158.0.8127.18",
+  "renderer": "SwiftShader software",
+  "windowClimb": true,
+  "windowPause": true,
+  "reducedMotion": true,
+  "stairWalk": true,
+  "outside": {
+    "room": "Jardín y vecindario",
+    "outdoor": 1,
+    "events": 5,
+    "voices": 3,
+    "loops": 3,
+    "lastEvent": "cricket",
+    "muted": false,
+    "volume": 0.8
+  },
+  "bathroom": {
+    "room": "Baño",
+    "outdoor": 0,
+    "events": 6,
+    "voices": 1,
+    "loops": 3,
+    "lastEvent": "drip",
+    "muted": false,
+    "volume": 0.8
+  },
+  "atmosphereOnlyPeak": 0.00887299608439207,
+  "mutedPeak": 1.400069038481888e-7,
+  "normalSavesUnchanged": true,
+  "errors": []
+}

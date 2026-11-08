@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),net=require('node:net');
 const {execFileSync}=require('node:child_process'),{chromium}=require('playwright');
 (async()=>{
- const reference=process.env.HOUSE_QA_REF,phase=reference?'before':'after',folder=path.resolve('docs/capturas/casa-v4/'+phase);fs.mkdirSync(folder,{recursive:true});
+ const reference=process.env.HOUSE_QA_REF,phase=reference?'before':'after',folder=path.resolve(process.env.HOUSE_QA_DIR||'docs/capturas/casa-v4/'+phase);fs.mkdirSync(folder,{recursive:true});
  const reservation=net.createServer();await new Promise(r=>reservation.listen(0,'127.0.0.1',r));const port=reservation.address().port;await new Promise(r=>reservation.close(r));
  const server=await (await import('vite')).createServer({configFile:false,logLevel:'silent',server:{host:'127.0.0.1',port,strictPort:true},plugins:[{name:'v4-reference',load(id){if(!reference)return;const normalized=id.replaceAll('\\','/'),index=normalized.indexOf('/src/lab/');if(index<0||!normalized.endsWith('.js'))return;return execFileSync('git',['show',reference+':'+normalized.slice(index+1)],{encoding:'utf8'});},configureServer(server){server.middlewares.use((req,res,next)=>{if(req.url!=='/__v4_render')return next();res.setHeader('Content-Type','text/html');res.end('<!doctype html><html><body style="margin:0"><canvas style="width:960px;height:540px;display:block"></canvas></body></html>');});}}]});
  await server.listen();let browser;

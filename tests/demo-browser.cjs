@@ -60,7 +60,7 @@ const {chromium}=require('playwright');
   await page.locator('#lab-window-intro [data-act="skip-intro"]').click();
   await page.locator('#lab-window-intro').waitFor({state:'hidden',timeout:8000});
   const landed=await page.evaluate(()=>window.__rescueHouse.snapshot().position);
-  assert(landed.z<9.6&&landed.z>9.2,'Window intro leaves player safely inside: '+JSON.stringify(landed));
+  assert(landed.z<11.2&&landed.z>10.8,'Window intro leaves player safely inside: '+JSON.stringify(landed));
   await page.waitForTimeout(320);
   await page.screenshot({path:path.join(folder,'06-casa-3d.png')});
   // Real browser pointer regression: swipe right -> look right (not inverted).

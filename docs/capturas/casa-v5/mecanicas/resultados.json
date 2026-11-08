@@ -1,0 +1,39 @@
+{
+  "browser": "158.0.8127.18",
+  "gpu": "SwiftShader software",
+  "roomsCaptured": 14,
+  "physicalStairs": true,
+  "groundedExterior": true,
+  "openDoor": {
+    "id": "estudio",
+    "open": true,
+    "state": "open",
+    "amount": 1,
+    "x": 5,
+    "z": 1.7999999999999998,
+    "yaw": -1.5707963267948966,
+    "solid": true
+  },
+  "wardrobeView": {
+    "x": 0.84,
+    "y": 4.43,
+    "z": 3.85,
+    "yaw": 1.5707963267948966,
+    "pitch": 0
+  },
+  "handHiddenInWardrobe": true,
+  "underbedAndBedExit": true,
+  "musicSignal": true,
+  "music": {
+    "scheduled": 61,
+    "voices": 3,
+    "timer": true,
+    "volume": 0.65
+  },
+  "geometry": {
+    "vertices": 23500,
+    "triangles": 11340
+  },
+  "normalSavesUnchanged": true,
+  "errors": []
+}

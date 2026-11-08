@@ -1,0 +1,13 @@
+{
+  "commit": "192fc34",
+  "width": 12,
+  "depth": 10,
+  "stairWidth": 1.9000000000000004,
+  "flight": 4.6000000000000005,
+  "bottomLanding": 0.75,
+  "topLanding": 1.0999999999999996,
+  "railToEastWall": 0.13250000000000028,
+  "bathWidth": 1.8,
+  "introSkippedInTrial": true,
+  "measurement": "Clear distance to the widest handrail cap"
+}

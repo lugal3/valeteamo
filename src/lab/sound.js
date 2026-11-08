@@ -1,5 +1,6 @@
 // Soft, original procedural sounds. No external audio files or third-party tracks.
 import {scheduleTensionStep,TENSION_BEAT} from './tension-music.js';
+import {HouseAtmosphere,playFoley} from './atmosphere.js';
 const KEY='valeteamo-lab-sound-v1';
 const defaults={muted:false,ambient:.40,effects:.68,music:.34};
 export class HouseSound {
@@ -16,26 +17,20 @@ export class HouseSound {
  }
  startAmbience(){
   if(!this.context)return;const ctx=this.context;
-  // Calm low drone and filtered room air, intentionally quiet and non-looping percussively.
-  for(const [freq,gain] of [[65,.024],[98,.012],[131,.008]]){
-   const osc=ctx.createOscillator(),low=ctx.createBiquadFilter(),vol=ctx.createGain();
-   osc.type='sine';osc.frequency.value=freq;low.type='lowpass';low.frequency.value=380;
-   vol.gain.value=this.settings.muted?0:gain*this.settings.ambient;
-   osc.connect(low);low.connect(vol);vol.connect(this.master);osc.start();
-   this.ambientNodes.push({osc,vol,gain});
-  }
+  this.atmosphere=new HouseAtmosphere(ctx,this.master);this.atmosphere.setVolume(this.settings.muted?0:this.settings.ambient);
  }
+ locate(environment){this.atmosphere?.locate(environment);}
  startMusic(){
   if(!this.context||this.musicTimer!==null||this.paused)return;this.nextBeat=this.context.currentTime+.035;
   const schedule=()=>{const ctx=this.context;if(!ctx||ctx.state!=='running'||this.paused)return;
    // Skip missed beats after a stalled/background tab instead of stacking old notes.
-   if(this.nextBeat<ctx.currentTime-.10)this.nextBeat=ctx.currentTime+.035;
+   this.atmosphere?.tick();if(this.nextBeat<ctx.currentTime-.10)this.nextBeat=ctx.currentTime+.035;
    while(this.nextBeat<ctx.currentTime+.20){scheduleTensionStep(ctx,this.musicBus,this.nextBeat,this.musicStep++,this.tension,voice=>{this.musicNodes.add(voice);voice.osc.onended=()=>{voice.osc.disconnect();voice.filter.disconnect();voice.gain.disconnect();this.musicNodes.delete(voice);};});this.nextBeat+=TENSION_BEAT;}};
   schedule();this.musicTimer=window.setInterval(schedule,80);
  }
  stopMusic(){if(this.musicTimer!==null){window.clearInterval(this.musicTimer);this.musicTimer=null;}for(const voice of this.musicNodes){try{voice.osc.stop();voice.osc.disconnect();voice.filter.disconnect();voice.gain.disconnect();}catch{}}this.musicNodes.clear();}
  setTension(value){this.tension=Math.max(0,Math.min(1,value));}
- applySettings(){for(const {vol,gain} of this.ambientNodes)vol.gain.setTargetAtTime(this.settings.muted?0:gain*this.settings.ambient,this.context.currentTime,.09);this.musicBus?.gain.setTargetAtTime(this.settings.muted?0:this.settings.music,this.context.currentTime,.06);this.save();}
+ applySettings(){this.atmosphere?.setVolume(this.settings.muted?0:this.settings.ambient);this.musicBus?.gain.setTargetAtTime(this.settings.muted?0:this.settings.music,this.context.currentTime,.06);this.save();}
  set(kind,value){this.settings[kind]=kind==='muted'?Boolean(value):Math.max(0,Math.min(1,Number(value)||0));if(this.context)this.applySettings();else this.save();}
  // Simple location-dependent stereo and attenuation, including room/floor obstruction.
  effect(kind,origin,listener,occluded=false){
@@ -45,6 +40,10 @@ export class HouseSound {
   const floorMask=origin&&Math.abs(origin.y-listener.y)>1.85?.55:1;
   const gain=.20*this.settings.effects*atten*floorMask*(occluded?.38:1);
   if(gain<.0007)return;
+  if(['wood','tile','grass','stone','door','drawer','window','latch','cloth','land'].includes(kind)){
+   const foley={door:'creak',drawer:'wood',land:'wood'}[kind]||kind;
+   playFoley(ctx,this.master,this.atmosphere.noise,foley,gain*2,(Math.random()-.5)*.18);return;
+  }
   const now=ctx.currentTime,vol=ctx.createGain(),pan=ctx.createStereoPanner();
   const yaw=listener.yaw||0,dx=origin?origin.x-listener.x:0,dz=origin?origin.z-listener.z:0;
   pan.pan.value=Math.max(-.85,Math.min(.85,(dx*Math.cos(yaw)-dz*Math.sin(yaw))/Math.max(1,distance)));
@@ -60,7 +59,7 @@ export class HouseSound {
   oscillator.connect(vol);oscillator.start(now);oscillator.stop(now+duration+.02);
   oscillator.onended=()=>{oscillator.disconnect();vol.disconnect();pan.disconnect();};
  }
- pause(){this.paused=true;this.stopMusic();try{if(this.context?.state==='running')void this.context.suspend();}catch{}}
- resume(){if(!this.context)return;this.paused=false;const ctx=this.context;try{void ctx.resume().then(()=>{if(this.context===ctx&&!this.paused)this.startMusic();}).catch(()=>{});}catch{}}
- destroy(){this.paused=true;this.stopMusic();for(const {osc} of this.ambientNodes){try{osc.stop();osc.disconnect()}catch{}}this.ambientNodes=[];if(this.context){void this.context.close().catch(()=>{});this.context=null;}}
+ pause(){this.paused=true;this.stopMusic();this.atmosphere?.pause();try{if(this.context?.state==='running')void this.context.suspend();}catch{}}
+ resume(){if(!this.context)return;this.paused=false;const ctx=this.context;try{void ctx.resume().then(()=>{if(this.context===ctx&&!this.paused){this.atmosphere?.resume();this.startMusic();}}).catch(()=>{});}catch{}}
+ destroy(){this.paused=true;this.stopMusic();this.atmosphere?.destroy();this.atmosphere=null;this.ambientNodes=[];if(this.context){void this.context.close().catch(()=>{});this.context=null;}}
 }

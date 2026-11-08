@@ -43,7 +43,7 @@ void main(){
   beam*=1.0-smoothstep(wall+.07,wall+.22,d);
  }
  beam*=.72+.28*max(0.0,dot(N,-direction));
- vec3 l1=vWorld-vec3(2.2,1.8,6.8),l2=vWorld-vec3(6.1,4.7,4.1),l3=vWorld-vec3(10.0,1.7,1.0);
+ vec3 l1=vWorld-vec3(2.2,1.25,8.1),l2=vWorld-vec3(2.5,4.35,7.5),l3=vWorld-vec3(11.15,1.25,2.8);
  float upper=step(3.15,vWorld.y);
  float warmth=(1.0-upper)*(.32/(1.0+.17*dot(l1,l1))*(1.0-step(4.4,vWorld.x))+.27/(1.0+.12*dot(l3,l3))*step(7.5,vWorld.x))+upper*.34/(1.0+.15*dot(l2,l2));
  float facing=.80+.20*max(0.0,dot(N,normalize(vec3(.3,.8,.4))));

@@ -21,6 +21,7 @@ export function interactionTarget(world,camera,previous=null){
 
 export function canApproachDoor(world,state,door){
  if(door.kind!=='door'||door.open||Math.abs(state.y-(door.y-1.1))>1.1)return false;
- if(Math.hypot(door.x-state.x,door.z-state.z)>.95)return false;
+ // Start before a walking player enters an outward leaf's swept arc.
+ if(Math.hypot(door.x-state.x,door.z-state.z)>2.0)return false;
  return !lineBlocked(world.boxes,{x:state.x,y:state.y+1.1,z:state.z},door,'door-'+door.id);
 }

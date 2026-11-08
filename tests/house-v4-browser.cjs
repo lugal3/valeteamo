@@ -1,7 +1,8 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),net=require('node:net');
 const {chromium}=require('playwright');
 (async()=>{
- const folder=path.resolve('docs/capturas/casa-v4');fs.mkdirSync(folder,{recursive:true});
+ const {STAIR,HOUSE}=await import('../src/lab/world.js');
+ const folder=path.resolve(process.env.HOUSE_QA_DIR||'docs/capturas/casa-v4');fs.mkdirSync(folder,{recursive:true});
  const reservation=net.createServer();await new Promise(r=>reservation.listen(0,'127.0.0.1',r));const port=reservation.address().port;await new Promise(r=>reservation.close(r));
  const server=await (await import('vite')).createServer({configFile:false,logLevel:'silent',server:{host:'127.0.0.1',port,strictPort:true}});await server.listen();let browser;
  try{
@@ -19,26 +20,26 @@ const {chromium}=require('playwright');
   const views=[
    ['01-pasillo',{x:5.95,y:0,z:8.65,yaw:Math.PI,pitch:0}],
    ['02-sala-estar',{x:3.7,y:0,z:8.8,yaw:-2.19,pitch:-.12}],
-   ['03-estudio',{x:3.6,y:0,z:1.2,yaw:-.58,pitch:-.24}],
+   ['03-estudio',{x:3.6,y:0,z:3.6,yaw:-2.9,pitch:-.24}],
    ['04-cocina',{x:8.3,y:0,z:3.5,yaw:2.77,pitch:-.16}],
    ['05-bano',{x:7.9,y:0,z:5.8,yaw:Math.PI/2,pitch:-.45}],
-   ['06-escalera-lateral',{x:10.6,y:0,z:9.4,yaw:Math.PI,pitch:.15}],
+   ['06-escalera-lateral',{x:STAIR.centerX,y:0,z:STAIR.zBottom+.8,yaw:Math.PI,pitch:.15}],
    ['07-descansillo',{x:8.2,y:3.15,z:5.0,yaw:-.4,pitch:0}],
    ['08-dormitorio',{x:3.9,y:3.15,z:3.6,yaw:-2.5,pitch:-.1}],
-   ['09-sala-musica',{x:8.3,y:3.15,z:2.8,yaw:2.53,pitch:-.1}],
+   ['09-sala-musica',{x:8.1,y:3.15,z:2.4,yaw:2.53,pitch:-.1}],
    ['10-lectura',{x:3.6,y:3.15,z:8.8,yaw:-2.3,pitch:-.1}],
    ['11-jardin-casa',{x:5.9,y:0,z:15.5,yaw:Math.PI,pitch:.14}],
-   ['12-vecindario',{x:5.9,y:0,z:12,yaw:0,pitch:0}],
+   ['12-vecindario',{x:5.9,y:0,z:HOUSE.depth+2,yaw:0,pitch:0}],
    ['19-casa-y-jardin-completo',{x:15.5,y:0,z:17.4,yaw:-2.49,pitch:.22}],
    ['20-auto',{x:7.5,y:0,z:12.3,yaw:.846,pitch:-.15}]
   ];
-  for(const [name,p] of views){await pose(p);await shot(name);}
-  await page.evaluate(()=>window.__rescueHouse.interactWith('estudio'));const door=(await snap()).doors.find(d=>d.id==='estudio');assert(door.open&&door.solid&&Math.abs(door.yaw)>1,'Open leaf stays visible, rotated and physical');
+  for(const [name,p] of views){try{await pose(p);}catch(e){throw Error('Invalid gallery pose '+name+': '+e.message);}await shot(name);}
+  if((await snap()).doors.find(d=>d.id==='estudio').state==='closed')await page.evaluate(()=>window.__rescueHouse.interactWith('estudio'));await page.waitForFunction(()=>window.__rescueHouse.snapshot().doors.find(d=>d.id==='estudio').open);const door=(await snap()).doors.find(d=>d.id==='estudio');assert(door.open&&door.solid&&Math.abs(door.yaw)>1,'Open leaf stays visible, rotated and physical');
   await pose({x:3.6,y:0,z:3.6,yaw:Math.PI,pitch:0});await shot('13-puerta-abierta');
   console.log('V4: physical stairs and grounded exit');
-  await pose({x:10.6,y:0,z:9.4,yaw:Math.PI,pitch:0});await page.keyboard.down('w');await page.waitForFunction(()=>{const p=window.__rescueHouse.snapshot().position;return p.y>3.10&&p.z<4.5;},{timeout:25000});await page.keyboard.up('w');await shot('14-escalera-arriba');
-  await page.keyboard.down('s');await page.waitForFunction(()=>{const p=window.__rescueHouse.snapshot().position;return p.y<.05&&p.z>9.2;},{timeout:25000});await page.keyboard.up('s');
-  await page.evaluate(()=>window.__rescueHouse.interactWith('entrada'));await pose({x:5.9,y:0,z:9.2,yaw:0,pitch:0});await page.keyboard.down('w');await page.waitForFunction(()=>window.__rescueHouse.snapshot().position.z>12.5,{timeout:15000});await page.keyboard.up('w');assert.equal((await snap()).position.y,0);await shot('15-salida-al-jardin');
+  await pose({x:STAIR.centerX,y:0,z:STAIR.zBottom+.8,yaw:Math.PI,pitch:0});await page.keyboard.down('w');await page.waitForFunction(z=>{const p=window.__rescueHouse.snapshot().position;return p.y>3.10&&p.z<z;},STAIR.zTop-.1,{timeout:25000});await page.keyboard.up('w');await shot('14-escalera-arriba');
+  await page.keyboard.down('s');await page.waitForFunction(z=>{const p=window.__rescueHouse.snapshot().position;return p.y<.05&&p.z>z;},STAIR.zBottom+.15,{timeout:25000});await page.keyboard.up('s');
+  if((await snap()).doors.find(d=>d.id==='entrada').state==='closed')await page.evaluate(()=>window.__rescueHouse.interactWith('entrada'));await page.waitForFunction(()=>window.__rescueHouse.snapshot().doors.find(d=>d.id==='entrada').open);await pose({x:5.9,y:0,z:HOUSE.depth-.8,yaw:0,pitch:0});await page.keyboard.down('w');await page.waitForFunction(z=>window.__rescueHouse.snapshot().position.z>z,HOUSE.depth+2.5,{timeout:15000});await page.keyboard.up('w');assert.equal((await snap()).position.y,0);await shot('15-salida-al-jardin');
   console.log('V4: wardrobe entry, louver view, pause, exit and reduced motion');
   await page.evaluate(()=>window.__rescueHouse.interactWith('wardrobe',false));await page.waitForFunction(()=>window.__rescueHouse.snapshot().target==='wardrobe');await page.locator('#lab-interact').click();
   await page.waitForFunction(()=>window.__rescueHouse.snapshot().poseTransition?.elapsed>.35);await shot('16-entrada-armario');

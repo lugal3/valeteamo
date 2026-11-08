@@ -1,4 +1,12 @@
 const cache={};
+export function climbingHandPieces(side){
+ return [
+  {id:'palm',x:0,y:0,z:0,w:.13,h:.07,d:.15,mat:'glove',shape:'round'},
+  {id:'thumb',x:side*.065,y:-.015,z:-.04,w:.045,h:.065,d:.09,mat:'glove',shape:'round'},
+  ...[-.04,0,.04].map((x,i)=>({id:'finger'+i,x,y:.008,z:-.085,w:.036,h:.05,d:.10,mat:'glove',shape:'round'})),
+  {id:'cuff',x:0,y:-.045,z:.12,w:.14,h:.13,d:.18,mat:'bow',shape:'round'}
+ ];
+}
 export function flashlightPieces(flash){
  return cache[flash?'on':'off']??=(
   [

@@ -1,4 +1,6 @@
 /* House-only selectors; shared lab/rescue styles remain untouched. */
+#lab3d .lab-window-intro button[data-act=pause]{left:max(14px,env(safe-area-inset-left));right:auto}
+#lab3d.lab-intro-active .lab-toast,#lab3d.lab-intro-active .lab-cross{visibility:hidden}
 #lab3d .lab-camera-panel{max-height:72vh;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}
 #lab3d .lab-camera-panel .lab-preference{display:flex;align-items:center;gap:9px}
 #lab3d .lab-camera-panel button{min-height:44px;font:700 13px system-ui}
