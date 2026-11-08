@@ -1,4 +1,6 @@
 # VALETEAMO — CONTEXTO MAESTRO PARA CODEX
+
+**Actualización autorizada (8 de noviembre de 2026):** espejo de Kitty/linterna, menú de pruebas agrupado y separación musical implementados. Ver `docs/ESPEJO-Y-PRUEBAS.md` para especificación, límites y validación. Se mantiene el 2D; se autorizó cambiar navegación compartida y audio de transición.
 **Estado revisado:** casa V5 (8 de noviembre de 2026), desarrollada sobre `192fc34`; ver `docs/CASA-V5-ESPACIO-ATMOSFERA-Y-ENTRADA.md`. Escalera y descansillos ampliados, circulación auditada, ambiente por zonas y entrada animada por ventana. Todo el 2D continúa protegido. Repo: https://github.com/lugal3/valeteamo · Web: https://valefc.web.app/. Para el estado de publicación exacto, comprobar `main` y su ejecución de Firebase en GitHub Actions.
 
 > **MANDATO DEL PROPIETARIO: NO MODIFICAR, ELIMINAR, REEMPLAZAR, "LIMPIAR" NI REFAC­TORIZAR EL 2D SIN AUTORIZACIÓN EXPLÍCITA.** El 2D le gusta como está. La prioridad actual es entender y separar el proyecto, no combinarlo en un solo juego, no borrar pruebas y no rediseñar el 2D.
@@ -14,7 +16,7 @@
 | **B. Aventura clásica 2D** | «Jugar la aventura clásica» | React + Phaser 3 | Juego anterior de seis salas, enemigos, tesoro, tienda, jefe, economía, objetos y combate | **CONGELADA: NO TOCAR** |
 | **C. Prólogo de rescate 2D** | «Jugar la demo de rescate 2D → 3D» | React + Phaser 3 | Jardín, corazón, secuestro no violento de Louis, pétalos/pistas, puerta y transición | **CONGELADO: NO TOCAR** |
 | **D. Casa del rescate 3D** | Después del prólogo de rescate | WebGL1 propio (no Three.js, no Phaser para la casa) | Casa única de dos pisos, cámara en primera persona, ventana cinematográfica, escaleras, linterna, pistas, dos puzzles y rescate | Área de desarrollo FUTURA, siempre por rama y revisión |
-| **E. Menú «Pruebas»** | Botón pequeño «Pruebas» en la portada de cumpleaños | React, checkpoints aislados | Siete accesos: jardín, secuestro, pista, casa, cajón, cerradura, rescate. **No son siete juegos.** | No quitar sin permiso; se puede estudiar ocultarlo al público en una tarea futura |
+| **E. Menú «Pruebas»** | Botón pequeño «Pruebas» en la portada de cumpleaños | React, checkpoints aislados | Tres accesos principales: 2D Corazones (isométrico nivel 2), Rescate 2D → 3D y Casa 3D. Abajo: Espejo, Cajón y pistas, Dormitorio y rescate, Aventura clásica, Historia y preguntas. | No quitar sin permiso; se puede estudiar ocultarlo al público en una tarea futura |
 | **F. Menú de laboratorio antiguo** | Código `src/lab/index.js` | HTML+JS/WebGL1 | Menú experimental histórico con entradas de planta baja/alta/interacciones | **No está montado por `index.html` actual**, que carga solo `/src/main.tsx`. No confundir archivo que existe con pantalla activa |
 
 ### Flujo real
@@ -35,7 +37,7 @@ index.html → src/main.tsx → StoryApp.tsx → Splash (PLAY)
 ### Capa común / orquestación
 - `index.html`: HTML real de entrada. Monta **solo** `src/main.tsx`.
 - `src/main.tsx`: configura React y conserva `ClassicApp`; al final monta `<StoryApp ClassicApp={ClassicApp}/>`.
-- `src/StoryApp.tsx`: **router de estados manual**; `screen` puede ser `splash`, `cover`, `story`, `game`, `classic`, `rescue` o `tests`. Por aquí nacen las cuatro experiencias. No existe una carpeta totalmente independiente por juego.
+- `src/StoryApp.tsx`: **router de estados manual**; `screen` puede ser `splash`, `cover`, `story`, `game`, `classic`, `rescue`, `tests` o `arcade` (combate 2D aislado). Por aquí nacen las cuatro experiencias. No existe una carpeta totalmente independiente por juego.
 - `src/FullscreenControl.tsx`: pantalla completa y orientación.
 - `src/demo/Splash.tsx`, `splash.css`, `welcome-melody.ts`: portada compartida, partículas, jingle original que se activa tras gesto de usuario.
 - CSS `src/story.css`, `src/style.css`, `src/birthday.css`: estilos compartidos y del 2D. **Cuidado con efectos colaterales al editar estilos globales**.
@@ -70,6 +72,7 @@ index.html → src/main.tsx → StoryApp.tsx → Splash (PLAY)
 - `src/lab/world.js`: colisiones, alturas y transformación de piezas móviles; `src/lab/house-layout.js` define la distribución V4, habitaciones, muebles, escalera y entorno.
 - `src/lab/navigation.js`: movimiento barrido, colisiones y escaleras.
 - `src/lab/camera-controls.js`: giro y suavizado, inversión horizontal, sensibilidad; preferencias locales.
+- `src/lab/mirror.js`: modelo procedural de Kitty/linterna y reflejo acotado del baño; checkpoint `mirror`, botón HUD exclusivo de pruebas.
 - `src/lab/window-intro.js`: secuencia por la ventana, salto opcional y aterrizaje.
 - `src/lab/renderer.js`: WebGL1, geometría real, shaders de materiales, luces y linterna/mano 3D.
 - `src/lab/sound.js`: ambiente y efectos 3D con Web Audio.

@@ -8,6 +8,7 @@ import {FullscreenControl} from './FullscreenControl';
 import {Splash} from './demo/Splash';
 import {RescueDemo} from './demo/RescueDemo';
 import './story.css';
+import {stopWelcomeMelody} from './demo/welcome-melody';
 
 function Portrait({character}:{character:CharacterId}){
  return <span className="kitty-reference-portrait" aria-hidden="true" style={{backgroundImage:`url(${new URL(`./sprites/${character}-reference-sheet.png`,document.baseURI).href})`}}/>;
@@ -31,18 +32,17 @@ export function StoryApp({ClassicApp}:{ClassicApp:ComponentType}){
  const container=useRef<HTMLDivElement>(null);
  const audio=useRef<Sound>(new Sound());
  const [progress,setProgress]=useState<StoryProgress>(()=>readProgress(STORY.length));
- const [screen,setScreen]=useState<'splash'|'cover'|'story'|'game'|'classic'|'rescue'|'tests'>('splash');
- const nextAfterSplash=useRef<'cover'|'rescue'>('cover');
- const [demoEntry,setDemoEntry]=useState<'garden'|'abduction'|'trail'|'house'|'drawer'|'lock'|'rescue'>('garden');
+ const [screen,setScreen]=useState<'splash'|'cover'|'story'|'game'|'classic'|'rescue'|'tests'|'arcade'>('splash');
+ const [demoEntry,setDemoEntry]=useState<'garden'|'abduction'|'trail'|'house'|'drawer'|'lock'|'rescue'|'mirror'>('garden');
  const [demoTrial,setDemoTrial]=useState(false);const [saved,setSaved]=useState(progress.started);const [storageOK,setStorageOK]=useState(true);
  const [audioNotice,setAudioNotice]=useState('');
  const [comicOpen,setComicOpen]=useState(false);
  const chapter=STORY[progress.index];
  const answer=progress.answers[chapter.id]??null;
  useEffect(()=>{container.current?.scrollTo({top:0,behavior:'auto'});},[progress.index,screen]);
- useEffect(()=>{audio.current.setTheme(screen==='game'&&chapter.kind==='game'?(chapter.level===3?'final':chapter.level===2?'battle':'garden'):'story');},[progress.index,screen]);
- useEffect(()=>{if(screen==='rescue'||screen==='tests')audio.current.suspend();},[screen]);
- useEffect(()=>{const visibility=()=>{if(document.hidden)audio.current.suspend();};document.addEventListener('visibilitychange',visibility);const sound=audio.current;return()=>{document.removeEventListener('visibilitychange',visibility);sound.destroy();};},[]);
+ useEffect(()=>{audio.current.setTheme(screen==='arcade'?'battle':screen==='game'&&chapter.kind==='game'?(chapter.level===3?'final':chapter.level===2?'battle':'garden'):'story');},[progress.index,screen]);
+ useEffect(()=>{if(['rescue','tests','classic'].includes(screen)){audio.current.destroy();stopWelcomeMelody();}},[screen]);
+ useEffect(()=>{const visibility=()=>{if(document.hidden)audio.current.suspend();};document.addEventListener('visibilitychange',visibility);const sound=audio.current;return()=>{document.removeEventListener('visibilitychange',visibility);sound.destroy();stopWelcomeMelody();};},[]);
  const save=(next:StoryProgress)=>{setProgress(next);setSaved(next.started);setStorageOK(writeProgress(next));};
  const next=()=>{save(advance(progress,STORY.length));setScreen('story');};
  const back=()=>{if(progress.index===0)setScreen('cover');else{save(goTo(progress,progress.index-1));setScreen('story');}};
@@ -51,16 +51,25 @@ export function StoryApp({ClassicApp}:{ClassicApp:ComponentType}){
  const tryAudio=(welcome=false)=>{audio.current.muted=false;void audio.current.start().then(ok=>{if(ok&&welcome)audio.current.ui();if(!audio.current.muted)setAudioNotice(ok?'':'El navegador bloqueó el audio. Toca Activar sonido y comprueba el volumen.');});};
  const toggleAudio=()=>{const muted=!progress.muted;audio.current.muted=muted;save({...progress,muted});setAudioNotice('');if(muted)audio.current.suspend();else tryAudio();};
  const unlockAudio=()=>{if(!progress.muted)tryAudio();};
- const openDemo=(entry:typeof demoEntry,trial:boolean)=>{setDemoEntry(entry);setDemoTrial(trial);nextAfterSplash.current='rescue';setScreen('splash');};
- if(screen==='splash')return <Splash muted={progress.muted} onStart={()=>{if(!progress.muted)tryAudio(true);setScreen(nextAfterSplash.current);}}/>;
- if(screen==='rescue')return <RescueDemo key={demoEntry+(demoTrial?'-trial':'-story')} entry={demoEntry} test={demoTrial} onExit={()=>{setScreen('cover');unlockAudio();}}/>;
+ const openDemo=(entry:typeof demoEntry,trial:boolean)=>{setDemoEntry(entry);setDemoTrial(trial);audio.current.destroy();stopWelcomeMelody();setScreen('rescue');};
+ if(screen==='splash')return <Splash muted={progress.muted} onStart={()=>{if(!progress.muted)tryAudio(true);setScreen('cover');}}/>;
+ if(screen==='rescue')return <RescueDemo key={demoEntry+(demoTrial?'-trial':'-story')} entry={demoEntry} test={demoTrial} onExit={()=>{setScreen(demoTrial?'tests':'cover');if(!demoTrial)unlockAudio();}}/>;
  if(screen==='tests')return <section className="rescue-test-menu" aria-label="Menú de pruebas"><div>
-  <span>VALETEAMO · SOLO DESARROLLO</span><h1>Pruebas de la demo</h1><p>Estos accesos usan estados aislados; no cambian tu partida normal ni el regalo original.</p>
-  <div className="rescue-test-grid">{([
-   ['garden','Inicio 2D'],['abduction','Secuestro visible'],['trail','Pista y llegada a casa'],['house','Casa 3D'],['drawer','Pista del cajón'],['lock','Llave y dormitorio'],['rescue','Rescate']
-  ] as [typeof demoEntry,string][]).map(([key,label])=><button key={key} onClick={()=>openDemo(key,true)}>{label} ↗</button>)}</div>
-  <button className="back-to-birthday" onClick={()=>setScreen('cover')}>← Volver a Feliz cumpleaños</button></div>
+  <span>VALETEAMO · PRUEBAS</span><h1>Elige dónde jugar</h1><p>Tres accesos principales. Las pruebas no cambian tu historia ni tu partida de rescate.</p>
+  <div className="rescue-test-grid rescue-main-trials">
+   <button onClick={()=>{unlockAudio();setScreen('arcade');}}><b>2D · Corazones</b><small>Kitty animada, disparos y enemigos. Entrar directo al desafío.</small></button>
+   <button onClick={()=>openDemo('garden',true)}><b>Rescate · 2D → 3D</b><small>Un solo recorrido: jardín, desaparición, pistas y casa.</small></button>
+   <button onClick={()=>openDemo('house',true)}><b>Casa 3D</b><small>Explorar la casa desde la entrada por la ventana.</small></button>
+  </div>
+  <h2>Pruebas puntuales</h2><nav className="rescue-trial-tools" aria-label="Herramientas de pruebas">
+   <button onClick={()=>openDemo('mirror',true)}>Espejo</button>
+   <button onClick={()=>openDemo('drawer',true)}>Cajón y pistas</button>
+   <button onClick={()=>openDemo('lock',true)}>Dormitorio y rescate</button>
+   <button onClick={()=>{audio.current.destroy();setScreen('classic');}}>Aventura clásica</button>
+   <button onClick={()=>{unlockAudio();setScreen('story');}}>Historia y preguntas</button>
+  </nav><button className="back-to-birthday" onClick={()=>{unlockAudio();setScreen('cover');}}>← Volver a Feliz cumpleaños</button></div>
  </section>;
+ if(screen==='arcade')return <StoryGame level={2} character="kitty" muted={progress.muted} audio={audio.current} audioNotice={audioNotice} onUnlockAudio={unlockAudio} onToggleAudio={toggleAudio} onComplete={()=>setScreen('tests')} onExit={()=>setScreen('tests')}/>;
  if(screen==='classic')return <><ClassicApp/><button className="classic-return" onClick={()=>{unlockAudio();setScreen('cover');}}>← Volver a la historia</button></>;
  if(screen==='game'&&chapter.kind==='game')return <StoryGame level={chapter.level} character={progress.character} muted={progress.muted} audio={audio.current} audioNotice={audioNotice} onUnlockAudio={unlockAudio} onToggleAudio={toggleAudio} onComplete={next} onExit={()=>{unlockAudio();setScreen('story');}}/>;
  return <div className="story-app" ref={container} onPointerDownCapture={unlockAudio} onKeyDownCapture={e=>{if((e.key==='Enter'||e.key===' ')&&(e.target as HTMLElement).closest('button'))unlockAudio();}} onClickCapture={e=>{const button=(e.target as HTMLElement).closest('button');if(button&&!button.disabled&&!button.classList.contains('sound-toggle'))audio.current.ui();}}>

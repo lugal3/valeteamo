@@ -1,3 +1,4 @@
+import {BATH_MIRROR,MIRROR_SPAWN} from './mirror.js';
 // V5: generous landings and an independent, open stairwell. Dimensions in metres.
 export const HEIGHT=3.15;
 export const HOUSE=Object.freeze({width:14,depth:12});
@@ -140,7 +141,10 @@ export function buildHouse(spawn='ground'){
  obj('basement-hatch','inspect','Trampilla del sótano',8.55,.05,3.55,{text:'La trampilla parece bajar al sótano. Está cerrada por dentro.'});
  add('bath-floor',8.75,.012,5.9,2.25,.024,2.75,'tile',false);add('toilet-base',9.25,.27,6.55,.45,.54,.65,'cream',true,{shape:'round'});add('toilet-seat',9.25,.56,6.5,.52,.08,.63,'cream',false,{shape:'round'});add('toilet-tank',9.25,.70,7.0,.50,.56,.22,'cream');
  add('basin-cabinet',8.55,.43,4.92,.75,.86,.50,'wood');add('basin',8.55,.90,4.92,.79,.10,.55,'cream',false,{shape:'round'});add('bath-tap',8.55,1.08,4.73,.05,.3,.05,'brass',false);
- add('bath-mirror',9.86,1.65,5.0,.045,.85,.70,'glass',false);add('towel',9.85,1.18,6.3,.05,.65,.45,'pink',false);
+ boxes.push({...BATH_MIRROR});
+ for(const z of [4.77,6.33])add('mirror-frame-'+z,9.83,1.48,z,.07,1.96,.07,'brass',false);
+ for(const y of [.52,2.44])add('mirror-frame-'+y,9.83,y,5.55,.07,.07,1.63,'brass',false);
+ add('towel',9.85,1.18,6.3,.05,.65,.45,'pink',false);
  // Hall consoles sit against walls, outside the walking strip.
  add('hall-console',4.68,.43,10.5,.35,.86,.9,'wood');obj('note-hall','note','Nota doblada',4.83,.92,10.5,{text:'Una nota espera junto a la entrada.'});
  add('hall-runner',5.95,.012,6.5,1.2,.024,9.5,'carpet',false);frame('hall',6.05,1.85,.15,'south',3);
@@ -187,6 +191,6 @@ export function buildHouse(spawn='ground'){
  for(const x of [-.52,.52])add('car-headlight-'+x,carX+x,.72,carZ-1.67,.30,.18,.04,'torchglass',false,{glow:true});
  for(const x of [-9.7,25.7])add('garden-boundary-x'+x,x,.65,12,.15,1.3,40,'wood');for(const z of [-7.7,31.7])add('garden-boundary-z'+z,8,.65,z,36,1.3,.15,'wood');
  add('moon',-2,15,-6,1.4,1.4,1.4,'paper',false,{shape:'round',glow:true});
- const spawns={ground:{x:5.95,y:0,z:10.65,yaw:Math.PI},upstairs:{x:12,y:HEIGHT,z:4.15,yaw:-Math.PI/2,items:{key:1}},sound:{x:2.2,y:0,z:11.0,yaw:Math.PI},interactions:{x:3.3,y:0,z:3.6,yaw:-2.8,items:{key:1,batteries:1}}};
+ const spawns={mirror:{...MIRROR_SPAWN},ground:{x:5.95,y:0,z:10.65,yaw:Math.PI},upstairs:{x:12,y:HEIGHT,z:4.15,yaw:-Math.PI/2,items:{key:1}},sound:{x:2.2,y:0,z:11.0,yaw:Math.PI},interactions:{x:3.3,y:0,z:3.6,yaw:-2.8,items:{key:1,batteries:1}}};
  return {boxes,objects,entryWindow,spawn:spawns[spawn]||spawns.ground,spawns,rooms:ROOMS,bounds:WORLD_BOUNDS,stair:STAIR,house:HOUSE};
 }

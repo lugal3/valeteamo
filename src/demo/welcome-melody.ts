@@ -1,3 +1,5 @@
+let activeWelcome:AudioContext|undefined;
+export function stopWelcomeMelody(){const ctx=activeWelcome;activeWelcome=undefined;if(ctx&&ctx.state!=='closed')void ctx.close().catch(()=>{});}
 // Original pentatonic welcome motif. Starts ONLY in a direct player gesture.
 // Keeps the page offline-capable; no third-party audio, autoplay or copyrighted tracks.
 export function playWelcomeMelody(muted:boolean):void{
@@ -5,7 +7,8 @@ export function playWelcomeMelody(muted:boolean):void{
  const Audio=window.AudioContext;
  if(!Audio)return;
  let context:AudioContext;
- try{context=new Audio()}catch{return;}
+ stopWelcomeMelody();
+ try{context=new Audio();activeWelcome=context}catch{return;}
  const now=context.currentTime+.03;
  const master=context.createGain();master.gain.setValueAtTime(.0001,now);
  master.gain.exponentialRampToValueAtTime(.095,now+.05);
@@ -28,5 +31,5 @@ export function playWelcomeMelody(muted:boolean):void{
   osc.onended=()=>{try{osc.disconnect();gain.disconnect()}catch{}};
  }
  void context.resume().catch(()=>{});
- window.setTimeout(()=>{void context.close().catch(()=>{});},3300);
+ window.setTimeout(()=>{if(activeWelcome===context)stopWelcomeMelody();},3300);
 }

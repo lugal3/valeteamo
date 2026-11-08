@@ -1,3 +1,4 @@
+import {BATH_MIRROR,mirrorVisible,kittyMirrorPieces,reflectedBathroom,reflectMesh,poseReflectedKitty} from './mirror.js';
 import {ART_COUNT,createArtworkCanvas} from './artwork.js';
 import {flashlightPieces,climbingHandPieces} from './first-person.js';
 import {VERTEX_SHADER as VS,FRAGMENT_SHADER as FS} from './material-shaders.js';
@@ -60,7 +61,7 @@ function geometry(boxes){
    rotateMesh();continue;
   }
   if(box.shape==='round'||box.shape==='cylinder'){
-   const segments=10,rings=box.shape==='round'?5:1;
+   const segments=box.segments||10,rings=box.shape==='round'?(box.rings||5):1;
    const point=(u,v)=>{
     const angle=u*Math.PI*2;
     if(box.shape==='round'){const lat=(v-.5)*Math.PI;return [Math.cos(angle)*Math.cos(lat),Math.sin(lat),Math.sin(angle)*Math.cos(lat)];}
@@ -122,9 +123,10 @@ function geometry(boxes){
 export class HouseRenderer {
  constructor(canvas,quality='medium'){
   this.canvas=canvas;this.quality=quality;
-  const gl=canvas.getContext('webgl',{alpha:false,antialias:false,powerPreference:'low-power',preserveDrawingBuffer:false});
+  const gl=canvas.getContext('webgl',{alpha:false,stencil:true,antialias:false,powerPreference:'low-power',preserveDrawingBuffer:false});
   if(!gl)throw Error('El navegador no permite WebGL. Activa aceleración gráfica o prueba otro navegador.');
   this.gl=gl;this.programs={medium:program(gl),low:program(gl,true)};this.program=this.programs[quality==='low'?'low':'medium'];this.texture=createAtlas(gl);this.materialTextures=createMaterials(gl);
+  this.mirrorSupported=gl.getContextAttributes().stencil;this.mirrorBuffers=Array.from({length:6},()=>gl.createBuffer());this.mirrorDrawn=false;
   this.vbo=gl.createBuffer();this.ibo=gl.createBuffer();this.count=0;
   this.dynamicVbo=gl.createBuffer();this.dynamicIbo=gl.createBuffer();this.dynamicCount=0;this.dynamicBoxes=[];
   this.handVbo=gl.createBuffer();this.handIbo=gl.createBuffer();this.handGeometry={};this.handVertices=null;this.handIndexReady=false;
@@ -162,6 +164,32 @@ export class HouseRenderer {
   gl.bindBuffer(gl.ARRAY_BUFFER,this.vbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.ibo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
   this.bind(this.vbo,this.ibo);
+  this.prepareMirror(boxes);
+ }
+ prepareMirror(boxes){
+  const gl=this.gl;
+  this.mirrorMeshes=[geometry([{...BATH_MIRROR,x:BATH_MIRROR.x-.0005}]),geometry(reflectedBathroom(boxes)),geometry(kittyMirrorPieces())];
+  reflectMesh(this.mirrorMeshes[1].vertices);
+  this.kittyVertices=new Float32Array(this.mirrorMeshes[2].vertices.length);
+  this.mirrorMeshes.forEach((mesh,i)=>{gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[i*2]);gl.bufferData(gl.ARRAY_BUFFER,mesh.vertices,i===2?gl.DYNAMIC_DRAW:gl.STATIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.mirrorBuffers[i*2+1]);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,mesh.indices,gl.STATIC_DRAW);});
+ }
+ drawMirror(camera,motion){
+  const gl=this.gl;this.mirrorDrawn=false;
+  if(!this.mirrorSupported||!mirrorVisible(camera))return;
+  const draw=i=>{this.bind(this.mirrorBuffers[i*2],this.mirrorBuffers[i*2+1]);gl.drawElements(gl.TRIANGLES,this.mirrorMeshes[i].indices.length,gl.UNSIGNED_SHORT,0);};
+  // Mark only visible mirror fragments. Walls/door/furniture still occlude it.
+  gl.enable(gl.STENCIL_TEST);gl.stencilMask(0xff);gl.stencilFunc(gl.ALWAYS,1,0xff);gl.stencilOp(gl.KEEP,gl.KEEP,gl.REPLACE);
+  gl.colorMask(false,false,false,false);gl.depthMask(false);gl.depthFunc(gl.LEQUAL);draw(0);
+  gl.stencilFunc(gl.EQUAL,1,0xff);gl.stencilOp(gl.KEEP,gl.KEEP,gl.KEEP);gl.stencilMask(0);
+  // Reset depth only inside the aperture, leaving the rest of the house intact.
+  gl.depthMask(true);gl.depthFunc(gl.ALWAYS);gl.depthRange(1,1);draw(0);
+  gl.depthRange(0,1);gl.depthFunc(gl.LESS);gl.colorMask(true,true,true,true);
+  gl.uniform1f(this.uniform.uFlash,0);gl.uniform1f(this.uniform.uOcclude,0);
+  gl.frontFace(gl.CW);draw(1);
+  poseReflectedKitty(this.mirrorMeshes[2].vertices,this.kittyVertices,camera,motion);
+  gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[4]);gl.bufferSubData(gl.ARRAY_BUFFER,0,this.kittyVertices);draw(2);
+  gl.frontFace(gl.CCW);gl.colorMask(false,false,false,false);gl.depthFunc(gl.ALWAYS);draw(0);
+  gl.colorMask(true,true,true,true);gl.depthFunc(gl.LESS);gl.stencilMask(0xff);gl.disable(gl.STENCIL_TEST);this.mirrorDrawn=true;
  }
  updateDynamic(){
   const gl=this.gl;let changed=false;
@@ -258,15 +286,16 @@ export class HouseRenderer {
     gl.activeTexture(gl.TEXTURE0);
    }
   }
-  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  gl.stencilMask(0xff);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT|gl.STENCIL_BUFFER_BIT);
   // Closed doors are useful depth occluders too. All these surfaces are opaque.
   if(this.dynamicCount){this.bind(this.dynamicVbo,this.dynamicIbo);gl.drawElements(gl.TRIANGLES,this.dynamicCount,gl.UNSIGNED_SHORT,0);}
   this.bind(this.vbo,this.ibo);
   gl.drawElements(gl.TRIANGLES,this.count,gl.UNSIGNED_SHORT,0);
+  this.drawMirror(camera,motion);
   if(motion.introHands)this.drawClimbingHands(motion.introHands);
   if(showHand)this.drawFirstPerson(camera,right,up,forward,time,flash,motion);
  }
- destroy(){const gl=this.gl;gl.deleteTexture(this.texture);gl.deleteTexture(this.lightTexture);for(const texture of this.materialTextures)gl.deleteTexture(texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.dynamicVbo);gl.deleteBuffer(this.dynamicIbo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);for(const p of Object.values(this.programs))gl.deleteProgram(p);this.canvas.width=1;this.canvas.height=1;}
+ destroy(){const gl=this.gl;for(const b of this.mirrorBuffers)gl.deleteBuffer(b);gl.deleteTexture(this.texture);gl.deleteTexture(this.lightTexture);for(const texture of this.materialTextures)gl.deleteTexture(texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.dynamicVbo);gl.deleteBuffer(this.dynamicIbo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);for(const p of Object.values(this.programs))gl.deleteProgram(p);this.canvas.width=1;this.canvas.height=1;}
 }
 export function pickupGeometry(objects){
  return objects.filter(o=>!o.taken&&(!o.concealed||o.dynamic)&&['battery','note','key'].includes(o.kind)).flatMap(o=>{

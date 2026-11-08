@@ -6,14 +6,14 @@ import {START,advanceRescue,loadRescue,saveRescue,resetRescue,type RescueState} 
 import '../lab/lab.css';
 import './rescue.css';
 
-type Entry='garden'|'abduction'|'trail'|'house'|'drawer'|'lock'|'rescue';
+type Entry='garden'|'abduction'|'trail'|'house'|'drawer'|'lock'|'rescue'|'mirror';
 const initial=(entry:Entry,test:boolean):RescueState=>{
  if(!test)return loadRescue();
  let s={...START};
  if(entry!=='garden')s=advanceRescue(s,'heart');
  if(entry!=='garden'&&entry!=='abduction')s=advanceRescue(s,'abduction');
- if(entry==='trail'||['house','drawer','lock','rescue'].includes(entry))s=advanceRescue(s,'trail');
- if(['house','drawer','lock','rescue'].includes(entry))s=advanceRescue(s,'house');
+ if(entry==='trail'||['house','drawer','lock','rescue','mirror'].includes(entry))s=advanceRescue(s,'trail');
+ if(['house','drawer','lock','rescue','mirror'].includes(entry))s=advanceRescue(s,'house');
  return s;
 };
 const descriptions:Record<string,string>={
@@ -144,15 +144,15 @@ export function RescueDemo({onExit,entry='garden',test=false}:{onExit:()=>void,e
   const boot=async()=>{
    try{
     const {launchHouse}=await import('../lab/house.js');if(cancelled)return;
-    const checkpoint: string=entry==='drawer'?'interactions':entry==='lock'||entry==='rescue'?'upstairs':entry==='house'?'ground':'ground';
+    const checkpoint: string=entry==='mirror'?'mirror':entry==='drawer'?'interactions':entry==='lock'||entry==='rescue'?'upstairs':entry==='house'?'ground':'ground';
     teardown=launchHouse(()=>onExit(),checkpoint,{demo:true,onRescue:()=>{emit('rescue');setMode('end');},trial:test,entry});
    }catch(e){if(!cancelled)setError(String(e));}
   };
   void boot();return()=>{cancelled=true;teardown?.();};
  },[mode]);
- const reset=()=>{resetRescue();const fresh={...START};phaseRef.current=fresh;setState(fresh);setNear('');setMode('garden');};
+ const reset=()=>{if(!test)resetRescue();const fresh={...START};phaseRef.current=fresh;setState(fresh);setNear('');setMode('garden');};
  return <div className="rescue-demo" aria-label="Demo jugable de rescate">
-  {mode==='garden'&&<><header className="rescue-head"><b>VALETEAMO · LA BÚSQUEDA DE LOUIS</b><button onClick={onExit}>Salir a cumpleaños</button></header>
+  {mode==='garden'&&<><header className="rescue-head"><b>VALETEAMO · LA BÚSQUEDA DE LOUIS</b><button onClick={onExit}>{test?'Volver a pruebas':'Salir a cumpleaños'}</button></header>
    <div className="rescue-stage" ref={stage}/>
    <div className="rescue-story" role="status">{descriptions[state.phase]}</div>
    <div className="rescue-stick" aria-label="Joystick analógico para moverse"

@@ -24,3 +24,5 @@
 - [Validación 1.3](VALIDACION-1.3.md)
 
 **No se han movido ni eliminado informes.** El índice sirve para ordenar sin romper enlaces existentes ni tocar juegos.
+
+- `ESPEJO-Y-PRUEBAS.md`: espejo de Kitty/linterna, tres accesos principales, herramientas puntuales, audio exclusivo y prompt de continuidad (8 de noviembre de 2026).
