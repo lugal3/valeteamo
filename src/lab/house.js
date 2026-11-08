@@ -1,35 +1,28 @@
-import {createHouse,HEIGHT,blocked,groundHeight,lineBlocked,setDoor,setDrawer} from './world.js';
+import {HIDE_SECONDS,hidingFrame} from './hiding.js';
+import {createHouse,HEIGHT,blocked,groundHeight,lineBlocked,setDoor,setDrawer,poseFurniture,roomAt} from './world.js';
 import {HouseRenderer,pickupGeometry} from './renderer.js';
 import {HouseSound} from './sound.js';
 import {applyLookDelta,followLook,readCameraSettings,writeCameraSettings,DEFAULT_CAMERA_SETTINGS} from './camera-controls.js';
 import {WINDOW_SHOT_SECONDS,WINDOW_LANDING,windowIntroCamera,shouldPlayWindowIntro} from './window-intro.js';
 import {navigate,smoothAxis,getStairDirection} from './navigation.js';
 import {interactionTarget,canApproachDoor} from './interactions.js';
-import {animateFurniture,updateFurniture} from './furniture-motion.js';
+import {animateFurniture,updateFurniture,sweepClear} from './furniture-motion.js';
 import {createHousePuzzle,puzzleEvent,canOpenDrawer,canOpenBedroom,canRescue,PUZZLE_HINTS} from '../demo/house-puzzles.js';
 import './house.css';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const canStand=(state,world)=>!blocked(world.boxes,state.x,state.y,state.z,.2,1.69);
 function cameraOf(s){
+ if(s.poseCamera)return s.poseCamera;
  if(s.hidden){const o=s.hidden;return {x:o.x,y:o.y,z:o.z,yaw:s.yaw,pitch:s.pitch};}
- const eye=s.lying?.64:s.eye;
+ const eye=s.lying?1.02:s.eye;
  return {x:s.x,y:s.y+eye+(!s.crouched&&!s.lying&&!s.reduceBob?Math.sin(s.bob)*.024:0),z:s.z,yaw:s.yaw,pitch:s.pitch};
 }
 function closestObject(world,state,previous=null){
- if(state.hidden||state.lying)return null;
+ if(state.hidden||state.lying||state.poseCamera)return null;
  return interactionTarget(world,cameraOf(state),previous);
 }
-const ctxRoom=(state)=>{
- if(getStairDirection(state)==='Escaleras')return 'escalera';
- if(state.y>HEIGHT*.52){
-  if(state.x<4.45&&state.z<5.4)return 'dormitorio';
-  if(state.x>7.55&&state.z<4.45)return 'habitación de recuerdos';
-  return 'planta alta';
- }
- if(state.x<4.05)return state.z>6.4?'cocina':'estudio';
- return state.x>7.65?'salón':'pasillo';
-};
+const ctxRoom=state=>getStairDirection(state)==='Escaleras'?'Escaleras':roomAt(state.x,state.z,state.y);
 export function launchHouse(onExit,checkpoint='ground',config={}){
  const demo=config.demo===true;
  const root=document.createElement('div');root.id='lab3d';root.innerHTML=`
@@ -53,6 +46,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      <label class="lab-preference"><input data-setting="bob" type="checkbox" checked> Balanceo al caminar</label>
      <label class="lab-preference"><input data-setting="mute" type="checkbox"> Silenciar la casa</label>
      <label>Ambiente <input data-setting="ambient" aria-label="Volumen de ambiente" type="range" min="0" max="1" step=".05" value=".4"></label>
+     <label>Música de tensión <input data-setting="music" aria-label="Volumen de música" type="range" min="0" max="1" step=".05" value=".34"></label>
      <label>Efectos <input data-setting="effects" aria-label="Volumen de efectos" type="range" min="0" max="1" step=".05" value=".68"></label>
      <button data-act="reset">Reiniciar casa</button>
      <small class="lab-settings-note">WASD: caminar · Flechas: mirar · E: usar · F: luz · I: mochila · Esc: pausa</small>
@@ -89,7 +83,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const controller=new AbortController(),signal=controller.signal;
  let renderer,world,puzzle=createHousePuzzle(config.entry),sound=new HouseSound(),s,raf=0,last=0,lastPaint=0,fps=0,elapsed=0,toastUntil=0,lookPointer=null,stickPointer=null;
  let active=true,ready=false,hasFocus=true,focus=null,lookLast={x:0,y:0},paused=false,modal='',intro=true,contextLost=false;
- let lookTarget={yaw:Math.PI,pitch:0},cinematic=null,handAction=0,lastInteraction=-Infinity;
+ let lookTarget={yaw:Math.PI,pitch:0},cinematic=null,poseTransition=null,handAction=0,lastInteraction=-Infinity;
  const manuallyClosed=new Set(),reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
  const keys=new Set(),joystick={x:0,z:0},velocity={forward:0,side:0};
  const cameraSettings=(()=>{try{return readCameraSettings(window.localStorage)}catch{return {...DEFAULT_CAMERA_SETTINGS}}})();
@@ -98,7 +92,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const points={ground:'Planta baja',upstairs:'Planta alta',sound:'Iluminación / sonido',interactions:'Interacciones'};
  const say=(text,seconds=2.4)=>{$('lab-toast').textContent=text;toastUntil=performance.now()+seconds*1000;};
  const isPortrait=()=>window.innerHeight>window.innerWidth;
- const isPaused=()=>!ready||paused||!!modal||!!cinematic||$('lab-camera-settings').open||isPortrait()||document.hidden||!hasFocus||contextLost;
+ const isPaused=()=>!ready||paused||!!modal||!!cinematic||!!poseTransition||$('lab-camera-settings').open||isPortrait()||document.hidden||!hasFocus||contextLost;
  function resetInput(){
   keys.clear();joystick.x=joystick.z=0;velocity.forward=velocity.side=0;
   const pairs=[[$('lab-look'),lookPointer],[$('lab-joystick'),stickPointer]];
@@ -127,7 +121,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   $('lab-intro-caption').textContent='Una ventana entreabierta…';
  }
  function reset(){
-  cinematic=null;paused=false;manuallyClosed.clear();lastInteraction=-Infinity;handAction=0;
+  cinematic=null;poseTransition=null;paused=false;manuallyClosed.clear();lastInteraction=-Infinity;handAction=0;
+  sound.setTension(.55);
   root.classList.remove('lab-intro-active');$('lab-window-intro').classList.add('lab-hidden');$('lab-camera-settings').open=false;
   world=createHouse(checkpoint);puzzle=createHousePuzzle(config.entry);
   if(demo){
@@ -161,8 +156,27 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(s.crouched&&!canStand(s,world)){say('No hay espacio suficiente para levantarte');return;}
   s.crouched=!s.crouched;play('click');say(s.crouched?'Agachada':'De pie');
  }
+ function beginHiding(object,entering){
+  const from=cameraOf(s),inside={...object.hideCamera},outside={x:object.returnX,y:s.y+1.63,z:object.returnZ,yaw:inside.yaw+Math.PI,pitch:0};
+  if(blocked(world.boxes,outside.x,s.y,outside.z,.18,1.64)){say('Deja libre el espacio delante del escondite');return;}
+  resetInput();poseTransition={object,entering,from,inside,outside,elapsed:0};
+  if(reducedMotion.matches)poseTransition.elapsed=HIDE_SECONDS;
+  play('hide',object);updateHiding(0);
+ }
+ function updateHiding(dt){
+  if(!poseTransition||paused||modal||$('lab-camera-settings').open||isPortrait()||document.hidden||!hasFocus||contextLost)return;
+  const transition=poseTransition;transition.elapsed=Math.min(HIDE_SECONDS,transition.elapsed+dt);
+  const frame=hidingFrame({...transition,progress:transition.elapsed/HIDE_SECONDS,wardrobe:!!transition.object.wardrobeLeaves});
+  s.poseCamera=frame.camera;if(transition.object.wardrobeLeaves)poseFurniture(transition.object,frame.doorAmount);
+  if(transition.elapsed>=HIDE_SECONDS){
+   if(transition.entering){s.hidden={...transition.inside,objectId:transition.object.id,hideType:transition.object.hideType,returnX:transition.outside.x,returnZ:transition.outside.z};s.yaw=transition.inside.yaw;s.pitch=transition.inside.pitch;sound.setTension(.85);say(transition.object.wardrobeLeaves?'Dentro del armario · mira por las rendijas · USAR para salir':'Bajo la cama · USAR para salir',4);}
+   else{s.hidden=null;s.x=transition.outside.x;s.z=transition.outside.z;s.yaw=frame.camera.yaw;s.pitch=0;sound.setTension(.55);say('Has salido con cuidado');}
+   s.poseCamera=null;poseTransition=null;resetInput();if(!isPaused())sound.resume();
+  }
+ }
  function exitPose(){
   const pose=s.hidden||s.lying;if(!pose)return;
+  if(s.hidden){const object=world.objects.find(o=>o.id===s.hidden.objectId);if(object){beginHiding(object,false);return;}}
   const position={x:pose.returnX,z:pose.returnZ};
   let free=null;
   for(const [dx,dz] of [[0,0],[.35,0],[-.35,0],[0,.35],[0,-.35],[.5,.5]]){
@@ -206,9 +220,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    s.lying={returnX:o.returnX,returnZ:o.returnZ};s.x=o.x;s.z=o.z-.25;s.pitch=-.08;
    play('bed',o);say('Te has acostado. Pulsa USAR para levantarte.');
   }else if(o.kind==='hide'){
-   const target=o.hideType==='underbed'?{x:2.0,y:HEIGHT+.48,z:3.45}:{x:.83,y:HEIGHT+1.25,z:4.24};
-   s.hidden={...target,hideType:o.hideType,returnX:o.returnX,returnZ:o.returnZ,yaw:s.yaw};
-   s.pitch=0;play('hide',o);say('Estás escondida. Pulsa USAR para salir.');
+   beginHiding(o,true);
   }
  }
  function bag(){
@@ -270,9 +282,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(getStairDirection(s)==='Escaleras')$('lab-objective').textContent+=' · ↑↓ Escaleras';
   $('lab-charge').style.width=s.battery+'%';$('lab-charge-text').textContent=Math.ceil(s.battery)+'%';
   const interactButton=$('lab-interact');interactButton.hidden=!target&&!s.hidden&&!s.lying;
-  interactButton.disabled=!!target?.motion;
+  interactButton.disabled=!!target?.motion||!!poseTransition;
   root.querySelector('.lab-cross').classList.toggle('lab-target',!!target);
   interactButton.querySelector('small').textContent=s.hidden||s.lying?'Salir':!target?'Usar':target.kind==='door'?(target.open?'Cerrar puerta':'Abrir puerta'):target.kind==='key'?'Recoger llave':target.kind==='note'?'Leer nota':target.kind==='drawer'?(target.open?'Cerrar cajón':'Abrir cajón'):target.kind==='rescue'?'Rescatar':'Examinar';
+  if(target?.kind==='hide')interactButton.querySelector('small').textContent=target.hideType==='wardrobe'?'Entrar en armario':'Esconderse';
+  if(poseTransition)interactButton.querySelector('small').textContent=poseTransition.entering?'Entrando…':'Saliendo…';
   if(target?.motion)interactButton.querySelector('small').textContent=target.state==='opening'?'Abriendo…':'Cerrando…';
   interactButton.classList.toggle('lab-available',!!target||!!s.hidden||!!s.lying);
   $('lab-crouch').classList.toggle('lab-available',s.crouched);
@@ -286,6 +300,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const turn=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0);
   lookTarget.yaw+=turn*dt*1.65;
   lookTarget.pitch=clamp(lookTarget.pitch+((keys.has('ArrowUp')?1:0)-(keys.has('ArrowDown')?1:0))*dt*1.12,-1.10,1.10);
+  if(s.hidden){const limit=s.hidden.hideType==='wardrobe'?.28:.6;lookTarget.yaw=clamp(lookTarget.yaw,s.hidden.yaw-limit,s.hidden.yaw+limit);lookTarget.pitch=clamp(lookTarget.pitch,-.14,.14);}
   const follow=followLook(s,lookTarget,dt,20);s.yaw=follow.yaw;s.pitch=follow.pitch;
   let forward=(keys.has('w')||keys.has('W')?1:0)-(keys.has('s')||keys.has('S')?1:0)-joystick.z;
   let side=(keys.has('d')||keys.has('D')?1:0)-(keys.has('a')||keys.has('A')?1:0)+joystick.x;
@@ -313,7 +328,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(now-lastPaint<limit-2)return;
   const dt=Math.min(.055,Math.max(0,(now-last)/1000||0));last=now;lastPaint=now;
   if(!s||!renderer)return;
-  let view=cameraOf(s),hand=true,torch=s.flashlight;
+  updateHiding(dt);
+  let view=cameraOf(s),hand=!s.hidden&&!s.lying&&!poseTransition,torch=s.flashlight&&!s.hidden;
   if(cinematic){
    if(!isPortrait()&&!document.hidden&&hasFocus)cinematic.elapsed+=dt;
    const progress=Math.min(1,cinematic.elapsed/WINDOW_SHOT_SECONDS);
@@ -360,7 +376,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function moveLook(e){if(isPaused()||e.pointerId!==lookPointer)return;const dx=e.clientX-lookLast.x,dy=e.clientY-lookLast.y;
   lookLast={x:e.clientX,y:e.clientY};
   lookTarget=applyLookDelta(lookTarget,dx,dy,options.sensitivity,options.invertX);
-  if(s.hidden)lookTarget.yaw=clamp(lookTarget.yaw,s.hidden.yaw-.7,s.hidden.yaw+.7);
+  if(s.hidden){const limit=s.hidden.hideType==='wardrobe'?.28:.6;lookTarget.yaw=clamp(lookTarget.yaw,s.hidden.yaw-limit,s.hidden.yaw+limit);lookTarget.pitch=clamp(lookTarget.pitch,-.14,.14);}
   e.preventDefault();}
  function endLook(e){if(e.pointerId===lookPointer)lookPointer=null;}
  const stick=$('lab-joystick'),look=$('lab-look');
@@ -382,6 +398,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(key==='bob'){options.bob=field.checked;if(s)s.reduceBob=!field.checked||reducedMotion.matches;}
   if(key==='ambient')sound.set('ambient',Number(field.value));
   if(key==='effects')sound.set('effects',Number(field.value));
+  if(key==='music')sound.set('music',Number(field.value));
   if(key==='mute')sound.set('muted',field.checked);
   root.querySelectorAll('[data-setting="'+key+'"]').forEach(el=>{if(el!==field){if(field.type==='checkbox')el.checked=field.checked;else el.value=field.value;}});
  },{signal});
@@ -411,7 +428,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  window.addEventListener('resize',()=>{last=performance.now();resetInput();if(isPortrait())sound.pause();else if(ready&&!isPaused())sound.resume();},{signal});
  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();contextLost=true;showModal('Gráficos interrumpidos','<p>El navegador perdió el contexto WebGL.</p>',[['Volver a pruebas','exit']]);},{signal});
  if(renderer){
-  for(const key of ['ambient','effects'])root.querySelectorAll('[data-setting="'+key+'"]').forEach(el=>el.value=sound.settings[key]);
+  for(const key of ['ambient','effects','music'])root.querySelectorAll('[data-setting="'+key+'"]').forEach(el=>el.value=sound.settings[key]);
   root.querySelectorAll('[data-setting="mute"]').forEach(el=>el.checked=sound.settings.muted);
   root.querySelectorAll('[data-setting="bob"]').forEach(el=>el.checked=options.bob);
   root.querySelectorAll('[data-setting="sensitivity"]').forEach(el=>el.value=options.sensitivity);
@@ -425,7 +442,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  // non-blocked player poses without altering the production build or saved game.
  if(import.meta.env.DEV&&demo){
   window.__rescueHouse={
-   snapshot:()=>({puzzle:{...puzzle},position:{x:s?.x,y:s?.y,z:s?.z},camera:{yaw:s?.yaw,pitch:s?.pitch,targetYaw:lookTarget.yaw,invertX:options.invertX},cinematic:!!cinematic,quality:options.quality,fps,target:focus?.id??null,paused:isPaused(),controls:{look:lookPointer,stick:stickPointer,joystick:{...joystick}},reduceBob:s.reduceBob,flashlight:s.flashlight,notes:s.inventory.notes.length,drawer:(()=>{const o=world.objects.find(o=>o.id==='drawer');return {state:o.state,amount:o.amount,z:o.box.z,key:world.objects.find(o=>o.id==='key').z,contentsAvailable:world.objects.find(o=>o.id==='key').interactable,contentsConcealed:world.objects.find(o=>o.id==='key').concealed}})(),doors:world.objects.filter(o=>o.kind==='door').map(o=>({id:o.id,open:o.open,state:o.state,amount:o.amount})),sound:sound.context?.state,geometry:{vertices:renderer.vertexCount,triangles:renderer.triangleCount}}),
+   snapshot:()=>({puzzle:{...puzzle},position:{x:s?.x,y:s?.y,z:s?.z},camera:{yaw:s?.yaw,pitch:s?.pitch,targetYaw:lookTarget.yaw,invertX:options.invertX},cinematic:!!cinematic,quality:options.quality,fps,target:focus?.id??null,paused:isPaused(),controls:{look:lookPointer,stick:stickPointer,joystick:{...joystick}},reduceBob:s.reduceBob,flashlight:s.flashlight,notes:s.inventory.notes.length,drawer:(()=>{const o=world.objects.find(o=>o.id==='drawer');return {state:o.state,amount:o.amount,z:o.box.z,key:world.objects.find(o=>o.id==='key').z,contentsAvailable:world.objects.find(o=>o.id==='key').interactable,contentsConcealed:world.objects.find(o=>o.id==='key').concealed}})(),doors:world.objects.filter(o=>o.kind==='door').map(o=>({id:o.id,open:o.open,state:o.state,amount:o.amount,x:o.box.x,z:o.box.z,yaw:o.box.yaw,solid:o.box.solid})),handVisible:renderer.lastShowHand,hidden:!!s.hidden,hideType:s.hidden?.hideType,poseTransition:poseTransition?{entering:poseTransition.entering,elapsed:poseTransition.elapsed}:null,view:cameraOf(s),wardrobeAmount:world.objects.find(o=>o.id==='wardrobe').amount,music:{scheduled:sound.musicStep,voices:sound.musicNodes.size,timer:sound.musicTimer!==null,volume:sound.settings.music},sound:sound.context?.state,geometry:{vertices:renderer.vertexCount,triangles:renderer.triangleCount}}),
    setPose:(pose)=>{if(blocked(world.boxes,pose.x,pose.y,pose.z,.2,1.7))throw Error('Blocked test pose');Object.assign(s,pose);resetInput();focus=null;},
    interactWith:async(id,activate=true)=>{
     const o=world.objects.find(o=>o.id===id&&!o.taken);if(!o)throw Error('Not available: '+id);
@@ -439,7 +456,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
       if(blocked(world.boxes,x,y,z,.2,1.7))continue;
       s.x=x;s.y=y;s.z=z;s.yaw=Math.atan2(o.x-x,o.z-z);
       s.pitch=Math.atan2(o.y-(y+s.eye),Math.hypot(o.x-x,o.z-z));
-      if(closestObject(world,s,null)?.id===o.id){found=true;break;}
+      if(closestObject(world,s,null)?.id===o.id){
+       if(['door','drawer'].includes(o.kind)&&!sweepClear(o,o.amount||0,o.open?0:1,s))continue;
+       found=true;break;
+      }
      }
     }
     if(!found)throw Error('No line-of-sight reachable pose for '+id);if(!activate){resetInput();return {position:{x:s.x,y:s.y,z:s.z}};}

@@ -25,7 +25,7 @@ uniform vec3 uEye,uLightEye,uForward,uRight,uUp;
 uniform sampler2D uAtlas,uLightDepth,uMaterials;
 uniform float uFlash,uOcclude;
 void main(){
- float tile=floor(vStyle+.01);
+ float tile=mod(floor(vStyle+.01),16.0);
  vec2 atlasUV=(vec2(mod(tile,4.0),floor(tile/4.0))*${TILE_SIZE.toFixed(1)}+${GUTTER.toFixed(1)}+fract(vUV)*${INNER.toFixed(1)})/${ATLAS_SIZE.toFixed(1)};
  vec4 material=texture2D(uMaterials,atlasUV);
  vec3 N=normalize(vNormal),T=vTangent;
@@ -43,9 +43,9 @@ void main(){
   beam*=1.0-smoothstep(wall+.07,wall+.22,d);
  }
  beam*=.72+.28*max(0.0,dot(N,-direction));
- vec3 l1=vWorld-vec3(10.9,1.5,1.1),l2=vWorld-vec3(6.1,4.7,4.1),l3=vWorld-vec3(2.0,1.7,6.1);
+ vec3 l1=vWorld-vec3(2.2,1.8,6.8),l2=vWorld-vec3(6.1,4.7,4.1),l3=vWorld-vec3(10.0,1.7,1.0);
  float upper=step(3.15,vWorld.y);
- float warmth=(1.0-upper)*(.32/(1.0+.17*dot(l1,l1))*step(7.55,vWorld.x)+.27/(1.0+.12*dot(l3,l3))*(1.0-step(4.15,vWorld.x)))+upper*.34/(1.0+.15*dot(l2,l2));
+ float warmth=(1.0-upper)*(.32/(1.0+.17*dot(l1,l1))*(1.0-step(4.4,vWorld.x))+.27/(1.0+.12*dot(l3,l3))*step(7.5,vWorld.x))+upper*.34/(1.0+.15*dot(l2,l2));
  float facing=.80+.20*max(0.0,dot(N,normalize(vec3(.3,.8,.4))));
  float lighting=(.60+warmth+beam)*facing;
  vec3 color=vColor*material.rrr*1.075;
@@ -56,6 +56,7 @@ void main(){
   shine=mix(s8*s8,s4,rough)*(1.0-rough)*(.08+beam*.14);
  }
  color=color*lighting/(1.0+.30*lighting)+vec3(1.0,.91,.79)*shine;
+ if(vStyle>31.5)color=mix(color,vColor*.90,.82);
  float fog=clamp((vDistance-6.0)/25.0,0.0,.32);
  color=mix(color,vec3(.19,.16,.22),fog);
  gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);

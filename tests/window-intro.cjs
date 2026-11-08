@@ -15,6 +15,6 @@ const assert=require('node:assert/strict');
  assert(!shouldPlayWindowIntro({demo:true,checkpoint:'upstairs'}));
  const house=w.createHouse('ground');
  assert(!w.blocked(house.boxes,WINDOW_LANDING.x,WINDOW_LANDING.y,WINDOW_LANDING.z,.155,1.64),'Window landing must be accessible');
- assert(!w.blocked(house.boxes,10.20,1.4,10.0,.12,.35),'Window gap must be physically open at camera height');
+ assert(!w.blocked(house.boxes,WINDOW_LANDING.x,1.4,10.0,.12,.35),'Living-room window gap is physically open at camera height');
  console.log('PASS: authored window shot, safe landing, real aperture and reduced-motion/test skipping');
 })().catch(e=>{console.error(e);process.exitCode=1});

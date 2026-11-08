@@ -8,9 +8,11 @@ export function rayDistance(boxes,origin,direction,reach=LIGHT_REACH){
  let nearest=reach;
  for(const box of boxes){
   if(!box.solid)continue;
+  const c=box.yaw?Math.cos(box.yaw):1,s=box.yaw?Math.sin(box.yaw):0,rx=origin.x-box.x,rz=origin.z-box.z;
   let near=0,far=nearest;
   for(const [axis,size] of AXES){
-   const delta=direction[axis],offset=box[axis]-origin[axis],half=box[size]/2;
+   const delta=axis==='x'?direction.x*c+direction.z*s:axis==='z'?-direction.x*s+direction.z*c:direction.y;
+   const offset=axis==='x'?-(rx*c+rz*s):axis==='z'?-(-rx*s+rz*c):box.y-origin.y,half=box[size]/2;
    if(Math.abs(delta)<1e-8){if(Math.abs(offset)>half){far=-1;break;}continue;}
    const a=(offset-half)/delta,b=(offset+half)/delta;
    near=Math.max(near,Math.min(a,b));far=Math.min(far,Math.max(a,b));

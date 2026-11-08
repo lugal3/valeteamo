@@ -1,7 +1,7 @@
 import {poseFurniture,overlaps} from './world.js';
 export const FURNITURE_SECONDS=.42;
 const ease=t=>t*t*(3-2*t);
-function sweepClear(object,from,to,player){
+export function sweepClear(object,from,to,player){
  if(!player)return true;
  const start=object.amount||0,steps=Math.max(1,Math.ceil(Math.abs(to-from)*Math.abs(object.slideDistance)/.035));
  let clear=true;

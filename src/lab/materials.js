@@ -57,6 +57,10 @@ export function materialPixels(){
  return cached={color,normal};
 }
 export function materialStyle(box){
+ if(box.mat==='grass')return 8;
+ if(box.mat==='stone')return 4;
+ if(box.mat==='asphalt')return 1;
+ if(box.mat==='roof'||box.mat==='carpaint')return 13;
  if(box.surface==='paint')return 13;
  if(box.id==='wardrobe')return 2;
  if(box.id?.startsWith('books-'))return 9;

@@ -88,17 +88,18 @@ async function main(){
   await page.emulateMedia({reducedMotion:'no-preference'});
 
   console.log('3D: occluded picking and doors');
-  await pose({x:8.05,y:0,z:4.9,yaw:-Math.PI/2,pitch:Math.atan2(-.76,2.1)});
+  await pose({x:5.95,y:0,z:4.0,yaw:-Math.PI/2,pitch:-.3});
   assert.notEqual((await snap()).target,'note-hall','A nearby note across the partition is not a valid target');
   const notes=(await snap()).notes;await page.keyboard.press('e');assert.equal((await snap()).notes,notes);
-  await pose({x:5.87,y:0,z:9.06,yaw:0,pitch:0});
+  await pose({x:5.9,y:0,z:10.75,yaw:Math.PI,pitch:0});
   await page.waitForFunction(()=>window.__rescueHouse.snapshot().doors.find(d=>d.id==='entrada').open);
-  await page.waitForTimeout(300);await page.keyboard.press('e');await page.waitForFunction(()=>window.__rescueHouse.snapshot().doors.find(d=>d.id==='entrada').state==='closed');
+  const aimEntry=async()=>{const s=await snap(),d=s.doors.find(d=>d.id==='entrada'),p=s.position;await pose({...p,yaw:Math.atan2(d.x-p.x,d.z-p.z),pitch:Math.atan2(1.1-p.y-1.63,Math.hypot(d.x-p.x,d.z-p.z))});await page.waitForFunction(()=>window.__rescueHouse.snapshot().target==='entrada');};
+  await aimEntry();await page.keyboard.press('e');await page.waitForFunction(()=>window.__rescueHouse.snapshot().doors.find(d=>d.id==='entrada').state==='closed');
   assert.equal((await snap()).doors.find(d=>d.id==='entrada').open,false,'A manually closed door stays closed nearby');
-  await page.keyboard.press('e');await page.waitForFunction(()=>window.__rescueHouse.snapshot().doors.find(d=>d.id==='entrada').state==='open');
-  await pose({x:5.87,y:0,z:9.76,yaw:0,pitch:0});await page.keyboard.press('e');
+  await aimEntry();await page.keyboard.press('e');await page.waitForFunction(()=>window.__rescueHouse.snapshot().doors.find(d=>d.id==='entrada').state==='open');
+  await pose({x:5.9,y:0,z:9.98,yaw:-2.34,pitch:-.554});await page.keyboard.press('e');
   assert((await snap()).doors.find(d=>d.id==='entrada').open,'Closing cannot trap the body inside the door');
-  await pose({x:11.2,y:0,z:7.4,yaw:Math.atan2(.2,-2.35),pitch:-.12});
+  await pose({x:3.7,y:0,z:8.8,yaw:-2.19,pitch:-.12});
   await screenshot('04-vegetacion');
 
   // Use existing objects without changing the puzzle graph or the normal save.
@@ -136,7 +137,7 @@ async function main(){
   await launch();await page.locator('#lab-window-intro:not(.lab-hidden)').waitFor();
   await screenshot('06-ventana');
   await page.waitForFunction(()=>!window.__rescueHouse.snapshot().cinematic,{timeout:25000});
-  const landing=await snap();assert.deepEqual(landing.position,{x:10.2,y:0,z:9.38});
+  const landing=await snap();assert.deepEqual(landing.position,{x:2.2,y:0,z:9.38});
   assert(Math.abs(landing.camera.pitch+.045)<.001);
   await page.waitForTimeout(1800);const metrics=await snap();await screenshot('07-aterrizaje');
   await page.evaluate(()=>window.__qaStop());

@@ -1,3 +1,5 @@
+import {ART_COUNT,createArtworkCanvas} from './artwork.js';
+import {flashlightPieces} from './first-person.js';
 import {VERTEX_SHADER as VS,FRAGMENT_SHADER as FS} from './material-shaders.js';
 // Minimal WebGL1 3D renderer: real perspective, depth buffer, world geometry and spotlight.
 // No additional packages, CDNs, runtime downloads or concurrent Phaser loops.
@@ -7,27 +9,7 @@ import {lightDepthField,LIGHT_DEPTH_SIZE,LIGHT_REACH,LIGHT_SPREAD} from './light
 function shader(gl,kind,source){const s=gl.createShader(kind);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){const msg=gl.getShaderInfoLog(s);gl.deleteShader(s);throw Error('Shader: '+msg);}return s;}
 function program(gl,low=false){const source=low?FS.replace('uniform float uFlash,uOcclude;','uniform float uFlash; const float uOcclude=0.0;'):FS;const p=gl.createProgram(),v=shader(gl,gl.VERTEX_SHADER,VS),f=shader(gl,gl.FRAGMENT_SHADER,source);gl.attachShader(p,v);gl.attachShader(p,f);gl.linkProgram(p);gl.deleteShader(v);gl.deleteShader(f);if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p)||'Shader linkage');return p;}
 function createAtlas(gl){
- const canvas=document.createElement('canvas');canvas.width=256;canvas.height=64;
- const g=canvas.getContext('2d');g.imageSmoothingEnabled=false;
- const rect=(x,y,w,h,color)=>{g.fillStyle=color;g.fillRect(x,y,w,h);};
- for(let a=0;a<4;a++){
-  const X=a*64;
-  rect(X,0,64,64,a===3?'#303048':a===1?'#b49ca3':'#e1c5ca');
-  rect(X+5,5,54,54,a===3?'#3c3049':'#f7d9d2');
-  rect(X+11,10,42,42,a===3?'#55506a':'#fff3e5');
-  rect(X+12,12,13,14,'#fff9f0');rect(X+39,12,13,14,'#fff9f0');
-  rect(X+14,21,36,31,'#fff9f0');
-  rect(X+22,35,4,5,'#222638');rect(X+39,35,4,5,'#222638');
-  rect(X+30,42,5,3,'#e5ab48');
-  rect(X+12,42,12,2,'#90707a');rect(X+42,42,10,2,'#90707a');
-  rect(X+12,46,12,2,'#90707a');rect(X+42,46,10,2,'#90707a');
-  rect(X+15,14,18,9,a===3?'#bd859d':'#c75378');
-  rect(X+23,11,6,16,a===3?'#dba1c1':'#ff7594');
-  rect(X+22,17,5,4,'#f5c6d2');
-  if(a===1){rect(X+46,47,5,7,'#8b283c');rect(X+40,51,12,3,'#9b3447');}
-  if(a===2){rect(X+22,35,6,2,'#343044');rect(X+39,35,6,2,'#343044');}
-  if(a===3){rect(X+24,27,20,2,'#7f607b');rect(X+46,48,3,6,'#d06a85');}
- }
+ const canvas=createArtworkCanvas();
  const tex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tex);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,canvas);
  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);
@@ -61,7 +43,22 @@ function geometry(boxes){
  const vertices=[],indices=[],colors=MATERIAL;let offset=0;
  for(const box of boxes){
   const color=colors[box.mat]||colors.cream;
-  const style=materialStyle(box);
+  const style=materialStyle(box)+(box.glow?32:0),first=vertices.length;
+  const rotateMesh=()=>{
+   if(!box.yaw)return;const c=Math.cos(box.yaw),s=Math.sin(box.yaw);
+   for(let i=first;i<vertices.length;i+=16){const x=vertices[i]-box.x,z=vertices[i+2]-box.z;vertices[i]=box.x+x*c-z*s;vertices[i+2]=box.z+x*s+z*c;for(const offset of [6,13]){const nx=vertices[i+offset],nz=vertices[i+offset+2];vertices[i+offset]=nx*c-nz*s;vertices[i+offset+2]=nx*s+nz*c;}}
+  };
+  if(box.shape==='gable'){
+   const w=box.w/2,h=box.h/2,d=box.d/2;
+   const p=[[-w,-h,-d],[w,-h,-d],[0,h,-d],[-w,-h,d],[w,-h,d],[0,h,d]];
+   for(const face of [[0,2,1],[3,4,5],[0,3,5,2],[1,2,5,4],[0,1,4,3]]){
+    const [a,b,c]=face.map(i=>p[i]),u=b.map((v,i)=>v-a[i]),v=c.map((x,i)=>x-a[i]),n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
+    const center=face.reduce((sum,i)=>sum.map((x,k)=>x+p[i][k]/face.length),[0,0,0]),sign=n.reduce((sum,x,k)=>sum+x*center[k],0)>=0?1:-1,length=Math.hypot(...n),normal=n.map(x=>x/length*sign),frame=surfaceFrame(box,normal,style);
+    for(const i of face){const point=p[i],uv=[frame.tangent,frame.bitangent].map(axis=>axis.reduce((sum,x,k)=>sum+x*point[k],0));vertices.push(box.x+point[0],box.y+point[1],box.z+point[2],...color,...normal,...uv,0,style,...frame.tangent);}
+    for(let i=1;i<face.length-1;i++)if(sign>0)indices.push(offset,offset+i+1,offset+i);else indices.push(offset,offset+i,offset+i+1);offset+=face.length;
+   }
+   rotateMesh();continue;
+  }
   if(box.shape==='round'||box.shape==='cylinder'){
    const segments=10,rings=box.shape==='round'?5:1;
    const point=(u,v)=>{
@@ -86,14 +83,14 @@ function geometry(boxes){
     }
     if(sign>0)indices.push(offset,offset+2,offset+1);else indices.push(offset,offset+1,offset+2);offset+=3;
    }
-   continue;
+   rotateMesh();continue;
   }
   if(box.shape==='leaf'){
    // Tapered, faceted leaves with actual depth; no alpha quads or blocking foliage.
    const points=[[0,-.5,0],[-.5,-.08,0],[0,.5,0],[.5,-.08,0],[0,0,.5],[0,0,-.5]];
    const transformed=points.map(([x,y,z])=>{
-    const px=x*box.w+(y+.5)*(box.lean||0),pz=z*box.d,angle=box.yaw||0;
-    return [box.x+px*Math.cos(angle)-pz*Math.sin(angle),box.y+y*box.h,box.z+px*Math.sin(angle)+pz*Math.cos(angle)];
+    const px=x*box.w+(y+.5)*(box.lean||0),pz=z*box.d;
+    return [box.x+px,box.y+y*box.h,box.z+pz];
    });
    for(const triangle of [[0,1,4],[1,2,4],[2,3,4],[3,0,4],[1,0,5],[2,1,5],[3,2,5],[0,3,5]]){
     const [a,b,c]=triangle.map(i=>transformed[i]),ab=b.map((v,i)=>v-a[i]),ac=c.map((v,i)=>v-a[i]);
@@ -103,7 +100,7 @@ function geometry(boxes){
     for(const index of triangle){const p=transformed[index],uv=points[index];vertices.push(...p,...color,...n,uv[0]+.5,uv[1]+.5,0,style,...frame.tangent);}
     indices.push(offset,offset+1,offset+2);offset+=3;
    }
-   continue;
+   rotateMesh();continue;
   }
   for(const face of faces){
    const art=box.art!==undefined&&box.front===face.dir?box.art+1:0;
@@ -114,10 +111,11 @@ function geometry(boxes){
     if(box.mat==='floor'||box.id.startsWith('floor-up-')){position[0]+=box.x;position[2]+=box.z;}
     const uv=[frame.tangent,frame.bitangent].map((axis,j)=>axis.reduce((sum,a,k)=>sum+a*position[k],0)*frame.scale[j]);
     vertices.push(box.x+dx*box.w/2,box.y+dy*box.h/2,box.z+dz*box.d/2,
-     color[0],color[1],color[2],...face.normal,art?((art-1)+u)/4:uv[0],art?v:uv[1],art?1:0,style,...frame.tangent);
+     color[0],color[1],color[2],...face.normal,art?((art-1)+u)/ART_COUNT:uv[0],art?v:uv[1],art?1:0,style,...frame.tangent);
    });
    indices.push(offset,offset+1,offset+2,offset,offset+2,offset+3);offset+=4;
   }
+  rotateMesh();
  }
  return {vertices:new Float32Array(vertices),indices:new Uint16Array(indices)};
 }
@@ -142,7 +140,7 @@ export class HouseRenderer {
    this.locations[quality]={atrib,uniform};
   }
   Object.assign(this,this.locations[quality==='low'?'low':'medium']);
-  gl.useProgram(this.program);gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);gl.cullFace(gl.BACK);gl.disable(gl.BLEND);gl.clearColor(.14,.11,.19,1);
+  gl.useProgram(this.program);gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);gl.cullFace(gl.BACK);gl.disable(gl.BLEND);gl.clearColor(.045,.065,.11,1);
   gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);gl.uniform1i(this.uniform.uAtlas,0);
   gl.uniform1i(this.uniform.uLightDepth,1);
   gl.uniform1i(this.uniform.uMaterials,2);
@@ -152,7 +150,7 @@ export class HouseRenderer {
   this.dynamicBoxes=boxes.filter(b=>b.dynamic);
   const dynamic=geometry(this.dynamicBoxes);this.dynamicCount=dynamic.indices.length;
   this.dynamicTemplate=dynamic.vertices;this.dynamicVertices=new Float32Array(dynamic.vertices);
-  this.dynamicOrigins=this.dynamicBoxes.map(b=>[b.x,b.y,b.z]);this.dynamicPositions=this.dynamicOrigins.map(()=>[Infinity,Infinity,Infinity]);
+  this.dynamicOrigins=this.dynamicBoxes.map(b=>[b.x,b.y,b.z,b.yaw||0]);this.dynamicPositions=this.dynamicOrigins.map(()=>[Infinity,Infinity,Infinity,Infinity]);
   gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamicVbo);gl.bufferData(gl.ARRAY_BUFFER,this.dynamicVertices,gl.DYNAMIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.dynamicIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,dynamic.indices,gl.STATIC_DRAW);
   this.vertexCount=(vertices.length+dynamic.vertices.length)/16;this.triangleCount=(indices.length+dynamic.indices.length)/3;
@@ -168,10 +166,11 @@ export class HouseRenderer {
   for(let i=0;i<this.dynamicBoxes.length;i++){
    const box=this.dynamicBoxes[i],source=box.source;
    if(source){const offset=box.sourceOffset||[0,0,0];box.x=source.x+offset[0];box.y=source.concealed?-100:source.y+offset[1];box.z=source.z+offset[2];}
-   const position=[box.x,box.y,box.z],old=this.dynamicPositions[i];
+   const position=[box.x,box.y,box.z,box.yaw||0],old=this.dynamicPositions[i];
    if(position.every((v,k)=>v===old[k]))continue;
    const start=i*24*16,end=start+24*16,origin=this.dynamicOrigins[i];
-   for(let v=start;v<end;v+=16)for(let axis=0;axis<3;axis++)this.dynamicVertices[v+axis]=this.dynamicTemplate[v+axis]+position[axis]-origin[axis];
+   const angle=position[3]-origin[3],c=Math.cos(angle),s=Math.sin(angle);
+   for(let v=start;v<end;v+=16){const x=this.dynamicTemplate[v]-origin[0],z=this.dynamicTemplate[v+2]-origin[2];this.dynamicVertices[v]=position[0]+x*c-z*s;this.dynamicVertices[v+1]=this.dynamicTemplate[v+1]+position[1]-origin[1];this.dynamicVertices[v+2]=position[2]+x*s+z*c;for(const offset of [6,13]){const nx=this.dynamicTemplate[v+offset],nz=this.dynamicTemplate[v+offset+2];this.dynamicVertices[v+offset]=nx*c-nz*s;this.dynamicVertices[v+offset+2]=nx*s+nz*c;}}
    gl.bufferSubData(gl.ARRAY_BUFFER,start*4,this.dynamicVertices.subarray(start,end));this.dynamicPositions[i]=position;changed=true;
   }
   if(changed)this.lightPose='';
@@ -182,38 +181,17 @@ export class HouseRenderer {
   for(const [name,size,start] of layout){const at=this.atrib[name];if(at<0)continue;gl.enableVertexAttribArray(at);gl.vertexAttribPointer(at,size,gl.FLOAT,false,stride,start*4);}
  }
  drawFirstPerson(camera,right,up,forward,time,flash,motion={}){
-  // Camera-space mitt/paw and real flashlight silhouette. Soft pads, rounded
-  // approximated fingers, cuff, grip switch, reflector and luminous glass.
-  const bob=0; // The base mesh is cached; walking/action motion is applied below.
-  const pieces=[
-   {id:'sleeve',x:.41,y:-.51+bob,z:.66,w:.37,h:.22,d:.23,mat:'bow'},
-   {id:'cuff',x:.40,y:-.46+bob,z:.71,w:.36,h:.13,d:.25,mat:'glove'},
-   {id:'paw-palm',x:.38,y:-.37+bob,z:.79,w:.39,h:.27,d:.34,mat:'glove'},
-   {id:'paw-finger-l',x:.235,y:-.255+bob,z:.80,w:.14,h:.18,d:.22,mat:'glove'},
-   {id:'paw-finger-m',x:.37,y:-.225+bob,z:.82,w:.15,h:.20,d:.24,mat:'glove'},
-   {id:'paw-finger-r',x:.51,y:-.265+bob,z:.80,w:.14,h:.18,d:.22,mat:'glove'},
-   {id:'paw-thumb',x:.19,y:-.38+bob,z:.88,w:.17,h:.18,d:.22,mat:'glove'},
-   {id:'pad-main',x:.365,y:-.38+bob,z:.598,w:.18,h:.11,d:.019,mat:'pawpad'},
-   {id:'pad-l',x:.25,y:-.282+bob,z:.683,w:.077,h:.062,d:.02,mat:'pawpad'},
-   {id:'pad-m',x:.375,y:-.267+bob,z:.682,w:.075,h:.062,d:.02,mat:'pawpad'},
-   {id:'pad-r',x:.50,y:-.283+bob,z:.685,w:.077,h:.062,d:.02,mat:'pawpad'},
-   {id:'torch-body',x:.54,y:-.31+bob,z:.94,w:.20,h:.21,d:.48,mat:'torchmetal'},
-   {id:'torch-grip',x:.54,y:-.31+bob,z:.86,w:.23,h:.23,d:.17,mat:'dark'},
-   {id:'torch-switch',x:.54,y:-.18+bob,z:.85,w:.10,h:.045,d:.11,mat:'bow'},
-   {id:'torch-neck',x:.54,y:-.31+bob,z:1.18,w:.24,h:.24,d:.11,mat:'brass'},
-   {id:'torch-reflector',x:.54,y:-.31+bob,z:1.255,w:.31,h:.31,d:.06,mat:'dark'},
-   {id:'torch-lens-ring',x:.54,y:-.31+bob,z:1.289,w:.27,h:.27,d:.045,mat:'brass'},
-   {id:'torch-lens',x:.54,y:-.31+bob,z:1.317,w:.225,h:.225,d:.030,mat:flash?'torchglass':'glass'}
-  ];
-  const {vertices:base,indices}=this.handGeometry[flash?'on':'off']??=geometry(pieces.map(piece=>({...piece,shape:['glove','pawpad'].includes(piece.mat)?'round':piece.id.startsWith('torch-')&&piece.id!=='torch-switch'?'cylinder':undefined})));
+  // Camera-space flashlight, with only the fingers gripping its lower edge.
+  const pieces=flashlightPieces(flash);
+  const {vertices:base,indices}=this.handGeometry[flash?'on':'off']??=geometry(pieces);
   const vertices=this.handVertices??=new Float32Array(base.length);vertices.set(base);
   const sway=motion.reduced?0:Math.sin(motion.bob||0)*.008;
   const action=motion.reduced?0:Math.sin(Math.PI*(motion.action||0))*.025;
   for(let i=0;i<vertices.length;i+=16){
    const px=vertices[i],py=vertices[i+1],pz=vertices[i+2];
-   // Keep the paw at the lower-right, without covering the centre reticle.
+   // Keep the flashlight at the lower-right, clear of the centre reticle.
    // Smaller camera-space geometry remains steady on mobile portrait/landscape.
-   const x=.50+(px-.4)*.70+sway,y=-.43+(py+.35)*.70+Math.abs(sway)-action,z=1.65+(pz-.83)*.70-action;
+   const x=px+sway,y=py+Math.abs(sway)-action*.5,z=pz-action*.5;
    vertices[i]=camera.x+x*right[0]+y*up[0]+z*forward[0];
    vertices[i+1]=camera.y+x*right[1]+y*up[1]+z*forward[1];
    vertices[i+2]=camera.z+x*right[2]+y*up[2]+z*forward[2];
@@ -239,6 +217,7 @@ export class HouseRenderer {
   if(w!==this.canvas.width||h!==this.canvas.height){this.canvas.width=w;this.canvas.height=h;this.gl.viewport(0,0,w,h);}
  }
  render(camera,flash,time,showHand=false,motion={}){
+  this.lastShowHand=showHand;
   this.resize();const gl=this.gl,quality=this.quality==='low'?'low':'medium';
   this.program=this.programs[quality];Object.assign(this,this.locations[quality]);gl.useProgram(this.program);
   gl.uniform1i(this.uniform.uAtlas,0);gl.uniform1i(this.uniform.uLightDepth,1);gl.uniform1i(this.uniform.uMaterials,2);

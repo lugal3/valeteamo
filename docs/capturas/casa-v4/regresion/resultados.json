@@ -1,0 +1,19 @@
+{
+  "browser": "158.0.8127.18",
+  "viewport": {
+    "width": 960,
+    "height": 540
+  },
+  "renderer": "ANGLE / SwiftShader software GPU",
+  "simultaneousTouchDistanceMetres": 1.2873680647559635,
+  "cameraTurnRadians": 0.2746976381744175,
+  "observedFps": 5,
+  "quality": "medium",
+  "geometry": {
+    "vertices": 23836,
+    "triangles": 11508
+  },
+  "closedAudioContexts": 3,
+  "protectedSavesUnchanged": true,
+  "errors": []
+}

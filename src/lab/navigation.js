@@ -1,4 +1,4 @@
-import {blocked,groundHeight,HEIGHT} from './world.js';
+import {blocked,groundHeight,HEIGHT,STAIR} from './world.js';
 
 /**
  * Small swept movement steps with separate axis collision. A small horizontal radius,
@@ -14,7 +14,7 @@ export function navigate(state,world,dx,dz,body=PLAYER_HEIGHT){
  for(let i=0;i<pieces;i++){
   const tryMove=(nx,nz)=>{
    const ny=groundHeight(nx,nz,state.y);
-   if(Math.abs(ny-state.y)>.35)return false;
+   if(!Number.isFinite(ny)||Math.abs(ny-state.y)>.35)return false;
    if(blocked(world.boxes,nx,ny,nz,PLAYER_RADIUS,body))return false;
    moved+=Math.hypot(nx-state.x,nz-state.z);
    state.x=nx;state.z=nz;state.y=ny;return true;
@@ -31,7 +31,7 @@ export function navigate(state,world,dx,dz,body=PLAYER_HEIGHT){
  return moved;
 }
 export function getStairDirection(state){
- if(state.x>8.52&&state.x<10.98&&state.z>=4.3&&state.z<=9.4)return state.y>=HEIGHT*.9?'Arriba':state.y<=.15?'Abajo':'Escaleras';
+ if(state.x>STAIR.xMin-.1&&state.x<STAIR.xMax+.1&&state.z>=STAIR.zTop-.2&&state.z<=STAIR.zBottom+.25)return state.y>=HEIGHT*.9?'Arriba':state.y<=.15?'Abajo':'Escaleras';
  return '';
 }
 export function smoothAxis(current,target,delta,response=10){

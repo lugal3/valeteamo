@@ -1,5 +1,5 @@
 # VALETEAMO — CONTEXTO MAESTRO PARA CODEX
-**Estado verificado:** `main` (7 de noviembre de 2026), última publicación exitosa de Firebase con commit `550a3b44c60f37a6ac84276e5d298a8f3cbd8cff`. Repo: https://github.com/lugal3/valeteamo · Web: https://valefc.web.app/. Este documento se actualiza exclusivamente como documentación; no se han cambiado mecánicas.
+**Estado revisado:** casa V4 (8 de noviembre de 2026), desarrollada sobre `700e74c`; ver `docs/CASA-V4-ENTORNO-Y-ARMARIO.md`. El propietario autorizó rehacer la distribución y presentación del 3D; todo el 2D continúa protegido. Repo: https://github.com/lugal3/valeteamo · Web: https://valefc.web.app/. Para el estado de publicación exacto, comprobar `main` y su ejecución de Firebase en GitHub Actions.
 
 > **MANDATO DEL PROPIETARIO: NO MODIFICAR, ELIMINAR, REEMPLAZAR, "LIMPIAR" NI REFAC­TORIZAR EL 2D SIN AUTORIZACIÓN EXPLÍCITA.** El 2D le gusta como está. La prioridad actual es entender y separar el proyecto, no combinarlo en un solo juego, no borrar pruebas y no rediseñar el 2D.
 
@@ -67,7 +67,7 @@ index.html → src/main.tsx → StoryApp.tsx → Splash (PLAY)
 
 ### D. Casa 3D — área para futuros cambios con autorización
 - `src/lab/house.js`: bucle de render, entrada cinematográfica, gestos, cámara, puertas, HUD, pickups, puzzles, salida y conexión con `RescueDemo`.
-- `src/lab/world.js`: mapa determinista de dos plantas, habitaciones, escalera continua, puerta, abertura de ventana, mobiliario y materiales.
+- `src/lab/world.js`: colisiones, alturas y transformación de piezas móviles; `src/lab/house-layout.js` define la distribución V4, habitaciones, muebles, escalera y entorno.
 - `src/lab/navigation.js`: movimiento barrido, colisiones y escaleras.
 - `src/lab/camera-controls.js`: giro y suavizado, inversión horizontal, sensibilidad; preferencias locales.
 - `src/lab/window-intro.js`: secuencia por la ventana, salto opcional y aterrizaje.
@@ -104,7 +104,7 @@ index.html → src/main.tsx → StoryApp.tsx → Splash (PLAY)
 
 ## 6. Publicación, ramas y seguridad
 - El workflow `.github/workflows/firebase-hosting-live.yml` ejecuta instalación, tests, build y despliega a Hosting `live` **solo con cambios en `main`** (o cuando se lo lanza manualmente según su configuración).
-- Último despliegue comprobado: ejecución `42423445008` (**success**) para SHA `550a3b44c60f37a6ac84276e5d298a8f3cbd8cff`. Ver: https://github.com/lugal3/valeteamo/actions/runs/42423445008
+- Referencia de despliegue anterior a V4: ejecución `42444831976` (**success**) para SHA `700e74cf7862d6e1e13d98d53ca62d5ef5c6dc84`. Ver: https://github.com/lugal3/valeteamo/actions/runs/42444831976. La publicación de V4 debe comprobarse con el SHA de su entrega; esta referencia no acredita una versión posterior.
 - Otras acciones `demo-rescue-checks.yml`, `fix-nav-checks.yml`, `casa-v3-checks.yml` contienen filtros de ramas históricas; **no corresponden a otros juegos**.
 - Nunca subir secretos ni service account JSON a repositorio ni compartirlos en prompts.
 - Flujo recomendado a Codex: rama `docs/...` o `feature/...` desde `main` → diagnóstico sin cambios → cambios acotados al módulo autorizado → `npm test`, `npm run build`, browser tests si aplica → PR con resumen → aprobación explícita de cambios 2D si los toca → merge a `main` solo por solicitud del propietario → comprobar Firebase. **Para esta tarea documental no se publica código ni se altera producción.**
@@ -130,6 +130,8 @@ npm run test:browser
 ## 8. Índice de informes (y cómo leerlos)
 **ESTADO VIGENTE / código actual:**
 - `docs/CONTEXTO-CODEX-VALETEAMO.md` (ESTE ARCHIVO): fuente de orientación consolidada, sin sobreescribir detalles especializados.
+- `docs/CASA-V4-ENTORNO-Y-ARMARIO.md`: nueva distribución autorizada del 3D, jardín y vecindario, ocho puertas con bisagra, armario animado, carteles y música de tensión. Base `700e74c`; evidencias en `docs/capturas/casa-v4/`.
+- `docs/AUTOPROMPT-CASA-V4.md`: especificación aplicada a los ocho comentarios visuales del propietario, manteniendo el 2D protegido.
 - `docs/CASA-V3-ANALISIS-Y-QA.md`: análisis técnico de cámara, render, escaleras, cinemática, pruebas y límites de la V3.
 - `docs/ARTE-Y-MECANICAS-V2.md`: inventario del kit de assets reinterpretados y relación con la casa/portada.
 - `docs/ASSETS.md`: las hojas activas de personajes para el 2D.
