@@ -7,6 +7,7 @@ const assert=require('node:assert/strict');
  assert(after.z<9.5,'Ends indoors');
  assert(after.z<before.z,'Travels through south window');
  assert(Math.abs(after.y-(WINDOW_LANDING.y+WINDOW_LANDING.eye))<.001);
+ assert(Math.abs(after.pitch-WINDOW_LANDING.pitch)<.0001,'No pitch snap when the shot hands control back');
  assert.equal(easeInOut(0),0);assert.equal(easeInOut(1),1);
  assert(shouldPlayWindowIntro({demo:true,checkpoint:'ground'}));
  assert(!shouldPlayWindowIntro({demo:true,checkpoint:'ground',trial:true}));

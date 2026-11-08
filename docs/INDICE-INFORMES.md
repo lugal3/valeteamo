@@ -4,6 +4,7 @@
 ## Vigente
 - [Contexto maestro](CONTEXTO-CODEX-VALETEAMO.md) — modos, carpetas, guardado, despliegue y límites del trabajo.
 - [Casa V3](CASA-V3-ANALISIS-Y-QA.md) — técnica 3D, cámara, colisiones, shaders, cinemática y QA.
+- [Mejoras y QA de casa 3D, 7 de noviembre](QA-CASA-3D-2026-11-07.md) — controles, puertas, ajustes, presentación, evidencias y mediciones; 2D preservado.
 - [Kit gráfico V2](ARTE-Y-MECANICAS-V2.md) — archivos activos o reservados, límites de uso.
 - [Assets de sprites 2D](ASSETS.md) — hojas reales y generación.
 - [Catálogo de 19 referencias](RECURSOS-DEMO.md) — lista de recursos; leer observación de frases antiguas en contexto maestro.

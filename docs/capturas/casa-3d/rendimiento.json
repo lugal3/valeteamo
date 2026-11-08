@@ -1,0 +1,64 @@
+{
+  "browser": "158.0.8127.18",
+  "gpu": "SwiftShader software, not physical mobile hardware",
+  "scenario": "Slow camera turn; synchronized pixel readback includes GPU completion",
+  "samplesPerCase": 12,
+  "results": [
+    {
+      "version": "baseline",
+      "quality": "medium",
+      "width": 768,
+      "height": 432,
+      "medianFrameMs": 35.5,
+      "p90FrameMs": 37.29999999701977,
+      "readbackPixel": [
+        53,
+        32,
+        32,
+        255
+      ]
+    },
+    {
+      "version": "baseline",
+      "quality": "low",
+      "width": 528,
+      "height": 297,
+      "medianFrameMs": 18.899999991059303,
+      "p90FrameMs": 20.600000008940697,
+      "readbackPixel": [
+        53,
+        32,
+        32,
+        255
+      ]
+    },
+    {
+      "version": "current",
+      "quality": "medium",
+      "width": 768,
+      "height": 432,
+      "medianFrameMs": 44.19999998807907,
+      "p90FrameMs": 45.79999999701977,
+      "readbackPixel": [
+        52,
+        32,
+        32,
+        255
+      ]
+    },
+    {
+      "version": "current",
+      "quality": "low",
+      "width": 528,
+      "height": 297,
+      "medianFrameMs": 21.299999997019768,
+      "p90FrameMs": 21.899999991059303,
+      "readbackPixel": [
+        52,
+        32,
+        32,
+        255
+      ]
+    }
+  ]
+}

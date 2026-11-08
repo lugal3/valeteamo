@@ -53,7 +53,7 @@ const {chromium}=require('playwright');
   await page.screenshot({path:path.join(folder,'05-transicion.png')});
   await page.getByRole('button',{name:/Entrar a buscar a Louis/}).click();
   await page.locator('#lab3d canvas').waitFor({timeout:15000});
-  await page.locator('#lab-dialog [data-act="start"]').click();
+  // Normal entry continues directly into the window shot; checkpoints keep instructions.
   await page.locator('#lab-window-intro:not(.lab-hidden)').waitFor({timeout:8000});
   await page.waitForTimeout(320);
   await page.screenshot({path:path.join(folder,'06-entrada-ventana.png')});

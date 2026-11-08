@@ -6,8 +6,7 @@ export const MATERIAL = {
   velvet: [0.65, 0.33, 0.45], cream: [0.85, 0.76, 0.65], pink: [0.92, 0.59, 0.65],
   dark: [0.28, 0.24, 0.33], glass: [0.49, 0.63, 0.76], brass: [0.94, 0.68, 0.33],
   paper: [0.93, 0.84, 0.70], foliage: [0.43, 0.61, 0.43], carpet: [0.58, 0.37, 0.51],
-  trim: [0.80, 0.60, 0.57], terracotta: [0.72, 0.42, 0.36], torchmetal: [0.43,0.47,0.60],
-  torchglass:[0.96,0.82,0.53], glove:[0.96,0.88,0.86], pawpad:[0.94,0.57,0.69], bow:[0.78,0.22,0.37],
+  trim: [0.80, 0.60, 0.57], terracotta: [0.72, 0.42, 0.36], stem: [0.31, 0.43, 0.29],
   glove: [0.98, 0.88, 0.84], pawpad: [0.96, 0.54, 0.62], torchmetal: [0.39, 0.47, 0.57], torchglass: [1.0, 0.93, 0.64], bow: [0.84, 0.23, 0.36]
 };
 const b = (id, x, y, z, w, h, d, mat, solid = true, extra = {}) => ({ id, x, y, z, w, h, d, mat, solid, ...extra });
@@ -142,9 +141,10 @@ export function createHouse(spawn = 'ground') {
   const plant=(id,x,y,z)=>{
     add(id+'-pot',x,y+.24,z,.45,.46,.45,'terracotta',false);
     add(id+'-lip',x,y+.47,z,.51,.10,.51,'brass',false);
-    for(let n=0;n<5;n++){
-      const angle=n*6.28318/5;
-      add(id+'-leaf-'+n,x+Math.cos(angle)*.18,y+.67+(.06*(n%2)),z+Math.sin(angle)*.18,.19,.49,.16,'foliage',false);
+    add(id+'-stem',x,y+.74,z,.035,.57,.035,'stem',false);
+    for(let n=0;n<7;n++){
+      const angle=n*6.28318/7;
+      add(id+'-leaf-'+n,x+Math.cos(angle)*.20,y+.70+(.13*(n%3)),z+Math.sin(angle)*.20,.25,.53,.085,'foliage',false,{shape:'leaf',yaw:angle,lean:.18});
     }
   };
   plant('salon-plant',11.4,0,5.05);

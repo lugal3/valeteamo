@@ -8,7 +8,7 @@ export function windowIntroCamera(progress){
  const y=1.79+(1.63-1.79)*ease+.06*Math.sin(t*Math.PI);
  const z=11.48+(WINDOW_LANDING.z-11.48)*ease;
  return {x:10.20+Math.sin(t*Math.PI)*.025,y,z,
-   yaw:Math.PI+.015*Math.sin(t*2*Math.PI),pitch:-.06+.03*ease};
+   yaw:Math.PI+.015*Math.sin(t*2*Math.PI),pitch:-.06+.015*ease};
 }
 export function shouldPlayWindowIntro({demo=false,trial=false,checkpoint='ground',reducedMotion=false}={}){
  return !!demo&&!trial&&checkpoint==='ground'&&!reducedMotion;

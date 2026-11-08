@@ -1,6 +1,7 @@
 // Minimal WebGL1 3D renderer: real perspective, depth buffer, world geometry and spotlight.
 // No additional packages, CDNs, runtime downloads or concurrent Phaser loops.
 import {MATERIAL} from './world.js';
+import {lightDepthField,LIGHT_DEPTH_SIZE,LIGHT_REACH,LIGHT_SPREAD} from './lighting.js';
 const VS = `
 precision mediump float;
 attribute vec3 aPos, aCol, aNormal;
@@ -24,25 +25,30 @@ precision mediump float;
 varying vec3 vColor,vNormal,vWorld;
 varying vec2 vUV;
 varying float vArt,vStyle,vDistance;
-uniform vec3 uEye,uForward;
-uniform sampler2D uAtlas;
-uniform float uFlash,uTime;
+uniform vec3 uEye,uLightEye,uForward,uRight,uUp;
+uniform sampler2D uAtlas,uLightDepth;
+uniform float uFlash,uTime,uOcclude;
 float tinyHash(vec2 cell){return fract(sin(dot(floor(cell),vec2(12.9898,78.233)))*437.58);}
 vec2 surfaceUV(vec3 p,vec3 n){return abs(n.y)>.6?p.xz:abs(n.x)>.6?p.zy:p.xy;}
 float seam(float v,float size,float width){float f=fract(v*size);return 1.0-step(width,f);}
 void main(){
- vec3 delta=vWorld-uEye;
+ vec3 delta=vWorld-uLightEye;
  float d=max(length(delta),.1);
  vec3 direction=delta/d;
  float cone=dot(direction,uForward);
- float beam=pow(smoothstep(.65,.96,cone),1.3)*uFlash*2.4/(1.0+.055*d*d);
+ float beam=pow(smoothstep(.65,.96,cone),1.3)*uFlash*1.6/(1.0+.055*d*d);
+ if(beam>.01 && uOcclude>.5){
+  vec2 lightUV=vec2(dot(delta,uRight),dot(delta,uUp))/max(.001,dot(delta,uForward));
+  float wall=texture2D(uLightDepth,lightUV/${2*LIGHT_SPREAD}+.5).r*${LIGHT_REACH.toFixed(1)};
+  beam*=1.0-smoothstep(wall+.07,wall+.22,d);
+ }
  // A few room-local lamps, softened by distance rather than costly dynamic shadows.
  vec3 lamp1=vec3(10.9,1.5,1.1), lamp2=vec3(6.1,4.7,4.1), lamp3=vec3(2.0,1.7,6.1);
  float warmth=.40/(1.0+.17*pow(distance(vWorld,lamp1),2.0))
    + .33/(1.0+.15*pow(distance(vWorld,lamp2),2.0))
    + .24/(1.0+.12*pow(distance(vWorld,lamp3),2.0));
  float facing=.75+.25*max(0.0,dot(normalize(vNormal),normalize(vec3(.3,.8,.4))));
- float lighting=(.41+warmth+beam)*facing;
+ float lighting=(.53+warmth+beam)*facing;
  vec3 color=vColor;
  vec2 uv=surfaceUV(vWorld,normalize(vNormal));
  // World-space anchored patterns remain stationary as the camera moves.
@@ -77,9 +83,9 @@ void main(){
    vec4 painted=texture2D(uAtlas,vUV);
    color=mix(color,painted.rgb,painted.a*.96);
  }
- color*=lighting;
+ color*=lighting/(1.0+.35*lighting); // Compress highlights with one scalar reciprocal.
  // Coherent low-color-count pixel appearance even on ordinary 3D geometry.
- color=floor(color*24.0+.5)/24.0;
+ color=floor(color*64.0+.5)/64.0;
  float fog=clamp((vDistance-5.5)/20.0,0.0,.51);
  color=mix(color,vec3(.16,.13,.21),fog);
  gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);
@@ -133,6 +139,22 @@ function geometry(boxes){
    ['wood','floor','trim'].includes(box.mat)?2:box.mat==='tile'?3:
    ['carpet','velvet','pink','glove','bow','pawpad'].includes(box.mat)?4:
    box.mat==='foliage'?5:['brass','terracotta','torchmetal'].includes(box.mat)?6:7;
+  if(box.shape==='leaf'){
+   // Tapered, faceted leaves with actual depth; no alpha quads or blocking foliage.
+   const points=[[0,-.5,0],[-.5,-.08,0],[0,.5,0],[.5,-.08,0],[0,0,.5],[0,0,-.5]];
+   const transformed=points.map(([x,y,z])=>{
+    const px=x*box.w+(y+.5)*(box.lean||0),pz=z*box.d,angle=box.yaw||0;
+    return [box.x+px*Math.cos(angle)-pz*Math.sin(angle),box.y+y*box.h,box.z+px*Math.sin(angle)+pz*Math.cos(angle)];
+   });
+   for(const triangle of [[0,1,4],[1,2,4],[2,3,4],[3,0,4],[1,0,5],[2,1,5],[3,2,5],[0,3,5]]){
+    const [a,b,c]=triangle.map(i=>transformed[i]),ab=b.map((v,i)=>v-a[i]),ac=c.map((v,i)=>v-a[i]);
+    const normal=[ab[1]*ac[2]-ab[2]*ac[1],ab[2]*ac[0]-ab[0]*ac[2],ab[0]*ac[1]-ab[1]*ac[0]];
+    const length=Math.hypot(...normal)||1;
+    for(const p of [a,b,c])vertices.push(...p,...color,...normal.map(v=>v/length),0,0,0,5);
+    indices.push(offset,offset+1,offset+2);offset+=3;
+   }
+   continue;
+  }
   for(const face of faces){
    const art=box.art!==undefined&&box.front===face.dir?box.art+1:0;
    face.corners.forEach(([dx,dy,dz],i)=>{
@@ -152,14 +174,22 @@ export class HouseRenderer {
   if(!gl)throw Error('El navegador no permite WebGL. Activa aceleración gráfica o prueba otro navegador.');
   this.gl=gl;this.program=program(gl);this.texture=createAtlas(gl);
   this.vbo=gl.createBuffer();this.ibo=gl.createBuffer();this.count=0;
-  this.handVbo=gl.createBuffer();this.handIbo=gl.createBuffer();
+  this.handVbo=gl.createBuffer();this.handIbo=gl.createBuffer();this.handGeometry={};this.handVertices=null;this.handIndexReady=false;
+  this.lightPixels=new Uint8Array(LIGHT_DEPTH_SIZE*LIGHT_DEPTH_SIZE);this.occluders=[];this.lightPose='';
+  this.lightTexture=gl.createTexture();gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,this.lightTexture);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.LUMINANCE,LIGHT_DEPTH_SIZE,LIGHT_DEPTH_SIZE,0,gl.LUMINANCE,gl.UNSIGNED_BYTE,this.lightPixels);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   this.atrib={};for(const key of ['aPos','aCol','aNormal','aUV','aArt','aStyle'])this.atrib[key]=gl.getAttribLocation(this.program,key);
-  this.uniform={};for(const key of ['uEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime'])this.uniform[key]=gl.getUniformLocation(this.program,key);
+  this.uniform={};for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude'])this.uniform[key]=gl.getUniformLocation(this.program,key);
   gl.useProgram(this.program);gl.enable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.clearColor(.14,.11,.19,1);
   gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);gl.uniform1i(this.uniform.uAtlas,0);
+  gl.uniform1i(this.uniform.uLightDepth,1);
  }
  rebuild(boxes){
   const gl=this.gl,{vertices,indices}=geometry(boxes);this.count=indices.length;
+  this.vertexCount=vertices.length/13;
+  this.occluders=boxes.filter(b=>b.solid);this.lightPose='';
   if(vertices.length/13>65530)throw Error('Demasiada geometría para WebGL1');
   gl.bindBuffer(gl.ARRAY_BUFFER,this.vbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.ibo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
@@ -170,10 +200,10 @@ export class HouseRenderer {
   const stride=13*4,layout=[['aPos',3,0],['aCol',3,3],['aNormal',3,6],['aUV',2,9],['aArt',1,11],['aStyle',1,12]];
   for(const [name,size,start] of layout){const at=this.atrib[name];if(at<0)continue;gl.enableVertexAttribArray(at);gl.vertexAttribPointer(at,size,gl.FLOAT,false,stride,start*4);}
  }
- drawFirstPerson(camera,right,up,forward,time,flash){
+ drawFirstPerson(camera,right,up,forward,time,flash,motion={}){
   // Camera-space mitt/paw and real flashlight silhouette. Soft pads, rounded
   // approximated fingers, cuff, grip switch, reflector and luminous glass.
-  const bob=typeof matchMedia!=='undefined'&&matchMedia('(prefers-reduced-motion: reduce)').matches?0:Math.sin(time*4.4)*.013;
+  const bob=0; // The base mesh is cached; walking/action motion is applied below.
   const pieces=[
    {id:'sleeve',x:.41,y:-.51+bob,z:.66,w:.37,h:.22,d:.23,mat:'bow'},
    {id:'cuff',x:.40,y:-.46+bob,z:.71,w:.36,h:.13,d:.25,mat:'glove'},
@@ -194,12 +224,15 @@ export class HouseRenderer {
    {id:'torch-lens-ring',x:.54,y:-.31+bob,z:1.289,w:.27,h:.27,d:.045,mat:'brass'},
    {id:'torch-lens',x:.54,y:-.31+bob,z:1.317,w:.225,h:.225,d:.030,mat:flash?'torchglass':'glass'}
   ];
-  const {vertices,indices}=geometry(pieces);
+  const {vertices:base,indices}=this.handGeometry[flash?'on':'off']??=geometry(pieces);
+  const vertices=this.handVertices??=new Float32Array(base.length);vertices.set(base);
+  const sway=motion.reduced?0:Math.sin(motion.bob||0)*.008;
+  const action=motion.reduced?0:Math.sin(Math.PI*(motion.action||0))*.025;
   for(let i=0;i<vertices.length;i+=13){
    const px=vertices[i],py=vertices[i+1],pz=vertices[i+2];
    // Keep the paw at the lower-right, without covering the centre reticle.
    // Smaller camera-space geometry remains steady on mobile portrait/landscape.
-   const x=.50+(px-.4)*.70,y=-.43+(py+.35)*.70,z=1.65+(pz-.83)*.70;
+   const x=.50+(px-.4)*.70+sway,y=-.43+(py+.35)*.70+Math.abs(sway)-action,z=1.65+(pz-.83)*.70-action;
    vertices[i]=camera.x+x*right[0]+y*up[0]+z*forward[0];
    vertices[i+1]=camera.y+x*right[1]+y*up[1]+z*forward[1];
    vertices[i+2]=camera.z+x*right[2]+y*up[2]+z*forward[2];
@@ -209,7 +242,7 @@ export class HouseRenderer {
    vertices[i+8]=nx*right[2]+ny*up[2]+nz*forward[2];
   }
   const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,this.handVbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.DYNAMIC_DRAW);
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.handIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.DYNAMIC_DRAW);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.handIbo);if(!this.handIndexReady){gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);this.handIndexReady=true;}
   this.bind(this.handVbo,this.handIbo);gl.clear(gl.DEPTH_BUFFER_BIT);
   // The torch illuminates the world, not its own reflective lens and mitten.
   gl.uniform1f(this.uniform.uFlash,0);
@@ -222,21 +255,36 @@ export class HouseRenderer {
   const h=Math.min(760,Math.max(1,Math.round(this.canvas.clientHeight*dpr)));
   if(w!==this.canvas.width||h!==this.canvas.height){this.canvas.width=w;this.canvas.height=h;this.gl.viewport(0,0,w,h);}
  }
- render(camera,flash,time,showHand=false){
+ render(camera,flash,time,showHand=false,motion={}){
   this.resize();const gl=this.gl;gl.useProgram(this.program);
   const cy=Math.cos(camera.yaw),sy=Math.sin(camera.yaw),cp=Math.cos(camera.pitch),sp=Math.sin(camera.pitch);
   const right=[cy,0,-sy],forward=[sy*cp,sp,cy*cp],up=[-sy*sp,cp,-cy*sp];
+  // Keep the light source inside the player's collision radius near walls.
+  const light={x:camera.x+right[0]*.07+forward[0]*.06-up[0]*.04,y:camera.y+forward[1]*.06-up[1]*.04,z:camera.z+right[2]*.07+forward[2]*.06-up[2]*.04};
   gl.uniform3f(this.uniform.uEye,camera.x,camera.y,camera.z);
+  gl.uniform3f(this.uniform.uLightEye,light.x,light.y,light.z);
   gl.uniform3fv(this.uniform.uRight,right);gl.uniform3fv(this.uniform.uUp,up);gl.uniform3fv(this.uniform.uForward,forward);
   gl.uniform2f(this.uniform.uProjection,1.30*this.canvas.height/this.canvas.width,1.30);
   gl.uniform1f(this.uniform.uNear,.07);gl.uniform1f(this.uniform.uFar,45);
   gl.uniform1f(this.uniform.uFlash,flash?1:0);gl.uniform1f(this.uniform.uTime,time);
+  gl.uniform1f(this.uniform.uOcclude,this.quality==='low'?0:1);
+  // Update only when the camera or collision geometry changes. One tiny texture
+  // lookup replaces multiple ray/box tests in every illuminated pixel.
+  if(flash&&this.quality!=='low'){
+   const pose=[camera.x,camera.y,camera.z,camera.yaw,camera.pitch].join(',');
+   if(pose!==this.lightPose){
+    lightDepthField(this.occluders,light,right,up,forward,this.lightPixels);this.lightPose=pose;
+    gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,this.lightTexture);
+    gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,LIGHT_DEPTH_SIZE,LIGHT_DEPTH_SIZE,gl.LUMINANCE,gl.UNSIGNED_BYTE,this.lightPixels);
+    gl.activeTexture(gl.TEXTURE0);
+   }
+  }
   gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
   this.bind(this.vbo,this.ibo);
   gl.drawElements(gl.TRIANGLES,this.count,gl.UNSIGNED_SHORT,0);
-  if(showHand)this.drawFirstPerson(camera,right,up,forward,time,flash);
+  if(showHand)this.drawFirstPerson(camera,right,up,forward,time,flash,motion);
  }
- destroy(){const gl=this.gl;gl.deleteTexture(this.texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);gl.deleteProgram(this.program);this.canvas.width=1;this.canvas.height=1;}
+ destroy(){const gl=this.gl;gl.deleteTexture(this.texture);gl.deleteTexture(this.lightTexture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);gl.deleteProgram(this.program);this.canvas.width=1;this.canvas.height=1;}
 }
 export function pickupGeometry(objects){
  return objects.filter(o=>!o.taken&&['battery','note','key'].includes(o.kind)).map(o=>({

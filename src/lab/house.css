@@ -1,0 +1,11 @@
+/* House-only selectors; shared lab/rescue styles remain untouched. */
+#lab3d .lab-camera-panel{max-height:72vh;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}
+#lab3d .lab-camera-panel .lab-preference{display:flex;align-items:center;gap:9px}
+#lab3d .lab-camera-panel button{min-height:44px;font:700 13px system-ui}
+#lab3d .lab-camera-panel input[type=range]{touch-action:pan-x}
+#lab3d .lab-buttons button[hidden]{display:none!important}
+#lab3d .lab-cross.lab-target{border-color:#ffe9b5;background:#ffe9b533;box-shadow:0 0 12px #ffdfa977}
+#lab3d .lab-buttons button:focus-visible,#lab3d .lab-top button:focus-visible,#lab3d summary:focus-visible{outline:3px solid #ffe3ad;outline-offset:3px}
+#lab3d .lab-camera-panel .lab-settings-note{border-top:1px solid #ffe4dd44;padding-top:8px}
+#lab3d .lab-objective,#lab3d .lab-camera-panel{backdrop-filter:none}
+@media(max-height:440px){#lab3d .lab-camera-panel{max-height:78vh;gap:9px}}
