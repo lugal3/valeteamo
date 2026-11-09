@@ -1,3 +1,4 @@
+import {windowEntryHands} from './animations/window-entry.js';
 // Approach, open the sash, grip the sill, climb through and land behind the sofa.
 export const WINDOW_SHOT_SECONDS=6.2;
 export const WINDOW_LANDING=Object.freeze({x:2.20,y:0,z:11.0,yaw:Math.PI,pitch:-.045,eye:1.63});
@@ -13,9 +14,9 @@ export function windowIntroCamera(progress){
  return {x:a[1]+(b[1]-a[1])*f,y:a[2]+(b[2]-a[2])*f,z:a[3]+(b[3]-a[3])*f,yaw:Math.PI,pitch:a[4]+(b[4]-a[4])*f};
 }
 export function windowIntroState(progress){
- const t=clamp01(progress),reach=easeInOut((t-.12)/.14),release=easeInOut((t-.62)/.12);
+ const t=clamp01(progress);
  return {windowAmount:easeInOut((t-.14)/.24),phase:t<.18?'approach':t<.36?'open':t<.62?'climb':t<.86?'land':'settle',
-  hands:t>.12&&t<.74?[{x:1.73,y:.78+reach*.22,z:12.3-reach*.18+release*.2},{x:2.68,y:.76+reach*.24,z:12.3-reach*.18+release*.2}]:null};
+  hands:windowEntryHands(t)};
 }
 export function shouldPlayWindowIntro({demo=false,checkpoint='ground',reducedMotion=false}={}){
  return !!demo&&checkpoint==='ground'&&!reducedMotion;

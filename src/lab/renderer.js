@@ -1,3 +1,4 @@
+import {createRigBinding,evaluateRig} from './character-rig.js';
 import {smoothSurface} from './chibi-geometry.js';
 import {BATH_MIRROR,mirrorVisible,kittyMirrorPieces,reflectedBathroom,reflectMesh,poseReflectedKitty} from './mirror.js';
 import {ART_COUNT,createArtworkCanvas} from './artwork.js';
@@ -42,7 +43,7 @@ function createMaterials(gl){
  return textures;
 }
 export function geometry(boxes){
- const vertices=[],indices=[],colors=MATERIAL;let offset=0;
+ const vertices=[],indices=[],groups=[],colors=MATERIAL;let offset=0;
  for(const box of boxes){
   const color=box.color||colors[box.mat]||colors.cream;
   const style=materialStyle(box)+(box.chibi?(box.emissive?96:64):(box.glow?32:0)),first=vertices.length;
@@ -54,7 +55,7 @@ export function geometry(boxes){
    const mesh=smoothSurface(box,color,style);
    for(const n of mesh.vertices)vertices.push(n);
    for(const i of mesh.indices)indices.push(offset+i);
-   offset+=mesh.vertices.length/16;rotateMesh();continue;
+   groups.push({start:offset,end:offset+mesh.vertices.length/16,joint:box.joint||'root'});offset+=mesh.vertices.length/16;rotateMesh();continue;
   }
   if(box.shape==='gable'){
    const w=box.w/2,h=box.h/2,d=box.d/2;
@@ -125,7 +126,7 @@ export function geometry(boxes){
   }
   rotateMesh();
  }
- return {vertices:new Float32Array(vertices),indices:new Uint16Array(indices)};
+ return {vertices:new Float32Array(vertices),indices:new Uint16Array(indices),groups};
 }
 export class HouseRenderer {
  constructor(canvas,quality='medium'){
@@ -177,7 +178,7 @@ export class HouseRenderer {
   const gl=this.gl;
   this.mirrorMeshes=[geometry([{...BATH_MIRROR,x:BATH_MIRROR.x-.0005}]),geometry(reflectedBathroom(boxes)),geometry(kittyMirrorPieces())];
   reflectMesh(this.mirrorMeshes[1].vertices);
-  this.kittyVertices=new Float32Array(this.mirrorMeshes[2].vertices.length);this.mirrorPose=null;this.mirrorUploads=0;
+  this.kittyVertices=new Float32Array(this.mirrorMeshes[2].vertices.length);this.mirrorPose=null;this.mirrorUploads=0;this.characterBinding=createRigBinding(this.mirrorMeshes[2].groups);
   this.mirrorMeshes.forEach((mesh,i)=>{gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[i*2]);gl.bufferData(gl.ARRAY_BUFFER,mesh.vertices,i===2?gl.DYNAMIC_DRAW:gl.STATIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.mirrorBuffers[i*2+1]);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,mesh.indices,gl.STATIC_DRAW);});
  }
  drawMirror(camera,motion){
@@ -193,9 +194,11 @@ export class HouseRenderer {
   gl.depthRange(0,1);gl.depthFunc(gl.LESS);gl.colorMask(true,true,true,true);
   gl.uniform1f(this.uniform.uFlash,0);gl.uniform1f(this.uniform.uOcclude,0);
   gl.frontFace(gl.CW);draw(1);
-  const pose=[camera.x,camera.y,camera.z,camera.yaw,motion.bob||0,!!motion.reduced];
+  const animator=motion.animator;
+  const pose=[camera.x,camera.y,camera.z,camera.yaw,motion.feetY,!!motion.crouched,animator?.reduced&&animator?.weight===0?0:animator?.time,animator?.distance,animator?.weight];
   if(!this.mirrorPose||pose.some((v,i)=>v!==this.mirrorPose[i])){
-   poseReflectedKitty(this.mirrorMeshes[2].vertices,this.kittyVertices,camera,motion);
+   if(animator)evaluateRig(this.characterBinding,animator.sample());
+   poseReflectedKitty(this.mirrorMeshes[2].vertices,this.kittyVertices,camera,motion,animator?this.characterBinding:null);
    gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[4]);gl.bufferSubData(gl.ARRAY_BUFFER,0,this.kittyVertices);this.mirrorPose=pose;this.mirrorUploads++;
   }
   draw(2);

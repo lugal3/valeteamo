@@ -1,5 +1,7 @@
 # VALETEAMO — CONTEXTO MAESTRO PARA CODEX
 
+**Animaciones reutilizables:** Kitty usa 15 articulaciones, reposo/caminar por desplazamiento real y clips separados en `src/lab/animations/`. Las poses se calculan al mostrar el espejo. Ver `docs/ANIMACIONES-PERSONAJE.md`; la entrada actual conserva su cámara y comparte apoyos de manos con el módulo de ventana.
+
 **Acabado chibi:** mano, linterna y Kitty del espejo comparten modelos redondeados y sombreado suave; joystick 3D aumentado. Referencia y pruebas en `docs/MODELOS-CHIBI.md`. No se modificaron los sprites ni los juegos 2D.
 
 **Actualización autorizada (8 de noviembre de 2026):** espejo de Kitty/linterna, menú de pruebas agrupado y separación musical implementados. Ver `docs/ESPEJO-Y-PRUEBAS.md` para especificación, límites y validación. Se mantiene el 2D; se autorizó cambiar navegación compartida y audio de transición.

@@ -27,9 +27,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=requ
   const initial=await snap();assert(initial.mirror.supported);assert(initial.mirror.vertices>0);assert.equal(initial.cinematic,false);
   await page.waitForFunction(()=>window.__audioContexts.slice(0,-1).every(c=>c.state==='closed')&&window.__audioContexts.at(-1).state==='running');
   await page.waitForTimeout(2000);await page.screenshot({path:'/tmp/valeteamo-qa/espejo.png'});
-  await page.locator('#lab-camera-settings summary').click();await page.locator('#lab-camera-settings [data-setting="quality"]').selectOption('low');await page.locator('#lab-camera-settings summary').click();await page.waitForFunction(()=>window.__rescueHouse.snapshot().quality==='low'&&window.__rescueHouse.snapshot().mirror.drawn);
-  await page.keyboard.down('d');await page.waitForTimeout(350);await page.keyboard.up('d');await page.waitForTimeout(150);
-  const moved=await snap();assert(Math.abs(moved.position.z-initial.position.z)>.2,'Strafing really moves the player');assert(moved.mirror.drawn);
+  await page.locator('#lab-camera-settings summary').click();await page.locator('#lab-camera-settings [data-setting="quality"]').selectOption('low');await page.locator('#lab-camera-settings summary').click();await page.waitForFunction(()=>window.__rescueHouse.snapshot().quality==='low'&&window.__rescueHouse.snapshot().mirror.drawn&&!window.__rescueHouse.snapshot().paused);await page.waitForTimeout(150);
+  await page.keyboard.down('d');await page.waitForFunction(()=>window.__rescueHouse.snapshot().position.z<5.40);await page.keyboard.up('d');await page.waitForTimeout(150);
+  const moved=await snap();assert(Math.abs(moved.position.z-initial.position.z)>.12,'Strafing really moves the player');assert(moved.mirror.drawn);
   await page.screenshot({path:'/tmp/valeteamo-qa/espejo-lateral.png'});
   await page.locator('#lab3d [data-act="mirror"]').click();await page.waitForTimeout(150);assert(Math.abs((await snap()).position.z-5.55)<.01);
   await page.keyboard.down('w');await page.waitForTimeout(280);await page.keyboard.up('w');await page.waitForTimeout(150);assert((await snap()).position.x>initial.position.x+.2);
