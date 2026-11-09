@@ -1,5 +1,7 @@
 # VALETEAMO — CONTEXTO MAESTRO PARA CODEX
 
+**Acabado chibi:** mano, linterna y Kitty del espejo comparten modelos redondeados y sombreado suave; joystick 3D aumentado. Referencia y pruebas en `docs/MODELOS-CHIBI.md`. No se modificaron los sprites ni los juegos 2D.
+
 **Actualización autorizada (8 de noviembre de 2026):** espejo de Kitty/linterna, menú de pruebas agrupado y separación musical implementados. Ver `docs/ESPEJO-Y-PRUEBAS.md` para especificación, límites y validación. Se mantiene el 2D; se autorizó cambiar navegación compartida y audio de transición.
 **Estado revisado:** casa V5 (8 de noviembre de 2026), desarrollada sobre `192fc34`; ver `docs/CASA-V5-ESPACIO-ATMOSFERA-Y-ENTRADA.md`. Escalera y descansillos ampliados, circulación auditada, ambiente por zonas y entrada animada por ventana. Todo el 2D continúa protegido. Repo: https://github.com/lugal3/valeteamo · Web: https://valefc.web.app/. Para el estado de publicación exacto, comprobar `main` y su ejecución de Firebase en GitHub Actions.
 

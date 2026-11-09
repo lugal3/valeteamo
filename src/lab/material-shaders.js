@@ -29,10 +29,22 @@ void main(){
  vec2 atlasUV=(vec2(mod(tile,4.0),floor(tile/4.0))*${TILE_SIZE.toFixed(1)}+${GUTTER.toFixed(1)}+fract(vUV)*${INNER.toFixed(1)})/${ATLAS_SIZE.toFixed(1)};
  vec4 material=texture2D(uMaterials,atlasUV);
  vec3 N=normalize(vNormal),T=vTangent;
- if(uOcclude>.5 && vArt<.5 && vDistance<5.0){
+ if(uOcclude>.5 && vArt<.5 && vDistance<5.0 && vStyle<63.5){
   vec2 xy=material.gb*2.0-1.0;vec3 detail=vec3(xy,1.0-.5*dot(xy,xy));
   vec3 B=cross(N,T);
   N=normalize(T*detail.x+B*detail.y+N*detail.z);
+ }
+ // Chibi surfaces use interpolated analytic normals and a broad studio key.
+ // This keeps white paws readable in the dark without changing the house lighting.
+ if(vStyle>63.5){
+  vec3 viewDir=normalize(uEye-vWorld);
+  float key=dot(N,normalize(vec3(-.45,.8,.6)))*.5+.5;
+  float wrap=smoothstep(.05,.95,key);
+  float rim=pow(1.0-max(0.0,dot(N,viewDir)),3.0);
+  float spec=pow(max(0.0,dot(N,normalize(viewDir+vec3(-.4,.8,.6)))),28.0);
+  vec3 soft=vColor*(.69+.32*wrap)+vec3(1.0,.89,.84)*rim*.065+vec3(1.0,.96,.90)*spec*.055;
+  if(vStyle>95.5)soft=mix(soft,vColor,.78);
+  gl_FragColor=vec4(clamp(soft,0.0,1.0),1.0);return;
  }
  vec3 delta=vWorld-uLightEye;float d=max(length(delta),.1);
  vec3 direction=delta/d;float cone=dot(direction,uForward);

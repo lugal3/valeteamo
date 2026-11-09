@@ -26,3 +26,5 @@
 **No se han movido ni eliminado informes.** El índice sirve para ordenar sin romper enlaces existentes ni tocar juegos.
 
 - `ESPEJO-Y-PRUEBAS.md`: espejo de Kitty/linterna, tres accesos principales, herramientas puntuales, audio exclusivo y prompt de continuidad (8 de noviembre de 2026).
+
+- `MODELOS-CHIBI.md`: análisis de la referencia 2D, modelos suaves compartidos, joystick, presupuesto y pruebas.

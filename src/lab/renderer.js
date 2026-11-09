@@ -1,3 +1,4 @@
+import {smoothSurface} from './chibi-geometry.js';
 import {BATH_MIRROR,mirrorVisible,kittyMirrorPieces,reflectedBathroom,reflectMesh,poseReflectedKitty} from './mirror.js';
 import {ART_COUNT,createArtworkCanvas} from './artwork.js';
 import {flashlightPieces,climbingHandPieces} from './first-person.js';
@@ -40,15 +41,21 @@ function createMaterials(gl){
  }
  return textures;
 }
-function geometry(boxes){
+export function geometry(boxes){
  const vertices=[],indices=[],colors=MATERIAL;let offset=0;
  for(const box of boxes){
-  const color=colors[box.mat]||colors.cream;
-  const style=materialStyle(box)+(box.glow?32:0),first=vertices.length;
+  const color=box.color||colors[box.mat]||colors.cream;
+  const style=materialStyle(box)+(box.chibi?(box.emissive?96:64):(box.glow?32:0)),first=vertices.length;
   const rotateMesh=()=>{
-   if(!box.yaw&&!box.pitch)return;const c=Math.cos(box.yaw||0),s=Math.sin(box.yaw||0),cp=Math.cos(box.pitch||0),sp=Math.sin(box.pitch||0);
-   for(let i=first;i<vertices.length;i+=16){const x=vertices[i]-box.x,y=vertices[i+1]-box.y,z=vertices[i+2]-box.z,pz=y*sp+z*cp;vertices[i]=box.x+x*c-pz*s;vertices[i+1]=box.y+y*cp-z*sp;vertices[i+2]=box.z+x*s+pz*c;for(const offset of [6,13]){const nx=vertices[i+offset],ny=vertices[i+offset+1],nz=vertices[i+offset+2],rz=ny*sp+nz*cp;vertices[i+offset]=nx*c-rz*s;vertices[i+offset+1]=ny*cp-nz*sp;vertices[i+offset+2]=nx*s+rz*c;}}
+   if(!box.yaw&&!box.pitch&&!box.roll)return;const c=Math.cos(box.yaw||0),s=Math.sin(box.yaw||0),cp=Math.cos(box.pitch||0),sp=Math.sin(box.pitch||0),cr=Math.cos(box.roll||0),sr=Math.sin(box.roll||0);
+   for(let i=first;i<vertices.length;i+=16){const dx=vertices[i]-box.x,dy=vertices[i+1]-box.y,x=dx*cr-dy*sr,y=dx*sr+dy*cr,z=vertices[i+2]-box.z,pz=y*sp+z*cp;vertices[i]=box.x+x*c-pz*s;vertices[i+1]=box.y+y*cp-z*sp;vertices[i+2]=box.z+x*s+pz*c;for(const offset of [6,13]){const ax=vertices[i+offset],ay=vertices[i+offset+1],nx=ax*cr-ay*sr,ny=ax*sr+ay*cr,nz=vertices[i+offset+2],rz=ny*sp+nz*cp;vertices[i+offset]=nx*c-rz*s;vertices[i+offset+1]=ny*cp-nz*sp;vertices[i+offset+2]=nx*s+rz*c;}}
   };
+  if(box.smooth){
+   const mesh=smoothSurface(box,color,style);
+   for(const n of mesh.vertices)vertices.push(n);
+   for(const i of mesh.indices)indices.push(offset+i);
+   offset+=mesh.vertices.length/16;rotateMesh();continue;
+  }
   if(box.shape==='gable'){
    const w=box.w/2,h=box.h/2,d=box.d/2;
    const p=[[-w,-h,-d],[w,-h,-d],[0,h,-d],[-w,-h,d],[w,-h,d],[0,h,d]];
@@ -170,7 +177,7 @@ export class HouseRenderer {
   const gl=this.gl;
   this.mirrorMeshes=[geometry([{...BATH_MIRROR,x:BATH_MIRROR.x-.0005}]),geometry(reflectedBathroom(boxes)),geometry(kittyMirrorPieces())];
   reflectMesh(this.mirrorMeshes[1].vertices);
-  this.kittyVertices=new Float32Array(this.mirrorMeshes[2].vertices.length);
+  this.kittyVertices=new Float32Array(this.mirrorMeshes[2].vertices.length);this.mirrorPose=null;this.mirrorUploads=0;
   this.mirrorMeshes.forEach((mesh,i)=>{gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[i*2]);gl.bufferData(gl.ARRAY_BUFFER,mesh.vertices,i===2?gl.DYNAMIC_DRAW:gl.STATIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.mirrorBuffers[i*2+1]);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,mesh.indices,gl.STATIC_DRAW);});
  }
  drawMirror(camera,motion){
@@ -186,8 +193,12 @@ export class HouseRenderer {
   gl.depthRange(0,1);gl.depthFunc(gl.LESS);gl.colorMask(true,true,true,true);
   gl.uniform1f(this.uniform.uFlash,0);gl.uniform1f(this.uniform.uOcclude,0);
   gl.frontFace(gl.CW);draw(1);
-  poseReflectedKitty(this.mirrorMeshes[2].vertices,this.kittyVertices,camera,motion);
-  gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[4]);gl.bufferSubData(gl.ARRAY_BUFFER,0,this.kittyVertices);draw(2);
+  const pose=[camera.x,camera.y,camera.z,camera.yaw,motion.bob||0,!!motion.reduced];
+  if(!this.mirrorPose||pose.some((v,i)=>v!==this.mirrorPose[i])){
+   poseReflectedKitty(this.mirrorMeshes[2].vertices,this.kittyVertices,camera,motion);
+   gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[4]);gl.bufferSubData(gl.ARRAY_BUFFER,0,this.kittyVertices);this.mirrorPose=pose;this.mirrorUploads++;
+  }
+  draw(2);
   gl.frontFace(gl.CCW);gl.colorMask(false,false,false,false);gl.depthFunc(gl.ALWAYS);draw(0);
   gl.colorMask(true,true,true,true);gl.depthFunc(gl.LESS);gl.stencilMask(0xff);gl.disable(gl.STENCIL_TEST);this.mirrorDrawn=true;
  }

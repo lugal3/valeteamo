@@ -11,3 +11,9 @@
 #lab3d .lab-camera-panel .lab-settings-note{border-top:1px solid #ffe4dd44;padding-top:8px}
 #lab3d .lab-objective,#lab3d .lab-camera-panel{backdrop-filter:none}
 @media(max-height:440px){#lab3d .lab-camera-panel{max-height:78vh;gap:9px}}
+
+/* Slightly larger left movement target, scoped to the house (not Phaser 2D). */
+#lab3d .lab-joystick{width:clamp(124px,22vw,182px);height:clamp(122px,29vh,166px);gap:7px}
+#lab3d .lab-stick-ring{width:clamp(98px,21vh,132px);height:clamp(98px,21vh,132px);flex-shrink:0}
+#lab3d .lab-stick-thumb{width:52%;height:52%}
+@media(max-height:410px){#lab3d .lab-joystick{width:114px;height:110px}#lab3d .lab-stick-ring{width:90px;height:90px}}
