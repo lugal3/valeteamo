@@ -1,0 +1,52 @@
+{
+  "errors": [],
+  "webgl": 0,
+  "hud": {
+    "anchor": "bottom",
+    "size": 52,
+    "x": 0,
+    "y": 0,
+    "opacity": 0.55,
+    "rect": {
+      "x": 333,
+      "y": 312,
+      "w": 178,
+      "h": 66,
+      "slot": 52,
+      "vertical": false
+    },
+    "editing": false
+  },
+  "phoneFrame": {
+    "x": 333.953125,
+    "y": 14,
+    "width": 176.09375,
+    "height": 362
+  },
+  "audio": {
+    "door-open": {
+      "peak": 0.06722095608711243,
+      "rms": 0.005573983889869262,
+      "ended": true
+    },
+    "door-close": {
+      "peak": 0.146832674741745,
+      "rms": 0.008640791266442517,
+      "ended": true
+    },
+    "stair": {
+      "peak": 0.09781225770711899,
+      "rms": 0.005126784096044515,
+      "ended": true
+    },
+    "floor-groan": {
+      "peak": 0.07205015420913696,
+      "rms": 0.009097383460238296,
+      "ended": true
+    }
+  },
+  "crouch": true,
+  "emotes": true,
+  "stairs": true,
+  "pressureZones": true
+}

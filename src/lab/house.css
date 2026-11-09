@@ -1,10 +1,4 @@
-/* House-only selectors; shared lab/rescue styles remain untouched. */
-#lab3d .house-hotbar{position:absolute;z-index:22;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:5px;padding:5px;border:1px solid #f6c9d9;border-radius:16px;background:#493344e8}
-#lab3d .house-hotbar button{position:relative;min-width:66px;min-height:54px;border:1px solid #dba4bb;border-radius:10px;background:#76506a;color:#fff2eb;font-size:22px}#lab3d .house-hotbar small{display:block;font:11px system-ui}#lab3d .house-hotbar [aria-pressed=true]{background:#bc7d9d;box-shadow:0 0 0 2px #ffe8af}
-#lab3d .phone-expand{position:absolute;z-index:22;bottom:85px;left:50%;transform:translateX(-50%)}#lab3d .phone-notice{position:absolute;z-index:23;top:130px;left:50%;transform:translateX(-50%);padding:12px;border-radius:18px;background:#eec4dce8;color:#38263c;cursor:pointer}
-#lab3d .phone-screen{position:absolute;inset:0;z-index:35;overflow:auto;background:linear-gradient(135deg,#ffe2ee,#bfa8d4);color:#38263c;padding:16px 22px;box-sizing:border-box;touch-action:pan-y;font:16px system-ui}
-#lab3d .phone-screen header{display:flex;justify-content:space-between;align-items:center;gap:10px}#lab3d .phone-screen button,#lab3d .phone-expand{border:1px solid #c98aac;border-radius:14px;background:#fff0f6;color:#4d3348;padding:12px;min-height:44px;font:600 14px system-ui}#lab3d .phone-warning{font-size:12px;text-align:center}#lab3d .phone-apps{display:grid;grid-template-columns:repeat(2,minmax(100px,220px));justify-content:center;gap:20px;padding:20px}#lab3d .phone-apps button{min-height:90px}
-#lab3d .phone-chat{max-width:660px;margin:auto}#lab3d .phone-chat p{background:#fff1f6;padding:14px;border-radius:18px;max-width:80%}#lab3d .phone-chat .outgoing{background:#d7f1de;margin-left:auto}#lab3d .phone-screen canvas{display:block;max-width:45vh;margin:auto;border:6px solid #9d698e;border-radius:10px}#lab3d .snake-controls{display:flex;justify-content:center;gap:10px;margin:10px}
+/* House-only styles. Shared 2D styles remain untouched. */
 #lab3d .house-danger{position:absolute;z-index:45;top:90px;left:50%;transform:translateX(-50%);padding:12px 24px;background:#721d35e8;color:#fff2dc;border:2px solid #ff91a3;border-radius:18px;font:bold 23px system-ui;text-align:center;pointer-events:none}#lab3d .house-enable-sound{position:absolute;top:57px;right:14px;z-index:25;border:1px solid #ffc9df;border-radius:12px;padding:8px;background:#754560;color:white}
 #lab3d [hidden]{display:none!important}#lab3d.lab-intro-active .house-equipment{visibility:hidden}
 #lab3d.house-arrival .lab-objective,#lab3d.house-arrival .lab-compass,#lab3d.house-arrival .lab-focus,#lab3d.house-arrival .lab-buttons,#lab3d.house-arrival .house-equipment,#lab3d.house-arrival .lab-joystick,#lab3d.house-arrival .lab-toast,#lab3d.house-arrival .lab-title small{visibility:hidden}
@@ -43,3 +37,62 @@
 #lab3d .lab-stick-ring{width:clamp(98px,21vh,132px);height:clamp(98px,21vh,132px);flex-shrink:0}
 #lab3d .lab-stick-thumb{width:52%;height:52%}
 @media(max-height:410px){#lab3d .lab-joystick{width:114px;height:110px}#lab3d .lab-stick-ring{width:90px;height:90px}}
+
+/* Compact equipment dock; positions are clamped to the viewport by hud-layout. */
+#lab3d .house-hotbar{position:absolute;z-index:22;display:flex;gap:4px;padding:6px;border-radius:18px;background:rgba(29,25,38,var(--hud-opacity,.55));border:1px solid #f4d9df50;box-shadow:0 4px 16px #100c2328}
+#lab3d .house-hotbar.vertical{flex-direction:column}
+#lab3d .house-hotbar button{position:relative;flex:0 0 var(--hud-slot,44px);width:var(--hud-slot,44px);height:var(--hud-slot,44px);min-width:0;min-height:0;padding:0;display:grid;place-items:center;border:1px solid transparent;border-radius:12px;background:transparent;color:#fff3eb;font:19px system-ui;box-shadow:none}
+#lab3d .house-hotbar small{position:absolute;bottom:2px;right:4px;font:8px system-ui;color:#e2cfdb99}
+#lab3d .house-hotbar svg{display:block;width:22px;height:22px;color:#f0dfe4}
+#lab3d .house-hotbar [aria-pressed=true]{background:#d9b6c51f;border-color:#f4d8bb9e;box-shadow:inset 0 0 0 1px #fff1db10}
+#lab3d .phone-badge{position:absolute;right:3px;top:0;color:#f1b4cb;font-size:12px}
+#lab3d .phone-expand{position:absolute;z-index:22;width:104px;height:32px;padding:3px 8px;border:1px solid #edcbd15c;border-radius:14px;background:#282230ab;color:#fce8ef;font:11px system-ui}
+#lab3d .phone-notice{position:absolute;z-index:23;top:116px;left:50%;transform:translateX(-50%);padding:9px 16px;border-radius:18px;background:#352c3ce8;color:#ffe6ee;border:1px solid #b990aa;font:12px system-ui;cursor:pointer;max-width:80vw}
+#lab3d[data-hotbar-anchor=right] .lab-buttons{right:calc(var(--hud-slot) + 36px)}
+#lab3d[data-hotbar-anchor=left] .lab-joystick{left:calc(var(--hud-slot) + 32px)}
+#lab3d .lab-buttons button{font-size:20px;min-height:44px;border-width:1px;box-shadow:0 3px 10px #150c2640;border-radius:13px}
+#lab3d .lab-buttons small{font-size:9px}
+
+/* A physical phone silhouette, with the live house visible around it. */
+#lab3d .phone-screen{position:absolute;inset:0;z-index:35;display:grid;place-content:center;background:#130f211f;color:#392c40;padding:10px;touch-action:pan-y;font:12px system-ui}
+#lab3d .phone-shell{height:min(760px,calc(100dvh - 28px));aspect-ratio:9/18.5;display:flex;flex-direction:column;overflow:hidden;border:6px solid #2e2634;border-radius:34px;background:linear-gradient(155deg,#ffe5ec,#d7c8df 60%,#b9cadb);box-shadow:0 0 0 2px #ce9fab,0 14px 50px #10091ad1,inset 0 0 0 1px #ffeff2;position:relative}
+#lab3d .phone-status{height:28px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:0 13px;font:600 9px system-ui}
+#lab3d .phone-status i{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:31%;height:12px;border-radius:20px;background:#302635}
+#lab3d .phone-shell header{display:flex;align-items:center;justify-content:space-between;gap:4px;padding:0 4px 5px;border-bottom:1px solid #866a891a}
+#lab3d .phone-shell header b{font:600 11px system-ui}
+#lab3d .phone-screen button{border:0;border-radius:12px;background:#fff8fb66;color:#49354d;padding:7px;min-height:40px;font:600 11px system-ui}
+#lab3d .phone-shell header button{width:40px;font-size:21px;background:transparent}
+#lab3d .phone-screen main{flex:1;min-height:0;overflow:auto;padding:8px 9px;overscroll-behavior:contain;touch-action:pan-y}
+#lab3d .phone-screen main h2{font:600 13px system-ui;margin:4px 0 9px}
+#lab3d .phone-apps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 9px;padding:17px 0}
+#lab3d .phone-apps button{min-height:64px;line-height:1.7;box-shadow:0 3px 9px #6a487018}
+#lab3d .phone-chat p{padding:9px 10px;border-radius:14px;background:#fff7fac9;max-width:95%;font:11px/1.5 system-ui;overflow-wrap:anywhere}
+#lab3d .phone-chat .outgoing{background:#daeadf;margin-left:12px}
+#lab3d .phone-chat b{font-size:10px}
+#lab3d .phone-home-indicator{width:34%;height:4px;flex-shrink:0;border-radius:9px;background:#5f465d;margin:5px auto 6px;opacity:.65}
+#lab3d .phone-screen canvas{display:block;width:100%;height:auto;aspect-ratio:1;border:4px solid #a3849a;border-radius:8px}
+#lab3d .snake-controls{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:8px}
+#lab3d .snake-controls button{font-size:18px;min-width:0}
+#lab3d .phone-warning{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);margin:0;white-space:nowrap;font:9px system-ui;color:#fff4ed;text-shadow:0 1px 3px #130f21}
+#lab3d.house-phone-open .house-hotbar,#lab3d.house-phone-open .phone-expand,#lab3d.house-phone-open .lab-buttons,#lab3d.house-phone-open .lab-joystick,#lab3d.house-phone-open .lab-focus{visibility:hidden}
+
+#lab3d .hud-editor{position:absolute;z-index:42;right:12px;top:60px;width:min(350px,calc(100vw - 100px));max-height:calc(100dvh - 72px);overflow:auto;touch-action:pan-y;overscroll-behavior:contain;border:1px solid #eed1e075;border-radius:18px;background:#292330f2;color:#fce8ef;padding:16px;box-shadow:0 8px 28px #0005}
+#lab3d .hud-editor h2{font:600 17px system-ui;margin:0 0 4px}
+#lab3d .hud-editor p{font:11px system-ui;color:#d9c2d2}
+#lab3d .hud-editor label{display:grid;grid-template-columns:100px 1fr;align-items:center;gap:10px;margin:9px 0;font:12px system-ui}
+#lab3d .hud-editor select{width:100%;background:#453749;color:white;border:1px solid #b99aaf;padding:6px;border-radius:8px}
+#lab3d .hud-editor input{min-width:0;width:100%;accent-color:#d6abc1;touch-action:pan-y}
+#lab3d .hud-editor output,#lab3d .hud-preview-tools output{display:block;font:11px/1.6 ui-monospace,monospace;color:#f3d7b9}
+#lab3d .hud-editor>div{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+#lab3d .hud-editor button,#lab3d .hud-preview-tools button,#lab3d .house-emotes button{border:1px solid #caa8b75e;border-radius:10px;background:#775c7266;color:#ffedf4;min-height:40px;padding:8px 12px;font:12px system-ui}
+#lab3d .hud-copy-status{display:block;overflow-wrap:anywhere;user-select:text;margin-top:8px;font-size:10px}
+#lab3d.house-hud-editing .house-hotbar{outline:1px dashed #f0d2a9;outline-offset:4px}
+#lab3d .hud-preview-tools{position:absolute;z-index:42;right:12px;top:65px;padding:10px;border-radius:12px;background:#292330e8}
+#lab3d[data-hotbar-anchor=right] .hud-editor,#lab3d[data-hotbar-anchor=right] .hud-preview-tools{left:12px;right:auto}
+#lab3d[data-hotbar-anchor=top] .lab-objective{top:calc(64px + var(--hud-slot) + 26px)}
+#lab3d[data-hotbar-anchor=top] .lab-toast{top:calc(64px + var(--hud-slot) + 60px)}
+#lab3d .house-emotes{position:absolute;z-index:24;bottom:16px;left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;gap:6px;max-width:280px;background:#292330ed;border:1px solid #d9b8c080;padding:10px;border-radius:15px}
+#lab3d .house-emotes span{flex-basis:100%;font:10px system-ui;color:#dcc3d2}
+#lab3d.house-arrival .house-emotes,#lab3d.lab-intro-active .house-emotes{visibility:hidden}
+#lab3d .house-hotbar button:focus-visible,#lab3d .phone-screen button:focus-visible,#lab3d .hud-editor :focus-visible,#lab3d .house-emotes button:focus-visible{outline:2px solid #ffdfae;outline-offset:2px}
+@media(max-height:420px){#lab3d .phone-shell{border-width:5px;border-radius:28px}#lab3d .phone-apps{padding:7px 0;gap:8px}#lab3d .phone-apps button{min-height:53px}#lab3d .hud-editor{padding:11px}#lab3d .hud-editor label{margin:6px 0}}

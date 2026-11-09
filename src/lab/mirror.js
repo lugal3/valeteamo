@@ -26,8 +26,8 @@ export function reflectedBathroom(boxes){
 export function reflectMesh(vertices){for(let i=0;i<vertices.length;i+=16){vertices[i]=2*MIRROR_PLANE-vertices[i];vertices[i+6]*=-1;vertices[i+13]*=-1;}return vertices;}
 export function poseReflectedKitty(base,out,camera,motion={},binding=null){
  if(binding)skinCharacter(base,out,binding);else out.set(base);
- const c=Math.cos(camera.yaw),s=Math.sin(camera.yaw),crouch=motion.crouched?.68:1;
- const ground=motion.feetY??camera.y-1.63*crouch;
+ const c=Math.cos(camera.yaw),s=Math.sin(camera.yaw),crouch=motion.crouched&&!binding?.68:1;
+ const ground=motion.feetY??camera.y-(motion.crouched?1.03:1.63);
  for(let i=0;i<base.length;i+=16){
   const x=out[i],y=out[i+1],z=out[i+2];
   out[i]=2*MIRROR_PLANE-(camera.x+x*c+z*s);out[i+1]=ground+y*crouch;out[i+2]=camera.z-x*s+z*c;

@@ -1,6 +1,7 @@
 // Soft, original procedural sounds. No external audio files or third-party tracks.
 import {scheduleTensionStep,TENSION_BEAT} from './tension-music.js';
 import {HouseAtmosphere,playFoley} from './atmosphere.js';
+import {spookyFoley} from './spooky-foley.js';
 const KEY='valeteamo-lab-sound-v1';
 const defaults={muted:false,ambient:.40,effects:.68,music:.34};
 export class HouseSound {
@@ -34,20 +35,25 @@ export class HouseSound {
  applySettings(){this.atmosphere?.setVolume(this.settings.muted?0:this.settings.ambient);this.musicBus?.gain.setTargetAtTime(this.settings.muted?0:this.settings.music,this.context.currentTime,.06);this.effectsBus?.gain.setTargetAtTime(this.settings.muted?0:this.settings.effects,this.context.currentTime,.025);this.save();}
  set(kind,value){this.settings[kind]=kind==='muted'?Boolean(value):Math.max(0,Math.min(1,Number(value)||0));if(this.context)this.applySettings();else this.save();}
  // Simple location-dependent stereo and attenuation, including room/floor obstruction.
- effect(kind,origin,listener,occluded=false){
+ effect(kind,origin,listener,occluded=false,{level=1}={}){
   const ctx=this.context;if(!ctx||this.paused||ctx.state!=='running'||this.settings.muted)return;
   const distance=origin?Math.hypot(origin.x-listener.x,origin.y-listener.y,origin.z-listener.z):0;
   const atten=origin?1/(1+.15*distance*distance):1;
   const floorMask=origin&&Math.abs(origin.y-listener.y)>1.85?.55:1;
-  const gain=.20*atten*floorMask*(occluded?.38:1);
+  const gain=.20*atten*floorMask*(occluded?.38:1)*Math.max(0,Math.min(1.5,level));
   if(gain<.0007)return;
+  const yaw=listener.yaw||0,dx=origin?origin.x-listener.x:0,dz=origin?origin.z-listener.z:0;
+  const stereo=Math.max(-.85,Math.min(.85,(dx*Math.cos(yaw)-dz*Math.sin(yaw))/Math.max(1,distance)));
+  if(['door','door-open','door-close','floor-groan','stair','wood','latch'].includes(kind)){
+   this.foleyVoices??=new Set();if(this.foleyVoices.size>=12)return;
+   const voice=spookyFoley(ctx,this.effectsBus,this.atmosphere.noise,kind,gain*(kind.startsWith('door')?2:kind==='floor-groan'?1.5:1),stereo,v=>this.foleyVoices.delete(v));this.foleyVoices.add(voice);this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;
+  }
   if(['wood','tile','grass','stone','door','drawer','window','latch','cloth','land'].includes(kind)){
    const foley={door:'creak',drawer:'wood',land:'wood'}[kind]||kind;
    playFoley(ctx,this.effectsBus,this.atmosphere.noise,foley,gain*2,(Math.random()-.5)*.18);return;
   }
   const now=ctx.currentTime,vol=ctx.createGain(),pan=ctx.createStereoPanner();
-  const yaw=listener.yaw||0,dx=origin?origin.x-listener.x:0,dz=origin?origin.z-listener.z:0;
-  pan.pan.value=Math.max(-.85,Math.min(.85,(dx*Math.cos(yaw)-dz*Math.sin(yaw))/Math.max(1,distance)));
+  pan.pan.value=stereo;
   vol.connect(pan);pan.connect(this.effectsBus);
   const oscillator=ctx.createOscillator();oscillator.type=kind==='footstep'?'triangle':kind==='pickup'?'sine':'sawtooth';
   const base={footstep:95,door:185,drawer:215,pickup:490,light:660,note:380,creak:78,click:425,hide:160,bed:120}[kind]||280;
@@ -61,7 +67,7 @@ export class HouseSound {
   oscillator.onended=()=>{oscillator.disconnect();vol.disconnect();pan.disconnect();};
  }
  sequence(kind){const ctx=this.context;if(!ctx||this.paused||ctx.state!=='running'||this.settings.muted)return;for(let i=0;i<3;i++){const osc=ctx.createOscillator(),gain=ctx.createGain(),at=ctx.currentTime+i*(kind==='keys'?.11:.28);osc.type=kind==='keys'?'sine':'triangle';osc.frequency.setValueAtTime(kind==='keys'?1700+i*330:85,at);osc.frequency.exponentialRampToValueAtTime(kind==='keys'?1100:38,at+.12);gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(kind==='keys'?.14:.50,at+.008);gain.gain.exponentialRampToValueAtTime(.0001,at+.17);osc.connect(gain);gain.connect(this.effectsBus);osc.start(at);osc.stop(at+.2);this.sequenceNodes.add(osc);osc.onended=()=>{osc.disconnect();gain.disconnect();this.sequenceNodes.delete(osc);};}}
- pause(){this.paused=true;this.stopMusic();for(const node of this.sequenceNodes||[])try{node.stop();}catch{}this.atmosphere?.pause();try{if(this.context?.state==='running')void this.context.suspend();}catch{}}
+ pause(){this.paused=true;this.stopMusic();for(const node of this.sequenceNodes||[])try{node.stop();}catch{}for(const voice of this.foleyVoices||[])voice.stop();this.atmosphere?.pause();try{if(this.context?.state==='running')void this.context.suspend().catch(()=>{});}catch{}}
  resume(){if(!this.context)return;this.paused=false;const ctx=this.context;try{void ctx.resume().then(()=>{if(this.context===ctx&&!this.paused){this.atmosphere?.resume();this.startMusic();}}).catch(()=>{});}catch{}}
- destroy(){this.paused=true;this.stopMusic();this.atmosphere?.destroy();this.atmosphere=null;this.ambientNodes=[];if(this.context){void this.context.close().catch(()=>{});this.context=null;}}
+ destroy(){this.pause();this.atmosphere?.destroy();this.atmosphere=null;this.ambientNodes=[];if(this.context){void this.context.close().catch(()=>{});this.context=null;}}
 }

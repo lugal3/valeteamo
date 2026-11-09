@@ -4,12 +4,12 @@ export function sampleHoldPhone(time,out,{reduced=false}={}){
  out.fill(0);
  const breath=reduced?0:Math.sin(time*Math.PI*2/3.4);
  setJoint(out,'body',0,0,0,0,breath*.004,0);
- // Cabeza inclinada hacia la derecha escuchando el teléfono
- setJoint(out,'head',.06+breath*.005,.08,-.24);
- // Brazo derecho flexionado llevando el teléfono a la oreja
- setJoint(out,'rightArm',-1.28,.32,.42);
- setJoint(out,'rightForearm',-1.62,.18,.10);
- setJoint(out,'rightHand',-.20,0,0);
+ // Mirada hacia la pantalla sostenida delante del pecho.
+ setJoint(out,'head',.12+breath*.005,-.08,.035);
+ // Ajustes sobre el brazo flexionado del modelo, sin doblar dos veces el codo.
+ setJoint(out,'rightArm',-.14,.12,.08);
+ setJoint(out,'rightForearm',-.22,0,-.08);
+ setJoint(out,'rightHand',.10,-.18,0);
  // Brazo izquierdo en reposo
  setJoint(out,'leftArm',.06,0,.08);
  return out;

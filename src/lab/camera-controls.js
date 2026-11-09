@@ -38,5 +38,5 @@ export function readCameraSettings(storage){
  }catch{return {...DEFAULT_CAMERA_SETTINGS};}
 }
 export function writeCameraSettings(storage,settings){
- try{storage?.setItem(CAMERA_SETTINGS_KEY,JSON.stringify({sensitivity:clamp(settings.sensitivity,SENSITIVITY_MIN,SENSITIVITY_MAX),invertX:!!settings.invertX}));return true;}catch{return false;}
+ try{let previous;try{previous=JSON.parse(storage?.getItem(CAMERA_SETTINGS_KEY)||'{}');}catch{previous={};}storage?.setItem(CAMERA_SETTINGS_KEY,JSON.stringify({...previous,sensitivity:clamp(settings.sensitivity,SENSITIVITY_MIN,SENSITIVITY_MAX),invertX:!!settings.invertX}));return true;}catch{return false;}
 }
