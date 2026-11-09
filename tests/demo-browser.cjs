@@ -84,13 +84,12 @@ const {chromium}=require('playwright');
   p=await use('picture-stain');assert(p.puzzle.symbol,'Picture clue examined');
   await page.screenshot({path:path.join(folder,'07-pista-cuadro.png')});
   p=await use('dormitorio');assert(p.puzzle.door,'Bedroom unlocked with two clues');
-  p=await use('rescue-louis');assert(p.puzzle.rescued,'Louis rescue reached');
-  await page.screenshot({path:path.join(folder,'08-rescate.png')});
-  await page.locator('#lab-dialog [data-act="finish"]').click();
-  await page.getByRole('heading',{name:/Louis está a salvo/}).waitFor({timeout:7000});
-  await page.screenshot({path:path.join(folder,'09-final.png')});
+  await page.waitForFunction(()=>window.__rescueHouse.story().phase==='hide',null,{timeout:20000});
+  await use('wardrobe');await page.waitForFunction(()=>window.__rescueHouse.snapshot().hidden);
+  await page.waitForFunction(()=>window.__rescueHouse.story().phase==='safe',null,{timeout:25000});
+  await page.getByRole('dialog',{name:'Estás a salvo',exact:true}).waitFor();await page.screenshot({path:path.join(folder,'09-final-escondite.png')});
   assert.deepEqual(errors,[],'Unexpected browser errors: '+errors.join(' | '));
-  console.log('PASS: birthday, 2D kidnapping, 3D puzzle interactions, rescue ending and WebGL');
+  console.log('PASS: birthday, 2D kidnapping, 3D puzzle interactions, hide-event endpoint and WebGL');
   await context.close();
  }finally{await browser?.close();await server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});

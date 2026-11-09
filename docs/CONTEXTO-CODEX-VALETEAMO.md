@@ -1,5 +1,7 @@
 # VALETEAMO — CONTEXTO MAESTRO PARA CODEX
 
+**Reparaciones y teléfono (9 de noviembre de 2026):** sobre `4a74efa`, se corrigen rangos de geometría dinámica, llave/cajón y espejo desde el pasillo. Hotbar, teléfono, respuestas automáticas y primera llegada con diez segundos para esconderse. El recorrido normal 3D termina en esa etapa; todavía no hay perseguidor. Ver `docs/REPARACIONES-ANTIGRAVITY-Y-TELEFONO.md`. Se mantienen las mejoras visuales de Anti-Gravity y la protección del 2D.
+
 **Animaciones reutilizables:** Kitty usa 15 articulaciones, reposo/caminar por desplazamiento real y clips separados en `src/lab/animations/`. Las poses se calculan al mostrar el espejo. Ver `docs/ANIMACIONES-PERSONAJE.md`; la entrada actual conserva su cámara y comparte apoyos de manos con el módulo de ventana.
 
 **Acabado chibi:** mano, linterna y Kitty del espejo comparten modelos redondeados y sombreado suave; joystick 3D aumentado. Referencia y pruebas en `docs/MODELOS-CHIBI.md`. No se modificaron los sprites ni los juegos 2D.

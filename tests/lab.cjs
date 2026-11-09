@@ -80,6 +80,7 @@ const assert=require('node:assert/strict');
  const {hidingFrame}=await import('../src/lab/hiding.js'),inside=wardrobe.hideCamera,outside={x:wardrobe.returnX,y:HEIGHT+1.63,z:wardrobe.returnZ,yaw:inside.yaw+Math.PI,pitch:0};
  const enter=hidingFrame({from:outside,inside,outside,progress:1});assert.deepEqual(enter.camera,inside);assert(Math.abs(enter.doorAmount-.035)<1e-9);
  const exit=hidingFrame({from:inside,inside,outside,entering:false,progress:1});assert.equal(exit.camera.x,outside.x);assert.equal(exit.doorAmount,0);
+ await require('./repairs-events.cjs')();
  console.log('PASS V4: defined rooms, six musical posters, closed hatch, real louver sight gaps and deterministic hiding endpoints');
  console.log('PASS: material cache, tangent orientation, staged drawer motion/contents, reduced motion, door safety, rounded corners and all spawns');
  console.log('PASS: 3D layout, floors, stairs, collisions, occlusion, doors/drawer and deterministic content');

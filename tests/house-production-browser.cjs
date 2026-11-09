@@ -19,7 +19,7 @@ const {chromium}=require('playwright');
   await page.goto(url);await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');
   await page.getByText('Feliz cumpleaños, Valentina').waitFor();
   await page.getByRole('button',{name:'Pruebas',exact:true}).click();
-  await page.getByRole('button',{name:/^Casa 3D/}).click();await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');
+  await page.getByRole('button',{name:/^Casa 3D/}).click();
   await page.locator('#lab-dialog [data-act="start"]').click();
   await page.getByRole('button',{name:'Pausar',exact:true}).click();
   await page.getByRole('dialog',{name:'Pausa',exact:true}).waitFor();
@@ -34,7 +34,7 @@ const {chromium}=require('playwright');
   assert.equal(gl.error,0);assert(gl.width>0&&gl.height>0);
   const folder=path.resolve(process.env.HOUSE_QA_DIR||'docs/capturas/casa-3d');fs.mkdirSync(folder,{recursive:true});
   await page.screenshot({path:path.join(folder,process.env.HOUSE_PREVIEW_URL?'13-firebase.png':'00-compilacion-movil.png')});
-  await page.locator('.lab-exit').click();await page.getByText('Feliz cumpleaños, Valentina').waitFor();
+  await page.locator('.lab-exit').click();await page.getByRole('heading',{name:'Elige dónde jugar',exact:true}).waitFor();
   assert.equal(await page.locator('#lab3d').count(),0);assert.deepEqual(errors,[]);
   console.log('PASS production 3D:',JSON.stringify({url,viewport:{width:844,height:390},webgl:gl,devHooksAbsent:true,errors}));
  }finally{await browser?.close();if(preview)await new Promise(r=>preview.httpServer.close(r));}

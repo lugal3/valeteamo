@@ -7,7 +7,7 @@ import {drawViewModel} from './viewmodel.js';
 import {VERTEX_SHADER as VS,FRAGMENT_SHADER as FS} from './material-shaders.js';
 // Minimal WebGL1 3D renderer: real perspective, depth buffer, world geometry and spotlight.
 // No additional packages, CDNs, runtime downloads or concurrent Phaser loops.
-import {MATERIAL} from './world.js';
+import {MATERIAL,lineBlocked} from './world.js';
 import {materialPixels,materialStyle,surfaceFrame,ATLAS_SIZE,TILE_SIZE,GUTTER,INNER,ATLAS_SIZE_MED,TILE_SIZE_MED,GUTTER_MED,INNER_MED} from './materials.js';
 import {lightDepthField,LIGHT_DEPTH_SIZE,LIGHT_REACH,LIGHT_SPREAD} from './lighting.js';
 function shader(gl,kind,source){const s=gl.createShader(kind);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){const msg=gl.getShaderInfoLog(s);gl.deleteShader(s);throw Error('Shader: '+msg);}return s;}
@@ -45,12 +45,14 @@ function createMaterials(gl,quality='medium'){
  return textures;
 }
 export function geometry(boxes){
- const vertices=[],indices=[],groups=[],colors=MATERIAL;let offset=0;
+ const vertices=[],indices=[],groups=[],ranges=[],colors=MATERIAL;let offset=0;
  for(const box of boxes){
   const baseColor=box.color||colors[box.mat]||colors.cream;
   const color=box.ao?[baseColor[0]*box.ao,baseColor[1]*box.ao,baseColor[2]*box.ao]:baseColor;
   const style=materialStyle(box)+(box.chibi?(box.emissive?96:64):(box.glow?32:0)),first=vertices.length;
+  const range={start:first,end:first};ranges.push(range);
   const rotateMesh=()=>{
+   range.end=vertices.length;
    if(!box.yaw&&!box.pitch&&!box.roll)return;const c=Math.cos(box.yaw||0),s=Math.sin(box.yaw||0),cp=Math.cos(box.pitch||0),sp=Math.sin(box.pitch||0),cr=Math.cos(box.roll||0),sr=Math.sin(box.roll||0);
    for(let i=first;i<vertices.length;i+=16){const dx=vertices[i]-box.x,dy=vertices[i+1]-box.y,x=dx*cr-dy*sr,y=dx*sr+dy*cr,z=vertices[i+2]-box.z,pz=y*sp+z*cp;vertices[i]=box.x+x*c-pz*s;vertices[i+1]=box.y+y*cp-z*sp;vertices[i+2]=box.z+x*s+pz*c;for(const offset of [6,13]){const ax=vertices[i+offset],ay=vertices[i+offset+1],nx=ax*cr-ay*sr,ny=ax*sr+ay*cr,nz=vertices[i+offset+2],rz=ny*sp+nz*cp;vertices[i+offset]=nx*c-rz*s;vertices[i+offset+1]=ny*cp-nz*sp;vertices[i+offset+2]=nx*s+rz*c;}}
   };
@@ -141,7 +143,7 @@ export function geometry(boxes){
   }
   rotateMesh();
  }
- return {vertices:new Float32Array(vertices),indices:new Uint16Array(indices),groups};
+ return {vertices:new Float32Array(vertices),indices:new Uint16Array(indices),groups,ranges};
 }
 export class HouseRenderer {
  constructor(canvas,quality='medium'){
@@ -149,7 +151,7 @@ export class HouseRenderer {
   const gl=canvas.getContext('webgl',{alpha:false,stencil:true,antialias:false,powerPreference:'low-power',preserveDrawingBuffer:false});
   if(!gl)throw Error('El navegador no permite WebGL. Activa aceleración gráfica o prueba otro navegador.');
   this.gl=gl;this.programs={medium:program(gl),low:program(gl,true)};this.program=this.programs[quality==='low'?'low':'medium'];this.texture=createAtlas(gl);this.materialQuality=quality;this.materialTextures=createMaterials(gl,quality);
-  this.mirrorSupported=gl.getContextAttributes().stencil;this.mirrorBuffers=Array.from({length:6},()=>gl.createBuffer());this.mirrorDrawn=false;
+  this.mirrorSupported=gl.getContextAttributes().stencil;this.mirrorBuffers=Array.from({length:8},()=>gl.createBuffer());this.mirrorDrawn=false;
   this.vbo=gl.createBuffer();this.ibo=gl.createBuffer();this.count=0;
   this.dynamicVbo=gl.createBuffer();this.dynamicIbo=gl.createBuffer();this.dynamicCount=0;this.dynamicBoxes=[];
   this.handVbo=gl.createBuffer();this.handIbo=gl.createBuffer();this.handGeometry={};this.handVertices=null;this.handIndexReady=false;
@@ -161,7 +163,7 @@ export class HouseRenderer {
   this.locations={};
   for(const [quality,p] of Object.entries(this.programs)){
    const atrib={},uniform={};for(const key of ['aPos','aCol','aNormal','aUV','aArt','aStyle','aTangent'])atrib[key]=gl.getAttribLocation(p,key);
-   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner'])uniform[key]=gl.getUniformLocation(p,key);
+   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass'])uniform[key]=gl.getUniformLocation(p,key);
    this.locations[quality]={atrib,uniform};
   }
   Object.assign(this,this.locations[quality==='low'?'low':'medium']);
@@ -177,7 +179,7 @@ export class HouseRenderer {
   const gl=this.gl,{vertices,indices}=geometry(boxes.filter(b=>!b.dynamic).sort((a,b)=>order(a)-order(b)));this.count=indices.length;
   this.dynamicBoxes=boxes.filter(b=>b.dynamic);
   const dynamic=geometry(this.dynamicBoxes);this.dynamicCount=dynamic.indices.length;
-  this.dynamicTemplate=dynamic.vertices;this.dynamicVertices=new Float32Array(dynamic.vertices);
+  this.dynamicTemplate=dynamic.vertices;this.dynamicVertices=new Float32Array(dynamic.vertices);this.dynamicRanges=dynamic.ranges;
   this.dynamicOrigins=this.dynamicBoxes.map(b=>[b.x,b.y,b.z,b.yaw||0]);this.dynamicPositions=new Float32Array(this.dynamicBoxes.length*4);this.dynamicPositions.fill(Infinity);
   gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamicVbo);gl.bufferData(gl.ARRAY_BUFFER,this.dynamicVertices,gl.DYNAMIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.dynamicIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,dynamic.indices,gl.STATIC_DRAW);
@@ -191,14 +193,18 @@ export class HouseRenderer {
  }
  prepareMirror(boxes){
   const gl=this.gl;
-  this.mirrorMeshes=[geometry([{...BATH_MIRROR,x:BATH_MIRROR.x-.0005}]),geometry(reflectedBathroom(boxes)),geometry(kittyMirrorPieces())];
+  this.mirrorBoxes=boxes;this.mirrorEquipment='flashlight';
+  this.mirrorMeshes=[geometry([{...BATH_MIRROR,x:BATH_MIRROR.x-.0005}]),geometry(boxes.filter(b=>!b.dynamic&&!b.id.includes('mirror'))),geometry(kittyMirrorPieces()),{vertices:new Float32Array(this.dynamicVertices.length),indices:geometry(this.dynamicBoxes).indices}];
   reflectMesh(this.mirrorMeshes[1].vertices);
   this.kittyVertices=new Float32Array(this.mirrorMeshes[2].vertices.length);this.mirrorPose=null;this.mirrorUploads=0;this.characterBinding=createRigBinding(this.mirrorMeshes[2].groups);
   this.mirrorMeshes.forEach((mesh,i)=>{gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[i*2]);gl.bufferData(gl.ARRAY_BUFFER,mesh.vertices,i===2?gl.DYNAMIC_DRAW:gl.STATIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.mirrorBuffers[i*2+1]);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,mesh.indices,gl.STATIC_DRAW);});
  }
  drawMirror(camera,motion){
   const gl=this.gl;this.mirrorDrawn=false;
-  if(!this.mirrorSupported||!mirrorVisible(camera))return;
+  if(!this.mirrorSupported||!mirrorVisible(camera,motion.bathDoorAmount||0))return;
+  if(![0,-.6,.6].some(dz=>!lineBlocked(this.occluders,camera,{x:BATH_MIRROR.x-.03,y:BATH_MIRROR.y,z:BATH_MIRROR.z+dz})))return;
+  const equipment=motion.equipment||'flashlight';
+  if(equipment!==this.mirrorEquipment){this.mirrorEquipment=equipment;this.mirrorMeshes[2]=geometry(kittyMirrorPieces(equipment));this.kittyVertices=new Float32Array(this.mirrorMeshes[2].vertices.length);this.characterBinding=createRigBinding(this.mirrorMeshes[2].groups);this.mirrorPose=null;gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[4]);gl.bufferData(gl.ARRAY_BUFFER,this.kittyVertices,gl.DYNAMIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.mirrorBuffers[5]);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,this.mirrorMeshes[2].indices,gl.STATIC_DRAW);}
   const draw=i=>{this.bind(this.mirrorBuffers[i*2],this.mirrorBuffers[i*2+1]);gl.drawElements(gl.TRIANGLES,this.mirrorMeshes[i].indices.length,gl.UNSIGNED_SHORT,0);};
   // Mark only visible mirror fragments. Walls/door/furniture still occlude it.
   gl.enable(gl.STENCIL_TEST);gl.stencilMask(0xff);gl.stencilFunc(gl.ALWAYS,1,0xff);gl.stencilOp(gl.KEEP,gl.KEEP,gl.REPLACE);
@@ -208,16 +214,17 @@ export class HouseRenderer {
   gl.depthMask(true);gl.depthFunc(gl.ALWAYS);gl.depthRange(1,1);draw(0);
   gl.depthRange(0,1);gl.depthFunc(gl.LESS);gl.colorMask(true,true,true,true);
   gl.uniform1f(this.uniform.uFlash,0);gl.uniform1f(this.uniform.uOcclude,0);
-  gl.frontFace(gl.CW);draw(1);
+  gl.uniform1f(this.uniform.uMirrorPass,1);gl.frontFace(gl.CW);draw(1);
+  this.mirrorMeshes[3].vertices.set(this.dynamicVertices);reflectMesh(this.mirrorMeshes[3].vertices);gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[6]);gl.bufferData(gl.ARRAY_BUFFER,this.mirrorMeshes[3].vertices,gl.DYNAMIC_DRAW);draw(3);
   const animator=motion.animator;
-  const pose=[camera.x,camera.y,camera.z,camera.yaw,motion.feetY,!!motion.crouched,animator?.reduced&&animator?.weight===0?0:animator?.time,animator?.distance,animator?.weight];
+  const pose=[camera.x,camera.y,camera.z,camera.yaw,motion.feetY,!!motion.crouched,animator?.reduced&&animator?.weight===0?0:animator?.time,animator?.distance,animator?.weight,equipment];
   if(!this.mirrorPose||pose.some((v,i)=>v!==this.mirrorPose[i])){
-   if(animator)evaluateRig(this.characterBinding,animator.sample());
+   if(animator)evaluateRig(this.characterBinding,animator.sample(equipment==='phone'?'hold-phone':motion.crouched?'crouch':'locomotion'));
    poseReflectedKitty(this.mirrorMeshes[2].vertices,this.kittyVertices,camera,motion,animator?this.characterBinding:null);
    gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[4]);gl.bufferSubData(gl.ARRAY_BUFFER,0,this.kittyVertices);this.mirrorPose=pose;this.mirrorUploads++;
   }
   draw(2);
-  gl.frontFace(gl.CCW);gl.colorMask(false,false,false,false);gl.depthFunc(gl.ALWAYS);draw(0);
+  gl.uniform1f(this.uniform.uMirrorPass,0);gl.frontFace(gl.CCW);gl.colorMask(false,false,false,false);gl.depthFunc(gl.ALWAYS);draw(0);
   gl.colorMask(true,true,true,true);gl.depthFunc(gl.LESS);gl.stencilMask(0xff);gl.disable(gl.STENCIL_TEST);this.mirrorDrawn=true;
  }
  updateDynamic(time=0,motion={}){
@@ -244,9 +251,9 @@ export class HouseRenderer {
     box.x=orig[0]+swing;box.z=orig[2]+swing*0.6;
    }
    const o4=i*4,bx=box.x,by=box.y,bz=box.z,byaw=box.yaw||0;
-   if(bx===this.dynamicPositions[o4]&&by===this.dynamicPositions[o4+1]&&bz===this.dynamicPositions[o4+2]&&byaw===this.dynamicPositions[o4+3])continue;
+   if(Math.fround(bx)===this.dynamicPositions[o4]&&Math.fround(by)===this.dynamicPositions[o4+1]&&Math.fround(bz)===this.dynamicPositions[o4+2]&&Math.fround(byaw)===this.dynamicPositions[o4+3])continue;
    this.dynamicPositions[o4]=bx;this.dynamicPositions[o4+1]=by;this.dynamicPositions[o4+2]=bz;this.dynamicPositions[o4+3]=byaw;
-   const start=i*24*16,end=start+24*16,origin=this.dynamicOrigins[i];
+   const {start,end}=this.dynamicRanges[i],origin=this.dynamicOrigins[i];
    const angle=byaw-origin[3],c=Math.cos(angle),s=Math.sin(angle);
    for(let v=start;v<end;v+=16){
     const x=this.dynamicTemplate[v]-origin[0],z=this.dynamicTemplate[v+2]-origin[2];
@@ -269,7 +276,7 @@ export class HouseRenderer {
   for(const [name,size,start] of layout){const at=this.atrib[name];if(at<0)continue;gl.enableVertexAttribArray(at);gl.vertexAttribPointer(at,size,gl.FLOAT,false,stride,start*4);}
  }
  drawFirstPerson(camera,right,up,forward,time,flash,motion={}){
-  drawViewModel(this,'flashlight',{camera,right,up,forward,time,flash,motion});
+  drawViewModel(this,motion.equipment||'flashlight',{camera,right,up,forward,time,flash,motion});
  }
  drawClimbingHands(hands){
   const gl=this.gl;gl.uniform1f(this.uniform.uFlash,0);
@@ -281,6 +288,13 @@ export class HouseRenderer {
    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.handIbo);if(this.handIndexKind!=='climb'){gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,model.indices,gl.STATIC_DRAW);this.handIndexKind='climb';}
    this.bind(this.handVbo,this.handIbo);gl.drawElements(gl.TRIANGLES,model.indices.length,gl.UNSIGNED_SHORT,0);
   }
+ }
+ drawActor(subject,motion){
+  const equipment=motion.equipment||'flashlight',gl=this.gl;
+  if(this.actorEquipment!==equipment){this.actorEquipment=equipment;this.actorMesh=geometry(kittyMirrorPieces(equipment));this.actorVertices=new Float32Array(this.actorMesh.vertices.length);this.actorBinding=createRigBinding(this.actorMesh.groups);}
+  if(motion.animator)evaluateRig(this.actorBinding,motion.animator.sample('look-behind',.5));
+  poseReflectedKitty(this.actorMesh.vertices,this.actorVertices,subject,{feetY:motion.feetY},this.actorBinding);reflectMesh(this.actorVertices);
+  gl.bindBuffer(gl.ARRAY_BUFFER,this.handVbo);gl.bufferData(gl.ARRAY_BUFFER,this.actorVertices,gl.DYNAMIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.handIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,this.actorMesh.indices,gl.STATIC_DRAW);this.handIndexKind='actor';this.bind(this.handVbo,this.handIbo);gl.drawElements(gl.TRIANGLES,this.actorMesh.indices.length,gl.UNSIGNED_SHORT,0);
  }
  resize(){
   const scale=this.quality==='low'?.55:.80;
@@ -304,7 +318,7 @@ export class HouseRenderer {
   gl.uniform1f(this.uniform.uTileSize,isLow?TILE_SIZE:TILE_SIZE_MED);
   gl.uniform1f(this.uniform.uGutter,isLow?GUTTER:GUTTER_MED);
   gl.uniform1f(this.uniform.uInner,isLow?INNER:INNER_MED);
-  this.updateDynamic(time,motion);
+  gl.uniform1f(this.uniform.uMirrorPass,0);this.updateDynamic(time,motion);
   const cy=Math.cos(camera.yaw),sy=Math.sin(camera.yaw),cp=Math.cos(camera.pitch),sp=Math.sin(camera.pitch);
   const right=[cy,0,-sy],forward=[sy*cp,sp,cy*cp],up=[-sy*sp,cp,-cy*sp];
   // Keep the light source inside the player's collision radius near walls.
@@ -332,7 +346,7 @@ export class HouseRenderer {
   if(this.dynamicCount){this.bind(this.dynamicVbo,this.dynamicIbo);gl.drawElements(gl.TRIANGLES,this.dynamicCount,gl.UNSIGNED_SHORT,0);}
   this.bind(this.vbo,this.ibo);
   gl.drawElements(gl.TRIANGLES,this.count,gl.UNSIGNED_SHORT,0);
-  this.drawMirror(camera,motion);
+  if(!motion.thirdPerson)this.drawMirror(camera,motion);else this.drawActor(motion.thirdPerson,motion);
   if(motion.introHands)this.drawClimbingHands(motion.introHands);
   if(showHand)this.drawFirstPerson(camera,right,up,forward,time,flash,motion);
  }

@@ -25,8 +25,10 @@ uniform vec3 uEye,uLightEye,uForward,uRight,uUp;
 uniform sampler2D uAtlas,uLightDepth,uMaterials;
 uniform float uFlash,uOcclude;
 uniform float uTime;
+uniform float uMirrorPass;
 uniform float uAtlasSize,uTileSize,uGutter,uInner;
 void main(){
+ if(uMirrorPass>.5&&vWorld.x<9.8375)discard;
  float tile=mod(floor(vStyle+.01),16.0);
  float aSize=uAtlasSize>0.0?uAtlasSize:${ATLAS_SIZE.toFixed(1)};
  float tSize=uTileSize>0.0?uTileSize:${TILE_SIZE.toFixed(1)};

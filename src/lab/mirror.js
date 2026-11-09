@@ -6,7 +6,11 @@ export const kittyMirrorPieces=characterPieces;
 export const BATH_MIRROR=Object.freeze({id:'bath-mirror',x:9.86,y:1.48,z:5.55,w:.045,h:1.85,d:1.50,mat:'glass',solid:false});
 export const MIRROR_PLANE=BATH_MIRROR.x-BATH_MIRROR.w/2-.001;
 export const MIRROR_SPAWN=Object.freeze({x:8.35,y:0,z:5.55,yaw:Math.PI/2});
-export function mirrorVisible(camera){return camera.x<MIRROR_PLANE&&camera.x>7.55&&camera.y<3&&camera.z>4.4&&camera.z<7.4&&Math.sin(camera.yaw)>.12;}
+export function mirrorVisible(camera,doorAmount=0){
+ const inside=camera.x>7.6&&camera.x<MIRROR_PLANE&&camera.z>4.4&&camera.z<7.4;
+ const dx=MIRROR_PLANE-camera.x,dz=BATH_MIRROR.z-camera.z,distance=Math.hypot(dx,dz);
+ return camera.y<3&&dx>0&&distance<6&&(inside||doorAmount>.025)&&(dx*Math.sin(camera.yaw)+dz*Math.cos(camera.yaw))/Math.max(.01,distance)>.35;
+}
 export function reflectPoint(p){return {...p,x:2*MIRROR_PLANE-p.x};}
 export function reflectedBathroom(boxes){
  const bath=boxes.filter(b=>!b.dynamic&&!b.id.includes('mirror')&&(b.id.startsWith('bath-')||/^(toilet-|basin|towel)/.test(b.id)));

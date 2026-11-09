@@ -1,0 +1,13 @@
+{
+  "errors": [],
+  "webgl": 0,
+  "mirrorHallway": true,
+  "keyVisible": true,
+  "phone": true,
+  "doorAudioSignal": true,
+  "snake": true,
+  "loss": true,
+  "retry": true,
+  "hiddenSuccess": true,
+  "audioClosed": true
+}

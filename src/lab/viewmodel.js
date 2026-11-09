@@ -1,5 +1,6 @@
 import {chibiPiece,placePieces,torchModel,grippingPaw} from './chibi-model.js';
 import {geometry} from './renderer.js';
+import {phonePieces} from './equipment.js';
 
 // V4 View-Model configuration. Variant C (compact, clear reticle on mobile & desktop).
 export const VIEWMODEL_CONFIG = Object.freeze({
@@ -21,6 +22,7 @@ export function dustPieces(flash=true){
 }
 
 export function viewModelPieces(kind='flashlight', flash=true){
+ if(kind==='phone')return placePieces(phonePieces(),{x:.37,y:-.25,z:.85,scale:1,prefix:'view-phone-'});
  const cfg = VIEWMODEL_CONFIG[kind] || VIEWMODEL_CONFIG.flashlight;
  const base = [...torchModel(flash), ...grippingPaw(), ...dustPieces(flash)];
  return placePieces(base, {x: cfg.x, y: cfg.y, z: cfg.z, scale: cfg.scale, prefix: 'view-'});
@@ -35,9 +37,11 @@ export function drawViewModel(renderer, kind='flashlight', state={}){
  const {camera, right, up, forward, time=0, flash=true, motion={}} = state;
  const gl = renderer.gl;
 
- const pieces = flashlightPieces(flash);
- const {vertices: base, indices} = renderer.handGeometry[flash?'on':'off'] ??= geometry(pieces);
- const vertices = renderer.handVertices ??= new Float32Array(base.length);
+ if(kind==='empty')return;
+ const cacheKey=kind==='phone'?'phone':flash?'on':'off';
+ const pieces = kind==='phone'?(cache.phone??=viewModelPieces('phone')):flashlightPieces(flash);
+ const {vertices: base, indices} = renderer.handGeometry[cacheKey] ??= geometry(pieces);
+ const vertices = (renderer.viewVertices??={})[cacheKey] ??= new Float32Array(base.length);
  vertices.set(base);
 
  const reduced = !!motion.reduced;
@@ -67,7 +71,7 @@ export function drawViewModel(renderer, kind='flashlight', state={}){
  const crouchDrop = motion.crouched ? -0.040 : 0;
 
  const totalOffsetX = breathX + walkSwayX + driftX;
- const totalOffsetY = breathY + walkBobY + driftY - recoil * 0.35 - clickJolt + crouchDrop;
+ const totalOffsetY = breathY + walkBobY + driftY - recoil * 0.35 - clickJolt + crouchDrop + (motion.equipLift||0);
  const totalOffsetZ = -recoil * 0.75;
 
  // Transform vertices into camera-oriented world space
