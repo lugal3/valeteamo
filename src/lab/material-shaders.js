@@ -24,9 +24,15 @@ varying float vArt,vStyle,vDistance;
 uniform vec3 uEye,uLightEye,uForward,uRight,uUp;
 uniform sampler2D uAtlas,uLightDepth,uMaterials;
 uniform float uFlash,uOcclude;
+uniform float uTime;
+uniform float uAtlasSize,uTileSize,uGutter,uInner;
 void main(){
  float tile=mod(floor(vStyle+.01),16.0);
- vec2 atlasUV=(vec2(mod(tile,4.0),floor(tile/4.0))*${TILE_SIZE.toFixed(1)}+${GUTTER.toFixed(1)}+fract(vUV)*${INNER.toFixed(1)})/${ATLAS_SIZE.toFixed(1)};
+ float aSize=uAtlasSize>0.0?uAtlasSize:${ATLAS_SIZE.toFixed(1)};
+ float tSize=uTileSize>0.0?uTileSize:${TILE_SIZE.toFixed(1)};
+ float gSize=uGutter>0.0?uGutter:${GUTTER.toFixed(1)};
+ float iSize=uInner>0.0?uInner:${INNER.toFixed(1)};
+ vec2 atlasUV=(vec2(mod(tile,4.0),floor(tile/4.0))*tSize+gSize+fract(vUV)*iSize)/aSize;
  vec4 material=texture2D(uMaterials,atlasUV);
  vec3 N=normalize(vNormal),T=vTangent;
  if(uOcclude>.5 && vArt<.5 && vDistance<5.0 && vStyle<63.5){
@@ -48,18 +54,26 @@ void main(){
  }
  vec3 delta=vWorld-uLightEye;float d=max(length(delta),.1);
  vec3 direction=delta/d;float cone=dot(direction,uForward);
- float beam=smoothstep(.66,.96,cone)*uFlash*1.45/(1.0+.055*d*d);
+ float wide=smoothstep(.58,.94,cone);float hotspot=pow(smoothstep(.82,.985,cone),2.0);
+ float beam=(wide*.82+hotspot*.88)*uFlash*1.45/(1.0+.055*d*d);
  if(beam>.01 && uOcclude>.5){
   vec2 lightUV=vec2(dot(delta,uRight),dot(delta,uUp))/max(.001,dot(delta,uForward));
   float wall=texture2D(uLightDepth,lightUV/${2*LIGHT_SPREAD}+.5).r*${LIGHT_REACH.toFixed(1)};
   beam*=1.0-smoothstep(wall+.07,wall+.22,d);
  }
  beam*=.72+.28*max(0.0,dot(N,-direction));
+ float motes=0.0;
+ if(uFlash>.5 && d<3.2 && wide>.65){
+  vec3 mPos=vWorld*6.0+vec3(sin(uTime*.35),cos(uTime*.28),sin(uTime*.42));
+  float mRand=fract(sin(dot(floor(mPos),vec3(12.9898,78.233,45.5432)))*43758.5453);
+  if(mRand>.965)motes=smoothstep(.35,0.0,length(fract(mPos)-.5))*.22;
+ }
  vec3 l1=vWorld-vec3(2.2,1.25,8.1),l2=vWorld-vec3(2.5,4.35,7.5),l3=vWorld-vec3(11.15,1.25,2.8);
  float upper=step(3.15,vWorld.y);
- float warmth=(1.0-upper)*(.32/(1.0+.17*dot(l1,l1))*(1.0-step(4.4,vWorld.x))+.27/(1.0+.12*dot(l3,l3))*step(7.5,vWorld.x))+upper*.34/(1.0+.15*dot(l2,l2));
+ float kFlicker=1.0-.30*step(.93,fract(sin(floor(uTime*7.5)*123.45)*43758.5453));
+ float warmth=(1.0-upper)*(.32/(1.0+.17*dot(l1,l1))*(1.0-step(4.4,vWorld.x))+.27*kFlicker/(1.0+.12*dot(l3,l3))*step(7.5,vWorld.x))+upper*.34/(1.0+.15*dot(l2,l2));
  float facing=.80+.20*max(0.0,dot(N,normalize(vec3(.3,.8,.4))));
- float lighting=(.60+warmth+beam)*facing;
+ float lighting=(.60+warmth+beam+motes)*facing;
  vec3 color=vColor*material.rrr*1.075;
  if(vArt>.5){vec4 painted=texture2D(uAtlas,vUV);color=mix(color,painted.rgb,painted.a*.96);}
  float rough=material.a,shine=0.0;

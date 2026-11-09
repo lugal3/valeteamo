@@ -4,7 +4,7 @@ import {HIDE_SECONDS,hidingFrame} from './hiding.js';
 import {createHouse,HEIGHT,HOUSE,blocked,groundHeight,lineBlocked,setDoor,setDrawer,poseFurniture,roomAt} from './world.js';
 import {HouseRenderer,pickupGeometry} from './renderer.js';
 import {HouseSound} from './sound.js';
-import {applyLookDelta,followLook,readCameraSettings,writeCameraSettings,DEFAULT_CAMERA_SETTINGS} from './camera-controls.js';
+import {applyLookDelta,followLook,readCameraSettings,writeCameraSettings,DEFAULT_CAMERA_SETTINGS,SENSITIVITY_MIN,SENSITIVITY_MAX,SENSITIVITY_STEP} from './camera-controls.js';
 import {WINDOW_SHOT_SECONDS,WINDOW_LANDING,windowIntroCamera,windowIntroState,shouldPlayWindowIntro} from './window-intro.js';
 import {navigate,smoothAxis,getStairDirection} from './navigation.js';
 import {interactionTarget,canApproachDoor} from './interactions.js';
@@ -43,7 +43,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    <button data-act="exit" class="lab-exit">← ${config.trial?'Pruebas':demo?'Cumpleaños':'Pruebas'}</button>
    <div class="lab-title"><b>CASA DE LOS RECUERDOS</b><small id="lab-floor">PLANTA BAJA · EXPLORACIÓN</small></div>
    <details class="lab-camera-settings" id="lab-camera-settings"><summary aria-label="Ajustes de la casa">⚙ Ajustes</summary><div class="lab-camera-panel">
-     <label>Velocidad de giro <input data-setting="sensitivity" aria-label="Sensibilidad de giro" type="range" min=".35" max="2" step=".05" value=".82"></label>
+     <label>Velocidad de giro <input data-setting="sensitivity" aria-label="Sensibilidad de giro" type="range" min="${SENSITIVITY_MIN}" max="${SENSITIVITY_MAX}" step="${SENSITIVITY_STEP}" value="${DEFAULT_CAMERA_SETTINGS.sensitivity}"></label>
      <label class="lab-invert-label"><input data-setting="invertX" type="checkbox"> Invertir giro horizontal</label>
      <label>Calidad de imagen <select data-setting="quality" aria-label="Calidad gráfica"><option value="medium">Detalles (auto)</option><option value="low">Modo fluido</option></select></label>
      <small>Arrastra a la derecha para mirar a la derecha.</small>
@@ -75,7 +75,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  <div id="lab-dialog" class="lab-dialog lab-hidden"></div>
  <details id="lab-diagnostics" class="lab-diagnostics ${demo?'lab-hidden':''}"><summary>Diagnóstico / ajustes</summary>
   <div id="lab-metrics">Cargando…</div>
-  <label>Sensibilidad de cámara <input data-setting="sensitivity" type="range" min=".45" max="2" step=".05" value="1"></label>
+  <label>Sensibilidad de cámara <input data-setting="sensitivity" type="range" min="${SENSITIVITY_MIN}" max="${SENSITIVITY_MAX}" step="${SENSITIVITY_STEP}" value="${DEFAULT_CAMERA_SETTINGS.sensitivity}"></label>
   <label><input data-setting="bob" type="checkbox" checked> Balanceo de cámara</label>
   <label>Calidad <select data-setting="quality"><option value="medium">Media · hasta 60 FPS</option><option value="low">Baja · hasta 30 FPS</option></select></label>
   <label>Ambiente <input data-setting="ambient" type="range" min="0" max="1" step=".05" value=".4"></label>
@@ -88,8 +88,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const controller=new AbortController(),signal=controller.signal;
  let renderer,world,puzzle=createHousePuzzle(config.entry),sound=new HouseSound(),s,raf=0,last=0,lastPaint=0,fps=0,elapsed=0,toastUntil=0,lookPointer=null,stickPointer=null;
  let active=true,ready=false,hasFocus=true,focus=null,lookLast={x:0,y:0},paused=false,modal='',intro=true,contextLost=false;
- let lookTarget={yaw:Math.PI,pitch:0},cinematic=null,poseTransition=null,handAction=0,lastInteraction=-Infinity;
- const handDrift={x:0,y:0};
+ let lookTarget={yaw:Math.PI,pitch:0},cinematic=null,poseTransition=null,handAction=0,clickAction=0,lastInteraction=-Infinity;
+ const handDrift={x:0,y:0,vx:0,vy:0};
  const manuallyClosed=new Set(),reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
  const keys=new Set(),joystick={x:0,z:0},velocity={forward:0,side:0};
  const cameraSettings=(()=>{try{return readCameraSettings(window.localStorage)}catch{return {...DEFAULT_CAMERA_SETTINGS}}})();
@@ -130,11 +130,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   $('lab-intro-caption').textContent='Una ventana entreabierta…';
  }
  function reset(){
-  animator.reset();cinematic=null;poseTransition=null;paused=false;manuallyClosed.clear();lastInteraction=-Infinity;handAction=0;
+  animator.reset();cinematic=null;poseTransition=null;paused=false;manuallyClosed.clear();lastInteraction=-Infinity;handAction=0;clickAction=0;
   sound.setTension(.55);
   root.classList.remove('lab-intro-active');$('lab-window-intro').classList.add('lab-hidden');$('lab-camera-settings').open=false;
   world=createHouse(checkpoint);puzzle=createHousePuzzle(config.entry);
-  poseFurniture(world.entryWindow,1);handDrift.x=handDrift.y=0;
+  poseFurniture(world.entryWindow,1);handDrift.x=handDrift.y=handDrift.vx=handDrift.vy=0;
   if(demo){
    const key=world.objects.find(o=>o.id==='key');key.taken=!puzzle.drawer||puzzle.key;
    setDrawer(world.objects.find(o=>o.id==='drawer'),puzzle.drawer);
@@ -161,7 +161,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   sound.resume();
   if(!demo&&!s.flashlight&&s.battery<=0){say('La linterna no tiene batería. Abre la mochila.');return;}
   s.flashlight=!s.flashlight;play('light');say(s.flashlight?'Linterna encendida':'Linterna apagada');
-  handAction=1;
+  handAction=1;clickAction=1;
  }
  function crouch(){if(s.hidden||s.lying)return;
   if(s.crouched&&!canStand(s,world)){say('No hay espacio suficiente para levantarte');return;}
@@ -309,13 +309,19 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   updateFurniture(world.objects,dt,s);
   if(demo&&!puzzle.door&&world.objects.find(o=>o.id==='dormitorio').open)puzzle=puzzleEvent(puzzle,'door');
   handAction=Math.max(0,handAction-dt*3.5);
+  clickAction=Math.max(0,clickAction-dt*6.0);
   const turn=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0);
   lookTarget.yaw+=turn*dt*1.65;
   lookTarget.pitch=clamp(lookTarget.pitch+((keys.has('ArrowUp')?1:0)-(keys.has('ArrowDown')?1:0))*dt*1.12,-1.10,1.10);
   if(s.hidden){const limit=s.hidden.hideType==='wardrobe'?.28:.6;lookTarget.yaw=clamp(lookTarget.yaw,s.hidden.yaw-limit,s.hidden.yaw+limit);lookTarget.pitch=clamp(lookTarget.pitch,-.14,.14);}
   const follow=followLook(s,lookTarget,dt,20);s.yaw=follow.yaw;s.pitch=follow.pitch;
-  handDrift.x=smoothAxis(handDrift.x,clamp(-(lookTarget.yaw-s.yaw)*.035,-.025,.025),dt,9);
-  handDrift.y=smoothAxis(handDrift.y,clamp(-(lookTarget.pitch-s.pitch)*.025,-.015,.015),dt,9);
+  const targetDriftX=clamp(-(lookTarget.yaw-s.yaw)*.04,-.03,.03);
+  const targetDriftY=clamp(-(lookTarget.pitch-s.pitch)*.03,-.02,.02);
+  const springK=110,dampingC=16;
+  const ax=(targetDriftX-handDrift.x)*springK-handDrift.vx*dampingC;
+  const ay=(targetDriftY-handDrift.y)*springK-handDrift.vy*dampingC;
+  handDrift.vx+=ax*dt;handDrift.x=clamp(handDrift.x+handDrift.vx*dt,-.04,.04);
+  handDrift.vy+=ay*dt;handDrift.y=clamp(handDrift.y+handDrift.vy*dt,-.03,.03);
   let forward=(keys.has('w')||keys.has('W')?1:0)-(keys.has('s')||keys.has('S')?1:0)-joystick.z;
   let side=(keys.has('d')||keys.has('D')?1:0)-(keys.has('a')||keys.has('A')?1:0)+joystick.x;
   if(s.hidden||s.lying){forward=side=0;}
@@ -343,7 +349,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const shotDelta=Math.min(.1,Math.max(0,(now-last)/1000||0)),dt=Math.min(.055,shotDelta);last=now;lastPaint=now;
   if(!s||!renderer)return;
   updateHiding(dt);
-  let view=cameraOf(s),hand=!s.hidden&&!s.lying&&!poseTransition,torch=s.flashlight&&!s.hidden,introHands=null;
+  let view=cameraOf(s),hand=!s.hidden&&!s.lying&&!poseTransition,torch=s.flashlight&&!s.hidden,introHands=null,distance=0;
   if(cinematic){
    if(!paused&&!modal&&!isPortrait()&&!document.hidden&&hasFocus)cinematic.elapsed+=shotDelta;
    const progress=Math.min(1,cinematic.elapsed/WINDOW_SHOT_SECONDS);
@@ -354,12 +360,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(progress>=1){finishWindowIntro();view=cameraOf(s);hand=true;}
   }else{
    const beforeX=s.x,beforeZ=s.z;tick(dt);view=cameraOf(s);elapsed+=isPaused()?0:dt;
-   const dx=s.x-beforeX,dz=s.z-beforeZ,distance=Math.hypot(dx,dz),divisor=distance||1;
+   const dx=s.x-beforeX,dz=s.z-beforeZ;distance=Math.hypot(dx,dz);const divisor=distance||1;
    animator.advance(dt,{distance,forward:(dx*Math.sin(s.yaw)+dz*Math.cos(s.yaw))/divisor,side:(dx*Math.cos(s.yaw)-dz*Math.sin(s.yaw))/divisor,paused:isPaused(),reduced:reducedMotion.matches});
   }
   const outdoor=view.x<0||view.x>HOUSE.width||view.z<0||view.z>HOUSE.depth?1:Math.max(0,1-Math.min(view.x,HOUSE.width-view.x,view.z,HOUSE.depth-view.z)/1.5)*.22;
   sound.locate({room:roomAt(view.x,view.z,view.y-1.6),outdoor,hidden:!!s.hidden});
-  try{renderer.render(view,torch,elapsed,hand,{bob:s.bob,action:handAction,reduced:s.reduceBob,swayX:handDrift.x,swayY:handDrift.y,introHands,animator,feetY:s.y,crouched:s.crouched});}catch(e){contextLost=true;showModal('Error de renderizado',`<p>${escapeHTML(String(e.message||e))}</p>`,[['Volver a pruebas','exit']]);}
+  try{renderer.render(view,torch,elapsed,hand,{bob:s.bob,action:handAction,clickAction,speed:distance/Math.max(dt,.001),reduced:s.reduceBob,swayX:handDrift.x,swayY:handDrift.y,introHands,animator,feetY:s.y,crouched:s.crouched});}catch(e){contextLost=true;showModal('Error de renderizado',`<p>${escapeHTML(String(e.message||e))}</p>`,[['Volver a pruebas','exit']]);}
   frameCount++;
   if(now-statsAt>1000){
    fps=Math.round(frameCount*1000/(now-statsAt));

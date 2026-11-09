@@ -1,0 +1,97 @@
+{
+  "browser": "158.0.8127.18",
+  "gpu": "SwiftShader software renderer (not physical GPU)",
+  "note": "FPS values are from SwiftShader; real GPU will be significantly faster. Use for relative comparison only.",
+  "results": [
+    {
+      "zone": "01-recibidor",
+      "medianMs": 70.8,
+      "fps": 14.1,
+      "p90Ms": 76.6,
+      "vertexCount": 23428,
+      "triangleCount": 11304,
+      "resolution": "960x540 (destroyed)"
+    },
+    {
+      "zone": "02-salon",
+      "medianMs": 39.4,
+      "fps": 25.4,
+      "p90Ms": 42.6,
+      "vertexCount": 23428,
+      "triangleCount": 11304,
+      "resolution": "960x540 (destroyed)"
+    },
+    {
+      "zone": "03-estudio",
+      "medianMs": 35.5,
+      "fps": 28.2,
+      "p90Ms": 45.2,
+      "vertexCount": 23428,
+      "triangleCount": 11304,
+      "resolution": "960x540 (destroyed)"
+    },
+    {
+      "zone": "04-escalera",
+      "medianMs": 65.3,
+      "fps": 15.3,
+      "p90Ms": 77.7,
+      "vertexCount": 23428,
+      "triangleCount": 11304,
+      "resolution": "960x540 (destroyed)"
+    },
+    {
+      "zone": "05-bano-espejo",
+      "medianMs": 125.3,
+      "fps": 8,
+      "p90Ms": 141.2,
+      "vertexCount": 23428,
+      "triangleCount": 11304,
+      "resolution": "960x540 (destroyed)"
+    },
+    {
+      "zone": "06-dormitorio",
+      "medianMs": 47.4,
+      "fps": 21.1,
+      "p90Ms": 55.8,
+      "vertexCount": 23428,
+      "triangleCount": 11304,
+      "resolution": "960x540 (destroyed)"
+    },
+    {
+      "zone": "07-lectura",
+      "medianMs": 49.7,
+      "fps": 20.1,
+      "p90Ms": 51.6,
+      "vertexCount": 23428,
+      "triangleCount": 11304,
+      "resolution": "960x540 (destroyed)"
+    },
+    {
+      "zone": "08-musica",
+      "medianMs": 67.3,
+      "fps": 14.9,
+      "p90Ms": 77.1,
+      "vertexCount": 23428,
+      "triangleCount": 11304,
+      "resolution": "960x540 (destroyed)"
+    },
+    {
+      "zone": "09-cocina",
+      "medianMs": 50,
+      "fps": 20,
+      "p90Ms": 60.9,
+      "vertexCount": 23428,
+      "triangleCount": 11304,
+      "resolution": "960x540 (destroyed)"
+    },
+    {
+      "zone": "10-exterior",
+      "medianMs": 79.5,
+      "fps": 12.6,
+      "p90Ms": 91.5,
+      "vertexCount": 23428,
+      "triangleCount": 11304,
+      "resolution": "960x540 (destroyed)"
+    }
+  ]
+}

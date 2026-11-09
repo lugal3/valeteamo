@@ -6,7 +6,23 @@
 #lab3d .lab-camera-panel button{min-height:44px;font:700 13px system-ui}
 #lab3d .lab-camera-panel input[type=range]{touch-action:pan-x}
 #lab3d .lab-buttons button[hidden]{display:none!important}
-#lab3d .lab-cross.lab-target{border-color:#ffe9b5;background:#ffe9b533;box-shadow:0 0 12px #ffdfa977}
+#lab3d button{transition:transform .09s ease-out,box-shadow .15s ease-out,background-color .15s ease-out}
+#lab3d button:active{transform:scale(.92)}
+#lab3d #lab-interact:not([hidden]){animation:lab-pulse-interact 1.6s ease-in-out infinite}
+@keyframes lab-pulse-interact{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,233,181,.45)}50%{transform:scale(1.05);box-shadow:0 0 14px 4px rgba(255,233,181,.25)}}
+
+#lab3d .lab-cross{transition:transform .14s ease-out,border-color .14s ease-out,background-color .14s ease-out,box-shadow .14s ease-out}
+#lab3d .lab-cross.lab-target{border-color:#ffe9b5;background:#ffe9b533;box-shadow:0 0 14px #ffdfa988;transform:translate(-50%,-50%) scale(1.22)}
+
+#lab3d .lab-focus:not(:empty){animation:lab-focus-pop .18s cubic-bezier(.16,1,.3,1)}
+@keyframes lab-focus-pop{from{opacity:0;transform:translate(-50%,6px) scale(.95)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+
+#lab3d .lab-toast:not(:empty){animation:lab-toast-in .22s cubic-bezier(.16,1,.3,1)}
+@keyframes lab-toast-in{from{opacity:0;transform:translate(-50%,12px) scale(.94)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+
+@media(prefers-reduced-motion:reduce){
+ #lab3d button,#lab3d #lab-interact,#lab3d .lab-cross,#lab3d .lab-focus,#lab3d .lab-toast{animation:none!important;transition:none!important}
+}
 #lab3d .lab-buttons button:focus-visible,#lab3d .lab-top button:focus-visible,#lab3d summary:focus-visible{outline:3px solid #ffe3ad;outline-offset:3px}
 #lab3d .lab-camera-panel .lab-settings-note{border-top:1px solid #ffe4dd44;padding-top:8px}
 #lab3d .lab-objective,#lab3d .lab-camera-panel{backdrop-filter:none}

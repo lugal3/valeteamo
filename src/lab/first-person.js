@@ -1,4 +1,6 @@
-import {CHIBI,chibiPiece,placePieces,torchModel,grippingPaw} from './chibi-model.js';
+import {CHIBI,chibiPiece} from './chibi-model.js';
+export {flashlightPieces} from './viewmodel.js';
+
 const cache={};
 export function climbingHandPieces(side){
  return cache['climb'+side]??=[
@@ -8,9 +10,4 @@ export function climbingHandPieces(side){
   chibiPiece('wrist',0,-.047,.095,.12,.10,.13),
   chibiPiece('cuff',0,-.07,.15,.155,.075,.18,CHIBI.pink)
  ];
-}
-export function flashlightPieces(flash){
- // Round white mitten wraps the grip, with a tucked thumb and three soft knuckles.
- // Forward-biased placement keeps the silhouette below and right of the reticle.
- return cache[flash?'on':'off']??=placePieces([...torchModel(flash),...grippingPaw()],{x:.47,y:-.34,z:1.0,scale:.85,prefix:'view-'});
 }

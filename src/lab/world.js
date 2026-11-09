@@ -10,6 +10,10 @@ export const MATERIAL = {
   trim: [0.80, 0.60, 0.57], terracotta: [0.72, 0.42, 0.36], stem: [0.31, 0.43, 0.29],
   glove: [0.98, 0.88, 0.84], pawpad: [0.96, 0.54, 0.62], torchmetal: [0.39, 0.47, 0.57], torchglass: [1.0, 0.93, 0.64], bow: [0.84, 0.23, 0.36]
   ,grass:[.27,.39,.30],stone:[.55,.53,.51],asphalt:[.19,.22,.28],roof:[.27,.25,.32],carpaint:[.30,.50,.56]
+  // Per-room wall palettes (Fase 3)
+  ,wall_salon:[0.86,0.72,0.74],wall_kitchen:[0.72,0.84,0.77],wall_bath:[0.70,0.76,0.86]
+  ,wall_bedroom:[0.90,0.82,0.78],wall_study:[0.73,0.78,0.69],wall_stairs:[0.68,0.68,0.72]
+  ,stain:[0.26,0.22,0.30],cobweb:[0.76,0.74,0.79]
 };
 export function createHouse(spawn='ground'){return buildHouse(spawn);}
 

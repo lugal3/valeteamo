@@ -9,12 +9,12 @@
       "quality": "medium",
       "width": 768,
       "height": 432,
-      "medianFrameMs": 35.5,
-      "p90FrameMs": 37.29999999701977,
+      "medianFrameMs": 141.20000000298023,
+      "p90FrameMs": 155.60000000149012,
       "readbackPixel": [
-        53,
-        32,
-        32,
+        64,
+        64,
+        74,
         255
       ]
     },
@@ -23,12 +23,12 @@
       "quality": "low",
       "width": 528,
       "height": 297,
-      "medianFrameMs": 18.899999991059303,
-      "p90FrameMs": 20.600000008940697,
+      "medianFrameMs": 70.20000000298023,
+      "p90FrameMs": 78.10000000149012,
       "readbackPixel": [
-        53,
-        32,
-        32,
+        64,
+        64,
+        74,
         255
       ]
     },
@@ -37,12 +37,12 @@
       "quality": "medium",
       "width": 768,
       "height": 432,
-      "medianFrameMs": 44.19999998807907,
-      "p90FrameMs": 45.79999999701977,
+      "medianFrameMs": 128.39999999850988,
+      "p90FrameMs": 140.90000000596046,
       "readbackPixel": [
-        52,
-        32,
-        32,
+        63,
+        68,
+        77,
         255
       ]
     },
@@ -51,12 +51,12 @@
       "quality": "low",
       "width": 528,
       "height": 297,
-      "medianFrameMs": 21.299999997019768,
-      "p90FrameMs": 21.899999991059303,
+      "medianFrameMs": 38.400000005960464,
+      "p90FrameMs": 42.79999999701977,
       "readbackPixel": [
-        52,
-        32,
-        32,
+        63,
+        68,
+        77,
         255
       ]
     }
