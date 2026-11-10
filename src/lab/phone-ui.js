@@ -3,7 +3,7 @@ const dockIcon=kind=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 
 export class PhoneUI{
  constructor(root,onEquip,onClose,{canUse=()=>true,onEdit=()=>{}}={}){
-  this.root=root;this.open=false;this.app='home';this.last='';this.score=0;this.direction=[1,0];this.pending=[1,0];this.resetSnake();
+  this.root=root;this.open=false;this.app='home';this.last='';this.readCount=0;this.score=0;this.direction=[1,0];this.pending=[1,0];this.resetSnake();
   this.canUse=canUse;this.onEdit=onEdit;this.editing=false;this.preview=false;
   try{this.layout=readHUD(window.localStorage);}catch{this.layout={...DEFAULT_HUD};}
   const host=document.createElement('div');host.className='house-equipment';host.innerHTML=`<nav class="house-hotbar" aria-label="Objetos equipados"><button data-equip="empty" aria-label="Mano vacía" title="1 · Mano vacía"><span>✋</span><small>1</small></button><button data-equip="flashlight" aria-label="Equipar linterna" title="2 · Linterna"><span>🔦</span><small>2</small></button><button data-equip="phone" aria-label="Equipar teléfono" title="3 · Teléfono"><span>📱</span><small>3</small><b class="phone-badge" hidden>●</b></button></nav><button class="phone-expand" hidden>Ver teléfono</button><div class="phone-notice" role="status" hidden></div>
@@ -48,7 +48,8 @@ export class PhoneUI{
  turn(index){const d=[[0,-1],[1,0],[0,1],[-1,0]][index];if(d[0]!==-this.direction[0]||d[1]!==-this.direction[1])this.pending=d;}
  key(key){const n={ArrowUp:0,w:0,ArrowRight:1,d:1,ArrowDown:2,s:2,ArrowLeft:3,a:3}[key];if(this.open&&this.app==='snake'&&n!==undefined)this.turn(n);}
  update(events,dt){
-  const badge=this.host.querySelector('.phone-badge');badge.hidden=!events.notified||events.replied;const notice=this.host.querySelector('.phone-notice');notice.hidden=!events.notified||events.replied||this.open;notice.textContent='📩 Mi Luis ❤️ · Tienes un mensaje';
+  if(!events.messages.length)this.readCount=0;if(this.open&&this.app==='messages')this.readCount=events.messages.length;
+  const unread=events.messages.length>this.readCount,badge=this.host.querySelector('.phone-badge');badge.hidden=!unread;const notice=this.host.querySelector('.phone-notice');notice.hidden=!unread||this.open;notice.textContent='📩 Mi Luis ❤️ · Tienes un mensaje';
   if(!this.open)return;if(this.app==='messages')events.read();
   if(this.app==='snake'&&!this.dead){this.clock+=dt;if(this.clock>=.18){this.clock=0;this.direction=this.pending;const head=[this.snake[0][0]+this.direction[0],this.snake[0][1]+this.direction[1]],eat=head[0]===this.food[0]&&head[1]===this.food[1],body=eat?this.snake:this.snake.slice(0,-1);if(head.some(v=>v<0||v>=12)||body.some(p=>p[0]===head[0]&&p[1]===head[1]))this.dead=true;else{this.snake.unshift(head);if(eat){this.score++;const free=[];for(let x=0;x<12;x++)for(let y=0;y<12;y++)if(!this.snake.some(p=>p[0]===x&&p[1]===y))free.push([x,y]);if(free.length)this.food=free[Math.floor(Math.random()*free.length)];else this.dead=true;}else this.snake.pop();}}}
   const stamp=this.app+'|'+events.messages.length+'|'+(events.replyAt!==null)+'|'+this.score+'|'+this.dead;

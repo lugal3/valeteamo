@@ -82,6 +82,7 @@ const assert=require('node:assert/strict');
  const exit=hidingFrame({from:inside,inside,outside,entering:false,progress:1});assert.equal(exit.camera.x,outside.x);assert.equal(exit.doorAmount,0);
  await require('./repairs-events.cjs')();
  await require('./sensations.cjs')();
+ await require('./pursuer.cjs')();
  console.log('PASS V4: defined rooms, six musical posters, closed hatch, real louver sight gaps and deterministic hiding endpoints');
  console.log('PASS: material cache, tangent orientation, staged drawer motion/contents, reduced motion, door safety, rounded corners and all spawns');
  console.log('PASS: 3D layout, floors, stairs, collisions, occlusion, doors/drawer and deterministic content');

@@ -1,5 +1,7 @@
 # VALETEAMO — CONTEXTO MAESTRO PARA CODEX
 
+**Perseguidor y grabaciones (10 de noviembre de 2026):** iteración local en `codex/perseguidor-y-audio-grabado`, sobre `b896135`. Dieciséis recortes de los once archivos aportados y continuación tras el aviso: llegada, escondite, búsqueda/persecución física, captura/reintento y avance hasta Louis. Ver `docs/PERSEGUIDOR-Y-AUDIO-GRABADO.md`. Este tramo sustituye el antiguo final del primer escondite solo en el recorrido normal 3D. Sin merge ni despliegue; procedencia/licencias de los audios pendientes de completar antes de publicar.
+
 **Sonido, HUD y emotes (9 de noviembre de 2026):** nueva iteración de la casa sobre `8768a07`, en `codex/sonido-hud-y-emotes`: foley de puertas/peldaños, zonas de crujido, hotbar lateral configurable, teléfono con marco y fondo visible, agacharse y emotes del rig. Alcance, pruebas y estado de publicación en `docs/SONIDO-HUD-Y-EMOTES.md`. El 2D permanece protegido.
 
 **Reparaciones y teléfono (9 de noviembre de 2026):** sobre `4a74efa`, se corrigen rangos de geometría dinámica, llave/cajón y espejo desde el pasillo. Hotbar, teléfono, respuestas automáticas y primera llegada con diez segundos para esconderse. El recorrido normal 3D termina en esa etapa; todavía no hay perseguidor. Ver `docs/REPARACIONES-ANTIGRAVITY-Y-TELEFONO.md`. Se mantienen las mejoras visuales de Anti-Gravity y la protección del 2D.

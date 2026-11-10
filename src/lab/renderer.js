@@ -4,6 +4,7 @@ import {BATH_MIRROR,mirrorVisible,kittyMirrorPieces,reflectedBathroom,reflectMes
 import {ART_COUNT,createArtworkCanvas} from './artwork.js';
 import {climbingHandPieces} from './first-person.js';
 import {drawViewModel} from './viewmodel.js';
+import {pursuerPieces} from './pursuer-model.js';
 import {VERTEX_SHADER as VS,FRAGMENT_SHADER as FS} from './material-shaders.js';
 // Minimal WebGL1 3D renderer: real perspective, depth buffer, world geometry and spotlight.
 // No additional packages, CDNs, runtime downloads or concurrent Phaser loops.
@@ -224,6 +225,7 @@ export class HouseRenderer {
    gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[4]);gl.bufferSubData(gl.ARRAY_BUFFER,0,this.kittyVertices);this.mirrorPose=pose;this.mirrorUploads++;
   }
   draw(2);
+  if(motion.pursuer?.active)this.drawPursuer(motion.pursuer,true);
   gl.uniform1f(this.uniform.uMirrorPass,0);gl.frontFace(gl.CCW);gl.colorMask(false,false,false,false);gl.depthFunc(gl.ALWAYS);draw(0);
   gl.colorMask(true,true,true,true);gl.depthFunc(gl.LESS);gl.stencilMask(0xff);gl.disable(gl.STENCIL_TEST);this.mirrorDrawn=true;
  }
@@ -296,6 +298,15 @@ export class HouseRenderer {
   poseReflectedKitty(this.actorMesh.vertices,this.actorVertices,subject,{feetY:motion.feetY},this.actorBinding);reflectMesh(this.actorVertices);
   gl.bindBuffer(gl.ARRAY_BUFFER,this.handVbo);gl.bufferData(gl.ARRAY_BUFFER,this.actorVertices,gl.DYNAMIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.handIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,this.actorMesh.indices,gl.STATIC_DRAW);this.handIndexKind='actor';this.bind(this.handVbo,this.handIbo);gl.drawElements(gl.TRIANGLES,this.actorMesh.indices.length,gl.UNSIGNED_SHORT,0);
  }
+ drawPursuer(actor,mirrored=false){
+  const gl=this.gl;if(!this.pursuerMesh){const parts=pursuerPieces();this.pursuerMesh=geometry(parts);this.pursuerGroups=parts.map((p,i)=>({id:p.id,start:this.pursuerMesh.ranges[i].start/16,end:this.pursuerMesh.ranges[i].end/16}));this.pursuerVertices=new Float32Array(this.pursuerMesh.vertices.length);this.pursuerVbo=gl.createBuffer();this.pursuerIbo=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.pursuerIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,this.pursuerMesh.indices,gl.STATIC_DRAW);}
+  const base=this.pursuerMesh.vertices,out=this.pursuerVertices,c=Math.cos(actor.yaw),s=Math.sin(actor.yaw),stride=Math.sin(actor.walk*7)*.30;
+  out.set(base);
+  for(const group of this.pursuerGroups){const limb=/^(leg|shoe|arm|hand)/.test(group.id),side=group.id.endsWith('-1')?-1:1,arm=/^(arm|hand)/.test(group.id),angle=limb?stride*side*(arm?-1:1):0,ca=Math.cos(angle),sa=Math.sin(angle),pivot=arm?1.35:.53;
+   for(let i=group.start*16;i<group.end*16;i+=16){const lx=base[i],dy=base[i+1]-pivot,lz=base[i+2],y=limb?pivot+dy*ca-lz*sa:base[i+1],z=limb?dy*sa+lz*ca:lz;out[i]=actor.x+lx*c+z*s;out[i+1]=actor.y+y;out[i+2]=actor.z-lx*s+z*c;for(const k of [6,13]){const nx=base[i+k],ny=base[i+k+1]*ca-base[i+k+2]*sa,nz=base[i+k+1]*sa+base[i+k+2]*ca;out[i+k]=nx*c+nz*s;out[i+k+1]=ny;out[i+k+2]=-nx*s+nz*c;}}
+  }
+  if(mirrored)reflectMesh(out);gl.bindBuffer(gl.ARRAY_BUFFER,this.pursuerVbo);gl.bufferData(gl.ARRAY_BUFFER,out,gl.DYNAMIC_DRAW);this.bind(this.pursuerVbo,this.pursuerIbo);gl.drawElements(gl.TRIANGLES,this.pursuerMesh.indices.length,gl.UNSIGNED_SHORT,0);
+ }
  resize(){
   const scale=this.quality==='low'?.55:.80;
   const dpr=Math.min(window.devicePixelRatio||1,1.7)*scale;
@@ -346,11 +357,12 @@ export class HouseRenderer {
   if(this.dynamicCount){this.bind(this.dynamicVbo,this.dynamicIbo);gl.drawElements(gl.TRIANGLES,this.dynamicCount,gl.UNSIGNED_SHORT,0);}
   this.bind(this.vbo,this.ibo);
   gl.drawElements(gl.TRIANGLES,this.count,gl.UNSIGNED_SHORT,0);
+  if(motion.pursuer?.active)this.drawPursuer(motion.pursuer);
   if(!motion.thirdPerson)this.drawMirror(camera,motion);else this.drawActor(motion.thirdPerson,motion);
   if(motion.introHands)this.drawClimbingHands(motion.introHands);
   if(showHand)this.drawFirstPerson(camera,right,up,forward,time,flash,motion);
  }
- destroy(){const gl=this.gl;for(const b of this.mirrorBuffers)gl.deleteBuffer(b);gl.deleteTexture(this.texture);gl.deleteTexture(this.lightTexture);for(const texture of this.materialTextures)gl.deleteTexture(texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.dynamicVbo);gl.deleteBuffer(this.dynamicIbo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);for(const p of Object.values(this.programs))gl.deleteProgram(p);this.canvas.width=1;this.canvas.height=1;}
+ destroy(){const gl=this.gl;if(this.pursuerVbo)gl.deleteBuffer(this.pursuerVbo);if(this.pursuerIbo)gl.deleteBuffer(this.pursuerIbo);for(const b of this.mirrorBuffers)gl.deleteBuffer(b);gl.deleteTexture(this.texture);gl.deleteTexture(this.lightTexture);for(const texture of this.materialTextures)gl.deleteTexture(texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.dynamicVbo);gl.deleteBuffer(this.dynamicIbo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);for(const p of Object.values(this.programs))gl.deleteProgram(p);this.canvas.width=1;this.canvas.height=1;}
 }
 export function pickupGeometry(objects){
  return objects.filter(o=>!o.taken&&(!o.concealed||o.dynamic)&&['battery','note','key'].includes(o.kind)).flatMap(o=>{

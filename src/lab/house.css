@@ -44,6 +44,10 @@
 #lab3d .house-hotbar button{position:relative;flex:0 0 var(--hud-slot,44px);width:var(--hud-slot,44px);height:var(--hud-slot,44px);min-width:0;min-height:0;padding:0;display:grid;place-items:center;border:1px solid transparent;border-radius:12px;background:transparent;color:#fff3eb;font:19px system-ui;box-shadow:none}
 #lab3d .house-hotbar small{position:absolute;bottom:2px;right:4px;font:8px system-ui;color:#e2cfdb99}
 #lab3d .house-hotbar svg{display:block;width:22px;height:22px;color:#f0dfe4}
+#lab3d .house-danger[data-level=watch]{background:#705229ee;border-color:#f1ca77}
+#lab3d .house-danger[data-level=chase]{background:#81293bee;border-color:#ff8694}
+#lab3d .house-danger{top:86px;font-size:15px;padding:8px 16px;max-width:calc(100vw - 170px);border-radius:14px}
+#lab3d.house-threat .lab-toast{top:134px}
 #lab3d .house-hotbar [aria-pressed=true]{background:#d9b6c51f;border-color:#f4d8bb9e;box-shadow:inset 0 0 0 1px #fff1db10}
 #lab3d .phone-badge{position:absolute;right:3px;top:0;color:#f1b4cb;font-size:12px}
 #lab3d .phone-expand{position:absolute;z-index:22;width:104px;height:32px;padding:3px 8px;border:1px solid #edcbd15c;border-radius:14px;background:#282230ab;color:#fce8ef;font:11px system-ui}

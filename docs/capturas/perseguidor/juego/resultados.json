@@ -1,0 +1,11 @@
+{
+  "webgl": 0,
+  "errors": [],
+  "clips": 16,
+  "capture": true,
+  "retry": true,
+  "hiddenEscape": true,
+  "advance": true,
+  "pause": true,
+  "audioClosed": true
+}
