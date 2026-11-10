@@ -1,6 +1,10 @@
 # Sonidos físicos, HUD configurable y emotes de la casa
 
-9 de noviembre de 2026. Rama `codex/sonido-hud-y-emotes`, sobre `8768a07`. Fuentes de producto exclusivamente en `src/lab/`. Se conserva Anti-Gravity y no se modifica el 2D ni su orquestación. Esta iteración no se fusiona a `main` ni se publica en Firebase sin un encargo de publicación.
+9 de noviembre de 2026. Rama `codex/sonido-hud-y-emotes`, sobre `8768a07`. Fuentes de producto exclusivamente en `src/lab/`. Se conserva Anti-Gravity y no se modifica el 2D ni su orquestación.
+
+**Publicación solicitada el 10 de noviembre de 2026:** el teléfono seguía mostrando la versión anterior porque esta rama aún no se había desplegado. Se autoriza publicar la iteración y verificar en Firebase la hotbar lateral, agacharse, editor, teléfono con marco y selector de emotes. La prueba de producción comprueba ahora esos elementos explícitamente, además de la entrada/salida y WebGL. El commit y el resultado del despliegue deben contrastarse con GitHub Actions y con los archivos JavaScript servidos por la web; la evidencia posterior queda en `capturas/sensaciones-3d/production/`.
+
+La inspección HTTP encontró además `Cache-Control: max-age=3600` en `/`, frente a `no-cache` en `/index.html`. Dentro de la corrección de actualización solicitada, `firebase.json` añade revalidación solamente para `/`. Impacto compartido: la portada de todas las experiencias consulta su versión actual; se mantienen rutas, código 2D, guardados y caché inmutable de archivos con hash. No se purgan datos del navegador. La prueba contra Firebase verifica la cabecera efectiva de la raíz. Un enlace con parámetro de versión permite acceder inmediatamente incluso si el navegador conservó el HTML anterior.
 
 ## Encargo aplicado y análisis
 
