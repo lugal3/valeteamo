@@ -1,0 +1,11 @@
+**/*.png
+!antes/844-02-telefono-y-aviso.png
+!despues/844-02-telefono-y-aviso.png
+!antes/844-06-peligro-con-telefono.png
+!despues/844-06-peligro-con-telefono.png
+!antes/568-05-esconderse.png
+!despues/568-05-esconderse.png
+!despues/568-03-anclaje-top.png
+!despues/1280-01-exploracion.png
+!compilado/00-compilacion-movil.png
+!compilado/01-emote-compilado.png

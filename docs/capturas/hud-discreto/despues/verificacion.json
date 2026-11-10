@@ -1,0 +1,1379 @@
+[
+  {
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "name": "01-exploracion",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 381.1875,
+        "y": 14,
+        "w": 175.140625,
+        "h": 24,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA BAJA · SALA DE ESTAR"
+      },
+      {
+        "selector": ".lab-objective",
+        "x": 563.21875,
+        "y": 58,
+        "w": 153.5625,
+        "h": 21.390625,
+        "font": 11,
+        "text": "✉ Busca la nota del pasillo"
+      },
+      {
+        "selector": ".lab-toast",
+        "x": 552.5,
+        "y": 84.390625,
+        "w": 175,
+        "h": 27.390625,
+        "font": 11,
+        "text": "Gangnam · mírate en el espejo"
+      },
+      {
+        "selector": ".lab-compass",
+        "x": 1243,
+        "y": 58,
+        "w": 25,
+        "h": 25,
+        "font": 10,
+        "text": "N ↑"
+      },
+      {
+        "selector": ".house-hotbar",
+        "x": 12,
+        "y": 243,
+        "w": 58,
+        "h": 154,
+        "font": 16,
+        "text": "123●"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "name": "02-telefono-y-aviso",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 295.1875,
+        "y": 14,
+        "w": 175.140625,
+        "h": 24,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA BAJA · SALA DE ESTAR"
+      },
+      {
+        "selector": ".lab-objective",
+        "x": 558.8125,
+        "y": 58,
+        "w": 162.359375,
+        "h": 21.390625,
+        "font": 11,
+        "text": "🚪 Sube y abre el dormitorio"
+      },
+      {
+        "selector": ".phone-notice",
+        "x": 558.96875,
+        "y": 84.390625,
+        "w": 162.0625,
+        "h": 44,
+        "font": 11,
+        "text": "Mi Luis ❤️ · Nuevo mensaje"
+      },
+      {
+        "selector": ".lab-compass",
+        "x": 1243,
+        "y": 58,
+        "w": 25,
+        "h": 25,
+        "font": 10,
+        "text": "N ↑"
+      },
+      {
+        "selector": ".house-hotbar",
+        "x": 12,
+        "y": 243,
+        "w": 58,
+        "h": 154,
+        "font": 16,
+        "text": "123●"
+      },
+      {
+        "selector": ".house-enable-sound",
+        "x": 968.015625,
+        "y": 4,
+        "w": 44,
+        "h": 44,
+        "font": 11,
+        "text": "🔊"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "name": "03-anclaje-top",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 381.1875,
+        "y": 14,
+        "w": 175.140625,
+        "h": 24,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA BAJA · SALA DE ESTAR"
+      },
+      {
+        "selector": ".lab-compass",
+        "x": 1243,
+        "y": 58,
+        "w": 25,
+        "h": 25,
+        "font": 10,
+        "text": "N ↑"
+      },
+      {
+        "selector": ".house-hotbar",
+        "x": 563,
+        "y": 64,
+        "w": 154,
+        "h": 58,
+        "font": 16,
+        "text": "123●"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "name": "03-anclaje-right",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 381.1875,
+        "y": 14,
+        "w": 175.140625,
+        "h": 24,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA BAJA · SALA DE ESTAR"
+      },
+      {
+        "selector": ".lab-compass",
+        "x": 1243,
+        "y": 58,
+        "w": 25,
+        "h": 25,
+        "font": 10,
+        "text": "N ↑"
+      },
+      {
+        "selector": ".house-hotbar",
+        "x": 1210,
+        "y": 243,
+        "w": 58,
+        "h": 154,
+        "font": 16,
+        "text": "123●"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "name": "03-anclaje-bottom",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 381.1875,
+        "y": 14,
+        "w": 175.140625,
+        "h": 24,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA BAJA · SALA DE ESTAR"
+      },
+      {
+        "selector": ".lab-compass",
+        "x": 1243,
+        "y": 58,
+        "w": 25,
+        "h": 25,
+        "font": 10,
+        "text": "N ↑"
+      },
+      {
+        "selector": ".house-hotbar",
+        "x": 563,
+        "y": 650,
+        "w": 154,
+        "h": 58,
+        "font": 16,
+        "text": "123●"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "name": "03-anclaje-left",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 295.1875,
+        "y": 14,
+        "w": 175.140625,
+        "h": 24,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA BAJA · SALA DE ESTAR"
+      },
+      {
+        "selector": ".lab-objective",
+        "x": 558.8125,
+        "y": 58,
+        "w": 162.359375,
+        "h": 21.390625,
+        "font": 11,
+        "text": "🚪 Sube y abre el dormitorio"
+      },
+      {
+        "selector": ".phone-notice",
+        "x": 558.96875,
+        "y": 84.390625,
+        "w": 162.0625,
+        "h": 44,
+        "font": 11,
+        "text": "Mi Luis ❤️ · Nuevo mensaje"
+      },
+      {
+        "selector": ".lab-compass",
+        "x": 1243,
+        "y": 58,
+        "w": 25,
+        "h": 25,
+        "font": 10,
+        "text": "N ↑"
+      },
+      {
+        "selector": ".house-hotbar",
+        "x": 12,
+        "y": 243,
+        "w": 58,
+        "h": 154,
+        "font": 16,
+        "text": "123●"
+      },
+      {
+        "selector": ".house-enable-sound",
+        "x": 968.015625,
+        "y": 4,
+        "w": 44,
+        "h": 44,
+        "font": 11,
+        "text": "🔊"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "name": "04-llegada",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 381.1875,
+        "y": 14,
+        "w": 175.140625,
+        "h": 24,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA ALTA · DORMITORIO"
+      },
+      {
+        "selector": ".house-danger",
+        "x": 539.390625,
+        "y": 58,
+        "w": 201.203125,
+        "h": 30.796875,
+        "font": 12,
+        "text": "Alguien está intentando entrar…"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "name": "05-esconderse",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 381.1875,
+        "y": 14,
+        "w": 175.140625,
+        "h": 24,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA ALTA · DORMITORIO"
+      },
+      {
+        "selector": ".house-danger",
+        "x": 579.8125,
+        "y": 58,
+        "w": 120.359375,
+        "h": 30.796875,
+        "font": 12,
+        "text": "¡ESCÓNDETE! 10 s"
+      },
+      {
+        "selector": ".lab-compass",
+        "x": 1243,
+        "y": 58,
+        "w": 25,
+        "h": 25,
+        "font": 10,
+        "text": "N ↑"
+      },
+      {
+        "selector": ".house-hotbar",
+        "x": 12,
+        "y": 243,
+        "w": 58,
+        "h": 154,
+        "font": 16,
+        "text": "123●"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "name": "06-peligro-con-telefono",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 381.1875,
+        "y": 14,
+        "w": 175.140625,
+        "h": 24,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA ALTA · DORMITORIO"
+      },
+      {
+        "selector": ".house-danger",
+        "x": 12,
+        "y": 58,
+        "w": 115.453125,
+        "h": 30.796875,
+        "font": 12,
+        "text": "¡ESCÓNDETE! 9 s"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "name": "01-exploracion",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 235.859375,
+        "y": 14,
+        "w": 175.140625,
+        "h": 24,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA BAJA · SALA DE ESTAR"
+      },
+      {
+        "selector": ".lab-objective",
+        "x": 345.21875,
+        "y": 58,
+        "w": 153.5625,
+        "h": 21.390625,
+        "font": 11,
+        "text": "✉ Busca la nota del pasillo"
+      },
+      {
+        "selector": ".lab-toast",
+        "x": 334.5,
+        "y": 84.390625,
+        "w": 175,
+        "h": 27.390625,
+        "font": 11,
+        "text": "Gangnam · mírate en el espejo"
+      },
+      {
+        "selector": ".lab-compass",
+        "x": 807,
+        "y": 58,
+        "w": 25,
+        "h": 25,
+        "font": 10,
+        "text": "N ↑"
+      },
+      {
+        "selector": ".house-hotbar",
+        "x": 12,
+        "y": 101,
+        "w": 58,
+        "h": 154,
+        "font": 16,
+        "text": "123●"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "name": "02-telefono-y-aviso",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 235.859375,
+        "y": 14,
+        "w": 175.140625,
+        "h": 24,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA BAJA · SALA DE ESTAR"
+      },
+      {
+        "selector": ".lab-objective",
+        "x": 340.8125,
+        "y": 58,
+        "w": 162.359375,
+        "h": 21.390625,
+        "font": 11,
+        "text": "🚪 Sube y abre el dormitorio"
+      },
+      {
+        "selector": ".phone-notice",
+        "x": 340.96875,
+        "y": 84.390625,
+        "w": 162.0625,
+        "h": 44,
+        "font": 11,
+        "text": "Mi Luis ❤️ · Nuevo mensaje"
+      },
+      {
+        "selector": ".lab-compass",
+        "x": 807,
+        "y": 58,
+        "w": 25,
+        "h": 25,
+        "font": 10,
+        "text": "N ↑"
+      },
+      {
+        "selector": ".house-hotbar",
+        "x": 12,
+        "y": 101,
+        "w": 58,
+        "h": 154,
+        "font": 16,
+        "text": "123●"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "name": "03-anclaje-top",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 235.859375,
+        "y": 14,
+        "w": 175.140625,
+        "h": 24,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA BAJA · SALA DE ESTAR"
+      },
+      {
+        "selector": ".lab-objective",
+        "x": 91.3125,
+        "y": 58,
+        "w": 162.359375,
+        "h": 21.390625,
+        "font": 11,
+        "text": "🚪 Sube y abre el dormitorio"
+      },
+      {
+        "selector": ".phone-notice",
+        "x": 91.46875,
+        "y": 84.390625,
+        "w": 162.0625,
+        "h": 44,
+        "font": 11,
+        "text": "Mi Luis ❤️ · Nuevo mensaje"
+      },
+      {
+        "selector": ".lab-compass",
+        "x": 807,
+        "y": 58,
+        "w": 25,
+        "h": 25,
+        "font": 10,
+        "text": "N ↑"
+      },
+      {
+        "selector": ".house-hotbar",
+        "x": 345,
+        "y": 64,
+        "w": 154,
+        "h": 58,
+        "font": 16,
+        "text": "123●"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "name": "03-anclaje-right",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 186.1875,
+        "y": 14,
+        "w": 175.140625,
+        "h": 24,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA BAJA · SALA DE ESTAR"
+      },
+      {
+        "selector": ".lab-objective",
+        "x": 340.8125,
+        "y": 58,
+        "w": 162.359375,
+        "h": 21.390625,
+        "font": 11,
+        "text": "🚪 Sube y abre el dormitorio"
+      },
+      {
+        "selector": ".phone-notice",
+        "x": 340.96875,
+        "y": 84.390625,
+        "w": 162.0625,
+        "h": 44,
+        "font": 11,
+        "text": "Mi Luis ❤️ · Nuevo mensaje"
+      },
+      {
+        "selector": ".lab-compass",
+        "x": 807,
+        "y": 58,
+        "w": 25,
+        "h": 25,
+        "font": 10,
+        "text": "N ↑"
+      },
+      {
+        "selector": ".house-hotbar",
+        "x": 774,
+        "y": 101,
+        "w": 58,
+        "h": 154,
+        "font": 16,
+        "text": "123●"
+      },
+      {
+        "selector": ".house-enable-sound",
+        "x": 641.015625,
+        "y": 4,
+        "w": 44,
+        "h": 44,
+        "font": 11,
+        "text": "🔊"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "name": "03-anclaje-bottom",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 235.859375,
+        "y": 14,
+        "w": 175.140625,
+        "h": 24,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA BAJA · SALA DE ESTAR"
+      },
+      {
+        "selector": ".lab-compass",
+        "x": 807,
+        "y": 58,
+        "w": 25,
+        "h": 25,
+        "font": 10,
+        "text": "N ↑"
+      },
+      {
+        "selector": ".house-hotbar",
+        "x": 345,
+        "y": 320,
+        "w": 154,
+        "h": 58,
+        "font": 16,
+        "text": "123●"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "name": "03-anclaje-left",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 235.859375,
+        "y": 14,
+        "w": 175.140625,
+        "h": 24,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA BAJA · SALA DE ESTAR"
+      },
+      {
+        "selector": ".lab-objective",
+        "x": 340.8125,
+        "y": 58,
+        "w": 162.359375,
+        "h": 21.390625,
+        "font": 11,
+        "text": "🚪 Sube y abre el dormitorio"
+      },
+      {
+        "selector": ".lab-toast",
+        "x": 308.4375,
+        "y": 84.390625,
+        "w": 227.125,
+        "h": 27.390625,
+        "font": 11,
+        "text": "Modo fluido activado para tu dispositivo"
+      },
+      {
+        "selector": ".lab-compass",
+        "x": 807,
+        "y": 58,
+        "w": 25,
+        "h": 25,
+        "font": 10,
+        "text": "N ↑"
+      },
+      {
+        "selector": ".house-hotbar",
+        "x": 12,
+        "y": 101,
+        "w": 58,
+        "h": 154,
+        "font": 16,
+        "text": "123●"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "name": "04-llegada",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 235.859375,
+        "y": 14,
+        "w": 175.140625,
+        "h": 24,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA ALTA · DORMITORIO"
+      },
+      {
+        "selector": ".house-danger",
+        "x": 321.390625,
+        "y": 58,
+        "w": 201.203125,
+        "h": 30.796875,
+        "font": 12,
+        "text": "Alguien está intentando entrar…"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "name": "05-esconderse",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 235.859375,
+        "y": 14,
+        "w": 175.140625,
+        "h": 24,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA ALTA · DORMITORIO"
+      },
+      {
+        "selector": ".house-danger",
+        "x": 361.8125,
+        "y": 58,
+        "w": 120.359375,
+        "h": 30.796875,
+        "font": 12,
+        "text": "¡ESCÓNDETE! 10 s"
+      },
+      {
+        "selector": ".lab-compass",
+        "x": 807,
+        "y": 58,
+        "w": 25,
+        "h": 25,
+        "font": 10,
+        "text": "N ↑"
+      },
+      {
+        "selector": ".house-hotbar",
+        "x": 12,
+        "y": 101,
+        "w": 58,
+        "h": 154,
+        "font": 16,
+        "text": "123●"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "name": "06-peligro-con-telefono",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 235.859375,
+        "y": 14,
+        "w": 175.140625,
+        "h": 24,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA ALTA · DORMITORIO"
+      },
+      {
+        "selector": ".house-danger",
+        "x": 12,
+        "y": 58,
+        "w": 120.359375,
+        "h": 30.796875,
+        "font": 12,
+        "text": "¡ESCÓNDETE! 10 s"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 568,
+      "height": 320
+    },
+    "name": "01-exploracion",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 149.15625,
+        "y": 15,
+        "w": 159.21875,
+        "h": 22,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA BAJA · SALA DE ESTAR"
+      },
+      {
+        "selector": ".lab-objective",
+        "x": 210.3125,
+        "y": 58,
+        "w": 147.359375,
+        "h": 20.6875,
+        "font": 10.5,
+        "text": "✉ Busca la nota del pasillo"
+      },
+      {
+        "selector": ".lab-toast",
+        "x": 200.015625,
+        "y": 83.6875,
+        "w": 167.953125,
+        "h": 26.6875,
+        "font": 10.5,
+        "text": "Gangnam · mírate en el espejo"
+      },
+      {
+        "selector": ".lab-compass",
+        "x": 531,
+        "y": 58,
+        "w": 25,
+        "h": 25,
+        "font": 10,
+        "text": "N ↑"
+      },
+      {
+        "selector": ".house-hotbar",
+        "x": 12,
+        "y": 71,
+        "w": 58,
+        "h": 154,
+        "font": 16,
+        "text": "123●"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 568,
+      "height": 320
+    },
+    "name": "02-telefono-y-aviso",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 149.15625,
+        "y": 15,
+        "w": 159.21875,
+        "h": 22,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA BAJA · SALA DE ESTAR"
+      },
+      {
+        "selector": ".lab-objective",
+        "x": 206.109375,
+        "y": 58,
+        "w": 155.765625,
+        "h": 20.6875,
+        "font": 10.5,
+        "text": "🚪 Sube y abre el dormitorio"
+      },
+      {
+        "selector": ".phone-notice",
+        "x": 206.203125,
+        "y": 83.6875,
+        "w": 155.59375,
+        "h": 44,
+        "font": 10.5,
+        "text": "Mi Luis ❤️ · Nuevo mensaje"
+      },
+      {
+        "selector": ".lab-compass",
+        "x": 531,
+        "y": 58,
+        "w": 25,
+        "h": 25,
+        "font": 10,
+        "text": "N ↑"
+      },
+      {
+        "selector": ".house-hotbar",
+        "x": 12,
+        "y": 71,
+        "w": 58,
+        "h": 154,
+        "font": 16,
+        "text": "123●"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 568,
+      "height": 320
+    },
+    "name": "03-anclaje-top",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 121.171875,
+        "y": 15,
+        "w": 159.21875,
+        "h": 22,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA BAJA · SALA DE ESTAR"
+      },
+      {
+        "selector": ".phone-notice",
+        "x": 25.703125,
+        "y": 58,
+        "w": 155.59375,
+        "h": 44,
+        "font": 10.5,
+        "text": "Mi Luis ❤️ · Nuevo mensaje"
+      },
+      {
+        "selector": ".lab-compass",
+        "x": 531,
+        "y": 58,
+        "w": 25,
+        "h": 25,
+        "font": 10,
+        "text": "N ↑"
+      },
+      {
+        "selector": ".house-hotbar",
+        "x": 207,
+        "y": 64,
+        "w": 154,
+        "h": 58,
+        "font": 16,
+        "text": "123●"
+      },
+      {
+        "selector": ".house-enable-sound",
+        "x": 430.03125,
+        "y": 4,
+        "w": 44,
+        "h": 44,
+        "font": 11,
+        "text": "🔊"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 568,
+      "height": 320
+    },
+    "name": "03-anclaje-right",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 149.15625,
+        "y": 15,
+        "w": 159.21875,
+        "h": 22,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA BAJA · SALA DE ESTAR"
+      },
+      {
+        "selector": ".lab-objective",
+        "x": 206.109375,
+        "y": 58,
+        "w": 155.765625,
+        "h": 20.6875,
+        "font": 10.5,
+        "text": "🚪 Sube y abre el dormitorio"
+      },
+      {
+        "selector": ".phone-notice",
+        "x": 206.203125,
+        "y": 83.6875,
+        "w": 155.59375,
+        "h": 44,
+        "font": 10.5,
+        "text": "Mi Luis ❤️ · Nuevo mensaje"
+      },
+      {
+        "selector": ".house-hotbar",
+        "x": 498,
+        "y": 71,
+        "w": 58,
+        "h": 154,
+        "font": 16,
+        "text": "123●"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 568,
+      "height": 320
+    },
+    "name": "03-anclaje-bottom",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 149.15625,
+        "y": 15,
+        "w": 159.21875,
+        "h": 22,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA BAJA · SALA DE ESTAR"
+      },
+      {
+        "selector": ".lab-objective",
+        "x": 206.109375,
+        "y": 58,
+        "w": 155.765625,
+        "h": 20.6875,
+        "font": 10.5,
+        "text": "🚪 Sube y abre el dormitorio"
+      },
+      {
+        "selector": ".phone-notice",
+        "x": 206.203125,
+        "y": 83.6875,
+        "w": 155.59375,
+        "h": 44,
+        "font": 10.5,
+        "text": "Mi Luis ❤️ · Nuevo mensaje"
+      },
+      {
+        "selector": ".lab-compass",
+        "x": 531,
+        "y": 58,
+        "w": 25,
+        "h": 25,
+        "font": 10,
+        "text": "N ↑"
+      },
+      {
+        "selector": ".house-hotbar",
+        "x": 207,
+        "y": 250,
+        "w": 154,
+        "h": 58,
+        "font": 16,
+        "text": "123●"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 568,
+      "height": 320
+    },
+    "name": "03-anclaje-left",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 149.15625,
+        "y": 15,
+        "w": 159.21875,
+        "h": 22,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA BAJA · SALA DE ESTAR"
+      },
+      {
+        "selector": ".lab-objective",
+        "x": 206.109375,
+        "y": 58,
+        "w": 155.765625,
+        "h": 20.6875,
+        "font": 10.5,
+        "text": "🚪 Sube y abre el dormitorio"
+      },
+      {
+        "selector": ".phone-notice",
+        "x": 206.203125,
+        "y": 83.6875,
+        "w": 155.59375,
+        "h": 44,
+        "font": 10.5,
+        "text": "Mi Luis ❤️ · Nuevo mensaje"
+      },
+      {
+        "selector": ".lab-compass",
+        "x": 531,
+        "y": 58,
+        "w": 25,
+        "h": 25,
+        "font": 10,
+        "text": "N ↑"
+      },
+      {
+        "selector": ".house-hotbar",
+        "x": 12,
+        "y": 71,
+        "w": 58,
+        "h": 154,
+        "font": 16,
+        "text": "123●"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 568,
+      "height": 320
+    },
+    "name": "04-llegada",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 149.15625,
+        "y": 15,
+        "w": 159.21875,
+        "h": 22,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA ALTA · DORMITORIO"
+      },
+      {
+        "selector": ".house-danger",
+        "x": 183.390625,
+        "y": 58,
+        "w": 201.203125,
+        "h": 30.796875,
+        "font": 12,
+        "text": "Alguien está intentando entrar…"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 568,
+      "height": 320
+    },
+    "name": "05-esconderse",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 149.15625,
+        "y": 15,
+        "w": 159.21875,
+        "h": 22,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA ALTA · DORMITORIO"
+      },
+      {
+        "selector": ".house-danger",
+        "x": 223.8125,
+        "y": 58,
+        "w": 120.359375,
+        "h": 30.796875,
+        "font": 12,
+        "text": "¡ESCÓNDETE! 10 s"
+      },
+      {
+        "selector": ".lab-compass",
+        "x": 531,
+        "y": 58,
+        "w": 25,
+        "h": 25,
+        "font": 10,
+        "text": "N ↑"
+      },
+      {
+        "selector": ".house-hotbar",
+        "x": 12,
+        "y": 71,
+        "w": 58,
+        "h": 154,
+        "font": 16,
+        "text": "123●"
+      }
+    ]
+  },
+  {
+    "viewport": {
+      "width": 568,
+      "height": 320
+    },
+    "name": "06-peligro-con-telefono",
+    "pass": true,
+    "collisions": [],
+    "phoneCollision": false,
+    "compact": true,
+    "bounds": true,
+    "priority": true,
+    "nodes": [
+      {
+        "selector": ".lab-title",
+        "x": 149.15625,
+        "y": 15,
+        "w": 159.21875,
+        "h": 22,
+        "font": 16,
+        "text": "CASA DE LOS RECUERDOSPLANTA ALTA · DORMITORIO"
+      },
+      {
+        "selector": ".house-danger",
+        "x": 12,
+        "y": 58,
+        "w": 120.359375,
+        "h": 30.796875,
+        "font": 12,
+        "text": "¡ESCÓNDETE! 10 s"
+      }
+    ]
+  }
+]

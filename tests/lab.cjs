@@ -83,6 +83,7 @@ const assert=require('node:assert/strict');
  await require('./repairs-events.cjs')();
  await require('./sensations.cjs')();
  await require('./pursuer.cjs')();
+ await require('./hud-messages.cjs')();
  console.log('PASS V4: defined rooms, six musical posters, closed hatch, real louver sight gaps and deterministic hiding endpoints');
  console.log('PASS: material cache, tangent orientation, staged drawer motion/contents, reduced motion, door safety, rounded corners and all spawns');
  console.log('PASS: 3D layout, floors, stairs, collisions, occlusion, doors/drawer and deterministic content');

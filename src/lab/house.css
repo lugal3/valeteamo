@@ -1,5 +1,5 @@
 /* House-only styles. Shared 2D styles remain untouched. */
-#lab3d .house-danger{position:absolute;z-index:45;top:90px;left:50%;transform:translateX(-50%);padding:12px 24px;background:#721d35e8;color:#fff2dc;border:2px solid #ff91a3;border-radius:18px;font:bold 23px system-ui;text-align:center;pointer-events:none}#lab3d .house-enable-sound{position:absolute;top:57px;right:14px;z-index:25;border:1px solid #ffc9df;border-radius:12px;padding:8px;background:#754560;color:white}
+#lab3d .house-danger{color:#fff0db;pointer-events:none;font-variant-numeric:tabular-nums}
 #lab3d [hidden]{display:none!important}#lab3d.lab-intro-active .house-equipment{visibility:hidden}
 #lab3d.house-arrival .lab-objective,#lab3d.house-arrival .lab-compass,#lab3d.house-arrival .lab-focus,#lab3d.house-arrival .lab-buttons,#lab3d.house-arrival .house-equipment,#lab3d.house-arrival .lab-joystick,#lab3d.house-arrival .lab-toast,#lab3d.house-arrival .lab-title small{visibility:hidden}
 #lab3d.house-arrival::after{content:"";position:absolute;inset:0;background:#000;z-index:10;pointer-events:none;animation:house-arrival-fade .3s ease-out forwards}@keyframes house-arrival-fade{from{opacity:1}to{opacity:0}}@media(prefers-reduced-motion:reduce){#lab3d.house-arrival::after{display:none}}
@@ -22,7 +22,7 @@
 @keyframes lab-focus-pop{from{opacity:0;transform:translate(-50%,6px) scale(.95)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
 
 #lab3d .lab-toast:not(:empty){animation:lab-toast-in .22s cubic-bezier(.16,1,.3,1)}
-@keyframes lab-toast-in{from{opacity:0;transform:translate(-50%,12px) scale(.94)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+@keyframes lab-toast-in{from{opacity:0;translate:0 3px}to{opacity:1;translate:0 0}}
 
 @media(prefers-reduced-motion:reduce){
  #lab3d button,#lab3d #lab-interact,#lab3d .lab-cross,#lab3d .lab-focus,#lab3d .lab-toast{animation:none!important;transition:none!important}
@@ -44,14 +44,11 @@
 #lab3d .house-hotbar button{position:relative;flex:0 0 var(--hud-slot,44px);width:var(--hud-slot,44px);height:var(--hud-slot,44px);min-width:0;min-height:0;padding:0;display:grid;place-items:center;border:1px solid transparent;border-radius:12px;background:transparent;color:#fff3eb;font:19px system-ui;box-shadow:none}
 #lab3d .house-hotbar small{position:absolute;bottom:2px;right:4px;font:8px system-ui;color:#e2cfdb99}
 #lab3d .house-hotbar svg{display:block;width:22px;height:22px;color:#f0dfe4}
-#lab3d .house-danger[data-level=watch]{background:#705229ee;border-color:#f1ca77}
-#lab3d .house-danger[data-level=chase]{background:#81293bee;border-color:#ff8694}
-#lab3d .house-danger{top:86px;font-size:15px;padding:8px 16px;max-width:calc(100vw - 170px);border-radius:14px}
-#lab3d.house-threat .lab-toast{top:134px}
+#lab3d .house-danger[data-level=watch]{border-left-color:#e9c57e}
+#lab3d .house-danger[data-level=chase]{border-left-color:#f99ba4;color:#ffe0df}
 #lab3d .house-hotbar [aria-pressed=true]{background:#d9b6c51f;border-color:#f4d8bb9e;box-shadow:inset 0 0 0 1px #fff1db10}
 #lab3d .phone-badge{position:absolute;right:3px;top:0;color:#f1b4cb;font-size:12px}
 #lab3d .phone-expand{position:absolute;z-index:22;width:104px;height:32px;padding:3px 8px;border:1px solid #edcbd15c;border-radius:14px;background:#282230ab;color:#fce8ef;font:11px system-ui}
-#lab3d .phone-notice{position:absolute;z-index:23;top:116px;left:50%;transform:translateX(-50%);padding:9px 16px;border-radius:18px;background:#352c3ce8;color:#ffe6ee;border:1px solid #b990aa;font:12px system-ui;cursor:pointer;max-width:80vw}
 #lab3d[data-hotbar-anchor=right] .lab-buttons{right:calc(var(--hud-slot) + 36px)}
 #lab3d[data-hotbar-anchor=left] .lab-joystick{left:calc(var(--hud-slot) + 32px)}
 #lab3d .lab-buttons button{font-size:20px;min-height:44px;border-width:1px;box-shadow:0 3px 10px #150c2640;border-radius:13px}
@@ -93,10 +90,35 @@
 #lab3d.house-hud-editing .house-hotbar{outline:1px dashed #f0d2a9;outline-offset:4px}
 #lab3d .hud-preview-tools{position:absolute;z-index:42;right:12px;top:65px;padding:10px;border-radius:12px;background:#292330e8}
 #lab3d[data-hotbar-anchor=right] .hud-editor,#lab3d[data-hotbar-anchor=right] .hud-preview-tools{left:12px;right:auto}
-#lab3d[data-hotbar-anchor=top] .lab-objective{top:calc(64px + var(--hud-slot) + 26px)}
-#lab3d[data-hotbar-anchor=top] .lab-toast{top:calc(64px + var(--hud-slot) + 60px)}
 #lab3d .house-emotes{position:absolute;z-index:24;bottom:16px;left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;gap:6px;max-width:280px;background:#292330ed;border:1px solid #d9b8c080;padding:10px;border-radius:15px}
 #lab3d .house-emotes span{flex-basis:100%;font:10px system-ui;color:#dcc3d2}
 #lab3d.house-arrival .house-emotes,#lab3d.lab-intro-active .house-emotes{visibility:hidden}
 #lab3d .house-hotbar button:focus-visible,#lab3d .phone-screen button:focus-visible,#lab3d .hud-editor :focus-visible,#lab3d .house-emotes button:focus-visible{outline:2px solid #ffdfae;outline-offset:2px}
 @media(max-height:420px){#lab3d .phone-shell{border-width:5px;border-radius:28px}#lab3d .phone-apps{padding:7px 0;gap:8px}#lab3d .phone-apps button{min-height:53px}#lab3d .hud-editor{padding:11px}#lab3d .hud-editor label{margin:6px 0}}
+
+/* One quiet objective and one event channel, in normal flow rather than overlaid. */
+#lab3d{--house-safe-left:env(safe-area-inset-left,0px);--house-safe-right:env(safe-area-inset-right,0px);--house-safe-top:env(safe-area-inset-top,0px)}
+#lab3d .house-messages{position:absolute;z-index:24;display:flex;flex-direction:column;gap:5px;align-items:center;pointer-events:none;color:#f5e8df;visibility:visible}
+#lab3d .house-messages>.lab-objective,#lab3d .house-messages>.lab-toast,#lab3d .house-messages>.house-danger,#lab3d .house-messages>.phone-notice{position:static;inset:auto;transform:none;width:fit-content;min-width:0;max-width:100%;margin:0;box-shadow:none;backdrop-filter:none;border-radius:6px;border:0;text-align:left;font:500 11px/1.4 system-ui;letter-spacing:.01em;overflow-wrap:anywhere}
+#lab3d .house-messages>.lab-objective{padding:3px 8px;background:#1c18255c;color:#e9dce1;border-left:1px solid #edd6de60;text-shadow:0 1px 3px #0c0a12}
+#lab3d .house-messages>.lab-toast{padding:6px 9px;background:#1e1929c9;color:#f7e8df;border-left:2px solid #cdaabd99}
+#lab3d .house-messages>.house-danger{padding:7px 10px;font-size:12px;font-weight:600;background:#251e27d9;border-left:2px solid #e1b9b4}
+#lab3d .house-messages>.house-danger[data-level=watch]{border-left-color:#e9c57e}
+#lab3d .house-messages>.house-danger[data-level=chase]{border-left-color:#f99ba4}
+#lab3d .house-messages>.phone-notice{min-height:44px;padding:7px 9px;background:#211c2bc4;color:#f2dce5;border-left:2px solid #bca6b7;pointer-events:auto;cursor:pointer}
+#lab3d .house-messages>.phone-notice:focus-visible{outline:2px solid #ffe5bd;outline-offset:3px}
+#lab3d.house-phone-open .house-messages{z-index:36;align-items:flex-start}
+#lab3d.house-phone-open .house-messages>.lab-objective,#lab3d.house-phone-open .house-messages>.lab-toast,#lab3d.house-phone-open .house-messages>.phone-notice{display:none}
+#lab3d.house-hud-editing .house-messages{visibility:hidden}
+#lab3d .lab-top{z-index:26;padding-top:max(4px,env(safe-area-inset-top));padding-bottom:4px;gap:7px;background:linear-gradient(180deg,#17131e9c,transparent)}
+#lab3d .lab-top button,#lab3d .lab-camera-settings>summary{min-height:44px;display:flex;align-items:center;justify-content:center;font-size:11px;border-color:#e7d1df4d;background:#211b2b75;padding:6px 9px;box-shadow:none}
+#lab3d .lab-top button[data-act=pause],#lab3d .lab-top .house-enable-sound{min-width:44px;width:44px}
+#lab3d .lab-title{min-width:0}
+#lab3d .lab-title b{font-size:11px;letter-spacing:.08em;opacity:.8}
+#lab3d .lab-title small{font-size:9px;letter-spacing:.04em;color:#e6cdd7;opacity:.8}
+#lab3d .lab-compass{top:calc(max(4px,env(safe-area-inset-top)) + 54px);right:max(12px,env(safe-area-inset-right));width:25px;height:25px;font-size:10px;border-color:#e2c9d040;background:#201a2d70;opacity:.8}
+#lab3d .lab-focus{font:500 11px/1.4 system-ui;padding:4px 8px;max-width:min(56vw,360px);border-color:#e3c7d540;border-radius:6px;background:#211b2bb3;animation:none}
+#lab3d .lab-buttons button{background:#2b223c80;border-color:#f4d6e057;box-shadow:none}
+#lab3d #lab-interact:not([hidden]){animation:none;background:#69435bc9;border-color:#ecc4d48c;box-shadow:none}
+#lab3d .lab-joystick{opacity:.8}
+@media(max-height:360px){#lab3d .house-messages>.lab-objective,#lab3d .house-messages>.lab-toast,#lab3d .house-messages>.phone-notice{font-size:10.5px}#lab3d .lab-title b{font-size:10px}#lab3d .lab-title small{font-size:8px}}

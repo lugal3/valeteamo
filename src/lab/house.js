@@ -1,4 +1,5 @@
 import {HouseEvents} from './story-events.js';
+import {HouseMessages} from './hud-messages.js';
 import {PhoneUI} from './phone-ui.js';
 import {FloorSounds} from './floor-sounds.js';
 import {EMOTES} from './animations/emotes.js';
@@ -65,9 +66,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    <button data-act="pause" aria-label="Pausar">Ⅱ</button>
  </div>
  <div class="lab-focus" id="lab-focus" role="status"></div>
+ <div class="house-messages" id="house-messages" hidden>
   <div class="lab-objective" id="lab-objective">✿ Explora la casa · sigue las pistas</div>
+  <div class="lab-toast" id="lab-toast" role="status" aria-live="polite"></div>
+ </div>
   <div class="lab-compass" id="lab-compass" aria-hidden="true">N ↑</div>
- <div class="lab-toast" id="lab-toast" role="status" aria-live="polite"></div>
  <div class="lab-power ${demo?'lab-hidden':''}"><span>☼ LINTERNA</span><div class="lab-powerbar"><i id="lab-charge"></i></div><strong id="lab-charge-text">100%</strong></div>
  <div class="lab-joystick" id="lab-joystick" aria-label="Joystick izquierdo, arrastrar para caminar"><div class="lab-stick-ring"><div id="lab-stick" class="lab-stick-thumb">♡</div></div><span>CAMINAR</span></div>
  <div class="lab-look" id="lab-look" aria-label="Arrastrar para mirar"></div>
@@ -95,12 +98,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  document.body.appendChild(root);
  const events=new HouseEvents({pursuit:config.entry!=='rescue'}),floorSounds=new FloorSounds();let pursuer=null,equipment='flashlight',equipmentAge=1,encounterCheckpoint=null,thirdView=null;
  const phone=new PhoneUI(root,kind=>{if(!ready||cinematic||events.phase==='arrival')return;animator.cancelEmote();equipment=kind;equipmentAge=0;phone.equip(kind);resetInput();},()=>resetInput(),{canUse:()=>ready&&!isSuspended()&&!cinematic&&events.phase!=='arrival'&&events.phase!=='failed'&&events.phase!=='safe',onEdit:()=>{resetInput();if(isSuspended())sound.pause();else sound.resume();}});phone.equip(equipment);
- const danger=document.createElement('div');danger.className='house-danger';danger.hidden=true;danger.setAttribute('role','status');root.append(danger);
- const enableSound=document.createElement('button');enableSound.className='house-enable-sound';enableSound.textContent='🔊 Activar sonido';root.append(enableSound);
+ const danger=document.createElement('div');danger.className='house-danger';danger.hidden=true;danger.setAttribute('role','status');root.querySelector('#house-messages').append(danger);
+ const enableSound=document.createElement('button');enableSound.className='house-enable-sound';enableSound.textContent='🔊';enableSound.setAttribute('aria-label','Activar sonido');enableSound.title='Activar sonido de la casa';root.querySelector('.lab-top').insertBefore(enableSound,root.querySelector('.lab-top [data-act=pause]'));
  enableSound.addEventListener('click',()=>{sound.set('muted',false);root.querySelectorAll('[data-setting="mute"]').forEach(el=>el.checked=false);void sound.start();});
  const $=id=>root.querySelector('#'+id),canvas=$('lab-canvas'),dialog=$('lab-dialog');
+ const hudMessages=new HouseMessages(root);
+ phone.onPresentationChange=()=>hudMessages.layout(phone.rect,phone.open);
  const controller=new AbortController(),signal=controller.signal;
- let renderer,world,puzzle=createHousePuzzle(config.entry),sound=new HouseSound(),s,raf=0,last=0,lastPaint=0,fps=0,elapsed=0,toastUntil=0,lookPointer=null,stickPointer=null;
+ let renderer,world,puzzle=createHousePuzzle(config.entry),sound=new HouseSound(),s,raf=0,last=0,lastPaint=0,fps=0,elapsed=0,lookPointer=null,stickPointer=null;
  let active=true,ready=false,hasFocus=true,focus=null,lookLast={x:0,y:0},paused=false,modal='',intro=true,contextLost=false,stickPointerType=null,lookPointerType=null;
  let lookTarget={yaw:Math.PI,pitch:0},cinematic=null,poseTransition=null,handAction=0,clickAction=0,lastInteraction=-Infinity;
  const handDrift={x:0,y:0,vx:0,vy:0};
@@ -110,7 +115,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const options={sensitivity:cameraSettings.sensitivity,invertX:cameraSettings.invertX,bob:!reducedMotion.matches,quality:'medium'};
  const saveCamera=()=>{try{writeCameraSettings(window.localStorage,options)}catch{}};
  const points={ground:'Planta baja',upstairs:'Planta alta',sound:'Iluminación / sonido',interactions:'Interacciones',mirror:'Espejo del baño'};
- const say=(text,seconds=2.4)=>{$('lab-toast').textContent=text;toastUntil=performance.now()+seconds*1000;};
+ const say=(text,seconds=2.4)=>hudMessages.say(text,seconds);
  const isPortrait=()=>window.innerHeight>window.innerWidth;
  const isSuspended=()=>!ready||paused||!!modal||phone.editing||$('lab-camera-settings').open||isPortrait()||document.hidden||!hasFocus||contextLost;
  const isPaused=()=>isSuspended()||!!cinematic||!!poseTransition;
@@ -127,6 +132,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const modalClose=()=>{modal='';dialog.classList.add('lab-hidden');dialog.innerHTML='';resetInput();if(!isSuspended())sound.resume();};
  function showModal(title,body,actions=[['Cerrar','close']]){
   modal=title;dialog.classList.remove('lab-hidden');
+  $('house-messages').hidden=true;
   dialog.innerHTML=`<section class="lab-paper" role="dialog" aria-modal="true" aria-label="${escapeHTML(title)}"><div class="lab-paper-mark">✿ ♡ ✿</div><h2>${escapeHTML(title)}</h2><div class="lab-paper-body">${body}</div><div class="lab-paper-actions">${actions.map(([label,act])=>`<button data-act="${escapeHTML(act)}">${escapeHTML(label)}</button>`).join('')}</div></section>`;
   resetInput();sound.pause();dialog.querySelector('button')?.focus({preventScroll:true});
  }
@@ -146,7 +152,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   $('lab-intro-caption').textContent='Una ventana entreabierta…';
  }
  function reset(){
-  events.reset();phone.close();equipment='flashlight';phone.equip(equipment);encounterCheckpoint=null;danger.hidden=true;
+  events.reset();hudMessages.reset();phone.close();equipment='flashlight';phone.equip(equipment);encounterCheckpoint=null;danger.hidden=true;
   animator.reset();floorSounds.reset();if(phone.editing)void phone.layoutAction('done');$('house-emotes').hidden=true;cinematic=null;poseTransition=null;paused=false;manuallyClosed.clear();lastInteraction=-Infinity;handAction=0;clickAction=0;
   sound.setTension(.55);
   root.classList.remove('lab-intro-active');$('lab-window-intro').classList.add('lab-hidden');$('lab-camera-settings').open=false;
@@ -375,13 +381,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(moved>.0001)s.bob+=moved*(s.crouched?5:8);
   for(const cue of floorSounds.advance(dt,s,moved))play(cue.kind,cue.origin?{...cue.origin,y:cue.origin.y+.25}:null,cue.level);
   if(s.flashlight&&!demo){s.battery=Math.max(0,s.battery-dt*.72);if(!s.battery){s.flashlight=false;play('light');say('La linterna se ha apagado. Necesitas una pila.');}}
-  if(performance.now()>toastUntil)$('lab-toast').textContent='';
  }
  let statsAt=performance.now(),frameCount=0,slowSeconds=0;
  function updateStory(delta){
   if(!demo||config.entry==='rescue'||isSuspended()||cinematic)return;
   const change=events.observe(puzzle);
-  if(change==='message'){sound.sequence('notification');say('📩 Mi Luis ❤️ te ha enviado un mensaje.',4);}
+  if(change==='message')sound.sequence('notification');
   if(change==='arrival'){
    sound.setThreat(true);
    animator.cancelEmote();$('house-emotes').hidden=true;
@@ -438,6 +443,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   danger.hidden=!['arrival','hide','hunt'].includes(events.phase);danger.dataset.level=pursuer.mode==='chase'?'chase':pursuer.awareness>.1?'watch':'search';danger.textContent=events.phase==='hide'?'¡ESCÓNDETE! '+Math.ceil(events.remaining)+' s':events.phase==='arrival'?'Alguien está intentando entrar…':pursuer.mode==='chase'?'¡TE PERSIGUE! Rompe su línea de visión':pursuer.awareness>.1?'Te está mirando · busca cobertura':s.hidden?'No salgas todavía · está registrando la casa':'Está buscando · armario o bajo la cama';
   root.classList.toggle('house-threat',!danger.hidden);
   if(!isSuspended())equipmentAge+=shotDelta;phone.update(events,isSuspended()?0:shotDelta);enableSound.hidden=isSuspended()||(!sound.settings.muted&&sound.context?.state==='running');
+  hudMessages.update({dt:isPaused()?0:shotDelta,blocked:isSuspended()||!!cinematic,danger:danger.hidden?'':danger.textContent,unread:events.messages.length>phone.readCount,messageCount:events.messages.length,phoneOpen:phone.open,dock:phone.rect});
   const outdoor=view.x<0||view.x>HOUSE.width||view.z<0||view.z>HOUSE.depth?1:Math.max(0,1-Math.min(view.x,HOUSE.width-view.x,view.z,HOUSE.depth-view.z)/1.5)*.22;
   sound.locate({room:roomAt(view.x,view.z,view.y-1.6),outdoor,hidden:!!s.hidden});
   try{renderer.render(view,torch,elapsed,hand,{bob:s.bob,action:handAction,clickAction,speed:animator.speed,acceleration:animator.acceleration,walkWeight:animator.weight,reduced:s.reduceBob,swayX:handDrift.x,swayY:handDrift.y,introHands,animator,feetY:s.y,crouched:s.crouched,equipment,equipLift:reducedMotion.matches?0:-.22*Math.pow(1-Math.min(1,equipmentAge/.3),2),bathDoorAmount:world.objects.find(o=>o.id==='bano').amount,thirdPerson,pursuer:pursuer.snapshot()});}catch(e){contextLost=true;showModal('Error de renderizado',`<p>${escapeHTML(String(e.message||e))}</p>`,[['Volver a pruebas','exit']]);}
