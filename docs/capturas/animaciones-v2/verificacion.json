@@ -1,0 +1,11 @@
+{
+  "studio": true,
+  "mirror": true,
+  "emoteInterrupt": true,
+  "crouch": true,
+  "pause": true,
+  "reducedMotion": true,
+  "visibilityCulling": true,
+  "webgl": 0,
+  "errors": []
+}

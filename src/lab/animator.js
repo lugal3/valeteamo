@@ -1,4 +1,4 @@
-import {createPose} from './character-rig.js';
+import {createPose,JOINT_INDEX} from './character-rig.js';
 import {sampleIdle} from './animations/idle.js';
 import {sampleWalk,WALK_CYCLE} from './animations/walk.js';
 import {sampleWindowEntry} from './animations/window-entry.js';
@@ -9,6 +9,7 @@ import {sampleListenDoor} from './animations/listen-door.js';
 import {sampleHide} from './animations/hide.js';
 import {sampleLookBehind} from './animations/look-behind.js';
 import {EMOTES,sampleEmote} from './animations/emotes.js';
+import {ease,blendPose} from './animations/pose-tools.js';
 
 export class CharacterAnimator{
  constructor(){
@@ -21,23 +22,28 @@ export class CharacterAnimator{
   this.hidePose=createPose();
   this.lookBehindPose=createPose();
   this.pose=createPose();
+  this.emotePose=createPose();this.transitionPose=createPose();
   this.reset();
  }
  reset(){
   this.time=0;this.distance=0;this.weight=0;this.forward=1;this.side=0;
-  this.reduced=false;this.evaluations=0;this.emote=null;this.emoteTime=0;
+  this.reduced=false;this.evaluations=0;this.emote=null;this.emoteTime=0;this.transition=null;this.equipment='flashlight';this.speed=0;this.acceleration=0;
  }
- startEmote(id){if(!EMOTES.some(e=>e.id===id))return false;this.emote=id;this.emoteTime=0;return true;}
- cancelEmote(){this.emote=null;this.emoteTime=0;}
+ get performing(){return !!this.emote||!!this.transition;}
+ captureTransition(){this.transitionPose.set(this.sample(this.equipment==='phone'?'hold-phone':'locomotion'));this.transition={age:0,duration:this.reduced ? .10 : .22};}
+ startEmote(id){if(!EMOTES.some(e=>e.id===id))return false;this.captureTransition();this.emote=id;this.emoteTime=0;return true;}
+ cancelEmote({immediate=false}={}){if(immediate){this.transition=null;}else if(this.emote)this.captureTransition();this.emote=null;this.emoteTime=0;}
  // This lightweight bookkeeping runs with simulation. Bone poses are sampled
  // only by a visible consumer (mirror now, cinematic/full-body shots later).
- advance(dt,{distance=0,forward=1,side=0,paused=false,reduced=false}={}){
+ advance(dt,{distance=0,forward=1,side=0,paused=false,reduced=false,equipment=this.equipment}={}){
   if(paused)return;
   dt=Math.max(0,Math.min(.1,dt));
   if(!dt)return;
-  this.time+=dt;this.reduced=reduced;
+  this.time+=dt;this.reduced=reduced;this.equipment=equipment;
+  if(this.transition){this.transition.age+=dt;if(this.transition.age>=this.transition.duration)this.transition=null;}
   distance=Math.max(0,Number.isFinite(distance)?distance:0);
-  if(this.emote){this.emoteTime+=dt;if(distance>.001||this.emoteTime>=EMOTES.find(e=>e.id===this.emote).duration)this.cancelEmote();}
+  const speed=distance/dt;this.acceleration=Math.max(-1,Math.min(1,(speed-this.speed)*.35));this.speed+=(speed-this.speed)*(1-Math.exp(-dt*10));
+  if(this.emote){if(distance>.001)this.cancelEmote();else{this.emoteTime+=dt;if(this.emoteTime>=EMOTES.find(e=>e.id===this.emote).duration)this.cancelEmote();}}
   this.distance+=distance;
   const walking=distance/dt>.035;
   this.weight+=(Number(walking)-this.weight)*(1-Math.exp(-dt*16));
@@ -50,7 +56,16 @@ export class CharacterAnimator{
  sample(clip='locomotion',progress=0){
   this.evaluations++;
   if(clip==='window-entry')return sampleWindowEntry(progress,this.pose);
-  if(this.emote&&clip!=='look-behind')return sampleEmote(this.emote,this.emoteTime,this.pose,{reduced:this.reduced});
+  if(clip!=='look-behind'&&(this.emote||this.transition)){
+   // Capture, sample and blend only when a visible consumer requests a pose.
+   this.basePose(clip,progress);
+   if(this.emote){sampleEmote(this.emote,this.emoteTime,this.emotePose,{reduced:this.reduced,envelope:false});const e=EMOTES.find(e=>e.id===this.emote),weight=ease(this.emoteTime/.30)*ease((e.duration-this.emoteTime)/.38);blendPose(this.pose,this.emotePose,weight,this.pose);}
+   if(this.transition)blendPose(this.transitionPose,this.pose,ease(this.transition.age/this.transition.duration),this.pose);
+   return this.pose;
+  }
+  return this.basePose(clip,progress);
+ }
+ basePose(clip,progress){
   if(clip==='crouch'){
    sampleCrouch(this.distance,this.crouchPose,{walking:this.weight>.05,forward:this.forward,side:this.side,reduced:this.reduced});
    this.pose.set(this.crouchPose);return this.pose;
@@ -61,6 +76,8 @@ export class CharacterAnimator{
   }
   if(clip==='hold-phone'){
    sampleHoldPhone(this.time,this.phonePose,{reduced:this.reduced});
+   sampleWalk(this.distance,this.walk,{forward:this.forward,side:this.side,reduced:this.reduced});
+   for(const name of ['root','leftLeg','leftKnee','leftFoot','rightLeg','rightKnee','rightFoot']){const j=JOINT_INDEX[name]*6;for(let i=j;i<j+6;i++)this.phonePose[i]=this.phonePose[i]*(1-this.weight)+this.walk[i]*this.weight;}
    this.pose.set(this.phonePose);return this.pose;
   }
   if(clip==='listen-door'){
@@ -76,14 +93,14 @@ export class CharacterAnimator{
    this.pose.set(this.lookBehindPose);return this.pose;
   }
 
-  sampleIdle(this.time,this.idle,{reduced:this.reduced});
+  sampleIdle(this.time,this.idle,{reduced:this.reduced,handsFree:this.equipment==='empty'});
   if(clip==='idle'){this.pose.set(this.idle);return this.pose;}
-  sampleWalk(this.distance,this.walk,{forward:this.forward,side:this.side,reduced:this.reduced});
+  sampleWalk(this.distance,this.walk,{forward:this.forward,side:this.side,reduced:this.reduced,handsFree:this.equipment==='empty'});
   const weight=clip==='walk'?1:this.weight;
-  for(let i=0;i<this.pose.length;i++)this.pose[i]=this.idle[i]*(1-weight)+this.walk[i]*weight;
+  blendPose(this.idle,this.walk,weight,this.pose);
   return this.pose;
  }
  snapshot(){
-  return {state:this.emote|| (this.weight>.05?'walk':'idle'),emote:this.emote,emoteTime:this.emoteTime,time:this.time,distance:this.distance,phase:(this.distance/WALK_CYCLE)%1,weight:this.weight,forward:this.forward,side:this.side,evaluations:this.evaluations,reduced:this.reduced};
+  return {state:this.emote|| (this.weight>.05?'walk':'idle'),emote:this.emote,emoteTime:this.emoteTime,transition:this.transition?{...this.transition}:null,performing:this.performing,time:this.time,distance:this.distance,phase:(this.distance/WALK_CYCLE)%1,weight:this.weight,speed:this.speed,acceleration:this.acceleration,forward:this.forward,side:this.side,evaluations:this.evaluations,reduced:this.reduced};
  }
 }

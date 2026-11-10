@@ -25,5 +25,6 @@ const near=(a,b,message,tol=1e-5)=>assert(Math.abs(a-b)<tol,message+': '+a+' vs 
  const rates=[];for(const hz of [30,60]){const a=new CharacterAnimator();for(let i=0;i<hz;i++)a.advance(1/hz,{distance:1/hz});rates.push(a.snapshot());}near(rates[0].distance,rates[1].distance,'Frame-independent stride');near(rates[0].weight,rates[1].weight,'Frame-independent blend');
  for(const t of [0,.2,.5,.8,1])assert([...sampleWindowEntry(t,createPose())].every(Number.isFinite));
  assert([...sampleWindowEntry(0,createPose())].every(v=>v===0));assert([...sampleWindowEntry(1,createPose())].every(v=>v===0));assert.equal(windowEntryHands(.4).length,2);
+ await require('./animation-quality.cjs')();
  assert.equal(JOINTS.length,15);console.log('PASS animation: articulated bind pose, attachments, unit normals, planted feet in 4 directions, collision stops, smooth blends, 30/60 Hz, pause, reduced motion and reusable window clip');
 })().catch(e=>{console.error(e);process.exitCode=1;});

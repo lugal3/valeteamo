@@ -204,7 +204,7 @@ export class HouseRenderer {
   const gl=this.gl;this.mirrorDrawn=false;
   if(!this.mirrorSupported||!mirrorVisible(camera,motion.bathDoorAmount||0))return;
   if(![0,-.6,.6].some(dz=>!lineBlocked(this.occluders,camera,{x:BATH_MIRROR.x-.03,y:BATH_MIRROR.y,z:BATH_MIRROR.z+dz})))return;
-  const equipment=motion.animator?.emote?'empty':motion.equipment||'flashlight';
+  const equipment=motion.animator?.performing?'empty':motion.equipment||'flashlight';
   if(equipment!==this.mirrorEquipment){this.mirrorEquipment=equipment;this.mirrorMeshes[2]=geometry(kittyMirrorPieces(equipment));this.kittyVertices=new Float32Array(this.mirrorMeshes[2].vertices.length);this.characterBinding=createRigBinding(this.mirrorMeshes[2].groups);this.mirrorPose=null;gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[4]);gl.bufferData(gl.ARRAY_BUFFER,this.kittyVertices,gl.DYNAMIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.mirrorBuffers[5]);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,this.mirrorMeshes[2].indices,gl.STATIC_DRAW);}
   const draw=i=>{this.bind(this.mirrorBuffers[i*2],this.mirrorBuffers[i*2+1]);gl.drawElements(gl.TRIANGLES,this.mirrorMeshes[i].indices.length,gl.UNSIGNED_SHORT,0);};
   // Mark only visible mirror fragments. Walls/door/furniture still occlude it.
@@ -218,9 +218,9 @@ export class HouseRenderer {
   gl.uniform1f(this.uniform.uMirrorPass,1);gl.frontFace(gl.CW);draw(1);
   this.mirrorMeshes[3].vertices.set(this.dynamicVertices);reflectMesh(this.mirrorMeshes[3].vertices);gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[6]);gl.bufferData(gl.ARRAY_BUFFER,this.mirrorMeshes[3].vertices,gl.DYNAMIC_DRAW);draw(3);
   const animator=motion.animator;
-  const pose=[camera.x,camera.y,camera.z,camera.yaw,motion.feetY,!!motion.crouched,animator?.reduced&&animator?.weight===0?0:animator?.time,animator?.distance,animator?.weight,equipment];
+  const pose=[camera.x,camera.y,camera.z,camera.yaw,motion.feetY,!!motion.crouched,animator?.reduced&&animator?.weight===0&&!animator?.performing?0:animator?.time,animator?.distance,animator?.weight,equipment,animator?.emote,animator?.emoteTime,animator?.transition?.age];
   if(!this.mirrorPose||pose.some((v,i)=>v!==this.mirrorPose[i])){
-   if(animator)evaluateRig(this.characterBinding,animator.sample(motion.crouched?'crouch':equipment==='phone'?'hold-phone':'locomotion'));
+   if(animator)evaluateRig(this.characterBinding,animator.sample(motion.crouched?'crouch':motion.equipment==='phone'?'hold-phone':'locomotion'));
    poseReflectedKitty(this.mirrorMeshes[2].vertices,this.kittyVertices,camera,motion,animator?this.characterBinding:null);
    gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[4]);gl.bufferSubData(gl.ARRAY_BUFFER,0,this.kittyVertices);this.mirrorPose=pose;this.mirrorUploads++;
   }

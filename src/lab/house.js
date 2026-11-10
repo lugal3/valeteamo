@@ -24,7 +24,7 @@ function cameraOf(s){
  if(s.poseCamera)return s.poseCamera;
  if(s.hidden){const o=s.hidden;return {x:o.x,y:o.y,z:o.z,yaw:s.yaw,pitch:s.pitch};}
  const eye=s.lying?1.02:s.eye;
- return {x:s.x,y:s.y+eye+(!s.crouched&&!s.lying&&!s.reduceBob?Math.sin(s.bob)*.024:0),z:s.z,yaw:s.yaw,pitch:s.pitch};
+ return {x:s.x,y:s.y+eye+(!s.crouched&&!s.lying&&!s.reduceBob?Math.sin(s.bob)*.024*(s.walkWeight||0):0),z:s.z,yaw:s.yaw,pitch:s.pitch};
 }
 function closestObject(world,state,previous=null){
  if(state.hidden||state.lying||state.poseCamera)return null;
@@ -183,12 +183,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   handAction=1;clickAction=1;
  }
  function crouch(){if(s.hidden||s.lying)return;
-  animator.cancelEmote();
+  animator.cancelEmote({immediate:true});
   if(s.crouched&&!canStand(s,world)){say('No hay espacio suficiente para levantarte');return;}
   s.crouched=!s.crouched;play('click');say(s.crouched?'Agachada':'De pie');
  }
  function beginHiding(object,entering){
-  animator.cancelEmote();
+  animator.cancelEmote({immediate:true});
   const from=cameraOf(s),inside={...object.hideCamera},outside={x:object.returnX,y:s.y+1.63,z:object.returnZ,yaw:inside.yaw+Math.PI,pitch:0};
   if(blocked(world.boxes,outside.x,s.y,outside.z,.18,1.64)){say('Deja libre el espacio delante del escondite');return;}
   resetInput();poseTransition={object,entering,from,inside,outside,elapsed:0};
@@ -413,7 +413,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(!s||!renderer)return;
   updateHiding(dt);
   updateStory(shotDelta);
-  let view=cameraOf(s),hand=!s.hidden&&!s.lying&&!poseTransition&&!animator.emote&&!phone.open,torch=s.flashlight&&!s.hidden&&!animator.emote&&equipment==='flashlight',introHands=null,distance=0;
+  let view=cameraOf(s),hand=!s.hidden&&!s.lying&&!poseTransition&&!animator.performing&&!phone.open,torch=s.flashlight&&!s.hidden&&!animator.performing&&equipment==='flashlight',introHands=null,distance=0;
   if(cinematic){
    if(!paused&&!modal&&!isPortrait()&&!document.hidden&&hasFocus)cinematic.elapsed+=shotDelta;
    const progress=Math.min(1,cinematic.elapsed/WINDOW_SHOT_SECONDS);
@@ -425,7 +425,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }else{
    const beforeX=s.x,beforeZ=s.z;tick(dt);view=cameraOf(s);elapsed+=isPaused()?0:dt;
    const dx=s.x-beforeX,dz=s.z-beforeZ;distance=Math.hypot(dx,dz);const divisor=distance||1;
-   const wasEmote=!!animator.emote;animator.advance(dt,{distance,forward:(dx*Math.sin(s.yaw)+dz*Math.cos(s.yaw))/divisor,side:(dx*Math.cos(s.yaw)-dz*Math.sin(s.yaw))/divisor,paused:isPaused(),reduced:reducedMotion.matches});if(wasEmote&&!animator.emote)equipmentAge=0;
+   const wasEmote=animator.performing;animator.advance(dt,{distance,forward:(dx*Math.sin(s.yaw)+dz*Math.cos(s.yaw))/divisor,side:(dx*Math.cos(s.yaw)-dz*Math.sin(s.yaw))/divisor,paused:isPaused(),reduced:reducedMotion.matches,equipment});s.walkWeight=animator.weight;view=cameraOf(s);if(wasEmote&&!animator.performing)equipmentAge=0;
   }
   let thirdPerson=null;
   if(events.phase==='arrival'){
@@ -440,7 +440,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(!isSuspended())equipmentAge+=shotDelta;phone.update(events,isSuspended()?0:shotDelta);enableSound.hidden=isSuspended()||(!sound.settings.muted&&sound.context?.state==='running');
   const outdoor=view.x<0||view.x>HOUSE.width||view.z<0||view.z>HOUSE.depth?1:Math.max(0,1-Math.min(view.x,HOUSE.width-view.x,view.z,HOUSE.depth-view.z)/1.5)*.22;
   sound.locate({room:roomAt(view.x,view.z,view.y-1.6),outdoor,hidden:!!s.hidden});
-  try{renderer.render(view,torch,elapsed,hand,{bob:s.bob,action:handAction,clickAction,speed:distance/Math.max(dt,.001),reduced:s.reduceBob,swayX:handDrift.x,swayY:handDrift.y,introHands,animator,feetY:s.y,crouched:s.crouched,equipment,equipLift:reducedMotion.matches?0:-.22*Math.pow(1-Math.min(1,equipmentAge/.3),2),bathDoorAmount:world.objects.find(o=>o.id==='bano').amount,thirdPerson,pursuer:pursuer.snapshot()});}catch(e){contextLost=true;showModal('Error de renderizado',`<p>${escapeHTML(String(e.message||e))}</p>`,[['Volver a pruebas','exit']]);}
+  try{renderer.render(view,torch,elapsed,hand,{bob:s.bob,action:handAction,clickAction,speed:animator.speed,acceleration:animator.acceleration,walkWeight:animator.weight,reduced:s.reduceBob,swayX:handDrift.x,swayY:handDrift.y,introHands,animator,feetY:s.y,crouched:s.crouched,equipment,equipLift:reducedMotion.matches?0:-.22*Math.pow(1-Math.min(1,equipmentAge/.3),2),bathDoorAmount:world.objects.find(o=>o.id==='bano').amount,thirdPerson,pursuer:pursuer.snapshot()});}catch(e){contextLost=true;showModal('Error de renderizado',`<p>${escapeHTML(String(e.message||e))}</p>`,[['Volver a pruebas','exit']]);}
   frameCount++;
   if(now-statsAt>1000){
    fps=Math.round(frameCount*1000/(now-statsAt));

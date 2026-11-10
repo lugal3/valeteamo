@@ -1,7 +1,9 @@
 import {setJoint} from '../character-rig.js';
+import {arm} from './pose-tools.js';
 
-export function sampleIdle(time,out,{reduced=false}={}){
+export function sampleIdle(time,out,{reduced=false,handsFree=false}={}){
  out.fill(0);
+ if(handsFree)arm(out,'right',[.375,.56,.06],[0,0,-.05]);
  if(reduced)return out;
  const breath=Math.sin(time*Math.PI*2/3.4);
  const sway=Math.sin(time*Math.PI*2/4.8);

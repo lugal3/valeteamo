@@ -1,5 +1,6 @@
 import {CHIBI,chibiPiece,placePieces,torchModel,grippingPaw} from './chibi-model.js';
 import {phonePieces} from './equipment.js';
+import {JOINTS,JOINT_INDEX} from './character-rig.js';
 // Rest mesh is independent of the mirror and can be consumed by other cameras.
 function jointFor(id){
  if(/^(head|ear|eye|whisker|nose|bow)/.test(id))return 'head';
@@ -15,6 +16,10 @@ function jointFor(id){
 export function characterPieces(equipment='flashlight'){
  const parts=[];
  const add=(id,x,y,z,w,h,d,color=CHIBI.white,extra={})=>parts.push(chibiPiece('mirror-kitty-'+id,x,y,z,w,h,d,color,{joint:jointFor(id),...extra}));
+ const segment=(id,from,to,width,color,joint)=>{
+  const a=JOINTS[JOINT_INDEX[from]].pivot,b=JOINTS[JOINT_INDEX[to]].pivot,d=b.map((v,i)=>v-a[i]),length=Math.hypot(...d),mid=a.map((v,i)=>(v+b[i])/2);
+  add(id,...mid,width,length+.045,width,color,{joint,roll:-Math.asin(d[0]/length),pitch:Math.atan2(d[2],d[1])});
+ };
  // Match the protected 2D reference: oversized ivory head, red bow, pink shirt, blue overalls.
  add('shirt',0,.72,0,.61,.58,.38,CHIBI.pink);
  add('overalls',0,.53,.025,.58,.48,.40,CHIBI.blue);
@@ -25,9 +30,14 @@ export function characterPieces(equipment='flashlight'){
   add('shoe'+side,side*.16,.11,.065,.25,.18,.33);
   add('strap'+side,side*.17,.84,.191,.068,.24,.055,CHIBI.blue);
   add('button'+side,side*.17,.77,.24,.052,.053,.022,CHIBI.gold,{segments:12,rings:8});
-  add('sleeve'+side,side*.32,.83,.005,.22,.24,.26,CHIBI.pink);
-  if(side<0){add('arm'+side,-.36,.66,.02,.16,.28,.19);add('paw'+side,-.37,.54,.045,.20,.21,.22);}
-  else add('arm'+side,.34,.91,.09,.16,.29,.19,CHIBI.white,{pitch:-.35});
+  const limb=side<0?'left':'right';
+  segment('sleeve'+side,limb+'Arm',limb+'Forearm',.205,CHIBI.pink,limb+'Arm');
+  segment('arm'+side,limb+'Forearm',limb+'Hand',.155,CHIBI.white,limb+'Forearm');
+  if(side<0||equipment==='empty'){
+   const [x,y,z]=JOINTS[JOINT_INDEX[limb+'Hand']].pivot;
+   add('paw'+side,x,y,z,.20,.17,.22);
+   if(equipment==='empty')add('paw-thumb'+side,x-side*.072,y+.025,z+.035,.085,.09,.10);
+  }
   add('ear'+side,side*.385,1.765,-.015,.34,.38,.30,CHIBI.white,{shape:'ear',segments:24,roll:-side*.18});
  }
  add('head',0,1.39,0,1.12,.87,.67,CHIBI.white,{segments:32,rings:18});
@@ -45,6 +55,6 @@ export function characterPieces(equipment='flashlight'){
  add('bow-right',.445,1.75,.18,.265,.25,.17,CHIBI.red,{roll:-.35});
  add('bow-knot',.335,1.74,.297,.15,.15,.115,CHIBI.red,{segments:20,rings:12});
  // Identical rounded barrel, lens and grip in both the mirror and first-person hand.
- parts.push(...placePieces(equipment==='phone'?phonePieces():equipment==='empty'?grippingPaw():[...torchModel(true),...grippingPaw()],{x:.365,y:1.145,z:.25,scale:.87,prefix:'mirror-kitty-'}).map(p=>({...p,joint:'rightHand'})));
+ if(equipment!=='empty')parts.push(...placePieces(equipment==='phone'?phonePieces():[...torchModel(true),...grippingPaw()],{x:.365,y:1.145,z:.25,scale:.87,prefix:'mirror-kitty-'}).map(p=>({...p,joint:'rightHand'})));
  return parts;
 }

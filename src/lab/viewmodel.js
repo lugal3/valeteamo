@@ -33,6 +33,15 @@ export function flashlightPieces(flash=true){
  return cache[flash?'on':'off'] ??= viewModelPieces('flashlight', flash);
 }
 
+export function viewModelOffsets(time,motion={}){
+ const act=Math.min(1,Math.max(0,motion.action||0)),click=Math.min(1,Math.max(0,motion.clickAction||0)),drop=(motion.crouched?-.040:0)+(motion.equipLift||0);
+ if(motion.reduced)return {x:0,y:drop,z:0,pitch:0,roll:0};
+ const speed=Math.max(0,Math.min(1.4,motion.speed||0)),weight=Math.max(0,Math.min(1,motion.walkWeight??1)),phase=motion.bob||0,brake=Math.max(-1,Math.min(1,motion.acceleration||0)),recoil=Math.sin(Math.PI*act)*.035;
+ return {x:Math.cos(time*1.05)*.0012+Math.cos(phase*.5)*.007*speed*weight+(motion.swayX||0),
+  y:Math.sin(time*2.1)*.0022+(1-Math.cos(phase*2))*.0045*speed*weight+(motion.swayY||0)-recoil*.35-Math.sin(Math.PI*click)*.015+drop,
+  z:-recoil*.75-brake*.006,pitch:brake*.018+Math.sin(phase)*.006*weight,roll:Math.sin(phase*.5)*.009*weight};
+}
+
 export function drawViewModel(renderer, kind='flashlight', state={}){
  const {camera, right, up, forward, time=0, flash=true, motion={}} = state;
  const gl = renderer.gl;
@@ -46,33 +55,9 @@ export function drawViewModel(renderer, kind='flashlight', state={}){
 
  const reduced = !!motion.reduced;
 
- // 1. Breathing: gentle continuous rhythm
- const breathY = reduced ? 0 : Math.sin(time * 2.1) * 0.0022;
- const breathX = reduced ? 0 : Math.cos(time * 1.05) * 0.0012;
-
- // 2. Walking bob & sway: scaled by movement speed
- const speed = motion.speed !== undefined ? Math.min(1.4, motion.speed) : (motion.bob ? 1 : 0);
- const walkBobY = reduced ? 0 : Math.abs(Math.sin(motion.bob || 0)) * 0.009 * speed;
- const walkSwayX = reduced ? 0 : Math.cos((motion.bob || 0) * 0.5) * 0.007 * speed;
-
- // 3. Turning inertia with damped spring
- const driftX = reduced ? 0 : (motion.swayX || 0);
- const driftY = reduced ? 0 : (motion.swayY || 0);
-
- // 4. Recoil on interaction
- const act = Math.min(1, Math.max(0, motion.action || 0));
- const recoil = reduced ? 0 : Math.sin(Math.PI * act) * 0.035;
-
- // 5. Tactile click dip on flashlight toggle
- const clk = Math.min(1, Math.max(0, motion.clickAction || 0));
- const clickJolt = reduced ? 0 : Math.sin(Math.PI * clk) * 0.015;
-
- // 6. Lowering when crouched
- const crouchDrop = motion.crouched ? -0.040 : 0;
-
- const totalOffsetX = breathX + walkSwayX + driftX;
- const totalOffsetY = breathY + walkBobY + driftY - recoil * 0.35 - clickJolt + crouchDrop + (motion.equipLift||0);
- const totalOffsetZ = -recoil * 0.75;
+ // Smoothed actual speed and a small grip rotation settle naturally after a stop.
+ const offset=viewModelOffsets(time,motion),cp=Math.cos(offset.pitch),sp=Math.sin(offset.pitch),cr=Math.cos(offset.roll),sr=Math.sin(offset.roll);
+ const grip=kind==='phone'?{x:.37,y:-.25,z:.85}:VIEWMODEL_CONFIG.flashlight;
 
  // Transform vertices into camera-oriented world space
  for(let i=0; i<vertices.length; i+=16){
@@ -87,20 +72,21 @@ export function drawViewModel(renderer, kind='flashlight', state={}){
    dustDz = Math.sin(time * 0.4 + idx * 0.5) * 0.020;
   }
 
-  const x = px + totalOffsetX + dustDx;
-  const y = py + totalOffsetY + dustDy;
-  const z = pz + totalOffsetZ + dustDz;
+  const lx=px-grip.x,ly=(py-grip.y)*cp-(pz-grip.z)*sp,lz=(py-grip.y)*sp+(pz-grip.z)*cp;
+  const x=grip.x+lx*cr-ly*sr+offset.x+dustDx,y=grip.y+lx*sr+ly*cr+offset.y+dustDy,z=grip.z+lz+offset.z+dustDz;
 
   vertices[i]   = camera.x + x*right[0] + y*up[0] + z*forward[0];
   vertices[i+1] = camera.y + x*right[1] + y*up[1] + z*forward[1];
   vertices[i+2] = camera.z + x*right[2] + y*up[2] + z*forward[2];
 
-  const nx = vertices[i+6], ny = vertices[i+7], nz = vertices[i+8];
+  const baseNx=vertices[i+6],rotNy=vertices[i+7]*cp-vertices[i+8]*sp;
+  const nx=baseNx*cr-rotNy*sr,ny=baseNx*sr+rotNy*cr,nz=vertices[i+7]*sp+vertices[i+8]*cp;
   vertices[i+6] = nx*right[0] + ny*up[0] + nz*forward[0];
   vertices[i+7] = nx*right[1] + ny*up[1] + nz*forward[1];
   vertices[i+8] = nx*right[2] + ny*up[2] + nz*forward[2];
 
-  const tx = vertices[i+13], ty = vertices[i+14], tz = vertices[i+15];
+  const baseTx=vertices[i+13],rotTy=vertices[i+14]*cp-vertices[i+15]*sp;
+  const tx=baseTx*cr-rotTy*sr,ty=baseTx*sr+rotTy*cr,tz=vertices[i+14]*sp+vertices[i+15]*cp;
   vertices[i+13] = tx*right[0] + ty*up[0] + tz*forward[0];
   vertices[i+14] = tx*right[1] + ty*up[1] + tz*forward[1];
   vertices[i+15] = tx*right[2] + ty*up[2] + tz*forward[2];
