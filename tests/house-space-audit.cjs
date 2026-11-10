@@ -19,7 +19,7 @@ module.exports=async()=>{
  }
  const anchors=[['hall',5.9,10.7,0],['study',3.7,3.7,0],['living',3.9,10.7,0],['kitchen',9.3,3.5,0],['bath',8.1,6.1,0],['stair-bottom',12,10.9,0],['stair-top',12,4.1,w.HEIGHT],['bedroom',3.9,3.7,w.HEIGHT],['wardrobe',2.3,3.9,w.HEIGHT],['reading',3.5,10.5,w.HEIGHT],['music',11.5,2.1,w.HEIGHT],['upper-balcony',12.5,11.1,w.HEIGHT]];
  const routes=anchors.map(([name,x,z,y])=>({name,reachable:queue.some(p=>Math.abs(p.y-y)<.04&&Math.hypot(p.x-x,p.z-z)<.26)}));
- const interactions=['note-hall','drawer','key','picture-stain','dormitorio','wardrobe','underbed','rescue-louis','basement-hatch'].map(id=>{
+ const interactions=['note-hall','drawer','key','mirror-note','mirror-safe','picture-stain','dormitorio','wardrobe','underbed','rescue-louis','basement-hatch'].map(id=>{
   const o=house.objects.find(o=>o.id===id);return {id,reachable:queue.some(p=>{const dy=o.y-p.y-1.63,dx=o.x-p.x,dz=o.z-p.z,d=Math.hypot(dx,dy,dz);return d<2.45&&interactionTarget(house,{x:p.x,y:p.y+1.63,z:p.z,yaw:Math.atan2(dx,dz),pitch:Math.atan2(dy,Math.hypot(dx,dz))})?.id===id;})};
  });
  const metrics={width:w.HOUSE.width,depth:w.HOUSE.depth,stairWidth:w.STAIR.xMax-w.STAIR.xMin,flight:w.STAIR.zBottom-w.STAIR.zTop,bottomLanding:11.9-w.STAIR.zBottom,topLanding:w.STAIR.zTop-3,railToEastWall:13.9-(13.45+.095/2),bathWidth:2.5,bodyWidth:radius*2,reachableSamples:queue.length,routes,interactions};

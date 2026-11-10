@@ -122,3 +122,30 @@
 #lab3d #lab-interact:not([hidden]){animation:none;background:#69435bc9;border-color:#ecc4d48c;box-shadow:none}
 #lab3d .lab-joystick{opacity:.8}
 @media(max-height:360px){#lab3d .house-messages>.lab-objective,#lab3d .house-messages>.lab-toast,#lab3d .house-messages>.phone-notice{font-size:10.5px}#lab3d .lab-title b{font-size:10px}#lab3d .lab-title small{font-size:8px}}
+
+/* The note is physically mirrored, including the shapes of the digits. */
+#lab3d .mirror-note-paper{position:relative;display:grid;justify-items:center;gap:12px;padding:20px 12px;margin:12px 0;background:repeating-linear-gradient(#fff4dc 0 27px,#d9c7af77 28px,#fff4dc 29px 30px);border:1px solid #c4a886;box-shadow:0 3px 9px #5038481a;transform:rotate(-1deg)}
+#lab3d .mirror-note-writing{display:block;transform:scaleX(-1);font:500 clamp(38px,7vw,60px)/1.1 Georgia,serif;letter-spacing:.2em;color:#49394b;user-select:none}
+#lab3d .mirror-note-description{font:11px/1.5 system-ui;color:#80616c}
+#lab3d .mirror-note-reading{font:13px system-ui;text-align:center}
+#lab3d .mirror-note-modal{padding:12px;max-height:100%;border-width:2px}
+#lab3d .mirror-note-modal .lab-paper-mark{display:none}
+#lab3d .mirror-note-modal h2{font-size:21px;margin:0 0 9px}
+#lab3d .mirror-note-modal .mirror-note-paper{padding:12px 10px;margin:10px 0;gap:8px}
+#lab3d .mirror-note-modal .mirror-note-writing{font-size:clamp(38px,7vw,50px)}
+#lab3d .mirror-note-modal p{margin:7px 0;font:12px/1.5 system-ui}
+#lab3d .mirror-note-modal .lab-paper-actions{margin-top:10px}
+#lab3d .mirror-note-modal .lab-paper-actions button{min-height:44px;padding:8px;font:12px system-ui}
+#lab3d[data-hud-message=puzzle] .house-messages>.lab-toast{border-left-color:#e9c57e;color:#fff0c8}
+#lab3d .safe-paper{width:min(520px,100%);padding:12px;max-height:100%;border-width:2px}
+#lab3d .safe-paper .lab-paper-mark{display:none}
+#lab3d .safe-paper h2{font-size:22px;margin:0 0 9px}
+#lab3d .safe-paper .lab-paper-body{display:grid;grid-template-columns:minmax(130px,1fr) minmax(160px,1fr);column-gap:18px;align-content:start}
+#lab3d .safe-instruction{grid-column:1;margin:4px 0;font:12px/1.5 system-ui}
+#lab3d .safe-code{grid-column:1;display:block;align-self:center;text-align:center;padding:10px 0;font:600 30px/1.3 ui-monospace,monospace;color:#5a3d51;font-variant-numeric:tabular-nums}
+#lab3d .safe-keypad{grid-column:2;grid-row:1/4;display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+#lab3d .safe-keypad button{min-width:44px;min-height:44px;border:1px solid #c0a0ae;background:#fff8ed;border-radius:7px;color:#513c4c;font:500 17px system-ui}
+#lab3d .safe-keypad button:focus-visible{outline:2px solid #87516e;outline-offset:1px}
+#lab3d .safe-feedback{grid-column:1;min-height:3em;margin:4px 0;font:11px/1.4 system-ui;color:#8b3c54}
+#lab3d .safe-paper .lab-paper-actions{margin-top:9px}
+#lab3d .safe-paper .lab-paper-actions button{min-height:44px;padding:8px;font:12px system-ui}

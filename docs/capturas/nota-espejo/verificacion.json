@@ -1,0 +1,34 @@
+[
+  {
+    "viewport": {
+      "width": 960,
+      "height": 540
+    },
+    "mirroredGlyphs": true,
+    "pausedHint": true,
+    "delayedHint": true,
+    "mirrorVisibility": true,
+    "wrongCode": true,
+    "keypad": true,
+    "bagReading": true,
+    "bedroomProgress": true,
+    "gl": 0,
+    "errors": []
+  },
+  {
+    "viewport": {
+      "width": 568,
+      "height": 320
+    },
+    "mirroredGlyphs": true,
+    "pausedHint": true,
+    "delayedHint": true,
+    "mirrorVisibility": true,
+    "wrongCode": true,
+    "keypad": true,
+    "bagReading": true,
+    "bedroomProgress": true,
+    "gl": 0,
+    "errors": []
+  }
+]

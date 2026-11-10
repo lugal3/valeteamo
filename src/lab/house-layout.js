@@ -160,6 +160,14 @@ export function buildHouse(spawn='ground'){
  add('media-clock-face',1.7,.76,5.085,.12,.12,.02,'paper',false,{shape:'round'});
  add('media-clock-rim',1.7,.76,5.085,.14,.14,.02,'brass',false,{shape:'torus',majorRadius:.06,tubeRadius:.008});
  lamp('table-lantern',2.2,.92,8.1);pendantLamp('salon-pendant',2.2,0,8.1);plant('salon-plant',.65,0,11.2);frame('stain',3.65,1.8,4.84,'south',1);frame('living-tour',.15,1.8,5.35,'east',0);
+ // A shallow safe against the wall, clear of the living-room circulation.
+ add('safe-bottom',.66,.10,5.10,.84,.12,.66,'dark');add('safe-top',.66,.91,5.10,.84,.10,.66,'torchmetal');
+ add('safe-left',.27,.50,5.10,.08,.74,.66,'torchmetal');add('safe-right',1.05,.50,5.10,.08,.74,.66,'torchmetal');add('safe-back',.66,.50,4.81,.70,.74,.08,'dark');
+ const safeDoor=add('safe-door',.66,.50,5.43,.76,.73,.075,'torchmetal',true,{dynamic:true});
+ const safeParts=[add('safe-keypad',.82,.61,5.48,.18,.24,.025,'dark',false,{dynamic:true}),add('safe-handle',.47,.52,5.50,.065,.22,.05,'brass',false,{dynamic:true})];
+ for(let i=0;i<9;i++)safeParts.push(add('safe-key-'+i,.77+(i%3)*.05,.67-Math.floor(i/3)*.06,5.50,.027,.027,.014,'cream',false,{dynamic:true}));
+ obj('mirror-safe','safe','Caja fuerte del salón',.66,.59,5.49,{box:safeDoor,parts:safeParts.map(box=>({box,origin:{x:box.x,z:box.z}})),origin:{x:.66,z:5.43},hinge:{x:.28,z:5.43},swingAngle:Math.PI*.48,slideDistance:.76,amount:0,open:false,state:'closed'});
+ add('safe-envelope',.66,.18,5.10,.33,.035,.24,'paper',false);add('safe-seal',.66,.205,5.10,.08,.014,.07,'pink',false);
  // Study with the same existing drawer/key progression.
  table('study-desk',2.6,0,2.7,1.35,.65);chair('study-chair',3.25,0,1.15,-2.75);shelf('study-shelf',.16,0,3.6,-Math.PI/2);plant('study-plant',3.8,0,4.05);
  add('desk-back',2.6,.66,2.97,1.2,.30,.06,'wood');for(const x of [2.15,3.05])add('drawer-housing-'+x,x,.73,2.65,.10,.22,.55,'wood');
@@ -168,6 +176,7 @@ export function buildHouse(spawn='ground'){
  const drawer=obj('drawer','drawer','Cajón del escritorio',2.6,.73,2.335,{box:front,parts:parts.map(box=>({box,origin:{x:box.x,z:box.z}})),origin:{x:2.6,z:2.365},slideAxis:'z',slideDistance:-.42,open:false,amount:0,state:'closed'});
  const key=obj('key','key','Llave con lazo',2.58,.68,2.58,{dynamic:true,concealed:true,interactable:false});drawer.contents=[{object:key,origin:{x:key.x,z:key.z}}];
  add('study-papers',2.65,.94,2.75,.38,.06,.27,'paper',false);lamp('study-lamp',2.15,.92,2.72);frame('study',.95,1.8,.15,'south',2);
+ obj('mirror-note','note','Nota con escritura extraña',3.03,.965,2.65,{text:'Cuatro cifras trazadas con una escritura extraña.',mirrored:true});
  // Kitchen and bathroom are recognizable rooms, not corridor props.
  add('kitchen-floor',10.75,.012,2.2,6.2,.024,4.1,'tile',false,{ao:.91});
  add('kitchen-counter',10.0,.48,.65,4.3,.96,.75,'tile');add('fridge',12.95,1.0,.75,.85,2.0,.85,'cream');

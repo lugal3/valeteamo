@@ -1,0 +1,108 @@
+{
+  "width": 14,
+  "depth": 12,
+  "stairWidth": 2.3999999999999986,
+  "flight": 4.999999999999999,
+  "bottomLanding": 1.950000000000001,
+  "topLanding": 1.9500000000000002,
+  "railToEastWall": 0.40250000000000163,
+  "bathWidth": 2.5,
+  "bodyWidth": 0.64,
+  "reachableSamples": 4070,
+  "routes": [
+    {
+      "name": "hall",
+      "reachable": true
+    },
+    {
+      "name": "study",
+      "reachable": true
+    },
+    {
+      "name": "living",
+      "reachable": true
+    },
+    {
+      "name": "kitchen",
+      "reachable": true
+    },
+    {
+      "name": "bath",
+      "reachable": true
+    },
+    {
+      "name": "stair-bottom",
+      "reachable": true
+    },
+    {
+      "name": "stair-top",
+      "reachable": true
+    },
+    {
+      "name": "bedroom",
+      "reachable": true
+    },
+    {
+      "name": "wardrobe",
+      "reachable": true
+    },
+    {
+      "name": "reading",
+      "reachable": true
+    },
+    {
+      "name": "music",
+      "reachable": true
+    },
+    {
+      "name": "upper-balcony",
+      "reachable": true
+    }
+  ],
+  "interactions": [
+    {
+      "id": "note-hall",
+      "reachable": true
+    },
+    {
+      "id": "drawer",
+      "reachable": true
+    },
+    {
+      "id": "key",
+      "reachable": true
+    },
+    {
+      "id": "mirror-note",
+      "reachable": true
+    },
+    {
+      "id": "mirror-safe",
+      "reachable": true
+    },
+    {
+      "id": "picture-stain",
+      "reachable": true
+    },
+    {
+      "id": "dormitorio",
+      "reachable": true
+    },
+    {
+      "id": "wardrobe",
+      "reachable": true
+    },
+    {
+      "id": "underbed",
+      "reachable": true
+    },
+    {
+      "id": "rescue-louis",
+      "reachable": true
+    },
+    {
+      "id": "basement-hatch",
+      "reachable": true
+    }
+  ]
+}

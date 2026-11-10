@@ -27,21 +27,21 @@ export class HouseMessages{
    const compass=this.root.querySelector('.lab-compass');if(compass){compass.hidden=false;const r=compass.getBoundingClientRect();compass.hidden=phoneOpen||!!dock&&intersects({x:r.x,y:r.y,w:r.width,h:r.height},dock);}
   }
  }
- update({dt=0,blocked=false,danger='',unread=false,messageCount=0,phoneOpen=false,dock=null}={}){
+ update({dt=0,blocked=false,danger='',revelation='',unread=false,messageCount=0,phoneOpen=false,dock=null}={}){
   dt=Math.max(0,Math.min(.1,dt));
   if(messageCount<this.lastCount){this.noticeRemaining=0;this.lastCount=0;}
   if(messageCount>this.lastCount){this.noticeRemaining=unread?5:0;this.lastCount=messageCount;}
   if(!unread)this.noticeRemaining=0;
   if(this.pending&&!blocked){this.pending.age+=dt;if(this.pending.age>8)this.pending=null;}
-  const channel=danger?'danger':phoneOpen?'none':unread&&this.noticeRemaining>0?'phone':this.pending?'toast':'none';
+  const channel=danger?'danger':phoneOpen?'none':revelation?'puzzle':unread&&this.noticeRemaining>0?'phone':this.pending?'toast':'none';
   if(!blocked){
    if(channel==='phone'&&document.activeElement!==this.notice)this.noticeRemaining=Math.max(0,this.noticeRemaining-dt);
    if(channel==='toast'){this.pending.remaining-=dt;if(this.pending.remaining<=0)this.pending=null;}
   }
   this.layout(dock,phoneOpen);
   this.feed.hidden=blocked;this.root.dataset.hudMessage=channel;
-  this.objective.hidden=!!danger||phoneOpen||(channel!=='none'&&this.rect.w<220);
-  this.danger.hidden=channel!=='danger';this.notice.hidden=channel!=='phone';this.toast.hidden=channel!=='toast'||!this.pending;
-  const text=this.pending?.text||'';if(this.toast.textContent!==text)this.toast.textContent=text;
+  this.objective.hidden=!!danger||!!revelation||phoneOpen||(channel!=='none'&&this.rect.w<220);
+  this.danger.hidden=channel!=='danger';this.notice.hidden=channel!=='phone';this.toast.hidden=channel!=='puzzle'&&(channel!=='toast'||!this.pending);
+  const text=channel==='puzzle'?revelation:this.pending?.text||'';if(this.toast.textContent!==text)this.toast.textContent=text;
  }
 }
