@@ -1,0 +1,168 @@
+{
+  "pcShiftRelease": {
+    "pass": false,
+    "drift": 0.17388991098656947
+  },
+  "pcMissedMouseUp": {
+    "pass": false,
+    "controls": {
+      "look": null,
+      "stick": 1,
+      "joystick": {
+        "x": -0.47352395447918,
+        "z": 0.47352395447918
+      }
+    }
+  },
+  "pcReleaseOutsideControl": {
+    "pass": false,
+    "controls": {
+      "look": null,
+      "stick": 1,
+      "joystick": {
+        "x": -0.47352395447918,
+        "z": 0.47352395447918
+      }
+    }
+  },
+  "pcRightButtonIgnored": {
+    "pass": false,
+    "controls": {
+      "look": null,
+      "stick": 1,
+      "joystick": {
+        "x": 0,
+        "z": 0
+      }
+    }
+  },
+  "pcFocusReset": {
+    "pass": true,
+    "controls": {
+      "look": null,
+      "stick": null,
+      "joystick": {
+        "x": 0,
+        "z": 0
+      }
+    }
+  },
+  "pcCanMoveAfterRelease": {
+    "pass": true,
+    "moved": {
+      "x": 6,
+      "y": 0,
+      "z": 8.606396459655672
+    }
+  },
+  "pcNeutralAfterPageResume": {
+    "pass": false,
+    "before": {
+      "x": 6,
+      "y": 0,
+      "z": 9.204320079517661
+    },
+    "after": {
+      "x": 6,
+      "y": 0,
+      "z": 10.34358235432827
+    }
+  },
+  "pcNoRuntimeErrors": {
+    "pass": true,
+    "gl": 0,
+    "errors": []
+  },
+  "mobileTwoOwners": {
+    "pass": true,
+    "controls": {
+      "look": 3,
+      "stick": 2,
+      "joystick": {
+        "x": -0.5846354982829469,
+        "z": 0.5846354982829469
+      }
+    }
+  },
+  "mobileLiftWalkingFinger": {
+    "pass": true,
+    "controls": {
+      "look": 3,
+      "stick": null,
+      "joystick": {
+        "x": 0,
+        "z": 0
+      }
+    }
+  },
+  "mobileLiftLookingFinger": {
+    "pass": true,
+    "controls": {
+      "look": null,
+      "stick": 4,
+      "joystick": {
+        "x": -0.5846354982829469,
+        "z": 0.5846354982829469
+      }
+    }
+  },
+  "mobileMissingPointerEnd": {
+    "pass": false,
+    "controls": {
+      "look": 7,
+      "stick": 6,
+      "joystick": {
+        "x": -0.5846354982829469,
+        "z": 0.5846354982829469
+      }
+    }
+  },
+  "mobileCancelOutsideControl": {
+    "pass": false,
+    "controls": {
+      "look": 9,
+      "stick": 8,
+      "joystick": {
+        "x": -0.5846354982829469,
+        "z": 0.5846354982829469
+      }
+    }
+  },
+  "mobileFocusReset": {
+    "pass": true,
+    "controls": {
+      "look": null,
+      "stick": null,
+      "joystick": {
+        "x": 0,
+        "z": 0
+      }
+    }
+  },
+  "mobileCanMoveAfterRelease": {
+    "pass": false,
+    "moved": {
+      "x": 6,
+      "y": 0,
+      "z": 8
+    }
+  },
+  "mobileNeutralAfterPageResume": {
+    "pass": false,
+    "before": {
+      "x": 6,
+      "y": 0,
+      "z": 8.069090259167687
+    },
+    "after": {
+      "x": 6,
+      "y": 0,
+      "z": 9.302376779834795
+    }
+  },
+  "mobileNoRuntimeErrors": {
+    "pass": true,
+    "gl": 0,
+    "errors": []
+  }
+}
