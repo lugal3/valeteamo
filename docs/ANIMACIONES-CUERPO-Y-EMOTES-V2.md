@@ -1,6 +1,6 @@
 # Cuerpo, emotes y movimiento en primera persona — V2
 
-10 de noviembre de 2026. Rama `codex/animaciones-cuerpo-y-emotes`, base `207ab7a`. Implementación local, sin merge, push ni despliegue. El encargo se limita a la casa 3D y conserva su aspecto chibi.
+10 de noviembre de 2026. Rama `codex/animaciones-cuerpo-y-emotes`, base `207ab7a`. El propietario autorizó posteriormente la fusión local a `main` junto con `codex/hud-mensajes-discretos`. Sin push ni despliegue. El encargo se limita a la casa 3D y conserva su aspecto chibi.
 
 ## Cambios visibles
 

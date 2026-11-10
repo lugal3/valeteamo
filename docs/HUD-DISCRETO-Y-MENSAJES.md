@@ -1,6 +1,6 @@
 # HUD discreto y mensajes sin solapamiento
 
-10 de noviembre de 2026. Rama `codex/hud-mensajes-discretos`, sobre `314891e` (animaciones V2). Sin merge, push ni despliegue.
+10 de noviembre de 2026. Rama `codex/hud-mensajes-discretos`, sobre `314891e` (animaciones V2). El propietario autorizó después la fusión local a `main`, incluyendo las animaciones V2. Sin push ni despliegue: subir `main` activa Firebase automáticamente. Se integra el mismo código de producto que pasó las pruebas descritas aquí.
 
 ## Resultado
 
