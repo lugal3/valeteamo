@@ -1,6 +1,6 @@
 # Movimiento que quedaba atascado — casa 3D
 
-10 de noviembre de 2026. Rama `codex/corregir-movimiento-atascado`, sobre `be8ef1a` (perseguidor y grabaciones locales). Sin merge ni despliegue.
+10 de noviembre de 2026. Rama `codex/corregir-movimiento-atascado`, sobre `be8ef1a` (perseguidor y grabaciones locales). El propietario autorizó después la fusión local a `main`, incluido ese trabajo previo. Se conserva la restricción de publicación: sin push ni despliegue; un push a `main` activa Firebase automáticamente. Las pruebas siguientes corresponden al mismo árbol de producto integrado, sin cambios adicionales de código.
 
 ## Problema y reparación
 

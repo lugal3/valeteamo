@@ -1,6 +1,6 @@
 # Tramo del perseguidor y grabaciones recortadas
 
-10 de noviembre de 2026. Base `b896135`, rama `codex/perseguidor-y-audio-grabado`. Encargo: analizar/recortar los archivos aportados, implementar su uso y continuar el tramo de la casa tras el aviso del teléfono. **Sin merge, push ni despliegue.** Las fuentes de producto y los assets nuevos están exclusivamente en `src/lab/`; no cambian `public/`, dependencias del juego, orquestación, sprites, CSS compartido, código 2D ni claves de guardado.
+10 de noviembre de 2026. Base `b896135`, rama `codex/perseguidor-y-audio-grabado`. Encargo: analizar/recortar los archivos aportados, implementar su uso y continuar el tramo de la casa tras el aviso del teléfono. El propietario autorizó posteriormente la **fusión local a `main`** junto con `codex/corregir-movimiento-atascado`. **Sin push ni despliegue.** Las fuentes de producto y los assets nuevos están exclusivamente en `src/lab/`; no cambian `public/`, dependencias del juego, orquestación, sprites, CSS compartido, código 2D ni claves de guardado.
 
 ## Secuencia jugable
 
