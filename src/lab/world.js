@@ -1,5 +1,5 @@
 // Deterministic, editable dollhouse layout. Metres: x/z horizontal, y upward.
-import {HEIGHT,HOUSE,STAIR,WORLD_BOUNDS,ROOMS,roomAt,buildHouse} from './house-layout.js';
+import {HEIGHT,HOUSE,STAIR,UNDER_STAIRS,WORLD_BOUNDS,ROOMS,roomAt,buildHouse} from './house-layout.js';
 export {HEIGHT,HOUSE,STAIR,WORLD_BOUNDS,ROOMS,roomAt};
 export const MATERIAL = {
   wallpaper: [0.75, 0.56, 0.65], wall2: [0.57, 0.61, 0.69], plaster: [0.68, 0.67, 0.72],
@@ -22,6 +22,7 @@ export function stairHeight(x,z) {
   return null;
 }
 export function groundHeight(x,z,levelHint=0) {
+  if(levelHint<.15&&x>=UNDER_STAIRS.xMin&&x<=UNDER_STAIRS.xMax&&z>=UNDER_STAIRS.zMin&&z<=UNDER_STAIRS.zMax)return 0;
   const stair=stairHeight(x,z); if(stair!==null) return stair;
   if(x<WORLD_BOUNDS.minX||x>WORLD_BOUNDS.maxX||z<WORLD_BOUNDS.minZ||z>WORLD_BOUNDS.maxZ)return NaN;
   if(x<0||x>HOUSE.width||z<0||z>HOUSE.depth)return 0;

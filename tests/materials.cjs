@@ -76,7 +76,7 @@ const assert=require('node:assert/strict');
 
  // 7. Upgraded artwork with legibility check
  const {ART_COUNT,ART_TITLES}=await import('../src/lab/artwork.js');
- assert.equal(ART_COUNT,11,'10 posters plus the altar portrait');
+ assert.equal(ART_COUNT,12,'10 posters plus the altar portrait and register');
  assert.equal(ART_TITLES.length,ART_COUNT,'Every artwork has a title');
  assert.equal(ART_TITLES[house.boxes.find(b=>b.id==='louis-altar-portrait').art],'LOUIS TOMLINSON');
 

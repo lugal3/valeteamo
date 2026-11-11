@@ -1,5 +1,5 @@
 // Physical movement keys survive Shift/CapsLock/layout changes between down/up.
-const CODES={KeyW:'w',KeyA:'a',KeyS:'s',KeyD:'d',ArrowUp:'ArrowUp',ArrowDown:'ArrowDown',ArrowLeft:'ArrowLeft',ArrowRight:'ArrowRight'};
+const CODES={KeyW:'w',KeyA:'a',KeyS:'s',KeyD:'d',ArrowUp:'ArrowUp',ArrowDown:'ArrowDown',ArrowLeft:'ArrowLeft',ArrowRight:'ArrowRight',ShiftLeft:'ShiftLeft',ShiftRight:'ShiftRight'};
 export function movementKey(event){
  if(event.code&&event.code!=='Unidentified')return CODES[event.code]||null;
  const key=event.key||'';return key.startsWith('Arrow')?CODES[key]||null:/^[wasd]$/i.test(key)?key.toLowerCase():null;

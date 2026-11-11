@@ -30,10 +30,14 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
    await page.waitForTimeout(300);assert.equal((await bathDoor()).state,'closed','Walking into range does not open a door');
    await page.click('#lab-interact');await page.waitForFunction(()=>window.__rescueHouse.snapshot().doors.find(d=>d.id==='bano').state==='open');
    await page.keyboard.press('f');
+   await page.keyboard.press('3');
    await page.evaluate(()=>window.__rescueHouse.setPose({x:8.35,y:0,z:5.55,yaw:Math.PI/2,pitch:0}));
-   await page.waitForFunction(()=>window.__rescueHouse.snapshot().mirror.drawn&&!window.__rescueHouse.snapshot().flashlight&&window.__rescueHouse.mirrorPuzzle().noteLift===0);
+   await page.waitForFunction(()=>window.__rescueHouse.snapshot().mirror.drawn&&!window.__rescueHouse.snapshot().flashlight&&window.__rescueHouse.mirrorPuzzle().noteLift===0&&window.__rescueHouse.amenities().notePresentation);
+   assert.equal(await page.locator('[data-equip=phone]').getAttribute('aria-pressed'),'false');
+   assert(await page.locator('#house-use-phone').isHidden());
    assert(!(await state()).revealed,'The code stays hidden in darkness');
-   if(viewport.width<700)await page.keyboard.press('f');else await use('switch-bano');
+   await page.evaluate(()=>window.__rescueHouse.setPose({x:8.35,y:0,z:5.55,yaw:-Math.PI/2,pitch:0}));
+   if(viewport.width<700){await page.locator('[data-equip=flashlight]').tap();await page.locator('#house-light').tap();}else await use('switch-bano');
    await page.evaluate(()=>window.__rescueHouse.setPose({x:8.35,y:0,z:5.55,yaw:-Math.PI/2,pitch:0}));
    await page.waitForFunction(()=>window.__rescueHouse.mirrorPuzzle().noteLift===1);
    assert(!(await state()).revealed,'The note rises as soon as Kitty enters, even when facing away from the mirror');

@@ -1,11 +1,12 @@
 import {DEFAULT_HUD,normalizeHUD,readHUD,writeHUD,hudRect} from './hud-layout.js';
-import {phoneHome,phoneChat,phoneNotice,formatPhoneTime,gallerySprites} from './phone-content.js';
+import {formatPhoneTime} from './device-time.js';
+import {phoneHome,phoneChat,phoneNotice,gallerySprites,earlierMessages} from './phone-content.js';
 const dockIcon=kind=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${kind==='empty'?'<path d="M6 14c0-4 12-4 12 0 0 5-3 7-6 7s-6-2-6-7Z"/><ellipse cx="6" cy="7" rx="2" ry="3"/><ellipse cx="12" cy="5" rx="2" ry="3"/><ellipse cx="18" cy="7" rx="2" ry="3"/>':kind==='flashlight'?'<path d="m6 4 12 0-2 8v8H8v-8Z"/><path d="M7 8h10M10 16h4M10 2h4"/>':'<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4M11 5h2"/>'}</svg>`;
 
 export class PhoneUI{
- constructor(root,onEquip,onClose,{canUse=()=>true,onEdit=()=>{},onPhoto=()=>{}}={}){
+ constructor(root,onEquip,onClose,{canUse=()=>true,canEquip=canUse,onEdit=()=>{},onPhoto=()=>{}}={}){
   this.root=root;this.open=false;this.app='home';this.last='';this.readCount=0;this.score=0;this.direction=[1,0];this.pending=[1,0];this.resetSnake();
-  this.gallery=[...gallerySprites];this.selectedPhoto=null;this.photoCount=0;this.messageTimes=new WeakMap();this.messageCount=0;this.latestNotice=null;this.clockMinute=-1;
+  this.gallery=[...gallerySprites];this.selectedPhoto=null;this.photoCount=0;this.messageTimes=new WeakMap();this.messageCount=0;this.latestNotice=null;this.clockMinute=-1;this.history=earlierMessages();
   this.canUse=canUse;this.onEdit=onEdit;this.editing=false;this.preview=false;this.onPresentationChange=()=>{};
   try{this.layout=readHUD(window.localStorage);}catch{this.layout={...DEFAULT_HUD};}
   const host=document.createElement('div');host.className='house-equipment';host.innerHTML=`<nav class="house-hotbar" aria-label="Objetos equipados"><button data-equip="empty" aria-label="Mano vacía" title="1 · Mano vacía"><span></span><small>1</small></button><button data-equip="flashlight" aria-label="Equipar linterna" title="2 · Linterna"><span></span><small>2</small></button><button data-equip="phone" aria-label="Equipar teléfono" title="3 · Teléfono"><span></span><small>3</small><b class="phone-badge" hidden>●</b></button></nav><button class="phone-notice" type="button" hidden></button>
@@ -14,8 +15,9 @@ export class PhoneUI{
   const feed=root.querySelector('#house-messages');this.managedNotice=!!feed;if(feed){host.append(feed);feed.append(host.querySelector('.phone-notice'));}
   host.addEventListener('click',e=>{
    const action=e.target.closest('[data-layout]')?.dataset.layout;if(action){this.layoutAction(action);return;}
-   if(this.editing||!canUse())return;
-   const equip=e.target.closest('[data-equip]');if(equip){onEquip(equip.dataset.equip);return;}
+   if(this.editing)return;
+   const equip=e.target.closest('[data-equip]');if(equip){if(canEquip())onEquip(equip.dataset.equip);return;}
+   if(!canUse())return;
    if(e.target.closest('.phone-notice')){onEquip('phone');this.show('messages');return;}
    const b=e.target.closest('[data-app]');if(b){if(b.dataset.app==='close'){this.close();onClose();}else{this.app=b.dataset.app;this.selectedPhoto=null;if(this.app==='snake')this.resetSnake();this.last='';}}
    if(e.target.closest('[data-photo=take]'))onPhoto();
@@ -98,8 +100,8 @@ export class PhoneUI{
   shell.querySelector('header [data-app=home]').hidden=this.app==='home';
   if(this.app==='home')main.innerHTML=phoneHome(unread);
   if(this.app==='messages'){
-   main.innerHTML=phoneChat(events.messages,events.replyAt!==null,message=>this.messageTimes.get(message));
-   main.scrollTop=main.scrollHeight;
+   main.innerHTML=phoneChat(events.messages,events.replyAt!==null,message=>this.messageTimes.get(message),this.history);
+   const chat=main.querySelector('.phone-chat');chat.scrollTop=chat.scrollHeight;
   }
   if(this.app==='snake')main.innerHTML=`<canvas width="240" height="240" aria-label="Tablero de Snake"></canvas>${this.dead?'<button data-app="snake">Reintentar Snake</button>':''}<div class="snake-controls"><button data-dir="0" aria-label="Arriba">↑</button><button data-dir="3" aria-label="Izquierda">←</button><button data-dir="2" aria-label="Abajo">↓</button><button data-dir="1" aria-label="Derecha">→</button></div>`;
   if(this.app==='photos')main.innerHTML=this.selectedPhoto?`<button data-app="photos">‹ Todas las fotos</button><img class="phone-full-photo" src="${this.selectedPhoto.url}" alt="${this.selectedPhoto.label}">`:`<div class="phone-gallery">${this.gallery.map((photo,i)=>`<button data-photo-index="${i}"><img loading="lazy" src="${photo.url}" alt=""><span>${photo.label}</span></button>`).join('')}</div>`;

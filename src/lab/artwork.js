@@ -1,9 +1,9 @@
 // Original fan-themed posters. No photographs, album art or song recordings.
-export const ART_COUNT=11,ART_SIZE=128;
+export const ART_COUNT=12,ART_SIZE=128;
 export const ART_TITLES=[
  'ONE DIRECTION · LIVE','1D · HEARTBEAT','ONE DIRECTION · VINYL','1D · ON THE ROAD',
  'ONE DIRECTION · STARS','1D · MUSIC ROOM','1D · NIGHT CHANGES','ONE DIRECTION · ACOUSTIC',
- '1D · MIDNIGHT MEMORIES','ONE DIRECTION · GOLDEN','LOUIS TOMLINSON'
+ '1D · MIDNIGHT MEMORIES','ONE DIRECTION · GOLDEN','LOUIS TOMLINSON','REGISTRO DE LOUIS'
 ];
 
 export function createArtworkCanvas(){
@@ -11,7 +11,7 @@ export function createArtworkCanvas(){
  const g=canvas.getContext('2d'),palettes=[
   ['#19243a','#f3b8bd'],['#e6cec8','#842e4c'],['#304b54','#f1d69b'],
   ['#d0c0d6','#382c4e'],['#202c48','#e8b873'],['#b95f78','#fff1cf'],
-  ['#1e3238','#c8e3d4'],['#42283b','#f5d2b3'],['#2a2d48','#fce4ec'],['#3a382c','#eed88b'],['#241d27','#ead4ba']
+  ['#1e3238','#c8e3d4'],['#42283b','#f5d2b3'],['#2a2d48','#fce4ec'],['#3a382c','#eed88b'],['#241d27','#ead4ba'],['#d6bf9d','#362a2c']
  ];
  for(let i=0;i<ART_COUNT;i++){
   g.save();g.translate(i*ART_SIZE,0);const [base,ink]=palettes[i];
@@ -28,6 +28,16 @@ export function createArtworkCanvas(){
    g.fillStyle='#3d2a29';g.beginPath();g.moveTo(40,58);g.bezierCurveTo(19,19,64,8,90,22);g.lineTo(87,50);g.lineTo(80,34);g.lineTo(53,43);g.closePath();g.fill();
    g.fillStyle='#363342';g.fillRect(49,47,8,3);g.fillRect(71,47,8,3);g.fillStyle='#97675e';g.fillRect(56,66,17,3);
    g.fillStyle=ink;g.font='bold 10px system-ui';g.fillText('LOUIS TOMLINSON',64,114);g.restore();continue;
+  }
+  if(i===11){
+   g.fillStyle=base;g.fillRect(1,1,126,126);
+   g.strokeStyle='#bba682';g.lineWidth=1;
+   for(let y=16;y<120;y+=12){g.beginPath();g.moveTo(9,y);g.lineTo(117,y);g.stroke();}
+   g.textAlign='left';g.fillStyle=ink;g.font='bold 13px monospace';g.fillText('31.01.2020',12,31);g.fillText('11.11.2022',12,77);
+   g.font='bold 10px system-ui';g.fillText('WALLS',13,45);g.fillText('FAITH IN THE FUTURE',13,91);
+   g.strokeStyle='#8e2737';g.lineWidth=2;g.strokeRect(9,16,89,20);
+   g.beginPath();g.moveTo(11,96);g.lineTo(115,93);g.stroke();
+   g.fillStyle='#8e2737';g.font='italic 11px cursive';g.fillText('Solo para mí.',45,115);g.restore();continue;
   }
   g.fillText(i%2?'1D':'ONE',64,25);
   g.fillText(i%2?['','HEARTBEAT','','ON THE ROAD','','MUSIC ROOM','','NIGHT CHANGES','','MIDNIGHT'][i]:(i===6?'CHANGES':i===8?'MEMORIES':i===9?'GOLDEN':'DIRECTION'),64,43);

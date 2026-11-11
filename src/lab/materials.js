@@ -111,6 +111,7 @@ export function materialStyle(box){
  if(box.mat==='roof'||box.mat==='carpaint')return 13;
  if(box.surface==='paint')return 13;
  if(box.surface==='glaze')return 11;
+ if(box.surface==='counter-stone')return 10;
  if(box.id==='wardrobe')return 2;
  if(box.id?.startsWith('books-'))return 9;
  if(box.id?.endsWith('-cap')&&box.mat==='dark')return 7;
@@ -138,6 +139,6 @@ export function surfaceFrame(box,normal,style){
  for(let i=0;i<3;i++)if(Math.abs(normal[i])<.5&&(Math.abs(normal[grain])>.5||sizes[i]>sizes[grain]))grain=i;
  const g=axes[grain],tangent=[g[1]*normal[2]-g[2]*normal[1],g[2]*normal[0]-g[0]*normal[2],g[0]*normal[1]-g[1]*normal[0]];
  const bitangent=[normal[1]*tangent[2]-normal[2]*tangent[1],normal[2]*tangent[0]-normal[0]*tangent[2],normal[0]*tangent[1]-normal[1]*tangent[0]];
- const scale=style===2?[4,.8]:style===3?[3.2,.7]:style===0?[1.6,1.6]:style===4?[2.65,2.65]:style===5||style===6?[3,3]:[2,2];
+ const scale=box.surface==='counter-stone'?[5,5]:style===2?[4,.8]:style===3?[3.2,.7]:style===0?[1.6,1.6]:style===4?[2.65,2.65]:style===5||style===6?[3,3]:[2,2];
  return {tangent,bitangent,scale};
 }

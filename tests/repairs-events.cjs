@@ -5,7 +5,7 @@ module.exports=async()=>{
  const boxes=[...world.boxes,...pickupGeometry(world.objects)].filter(b=>b.dynamic),mesh=geometry(boxes);let cursor=0;
  boxes.forEach((b,i)=>{assert.equal(mesh.ranges[i].start,cursor);cursor+=geometry([b]).vertices.length;assert.equal(mesh.ranges[i].end,cursor);});assert.equal(cursor,mesh.vertices.length);
  const {castsShadow}=await import('../src/lab/lighting.js');
- const renderer=Object.assign(Object.create(HouseRenderer.prototype),{gl:{ARRAY_BUFFER:0,bindBuffer(){},bufferSubData(){}},dynamicBoxes:boxes,dynamicRanges:mesh.ranges,dynamicOrigins:boxes.map(b=>[b.x,b.y,b.z,b.yaw||0]),dynamicPositions:new Float32Array(boxes.length*4).fill(Infinity),dynamicTemplate:mesh.vertices,dynamicVertices:new Float32Array(mesh.vertices),dynamicCasters:boxes.map(castsShadow),fixtures:world.lights.fixtures,dirtyLampShadows:new Set()});
+ const renderer=Object.assign(Object.create(HouseRenderer.prototype),{gl:{ARRAY_BUFFER:0,bindBuffer(){},bufferSubData(){}},dynamicBoxes:boxes,dynamicRanges:mesh.ranges,dynamicOrigins:boxes.map(b=>[b.x,b.y,b.z,b.yaw||0,b.roll||0]),dynamicPositions:new Float32Array(boxes.length*5).fill(Infinity),dynamicTemplate:mesh.vertices,dynamicVertices:new Float32Array(mesh.vertices),dynamicCasters:boxes.map(castsShadow),fixtures:world.lights.fixtures,dirtyLampShadows:new Set()});
  for(const amount of [true,false,true,false]){
   world.objects.filter(o=>o.kind==='door').forEach(o=>setDoor(o,amount));setDrawer(world.objects.find(o=>o.id==='drawer'),amount);renderer.updateDynamic(0,{reduced:true});const fresh=geometry(boxes).vertices;
   for(let v=0;v<fresh.length;v+=16)for(const k of [0,1,2,6,7,8,13,14,15])assert(Math.abs(renderer.dynamicVertices[v+k]-fresh[v+k])<.0001,'Mesh transform matches collider '+v+' '+k);

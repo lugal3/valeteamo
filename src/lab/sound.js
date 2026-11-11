@@ -84,6 +84,10 @@ export class HouseSound {
   if(gain<.0007)return;
   const yaw=listener.yaw||0,dx=origin?origin.x-listener.x:0,dz=origin?origin.z-listener.z:0;
   const stereo=Math.max(-.85,Math.min(.85,(dx*Math.cos(yaw)-dz*Math.sin(yaw))/Math.max(1,distance)));
+  if(kind==='clock-tick'||kind==='tv-static'){
+   playFoley(ctx,output,this.atmosphere.noise,kind,gain*(kind==='clock-tick'?.82:1.7),stereo);
+   this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;
+  }
   if(this.recordings?.kind(kind,{gain:gain*1.8,pan:stereo,output})){this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;}
   if(['door','door-open','door-close','floor-groan','stair','wood','latch'].includes(kind)){
    this.foleyVoices??=new Set();if(this.foleyVoices.size>=12)return;

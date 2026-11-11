@@ -6,9 +6,9 @@ const MOUNT=[[-.5,.62],[-.46,.89],[-.30,1],[.48,1],[.5,0]];
 const SHADE=CUP_PROFILE.map(([y,radius],i)=>[y,i===CUP_PROFILE.length-1?.98:radius]);
 
 export function installHouseLights(add,obj,height){
- const circuits=[],fixtures=[];
+ const circuits=[],fixtures=[],power={on:true};
  function circuit(id,room,mounts,switches,on=false){
-  const state={id,room,on,switches:[]};circuits.push(state);
+  const state={id,room,on,supply:power,switches:[]};circuits.push(state);
   for(const [x,floor,z,drop=.37] of mounts){
    const id='fixture-'+fixtures.length,ceiling=floor===0?height-.22:6.26,y=ceiling-drop;
    const fixture={x,y:y-.153,z,tile:fixtures.length+1,circuit:state};fixtures.push(fixture);
@@ -23,9 +23,13 @@ export function installHouseLights(add,obj,height){
   for(const [x,floor,z,axis,side] of switches){
    const id='switch-'+state.id+(state.switches.length?'-'+state.switches.length:''),y=floor+1.26;
    const flat=axis==='x',dx=flat?side*.035:0,dz=flat?0:side*.035;
-   add(id+'-plate',x,y,z,flat?.034:.135,.187,flat?.135:.034,'cream',false,{shape:'rounded-box',segments:8,rings:5,roundness:.26});
-   const rocker=add(id+'-rocker',x+dx,y+(on?.024:-.024),z+dz,flat?.031:.065,.087,flat?.065:.031,'torchmetal',false,{dynamic:true});
-   add(id+'-locator',x+dx*.57,y-.073,z+dz*.57,.014,.013,.014,'paper',false,{glow:true,color:[.33,.57,.50]});
+   const plate=(part,scale,py,width,height,depth,mat,extra={})=>add(id+'-'+part,x+dx*scale,py,z+dz*scale,flat?depth:width,height,flat?width:depth,mat,false,extra);
+   plate('frame',0,y,.145,.218,.035,'brass',{shape:'rounded-box',roundness:.19,color:[.61,.48,.34]});
+   plate('plate',.54,y,.124,.191,.018,'cream',{shape:'rounded-box',roundness:.18,surface:'glaze'});
+   plate('socket',.84,y,.076,.120,.014,'dark');
+   const rocker=plate('rocker',1.18,y+(on?.024:-.024),.056,.071,.020,'torchmetal',{dynamic:true,shape:'rounded-box',roundness:.18});
+   for(const side of [-1,1])plate('screw-'+side,.87,y+side*.080,.019,.015,.013,'torchmetal',{color:[.46,.39,.33]});
+   plate('locator',1.01,y-.053,.014,.010,.012,'paper',{glow:true,color:[.23,.38,.34]});
    state.switches.push({rocker,y});
    obj(id,'light-switch','Interruptor · '+room,x+dx*1.6,y,z+dz*1.6,{circuit:state});
   }
@@ -41,11 +45,28 @@ export function installHouseLights(add,obj,height){
  circuit('dormitorio','Dormitorio',[[2.20,height,2.30]],[[4.275,height,1.40,'x',-1]]);
  circuit('lectura','Sala de lectura',[[2.2,height,8]],[[4.275,height,7.82,'x',-1]]);
  circuit('musica','Sala de música',[[10.62,height,1.65]],[[10.12,height,2.875,'z',-1]]);
- return {circuits,fixtures};
+ const x=10.16,y=1.48,z=7.02;
+ add('power-meter-case',x,y,z,.13,.52,.35,'torchmetal',false,{shape:'rounded-box',roundness:.15});
+ add('power-meter-display',x+.07,y+.12,z,.03,.14,.25,'glass',false,{color:[.35,.47,.50]});
+ for(let n=0;n<5;n++)add('power-meter-mark-'+n,x+.091,y+.12,z-.082+n*.041,.012,.046,.021,'paper',false,{color:[.65,.72,.69]});
+ add('power-meter-lamp',x+.094,y+.04,z-.078,.018,.024,.024,'paper',false,{dynamic:true,power,color:[.48,.83,.62]});
+ add('power-meter-slot',x+.073,y-.102,z,.023,.155,.142,'dark',false);
+ const lever=add('power-meter-lever',x+.095,y-.067,z,.055,.045,.107,'trim',false,{dynamic:true,color:[.68,.28,.20]});
+ obj('house-power','power-switch','Interruptor general',x+.135,y-.067,z,{power,lever,leverUp:y-.067});
+ return {circuits,fixtures,power};
 }
 
+export const circuitPowered=circuit=>!!circuit?.on&&circuit.supply?.on!==false;
+
 export function toggleCircuit(circuit){
+ if(circuit.supply?.on===false)return null;
  circuit.on=!circuit.on;
  for(const {rocker,y} of circuit.switches)rocker.y=y+(circuit.on?.024:-.024);
  return circuit.on;
+}
+
+export function toggleHousePower(meter){
+ meter.power.on=!meter.power.on;
+ meter.lever.y=meter.leverUp-(meter.power.on?0:.072);
+ return meter.power.on;
 }

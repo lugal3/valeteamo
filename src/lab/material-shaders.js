@@ -24,11 +24,12 @@ varying vec3 vColor,vNormal,vWorld,vTangent;
 varying vec2 vUV;
 varying float vArt,vStyle,vDistance;
 uniform vec3 uEye,uLightEye,uForward,uRight,uUp;
-uniform sampler2D uAtlas,uLightDepth,uMaterials;
+uniform sampler2D uAtlas,uLightDepth,uMaterials,uTV;
 uniform float uFlash,uOcclude;
 uniform float uHasShadows;
 uniform vec4 uLamps[${VISIBLE_LAMPS}];
 uniform float uTime;
+uniform float uTVSignal;
 uniform float uMirrorPass,uHeld;
 uniform float uAtlasSize,uTileSize,uGutter,uInner;
 float depthAt(vec2 pixel,vec2 corner,float reach){
@@ -67,6 +68,14 @@ float lampLight(vec4 lamp,vec3 world,vec3 normal,vec3 surfaceNormal){
 }
 void main(){
  if(uMirrorPass>.5&&vWorld.x<9.8375)discard;
+ if(vArt>1.5&&uTVSignal>.5){
+  vec2 grid=floor(vUV*vec2(256.0,144.0));
+  float grain=fract(sin(dot(grid,vec2(3.4,7.3)))*419.3);
+  float scan=.88+.12*mod(grid.y,2.0);
+  vec3 signal=uTVSignal>1.5?texture2D(uTV,vUV).rgb:vec3(.18+grain*.35);
+  float edge=smoothstep(0.0,.37,min(min(vUV.x,1.0-vUV.x),min(vUV.y,1.0-vUV.y)));
+  gl_FragColor=vec4(signal*vec3(.86,.95,1.0)*scan*(.77+.23*edge),1.0);return;
+ }
  float tile=mod(floor(vStyle+.01),16.0);
  float aSize=uAtlasSize>0.0?uAtlasSize:${ATLAS_SIZE.toFixed(1)};
  float tSize=uTileSize>0.0?uTileSize:${TILE_SIZE.toFixed(1)};
@@ -119,7 +128,7 @@ void main(){
  vec3 ambient=mix(vec3(.071,.076,.107),vec3(.20,.22,.32),smoothstep(.06,.48,boundary));
  vec3 lighting=ambient*facing+vec3(.94,.97,1.0)*(beam+motes*.50)+vec3(1.0,.82,.60)*warmth;
  vec3 color=vColor*material.rrr*1.075;
- if(vArt>.5){vec4 painted=texture2D(uAtlas,vUV);color=mix(color,painted.rgb,painted.a*.96);}
+ if(vArt>.5&&vArt<1.5){vec4 painted=texture2D(uAtlas,vUV);color=mix(color,painted.rgb,painted.a*.96);}
  float rough=material.a,shine=0.0;
  if(uOcclude>.5 && rough<.8){
   float h=max(0.0,dot(N,-direction)),s2=h*h,s4=s2*s2,s8=s4*s4;

@@ -3,19 +3,6 @@ const fs=require('node:fs');
 const path=require('node:path');
 const {chromium}=require('playwright');
 
-const playerStub=`
- window.tvCommands=[];
- window.YT={PlayerState:{ENDED:0,PLAYING:1},Player:function(frame,{events}){
-  const target=this;
-  this.loadVideoById=clip=>{window.tvCommands.push(clip);events.onStateChange({data:1,target});};
-  this.destroy=()=>window.tvCommands.push('destroy');
-  this.mute=()=>{};
-  window.endTvClip=()=>events.onStateChange({data:0,target});
-  window.failTvClip=()=>events.onError({data:101,target});
-  setTimeout(()=>events.onReady({target}),0);
- }};
- window.onYouTubeIframeAPIReady();`;
-
 (async()=>{
  const {createServer}=await import('vite');
  const server=await createServer({configFile:false,logLevel:'silent',server:{host:'127.0.0.1',port:0}});
@@ -24,8 +11,6 @@ const playerStub=`
   browser=await chromium.launch({args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   const page=await browser.newPage({viewport:{width:844,height:390},hasTouch:true,isMobile:true}),errors=[];
   page.on('pageerror',error=>errors.push(error.message));
-  await page.route('https://www.youtube.com/iframe_api',route=>route.fulfill({contentType:'text/javascript',body:playerStub}));
-  await page.route('https://www.youtube-nocookie.com/embed/**',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><title>Test TV</title>'}));
   await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/');
   await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');
   await page.getByRole('button',{name:'Pruebas',exact:true}).click();
@@ -33,6 +18,8 @@ const playerStub=`
   await page.locator('[data-act=start]').click();await page.locator('[data-act=skip-intro]').click();
   const use=(id,activate=true)=>page.evaluate(([id,activate])=>window.__rescueHouse.interactWith(id,activate),[id,activate]);
   const snapshot=()=>page.evaluate(()=>window.__rescueHouse.snapshot());
+  const amenities=()=>page.evaluate(()=>window.__rescueHouse.amenities());
+  const pose=(x,z,yaw=0,pitch=0)=>page.evaluate(({x,z,yaw,pitch})=>window.__rescueHouse.setPose({x,y:0,z,yaw,pitch}),{x,z,yaw,pitch});
   const close=()=>page.keyboard.press('Escape');
   const shot=async name=>{
    if(!process.env.HOUSE_QA_DIR)return;
@@ -40,17 +27,49 @@ const playerStub=`
   };
 
   await use('television',false);await page.getByRole('button',{name:'Encender tele',exact:true}).click();
-  const frame=page.locator('.house-tv-screen iframe');
-  assert.match(await frame.getAttribute('src'),/jyCmnvBbm8Q/);
-  const bounds=await frame.boundingBox();assert(bounds.width>=200&&bounds.height>=200);
-  await page.waitForFunction(()=>window.tvCommands?.length===1);
-  await page.evaluate(()=>window.endTvClip());
-  const clip={videoId:'jyCmnvBbm8Q',startSeconds:0,endSeconds:15};
-  assert.deepEqual(await page.evaluate(()=>window.tvCommands),[clip,clip]);
-  await page.evaluate(()=>window.failTvClip());
-  await page.getByRole('link',{name:'Abrir en YouTube'}).waitFor();
-  await page.getByRole('button',{name:'Apagar tele'}).click();assert.equal(await frame.count(),0);
-  assert.equal(await page.evaluate(()=>window.tvCommands.at(-1)),'destroy');
+  await page.waitForFunction(()=>{const tv=window.__rescueHouse.amenities().television;return tv.on&&tv.duration===14&&tv.frame>1;});
+  assert.equal(await page.evaluate(()=>window.__rescueHouse.story().audio.lastEffect),'tv-static');
+  assert.equal(await page.locator('iframe').count(),0);
+  await pose(1.52,7.63,.96,-.18);await shot('televisor-en-el-salon');
+  await use('television');await page.waitForFunction(()=>!window.__rescueHouse.amenities().television.on);
+  await use('television');await page.waitForFunction(()=>window.__rescueHouse.amenities().television.on);
+  await pose(5.9,6.9);await page.waitForFunction(()=>!window.__rescueHouse.amenities().television.on);
+
+  await use('house-power');assert.equal((await amenities()).power,false);assert.deepEqual((await amenities()).lights,[]);
+  await use('switch-recibidor');assert.deepEqual((await amenities()).lights,[]);
+  await use('television');assert.equal((await amenities()).television.on,false);
+  await use('house-power');assert.equal((await amenities()).power,true);assert((await amenities()).lights.includes('recibidor'));
+  await pose(6.05,1.35,Math.PI,.19);
+  const {clock}=await amenities();
+  await page.waitForFunction(second=>window.__rescueHouse.amenities().clock.second>second,clock.second);
+  assert.notDeepEqual((await amenities()).clock.hands,clock.hands);
+  assert.equal(await page.evaluate(()=>window.__rescueHouse.story().audio.lastEffect),'clock-tick');await shot('reloj-del-pasillo');
+
+  await page.keyboard.press('3');await page.keyboard.press('p');
+  await page.getByRole('button',{name:'WhatsApp',exact:true}).click();
+  await page.getByText('Hace varias horas').waitFor();await page.getByText(/Ten cuidado cuando llegues/).waitFor();
+  assert.equal(await page.locator('.phone-composer').getAttribute('aria-hidden'),'true');await shot('telefono-chat-previo');
+  await close();await page.keyboard.press('2');
+
+  await pose(23.5,8);await page.keyboard.down('Shift');await page.keyboard.down('w');
+  await page.waitForFunction(()=>window.__rescueHouse.amenities().sprinting);await page.getByRole('meter',{name:'Estamina'}).waitFor();
+  await page.waitForFunction(()=>window.__rescueHouse.amenities().stamina===0,{},{timeout:18000});
+  await page.keyboard.up('w');await page.keyboard.up('Shift');
+  await page.waitForFunction(()=>window.__rescueHouse.amenities().stamina>1);
+  await pose(23.5,10);const ring=await page.locator('.lab-stick-ring').boundingBox(),touchX=ring.x+ring.width/2,touchY=ring.y+ring.height/2;
+  const cdp=await page.context().newCDPSession(page);
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:touchX,y:touchY}]});
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:touchX,y:touchY-ring.width*.68}]});
+  await page.waitForFunction(()=>window.__rescueHouse.amenities().sprinting);
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await cdp.detach();
+  await page.waitForFunction(()=>!window.__rescueHouse.amenities().sprinting);
+
+  await pose(10.39,6.83,Math.PI/2,-.23);await page.keyboard.press('c');
+  await page.keyboard.down('w');await page.waitForFunction(()=>window.__rescueHouse.snapshot().position.x>10.98);await page.keyboard.up('w');
+  await page.keyboard.press('c');assert.equal(await page.locator('#lab-crouch').getAttribute('aria-pressed'),'true');
+  await page.getByRole('button',{name:'Esconderse',exact:true}).click();
+  await page.waitForFunction(()=>window.__rescueHouse.snapshot().hideType==='understairs');await shot('escondite-escalera');
+  await page.getByRole('button',{name:'Salir',exact:true}).click();await page.waitForFunction(()=>!window.__rescueHouse.snapshot().hidden);
 
   await use('bano');await use('switch-bano');
   await assert.rejects(use('bath-battery',false),/No line-of-sight/);
@@ -63,15 +82,22 @@ const playerStub=`
   await page.getByRole('button',{name:'Cerrar llave',exact:true}).waitFor();await use('bath-tap');
   assert(!(await snapshot()).puzzle.drawer,'The bathroom drawer does not advance the desk puzzle');
 
-  await use('cocina');await use('kitchen-drawer');await use('pantry-note');await close();
+  await use('cocina');await use('switch-cocina');
+  await assert.rejects(use('basement-hatch',false),/No line-of-sight/);
+  await use('hatch-rug');await page.waitForFunction(()=>window.__rescueHouse.amenities().rug===1);
+  await use('basement-hatch');await page.getByRole('dialog',{name:'Trampilla del sótano'}).waitFor();await close();await shot('trampilla-revelada');
+  await use('hatch-rug');await page.waitForFunction(()=>window.__rescueHouse.amenities().rug===0);
+  await use('kitchen-drawer');await use('pantry-note');await close();
   await use('fridge');await use('fridge-list');await page.getByRole('dialog',{name:'Lista en el refrigerador'}).waitFor();await close();
   await use('fridge');await assert.rejects(use('fridge-list',false),/No line-of-sight/);
   await use('lectura');await use('reading-cabinet');await use('reading-battery');
   await use('habitación');await use('switch-musica');await use('louis-altar',false);await shot('altar-de-louis');
   await use('louis-altar');await page.getByText(/Louis Tomlinson está en el centro/).waitFor();await close();
+  await use('altar-mechon');await page.getByText(/Mechón — L. T./).waitFor();await close();
+  await use('altar-registro');await page.getByText(/31\/01\/2020/).waitFor();await close();
   await use('president-dossier');await page.getByText(/Friedrich Weiss, presidente alemán/).waitFor();await close();
   assert.equal(await page.locator('#lab-canvas').evaluate(c=>c.getContext('webgl').getError()),0);
   assert.deepEqual(errors,[]);
-  console.log('PASS casa 3D: tele en bucle, lavamanos, cajones, refrigerador y altar en pantalla táctil emulada');
+  console.log('PASS casa 3D: tele, corriente, reloj, carrera PC/táctil, escondite, trampilla, teléfono y muebles');
  }finally{await browser?.close();await server.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

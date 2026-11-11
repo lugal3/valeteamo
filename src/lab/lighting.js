@@ -1,3 +1,5 @@
+import {circuitPowered} from './house-lights.js';
+
 export const SHADOW_GRID=4;
 export const SHADOW_TILE=256;
 export const SHADOW_ATLAS=SHADOW_TILE*SHADOW_GRID;
@@ -37,7 +39,7 @@ export function castsShadow(box){
 }
 
 export function nearbyLights(fixtures,camera){
- return fixtures.filter(light=>light.circuit.on)
+ return fixtures.filter(light=>circuitPowered(light.circuit))
   .map(light=>({light,distance:Math.hypot(camera.x-light.x,camera.y-light.y,camera.z-light.z)}))
   .filter(({distance})=>distance<LAMP_REACH+2)
   .sort((a,b)=>a.distance-b.distance)

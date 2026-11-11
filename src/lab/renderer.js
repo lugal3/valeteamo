@@ -12,6 +12,7 @@ import {VERTEX_SHADER as VS,FRAGMENT_SHADER as FS} from './material-shaders.js';
 import {MATERIAL,lineBlocked} from './world.js';
 import {materialPixels,materialStyle,surfaceFrame,ATLAS_SIZE,TILE_SIZE,GUTTER,INNER,ATLAS_SIZE_MED,TILE_SIZE_MED,GUTTER_MED,INNER_MED} from './materials.js';
 import {HouseShadows,castsShadow,nearbyLights,FLASH_REACH,FLASH_SPREAD,LAMP_REACH,VISIBLE_LAMPS,NIGHT_SKY} from './lighting.js';
+import {circuitPowered} from './house-lights.js';
 export {pickupGeometry} from './pickup-models.js';
 function shader(gl,kind,source){const s=gl.createShader(kind);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){const msg=gl.getShaderInfoLog(s);gl.deleteShader(s);throw Error('Shader: '+msg);}return s;}
 function program(gl,low=false){const source=low?FS.replace('uniform float uFlash,uOcclude;','uniform float uFlash; const float uOcclude=0.0;'):FS;const p=gl.createProgram(),v=shader(gl,gl.VERTEX_SHADER,VS),f=shader(gl,gl.FRAGMENT_SHADER,source);gl.attachShader(p,v);gl.attachShader(p,f);gl.linkProgram(p);gl.deleteShader(v);gl.deleteShader(f);if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p)||'Shader linkage');return p;}
@@ -134,6 +135,7 @@ export function geometry(boxes){
   const start=offset;
   for(const face of faces){
    const art=box.art!==undefined&&box.front===face.dir?box.art+1:0;
+   const video=box.video&&box.front===face.dir;
    const frame=surfaceFrame(box,face.normal,style);
    face.corners.forEach(([dx,dy,dz],i)=>{
     const u=(i===0||i===3)?0:1,v=i<2?0:1;
@@ -141,7 +143,7 @@ export function geometry(boxes){
     if(box.mat==='floor'||box.id.startsWith('floor-up-')){position[0]+=box.x;position[2]+=box.z;}
     const uv=[frame.tangent,frame.bitangent].map((axis,j)=>axis.reduce((sum,a,k)=>sum+a*position[k],0)*frame.scale[j]);
     vertices.push(box.x+dx*box.w/2,box.y+dy*box.h/2,box.z+dz*box.d/2,
-     color[0],color[1],color[2],...face.normal,art?((art-1)+u)/ART_COUNT:uv[0],art?v:uv[1],art?1:0,style,...frame.tangent);
+     color[0],color[1],color[2],...face.normal,video?u:art?((art-1)+u)/ART_COUNT:uv[0],video||art?v:uv[1],video?2:art?1:0,style,...frame.tangent);
    });
    indices.push(offset,offset+1,offset+2,offset,offset+2,offset+3);offset+=4;
   }
@@ -175,10 +177,15 @@ export class HouseRenderer {
   this.shadows=new HouseShadows(gl);
   this.shadowMeshes=[this.vbo,this.dynamicVbo].map(vertices=>({vertices,indices:gl.createBuffer(),count:0}));
   this.lampUniforms=new Float32Array(VISIBLE_LAMPS*4);
+  this.tvTexture=gl.createTexture();this.tvFrame=-1;
+  gl.activeTexture(gl.TEXTURE3);gl.bindTexture(gl.TEXTURE_2D,this.tvTexture);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   this.locations={};
   for(const [quality,p] of Object.entries(this.programs)){
    const atrib={},uniform={};for(const key of ['aPos','aCol','aNormal','aUV','aArt','aStyle','aTangent'])atrib[key]=gl.getAttribLocation(p,key);
-   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld'])uniform[key]=gl.getUniformLocation(p,key);
+   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld','uTV','uTVSignal'])uniform[key]=gl.getUniformLocation(p,key);
    uniform.uLamps=gl.getUniformLocation(p,'uLamps[0]');
    this.locations[quality]={atrib,uniform};
   }
@@ -197,7 +204,7 @@ export class HouseRenderer {
   this.dynamicBoxes=boxes.filter(b=>b.dynamic);
   const dynamic=geometry(this.dynamicBoxes);this.dynamicCount=dynamic.indices.length;
   this.dynamicTemplate=dynamic.vertices;this.dynamicVertices=new Float32Array(dynamic.vertices);this.dynamicRanges=dynamic.ranges;
-  this.dynamicOrigins=this.dynamicBoxes.map(b=>[b.x,b.y,b.z,b.yaw||0]);this.dynamicPositions=new Float32Array(this.dynamicBoxes.length*4);this.dynamicPositions.fill(Infinity);
+  this.dynamicOrigins=this.dynamicBoxes.map(b=>[b.x,b.y,b.z,b.yaw||0,b.roll||0]);this.dynamicPositions=new Float32Array(this.dynamicBoxes.length*5);this.dynamicPositions.fill(Infinity);
   gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamicVbo);gl.bufferData(gl.ARRAY_BUFFER,this.dynamicVertices,gl.DYNAMIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.dynamicIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,dynamic.indices,gl.STATIC_DRAW);
   this.vertexCount=(vertices.length+dynamic.vertices.length)/16;this.triangleCount=(indices.length+dynamic.indices.length)/3;
@@ -278,22 +285,25 @@ export class HouseRenderer {
     const orig=this.dynamicOrigins[i];
     box.x=orig[0]+(reduced?0:Math.sin(time*1.8+(orig[0]+orig[2])*1.5)*0.014);
    }
-   const o4=i*4,bx=box.x,by=box.y,bz=box.z,byaw=box.yaw||0;
-   const {start,end}=this.dynamicRanges[i],glow=box.fixture?.circuit.on||box.power?.on?32:0;
-   const moved=Math.fround(bx)!==this.dynamicPositions[o4]||Math.fround(by)!==this.dynamicPositions[o4+1]||Math.fround(bz)!==this.dynamicPositions[o4+2]||Math.fround(byaw)!==this.dynamicPositions[o4+3];
+   const at=i*5,bx=box.x,by=box.y,bz=box.z,byaw=box.yaw||0,roll=box.roll||0;
+   const {start,end}=this.dynamicRanges[i],glow=circuitPowered(box.fixture?.circuit)||box.power?.on?32:0;
+   const moved=Math.fround(bx)!==this.dynamicPositions[at]||Math.fround(by)!==this.dynamicPositions[at+1]||Math.fround(bz)!==this.dynamicPositions[at+2]||Math.fround(byaw)!==this.dynamicPositions[at+3]||Math.fround(roll)!==this.dynamicPositions[at+4];
    if(!moved&&this.dynamicVertices[start+12]===this.dynamicTemplate[start+12]+glow)continue;
-   this.dynamicPositions[o4]=bx;this.dynamicPositions[o4+1]=by;this.dynamicPositions[o4+2]=bz;this.dynamicPositions[o4+3]=byaw;
+   this.dynamicPositions.set([bx,by,bz,byaw,roll],at);
    const origin=this.dynamicOrigins[i];
-   const angle=byaw-origin[3],c=Math.cos(angle),s=Math.sin(angle);
+   const angle=byaw-origin[3],c=Math.cos(angle),s=Math.sin(angle),cr=Math.cos(roll-origin[4]),sr=Math.sin(roll-origin[4]);
    for(let v=start;v<end;v+=16){
-    const x=this.dynamicTemplate[v]-origin[0],z=this.dynamicTemplate[v+2]-origin[2];
+    const localX=this.dynamicTemplate[v]-origin[0],localY=this.dynamicTemplate[v+1]-origin[1];
+    const x=localX*cr-localY*sr,z=this.dynamicTemplate[v+2]-origin[2];
     this.dynamicVertices[v]=bx+x*c-z*s;
-    this.dynamicVertices[v+1]=this.dynamicTemplate[v+1]+by-origin[1];
+    this.dynamicVertices[v+1]=by+localX*sr+localY*cr;
     this.dynamicVertices[v+2]=bz+x*s+z*c;
     this.dynamicVertices[v+12]=this.dynamicTemplate[v+12]+glow;
     for(const offset of [6,13]){
-     const nx=this.dynamicTemplate[v+offset],nz=this.dynamicTemplate[v+offset+2];
+     const tx=this.dynamicTemplate[v+offset],ty=this.dynamicTemplate[v+offset+1];
+     const nx=tx*cr-ty*sr,nz=this.dynamicTemplate[v+offset+2];
      this.dynamicVertices[v+offset]=nx*c-nz*s;
+     this.dynamicVertices[v+offset+1]=tx*sr+ty*cr;
      this.dynamicVertices[v+offset+2]=nx*s+nz*c;
     }
    }
@@ -372,6 +382,21 @@ export class HouseRenderer {
   const h=Math.min(760,Math.max(1,Math.round(this.canvas.clientHeight*dpr)));
   if(w!==this.canvas.width||h!==this.canvas.height){this.canvas.width=w;this.canvas.height=h;this.gl.viewport(0,0,w,h);}
  }
+ updateTelevision(television){
+  const gl=this.gl;
+  gl.uniform1i(this.uniform.uTV,3);
+  if(!television?.powered){this.tvFrame=-1;gl.uniform1f(this.uniform.uTVSignal,0);return;}
+  const video=television.video,ready=video.readyState>=2&&video.videoWidth>0;
+  gl.uniform1f(this.uniform.uTVSignal,ready?2:1);
+  if(!ready)return;
+  const frame=Math.floor(video.currentTime*12);
+  if(frame===this.tvFrame)return;
+  gl.activeTexture(gl.TEXTURE3);gl.bindTexture(gl.TEXTURE_2D,this.tvTexture);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,video);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+  this.tvFrame=frame;
+ }
  render(camera,flash,time,showHand=false,motion={}){
   this.lastShowHand=showHand;
   this.resize();const gl=this.gl,quality=this.quality==='low'?'low':'medium';
@@ -388,6 +413,7 @@ export class HouseRenderer {
   this.updateShadows(camera,flash,light,{right,up,forward});
   this.program=this.programs[quality];Object.assign(this,this.locations[quality]);gl.useProgram(this.program);
   gl.uniform1i(this.uniform.uAtlas,0);gl.uniform1i(this.uniform.uLightDepth,1);gl.uniform1i(this.uniform.uMaterials,2);
+  this.updateTelevision(motion.television);
   const isLow=quality==='low';
   gl.uniform1f(this.uniform.uAtlasSize,isLow?ATLAS_SIZE:ATLAS_SIZE_MED);
   gl.uniform1f(this.uniform.uTileSize,isLow?TILE_SIZE:TILE_SIZE_MED);
@@ -415,5 +441,5 @@ export class HouseRenderer {
   if(motion.introHands)this.drawClimbingHands(motion.introHands);
   if(showHand)this.drawFirstPerson(camera,right,up,forward,time,flash,motion);
  }
- destroy(){const gl=this.gl;if(this.pursuerVbo)gl.deleteBuffer(this.pursuerVbo);if(this.pursuerIbo)gl.deleteBuffer(this.pursuerIbo);for(const b of this.mirrorBuffers)gl.deleteBuffer(b);gl.deleteTexture(this.texture);this.shadows.destroy();for(const mesh of this.shadowMeshes)gl.deleteBuffer(mesh.indices);for(const texture of this.materialTextures)gl.deleteTexture(texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.dynamicVbo);gl.deleteBuffer(this.dynamicIbo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);for(const p of Object.values(this.programs))gl.deleteProgram(p);this.canvas.width=1;this.canvas.height=1;}
+ destroy(){const gl=this.gl;if(this.pursuerVbo)gl.deleteBuffer(this.pursuerVbo);if(this.pursuerIbo)gl.deleteBuffer(this.pursuerIbo);for(const b of this.mirrorBuffers)gl.deleteBuffer(b);gl.deleteTexture(this.texture);gl.deleteTexture(this.tvTexture);this.shadows.destroy();for(const mesh of this.shadowMeshes)gl.deleteBuffer(mesh.indices);for(const texture of this.materialTextures)gl.deleteTexture(texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.dynamicVbo);gl.deleteBuffer(this.dynamicIbo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);for(const p of Object.values(this.programs))gl.deleteProgram(p);this.canvas.width=1;this.canvas.height=1;}
 }
