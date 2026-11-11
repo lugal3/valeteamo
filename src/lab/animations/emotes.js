@@ -2,8 +2,8 @@ import {setJoint} from '../character-rig.js';
 import {arm,feet,curve,ease} from './pose-tools.js';
 
 export const EMOTES=Object.freeze([
- {id:'six-seven',label:'6–7',key:'6',duration:3.4},
- {id:'gangnam',label:'Gangnam',key:'7',duration:5.2},
+ {id:'six-seven',label:'6–7',key:'6',duration:7.5},
+ {id:'gangnam',label:'Gangnam',key:'7',duration:7},
  {id:'wave',label:'Saludar',key:'8',duration:2.4}
 ]);
 const alternation=[[0,-1],[.10,-1],[.38,1],[.48,1],[.76,-1]];
@@ -24,7 +24,7 @@ export function sampleEmote(id,time,out,{reduced=false,envelope=true}={}){
   setJoint(out,'body',-.015,follow*.045,-follow*.018);
   setJoint(out,'head',-.025,-follow*.035,follow*.025);
  }else if(id==='gangnam'){
-  // Double left / double right horseback steps. Support shoes stay on the floor.
+  // Repeat the horseback steps through the entire clip. Support shoes stay planted.
   const t=Math.max(0,time-.32),phase=reduced?0:t%.96,shift=reduced?0:curve(weightShift,phase),sink=reduced?-.025:curve(bounce,t%.24);
   feet(out,{x:shift*.014,y:sink,left:[-.185,.11+(reduced?0:curve(leftHop,phase)),.005],right:[.185,.11+(reduced?0:curve(rightHop,phase)),.005]});
   const pump=reduced?0:curve([[0,0],[.12,1],[.24,0]],t%.24);

@@ -310,7 +310,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   audioPreview=true;
   sound.stopEmote();
   sound.recordings?.setMood(kind==='music'?'tension':kind==='ambient'?'ambient':sound.threat?'tension':'ambient');
-  if(kind==='six-seven')sound.emote(kind,3.4);
+  if(kind==='six-seven')sound.emote(kind,EMOTES.find(emote=>emote.id===kind).duration);
   else if(kind==='notification')sound.sequence(kind);
   else if(kind!=='ambient'&&kind!=='music')play(kind==='master'||kind==='effects'?'door-open':kind);
  }
@@ -472,9 +472,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    const beforeX=s.x,beforeZ=s.z;tick(dt);view=cameraOf(s);elapsed+=isPaused()?0:dt;
    const dx=s.x-beforeX,dz=s.z-beforeZ;distance=Math.hypot(dx,dz);const divisor=distance||1;
    const wasEmote=animator.emote;
-   animator.advance(dt,{distance,forward:(dx*Math.sin(s.yaw)+dz*Math.cos(s.yaw))/divisor,side:(dx*Math.cos(s.yaw)-dz*Math.sin(s.yaw))/divisor,paused:isPaused(),reduced:reducedMotion.matches,equipment});
-   if(animator.emote&&!inBathroom())animator.cancelEmote();
-   if(wasEmote&&!animator.emote){equipmentAge=0;sound.stopEmote();}
+   animator.advance(dt,{distance,forward:(dx*Math.sin(s.yaw)+dz*Math.cos(s.yaw))/divisor,side:(dx*Math.cos(s.yaw)-dz*Math.sin(s.yaw))/divisor,paused:isPaused(),reduced:reducedMotion.matches,equipment,emoteElapsed:sound.emoteElapsed});
+   const leftBathroom=wasEmote&&!inBathroom();
+   if(leftBathroom)animator.cancelEmote();
+   if(wasEmote&&!animator.emote){
+    equipmentAge=0;
+    if(leftBathroom||distance>.001)sound.stopEmote();
+   }
    s.walkWeight=animator.weight;view=cameraOf(s);
   }
   let thirdPerson=null;

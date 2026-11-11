@@ -1,14 +1,16 @@
 const ids=['door-open','door-close','closet-close','unlock','trying-door','notification','light','wood-1','wood-2','wood-3','stair-1','stair-2','stair-3','ambient','tension','alert'];
-export const SAMPLE_URLS=Object.fromEntries(ids.map(id=>[id,new URL(`./audio/${id}.wav`,import.meta.url).href]));
 const emoteURLs=import.meta.glob('./audio/emote-*.{mp3,ogg,wav}',{eager:true,query:'?url',import:'default'});
-for(const [path,url] of Object.entries(emoteURLs))SAMPLE_URLS[path.split('/').at(-1).replace(/\.[^.]+$/,'')]=url;
+export const SAMPLE_URLS=Object.fromEntries([
+ ...Object.entries(emoteURLs).map(([path,url])=>[path.split('/').at(-1).replace(/\.[^.]+$/,''),url]),
+ ...ids.map(id=>[id,new URL(`./audio/${id}.wav`,import.meta.url).href])
+]);
 export class RecordedAudio{
  constructor(ctx,effects,music,ambient=music){this.ctx=ctx;this.effects=effects;this.music=music;this.ambient=ambient;this.buffers=new Map();this.voices=new Set();this.loops=new Map();this.offsets={};this.indices={};this.abort=new AbortController();this.dead=false;this.mood='ambient';this.played=0;this.errors=[];}
  async load(){await Promise.all(Object.entries(SAMPLE_URLS).map(async([id,url])=>{try{const r=await fetch(url,{signal:this.abort.signal});if(!r.ok)throw Error('HTTP '+r.status);const data=await this.ctx.decodeAudioData(await r.arrayBuffer());if(!this.dead)this.buffers.set(id,data);}catch(e){if(!this.dead)this.errors.push(id+': '+e.message);}}));}
- play(id,{gain=1,pan=0,rate=1,output=this.effects,duration}={}){
+ play(id,{gain=1,pan=0,rate=1,output=this.effects}={}){
   const buffer=this.buffers.get(id);if(this.dead||!buffer||this.ctx.state!=='running'||this.voices.size>=18)return false;
   const source=this.ctx.createBufferSource(),vol=this.ctx.createGain(),stereo=this.ctx.createStereoPanner();source.buffer=buffer;source.playbackRate.value=rate;vol.gain.value=gain;stereo.pan.value=pan;source.connect(vol);vol.connect(stereo);stereo.connect(output);
-  const voice={stop:()=>{source.onended=null;try{source.stop();}catch{}source.disconnect();vol.disconnect();stereo.disconnect();this.voices.delete(voice);}};source.onended=voice.stop;this.voices.add(voice);source.start(0,0,duration??buffer.duration);this.lastPlayed=id;this.played++;return voice;
+  const voice={stop:()=>{source.onended=null;try{source.stop();}catch{}source.disconnect();vol.disconnect();stereo.disconnect();this.voices.delete(voice);}};source.onended=voice.stop;this.voices.add(voice);source.start();this.lastPlayed=id;this.played++;return voice;
  }
  kind(kind,options={}){
   let id=({'keys':'unlock',trying:'trying-door',knock:'trying-door',door:'door-open'})[kind]||kind;

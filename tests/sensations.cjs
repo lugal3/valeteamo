@@ -19,7 +19,14 @@ module.exports=async()=>{
  const {CharacterAnimator}=await import('../src/lab/animator.js'),{EMOTES,sampleEmote}=await import('../src/lab/animations/emotes.js'),{createPose,evaluateRig,createRigBinding,skinCharacter}=await import('../src/lab/character-rig.js');
  const {geometry}=await import('../src/lab/renderer.js'),{characterPieces}=await import('../src/lab/character-model.js'),mesh=geometry(characterPieces('empty')),binding=createRigBinding(mesh.groups),out=new Float32Array(mesh.vertices.length);
  for(const e of EMOTES){assert([...sampleEmote(e.id,0,createPose())].every(v=>v===0));assert([...sampleEmote(e.id,e.duration,createPose())].every(v=>v===0));for(const t of [.2,.8,1.4]){const pose=sampleEmote(e.id,t,createPose());evaluateRig(binding,pose);skinCharacter(mesh.vertices,out,binding);assert(out.every(Number.isFinite));for(let i=0;i<out.length;i+=16)assert(Math.abs(Math.hypot(...out.slice(i+6,i+9))-1)<1e-5);}}
- const a=new CharacterAnimator();assert(a.startEmote('gangnam'));a.advance(.1);const time=a.emoteTime;a.advance(.1,{paused:true});assert.equal(a.emoteTime,time);a.advance(.1,{distance:.1});assert.equal(a.emote,null);a.startEmote('six-seven');for(let i=0;i<40;i++)a.advance(.1);assert.equal(a.emote,null);
+ const a=new CharacterAnimator();assert(a.startEmote('gangnam'));a.advance(.1);const time=a.emoteTime;a.advance(.1,{paused:true});assert.equal(a.emoteTime,time);a.advance(.1,{distance:.1});assert.equal(a.emote,null);
+ for(const [id,duration] of [['six-seven',7.5],['gangnam',7]]){
+  a.startEmote(id);
+  a.advance(.016,{emoteElapsed:duration-.06});
+  assert.equal(a.emote,id,'The dance covers the last beats even when render frames are dropped');
+  a.advance(.016,{emoteElapsed:duration});
+  assert.equal(a.emote,null,'The emote settles at the end of its sample');
+ }
  assert.deepEqual(sampleEmote('six-seven',.8,createPose(),{reduced:true}),sampleEmote('six-seven',1.2,createPose(),{reduced:true}));
  console.log('PASS sensations: sound-zone hysteresis/cooldown/floors, stair steps, HUD bounds/storage isolation, finite emote meshes, pause/cancel/reduced motion');
 };

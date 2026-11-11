@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),net=require('node:net'),{chromium}=require('playwright');
 (async()=>{
- const folder=path.resolve('docs/capturas/animaciones-v2');fs.mkdirSync(folder,{recursive:true});
+ const folder=path.resolve(process.env.HOUSE_QA_DIR||'docs/capturas/animaciones-v2');fs.mkdirSync(folder,{recursive:true});
  const reservation=net.createServer();await new Promise(r=>reservation.listen(0,'127.0.0.1',r));const port=reservation.address().port;await new Promise(r=>reservation.close(r));
  const stage=`<html><meta charset="utf-8"><style>body{margin:0;background:#171c29;color:#fff;font:16px system-ui}canvas{display:block;width:640px;height:640px}#caption{position:absolute;top:16px;left:20px}button{position:absolute;bottom:10px}</style><body><canvas id="canvas"></canvas><div id="caption"></div><script type="module">
  import {HouseRenderer,geometry} from '/src/lab/renderer.js';import {characterPieces} from '/src/lab/character-model.js';import {createPose,createRigBinding,evaluateRig,skinCharacter} from '/src/lab/character-rig.js';import {CharacterAnimator} from '/src/lab/animator.js';import {sampleWalk} from '/src/lab/animations/walk.js';
@@ -14,12 +14,25 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   const studio=await browser.newContext({viewport:{width:640,height:640},recordVideo:{dir:path.join(folder,'video-temporal'),size:{width:640,height:640}}}),page=await studio.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(`http://127.0.0.1:${port}/__animation-stage`);await page.waitForFunction(()=>window.stage);
   for(const [id,t,name] of [['six-seven',.35,'01-six-seven-derecha'],['six-seven',.72,'02-six-seven-izquierda'],['gangnam',.68,'03-gangnam-apoyo'],['gangnam',1.16,'04-gangnam-alternado'],['gangnam',3.40,'05-gangnam-muneca'],['walk',.27,'06-caminar']]){assert.equal(await page.evaluate(([id,t])=>window.stage.draw(id,t),[id,t]),0);await page.screenshot({path:path.join(folder,name+'.png')});}
-  await page.evaluate(()=>window.stage.play('six-seven',3.4));await page.waitForTimeout(3500);await page.evaluate(()=>window.stage.play('gangnam',5.2));await page.waitForTimeout(5400);await page.evaluate(()=>window.stage.play('walk',2));await page.waitForTimeout(2200);const video=page.video();await studio.close();await video.saveAs(path.join(folder,'secuencias.webm'));
+  await page.evaluate(()=>window.stage.play('six-seven',7.5));await page.waitForTimeout(7600);await page.evaluate(()=>window.stage.play('gangnam',7));await page.waitForTimeout(7100);await page.evaluate(()=>window.stage.play('walk',2));await page.waitForTimeout(2200);const video=page.video();await studio.close();await video.saveAs(path.join(folder,'secuencias.webm'));
   const context=await browser.newContext({viewport:{width:960,height:540},hasTouch:true}),game=await context.newPage();game.on('pageerror',e=>errors.push(e.message));const snap=()=>game.evaluate(()=>window.__rescueHouse.snapshot());
   await game.goto(`http://127.0.0.1:${port}/`);await game.locator('.splash-start').waitFor();await game.keyboard.press('Enter');await game.getByRole('button',{name:'Pruebas',exact:true}).click();await game.getByRole('button',{name:'Espejo',exact:true}).click();await game.click('#lab-dialog [data-act=start]');await game.waitForFunction(()=>window.__rescueHouse?.snapshot().mirror.drawn);await game.keyboard.press('1');
   for(const [key,id,name]of [['6','six-seven','07-six-seven-espejo'],['7','gangnam','08-gangnam-espejo']]){await game.keyboard.press(key);await game.waitForFunction(id=>window.__rescueHouse.snapshot().animation.emote===id,id);await game.waitForTimeout(650);await game.screenshot({path:path.join(folder,name+'.png')});assert((await snap()).mirror.drawn);}
   await game.keyboard.press('Escape');const paused=(await snap()).animation;await game.waitForTimeout(300);assert.deepEqual((await snap()).animation,paused);await game.getByRole('button',{name:'Continuar',exact:true}).click();await game.keyboard.down('s');await game.waitForFunction(()=>window.__rescueHouse.snapshot().animation.emote===null);await game.keyboard.up('s');await game.waitForFunction(()=>!window.__rescueHouse.snapshot().animation.performing);await game.waitForTimeout(650);assert((await snap()).animation.weight<.01);
   await game.keyboard.press('7');await game.waitForTimeout(500);await game.getByRole('button',{name:'Agacharse',exact:true}).click();assert(!(await snap()).animation.performing);await game.getByRole('button',{name:'Levantarse',exact:true}).click();
+  await game.waitForFunction(()=>window.__rescueHouse.story().samples.loaded===18);
+  for(const [key,id,seconds]of [['6','six-seven',7.5],['7','gangnam',7]]){
+   const duration=await game.evaluate(async id=>{
+    const context=new OfflineAudioContext(1,1,44100);
+    const response=await fetch('/src/lab/audio/emote-'+id+'.mp3');
+    return (await context.decodeAudioData(await response.arrayBuffer())).duration;
+   },id);
+   assert(Math.abs(duration-seconds)<.015,id+' decodes to the requested length');
+   await game.keyboard.press(key);
+   await game.waitForFunction(id=>window.__rescueHouse.story().samples.last==='emote-'+id,id);
+   await game.waitForFunction(seconds=>window.__rescueHouse.snapshot().animation.emoteTime>=seconds-.20,seconds);
+   await game.waitForFunction(()=>!window.__rescueHouse.snapshot().animation.performing);
+  }
   await game.emulateMedia({reducedMotion:'reduce'});await game.keyboard.press('6');await game.waitForTimeout(400);assert((await snap()).animation.reduced);await game.waitForFunction(()=>!window.__rescueHouse.snapshot().animation.performing);await game.keyboard.press('2');
   await game.evaluate(()=>window.__rescueHouse.setPose({x:8.35,y:0,z:5.55,yaw:-Math.PI/2,pitch:0}));await game.waitForTimeout(200);const away=(await snap()).animation.evaluations;await game.waitForTimeout(300);assert.equal((await snap()).animation.evaluations,away,'No per-frame body sampling away from mirror');
   assert.equal(await game.locator('#lab-canvas').evaluate(c=>c.getContext('webgl').getError()),0);assert.deepEqual(errors,[]);await context.close();

@@ -35,7 +35,7 @@ export class CharacterAnimator{
  cancelEmote({immediate=false}={}){if(immediate){this.transition=null;}else if(this.emote)this.captureTransition();this.emote=null;this.emoteTime=0;}
  // This lightweight bookkeeping runs with simulation. Bone poses are sampled
  // only by a visible consumer (mirror now, cinematic/full-body shots later).
- advance(dt,{distance=0,forward=1,side=0,paused=false,reduced=false,equipment=this.equipment}={}){
+ advance(dt,{distance=0,forward=1,side=0,paused=false,reduced=false,equipment=this.equipment,emoteElapsed=null}={}){
   if(paused)return;
   dt=Math.max(0,Math.min(.1,dt));
   if(!dt)return;
@@ -43,7 +43,14 @@ export class CharacterAnimator{
   if(this.transition){this.transition.age+=dt;if(this.transition.age>=this.transition.duration)this.transition=null;}
   distance=Math.max(0,Number.isFinite(distance)?distance:0);
   const speed=distance/dt;this.acceleration=Math.max(-1,Math.min(1,(speed-this.speed)*.35));this.speed+=(speed-this.speed)*(1-Math.exp(-dt*10));
-  if(this.emote){if(distance>.001)this.cancelEmote();else{this.emoteTime+=dt;if(this.emoteTime>=EMOTES.find(e=>e.id===this.emote).duration)this.cancelEmote();}}
+  if(this.emote){
+   if(distance>.001)this.cancelEmote();
+   else{
+    // Use playback time when a sound is running so dropped frames do not slow the dance.
+    this.emoteTime=Number.isFinite(emoteElapsed)?Math.max(this.emoteTime,emoteElapsed):this.emoteTime+dt;
+    if(this.emoteTime>=EMOTES.find(e=>e.id===this.emote).duration)this.cancelEmote();
+   }
+  }
   this.distance+=distance;
   const walking=distance/dt>.035;
   this.weight+=(Number(walking)-this.weight)*(1-Math.exp(-dt*16));

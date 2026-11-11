@@ -68,8 +68,10 @@ export class HouseSound {
   this.stopEmote();
   if(!this.context||this.paused||this.context.state!=='running'||this.settings.muted)return;
   const output=this.channels.emotes;
-  this.emoteVoice=this.recordings.play('emote-'+id,{gain:.66,output,duration})||playEmoteRhythm(this.context,output,id,duration);
+  this.emoteStartedAt=this.context.currentTime;
+  this.emoteVoice=this.recordings.play('emote-'+id,{gain:.66,output})||playEmoteRhythm(this.context,output,id,duration);
  }
+ get emoteElapsed(){return this.emoteVoice?this.context.currentTime-this.emoteStartedAt:null;}
  stopEmote(){this.emoteVoice?.stop();this.emoteVoice=null;}
  // Simple location-dependent stereo and attenuation, including room/floor obstruction.
  effect(kind,origin,listener,occluded=false,{level=1}={}){
