@@ -45,15 +45,27 @@ export function installHouseLights(add,obj,height){
  circuit('dormitorio','Dormitorio',[[2.20,height,2.30]],[[4.275,height,1.40,'x',-1]]);
  circuit('lectura','Sala de lectura',[[2.2,height,8]],[[4.275,height,7.82,'x',-1]]);
  circuit('musica','Sala de música',[[10.62,height,1.65]],[[10.12,height,2.875,'z',-1]]);
- const x=10.16,y=1.48,z=7.02;
- add('power-meter-case',x,y,z,.13,.52,.35,'torchmetal',false,{shape:'rounded-box',roundness:.15});
- add('power-meter-display',x+.07,y+.12,z,.03,.14,.25,'glass',false,{color:[.35,.47,.50]});
- for(let n=0;n<5;n++)add('power-meter-mark-'+n,x+.091,y+.12,z-.082+n*.041,.012,.046,.021,'paper',false,{color:[.65,.72,.69]});
- add('power-meter-lamp',x+.094,y+.04,z-.078,.018,.024,.024,'paper',false,{dynamic:true,power,color:[.48,.83,.62]});
- add('power-meter-slot',x+.073,y-.102,z,.023,.155,.142,'dark',false);
- const lever=add('power-meter-lever',x+.095,y-.067,z,.055,.045,.107,'trim',false,{dynamic:true,color:[.68,.28,.20]});
- obj('house-power','power-switch','Interruptor general',x+.135,y-.067,z,{power,lever,leverUp:y-.067});
- return {circuits,fixtures,power};
+ // South-facing bath wall, directly ahead from the foot of the stairs.
+ const x=9.40,y=1.48,z=7.55,front=z+.11,plate={color:[.28,.28,.25]},rust={color:[.49,.28,.17]},copper={color:[.64,.43,.22]};
+ add('power-meter-case',x,y,z,.75,1.02,.16,'torchmetal',false,{...plate,shape:'rounded-box',roundness:.12});
+ add('power-meter-recess',x,y-.04,front-.021,.62,.73,.038,'dark',false,{color:[.16,.16,.15]});
+ for(const side of [-1,1]){
+  for(const height of [-.42,.42])add('power-meter-rivet-'+side+height,x+side*.323,y+height,front-.01,.051,.051,.033,'torchmetal',false,{...rust,shape:'cylinder',segments:6});
+  for(const height of [-.23,.19]){
+   add('power-meter-insulator-'+side+height,x+side*.13,y+height,front,.133,.138,.072,'cream',false,{surface:'glaze',color:[.61,.53,.38]});
+   add('power-meter-contact-'+side+height,x+side*.13,y+height,front+.051,.08,.103,.062,'brass',false,copper);
+  }
+ }
+ add('power-meter-header',x,y+.357,front+.004,.57,.143,.025,'brass',false,{...copper,art:14,front:'south'});
+ for(let i=0;i<8;i++)add('power-meter-stripe-'+i,x-.245+i*.07,y-.40,front+.016,.038,.064,.017,'brass',false,{roll:-.40,color:[.75,.50,.14]});
+ for(let i=0;i<10;i++)add('power-meter-scuff-'+i,x+(i%2?-.318:.318),y-.29+(i%5)*.14,front-.021,.064,.013,.014,'wood',false,{...rust,roll:(i%3-1)*.34});
+ const conduit=add('power-meter-conduit',x+.218,y+.73,z-.014,.085,.53,.088,'torchmetal',false,{shape:'round',segments:8,rings:5,...plate});
+ add('power-meter-conduit-clamp',conduit.x,y+.67,z+.015,.125,.068,.11,'torchmetal',false,rust);
+ add('power-meter-lamp',x+.244,y+.22,front+.031,.07,.07,.044,'paper',false,{dynamic:true,power,shape:'cylinder',segments:9,color:[.58,.81,.41]});
+ const leverParts=[-.13,.13].map(dx=>add('power-meter-knife-'+dx,x+dx,y-.02,front+.108,.045,.32,.043,'brass',false,{dynamic:true,...copper}));
+ leverParts.push(add('power-meter-lever',x,y+.14,front+.137,.37,.082,.074,'trim',false,{dynamic:true,shape:'rounded-box',roundness:.30,color:[.64,.16,.13]}));
+ const meter=obj('house-power','power-switch','Interruptor general',x,y-.025,front+.16,{power,amount:1,parts:leverParts.map(box=>({box,y:box.y,z:box.z}))});
+ return {circuits,fixtures,power,meter};
 }
 
 export const circuitPowered=circuit=>!!circuit?.on&&circuit.supply?.on!==false;
@@ -67,6 +79,13 @@ export function toggleCircuit(circuit){
 
 export function toggleHousePower(meter){
  meter.power.on=!meter.power.on;
- meter.lever.y=meter.leverUp-(meter.power.on?0:.072);
  return meter.power.on;
+}
+
+export function updatePowerLever(meter,delta){
+ const target=Number(meter.power.on);
+ if(meter.amount===target)return;
+ meter.amount=Math.min(1,Math.max(0,meter.amount+Math.sign(target-meter.amount)*delta/.22));
+ const t=meter.amount,drop=(1-t*t*(3-2*t));
+ for(const {box,y,z} of meter.parts){box.y=y-.30*drop;box.z=z+Math.sin(t*Math.PI)*.075;}
 }

@@ -13,7 +13,7 @@ export const MIX_CHANNELS=[
 const defaults={muted:false,master:1,ambient:.40,effects:.68,music:.34,doors:1.8,steps:1,creaks:1,objects:1,alerts:1,emotes:1};
 const effectChannel=kind=>{
  if(/^(door|closet|latch|unlock|trying|knock|keys)/.test(kind))return 'doors';
- if(['wood','stair','tile','grass','stone','footstep'].includes(kind))return 'steps';
+ if(['wood','stair','tile','grass','dirt','stone','footstep'].includes(kind))return 'steps';
  if(kind==='floor-groan')return 'creaks';
  return ['notification','alert'].includes(kind)?'alerts':'objects';
 };
@@ -93,7 +93,7 @@ export class HouseSound {
    this.foleyVoices??=new Set();if(this.foleyVoices.size>=12)return;
    const voice=spookyFoley(ctx,output,this.atmosphere.noise,kind,gain*(kind.startsWith('door')?2:kind==='floor-groan'?1.5:1),stereo,v=>this.foleyVoices.delete(v));this.foleyVoices.add(voice);this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;
   }
-  if(['wood','tile','grass','stone','door','drawer','window','latch','cloth','land'].includes(kind)){
+  if(['wood','tile','grass','dirt','stone','door','drawer','window','latch','cloth','land'].includes(kind)){
    const foley={door:'creak',drawer:'wood',land:'wood'}[kind]||kind;
    playFoley(ctx,output,this.atmosphere.noise,foley,gain*2,(Math.random()-.5)*.18);return;
   }

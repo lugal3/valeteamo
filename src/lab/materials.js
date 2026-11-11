@@ -52,9 +52,10 @@ function sample(style,u,v,inner=60){
   const fleck=hash(Math.floor(u*24),Math.floor(v*32),9),fiber=wave(v+u,27)*wave(u,7);
   shade=.91+.065*fine+.029*soft+.022*fiber-(fleck>.92?.075:0);height=.5+.038*fine+.020*fiber;rough=.94;
  }else if(style===10){
-  // arcilla / stone: mineral micro-pores
+  // Mineral grains and irregular pockets in the packed earth.
+  const bands=wave(v+wave(u,2)*.035,4)*.031,grit=wave(u+v*.16,6)*wave(v+u*.12,7)*.045;
   const specks=fine>.82?.06:0;
-  shade=.9+fine*.065+soft*.015-specks;height=.5+fine*.055-specks*.1;rough=.89;
+  shade=.89+fine*.071+bands+grit-specks;height=.51+fine*.065+bands*.9+grit*.8-specks*.13;rough=.92;
  }else if(style===11){
   const cloud=wave(u+wave(v,3)*.04,2)*wave(v,3),rib=wave(u,19);
   shade=.91+cloud*.067+fine*.038+rib*.021;height=.5+cloud*.045+rib*.017;rough=.20+fine*.09;
@@ -111,7 +112,7 @@ export function materialStyle(box){
  if(box.mat==='roof'||box.mat==='carpaint')return 13;
  if(box.surface==='paint')return 13;
  if(box.surface==='glaze')return 11;
- if(box.surface==='counter-stone')return 10;
+ if(box.surface==='counter-stone'||box.mat==='earth')return 10;
  if(box.id==='wardrobe')return 2;
  if(box.id?.startsWith('books-'))return 9;
  if(box.id?.endsWith('-cap')&&box.mat==='dark')return 7;

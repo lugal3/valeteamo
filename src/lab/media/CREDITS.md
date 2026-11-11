@@ -2,9 +2,13 @@
 
 ## Televisor
 
-El clip de 14 segundos se reproduce en la pantalla del televisor 3D. Se carga al usar el mando del salón y se apaga al salir o al bajar el interruptor general.
+El clip se reproduce en la pantalla del televisor 3D. Se carga al usar el mando del salón y se apaga al salir o al bajar el interruptor general.
 
-`television.mp4` deriva de [Raccoon standing, braced against a shed, while eating](https://commons.wikimedia.org/wiki/File:Raccoon_standing,_braced_against_a_shed,_while_eating.webm), de Greenmars. El recorte y la adaptación se distribuyen bajo [Creative Commons Atribución-CompartirIgual 3.0](https://creativecommons.org/licenses/by-sa/3.0/). Se recortó un segmento de 14 segundos desde el segundo 5, se reencuadró y se codificó a 256 × 144 píxeles y 12 fps sin pista sonora. La estática del televisor se genera en el juego.
+`television.mp4` contiene el archivo `raccoon-eating.gif` aportado por el propietario. Conserva su bucle de 2 segundos y se codificó en H.264 a 220 × 122 píxeles sin pista sonora. La estática del televisor se genera en el juego.
+
+## Pósteres
+
+`poster-titanes.jpg` y `poster-archivo.jpg` proceden de las imágenes aportadas por el propietario. Conservan su proporción en el salón y en la sala de música, respectivamente.
 
 ## Altar
 
@@ -13,5 +17,6 @@ La ilustración y los textos del altar son originales del juego. Las fechas corr
 ## Controles nuevos
 
 - Mantén Shift y una dirección en PC, o arrastra el joystick más allá de su aro en móvil, para correr hasta cuatro segundos. Suelta el control de carrera para volver a usarla después de agotarte.
-- Agáchate antes de entrar en el hueco bajo la escalera. El interruptor general está en la pared junto al hueco.
-- El tapete bordado de la cocina se puede apartar y volver a colocar. El reloj del pasillo y el teléfono usan la hora local del dispositivo.
+- Agáchate antes de entrar en el hueco bajo la escalera. El interruptor general está de frente, en la pared exterior del baño que da al vestíbulo de la escalera.
+- Aparta el tapete bordado de la cocina, abre la trampilla desde el borde y baja por los peldaños. El rescate del recorrido principal se completa después de despistar al perseguidor.
+- El reloj del pasillo y el teléfono usan la hora local del dispositivo.

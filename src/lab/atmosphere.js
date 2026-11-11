@@ -3,11 +3,11 @@ export function makeNoise(ctx){
  const buffer=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate),data=buffer.getChannelData(0);let seed=7919;
  for(let i=0;i<data.length;i++){seed=(seed*16807)%2147483647;data[i]=seed/1073741824-1;}return buffer;
 }
-const FOLEY_DURATION={creak:.65,window:.65,cloth:.36,'tv-static':.45,'clock-tick':.046};
+const FOLEY_DURATION={creak:.65,window:.65,cloth:.36,dirt:.28,'tv-static':.45,'clock-tick':.046};
 function transient(ctx,bus,noise,{kind,time=ctx.currentTime,level=.1,pan=0},onEnd=()=>{}){
  const start=Math.max(ctx.currentTime+.004,time),duration=FOLEY_DURATION[kind]??.20;
  const source=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain(),stereo=ctx.createStereoPanner();
- source.buffer=noise;filter.type='bandpass';filter.frequency.value={creak:180,window:250,cloth:1300,grass:850,tile:1400,stone:900,wood:320,cricket:3300,drip:1800,latch:1700,'tv-static':2250,'clock-tick':1580}[kind]||450;filter.Q.value=kind==='cricket'?10:kind==='creak'||kind==='clock-tick'?3:.7;stereo.pan.value=pan;
+ source.buffer=noise;filter.type='bandpass';filter.frequency.value={creak:180,window:250,cloth:1300,grass:850,dirt:590,tile:1400,stone:900,wood:320,cricket:3300,drip:1800,latch:1700,'tv-static':2250,'clock-tick':1580}[kind]||450;filter.Q.value=kind==='cricket'?10:kind==='creak'||kind==='clock-tick'?3:.7;stereo.pan.value=pan;
  gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(Math.max(.0002,level),start+.012);gain.gain.exponentialRampToValueAtTime(.0001,start+duration);
  source.connect(filter);filter.connect(gain);gain.connect(stereo);stereo.connect(bus);source.start(start,(start*1.37)%1);source.stop(start+duration+.02);
  const voice={source,stop(){try{source.stop();}catch{}source.disconnect();filter.disconnect();gain.disconnect();stereo.disconnect();}};
@@ -31,7 +31,7 @@ export class HouseAtmosphere{
  }
  tick(){
   const now=this.ctx.currentTime;if(this.paused||now<this.nextEvent)return;this.nextEvent=now+4+Math.random()*5;
-  const kind=this.outdoor>.6?'cricket':this.room==='Baño'?'drip':'creak';
+  const kind=this.outdoor>.6?'cricket':this.room==='Baño'||this.room==='Sótano'?'drip':'creak';
   this.emit(kind,kind==='cricket'?.12:kind==='drip'?.075:this.hidden?.11:.075,(Math.random()-.5)*1.3);
   if(kind==='cricket'){this.emit(kind,.09,.55,now+.17);this.emit(kind,.06,.55,now+.34);}
  }

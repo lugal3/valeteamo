@@ -35,11 +35,11 @@ void main(){
 const LAMP_BASIS={right:[1,0,0],up:[0,0,1],forward:[0,-1,0]};
 
 export function castsShadow(box){
- return box.solid||/^(step-\d+$|upper-mattress$|sofa-pillow-|wardrobe-louver-)/.test(box.id);
+ return box.solid||box.castShadow||/^(step-\d+$|basement-step-\d+$|upper-mattress$|sofa-pillow-|wardrobe-louver-)/.test(box.id);
 }
 
 export function nearbyLights(fixtures,camera){
- return fixtures.filter(light=>circuitPowered(light.circuit))
+ return fixtures.filter(light=>circuitPowered(light.circuit)&&!!light.underground===(camera.y<-.30))
   .map(light=>({light,distance:Math.hypot(camera.x-light.x,camera.y-light.y,camera.z-light.z)}))
   .filter(({distance})=>distance<LAMP_REACH+2)
   .sort((a,b)=>a.distance-b.distance)

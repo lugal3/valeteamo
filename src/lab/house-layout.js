@@ -4,6 +4,8 @@ import {installHouseLights} from './house-lights.js';
 import {installCabinet,installRefrigerator} from './house-cabinets.js';
 import {installLouisAltar} from './louis-altar.js';
 import {installWallClock} from './wall-clock.js';
+import {STUDY_SIGN} from './artwork.js';
+import {HATCH,floorAroundHatch,installBasement} from './basement.js';
 // V5: generous landings and an independent, open stairwell. Dimensions in metres.
 export const HEIGHT=3.15;
 export const HOUSE=Object.freeze({width:14,depth:12});
@@ -22,6 +24,7 @@ export const ROOMS=[
  {id:'music',label:'Sala de música',floor:1,x0:7.5,x1:14,z0:0,z1:3}
 ];
 export function roomAt(x,z,y=0){
+ if(y<-.12)return 'Sótano';
  if(x<0||x>HOUSE.width||z<0||z>HOUSE.depth)return 'Jardín y vecindario';
  return ROOMS.find(r=>r.floor===(y>HEIGHT*.52?1:0)&&x>r.x0&&x<r.x1&&z>r.z0&&z<r.z1)?.label||(y>HEIGHT*.52?'Distribuidor y descansillo':'Recibidor y pasillo');
 }
@@ -43,16 +46,28 @@ export function buildHouse(spawn='ground'){
     const x=axis==='x'?coordinate:gap.center,z=axis==='z'?coordinate:gap.center,vertical=axis==='x';
     for(const side of [-1,1])add(id+'-frame-'+low+'-'+side,x+(vertical?0:side*gap.width/2),floor+sill+height/2,z+(vertical?side*gap.width/2:0),vertical?.14:.08,height,vertical?.08:.14,'wood',false);
     for(const top of [0,height])add(id+'-rail-'+low+'-'+top,x,floor+sill+top,z,vertical?.14:gap.width+.1,.08,vertical?gap.width+.1:.14,'wood',false);
-    if(!gap.intro)add(id+'-cross-'+low,x,floor+sill+height/2,z,vertical?.12:.055,height,vertical?.055:.12,'cream',false);
-    add(id+'-curtain-'+low,x+(vertical?-.13:-gap.width/2+.08),floor+sill+height/2,z+(vertical?-gap.width/2+.08:-.13),vertical?.10:.16,height,vertical?.16:.10,'pink',false,{dynamic:true,ambient:'curtain'});
+    if(!gap.intro){
+     add(id+'-cross-'+low,x,floor+sill+height/2,z,vertical?.12:.055,height,vertical?.055:.12,'cream',false);
+     const out=coordinate===0?-1:1;
+     for(const [i,level] of [.39,.68].entries()){
+      const width=gap.width+.27,py=floor+sill+height*level,bx=x+(vertical?out*.115:0),bz=z+(vertical?0:out*.115);
+      const planks=['board-low','board-high'];
+      add(id+'-'+planks[i]+'-'+low,bx,py,bz,vertical?.089:width,.182,vertical?width:.089,'wood',false,{castShadow:true,color:i?[.45,.32,.25]:[.37,.26,.23]});
+      for(const side of [-1,1])for(const row of [-1,1]){
+       const span=side*(gap.width*.5-.026),surface=out*.052;
+       add(id+'-nail-'+low+i+side+row,bx+(vertical?surface:span),py+row*.042,bz+(vertical?span:surface),vertical?.018:.033,.035,vertical?.033:.018,'torchmetal',false,{shape:'cylinder',yaw:vertical?Math.PI/2:0,segments:6,color:[.47,.45,.39]});
+       add(id+'-nail-tip-'+low+i+side+row,bx+(vertical?-surface:span),py+row*.042,bz+(vertical?span:-surface),.017,.017,.017,'torchmetal',false,{color:[.26,.27,.25]});
+      }
+     }
+    }
    }
    cursor=high;
   }
   if(cursor<end)wall(axis,id+'-end',coordinate,cursor,end,floor,mat);
  }
  const window=(center,width=1.4,intro=false)=>({center,width,sill:.85,height:1.5,window:true,intro});
- add('garden-ground',8,-.25,12,36,.44,40,'grass');
- add('base',7,-.17,6,14.3,.34,12.3,'floor');
+ floorAroundHatch(add,'garden-ground',-.25,.44,-10,26,-8,32,'grass',true);
+ floorAroundHatch(add,'base',-.17,.34,-.15,14.15,-.15,12.15,'floor',true);
  add('floor-up-left',5.15,HEIGHT-.11,6,10.3,.22,12,'wood');
  add('floor-up-right-front',12.15,HEIGHT-.11,2.475,3.7,.22,4.95,'wood');
  add('floor-up-right-back',12.15,HEIGHT-.11,11.1,3.7,.22,1.8,'wood');
@@ -155,10 +170,10 @@ export function buildHouse(spawn='ground'){
   add(id+'-pot',x,y+.22,z,.40,.44,.40,'terracotta');add(id+'-lip',x,y+.44,z,.44,.07,.44,'brass',false);add(id+'-stem',x,y+.70,z,.03,.53,.03,'stem',false);
   for(let n=0;n<7;n++){const angle=n*Math.PI*2/7;add(id+'-leaf-'+n,x+Math.cos(angle)*.18,y+.67+.12*(n%3),z+Math.sin(angle)*.18,.24,.48,.08,'foliage',false,{shape:'leaf',yaw:angle,lean:.16});}
  }
- function frame(id,x,y,z,dir,art){
-  const vertical=dir==='west'||dir==='east';add('frame-'+id,x,y,z,vertical?.10:.88,.93,vertical?.88:.10,'wood',false);
-  add('picture-'+id,x+(dir==='east'?.06:dir==='west'?-.06:0),y,z+(dir==='south'?.06:dir==='north'?-.06:0),vertical?.02:.76,.81,vertical?.76:.02,'paper',false,{art,front:dir});
-  obj('picture-'+id,'picture',art===1?'Cuadro del corazón · One Direction':'Cuadro de One Direction',x,y,z,{art,text:art===1?'Un corazón rojo está marcado junto al escenario. Parece una pista.':'Un cartel original inspirado en One Direction: música, viajes y recuerdos.'});
+ function frame(id,x,y,z,dir,art,{width=.76,height=.81,label=art===1?'Cuadro del corazón · One Direction':'Cuadro de One Direction',text=art===1?'Un corazón rojo está marcado junto al escenario. Parece una pista.':'Un cartel original inspirado en One Direction: música, viajes y recuerdos.'}={}){
+  const vertical=dir==='west'||dir==='east';add('frame-'+id,x,y,z,vertical?.10:width+.12,height+.12,vertical?width+.12:.10,'wood',false);
+  add('picture-'+id,x+(dir==='east'?.06:dir==='west'?-.06:0),y,z+(dir==='south'?.06:dir==='north'?-.06:0),vertical?.02:width,height,vertical?width:.02,'paper',false,{art,front:dir});
+  obj('picture-'+id,'picture',label,x,y,z,{art,text});
  }
  // Keep the window landing and both sides of the doorway clear.
  const sofaStart=boxes.length;
@@ -192,7 +207,8 @@ export function buildHouse(spawn='ground'){
  add('tv-remote-power',2.34,.965,8.995,.033,.014,.029,'bow',false);
  for(let i=0;i<6;i++)add('tv-remote-key-'+i,2.316+i%2*.048,.967,9.05+Math.floor(i/2)*.036,.025,.013,.022,'torchmetal',false);
  obj('television','television','Control remoto',2.34,.985,9.07,{power:tvPower});
- lamp('table-lantern',2.10,.92,9.5);plant('salon-plant',.38,0,11.55);frame('stain',3.65,1.8,4.84,'south',1);frame('living-tour',.15,1.8,5.35,'east',0);
+ lamp('table-lantern',2.10,.92,9.5);plant('salon-plant',.38,0,11.55);frame('stain',3.65,1.8,4.84,'south',1);
+ frame('living-tour',.15,1.8,5.35,'east',12,{width:.65,height:1.16,label:'Starfire y Robin',text:'Starfire y Robin en la portada de un cómic de los Jóvenes Titanes.'});
  // Study with the same existing drawer/key progression.
  const studyStart=boxes.length,deskOffset=1.565;
  table('study-desk',2.6,0,2.7,1.35,.65);chair('study-chair',2.55,0,1.31,Math.PI);
@@ -205,9 +221,10 @@ export function buildHouse(spawn='ground'){
  add('study-papers',2.65,.94,2.75,.38,.06,.27,'paper',false);lamp('study-lamp',2.15,.92,2.72);
  for(const box of boxes.slice(studyStart))box.z+=deskOffset;
  for(const item of [drawer,key,drawer.origin,drawer.contents[0].origin,...drawer.parts.map(part=>part.origin)])item.z+=deskOffset;
- shelf('study-shelf',.19,0,3.6,-Math.PI/2);plant('study-plant',4.00,0,4.32);frame('study',.95,1.8,.15,'south',2);
+ shelf('study-shelf',.19,0,3.6,-Math.PI/2);plant('study-plant',4.00,0,4.32);
+ frame('study',.95,1.8,.15,'south',15,{label:'Letrero del estudio',text:STUDY_SIGN});
  // Kitchen and bathroom are recognizable rooms, not corridor props.
- add('kitchen-floor',10.75,.012,2.2,6.2,.024,4.1,'tile',false,{ao:.91});
+ floorAroundHatch(add,'kitchen-floor',.012,.024,7.65,13.85,.15,4.25,'tile',false,{ao:.91});
  const quartz={surface:'counter-stone',color:[.55,.53,.51]};
  add('kitchen-counter',8.875,.925,.48,1.69,.075,.73,'stone',true,quartz);
  add('kitchen-counter-east',11.37,.925,.48,2,.075,.73,'stone',true,quartz);
@@ -240,12 +257,11 @@ export function buildHouse(spawn='ground'){
  add('kitchen-mug-a',11.5,1.01,.46,.09,.09,.09,'cream',false,{shape:'lathe',profile:CUP_PROFILE,segments:9});
  add('kitchen-mug-b',11.7,1.01,.46,.09,.09,.09,'pink',false,{shape:'lathe',profile:CUP_PROFILE,segments:9});
  chair('dining-chair-a',11.15,0,1.96,Math.PI);chair('dining-chair-b',11.15,0,3.25);lamp('dining-light',11.15,.92,2.62);
- add('basement-hatch',8.55,.018,3.55,1.25,.035,1.0,'dark',false);for(const x of [8.15,8.95])add('hatch-hinge-'+x,x,.044,3.95,.20,.025,.07,'brass',false);add('hatch-pull',8.55,.05,3.15,.26,.04,.06,'brass',false);
- const hatch=obj('basement-hatch','inspect','Trampilla del sótano',8.55,.05,3.55,{concealed:true,text:'La trampilla parece bajar al sótano. Está cerrada por dentro.'});
- const rug=[add('hatch-rug',8.55,.089,3.55,1.48,.030,1.20,'carpet',false,{dynamic:true,color:[.62,.17,.30]})];
- for(const offset of [-.45,.45])rug.push(add('hatch-rug-band-'+offset,8.55,.106,3.55+offset,1.44,.009,.125,'velvet',false,{dynamic:true,color:[.84,.56,.32]}));
- for(let i=0;i<5;i++)rug.push(add('hatch-rug-diamond-'+i,8.15+i*.2,.108,3.55,.10,.010,.10,'velvet',false,{dynamic:true,yaw:Math.PI/4,color:[.83,.52,.52]}));
- const hatchRug=obj('hatch-rug','rug','Tapete bordado',8.55,.129,3.55,{hatch,amount:0,aside:false,
+ const rugZ=(HATCH.minZ+HATCH.maxZ)/2;
+ const rug=[add('hatch-rug',8.55,.120,rugZ,1.48,.030,1.81,'carpet',false,{dynamic:true,color:[.62,.17,.30]})];
+ for(const offset of [-.74,.74])rug.push(add('hatch-rug-band-'+offset,8.55,.137,rugZ+offset,1.44,.009,.125,'velvet',false,{dynamic:true,color:[.84,.56,.32]}));
+ for(let i=0;i<5;i++)rug.push(add('hatch-rug-diamond-'+i,8.15+i*.2,.139,rugZ,.10,.010,.10,'velvet',false,{dynamic:true,yaw:Math.PI/4,color:[.83,.52,.52]}));
+ const hatchRug=obj('hatch-rug','rug','Tapete bordado',8.55,.15,rugZ,{amount:0,aside:false,
   parts:rug.map(box=>({box,x:box.x,y:box.y}))});
  add('bath-floor',8.75,.012,5.9,2.25,.024,2.75,'tile',false,{ao:.90});add('toilet-base',9.25,.27,6.55,.45,.54,.65,'cream',true,{shape:'round'});add('toilet-seat',9.25,.56,6.5,.52,.08,.63,'cream',false,{shape:'round'});add('toilet-tank',9.25,.70,7.0,.50,.56,.22,'cream');
  installCabinet(add,obj,{id:'basin-cabinet',label:'Gabinete bajo el lavamanos',x:8.66,z:4.8,w:.89,h:.86,d:.57,color:[.37,.45,.47],
@@ -307,6 +323,7 @@ export function buildHouse(spawn='ground'){
  frame('bed',3.8,HEIGHT+1.95,.15,'south',4);
  obj('note-upper','note','Carta en el dormitorio',bedsideX-.15,HEIGHT+.755,bedsideZ+.19,{text:'Hay una canción que siempre me recuerda a ti.'});
  obj('battery-upper','battery','Pila del dormitorio',bedsideX+.17,HEIGHT+.78,bedsideZ+.13);
+ obj('basement-note','note','Papel clavado en el dormitorio',3.55,HEIGHT+1.46,.19,{text:'Lo bajé a la fuerza. La trampilla queda bajo el tapete rojo de la cocina.'});
  obj('bed','bed','Cama con lazo',bedX,HEIGHT+1.0,2.07,{returnX:2.80,returnZ:2.63});
  obj('underbed','hide','Esconderse bajo la cama',bedX,HEIGHT+.32,2.31,{hideType:'underbed',returnX:bedX,returnZ:2.72,hideCamera:{x:bedX,y:HEIGHT+.28,z:1.72,yaw:0,pitch:0}});
  // Wardrobe is a hollow shell. Its two physical louvered leaves leave real sight gaps.
@@ -329,9 +346,10 @@ export function buildHouse(spawn='ground'){
  add('record-arm',9.94,HEIGHT+1.035,.41,.025,.026,.29,'torchmetal',false,{yaw:.19});
  obj('record-player','inspect','Tocadiscos',9.78,HEIGHT+1.05,.42,{text:'El vinilo está rayado en el mismo surco. Al lado, alguien escribió «Otra vez, desde el principio».'});
  shelf('music-books',13.80,HEIGHT,2.03,Math.PI/2);chair('music-chair',8.24,HEIGHT,1.33,.98);
- add('guitar-body',10.92,HEIGHT+1.13,.20,.35,.48,.10,'wood',false,{shape:'round'});add('guitar-neck',10.92,HEIGHT+1.6,.20,.055,.65,.08,'wood',false);frame('music',8.0,HEIGHT+1.9,.15,'south',5);
+ add('guitar-body',10.92,HEIGHT+1.13,.20,.35,.48,.10,'wood',false,{shape:'round'});add('guitar-neck',10.92,HEIGHT+1.6,.20,.055,.65,.08,'wood',false);
  obj('guitar','inspect','Guitarra de la sala',10.92,HEIGHT+1.39,.32,{text:'Una cuerda está rota. En la caja quedó un adhesivo de One Direction.'});
  installLouisAltar(add,obj,HEIGHT);
+ frame('archive',12.45,HEIGHT+1.71,2.86,'north',13,{width:1.36,height:.745,label:'Afiche de archivo',text:'Un afiche de campaña viejo, guardado junto a los recortes de la casa.'});
  chair('reading-chair',.67,HEIGHT,7.55,-Math.PI/2);table('reading-table',1.50,HEIGHT,7.92,.72,.62);lamp('reading-light',1.50,HEIGHT+.92,7.92);shelf('reading-books',.19,HEIGHT,9.8,-Math.PI/2);plant('reading-plant',4.02,HEIGHT,5.33);frame('reading',3.75,HEIGHT+1.9,11.83,'north',2);
  obj('reading-books','inspect','Biblioteca de la planta alta',.47,HEIGHT+1.16,9.8,{text:'Los anuarios tienen los lomos gastados. Entre ellos hay entradas de conciertos archivadas por fecha.'});
  installCabinet(add,obj,{id:'reading-cabinet',label:'Cajón de la sala de lectura',x:2.05,y:HEIGHT,z:5.12,w:1.28,d:.60,
@@ -364,10 +382,11 @@ export function buildHouse(spawn='ground'){
   add('decal-finger-a',5.0,1.08,11.94,.22,.18,.01,'stain',false);
   add('decal-finger-b',6.5,0.92,11.94,.14,.12,.01,'stain',false);
   add('decal-stair-dust',12,.005,7.45,2.3,.01,.12,'stain',false);
-  add('decal-wall-patch',0.08,1.55,8.6,.01,.65,1.1,'stain',false);
   add('decal-bath-drip',9.88,0.6,4.45,.01,.55,.12,'stain',false);
   add('decal-study-dust',.12,.005,1.5,.12,.01,2.8,'stain',false);
   const spawns={mirror:{...MIRROR_SPAWN},ground:{x:5.95,y:0,z:10.65,yaw:Math.PI},upstairs:{x:12,y:HEIGHT,z:4.15,yaw:-Math.PI/2,items:{key:1}},sound:{x:2.2,y:0,z:11.0,yaw:Math.PI},interactions:{x:3.3,y:0,z:3.6,yaw:-2.8,items:{key:1,batteries:1}}};
  const lights=installHouseLights(add,obj,HEIGHT);
- return {boxes,objects,lights,television,clock,hatchRug,entryWindow,spawn:spawns[spawn]||spawns.ground,spawns,rooms:ROOMS,bounds:WORLD_BOUNDS,stair:STAIR,house:HOUSE};
+ const hatch=installBasement(add,obj,lights);
+ hatchRug.hatch=hatch;
+ return {boxes,objects,lights,television,clock,hatch,hatchRug,entryWindow,spawn:spawns[spawn]||spawns.ground,spawns,rooms:ROOMS,bounds:WORLD_BOUNDS,stair:STAIR,house:HOUSE};
 }

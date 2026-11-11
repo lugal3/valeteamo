@@ -52,10 +52,11 @@ float visibility(float tile,vec2 uv,float depth,float reach,float slope){
 }
 float lampLight(vec4 lamp,vec3 world,vec3 normal,vec3 surfaceNormal){
  if(lamp.w<.5)return 0.0;
+ float strength=fract(lamp.w);if(strength<.01)strength=1.0;
  vec3 delta=lamp.xyz-world;float depth=delta.y;
  float d2=dot(delta,delta);
  // A short bounce around the shade lights the mounting surface and stays inside the room.
- float bounce=.44*(1.0-smoothstep(.12,.82,d2))*smoothstep(-.57,-.28,depth);
+ float bounce=.44*strength*(1.0-smoothstep(.12,.82,d2))*smoothstep(-.57,-.28,depth);
  if(depth<=.035||d2>${(LAMP_REACH**2).toFixed(1)})return bounce;
  vec2 projected=-delta.xz/(depth*${LAMP_SPREAD.toFixed(1)});
  float coverage=1.0-smoothstep(.16,.99,length(projected));
@@ -63,8 +64,8 @@ float lampLight(vec4 lamp,vec3 world,vec3 normal,vec3 surfaceNormal){
  vec3 direction=delta*inversesqrt(max(.02,d2));
  float facing=max(0.0,dot(normal,direction));
  float falloff=(1.0-smoothstep(36.0,64.0,d2))/(1.0+.23*d2);
- return bounce+2.1*falloff*coverage*(.22+.78*facing)*
-  visibility(lamp.w,projected*.5+.5,depth,${LAMP_REACH.toFixed(1)},max(0.0,dot(surfaceNormal,direction)));
+ return bounce+2.1*strength*falloff*coverage*(.22+.78*facing)*
+  visibility(floor(lamp.w),projected*.5+.5,depth,${LAMP_REACH.toFixed(1)},max(0.0,dot(surfaceNormal,direction)));
 }
 void main(){
  if(uMirrorPass>.5&&vWorld.x<9.8375)discard;
@@ -126,6 +127,7 @@ void main(){
  float facing=.86+.14*max(0.0,dot(N,normalize(vec3(.3,.8,.4))));
  float boundary=max(max(-world.x,world.x-${HOUSE.width.toFixed(1)}),max(-world.z,world.z-${HOUSE.depth.toFixed(1)}));
  vec3 ambient=mix(vec3(.071,.076,.107),vec3(.20,.22,.32),smoothstep(.06,.48,boundary));
+ ambient=mix(ambient,vec3(.056,.048,.047),smoothstep(.18,1.1,-world.y));
  vec3 lighting=ambient*facing+vec3(.94,.97,1.0)*(beam+motes*.50)+vec3(1.0,.82,.60)*warmth;
  vec3 color=vColor*material.rrr*1.075;
  if(vArt>.5&&vArt<1.5){vec4 painted=texture2D(uAtlas,vUV);color=mix(color,painted.rgb,painted.a*.96);}

@@ -2,7 +2,7 @@ import {createRigBinding,evaluateRig,JOINT_INDEX} from './character-rig.js';
 import {sampleBlink} from './animations/face.js';
 import {smoothSurface,torusSurface,roundedBoxSurface} from './chibi-geometry.js';
 import {BATH_MIRROR,mirrorVisible,kittyMirrorPieces,reflectedBathroom,reflectMesh,poseReflectedKitty} from './mirror.js';
-import {ART_COUNT,createArtworkCanvas} from './artwork.js';
+import {ART_SIZE,ART_COLUMNS,ART_ROWS,POSTER_IMAGES,artTile,createArtworkCanvas} from './artwork.js';
 import {climbingHandPieces} from './first-person.js';
 import {drawViewModel} from './viewmodel.js';
 import {pursuerPieces,posePursuer} from './pursuer-model.js';
@@ -25,6 +25,22 @@ function createAtlas(gl){
  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
  return tex;
+}
+function loadPosterTiles(gl,texture){
+ const scratch=document.createElement('canvas');scratch.width=scratch.height=ART_SIZE;
+ const ctx=scratch.getContext('2d');
+ const images=POSTER_IMAGES.map(([index,url])=>{
+  const image=new Image(),tile=artTile(index);
+  image.onload=()=>{
+   ctx.drawImage(image,0,0,ART_SIZE,ART_SIZE);
+   const unit=gl.getParameter(gl.ACTIVE_TEXTURE),flip=gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL);
+   gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+   gl.texSubImage2D(gl.TEXTURE_2D,0,tile.x,(ART_ROWS-1)*ART_SIZE-tile.y,gl.RGBA,gl.UNSIGNED_BYTE,scratch);
+   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,flip);gl.activeTexture(unit);
+  };
+  image.src=url;return image;
+ });
+ return ()=>{for(const image of images)image.onload=null;};
 }
 const faces=[
  // right, left, top, bottom, south, north; each face has an explicit outward normal.
@@ -135,15 +151,18 @@ export function geometry(boxes){
   const start=offset;
   for(const face of faces){
    const art=box.art!==undefined&&box.front===face.dir?box.art+1:0;
+   const tile=art?artTile(art-1):null;
    const video=box.video&&box.front===face.dir;
    const frame=surfaceFrame(box,face.normal,style);
    face.corners.forEach(([dx,dy,dz],i)=>{
     const u=(i===0||i===3)?0:1,v=i<2?0:1;
     const position=[dx*box.w/2,dy*box.h/2,dz*box.d/2];
-    if(box.mat==='floor'||box.id.startsWith('floor-up-')){position[0]+=box.x;position[2]+=box.z;}
-    const uv=[frame.tangent,frame.bitangent].map((axis,j)=>axis.reduce((sum,a,k)=>sum+a*position[k],0)*frame.scale[j]);
+    if(box.worldUV){position[0]+=box.x;position[1]+=box.y;position[2]+=box.z;}
+    else if(box.mat==='floor'||box.id.startsWith('floor-up-')){position[0]+=box.x;position[2]+=box.z;}
+    const uv=video?[u,v]:tile?[(tile.x+.5+u*(ART_SIZE-1))/(ART_SIZE*ART_COLUMNS),(ART_SIZE*(ART_ROWS-1)-tile.y+.5+v*(ART_SIZE-1))/(ART_SIZE*ART_ROWS)]:
+     [frame.tangent,frame.bitangent].map((axis,j)=>axis.reduce((sum,a,k)=>sum+a*position[k],0)*frame.scale[j]);
     vertices.push(box.x+dx*box.w/2,box.y+dy*box.h/2,box.z+dz*box.d/2,
-     color[0],color[1],color[2],...face.normal,video?u:art?((art-1)+u)/ART_COUNT:uv[0],video||art?v:uv[1],video?2:art?1:0,style,...frame.tangent);
+     color[0],color[1],color[2],...face.normal,...uv,video?2:art?1:0,style,...frame.tangent);
    });
    indices.push(offset,offset+1,offset+2,offset,offset+2,offset+3);offset+=4;
   }
@@ -168,7 +187,7 @@ export class HouseRenderer {
   this.canvas=canvas;this.quality=quality;
   const gl=canvas.getContext('webgl',{alpha:false,stencil:true,antialias:false,powerPreference:'low-power',preserveDrawingBuffer:false});
   if(!gl)throw Error('El navegador no permite WebGL. Activa aceleración gráfica o prueba otro navegador.');
-  this.gl=gl;this.programs={medium:program(gl),low:program(gl,true)};this.program=this.programs[quality==='low'?'low':'medium'];this.texture=createAtlas(gl);this.materialQuality=quality;this.materialTextures=createMaterials(gl,quality);
+  this.gl=gl;this.programs={medium:program(gl),low:program(gl,true)};this.program=this.programs[quality==='low'?'low':'medium'];this.texture=createAtlas(gl);this.disposeArtwork=loadPosterTiles(gl,this.texture);this.materialQuality=quality;this.materialTextures=createMaterials(gl,quality);
   this.mirrorSupported=gl.getContextAttributes().stencil;this.mirrorBuffers=Array.from({length:8},()=>gl.createBuffer());this.mirrorDrawn=false;
   this.vbo=gl.createBuffer();this.ibo=gl.createBuffer();this.count=0;
   this.dynamicVbo=gl.createBuffer();this.dynamicIbo=gl.createBuffer();this.dynamicCount=0;this.dynamicBoxes=[];
@@ -281,9 +300,8 @@ export class HouseRenderer {
     box.y=source.concealed?-100:source.y+offset[1]+bob;
     box.z=source.z+offset[2];
     if(sway)box.yaw=(box.baseYaw||0)+sway;
-   } else if(box.ambient==='curtain'){
-    const orig=this.dynamicOrigins[i];
-    box.x=orig[0]+(reduced?0:Math.sin(time*1.8+(orig[0]+orig[2])*1.5)*0.014);
+   } else if(box.ambient==='captive-breath'){
+    box.y=this.dynamicOrigins[i][1]+(reduced||motion.feetY>-.3?0:Math.sin(time*2.3)*.010);
    }
    const at=i*5,bx=box.x,by=box.y,bz=box.z,byaw=box.yaw||0,roll=box.roll||0;
    const {start,end}=this.dynamicRanges[i],glow=circuitPowered(box.fixture?.circuit)||box.power?.on?32:0;
@@ -318,7 +336,7 @@ export class HouseRenderer {
  updateShadows(camera,flash,light,basis){
   const lamps=nearbyLights(this.fixtures,camera);
   this.lampUniforms.fill(0);
-  lamps.forEach(({x,y,z,tile},i)=>this.lampUniforms.set([x,y,z,tile],i*4));
+  lamps.forEach(({x,y,z,tile,strength=1},i)=>this.lampUniforms.set([x,y,z,tile+(strength===1?0:strength)],i*4));
   if(!this.shadows.available)return;
   const pose=flash?[camera.x,camera.y,camera.z,camera.yaw,camera.pitch].join(','):'';
   const torchChanged=flash&&pose!==this.lightPose,dirty=lamps.filter(lamp=>this.dirtyLampShadows.has(lamp));
@@ -441,5 +459,5 @@ export class HouseRenderer {
   if(motion.introHands)this.drawClimbingHands(motion.introHands);
   if(showHand)this.drawFirstPerson(camera,right,up,forward,time,flash,motion);
  }
- destroy(){const gl=this.gl;if(this.pursuerVbo)gl.deleteBuffer(this.pursuerVbo);if(this.pursuerIbo)gl.deleteBuffer(this.pursuerIbo);for(const b of this.mirrorBuffers)gl.deleteBuffer(b);gl.deleteTexture(this.texture);gl.deleteTexture(this.tvTexture);this.shadows.destroy();for(const mesh of this.shadowMeshes)gl.deleteBuffer(mesh.indices);for(const texture of this.materialTextures)gl.deleteTexture(texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.dynamicVbo);gl.deleteBuffer(this.dynamicIbo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);for(const p of Object.values(this.programs))gl.deleteProgram(p);this.canvas.width=1;this.canvas.height=1;}
+ destroy(){const gl=this.gl;this.disposeArtwork();if(this.pursuerVbo)gl.deleteBuffer(this.pursuerVbo);if(this.pursuerIbo)gl.deleteBuffer(this.pursuerIbo);for(const b of this.mirrorBuffers)gl.deleteBuffer(b);gl.deleteTexture(this.texture);gl.deleteTexture(this.tvTexture);this.shadows.destroy();for(const mesh of this.shadowMeshes)gl.deleteBuffer(mesh.indices);for(const texture of this.materialTextures)gl.deleteTexture(texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.dynamicVbo);gl.deleteBuffer(this.dynamicIbo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);for(const p of Object.values(this.programs))gl.deleteProgram(p);this.canvas.width=1;this.canvas.height=1;}
 }

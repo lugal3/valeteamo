@@ -1,20 +1,27 @@
-// Original fan-themed posters. No photographs, album art or song recordings.
-export const ART_COUNT=12,ART_SIZE=128;
+// Original illustrations and two posters supplied for the house.
+export const ART_COUNT=16,ART_SIZE=192,ART_COLUMNS=4,ART_ROWS=4;
+export const STUDY_SIGN='demonstar pa demostrar';
+export const POSTER_IMAGES=[
+ [12,new URL('./media/poster-titanes.jpg',import.meta.url).href],
+ [13,new URL('./media/poster-archivo.jpg',import.meta.url).href]
+];
+export const artTile=index=>({x:index%ART_COLUMNS*ART_SIZE,y:Math.floor(index/ART_COLUMNS)*ART_SIZE});
 export const ART_TITLES=[
  'ONE DIRECTION · LIVE','1D · HEARTBEAT','ONE DIRECTION · VINYL','1D · ON THE ROAD',
  'ONE DIRECTION · STARS','1D · MUSIC ROOM','1D · NIGHT CHANGES','ONE DIRECTION · ACOUSTIC',
- '1D · MIDNIGHT MEMORIES','ONE DIRECTION · GOLDEN','LOUIS TOMLINSON','REGISTRO DE LOUIS'
+ '1D · MIDNIGHT MEMORIES','ONE DIRECTION · GOLDEN','LOUIS TOMLINSON','REGISTRO DE LOUIS',
+ 'STARFIRE Y ROBIN','AFICHE DE ARCHIVO','PELIGRO ELÉCTRICO',STUDY_SIGN
 ];
 
 export function createArtworkCanvas(){
- const canvas=document.createElement('canvas');canvas.width=ART_COUNT*ART_SIZE;canvas.height=ART_SIZE;
+ const canvas=document.createElement('canvas');canvas.width=ART_COLUMNS*ART_SIZE;canvas.height=ART_ROWS*ART_SIZE;
  const g=canvas.getContext('2d'),palettes=[
   ['#19243a','#f3b8bd'],['#e6cec8','#842e4c'],['#304b54','#f1d69b'],
   ['#d0c0d6','#382c4e'],['#202c48','#e8b873'],['#b95f78','#fff1cf'],
-  ['#1e3238','#c8e3d4'],['#42283b','#f5d2b3'],['#2a2d48','#fce4ec'],['#3a382c','#eed88b'],['#241d27','#ead4ba'],['#d6bf9d','#362a2c']
+  ['#1e3238','#c8e3d4'],['#42283b','#f5d2b3'],['#2a2d48','#fce4ec'],['#3a382c','#eed88b'],['#241d27','#ead4ba'],['#d6bf9d','#362a2c'],['#252830','#bbb9a4'],['#252830','#bbb9a4'],['#c1a24f','#23211b'],['#273e43','#ffe6ad']
  ];
  for(let i=0;i<ART_COUNT;i++){
-  g.save();g.translate(i*ART_SIZE,0);const [base,ink]=palettes[i];
+  const {x,y}=artTile(i),[base,ink]=palettes[i];g.save();g.translate(x,y);g.scale(ART_SIZE/128,ART_SIZE/128);
   g.fillStyle=base;g.fillRect(0,0,128,128);
   // Outer decorative frame molding
   g.strokeStyle='#c29b53';g.lineWidth=4;g.strokeRect(2,2,124,124);
@@ -38,6 +45,17 @@ export function createArtworkCanvas(){
    g.strokeStyle='#8e2737';g.lineWidth=2;g.strokeRect(9,16,89,20);
    g.beginPath();g.moveTo(11,96);g.lineTo(115,93);g.stroke();
    g.fillStyle='#8e2737';g.font='italic 11px cursive';g.fillText('Solo para mí.',45,115);g.restore();continue;
+  }
+  if(i===12||i===13){g.fillText('•',64,69);g.restore();continue;}
+  if(i===14){
+   g.font='900 24px system-ui';g.fillText('PELIGRO',64,58);g.font='bold 19px system-ui';g.fillText('ALTO VOLTAJE',64,89);
+   g.restore();continue;
+  }
+  if(i===15){
+   const [first,...rest]=STUDY_SIGN.split(' ');
+   g.font='900 21px system-ui';g.fillText(first,64,58,108);
+   g.font='bold 17px system-ui';g.fillText(rest.join(' '),64,82,108);
+   g.restore();continue;
   }
   g.fillText(i%2?'1D':'ONE',64,25);
   g.fillText(i%2?['','HEARTBEAT','','ON THE ROAD','','MUSIC ROOM','','NIGHT CHANGES','','MIDNIGHT'][i]:(i===6?'CHANGES':i===8?'MEMORIES':i===9?'GOLDEN':'DIRECTION'),64,43);

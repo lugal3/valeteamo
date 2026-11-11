@@ -1,5 +1,6 @@
 // Deterministic, editable dollhouse layout. Metres: x/z horizontal, y upward.
 import {HEIGHT,HOUSE,STAIR,UNDER_STAIRS,WORLD_BOUNDS,ROOMS,roomAt,buildHouse} from './house-layout.js';
+import {basementGround} from './basement.js';
 export {HEIGHT,HOUSE,STAIR,WORLD_BOUNDS,ROOMS,roomAt};
 export const MATERIAL = {
   wallpaper: [0.75, 0.56, 0.65], wall2: [0.57, 0.61, 0.69], plaster: [0.68, 0.67, 0.72],
@@ -13,7 +14,7 @@ export const MATERIAL = {
   // Per-room wall palettes (Fase 3)
   ,wall_salon:[0.86,0.72,0.74],wall_kitchen:[0.72,0.84,0.77],wall_bath:[0.70,0.76,0.86]
   ,wall_bedroom:[0.90,0.82,0.78],wall_study:[0.73,0.78,0.69],wall_stairs:[0.68,0.68,0.72]
-  ,stain:[0.26,0.22,0.30],cobweb:[0.76,0.74,0.79]
+  ,stain:[0.26,0.22,0.30],cobweb:[0.76,0.74,0.79],earth:[.47,.32,.24]
 };
 export function createHouse(spawn='ground'){return buildHouse(spawn);}
 
@@ -21,7 +22,9 @@ export function stairHeight(x,z) {
   if(x>=STAIR.xMin&&x<=STAIR.xMax&&z>=STAIR.zTop&&z<=STAIR.zBottom)return HEIGHT*(STAIR.zBottom-z)/(STAIR.zBottom-STAIR.zTop);
   return null;
 }
-export function groundHeight(x,z,levelHint=0) {
+export function groundHeight(x,z,levelHint=0,hatchOpen=false) {
+  const basement=basementGround(x,z,levelHint,hatchOpen);
+  if(basement!==null)return basement;
   if(levelHint<.15&&x>=UNDER_STAIRS.xMin&&x<=UNDER_STAIRS.xMax&&z>=UNDER_STAIRS.zMin&&z<=UNDER_STAIRS.zMax)return 0;
   const stair=stairHeight(x,z); if(stair!==null) return stair;
   if(x<WORLD_BOUNDS.minX||x>WORLD_BOUNDS.maxX||z<WORLD_BOUNDS.minZ||z>WORLD_BOUNDS.maxZ)return NaN;
@@ -31,7 +34,7 @@ export function groundHeight(x,z,levelHint=0) {
 }
 export function overlaps(box, x, footY, z, radius=.19, bodyHeight=1.65) {
   // A slab is a walking surface/visual occluder, not a wall to trap a head at stair landings.
-  if(!box.solid||box.id.startsWith('floor-up-'))return false;
+  if(!box.solid||box.walkSurface||box.id.startsWith('floor-up-'))return false;
   if(!(footY < box.y+box.h/2-.02 && footY+bodyHeight > box.y-box.h/2+.02))return false;
   const yaw=box.yaw||0,c=Math.cos(yaw),s=Math.sin(yaw),rx=x-box.x,rz=z-box.z;
   const dx=Math.max(0,Math.abs(rx*c+rz*s)-box.w/2),dz=Math.max(0,Math.abs(-rx*s+rz*c)-box.d/2);

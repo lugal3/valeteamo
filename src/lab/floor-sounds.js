@@ -1,4 +1,5 @@
 import {HOUSE,HEIGHT,STAIR,roomAt} from './house-layout.js';
+import {HATCH} from './basement.js';
 
 // Session-only sound zones: no visible mesh, collision or saved-story state.
 export const CREAK_ZONES=Object.freeze([
@@ -6,9 +7,11 @@ export const CREAK_ZONES=Object.freeze([
  {id:'living-board',x:3.44,y:0,z:9.50,r:.65},
  {id:'study-board',x:3,y:0,z:3.7,r:.6},
  {id:'landing-board',x:10.2,y:HEIGHT,z:4.1,r:.65},
- {id:'upper-hall-board',x:6,y:HEIGHT,z:6.5,r:.7}
+ {id:'upper-hall-board',x:6,y:HEIGHT,z:6.5,r:.7},
+ {id:'tunnel-support',x:HATCH.x,y:-3.55,z:8.37,r:.53}
 ]);
 export function floorSurface(p){
+ if(p.y<-.025)return p.z<HATCH.maxZ?'stair':'dirt';
  if(p.x>=STAIR.xMin&&p.x<=STAIR.xMax&&p.z>=STAIR.zTop&&p.z<=STAIR.zBottom)return 'stair';
  if(p.x<0||p.x>HOUSE.width||p.z<0||p.z>HOUSE.depth)return Math.abs(p.x-5.9)<.9?'stone':'grass';
  const room=roomAt(p.x,p.z,p.y);return room==='Baño'||room==='Cocina y comedor'?'tile':'wood';

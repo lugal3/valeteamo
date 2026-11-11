@@ -14,7 +14,7 @@ export function navigate(state,world,dx,dz,body=PLAYER_HEIGHT){
  let moved=0;
  for(let i=0;i<pieces;i++){
   const tryMove=(nx,nz)=>{
-   const ny=groundHeight(nx,nz,state.y);
+   const ny=groundHeight(nx,nz,state.y,world.hatch?.amount===1);
    if(!Number.isFinite(ny)||Math.abs(ny-state.y)>.35)return false;
    if(blocked(world.boxes,nx,ny,nz,PLAYER_RADIUS,body))return false;
    // Reserve the remaining swing/slide while furniture moves, so the player
