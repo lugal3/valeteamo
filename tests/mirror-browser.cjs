@@ -27,15 +27,15 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=requ
   const initial=await snap();assert(initial.mirror.supported);assert(initial.mirror.vertices>0);assert.equal(initial.cinematic,false);
   await page.waitForFunction(()=>window.__audioContexts.slice(0,-1).every(c=>c.state==='closed')&&window.__audioContexts.at(-1).state==='running');
   await page.waitForTimeout(2000);await page.screenshot({path:'/tmp/valeteamo-qa/espejo.png'});
-  await page.locator('#lab-camera-settings summary').click();await page.locator('#lab-camera-settings [data-setting="quality"]').selectOption('low');await page.locator('#lab-camera-settings summary').click();await page.waitForFunction(()=>window.__rescueHouse.snapshot().quality==='low'&&window.__rescueHouse.snapshot().mirror.drawn&&!window.__rescueHouse.snapshot().paused);await page.waitForTimeout(150);
+  await page.locator('#lab-camera-settings > summary').click();await page.locator('#lab-camera-settings [data-setting="quality"]').selectOption('low');await page.locator('#lab-camera-settings > summary').click();await page.waitForFunction(()=>window.__rescueHouse.snapshot().quality==='low'&&window.__rescueHouse.snapshot().mirror.drawn&&!window.__rescueHouse.snapshot().paused);await page.waitForTimeout(150);
   await page.keyboard.down('d');await page.waitForFunction(()=>window.__rescueHouse.snapshot().position.z<5.40);await page.keyboard.up('d');await page.waitForTimeout(150);
   const moved=await snap();assert(Math.abs(moved.position.z-initial.position.z)>.12,'Strafing really moves the player');assert(moved.mirror.drawn);
   await page.screenshot({path:'/tmp/valeteamo-qa/espejo-lateral.png'});
-  await page.locator('#lab3d [data-act="mirror"]').click();await page.waitForTimeout(150);assert(Math.abs((await snap()).position.z-5.55)<.01);
+  await page.evaluate(()=>window.__rescueHouse.setPose({x:8.35,y:0,z:5.55,yaw:Math.PI/2,pitch:0}));await page.waitForTimeout(150);assert(Math.abs((await snap()).position.z-5.55)<.01);
   await page.keyboard.down('w');await page.waitForTimeout(280);await page.keyboard.up('w');await page.waitForTimeout(150);assert((await snap()).position.x>initial.position.x+.2);
   await page.screenshot({path:'/tmp/valeteamo-qa/espejo-cerca.png'});
-  await page.locator('#lab3d [data-act="mirror"]').click();await page.keyboard.down('ArrowLeft');await page.waitForTimeout(1500);await page.keyboard.up('ArrowLeft');await page.waitForTimeout(250);assert.equal((await snap()).mirror.drawn,false,'Mirror skips rendering when facing away');
-  await page.locator('.lab-exit').click();await page.waitForFunction(()=>window.__audioContexts.every(c=>c.state==='closed'));
+  await page.evaluate(()=>window.__rescueHouse.setPose({x:8.35,y:0,z:5.55,yaw:Math.PI/2,pitch:0}));await page.keyboard.down('ArrowLeft');await page.waitForTimeout(1500);await page.keyboard.up('ArrowLeft');await page.waitForTimeout(250);assert.equal((await snap()).mirror.drawn,false,'Mirror skips rendering when facing away');
+  await page.locator('#lab-camera-settings > summary').click();await page.locator('.lab-exit').click();await page.waitForFunction(()=>window.__audioContexts.every(c=>c.state==='closed'));
   const after=await page.evaluate(()=>({story:localStorage.getItem('valeteamo-story-v1'),rescue:localStorage.getItem('valeteamo-rescue-v2')}));assert.deepEqual(after,saves);
   // Combined rescue is one flow. Exit cleans its Phaser canvas before direct 3D.
   await page.getByRole('button',{name:/^Rescate · 2D/}).click();await page.locator('.rescue-demo canvas').waitFor();

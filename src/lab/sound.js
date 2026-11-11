@@ -3,19 +3,34 @@ import {scheduleTensionStep,TENSION_BEAT} from './tension-music.js';
 import {HouseAtmosphere,playFoley} from './atmosphere.js';
 import {spookyFoley} from './spooky-foley.js';
 import {RecordedAudio} from './recorded-audio.js';
+import {playEmoteRhythm} from './emote-audio.js';
 const KEY='valeteamo-lab-sound-v1';
-const defaults={muted:false,ambient:.40,effects:.68,music:.34};
+export const MIX_CHANNELS=[
+ ['master','Volumen maestro'],['ambient','Ambiente'],['music','Música de tensión'],['effects','Todos los efectos'],
+ ['doors','Puertas y armario','door-open'],['steps','Pasos y escalera','stair'],['creaks','Crujidos de la casa','floor-groan'],
+ ['objects','Objetos e interacciones','light'],['alerts','Mensajes y alertas','notification'],['emotes','Música de emotes','six-seven']
+];
+const defaults={muted:false,master:1,ambient:.40,effects:.68,music:.34,doors:1.8,steps:1,creaks:1,objects:1,alerts:1,emotes:1};
+const effectChannel=kind=>{
+ if(/^(door|closet|latch|unlock|trying|knock|keys)/.test(kind))return 'doors';
+ if(['wood','stair','tile','grass','stone','footstep'].includes(kind))return 'steps';
+ if(kind==='floor-groan')return 'creaks';
+ return ['notification','alert'].includes(kind)?'alerts':'objects';
+};
 export class HouseSound {
- constructor(){try{this.settings={...defaults,...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch{this.settings={...defaults}}this.context=null;this.ambientNodes=[];this.musicNodes=new Set();this.musicTimer=null;this.musicStep=0;this.tension=.55;this.paused=false;}
+ constructor(){let saved;try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')}catch{}this.settings={...defaults};for(const key of Object.keys(defaults))if(saved?.[key]!==undefined)this.settings[key]=this.settingValue(key,saved[key]);this.context=null;this.ambientNodes=[];this.musicNodes=new Set();this.musicTimer=null;this.musicStep=0;this.tension=.55;this.paused=false;}
  save(){try{localStorage.setItem(KEY,JSON.stringify(this.settings))}catch{}}
  async start(){
   if(!this.context){
    const C=window.AudioContext||window.webkitAudioContext;if(!C)return false;
-   this.context=new C();this.master=this.context.createGain();this.master.gain.value=.45;this.master.connect(this.context.destination);
+   this.context=new C();this.master=this.context.createGain();this.master.gain.value=.45*this.settings.master;
+   const limiter=this.context.createDynamicsCompressor();limiter.threshold.value=-10;limiter.ratio.value=8;this.master.connect(limiter);limiter.connect(this.context.destination);
    this.musicBus=this.context.createGain();this.musicBus.gain.value=this.settings.muted?0:this.settings.music;this.musicBus.connect(this.master);
    this.effectsBus=this.context.createGain();this.effectsBus.gain.value=this.settings.muted?0:this.settings.effects;this.effectsBus.connect(this.master);this.sequenceNodes=new Set();
    this.recordedMusicBus=this.context.createGain();this.recordedMusicBus.gain.value=this.settings.muted?0:this.settings.music;this.recordedMusicBus.connect(this.master);
-   this.recordings=new RecordedAudio(this.context,this.effectsBus,this.recordedMusicBus);const ctx=this.context;void this.recordings.load().then(()=>{if(this.context===ctx){this.applySettings();if(!this.paused)this.recordings.setMood(this.threat?'tension':'ambient');}});
+   this.recordedAmbientBus=this.context.createGain();this.recordedAmbientBus.gain.value=this.settings.muted?0:this.settings.ambient;this.recordedAmbientBus.connect(this.master);
+   this.channels=Object.fromEntries(MIX_CHANNELS.slice(4).map(([name])=>{const gain=this.context.createGain();gain.gain.value=this.settings[name];gain.connect(this.effectsBus);return [name,gain];}));
+   this.recordings=new RecordedAudio(this.context,this.effectsBus,this.recordedMusicBus,this.recordedAmbientBus);const ctx=this.context;void this.recordings.load().then(()=>{if(this.context===ctx){this.applySettings();if(!this.paused)this.recordings.setMood(this.threat?'tension':'ambient');}});
    this.startAmbience();
   }
   try{await this.context.resume();this.paused=false;this.startMusic();this.recordings?.setMood(this.threat?'tension':'ambient');return this.context.state==='running';}catch{return false;}
@@ -36,11 +51,30 @@ export class HouseSound {
  stopMusic(){if(this.musicTimer!==null){window.clearInterval(this.musicTimer);this.musicTimer=null;}for(const voice of this.musicNodes){try{voice.osc.stop();voice.osc.disconnect();voice.filter.disconnect();voice.gain.disconnect();}catch{}}this.musicNodes.clear();}
  setTension(value){this.tension=Math.max(0,Math.min(1,value));}
  setThreat(value){if(this.threat===!!value)return;this.threat=!!value;if(!this.paused)this.recordings?.setMood(this.threat?'tension':'ambient');}
- applySettings(){this.atmosphere?.setVolume(this.settings.muted?0:this.settings.ambient);this.musicBus?.gain.setTargetAtTime(this.settings.muted||this.recordings?.buffers.has('ambient')?0:this.settings.music,this.context.currentTime,.06);this.recordedMusicBus?.gain.setTargetAtTime(this.settings.muted?0:this.settings.music,this.context.currentTime,.06);this.effectsBus?.gain.setTargetAtTime(this.settings.muted?0:this.settings.effects,this.context.currentTime,.025);this.save();}
- set(kind,value){this.settings[kind]=kind==='muted'?Boolean(value):Math.max(0,Math.min(1,Number(value)||0));if(this.context)this.applySettings();else this.save();}
+ applySettings(){
+  const now=this.context.currentTime,volume=key=>this.settings.muted?0:this.settings[key];
+  this.master.gain.setTargetAtTime(volume('master')*.45,now,.025);
+  this.atmosphere?.setVolume(volume('ambient'));
+  this.musicBus.gain.setTargetAtTime(this.recordings.buffers.has('ambient')?0:volume('music'),now,.06);
+  this.recordedMusicBus.gain.setTargetAtTime(volume('music'),now,.06);
+  this.recordedAmbientBus.gain.setTargetAtTime(volume('ambient'),now,.06);
+  this.effectsBus.gain.setTargetAtTime(volume('effects'),now,.025);
+  for(const [key,bus] of Object.entries(this.channels))bus.gain.setTargetAtTime(this.settings[key],now,.025);
+  this.save();
+ }
+ settingValue(key,value){return key==='muted'?Boolean(value):Math.max(0,Math.min(MIX_CHANNELS.slice(4).some(([name])=>name===key)?2:1,Number(value)||0));}
+ set(kind,value){this.settings[kind]=this.settingValue(kind,value);if(this.context)this.applySettings();else this.save();}
+ emote(id,duration){
+  this.stopEmote();
+  if(!this.context||this.paused||this.context.state!=='running'||this.settings.muted)return;
+  const output=this.channels.emotes;
+  this.emoteVoice=this.recordings.play('emote-'+id,{gain:.66,output,duration})||playEmoteRhythm(this.context,output,id,duration);
+ }
+ stopEmote(){this.emoteVoice?.stop();this.emoteVoice=null;}
  // Simple location-dependent stereo and attenuation, including room/floor obstruction.
  effect(kind,origin,listener,occluded=false,{level=1}={}){
   const ctx=this.context;if(!ctx||this.paused||ctx.state!=='running'||this.settings.muted)return;
+  const output=this.channels[effectChannel(kind)];
   const distance=origin?Math.hypot(origin.x-listener.x,origin.y-listener.y,origin.z-listener.z):0;
   const atten=origin?1/(1+.15*distance*distance):1;
   const floorMask=origin&&Math.abs(origin.y-listener.y)>1.85?.55:1;
@@ -48,18 +82,18 @@ export class HouseSound {
   if(gain<.0007)return;
   const yaw=listener.yaw||0,dx=origin?origin.x-listener.x:0,dz=origin?origin.z-listener.z:0;
   const stereo=Math.max(-.85,Math.min(.85,(dx*Math.cos(yaw)-dz*Math.sin(yaw))/Math.max(1,distance)));
-  if(this.recordings?.kind(kind,{gain:gain*1.8,pan:stereo})){this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;}
+  if(this.recordings?.kind(kind,{gain:gain*1.8,pan:stereo,output})){this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;}
   if(['door','door-open','door-close','floor-groan','stair','wood','latch'].includes(kind)){
    this.foleyVoices??=new Set();if(this.foleyVoices.size>=12)return;
-   const voice=spookyFoley(ctx,this.effectsBus,this.atmosphere.noise,kind,gain*(kind.startsWith('door')?2:kind==='floor-groan'?1.5:1),stereo,v=>this.foleyVoices.delete(v));this.foleyVoices.add(voice);this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;
+   const voice=spookyFoley(ctx,output,this.atmosphere.noise,kind,gain*(kind.startsWith('door')?2:kind==='floor-groan'?1.5:1),stereo,v=>this.foleyVoices.delete(v));this.foleyVoices.add(voice);this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;
   }
   if(['wood','tile','grass','stone','door','drawer','window','latch','cloth','land'].includes(kind)){
    const foley={door:'creak',drawer:'wood',land:'wood'}[kind]||kind;
-   playFoley(ctx,this.effectsBus,this.atmosphere.noise,foley,gain*2,(Math.random()-.5)*.18);return;
+   playFoley(ctx,output,this.atmosphere.noise,foley,gain*2,(Math.random()-.5)*.18);return;
   }
   const now=ctx.currentTime,vol=ctx.createGain(),pan=ctx.createStereoPanner();
   pan.pan.value=stereo;
-  vol.connect(pan);pan.connect(this.effectsBus);
+  vol.connect(pan);pan.connect(output);
   const oscillator=ctx.createOscillator();oscillator.type=kind==='footstep'?'triangle':kind==='pickup'?'sine':'sawtooth';
   const base={footstep:95,door:185,drawer:215,pickup:490,light:660,note:380,creak:78,click:425,hide:160,bed:120}[kind]||280;
   const variation=kind==='footstep'?(Math.random()-.5)*20:(Math.random()-.5)*8;
@@ -71,8 +105,8 @@ export class HouseSound {
   oscillator.connect(vol);oscillator.start(now);oscillator.stop(now+duration+.02);
   oscillator.onended=()=>{oscillator.disconnect();vol.disconnect();pan.disconnect();};
  }
- sequence(kind){const ctx=this.context;if(!ctx||this.paused||ctx.state!=='running'||this.settings.muted)return;if(this.recordings?.kind(kind,{gain:kind==='notification'?.30:.38}))return;for(let i=0;i<3;i++){const osc=ctx.createOscillator(),gain=ctx.createGain(),at=ctx.currentTime+i*(kind==='keys'?.11:.28);osc.type=kind==='keys'?'sine':'triangle';osc.frequency.setValueAtTime(kind==='keys'?1700+i*330:85,at);osc.frequency.exponentialRampToValueAtTime(kind==='keys'?1100:38,at+.12);gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(kind==='keys'?.14:.50,at+.008);gain.gain.exponentialRampToValueAtTime(.0001,at+.17);osc.connect(gain);gain.connect(this.effectsBus);osc.start(at);osc.stop(at+.2);this.sequenceNodes.add(osc);osc.onended=()=>{osc.disconnect();gain.disconnect();this.sequenceNodes.delete(osc);};}}
- pause(){this.paused=true;this.recordings?.pause();this.stopMusic();for(const node of this.sequenceNodes||[])try{node.stop();}catch{}for(const voice of this.foleyVoices||[])voice.stop();this.atmosphere?.pause();try{if(this.context?.state==='running')void this.context.suspend().catch(()=>{});}catch{}}
+ sequence(kind){const ctx=this.context;if(!ctx||this.paused||ctx.state!=='running'||this.settings.muted)return;const output=this.channels[effectChannel(kind)];if(this.recordings?.kind(kind,{gain:kind==='notification'?.30:.38,output}))return;for(let i=0;i<3;i++){const osc=ctx.createOscillator(),gain=ctx.createGain(),at=ctx.currentTime+i*(kind==='keys'?.11:.28);osc.type=kind==='keys'?'sine':'triangle';osc.frequency.setValueAtTime(kind==='keys'?1700+i*330:85,at);osc.frequency.exponentialRampToValueAtTime(kind==='keys'?1100:38,at+.12);gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(kind==='keys'?.14:.50,at+.008);gain.gain.exponentialRampToValueAtTime(.0001,at+.17);osc.connect(gain);gain.connect(output);osc.start(at);osc.stop(at+.2);this.sequenceNodes.add(osc);osc.onended=()=>{osc.disconnect();gain.disconnect();this.sequenceNodes.delete(osc);};}}
+ pause(){this.paused=true;this.recordings?.pause(this.emoteVoice);this.stopMusic();for(const node of this.sequenceNodes||[])try{node.stop();}catch{}for(const voice of this.foleyVoices||[])voice.stop();this.atmosphere?.pause();try{if(this.context?.state==='running')void this.context.suspend().catch(()=>{});}catch{}}
  resume(){if(!this.context)return;this.paused=false;const ctx=this.context;try{void ctx.resume().then(()=>{if(this.context===ctx&&!this.paused){this.atmosphere?.resume();this.startMusic();this.recordings?.setMood(this.threat?'tension':'ambient');}}).catch(()=>{});}catch{}}
- destroy(){this.pause();this.recordings?.destroy();this.atmosphere?.destroy();this.atmosphere=null;this.ambientNodes=[];if(this.context){void this.context.close().catch(()=>{});this.context=null;}}
+ destroy(){this.stopEmote();this.pause();this.recordings?.destroy();this.atmosphere?.destroy();this.atmosphere=null;this.ambientNodes=[];if(this.context){void this.context.close().catch(()=>{});this.context=null;}}
 }

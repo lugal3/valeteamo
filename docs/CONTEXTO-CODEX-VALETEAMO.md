@@ -1,5 +1,7 @@
 # VALETEAMO — CONTEXTO MAESTRO PARA CODEX
 
+**Controles, teléfono y nota en mano (10 de noviembre de 2026):** iteración en `codex/hud-telefono-espejo` sobre `03b35e2`. Engranaje único, hotbar inferior configurable, joystick con respuesta WASD y puertas por interacción. Kitty levanta la nota al entrar al baño y el espejo muestra sus cifras. Teléfono con reloj del dispositivo, chat de Luis, Snake, fotos y cámara de la escena. Mezclador con ajustes por canal y exportación de la mezcla. Los emotes del baño tienen ritmos originales provisionales y admiten recortes en `src/lab/audio/emote-six-seven.*` y `src/lab/audio/emote-gangnam.*`. Solo se reutilizan los sprites 2D para visualizarlos en Fotos. Cambios de juego en `src/lab/`, sin migración de partidas ni despliegue.
+
 **Nota reflejada y caja fuerte (10 de noviembre de 2026):** iteración en `codex/nota-espejo-caja-fuerte`, sobre `c864840`. Nota del estudio con glifos reflejados, ayuda tras más de un minuto activo y lectura automática 1505 al mirar el espejo cercano. La caja del salón entrega el símbolo del corazón que antes daba el cuadro, conservando llave, dormitorio y perseguidor. Ver `docs/NOTA-ESPEJO-Y-CAJA-FUERTE.md`. Solo fuentes de `src/lab/`, sin tocar 2D, guardados ni el módulo compartido de puzles. Sin merge, push ni despliegue.
 
 **HUD discreto (10 de noviembre de 2026):** iteración en `codex/hud-mensajes-discretos`, sobre `314891e`. Objetivo compacto y canal de avisos con prioridad, retirada del banner de Luis conservando el punto sin leer, alerta fuera del teléfono y distribución que respeta el dock. Ver `docs/HUD-DISCRETO-Y-MENSAJES.md`. Solo presentación de la casa en `src/lab/`, sin cambios a CSS compartido, 2D, guardados o tiempos de eventos. Fusión local a `main` autorizada después por el propietario, incluyendo las animaciones V2. Sin push ni despliegue: subir `main` activa Firebase automáticamente.
@@ -90,7 +92,7 @@ index.html → src/main.tsx → StoryApp.tsx → Splash (PLAY)
 - `src/lab/world.js`: colisiones, alturas y transformación de piezas móviles; `src/lab/house-layout.js` define la distribución V4, habitaciones, muebles, escalera y entorno.
 - `src/lab/navigation.js`: movimiento barrido, colisiones y escaleras.
 - `src/lab/camera-controls.js`: giro y suavizado, inversión horizontal, sensibilidad; preferencias locales.
-- `src/lab/mirror.js`: modelo procedural de Kitty/linterna y reflejo acotado del baño; checkpoint `mirror`, botón HUD exclusivo de pruebas.
+- `src/lab/mirror.js`: modelo procedural de Kitty y reflejo acotado del baño; el checkpoint `mirror` se abre desde «Pruebas».
 - `src/lab/window-intro.js`: secuencia por la ventana, salto opcional y aterrizaje.
 - `src/lab/renderer.js`: WebGL1, geometría real, shaders de materiales, luces y linterna/mano 3D.
 - `src/lab/sound.js`: ambiente y efectos 3D con Web Audio.

@@ -1,7 +1,7 @@
 /* House-only styles. Shared 2D styles remain untouched. */
 #lab3d .house-danger{color:#fff0db;pointer-events:none;font-variant-numeric:tabular-nums}
 #lab3d [hidden]{display:none!important}#lab3d.lab-intro-active .house-equipment{visibility:hidden}
-#lab3d.house-arrival .lab-objective,#lab3d.house-arrival .lab-compass,#lab3d.house-arrival .lab-focus,#lab3d.house-arrival .lab-buttons,#lab3d.house-arrival .house-equipment,#lab3d.house-arrival .lab-joystick,#lab3d.house-arrival .lab-toast,#lab3d.house-arrival .lab-title small{visibility:hidden}
+#lab3d.house-arrival .lab-objective,#lab3d.house-arrival .lab-focus,#lab3d.house-arrival .lab-buttons,#lab3d.house-arrival .house-equipment,#lab3d.house-arrival .lab-joystick,#lab3d.house-arrival .lab-toast{visibility:hidden}
 #lab3d.house-arrival::after{content:"";position:absolute;inset:0;background:#000;z-index:10;pointer-events:none;animation:house-arrival-fade .3s ease-out forwards}@keyframes house-arrival-fade{from{opacity:1}to{opacity:0}}@media(prefers-reduced-motion:reduce){#lab3d.house-arrival::after{display:none}}
 #lab3d .lab-window-intro button[data-act=pause]{left:max(14px,env(safe-area-inset-left));right:auto}
 #lab3d.lab-intro-active .lab-toast,#lab3d.lab-intro-active .lab-cross{visibility:hidden}
@@ -33,49 +33,84 @@
 @media(max-height:440px){#lab3d .lab-camera-panel{max-height:78vh;gap:9px}}
 
 /* Slightly larger left movement target, scoped to the house (not Phaser 2D). */
-#lab3d .lab-joystick{width:clamp(124px,22vw,182px);height:clamp(122px,29vh,166px);gap:7px}
-#lab3d .lab-stick-ring{width:clamp(98px,21vh,132px);height:clamp(98px,21vh,132px);flex-shrink:0}
+#lab3d .lab-joystick{left:max(10px,env(safe-area-inset-left));width:auto;height:auto;bottom:max(14px,env(safe-area-inset-bottom));padding:3px}
+#lab3d .lab-stick-ring{width:clamp(108px,23vh,146px);height:clamp(108px,23vh,146px);flex-shrink:0}
 #lab3d .lab-stick-thumb{width:52%;height:52%}
-@media(max-height:410px){#lab3d .lab-joystick{width:114px;height:110px}#lab3d .lab-stick-ring{width:90px;height:90px}}
+@media(max-height:410px){#lab3d .lab-stick-ring{width:100px;height:100px}}
 
 /* Compact equipment dock; positions are clamped to the viewport by hud-layout. */
-#lab3d .house-hotbar{position:absolute;z-index:22;display:flex;gap:4px;padding:6px;border-radius:18px;background:rgba(29,25,38,var(--hud-opacity,.55));border:1px solid #f4d9df50;box-shadow:0 4px 16px #100c2328}
+#lab3d .house-hotbar{position:absolute;z-index:22;display:flex;gap:4px;padding:6px;border-radius:12px;background:rgba(31,23,36,var(--hud-opacity,.55));border:1px solid #ecb7cf83;box-shadow:0 4px 16px #100c2350}
 #lab3d .house-hotbar.vertical{flex-direction:column}
-#lab3d .house-hotbar button{position:relative;flex:0 0 var(--hud-slot,44px);width:var(--hud-slot,44px);height:var(--hud-slot,44px);min-width:0;min-height:0;padding:0;display:grid;place-items:center;border:1px solid transparent;border-radius:12px;background:transparent;color:#fff3eb;font:19px system-ui;box-shadow:none}
+#lab3d .house-hotbar button{position:relative;flex:0 0 var(--hud-slot,44px);width:var(--hud-slot,44px);height:var(--hud-slot,44px);min-width:0;min-height:0;padding:0;display:grid;place-items:center;border:1px solid #ecb7cf61;border-radius:7px;background:#b2729619;color:#fff3eb;font:19px system-ui;box-shadow:none}
 #lab3d .house-hotbar small{position:absolute;bottom:2px;right:4px;font:8px system-ui;color:#e2cfdb99}
 #lab3d .house-hotbar svg{display:block;width:22px;height:22px;color:#f0dfe4}
 #lab3d .house-danger[data-level=watch]{border-left-color:#e9c57e}
 #lab3d .house-danger[data-level=chase]{border-left-color:#f99ba4;color:#ffe0df}
-#lab3d .house-hotbar [aria-pressed=true]{background:#d9b6c51f;border-color:#f4d8bb9e;box-shadow:inset 0 0 0 1px #fff1db10}
+#lab3d .house-hotbar [aria-pressed=true]{background:#d08eaf50;border-color:#ffe0ec;box-shadow:inset 0 0 0 1px #e7a6c6}
 #lab3d .phone-badge{position:absolute;right:3px;top:0;color:#f1b4cb;font-size:12px}
-#lab3d .phone-expand{position:absolute;z-index:22;width:104px;height:32px;padding:3px 8px;border:1px solid #edcbd15c;border-radius:14px;background:#282230ab;color:#fce8ef;font:11px system-ui}
 #lab3d[data-hotbar-anchor=right] .lab-buttons{right:calc(var(--hud-slot) + 36px)}
 #lab3d[data-hotbar-anchor=left] .lab-joystick{left:calc(var(--hud-slot) + 32px)}
-#lab3d .lab-buttons button{font-size:20px;min-height:44px;border-width:1px;box-shadow:0 3px 10px #150c2640;border-radius:13px}
-#lab3d .lab-buttons small{font-size:9px}
+#lab3d .lab-buttons{grid-template-columns:repeat(3,clamp(46px,7.2vw,58px));gap:5px;right:max(10px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom))}
+#lab3d .lab-buttons button{font-size:19px;min-height:44px;aspect-ratio:auto;border-width:1px;box-shadow:0 3px 10px #150c2640;border-radius:11px;padding:4px 2px}
+#lab3d .lab-buttons svg{width:21px;height:21px}
+#lab3d .lab-buttons small{font:600 9px/1.15 system-ui;letter-spacing:0}
+#lab3d #lab-crouch{grid-area:3/3}
+#lab3d .lab-buttons [data-act=bag]{grid-area:3/1}
+#lab3d #house-use-phone,#lab3d #house-light{grid-area:3/2}
+#lab3d .lab-buttons [data-act=emotes]{grid-area:2/3}
+#lab3d #lab-interact{grid-area:1/1/2/4}
 
 /* A physical phone silhouette, with the live house visible around it. */
 #lab3d .phone-screen{position:absolute;inset:0;z-index:35;display:grid;place-content:center;background:#130f211f;color:#392c40;padding:10px;touch-action:pan-y;font:12px system-ui}
-#lab3d .phone-shell{height:min(760px,calc(100dvh - 28px));aspect-ratio:9/18.5;display:flex;flex-direction:column;overflow:hidden;border:6px solid #2e2634;border-radius:34px;background:linear-gradient(155deg,#ffe5ec,#d7c8df 60%,#b9cadb);box-shadow:0 0 0 2px #ce9fab,0 14px 50px #10091ad1,inset 0 0 0 1px #ffeff2;position:relative}
-#lab3d .phone-status{height:28px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:0 13px;font:600 9px system-ui}
-#lab3d .phone-status i{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:31%;height:12px;border-radius:20px;background:#302635}
-#lab3d .phone-shell header{display:flex;align-items:center;justify-content:space-between;gap:4px;padding:0 4px 5px;border-bottom:1px solid #866a891a}
-#lab3d .phone-shell header b{font:600 11px system-ui}
-#lab3d .phone-screen button{border:0;border-radius:12px;background:#fff8fb66;color:#49354d;padding:7px;min-height:40px;font:600 11px system-ui}
-#lab3d .phone-shell header button{width:40px;font-size:21px;background:transparent}
-#lab3d .phone-screen main{flex:1;min-height:0;overflow:auto;padding:8px 9px;overscroll-behavior:contain;touch-action:pan-y}
-#lab3d .phone-screen main h2{font:600 13px system-ui;margin:4px 0 9px}
-#lab3d .phone-apps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 9px;padding:17px 0}
-#lab3d .phone-apps button{min-height:64px;line-height:1.7;box-shadow:0 3px 9px #6a487018}
-#lab3d .phone-chat p{padding:9px 10px;border-radius:14px;background:#fff7fac9;max-width:95%;font:11px/1.5 system-ui;overflow-wrap:anywhere}
-#lab3d .phone-chat .outgoing{background:#daeadf;margin-left:12px}
-#lab3d .phone-chat b{font-size:10px}
-#lab3d .phone-home-indicator{width:34%;height:4px;flex-shrink:0;border-radius:9px;background:#5f465d;margin:5px auto 6px;opacity:.65}
-#lab3d .phone-screen canvas{display:block;width:100%;height:auto;aspect-ratio:1;border:4px solid #a3849a;border-radius:8px}
+#lab3d .phone-shell{height:min(680px,calc(100dvh - 24px));width:clamp(208px,49dvh,334px);display:flex;flex-direction:column;overflow:hidden;border:6px solid #191820;border-radius:36px;background:#f7f6f9;box-shadow:0 0 0 2px #cfb5c5,0 14px 45px #10091acc;position:relative;color:#161622}
+#lab3d .phone-shell[data-page=home]{color:#fff;background:radial-gradient(ellipse at 65% 56%,#f2a3b6,transparent 54%),radial-gradient(ellipse at 8% 40%,#6c7cd4,transparent 70%),linear-gradient(151deg,#231840,#785680 65%,#e88cae)}
+#lab3d .phone-status{height:29px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:0 12px;font:650 11px system-ui}
+#lab3d .phone-status svg{width:36px}
+#lab3d .phone-status i{position:absolute;top:7px;left:50%;transform:translateX(-50%);width:26%;height:13px;border-radius:20px;background:#15141c}
+#lab3d .phone-shell header{min-height:36px;display:flex;align-items:center;gap:4px;padding:0 4px;border-bottom:1px solid #261b2920}
+#lab3d .phone-shell[data-page=home] header{border:0}
+#lab3d .phone-shell header b{flex:1;display:flex;align-items:center;gap:6px;font:650 12px system-ui}
+#lab3d .phone-screen button{border:0;border-radius:9px;background:#7c7d821c;color:inherit;padding:5px;min-height:36px;font:600 11px system-ui;touch-action:manipulation}
+#lab3d .phone-shell header button{width:36px;font:400 24px/1 system-ui;background:transparent}
+#lab3d .phone-screen main{flex:1;min-height:0;overflow:auto;padding:8px 9px;overscroll-behavior:contain;touch-action:pan-y;outline:0}
+#lab3d .phone-apps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:8px 0}
+#lab3d .phone-apps button{display:grid;justify-items:center;gap:5px;background:none;padding:0;font:500 clamp(8px,1.7dvh,11px) system-ui}
+#lab3d .phone-app-icon{width:min(100%,48px);aspect-ratio:1;position:relative;display:grid;place-items:center;border-radius:26%;box-shadow:0 3px 8px #2b173944,inset 0 1px 1px #fff7}
+#lab3d .phone-app-icon svg{width:72%;height:72%}
+#lab3d .phone-app-icon.messages{background:linear-gradient(#5ae780,#13ad5b)}
+#lab3d .phone-app-icon.snake{background:linear-gradient(#145444,#101f2b);color:#a8f4a3}
+#lab3d .phone-app-icon.photos{background:#fff}
+#lab3d .phone-app-icon.camera{background:linear-gradient(#f5f7fa,#a6aab5)}
+#lab3d .phone-app-icon i{position:absolute;right:-3px;top:-3px;width:11px;height:11px;border-radius:50%;background:#f45364;border:1px solid #fff8}
+#lab3d .phone-avatar{display:grid;place-items:center;width:23px;height:23px;border-radius:50%;background:#cfecdf;color:#18503d}
+#lab3d .phone-shell[data-page=messages]{background:#f7faf8;color:#182821}
+#lab3d .phone-shell[data-page=messages] header{background:#e9f7ee}
+#lab3d .phone-shell[data-page=messages] main{background-color:#efe9df;background-image:radial-gradient(ellipse at center,transparent 33%,#b1a89332 35%,transparent 39%);background-size:24px 19px}
+#lab3d .phone-chat{display:flex;flex-direction:column;gap:7px}
+#lab3d .phone-chat p{margin:0;padding:6px 8px;border-radius:8px;max-width:90%;font:11px/1.42 system-ui;overflow-wrap:anywhere;box-shadow:0 1px 2px #3d3e301e}
+#lab3d .phone-chat .incoming{background:white;border-top-left-radius:2px;align-self:flex-start}
+#lab3d .phone-chat .outgoing{background:#d9fdd3;border-top-right-radius:2px;align-self:flex-end}
+#lab3d .phone-chat .phone-chat-date,#lab3d .phone-chat .phone-typing{align-self:center;background:#fff9;padding:3px 8px;border-radius:6px;font:10px system-ui;color:#496458}
+#lab3d .phone-message-meta{display:block;text-align:right;color:#53695e;font:8px system-ui;margin-top:2px}
+#lab3d .phone-message-meta span{color:#249dc1}
+#lab3d .phone-screen .phone-home-indicator{width:42%;min-height:14px;flex-shrink:0;background:transparent;margin:0 auto;padding:0;display:grid;place-items:center}
+#lab3d .phone-home-indicator::after{content:"";width:80%;height:4px;border-radius:9px;background:currentColor;opacity:.8}
+#lab3d .phone-screen canvas{display:block;width:100%;height:auto;border-radius:8px}
+#lab3d .phone-gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+#lab3d .phone-gallery button{display:grid;gap:4px;text-align:left}
+#lab3d .phone-gallery img{width:100%;height:clamp(50px,14dvh,110px);object-fit:contain;background:#ffedf1;border-radius:5px}
+#lab3d .phone-full-photo{display:block;width:100%;margin-top:6px;object-fit:contain}
+#lab3d .phone-shell[data-page=camera]{background:#17161b;color:#fff}
+#lab3d .phone-camera-view{margin:7px 0;display:grid;align-items:center}
+#lab3d .phone-camera-view canvas{background:#27232b}
+#lab3d .phone-camera-actions{display:grid;grid-template-columns:40px 1fr 40px;align-items:center}
+#lab3d .phone-camera-actions button{justify-self:center}
+#lab3d .phone-camera-actions img{width:29px;height:25px;object-fit:cover;border-radius:4px}
+#lab3d .phone-camera-actions [data-photo=take]{width:44px;height:44px;border-radius:50%;border:3px solid #fff;background:#fff;box-shadow:inset 0 0 0 3px #17161b}
 #lab3d .snake-controls{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:8px}
 #lab3d .snake-controls button{font-size:18px;min-width:0}
-#lab3d .phone-warning{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);margin:0;white-space:nowrap;font:9px system-ui;color:#fff4ed;text-shadow:0 1px 3px #130f21}
-#lab3d.house-phone-open .house-hotbar,#lab3d.house-phone-open .phone-expand,#lab3d.house-phone-open .lab-buttons,#lab3d.house-phone-open .lab-joystick,#lab3d.house-phone-open .lab-focus{visibility:hidden}
+#lab3d.house-phone-open .lab-top{visibility:hidden}
+#lab3d.house-phone-open .house-hotbar,#lab3d.house-phone-open .lab-buttons,#lab3d.house-phone-open .lab-joystick,#lab3d.house-phone-open .lab-focus,#lab3d.house-phone-open .house-emotes{visibility:hidden}
 
 #lab3d .hud-editor{position:absolute;z-index:42;right:12px;top:60px;width:min(350px,calc(100vw - 100px));max-height:calc(100dvh - 72px);overflow:auto;touch-action:pan-y;overscroll-behavior:contain;border:1px solid #eed1e075;border-radius:18px;background:#292330f2;color:#fce8ef;padding:16px;box-shadow:0 8px 28px #0005}
 #lab3d .hud-editor h2{font:600 17px system-ui;margin:0 0 4px}
@@ -90,11 +125,11 @@
 #lab3d.house-hud-editing .house-hotbar{outline:1px dashed #f0d2a9;outline-offset:4px}
 #lab3d .hud-preview-tools{position:absolute;z-index:42;right:12px;top:65px;padding:10px;border-radius:12px;background:#292330e8}
 #lab3d[data-hotbar-anchor=right] .hud-editor,#lab3d[data-hotbar-anchor=right] .hud-preview-tools{left:12px;right:auto}
-#lab3d .house-emotes{position:absolute;z-index:24;bottom:16px;left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;gap:6px;max-width:280px;background:#292330ed;border:1px solid #d9b8c080;padding:10px;border-radius:15px}
+#lab3d .house-emotes{position:absolute;z-index:24;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 140px);right:max(10px,env(safe-area-inset-right));display:flex;flex-wrap:wrap;gap:6px;width:min(250px,65vw);background:#292330ed;border:1px solid #d9b8c080;padding:10px;border-radius:15px}
 #lab3d .house-emotes span{flex-basis:100%;font:10px system-ui;color:#dcc3d2}
 #lab3d.house-arrival .house-emotes,#lab3d.lab-intro-active .house-emotes{visibility:hidden}
 #lab3d .house-hotbar button:focus-visible,#lab3d .phone-screen button:focus-visible,#lab3d .hud-editor :focus-visible,#lab3d .house-emotes button:focus-visible{outline:2px solid #ffdfae;outline-offset:2px}
-@media(max-height:420px){#lab3d .phone-shell{border-width:5px;border-radius:28px}#lab3d .phone-apps{padding:7px 0;gap:8px}#lab3d .phone-apps button{min-height:53px}#lab3d .hud-editor{padding:11px}#lab3d .hud-editor label{margin:6px 0}}
+@media(max-height:420px){#lab3d .phone-shell{border-width:5px;border-radius:28px}#lab3d .hud-editor{padding:11px}#lab3d .hud-editor label{margin:6px 0}}
 
 /* One quiet objective and one event channel, in normal flow rather than overlaid. */
 #lab3d{--house-safe-left:env(safe-area-inset-left,0px);--house-safe-right:env(safe-area-inset-right,0px);--house-safe-top:env(safe-area-inset-top,0px)}
@@ -105,23 +140,34 @@
 #lab3d .house-messages>.house-danger{padding:7px 10px;font-size:12px;font-weight:600;background:#251e27d9;border-left:2px solid #e1b9b4}
 #lab3d .house-messages>.house-danger[data-level=watch]{border-left-color:#e9c57e}
 #lab3d .house-messages>.house-danger[data-level=chase]{border-left-color:#f99ba4}
-#lab3d .house-messages>.phone-notice{min-height:44px;padding:7px 9px;background:#211c2bc4;color:#f2dce5;border-left:2px solid #bca6b7;pointer-events:auto;cursor:pointer}
+#lab3d .house-messages>.phone-notice{min-height:44px;pointer-events:auto;cursor:pointer}
 #lab3d .house-messages>.phone-notice:focus-visible{outline:2px solid #ffe5bd;outline-offset:3px}
 #lab3d.house-phone-open .house-messages{z-index:36;align-items:flex-start}
 #lab3d.house-phone-open .house-messages>.lab-objective,#lab3d.house-phone-open .house-messages>.lab-toast,#lab3d.house-phone-open .house-messages>.phone-notice{display:none}
 #lab3d.house-hud-editing .house-messages{visibility:hidden}
-#lab3d .lab-top{z-index:26;padding-top:max(4px,env(safe-area-inset-top));padding-bottom:4px;gap:7px;background:linear-gradient(180deg,#17131e9c,transparent)}
 #lab3d .lab-top button,#lab3d .lab-camera-settings>summary{min-height:44px;display:flex;align-items:center;justify-content:center;font-size:11px;border-color:#e7d1df4d;background:#211b2b75;padding:6px 9px;box-shadow:none}
-#lab3d .lab-top button[data-act=pause],#lab3d .lab-top .house-enable-sound{min-width:44px;width:44px}
-#lab3d .lab-title{min-width:0}
-#lab3d .lab-title b{font-size:11px;letter-spacing:.08em;opacity:.8}
-#lab3d .lab-title small{font-size:9px;letter-spacing:.04em;color:#e6cdd7;opacity:.8}
-#lab3d .lab-compass{top:calc(max(4px,env(safe-area-inset-top)) + 54px);right:max(12px,env(safe-area-inset-right));width:25px;height:25px;font-size:10px;border-color:#e2c9d040;background:#201a2d70;opacity:.8}
+#lab3d .lab-top{left:auto;justify-content:flex-end;background:none;padding: max(8px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) 0 0;z-index:28}
+#lab3d .lab-camera-settings>summary{display:grid;place-items:center;width:44px;height:44px;padding:0;font:21px system-ui;background:#271f32b5;border-color:#e7adcb84}
+#lab3d .lab-camera-panel{width:min(305px,76vw);max-height:calc(100dvh - 68px);gap:9px}
+#lab3d .house-menu-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+#lab3d .house-mixer>summary{padding:9px;font:650 13px system-ui}
+#lab3d .house-mixer[open]>summary{margin-bottom:8px}
+#lab3d .mixer-row{display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:8px;align-items:center;margin:6px 0}
+#lab3d .mixer-row label{gap:0;font:600 11px system-ui}
+#lab3d .mixer-row label span{display:flex;justify-content:space-between;gap:4px}
+#lab3d .mixer-row output{font-variant-numeric:tabular-nums;color:#ffc5dd}
+#lab3d .mixer-row button{min-width:0;padding:0}
+#lab3d .mixer-export{width:100%;height:92px;margin-top:5px;resize:vertical}
 #lab3d .lab-focus{font:500 11px/1.4 system-ui;padding:4px 8px;max-width:min(56vw,360px);border-color:#e3c7d540;border-radius:6px;background:#211b2bb3;animation:none}
-#lab3d .lab-buttons button{background:#2b223c80;border-color:#f4d6e057;box-shadow:none}
-#lab3d #lab-interact:not([hidden]){animation:none;background:#69435bc9;border-color:#ecc4d48c;box-shadow:none}
+#lab3d .lab-buttons button{background:#33253bc7;color:#fff0f6;border-color:#ecb7cf83;box-shadow:none}
+#lab3d .lab-buttons [aria-pressed=true],#lab3d #lab-interact:not([hidden]){animation:none;background:#704760dc;border-color:#ffc6dd;box-shadow:none}
+#lab3d #lab-interact:not([hidden]){min-height:37px}
+#lab3d .house-messages>.phone-notice{display:flex;align-items:center;gap:8px;max-width:100%;padding:7px 9px;background:#f3fff7f5;border-left:3px solid #24b66a;border-radius:10px;color:#132d24;box-shadow:0 4px 16px #14251f4d}
+#lab3d .phone-notice-icon{width:25px;height:25px;border-radius:7px;padding:3px;flex-shrink:0;background:#1fbc63;color:#fff}
+#lab3d .phone-notice-copy{display:grid;gap:1px;min-width:0}
+#lab3d .phone-notice-app{display:flex;gap:10px;justify-content:space-between;color:#2d634f;font:600 9px system-ui}
 #lab3d .lab-joystick{opacity:.8}
-@media(max-height:360px){#lab3d .house-messages>.lab-objective,#lab3d .house-messages>.lab-toast,#lab3d .house-messages>.phone-notice{font-size:10.5px}#lab3d .lab-title b{font-size:10px}#lab3d .lab-title small{font-size:8px}}
+@media(max-height:360px){#lab3d .house-messages>.lab-objective,#lab3d .house-messages>.lab-toast,#lab3d .house-messages>.phone-notice{font-size:10.5px}}
 
 /* The note is physically mirrored, including the shapes of the digits. */
 #lab3d .mirror-note-paper{position:relative;display:grid;justify-items:center;gap:12px;padding:20px 12px;margin:12px 0;background:repeating-linear-gradient(#fff4dc 0 27px,#d9c7af77 28px,#fff4dc 29px 30px);border:1px solid #c4a886;box-shadow:0 3px 9px #5038481a;transform:rotate(-1deg)}

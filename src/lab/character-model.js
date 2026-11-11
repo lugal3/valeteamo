@@ -1,5 +1,5 @@
 import {CHIBI,chibiPiece,placePieces,torchModel,grippingPaw} from './chibi-model.js';
-import {phonePieces} from './equipment.js';
+import {notePieces,phonePieces} from './equipment.js';
 import {JOINTS,JOINT_INDEX} from './character-rig.js';
 // Rest mesh is independent of the mirror and can be consumed by other cameras.
 function jointFor(id){
@@ -55,6 +55,9 @@ export function characterPieces(equipment='flashlight'){
  add('bow-right',.445,1.75,.18,.265,.25,.17,CHIBI.red,{roll:-.35});
  add('bow-knot',.335,1.74,.297,.15,.15,.115,CHIBI.red,{segments:20,rings:12});
  // Identical rounded barrel, lens and grip in both the mirror and first-person hand.
- if(equipment!=='empty')parts.push(...placePieces(equipment==='phone'?phonePieces():[...torchModel(true),...grippingPaw()],{x:.365,y:1.145,z:.25,scale:.87,prefix:'mirror-kitty-'}).map(p=>({...p,joint:'rightHand'})));
+ if(equipment!=='empty'){
+  const held=equipment==='note'?notePieces(1.4):equipment==='phone'?phonePieces():[...torchModel(true),...grippingPaw()];
+  parts.push(...placePieces(held,{x:equipment==='note'?.265:.365,y:1.145,z:.25,scale:.87,prefix:'mirror-kitty-'}).map(p=>({...p,joint:'rightHand'})));
+ }
  return parts;
 }

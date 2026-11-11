@@ -1,4 +1,4 @@
-import {createRigBinding,evaluateRig} from './character-rig.js';
+import {createRigBinding,evaluateRig,JOINT_INDEX} from './character-rig.js';
 import {smoothSurface,torusSurface,roundedBoxSurface} from './chibi-geometry.js';
 import {BATH_MIRROR,mirrorVisible,kittyMirrorPieces,reflectedBathroom,reflectMesh,poseReflectedKitty} from './mirror.js';
 import {ART_COUNT,createArtworkCanvas} from './artwork.js';
@@ -129,6 +129,7 @@ export function geometry(boxes){
    }
    rotateMesh();continue;
   }
+  const start=offset;
   for(const face of faces){
    const art=box.art!==undefined&&box.front===face.dir?box.art+1:0;
    const frame=surfaceFrame(box,face.normal,style);
@@ -142,6 +143,7 @@ export function geometry(boxes){
    });
    indices.push(offset,offset+1,offset+2,offset,offset+2,offset+3);offset+=4;
   }
+  if(box.joint)groups.push({start,end:offset,joint:box.joint});
   rotateMesh();
  }
  return {vertices:new Float32Array(vertices),indices:new Uint16Array(indices),groups,ranges};
@@ -218,9 +220,17 @@ export class HouseRenderer {
   gl.uniform1f(this.uniform.uMirrorPass,1);gl.frontFace(gl.CW);draw(1);
   this.mirrorMeshes[3].vertices.set(this.dynamicVertices);reflectMesh(this.mirrorMeshes[3].vertices);gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[6]);gl.bufferData(gl.ARRAY_BUFFER,this.mirrorMeshes[3].vertices,gl.DYNAMIC_DRAW);draw(3);
   const animator=motion.animator;
-  const pose=[camera.x,camera.y,camera.z,camera.yaw,motion.feetY,!!motion.crouched,animator?.reduced&&animator?.weight===0&&!animator?.performing?0:animator?.time,animator?.distance,animator?.weight,equipment,animator?.emote,animator?.emoteTime,animator?.transition?.age];
+  const pose=[camera.x,camera.y,camera.z,camera.yaw,motion.feetY,!!motion.crouched,animator?.reduced&&animator?.weight===0&&!animator?.performing?0:animator?.time,animator?.distance,animator?.weight,equipment,animator?.emote,animator?.emoteTime,animator?.transition?.age,motion.noteRaise];
   if(!this.mirrorPose||pose.some((v,i)=>v!==this.mirrorPose[i])){
-   if(animator)evaluateRig(this.characterBinding,animator.sample(motion.crouched?'crouch':motion.equipment==='phone'?'hold-phone':'locomotion'));
+   if(animator){
+    const bones=animator.sample(motion.crouched?'crouch':motion.equipment==='phone'?'hold-phone':'locomotion');
+    if(equipment==='note'){
+     const drop=.30+(1-motion.noteRaise)*.85;
+     bones[JOINT_INDEX.rightArm*6]+=drop;
+     bones[JOINT_INDEX.rightHand*6]-=drop;
+    }
+    evaluateRig(this.characterBinding,bones);
+   }
    poseReflectedKitty(this.mirrorMeshes[2].vertices,this.kittyVertices,camera,motion,animator?this.characterBinding:null);
    gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[4]);gl.bufferSubData(gl.ARRAY_BUFFER,0,this.kittyVertices);this.mirrorPose=pose;this.mirrorUploads++;
   }

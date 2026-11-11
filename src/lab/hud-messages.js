@@ -3,7 +3,7 @@ const intersects=(a,b)=>a.x<b.x+b.w+8&&a.x+a.w+8>b.x&&a.y<b.y+b.h+8&&a.y+a.h+8>b
 export function messageLayout(width,height,dock,{phoneOpen=false,left=12,right=52,top=58}={}){
  const span=Math.max(128,width-left-right),w=Math.min(360,Math.max(180,width-176),span);
  let rect={x:Math.max(left,(width-w)/2),y:top,w,h:92};
- if(phoneOpen){const phoneWidth=Math.min(760,height-28)*9/18.5;return {x:left,y:top,w:Math.max(128,Math.min(280,(width-phoneWidth)/2-left-12)),h:92};}
+ if(phoneOpen){const phoneWidth=Math.min(334,Math.max(208,height*.49));return {x:left,y:top,w:Math.max(128,Math.min(280,(width-phoneWidth)/2-left-12)),h:92};}
  if(dock&&intersects(rect,dock)){
   const gaps=[{x:left,w:dock.x-left-12},{x:dock.x+dock.w+12,w:width-right-dock.x-dock.w-12}].sort((a,b)=>b.w-a.w);
   if(gaps[0].w>=128)rect={...rect,...gaps[0],w:Math.min(360,gaps[0].w)};
@@ -20,11 +20,10 @@ export class HouseMessages{
  say(text,seconds=2.4){if(!text)return;if(this.pending?.text===text)return;this.pending={text,remaining:seconds,age:0};}
  layout(dock,phoneOpen=false){
   const width=this.root.clientWidth,height=this.root.clientHeight;
-  if(!this.safe||this.width!==width||this.height!==height){const style=getComputedStyle(this.root);this.width=width;this.height=height;this.safe={left:Math.max(12,parseFloat(style.getPropertyValue('--house-safe-left'))+8||0),right:Math.max(52,parseFloat(style.getPropertyValue('--house-safe-right'))+44||0),top:Math.max(4,parseFloat(style.getPropertyValue('--house-safe-top'))||0)+54};}
+  if(!this.safe||this.width!==width||this.height!==height){const style=getComputedStyle(this.root);this.width=width;this.height=height;this.safe={left:Math.max(12,parseFloat(style.getPropertyValue('--house-safe-left'))+8||0),right:Math.max(60,parseFloat(style.getPropertyValue('--house-safe-right'))+52||0),top:Math.max(8,parseFloat(style.getPropertyValue('--house-safe-top'))||0)+4};}
   const safe=this.safe,stamp=[width,height,phoneOpen,dock?.x,dock?.y,dock?.w,dock?.h,...Object.values(safe)].join('|');
   if(stamp!==this.layoutStamp){
    this.layoutStamp=stamp;this.rect=messageLayout(width,height,dock,{phoneOpen,...safe});this.feed.style.left=this.rect.x+'px';this.feed.style.top=this.rect.y+'px';this.feed.style.width=this.rect.w+'px';
-   const compass=this.root.querySelector('.lab-compass');if(compass){compass.hidden=false;const r=compass.getBoundingClientRect();compass.hidden=phoneOpen||!!dock&&intersects({x:r.x,y:r.y,w:r.width,h:r.height},dock);}
   }
  }
  update({dt=0,blocked=false,danger='',revelation='',unread=false,messageCount=0,phoneOpen=false,dock=null}={}){
