@@ -1,3 +1,5 @@
+import {BEVEL_PROFILE} from './chibi-geometry.js';
+
 function noteModel(piece,note){
  const yaw=note.mirrored?.25:-.12,c=Math.cos(yaw),s=Math.sin(yaw);
  const paper=[.96,.86,.69],crease=[.69,.55,.43],ink=[.23,.16,.22];
@@ -21,7 +23,7 @@ function batteryModel(piece){
   const x=-y*Math.sin(roll);
   return piece(id,x*Math.cos(yaw),y*Math.cos(roll)-.012,x*Math.sin(yaw),w,h,d,mat,{roll,yaw,...extra});
  };
- const ring=(id,y,diameter,height,color,mat='torchmetal')=>section(id,y,diameter,height,diameter,mat,{color,shape:'cylinder',segments:16});
+ const ring=(id,y,diameter,height,color,mat='torchmetal')=>section(id,y,diameter,height,diameter,mat,{color,shape:'lathe',profile:BEVEL_PROFILE,segments:16});
  return [
   ring('base',-.114,.136,.028,metal),
   ring('wrapper',-.031,.138,.148,[.22,.29,.40],'paper'),

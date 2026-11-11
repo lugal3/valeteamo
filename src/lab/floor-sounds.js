@@ -3,7 +3,7 @@ import {HOUSE,HEIGHT,STAIR,roomAt} from './house-layout.js';
 // Session-only sound zones: no visible mesh, collision or saved-story state.
 export const CREAK_ZONES=Object.freeze([
  {id:'hall-board',x:5.9,y:0,z:8.8,r:.7},
- {id:'living-board',x:3.8,y:0,z:9.5,r:.65},
+ {id:'living-board',x:3.44,y:0,z:9.50,r:.65},
  {id:'study-board',x:3,y:0,z:3.7,r:.6},
  {id:'landing-board',x:10.2,y:HEIGHT,z:4.1,r:.65},
  {id:'upper-hall-board',x:6,y:HEIGHT,z:6.5,r:.7}

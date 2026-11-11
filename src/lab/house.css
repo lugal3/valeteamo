@@ -203,3 +203,11 @@
 #lab3d .safe-feedback{grid-column:1;min-height:3em;margin:4px 0;font:11px/1.4 system-ui;color:#8b3c54}
 #lab3d .safe-paper .lab-paper-actions{margin-top:9px}
 #lab3d .safe-paper .lab-paper-actions button{min-height:44px;padding:8px;font:12px system-ui}
+#lab3d .house-tv{width:min(580px,100%);max-height:100%;padding:10px 12px 12px;border:3px solid #69606a;border-radius:20px;background:linear-gradient(#3f3946,#1b1923 88%);color:#e7dbe0;box-shadow:0 12px 70px #000c,inset 0 0 0 3px #211e27}
+#lab3d .house-tv .lab-paper-mark{display:none}
+#lab3d .house-tv h2{font:600 13px/1 system-ui;margin:4px 0 9px;letter-spacing:.1em}
+#lab3d .house-tv-screen{display:grid;justify-items:center;gap:5px;padding:6px 6px 4px;border-radius:12px;background:#11131b;color:#e7dbe0;font:12px/1.3 system-ui}
+#lab3d .house-tv-screen iframe{width:100%;min-width:200px;min-height:200px;height:min(53vh,306px);border:0;border-radius:6px;background:#07080d}
+#lab3d .house-tv-screen a{color:#f6c6dc}
+#lab3d .house-tv .lab-paper-actions{margin-top:7px}
+#lab3d .house-tv .lab-paper-actions button{min-height:40px;flex:0 1 auto;background:#352c3c;border-color:#bc90aa;color:#fff;font:600 12px system-ui}

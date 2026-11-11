@@ -76,8 +76,9 @@ const assert=require('node:assert/strict');
 
  // 7. Upgraded artwork with legibility check
  const {ART_COUNT,ART_TITLES}=await import('../src/lab/artwork.js');
- assert.equal(ART_COUNT,10,'10 framed poster artworks available');
- assert.equal(ART_TITLES.length,10,'10 poster titles');
+ assert.equal(ART_COUNT,11,'10 posters plus the altar portrait');
+ assert.equal(ART_TITLES.length,ART_COUNT,'Every artwork has a title');
+ assert.equal(ART_TITLES[house.boxes.find(b=>b.id==='louis-altar-portrait').art],'LOUIS TOMLINSON');
 
  console.log('PASS materials.cjs: dual-resolution atlas, per-room palettes, decals, and artwork upgraded.');
 })().catch(e=>{

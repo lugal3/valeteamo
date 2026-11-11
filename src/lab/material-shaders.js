@@ -126,7 +126,7 @@ void main(){
   shine=mix(s8*s8,s4,rough)*(1.0-rough)*beam*.14;
  }
  color=color*lighting/(1.0+.24*lighting)+vec3(1.0,.91,.79)*shine;
- if(vStyle>31.5)color=mix(color,vColor*.90,.82);
+ if(vStyle>31.5)color=mix(color,vColor*(.55+material.r*.40),.82);
  float fog=clamp((vDistance-6.0)/25.0,0.0,.32);
  color=mix(color,vec3(.024,.030,.054),fog);
  gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);

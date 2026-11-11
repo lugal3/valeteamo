@@ -1,9 +1,9 @@
 // Original fan-themed posters. No photographs, album art or song recordings.
-export const ART_COUNT=10,ART_SIZE=128;
+export const ART_COUNT=11,ART_SIZE=128;
 export const ART_TITLES=[
  'ONE DIRECTION · LIVE','1D · HEARTBEAT','ONE DIRECTION · VINYL','1D · ON THE ROAD',
  'ONE DIRECTION · STARS','1D · MUSIC ROOM','1D · NIGHT CHANGES','ONE DIRECTION · ACOUSTIC',
- '1D · MIDNIGHT MEMORIES','ONE DIRECTION · GOLDEN'
+ '1D · MIDNIGHT MEMORIES','ONE DIRECTION · GOLDEN','LOUIS TOMLINSON'
 ];
 
 export function createArtworkCanvas(){
@@ -11,7 +11,7 @@ export function createArtworkCanvas(){
  const g=canvas.getContext('2d'),palettes=[
   ['#19243a','#f3b8bd'],['#e6cec8','#842e4c'],['#304b54','#f1d69b'],
   ['#d0c0d6','#382c4e'],['#202c48','#e8b873'],['#b95f78','#fff1cf'],
-  ['#1e3238','#c8e3d4'],['#42283b','#f5d2b3'],['#2a2d48','#fce4ec'],['#3a382c','#eed88b']
+  ['#1e3238','#c8e3d4'],['#42283b','#f5d2b3'],['#2a2d48','#fce4ec'],['#3a382c','#eed88b'],['#241d27','#ead4ba']
  ];
  for(let i=0;i<ART_COUNT;i++){
   g.save();g.translate(i*ART_SIZE,0);const [base,ink]=palettes[i];
@@ -21,6 +21,14 @@ export function createArtworkCanvas(){
   g.strokeStyle=ink;g.lineWidth=1.5;g.strokeRect(6,6,116,116);
   g.fillStyle=ink;
   g.font='bold 15px system-ui';g.textAlign='center';
+  if(i===10){
+   g.fillStyle='#b88476';g.fillRect(16,11,96,86);
+   g.fillStyle='#333040';g.beginPath();g.ellipse(64,100,37,29,0,0,Math.PI*2);g.fill();
+   g.fillStyle='#edba99';g.fillRect(54,65,20,25);g.beginPath();g.ellipse(64,48,25,30,-.07,0,Math.PI*2);g.fill();
+   g.fillStyle='#3d2a29';g.beginPath();g.moveTo(40,58);g.bezierCurveTo(19,19,64,8,90,22);g.lineTo(87,50);g.lineTo(80,34);g.lineTo(53,43);g.closePath();g.fill();
+   g.fillStyle='#363342';g.fillRect(49,47,8,3);g.fillRect(71,47,8,3);g.fillStyle='#97675e';g.fillRect(56,66,17,3);
+   g.fillStyle=ink;g.font='bold 10px system-ui';g.fillText('LOUIS TOMLINSON',64,114);g.restore();continue;
+  }
   g.fillText(i%2?'1D':'ONE',64,25);
   g.fillText(i%2?['','HEARTBEAT','','ON THE ROAD','','MUSIC ROOM','','NIGHT CHANGES','','MIDNIGHT'][i]:(i===6?'CHANGES':i===8?'MEMORIES':i===9?'GOLDEN':'DIRECTION'),64,43);
 

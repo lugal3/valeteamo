@@ -1,5 +1,10 @@
 import {CUP_PROFILE} from './chibi-geometry.js';
 
+const BULB_GLASS=[[-.5,0],[-.48,.31],[-.42,.61],[-.31,.85],[-.15,1],[.04,.97],[.22,.79],[.37,.56],[.5,.43],[.5,0]];
+const BULB_SOCKET=[[-.5,.68],[-.48,1],[-.30,1],[.32,1],[.48,.94],[.5,.70]];
+const MOUNT=[[-.5,.62],[-.46,.89],[-.30,1],[.48,1],[.5,0]];
+const SHADE=CUP_PROFILE.map(([y,radius],i)=>[y,i===CUP_PROFILE.length-1?.98:radius]);
+
 export function installHouseLights(add,obj,height){
  const circuits=[],fixtures=[];
  function circuit(id,room,mounts,switches,on=false){
@@ -7,10 +12,13 @@ export function installHouseLights(add,obj,height){
   for(const [x,floor,z,drop=.37] of mounts){
    const id='fixture-'+fixtures.length,ceiling=floor===0?height-.22:6.26,y=ceiling-drop;
    const fixture={x,y:y-.153,z,tile:fixtures.length+1,circuit:state};fixtures.push(fixture);
-   add(id+'-mount',x,ceiling-.035,z,.24,.07,.24,'dark',false,{shape:'cylinder',segments:10});
-   add(id+'-cord',x,(ceiling+y)/2,z,.025,drop,.025,'dark',false);
-   add(id+'-shade',x,y+.055,z,.39,.19,.39,'brass',false,{shape:'lathe',profile:CUP_PROFILE,pitch:Math.PI,segments:12});
-   add(id+'-bulb',x,y-.065,z,.145,.151,.145,'paper',false,{shape:'round',segments:14,rings:8,dynamic:true,color:[1,.91,.74],fixture});
+   add(id+'-mount',x,ceiling-.035,z,.25,.07,.25,'torchmetal',false,{shape:'lathe',profile:MOUNT,segments:12,color:[.33,.28,.32]});
+   add(id+'-cord',x,(ceiling+y)/2,z,.027,drop,.027,'dark',false);
+   add(id+'-shade',x,y+.084,z,.37,.15,.37,'brass',false,{shape:'lathe',profile:SHADE,pitch:Math.PI,segments:16,color:[.60,.42,.24]});
+   add(id+'-shade-rim',x,y+.013,z,.365,.013,.365,'brass',false,{shape:'torus',majorRadius:.174,tubeRadius:.007,pitch:Math.PI/2,segments:14});
+   add(id+'-socket',x,y+.006,z,.101,.087,.101,'torchmetal',false,{shape:'lathe',profile:BULB_SOCKET,segments:12,color:[.43,.39,.36]});
+   for(let n=0;n<3;n++)add(id+'-thread-'+n,x,y-.030+n*.021,z,.106,.012,.106,'brass',false,{shape:'lathe',profile:MOUNT,segments:10,color:[.58,.49,.39]});
+   add(id+'-bulb',x,y-.103,z,.168,.171,.168,'glass',false,{shape:'lathe',profile:BULB_GLASS,segments:16,dynamic:true,color:[1,.91,.74],fixture});
   }
   for(const [x,floor,z,axis,side] of switches){
    const id='switch-'+state.id+(state.switches.length?'-'+state.switches.length:''),y=floor+1.26;

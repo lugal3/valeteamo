@@ -5,7 +5,7 @@ const CELL=.4,dist=(a,b)=>Math.hypot(a.x-b.x,(a.y-b.y)*2,a.z-b.z);
 export const SEARCH_ROUTE=Object.freeze([{x:12,y:HEIGHT,z:4.2},{x:6,y:HEIGHT,z:2.8},{x:2.5,y:HEIGHT,z:3.6},{x:6,y:HEIGHT,z:5.8}]);
 export class Pursuer{
  constructor(world){this.world=world;this.reset();}
- reset(){this.x=5.8;this.y=0;this.z=11;this.yaw=Math.PI;this.mode='dormant';this.awareness=0;this.lost=10;this.witnessed=null;this.lastSeen=null;this.path=[];this.route=0;this.visited=0;this.replan=0;this.walk=0;this.stepDistance=0;this.caught=false;this.stuck=0;}
+ reset(){this.x=5.8;this.y=0;this.z=11;this.yaw=this.facing=Math.PI;this.mode='dormant';this.awareness=0;this.lost=10;this.witnessed=null;this.lastSeen=null;this.path=[];this.route=0;this.visited=0;this.replan=0;this.walk=this.speed=this.age=0;this.stepDistance=0;this.caught=false;this.stuck=0;}
  get active(){return this.mode!=='dormant'&&this.mode!=='gone';}
  start(){this.reset();this.mode='search';this.plan(SEARCH_ROUTE[0]);}
  retreat(){this.mode='retreat';this.witnessed=null;this.lastSeen=null;this.awareness=0;this.plan({x:5.8,y:0,z:11});}
@@ -49,11 +49,16 @@ export class Pursuer{
   const target=this.mode==='retreat'?{x:5.8,y:0,z:11}:witnessed?(p.hideExit||this.lastSeen):this.lastSeen&&this.lost<4?this.lastSeen:SEARCH_ROUTE[this.route];
   if(this.replan<=0&&(this.mode==='chase'||!this.path.length||this.stuck>.5||!this.goal||dist(target,this.goal)>.5))this.plan(target);
   for(const door of this.world.objects)if(door.kind==='door'&&door.state!=='open'&&Math.abs(door.y-1.1-this.y)<1.2&&Math.hypot(door.x-this.x,door.z-this.z)<1.6)onDoor(door);
+  let moved=0;
   const next=this.path[0];if(next){const dx=next.x-this.x,dz=next.z-this.z,d=Math.hypot(dx,dz);if(d<.07){this.path.shift();}else{
-   this.yaw=Math.atan2(dx,dz);const step=Math.min(d,dt*(this.mode==='chase'?2.15:1.45)),moved=navigate(this,this.world,dx/d*step,dz/d*step,1.72);this.walk+=moved;this.stepDistance+=moved;this.stuck=moved<.003?this.stuck+dt:0;
+   this.yaw=Math.atan2(dx,dz);const step=Math.min(d,dt*(this.mode==='chase'?2.15:1.45));moved=navigate(this,this.world,dx/d*step,dz/d*step,1.72);this.walk+=moved;this.stepDistance+=moved;this.stuck=moved<.003?this.stuck+dt:0;
    if(this.stepDistance>.65){this.stepDistance%=.65;cues.push('step');}
   }}else if(this.goal&&dist(this,this.goal)<.8){if(this.mode==='retreat'){this.mode='gone';cues.push('gone');}else{this.lastSeen=null;this.witnessed=null;this.visited++;this.route=(this.route+1)%SEARCH_ROUTE.length;this.plan(SEARCH_ROUTE[this.route]);}}
+  this.age+=dt;
+  this.speed+=(moved/dt-this.speed)*(1-Math.exp(-8*dt));
+  const turn=this.yaw-this.facing;
+  this.facing+=Math.atan2(Math.sin(turn),Math.cos(turn))*(1-Math.exp(-12*dt));
   return cues;
  }
- snapshot(){return {x:this.x,y:this.y,z:this.z,yaw:this.yaw,mode:this.mode,awareness:this.awareness,lost:this.lost,walk:this.walk,active:this.active,witnessed:this.witnessed,path:this.path.length,caught:this.caught};}
+ snapshot(){return {x:this.x,y:this.y,z:this.z,yaw:this.yaw,facing:this.facing,mode:this.mode,awareness:this.awareness,lost:this.lost,walk:this.walk,speed:this.speed,age:this.age,active:this.active,witnessed:this.witnessed,path:this.path.length,caught:this.caught};}
 }

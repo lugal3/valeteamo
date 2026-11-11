@@ -19,11 +19,13 @@ function sample(style,u,v,inner=60){
   // yeso: soft wall plaster with trowel marks and subtle grit
   shade=.93+fine*.05+soft*.015;height=.45+fine*.1+soft*.04;rough=.98;
  }else if(style===2||style===3){
-  // madera / tablones: rich wood grain with bevel profile
-  const grain=wave(u+wave(v,1)*.014,9)*.055+wave(u+wave(v,2)*.009,21)*.025;
+  const bend=wave(v,1)*.037+wave(v+u,2)*.015;
+  const grain=wave(u+bend,7)*.048+wave(u+bend*.71,19)*.019+wave(u+v*.01,47)*.011;
+  const knot=Math.exp(-Math.pow(wave(u-.17,1)*3.1,2)-Math.pow(wave(v-.29,1)*4.6,2));
+  const pores=hash(Math.floor(u*52),Math.floor(v*25),12)>.91?.024:0;
   const joint=style===3?(Math.min(u,1-u)<.012||Math.min(v,1-v)<.008?1:0):0;
-  const molding=style===2?Math.sin(clamp(v*6,0,Math.PI))*.02:0;
-  shade=.93+grain+fine*.025-joint*.20+molding;height=.5+grain*1.3-joint*.18+molding;rough=.62;
+  const finish=style===2?wave(v,1)*.024:0;
+  shade=.92+grain+fine*.024-joint*.20-knot*.09+finish-pores;height=.5+grain*.74-joint*.18-knot*.05;rough=.60+fine*.08;
  }else if(style===4){
   // ceramica: decorative patterned tile with border and star motif
   const edge=Math.min(u,1-u,v,1-v),bevel=clamp(edge/.04);
@@ -35,13 +37,14 @@ function sample(style,u,v,inner=60){
   const cx=Math.abs((u*2)%1-.5),cy=Math.abs((v*2)%1-.5);
   const tuft=Math.exp(-(cx*cx+cy*cy)*24)*.12;
   const warp=wave(u,14),weft=wave(v,14),thread=(warp+weft)*.016;
-  shade=.93+thread+fine*.02-tuft;height=.5+(warp+weft)*.035-tuft*1.5;rough=.94;
+  shade=.91+thread+fine*.035-tuft+soft*.032;height=.5+(warp+weft)*.021-tuft*1.1;rough=.91+fine*.07;
  }else if(style===6){
   // alfombra: textured warm carpet with woven diagonal structure
   const diag=Math.sin((u+v)*Math.PI*20)*Math.sin((u-v)*Math.PI*20)*.025;
   shade=.94+diag+fine*.03;height=.5+diag*1.4;rough=.99;
  }else if(style===7){
-  shade=.94+wave(u,25)*.018+fine*.016;height=.5+wave(u,25)*.018;rough=.29;
+  const scuff=Math.max(0,wave(u+wave(v,4)*.014,37))**8;
+  shade=.93+wave(u,25)*.021+fine*.021-scuff*.054;height=.5+wave(u,25)*.011-scuff*.025;rough=.22+scuff*.24;
  }else if(style===8){
   const spine=Math.exp(-Math.pow(u-.5,2)*1800),branches=Math.exp(-Math.pow(Math.sin((v*7+Math.abs(u-.5)*4)*Math.PI),2)*70);
   shade=.85+Math.abs(u-.5)*.11+spine*.11+branches*.045;height=.48+spine*.16+branches*.055;rough=.67;
@@ -53,7 +56,8 @@ function sample(style,u,v,inner=60){
   const specks=fine>.82?.06:0;
   shade=.9+fine*.065+soft*.015-specks;height=.5+fine*.055-specks*.1;rough=.89;
  }else if(style===11){
-  shade=.96+wave(u+v,1)*.025;height=.5;rough=.12;
+  const cloud=wave(u+wave(v,3)*.04,2)*wave(v,3),rib=wave(u,19);
+  shade=.91+cloud*.067+fine*.038+rib*.021;height=.5+cloud*.045+rib*.017;rough=.20+fine*.09;
  }else if(style===12){
   shade=.97+fine*.009;height=.5+fine*.009;rough=.91;
  }else if(style===13){
@@ -106,6 +110,7 @@ export function materialStyle(box){
  if(box.mat==='asphalt')return 1;
  if(box.mat==='roof'||box.mat==='carpaint')return 13;
  if(box.surface==='paint')return 13;
+ if(box.surface==='glaze')return 11;
  if(box.id==='wardrobe')return 2;
  if(box.id?.startsWith('books-'))return 9;
  if(box.id?.endsWith('-cap')&&box.mat==='dark')return 7;

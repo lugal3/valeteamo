@@ -1,11 +1,14 @@
 import {BATH_MIRROR,MIRROR_SPAWN} from './mirror.js';
 import {BALUSTER_PROFILE,CUP_PROFILE,CANDLE_PROFILE,CLOCK_PROFILE} from './chibi-geometry.js';
 import {installHouseLights} from './house-lights.js';
+import {installCabinet,installRefrigerator} from './house-cabinets.js';
+import {installLouisAltar} from './louis-altar.js';
 // V5: generous landings and an independent, open stairwell. Dimensions in metres.
 export const HEIGHT=3.15;
 export const HOUSE=Object.freeze({width:14,depth:12});
 export const STAIR=Object.freeze({xMin:10.8,xMax:13.2,centerX:12,zTop:4.95,zBottom:9.95,wellX:10.3,wellZ:10.2});
 export const WORLD_BOUNDS=Object.freeze({minX:-10,maxX:26,minZ:-8,maxZ:32});
+const BASIN_PROFILE=[[-.5,0],[-.5,.58],[-.36,.78],[-.03,.97],[.33,1],[.5,.99],[.5,.91],[.31,.88],[-.04,.74],[-.25,.49],[-.28,0]];
 export const ROOMS=[
  {id:'study',label:'Estudio',floor:0,x0:0,x1:4.4,z0:0,z1:4.7},
  {id:'living',label:'Sala de estar',floor:0,x0:0,x1:4.4,z0:4.7,z1:12},
@@ -132,7 +135,7 @@ export function buildHouse(spawn='ground'){
   add(id,x,y+.85,z,w,.12,d,'wood');
   for(const sx of [-1,1])for(const sz of [-1,1])add(id+'-leg-'+sx+sz,x+sx*(w/2-.08),y+.41,z+sz*(d/2-.07),.09,.82,.09,'wood');
  }
- function orient(first,x,z,yaw){if(!yaw)return;const c=Math.cos(yaw),s=Math.sin(yaw);for(const b of boxes.slice(first)){const dx=b.x-x,dz=b.z-z;b.x=x+dx*c-dz*s;b.z=z+dx*s+dz*c;b.yaw=yaw;}}
+ function orient(first,x,z,yaw){if(!yaw)return;const c=Math.cos(yaw),s=Math.sin(yaw);for(const b of boxes.slice(first)){const dx=b.x-x,dz=b.z-z;b.x=x+dx*c-dz*s;b.z=z+dx*s+dz*c;b.yaw=(b.yaw||0)+yaw;}}
  function chair(id,x,y,z,yaw=0){const first=boxes.length;add(id,x,y+.36,z,.60,.13,.58,'velvet',true,{shape:'rounded-box',roundness:.32});add(id+'-back',x,y+.72,z+.25,.60,.65,.08,'pink',true,{shape:'rounded-box',roundness:.35});for(const sx of [-1,1])for(const sz of [-1,1])add(id+'-leg-'+sx+sz,x+sx*.22,y+.17,z+sz*.20,.07,.34,.07,'wood');orient(first,x,z,yaw);}
  function shelf(id,x,y,z,yaw=0){const first=boxes.length;add(id+'-back',x,y+1,z,.70,2,.15,'wood');for(let i=0;i<4;i++){add(id+'-shelf-'+i,x,y+.2+i*.5,z+.18,.72,.08,.50,'wood');for(let j=0;j<4;j++)add(id+'-book-'+i+j,x-.23+j*.15,y+.4+i*.5,z+.18,.1,.30,.26,j%2?'pink':'paper',false);}orient(first,x,z,yaw);}
  function lamp(id,x,y,z){add(id+'-base',x,y+.035,z,.24,.07,.24,'brass',false,{shape:'round'});add(id+'-stem',x,y+.24,z,.04,.35,.04,'brass',false,{shape:'cylinder'});add(id+'-shade',x,y+.38,z,.28,.20,.28,'cream',false,{shape:'lathe',profile:CUP_PROFILE,segments:6,pitch:Math.PI});add(id+'-glass',x,y+.30,z,.10,.12,.10,'paper',false,{shape:'round'});add(id+'-cap',x,y+.49,z,.05,.04,.05,'brass',false,{shape:'round'});}
@@ -145,21 +148,32 @@ export function buildHouse(spawn='ground'){
   add('picture-'+id,x+(dir==='east'?.06:dir==='west'?-.06:0),y,z+(dir==='south'?.06:dir==='north'?-.06:0),vertical?.02:.76,.81,vertical?.76:.02,'paper',false,{art,front:dir});
   obj('picture-'+id,'picture',art===1?'Cuadro del corazón · One Direction':'Cuadro de One Direction',x,y,z,{art,text:art===1?'Un corazón rojo está marcado junto al escenario. Parece una pista.':'Un cartel original inspirado en One Direction: música, viajes y recuerdos.'});
  }
- // Living room: seating faces a low media cabinet, with a clear route around it.
+ // Keep the window landing and both sides of the doorway clear.
+ const sofaStart=boxes.length;
  add('sofa',2.15,.35,9.5,2.2,.55,.85,'velvet',true,{shape:'rounded-box',roundness:.35});add('sofa-back',2.15,.76,9.95,2.3,.76,.17,'pink',true,{shape:'rounded-box',roundness:.35});
  for(const x of [.98,3.32])add('sofa-arm-'+x,x,.62,9.5,.18,.35,.94,'velvet',true,{shape:'rounded-box',roundness:.35});
  add('sofa-pillow-l',1.25,.58,9.5,.35,.32,.15,'pink',false,{shape:'rounded-box',roundness:.4,yaw:.25});
  add('sofa-pillow-r',3.05,.58,9.5,.35,.32,.15,'bow',false,{shape:'rounded-box',roundness:.4,yaw:-.25});
- table('coffee-table',2.2,0,8.1,1.10,.82);add('table-runner',2.2,.855,8.1,.90,.01,.45,'cream',false);
- add('cup-coffee',2.0,.87,8.0,.08,.09,.08,'cream',false,{shape:'lathe',profile:CUP_PROFILE,segments:8});
- add('cup-saucer',2.0,.86,8.0,.12,.015,.12,'cream',false,{shape:'round'});
- add('living-rug',2.2,.014,8.6,3.3,.025,4.0,'carpet',false,{ao:.88});
- add('media-cabinet',2.2,.31,5.02,1.6,.62,.40,'wood');add('tv-frame',2.2,1.02,4.98,1.1,.62,.10,'dark',false);add('tv-screen',2.2,1.02,5.045,.94,.48,.02,'glass',false);
- add('media-clock-base',1.7,.64,5.02,.22,.04,.14,'wood',false);
- add('media-clock-body',1.7,.76,5.02,.18,.20,.12,'wood',false,{shape:'rounded-box',roundness:.35});
- add('media-clock-face',1.7,.76,5.085,.12,.12,.02,'paper',false,{shape:'round'});
- add('media-clock-rim',1.7,.76,5.085,.14,.14,.02,'brass',false,{shape:'torus',majorRadius:.06,tubeRadius:.008});
- lamp('table-lantern',2.2,.92,8.1);plant('salon-plant',.65,0,11.2);frame('stain',3.65,1.8,4.84,'south',1);frame('living-tour',.15,1.8,5.35,'east',0);
+ orient(sofaStart,2.15,9.5,Math.PI/2);
+ for(const box of boxes.slice(sofaStart)){box.x-=1.49;box.z-=.30;}
+ table('coffee-table',2.10,0,9.2,.83,1.08);add('table-runner',2.10,.918,9.2,.54,.012,.90,'velvet',false);
+ add('cup-saucer',2.0,.930,8.9,.14,.016,.14,'cream',false,{shape:'lathe',profile:CUP_PROFILE,segments:10});
+ add('cup-coffee',2.0,.976,8.9,.10,.09,.10,'cream',false,{shape:'lathe',profile:CUP_PROFILE,segments:10});
+ obj('sofa-note','inspect','Sofá',1.09,.67,9.20,{text:'La tela está gastada justo frente a la tele. Alguien pasaba mucho tiempo sentado aquí.'});
+ obj('coffee-cup','inspect','Taza de café',2.0,.99,8.9,{text:'Todavía queda café en el fondo. La taza está fría.'});
+ add('living-rug',2.05,.014,9.12,3.55,.025,3.05,'carpet',false,{ao:.88});
+ installCabinet(add,obj,{id:'media-cabinet',label:'Cajón de los mandos',x:2.63,z:5.04,w:1.56,h:.61,d:.46,
+  items:[{id:'media-battery',kind:'battery',label:'Pila del control remoto',dx:.49}]});
+ const tvStand=boxes.length,power={on:false};
+ add('tv-table',4.04,.31,9.42,1.49,.62,.47,'wood');
+ add('tv-frame',4.04,1.02,9.42,1.18,.67,.19,'dark',false,{shape:'rounded-box',roundness:.20,segments:8,rings:5});
+ add('tv-bezel',4.00,1.02,9.535,1.08,.56,.04,'torchmetal',false,{shape:'rounded-box',roundness:.22,segments:8,rings:5});
+ add('tv-screen',3.99,1.03,9.56,.98,.47,.020,'glass',false,{dynamic:true,power,color:[.18,.25,.31]});
+ add('tv-power-dot',4.55,.87,9.54,.025,.025,.018,'paper',false,{dynamic:true,power,color:[.39,.80,.52]});
+ for(let n=0;n<5;n++)add('tv-speaker-'+n,4.55,.92+n*.035,9.527,.045,.013,.015,'dark',false);
+ orient(tvStand,4.04,9.42,Math.PI/2);
+ obj('television','television','Televisor',3.86,1.03,9.42,{power});
+ lamp('table-lantern',2.10,.92,9.5);plant('salon-plant',.38,0,11.55);frame('stain',3.65,1.8,4.84,'south',1);frame('living-tour',.15,1.8,5.35,'east',0);
  // A shallow safe against the wall, clear of the living-room circulation.
  add('safe-bottom',.66,.10,5.10,.84,.12,.66,'dark');add('safe-top',.66,.91,5.10,.84,.10,.66,'torchmetal');
  add('safe-left',.27,.50,5.10,.08,.74,.66,'torchmetal');add('safe-right',1.05,.50,5.10,.08,.74,.66,'torchmetal');add('safe-back',.66,.50,4.81,.70,.74,.08,'dark');
@@ -169,7 +183,8 @@ export function buildHouse(spawn='ground'){
  obj('mirror-safe','safe','Caja fuerte del salón',.66,.59,5.49,{box:safeDoor,parts:safeParts.map(box=>({box,origin:{x:box.x,z:box.z}})),origin:{x:.66,z:5.43},hinge:{x:.28,z:5.43},swingAngle:Math.PI*.48,slideDistance:.76,amount:0,open:false,state:'closed'});
  add('safe-envelope',.66,.18,5.10,.33,.035,.24,'paper',false);add('safe-seal',.66,.205,5.10,.08,.014,.07,'pink',false);
  // Study with the same existing drawer/key progression.
- table('study-desk',2.6,0,2.7,1.35,.65);chair('study-chair',3.25,0,1.15,-2.75);shelf('study-shelf',.16,0,3.6,-Math.PI/2);plant('study-plant',3.8,0,4.05);
+ table('study-desk',2.6,0,2.7,1.35,.65);chair('study-chair',2.55,0,1.31,Math.PI);shelf('study-shelf',.19,0,3.6,-Math.PI/2);plant('study-plant',4.00,0,4.32);
+ obj('study-books','inspect','Libros del estudio',.42,1.16,3.62,{text:'Entre los manuales hay un álbum vacío. Han arrancado todas las fotos de la misma página.'});
  add('desk-back',2.6,.66,2.97,1.2,.30,.06,'wood');for(const x of [2.15,3.05])add('drawer-housing-'+x,x,.73,2.65,.10,.22,.55,'wood');
  const front=add('drawer',2.6,.73,2.365,.76,.22,.055,'pink',true,{dynamic:true,surface:'paint'});
  const parts=[add('drawer-bottom',2.6,.64,2.61,.70,.035,.44,'wood',true,{dynamic:true}),add('drawer-left',2.25,.73,2.61,.035,.18,.44,'wood',true,{dynamic:true}),add('drawer-right',2.95,.73,2.61,.035,.18,.44,'wood',true,{dynamic:true}),add('drawer-back',2.6,.73,2.83,.70,.18,.035,'wood',true,{dynamic:true}),add('drawer-handle',2.6,.73,2.315,.19,.055,.055,'brass',false,{dynamic:true})];
@@ -179,24 +194,38 @@ export function buildHouse(spawn='ground'){
  obj('mirror-note','note','Nota con escritura extraña',3.03,.965,2.65,{text:'Cuatro cifras trazadas con una escritura extraña.',mirrored:true});
  // Kitchen and bathroom are recognizable rooms, not corridor props.
  add('kitchen-floor',10.75,.012,2.2,6.2,.024,4.1,'tile',false,{ao:.91});
- add('kitchen-counter',10.0,.48,.65,4.3,.96,.75,'tile');add('fridge',12.95,1.0,.75,.85,2.0,.85,'cream');
- add('oven',8.5,.53,.65,.65,.82,.76,'torchmetal');add('oven-glass',8.5,.53,1.05,.48,.40,.03,'glass',false);
- for(const x of [8.35,8.65])for(const z of [.48,.80])add('hob-'+x+z,x,.99,z,.18,.025,.18,'dark',false,{shape:'round'});
- add('sink',10.0,.98,.65,.60,.045,.42,'torchmetal',false);add('tap',10.0,1.14,.35,.045,.33,.045,'brass',false);add('tap-spout',10.0,1.30,.48,.045,.045,.25,'brass',false);
- table('dining-table',11.15,0,2.8,1.6,.75);add('dining-cloth',11.15,.855,2.8,1.35,.01,.55,'cream',false);
- add('kitchen-mug-a',11.5,.99,.55,.08,.09,.08,'cream',false,{shape:'lathe',profile:CUP_PROFILE,segments:8});
- add('kitchen-mug-b',11.7,.99,.55,.08,.09,.08,'pink',false,{shape:'lathe',profile:CUP_PROFILE,segments:8});
- chair('dining-chair-a',11.15,0,1.75,Math.PI);chair('dining-chair-b',11.15,0,3.65);lamp('dining-light',11.15,.92,2.8);
+ add('kitchen-counter',10.20,.925,.48,4.34,.075,.73,'tile');add('kitchen-counter-base',9.76,.44,.47,1.70,.88,.67,'wood');
+ add('kitchen-backsplash',10.20,1.06,.14,4.34,.20,.066,'tile',false);
+ installRefrigerator(add,obj);
+ installCabinet(add,obj,{id:'kitchen-drawer',label:'Cajón de la cocina',x:11.51,z:.48,w:1.45,h:.885,d:.66,color:[.28,.44,.44],
+  items:[{id:'pantry-note',kind:'note',label:'Lista de compras arrugada',dx:-.21,text:'Uvas. Café. Velas nuevas para la sala de música. La última línea dice «no volver a dejarlo salir».'}]});
+ add('oven',8.50,.43,.49,.79,.86,.70,'torchmetal');add('oven-glass',8.50,.46,.86,.63,.45,.029,'glass',false,{color:[.16,.21,.26]});
+ add('oven-handle',8.50,.74,.897,.56,.04,.045,'torchmetal',false);
+ for(const x of [8.36,8.64])for(const z of [.33,.62])add('hob-'+x+z,x,.98,z,.19,.031,.19,'dark',false,{shape:'lathe',profile:CLOCK_PROFILE,segments:10});
+ obj('oven','inspect','Horno',8.50,.57,.92,{text:'El reloj se quedó detenido. El vidrio está frío.'});
+ add('sink',10.05,.99,.49,.61,.068,.42,'torchmetal',false,{shape:'lathe',profile:CUP_PROFILE,segments:14});add('tap',10.05,1.12,.25,.045,.31,.045,'brass',false);add('tap-spout',10.05,1.26,.38,.045,.045,.26,'brass',false);
+ table('dining-table',11.15,0,2.62,1.6,.75);add('dining-cloth',11.15,.918,2.62,1.35,.012,.55,'velvet',false);
+ add('kitchen-mug-a',11.5,1.01,.46,.09,.09,.09,'cream',false,{shape:'lathe',profile:CUP_PROFILE,segments:9});
+ add('kitchen-mug-b',11.7,1.01,.46,.09,.09,.09,'pink',false,{shape:'lathe',profile:CUP_PROFILE,segments:9});
+ chair('dining-chair-a',11.15,0,1.96,Math.PI);chair('dining-chair-b',11.15,0,3.25);lamp('dining-light',11.15,.92,2.62);
  add('basement-hatch',8.55,.018,3.55,1.25,.035,1.0,'dark',false);for(const x of [8.15,8.95])add('hatch-hinge-'+x,x,.044,3.95,.20,.025,.07,'brass',false);add('hatch-pull',8.55,.05,3.15,.26,.04,.06,'brass',false);
  obj('basement-hatch','inspect','Trampilla del sótano',8.55,.05,3.55,{text:'La trampilla parece bajar al sótano. Está cerrada por dentro.'});
  add('bath-floor',8.75,.012,5.9,2.25,.024,2.75,'tile',false,{ao:.90});add('toilet-base',9.25,.27,6.55,.45,.54,.65,'cream',true,{shape:'round'});add('toilet-seat',9.25,.56,6.5,.52,.08,.63,'cream',false,{shape:'round'});add('toilet-tank',9.25,.70,7.0,.50,.56,.22,'cream');
- add('basin-cabinet',8.55,.43,4.92,.75,.86,.50,'wood');add('basin',8.55,.90,4.92,.79,.10,.55,'cream',false,{shape:'round'});add('bath-tap',8.55,1.08,4.73,.05,.3,.05,'brass',false);
+ installCabinet(add,obj,{id:'basin-cabinet',label:'Gabinete bajo el lavamanos',x:8.66,z:4.8,w:.89,h:.86,d:.57,color:[.37,.45,.47],
+  items:[{id:'bath-battery',kind:'battery',label:'Pila del lavamanos',dx:.235},{id:'bath-note',kind:'note',label:'Papel bajo el lavamanos',dx:-.17,text:'W. mandó quitar el pestillo de la sala de música. Desde entonces la cierra por fuera.'}]});
+ add('basin',8.66,.922,4.81,.81,.13,.53,'cream',false,{shape:'lathe',profile:BASIN_PROFILE,segments:16,surface:'glaze',color:[.9,.92,.88]});
+ add('bath-drain',8.66,.889,4.81,.071,.012,.071,'torchmetal',false,{shape:'round',segments:7,rings:4});
+ add('bath-tap',8.66,1.014,4.57,.056,.30,.056,'brass',false,{shape:'lathe',profile:CLOCK_PROFILE,segments:10});
+ add('bath-tap-spout',8.66,1.14,4.69,.059,.047,.25,'brass',false,{shape:'rounded-box',roundness:.45,segments:8,rings:5});
+ const water=add('bath-water',8.66,-100,4.795,.027,.211,.025,'glass',false,{shape:'lathe',profile:CLOCK_PROFILE,segments:9,dynamic:true,color:[.46,.66,.79]});
+ obj('bath-tap','tap','Llave del lavamanos',8.66,1.15,4.81,{water,on:false});
  boxes.push({...BATH_MIRROR});
  for(const z of [4.77,6.33])add('mirror-frame-'+z,9.83,1.48,z,.07,1.96,.07,'brass',false);
  for(const y of [.52,2.44])add('mirror-frame-'+y,9.83,y,5.55,.07,.07,1.63,'brass',false);
- add('towel',9.85,1.18,6.3,.05,.65,.45,'pink',false);
+ add('towel-rail',9.81,1.57,6.67,.06,.044,.52,'brass',false);
+ add('towel',9.78,1.29,6.67,.05,.55,.42,'pink',false);
  // Hall consoles sit against walls, outside the walking strip.
- add('hall-console',4.68,.43,10.5,.35,.86,.9,'wood');obj('note-hall','note','Nota doblada',4.70,.911,10.5,{text:'Una nota espera junto a la entrada.'});
+ add('hall-console',4.682,.43,10.5,.35,.86,.9,'wood');obj('note-hall','note','Nota doblada',4.70,.911,10.5,{text:'Una nota espera junto a la entrada.'});
  add('hall-runner',5.95,.012,6.5,1.2,.024,9.5,'carpet',false,{ao:.86});frame('hall',6.05,1.85,.15,'south',3);
  obj('battery-hall','battery','Pila pequeña',6.7,.13,7.5);obj('battery-living','battery','Pila junto al sofá',3.6,.13,7.8);
  // Master bedroom: space beside the bed remains clear for the rescue and closet.
@@ -205,8 +234,8 @@ export function buildHouse(spawn='ground'){
  add('upper-mattress',2.5,HEIGHT+.70,1.8,2.05,.22,2.45,'cream',false,{shape:'rounded-box',roundness:.25});
  add('upper-blanket',2.5,HEIGHT+.83,2.15,2.05,.08,1.7,'pink',false,{shape:'rounded-box',roundness:.35});
  add('upper-blanket-fold',2.5,HEIGHT+.88,1.35,2.05,.06,.25,'cream',false,{shape:'rounded-box',roundness:.35});
- add('headboard',2.5,HEIGHT+.90,.54,2.2,1.0,.12,'wood');
- add('headboard-cap',2.5,HEIGHT+1.42,.54,2.24,.06,.14,'trim',false);
+ add('headboard',2.5,HEIGHT+.90,.38,2.2,1.0,.34,'wood');
+ add('headboard-cap',2.5,HEIGHT+1.42,.38,2.24,.06,.37,'trim',false);
  add('bed-bow-center',2.5,HEIGHT+1.35,.62,.10,.09,.07,'bow',false,{shape:'round'});
  add('bed-bow-left',2.41,HEIGHT+1.35,.62,.12,.13,.06,'pink',false,{shape:'round',roll:-.2});
  add('bed-bow-right',2.59,HEIGHT+1.35,.62,.12,.13,.06,'pink',false,{shape:'round',roll:.2});
@@ -221,6 +250,7 @@ export function buildHouse(spawn='ground'){
  add('plush-ear-l',3.80,HEIGHT+.98,1.4,.045,.06,.045,'pink',false,{shape:'round'});
  add('plush-ear-r',3.90,HEIGHT+.98,1.4,.045,.06,.045,'pink',false,{shape:'round'});
  add('plush-bow',3.88,HEIGHT+.94,1.34,.05,.04,.03,'bow',false,{shape:'round'});
+ obj('bedside-plush','inspect','Peluche del velador',3.85,HEIGHT+.94,1.42,{text:'El peluche está mirando hacia la puerta. En la etiqueta está bordado el nombre de Louis.'});
  plant('bedroom-plant',.60,HEIGHT,1.2);
  frame('bed',3.8,HEIGHT+1.95,.15,'south',4);obj('note-upper','note','Carta en el dormitorio',3.85,HEIGHT+.79,1.5,{text:'Hay una canción que siempre me recuerda a ti.'});obj('battery-upper','battery','Pila del dormitorio',3.85,HEIGHT+.85,1.0);
  obj('bed','bed','Cama con lazo',2.5,HEIGHT+1.0,2.75,{returnX:3.85,returnZ:3.4});
@@ -239,10 +269,20 @@ export function buildHouse(spawn='ground'){
  }
  obj('wardrobe','hide','Entrar en el armario',1.42,HEIGHT+1.15,3.85,{hideType:'wardrobe',returnX:2.25,returnZ:3.85,wardrobeLeaves:leaves,amount:0,hideCamera:{x:.84,y:HEIGHT+1.28,z:3.85,yaw:Math.PI/2,pitch:0}});
  // Upstairs music room and reading room have distinct furniture and clear passages.
- table('music-console',9.8,HEIGHT,.65,1.7,.55);add('record-player',9.8,HEIGHT+.96,.65,.40,.05,.40,'dark',false,{shape:'round'});shelf('music-books',12.8,HEIGHT,.16);chair('music-chair',8.3,HEIGHT,1.65,.98);
- add('guitar-body',11.1,HEIGHT+1.13,.21,.35,.48,.10,'wood',false,{shape:'round'});add('guitar-neck',11.1,HEIGHT+1.6,.21,.055,.65,.08,'wood',false);frame('music',8.0,HEIGHT+1.9,.15,'south',5);
- chair('reading-chair',1.3,HEIGHT,7.5,Math.PI/2);table('reading-table',2.5,HEIGHT,7.5,.75,.65);lamp('reading-light',2.5,HEIGHT+.92,7.5);shelf('reading-books',.16,HEIGHT,9.8,-Math.PI/2);plant('reading-plant',3.7,HEIGHT,5.3);frame('reading',3.75,HEIGHT+1.9,11.83,'north',2);
- add('reading-rug',2.2,HEIGHT+.012,8.0,3.1,.024,4,'carpet',false,{ao:.88});add('upper-bench',5.1,HEIGHT+.43,11.3,1.15,.18,.48,'velvet');for(const x of [4.7,5.5])add('bench-leg-'+x,x,HEIGHT+.20,11.3,.08,.4,.35,'wood');plant('landing-plant',8.3,HEIGHT,10.8);frame('landing',8.0,HEIGHT+1.85,11.83,'north',0);
+ table('music-console',9.78,HEIGHT,.40,1.65,.55);
+ add('record-deck',9.78,HEIGHT+.966,.40,.52,.105,.41,'wood',false,{shape:'rounded-box',roundness:.20,segments:8,rings:4});
+ add('record-player',9.73,HEIGHT+1.026,.40,.33,.022,.33,'dark',false,{shape:'lathe',profile:CLOCK_PROFILE,segments:16});
+ add('record-arm',9.94,HEIGHT+1.035,.41,.025,.026,.29,'torchmetal',false,{yaw:.19});
+ obj('record-player','inspect','Tocadiscos',9.78,HEIGHT+1.05,.42,{text:'El vinilo está rayado en el mismo surco. Al lado, alguien escribió «Otra vez, desde el principio».'});
+ shelf('music-books',13.80,HEIGHT,2.03,Math.PI/2);chair('music-chair',8.24,HEIGHT,1.33,.98);
+ add('guitar-body',10.92,HEIGHT+1.13,.20,.35,.48,.10,'wood',false,{shape:'round'});add('guitar-neck',10.92,HEIGHT+1.6,.20,.055,.65,.08,'wood',false);frame('music',8.0,HEIGHT+1.9,.15,'south',5);
+ obj('guitar','inspect','Guitarra de la sala',10.92,HEIGHT+1.39,.32,{text:'Una cuerda está rota. En la caja quedó un adhesivo de One Direction.'});
+ installLouisAltar(add,obj,HEIGHT);
+ chair('reading-chair',.67,HEIGHT,7.55,-Math.PI/2);table('reading-table',1.50,HEIGHT,7.92,.72,.62);lamp('reading-light',1.50,HEIGHT+.92,7.92);shelf('reading-books',.19,HEIGHT,9.8,-Math.PI/2);plant('reading-plant',4.02,HEIGHT,5.33);frame('reading',3.75,HEIGHT+1.9,11.83,'north',2);
+ obj('reading-books','inspect','Biblioteca de la planta alta',.47,HEIGHT+1.16,9.8,{text:'Los anuarios tienen los lomos gastados. Entre ellos hay entradas de conciertos archivadas por fecha.'});
+ installCabinet(add,obj,{id:'reading-cabinet',label:'Cajón de la sala de lectura',x:2.05,y:HEIGHT,z:5.12,w:1.28,d:.60,
+  items:[{id:'reading-battery',kind:'battery',label:'Pila de la sala de lectura',dx:.24}]});
+ add('reading-rug',1.92,HEIGHT+.012,8.0,2.9,.024,4,'carpet',false,{ao:.88});add('upper-bench',4.95,HEIGHT+.43,11.65,1.15,.18,.48,'velvet');for(const x of [4.55,5.35])add('bench-leg-'+x,x,HEIGHT+.20,11.65,.08,.4,.35,'wood');plant('landing-plant',8.3,HEIGHT,11.54);frame('landing',8.0,HEIGHT+1.85,11.83,'north',0);
  // Exterior is built geometry, with a grounded garden and recognizable neighborhood.
  add('front-path',5.9,-.005,16.25,1.65,.025,8.5,'stone',false);add('road',8,-.005,23,36,.025,3.4,'asphalt',false);add('pavement',8,0,20.5,36,.04,1.3,'stone',false);
  for(const x of [-4.8,19.5]){

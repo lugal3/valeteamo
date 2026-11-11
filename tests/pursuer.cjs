@@ -13,6 +13,16 @@ module.exports=async()=>{
  const manifest=JSON.parse(fs.readFileSync('src/lab/audio/manifest.json'));assert.equal(manifest.length,16);let total=0;
  for(const clip of manifest){const bytes=fs.readFileSync('src/lab/audio/'+clip.id+'.wav');assert.equal(bytes.toString('ascii',0,4),'RIFF');assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'),clip.sha256);assert(clip.peak<=.8);assert(clip.end>clip.start);total+=bytes.length;}
  assert(total<3000000);const open=manifest.find(c=>c.id==='door-open'),close=manifest.find(c=>c.id==='door-close');assert.equal(open.source,close.source);assert(open.end<close.start,'Opening and closing are distinct actions, not the same sound');
+ const {pursuerPose,pursuerPieces,posePursuer}=await import('../src/lab/pursuer-model.js'),{geometry}=await import('../src/lab/renderer.js');
+ const mesh=geometry(pursuerPieces()),vertices=new Float32Array(mesh.vertices.length);
+ const actor={x:2,y:3.15,z:5,yaw:0,facing:.32,walk:0,speed:1.45,age:0,mode:'search'};
+ const first=pursuerPose(actor)['foot-1'],next=pursuerPose({...actor,walk:.20})['foot-1'];
+ assert.equal(next.y,0);assert(Math.abs(next.z+.20-first.z)<1e-8,'The planted foot cancels actor displacement');
+ for(const mode of ['search','chase'])for(let i=0;i<32;i++){
+  posePursuer(mesh.vertices,vertices,mesh.groups,{...actor,mode,walk:i*.053,age:i*.035});
+  assert(vertices.every(Number.isFinite),'All posed mesh positions and normals are finite');
+  for(let j=1;j<vertices.length;j+=16)assert(vertices[j]>=actor.y-.028,'Feet clear the floor through the gait cycle');
+ }
  console.log('PASS pursuit: physical stair/door navigation, LOS, witnessed/unseen hiding, retry/completion, 16 bounded separate audio cuts and hashes');
 };
 if(require.main===module)module.exports().catch(e=>{console.error(e);process.exitCode=1;});

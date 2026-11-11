@@ -17,6 +17,7 @@ import {WINDOW_SHOT_SECONDS,WINDOW_LANDING,windowIntroCamera,windowIntroState,sh
 import {navigate,smoothAxis,getStairDirection} from './navigation.js';
 import {interactionTarget} from './interactions.js';
 import {toggleCircuit} from './house-lights.js';
+import {turnOnTelevision} from './television.js';
 import {animateFurniture,updateFurniture,sweepClear} from './furniture-motion.js';
 import {createHousePuzzle,puzzleEvent,canOpenDrawer,canOpenBedroom,canRescue,PUZZLE_HINTS} from '../demo/house-puzzles.js';
 import './house.css';
@@ -129,8 +130,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if($('lab-stick'))$('lab-stick').style.transform='translate(0,0)';
   if(s)lookTarget={yaw:s.yaw,pitch:s.pitch};
  }
- const modalClose=()=>{modal='';activeSafe=null;safeInput='';dialog.classList.add('lab-hidden');dialog.innerHTML='';resetInput();if(!isSuspended())sound.resume();};
+ let stopTelevision=null;
+ function closeTelevision(){stopTelevision?.();stopTelevision=null;}
+ const modalClose=()=>{closeTelevision();modal='';activeSafe=null;safeInput='';dialog.classList.add('lab-hidden');dialog.innerHTML='';resetInput();if(!isSuspended())sound.resume();};
  function showModal(title,body,actions=[['Cerrar','close']]){
+  closeTelevision();
   modal=title;dialog.classList.remove('lab-hidden');
   $('house-messages').hidden=true;
   dialog.innerHTML=`<section class="lab-paper" role="dialog" aria-modal="true" aria-label="${escapeHTML(title)}"><div class="lab-paper-mark">✿ ♡ ✿</div><h2>${escapeHTML(title)}</h2><div class="lab-paper-body">${body}</div><div class="lab-paper-actions">${actions.map(([label,act])=>`<button data-act="${escapeHTML(act)}">${escapeHTML(label)}</button>`).join('')}</div></section>`;
@@ -233,23 +237,36 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const o=closestObject(world,s,focus);if(!o){say('Acércate a un objeto y míralo para interactuar');return;}
   if(o.kind==='light-switch'){
    const on=toggleCircuit(o.circuit);play('click',o);say(on?'Luz encendida':'Luz apagada');
-  }else if(o.kind==='door'){
+  }else if(o.kind==='tap'){
+   o.on=!o.on;o.water.y=o.on?1.01:-100;play('click',o);say(o.on?'Llave de agua abierta':'Llave de agua cerrada');
+  }else if(o.kind==='door'||o.kind==='cupboard'){
    if(demo&&o.id==='dormitorio'&&!canOpenBedroom(puzzle)){say(puzzle.key?'La segunda pista está dentro de la caja fuerte del salón.':'Busca la llave con lazo en el cajón del estudio.',4);play('latch',o);return;}
    if(o.locked&&!s.inventory.key){say('La puerta tiene un pequeño candado. Busca una llave.');play('latch',o);return;}
     const opening=!o.open;if(pursuer.active&&!sweepClear(o,o.amount,opening?1:0,pursuer)){say('No puedes mover la puerta mientras alguien ocupa el paso.');return;}const result=animateFurniture(o,opening,{player:s,reducedMotion:reducedMotion.matches});
     if(!result.started){if(result.reason==='blocked')say('No puedes mover la puerta mientras estás en el paso.');return;}
     if(demo&&o.id==='dormitorio'&&opening&&result.complete)puzzle=puzzleEvent(puzzle,'door');
-    play(opening?'door-open':'door-close',o);say(opening?'Abriendo puerta…':'Cerrando puerta…');
+    play(o.kind==='cupboard'?'drawer':opening?'door-open':'door-close',o);
+    say(o.kind==='cupboard'?(opening?'Refrigerador abierto':'Refrigerador cerrado'):(opening?'Abriendo puerta…':'Cerrando puerta…'));
   }else if(o.kind==='drawer'){
-   if(demo&&!canOpenDrawer(puzzle)){say(PUZZLE_HINTS.drawer);return;}
+   const keyDrawer=demo&&o.id==='drawer';
+   if(keyDrawer&&!canOpenDrawer(puzzle)){say(PUZZLE_HINTS.drawer);return;}
     const opening=!o.open,result=animateFurniture(o,opening,{player:s,reducedMotion:reducedMotion.matches});
     if(!result.started){if(result.reason==='blocked')say('Deja un poco de espacio delante del cajón.');return;}
-    if(demo&&opening){puzzle=puzzleEvent(puzzle,'drawer');world.objects.find(k=>k.id==='key').taken=puzzle.key;say(puzzle.key?'Ya guardaste la llave en la mochila.':'Abriendo el cajón… una llave con un lazo.',3);}
-    play('drawer',o);if(!demo)say(opening?'Abriendo cajón…':'Cerrando cajón…');
+    if(keyDrawer&&opening){puzzle=puzzleEvent(puzzle,'drawer');world.objects.find(k=>k.id==='key').taken=puzzle.key;say(puzzle.key?'Ya guardaste la llave en la mochila.':'Abriendo el cajón… una llave con un lazo.',3);}
+    else say(opening?'Abriendo cajón…':'Cerrando cajón…');
+    play('drawer',o);
   }else if(o.kind==='battery'){o.taken=true;s.inventory.batteries++;rebuild();play('pickup',o);say('Pila guardada en la mochila');}
   else if(o.kind==='key'){o.taken=true;s.inventory.key=true;if(demo)puzzle=puzzleEvent(puzzle,'key');rebuild();play('pickup',o);say('Llave con lazo obtenida');}
   else if(o.kind==='note'){o.taken=true;s.inventory.notes.push({id:o.id,label:o.label,text:o.text});if(demo&&o.id==='note-hall')puzzle=puzzleEvent(puzzle,'note');rebuild();play('note',o);if(o.mirrored){mirrorSafe.collect();showMirrorNote();}else showNote(o);}
   else if(o.kind==='safe')showSafe(o);
+  else if(o.kind==='television'){
+   if(events.phase==='hide'||events.phase==='hunt'){say('La tele puede esperar. Busca un escondite.');return;}
+   showModal('Televisor',`<div class="house-tv-screen"></div>`,[['Apagar tele','close']]);
+   dialog.querySelector('.lab-paper').classList.add('house-tv');
+   o.power.on=true;
+   const stopPlayer=turnOnTelevision(dialog.querySelector('.house-tv-screen'),{muted:sound.settings.muted});
+   stopTelevision=()=>{stopPlayer();o.power.on=false;};
+  }
   else if(o.kind==='picture'||o.kind==='inspect'){
    play('click',o);showModal(o.label,`<p>${escapeHTML(o.text)}</p>`);
   }else if(o.kind==='rescue'){
@@ -403,6 +420,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   interactButton.querySelector('small').textContent=s.hidden||s.lying?'Salir':!target?'Usar':target.kind==='door'?(target.open?'Cerrar puerta':'Abrir puerta'):target.kind==='key'?'Recoger llave':target.kind==='note'?'Leer nota':target.kind==='drawer'?(target.open?'Cerrar cajón':'Abrir cajón'):target.kind==='rescue'?'Rescatar':'Examinar';
   if(target?.kind==='hide')interactButton.querySelector('small').textContent=target.hideType==='wardrobe'?'Entrar en armario':'Esconderse';
   if(target?.kind==='battery')interactButton.querySelector('small').textContent='Recoger pila';
+  if(target?.kind==='television')interactButton.querySelector('small').textContent='Encender tele';
+  if(target?.kind==='tap')interactButton.querySelector('small').textContent=target.on?'Cerrar llave':'Abrir llave';
+  if(target?.kind==='cupboard')interactButton.querySelector('small').textContent=target.open?'Cerrar refrigerador':'Abrir refrigerador';
   if(target?.kind==='safe')interactButton.querySelector('small').textContent=mirrorSafe.opened?'Ver contenido':'Introducir código';
   if(target?.kind==='light-switch')interactButton.querySelector('small').textContent=target.circuit.on?'Apagar luz':'Encender luz';
   if(poseTransition)interactButton.querySelector('small').textContent=poseTransition.entering?'Entrando…':'Saliendo…';
@@ -629,7 +649,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(!e.repeat&&(e.key==='m'||e.key==='M')){runAction('emotes');return;}
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();
   if(e.key==='Tab'&&modal){
-   const buttons=[...dialog.querySelectorAll('button')],first=buttons[0],lastButton=buttons.at(-1);
+   const buttons=[...dialog.querySelectorAll('button,iframe,a[href]:not([hidden])')],first=buttons[0],lastButton=buttons.at(-1);
    if((e.shiftKey&&document.activeElement===first)||(!e.shiftKey&&document.activeElement===lastButton)){e.preventDefault();(e.shiftKey?lastButton:first)?.focus();}return;
   }
   const key=movementKey(e);if(!isPaused()&&key&&(!e.repeat||keys.has(key)))keys.add(key);
@@ -689,7 +709,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
       s.x=x;s.y=y;s.z=z;s.yaw=Math.atan2(o.x-x,o.z-z);
       s.pitch=Math.atan2(o.y-(y+s.eye),Math.hypot(o.x-x,o.z-z));
       if(closestObject(world,s,null)?.id===o.id){
-       if(['door','drawer','safe'].includes(o.kind)&&!sweepClear(o,o.amount||0,o.open?0:1,s))continue;
+       if(['door','drawer','safe','cupboard'].includes(o.kind)&&!sweepClear(o,o.amount||0,o.open?0:1,s))continue;
        found=true;break;
       }
      }
@@ -699,6 +719,6 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    }
   };
  }
- function stop(){if(!active)return;active=false;cancelAnimationFrame(raf);controller.abort();phone.destroy();sound.destroy();renderer?.destroy();if(window.__rescueHouse)delete window.__rescueHouse;root.remove();}
+ function stop(){if(!active)return;active=false;cancelAnimationFrame(raf);controller.abort();closeTelevision();phone.destroy();sound.destroy();renderer?.destroy();if(window.__rescueHouse)delete window.__rescueHouse;root.remove();}
  return stop;
 }
