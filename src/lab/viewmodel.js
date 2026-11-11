@@ -103,7 +103,6 @@ export function drawViewModel(renderer, kind='flashlight', state={}){
  }
  renderer.bind(renderer.handVbo, renderer.handIbo);
  gl.clear(gl.DEPTH_BUFFER_BIT);
- gl.uniform1f(renderer.uniform.uFlash, 0);
  gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
 }
 

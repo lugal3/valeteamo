@@ -11,7 +11,8 @@ import {VERTEX_SHADER as VS,FRAGMENT_SHADER as FS} from './material-shaders.js';
 // No additional packages, CDNs, runtime downloads or concurrent Phaser loops.
 import {MATERIAL,lineBlocked} from './world.js';
 import {materialPixels,materialStyle,surfaceFrame,ATLAS_SIZE,TILE_SIZE,GUTTER,INNER,ATLAS_SIZE_MED,TILE_SIZE_MED,GUTTER_MED,INNER_MED} from './materials.js';
-import {HouseShadows,castsShadow,nearbyLights,FLASH_REACH,FLASH_SPREAD,LAMP_REACH,VISIBLE_LAMPS} from './lighting.js';
+import {HouseShadows,castsShadow,nearbyLights,FLASH_REACH,FLASH_SPREAD,LAMP_REACH,VISIBLE_LAMPS,NIGHT_SKY} from './lighting.js';
+export {pickupGeometry} from './pickup-models.js';
 function shader(gl,kind,source){const s=gl.createShader(kind);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){const msg=gl.getShaderInfoLog(s);gl.deleteShader(s);throw Error('Shader: '+msg);}return s;}
 function program(gl,low=false){const source=low?FS.replace('uniform float uFlash,uOcclude;','uniform float uFlash; const float uOcclude=0.0;'):FS;const p=gl.createProgram(),v=shader(gl,gl.VERTEX_SHADER,VS),f=shader(gl,gl.FRAGMENT_SHADER,source);gl.attachShader(p,v);gl.attachShader(p,f);gl.linkProgram(p);gl.deleteShader(v);gl.deleteShader(f);if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p)||'Shader linkage');return p;}
 function createAtlas(gl){
@@ -177,12 +178,12 @@ export class HouseRenderer {
   this.locations={};
   for(const [quality,p] of Object.entries(this.programs)){
    const atrib={},uniform={};for(const key of ['aPos','aCol','aNormal','aUV','aArt','aStyle','aTangent'])atrib[key]=gl.getAttribLocation(p,key);
-   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows'])uniform[key]=gl.getUniformLocation(p,key);
+   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld'])uniform[key]=gl.getUniformLocation(p,key);
    uniform.uLamps=gl.getUniformLocation(p,'uLamps[0]');
    this.locations[quality]={atrib,uniform};
   }
   Object.assign(this,this.locations[quality==='low'?'low':'medium']);
-  gl.useProgram(this.program);gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);gl.cullFace(gl.BACK);gl.disable(gl.BLEND);gl.clearColor(.045,.065,.11,1);
+  gl.useProgram(this.program);gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);gl.cullFace(gl.BACK);gl.disable(gl.BLEND);gl.clearColor(...NIGHT_SKY,1);
   gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);gl.uniform1i(this.uniform.uAtlas,0);
   gl.uniform1i(this.uniform.uLightDepth,1);
   gl.uniform1i(this.uniform.uMaterials,2);
@@ -267,7 +268,7 @@ export class HouseRenderer {
    const box=this.dynamicBoxes[i],source=box.source;
    if(source){
     const offset=box.sourceOffset||[0,0,0];
-    const bob=box.id.startsWith('pickup-')?Math.sin(time*3.2+(source.x+source.z)*2.5)*bobAmp:0;
+    const bob=source.kind==='key'?Math.sin(time*3.2+(source.x+source.z)*2.5)*bobAmp:0;
     const sway=(box.id.includes('bow-left')||box.id.includes('bow-right'))?Math.sin(time*4.2)*swayAmp:0;
     box.x=source.x+offset[0];
     box.y=source.concealed?-100:source.y+offset[1]+bob;
@@ -391,6 +392,7 @@ export class HouseRenderer {
   gl.uniform1f(this.uniform.uGutter,isLow?GUTTER:GUTTER_MED);
   gl.uniform1f(this.uniform.uInner,isLow?INNER:INNER_MED);
   gl.uniform1f(this.uniform.uMirrorPass,0);
+  gl.uniform1f(this.uniform.uHeld,0);
   gl.uniform1f(this.uniform.uHasShadows,this.shadows.available?1:0);
   gl.uniform4fv(this.uniform.uLamps,this.lampUniforms);
   gl.uniform3f(this.uniform.uEye,camera.x,camera.y,camera.z);
@@ -407,23 +409,9 @@ export class HouseRenderer {
   gl.drawElements(gl.TRIANGLES,this.count,gl.UNSIGNED_SHORT,0);
   if(motion.pursuer?.active)this.drawPursuer(motion.pursuer);
   if(!motion.thirdPerson)this.drawMirror(camera,motion);else this.drawActor(motion.thirdPerson,motion);
+  gl.uniform1f(this.uniform.uHeld,1);
   if(motion.introHands)this.drawClimbingHands(motion.introHands);
   if(showHand)this.drawFirstPerson(camera,right,up,forward,time,flash,motion);
  }
  destroy(){const gl=this.gl;if(this.pursuerVbo)gl.deleteBuffer(this.pursuerVbo);if(this.pursuerIbo)gl.deleteBuffer(this.pursuerIbo);for(const b of this.mirrorBuffers)gl.deleteBuffer(b);gl.deleteTexture(this.texture);this.shadows.destroy();for(const mesh of this.shadowMeshes)gl.deleteBuffer(mesh.indices);for(const texture of this.materialTextures)gl.deleteTexture(texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.dynamicVbo);gl.deleteBuffer(this.dynamicIbo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);for(const p of Object.values(this.programs))gl.deleteProgram(p);this.canvas.width=1;this.canvas.height=1;}
-}
-export function pickupGeometry(objects){
- return objects.filter(o=>!o.taken&&(!o.concealed||o.dynamic)&&['battery','note','key'].includes(o.kind)).flatMap(o=>{
-  if(o.kind==='key'){
-   const pieces=[];
-   const piece=(id,dx,dy,dz,w,h,d,mat='brass',extra={})=>({id:'pickup-'+o.id+'-'+id,x:o.x+dx,y:o.y+dy,z:o.z+dz,w,h,d,mat,solid:false,dynamic:true,source:o,sourceOffset:[dx,dy,dz],glow:true,...extra});
-   for(let i=0;i<8;i++){const angle=i*Math.PI/4;pieces.push(piece('ring-'+i,Math.cos(angle)*.065,0,Math.sin(angle)*.065-.055,.045,.025,.045));}
-   pieces.push(piece('shaft',0,0,.08,.035,.025,.18),piece('tooth',.028,0,.13,.07,.025,.025),piece('bow-left',-.045,.025,-.055,.065,.035,.04,'pink',{baseYaw:-.15}),piece('bow-right',.045,.025,-.055,.065,.035,.04,'pink',{baseYaw:.15}));
-   return pieces;
-  }
-  return [{
-   id:'pickup-'+o.id,x:o.x,y:o.y,z:o.z,w:o.kind==='note'?.32:.21,h:o.kind==='note'?.10:.25,d:.22,
-   mat:o.kind==='note'?'paper':'brass',solid:false,dynamic:true,source:o,glow:true
-  }];
- });
 }

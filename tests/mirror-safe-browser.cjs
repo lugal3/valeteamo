@@ -17,6 +17,11 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
    const bathDoor=()=>page.evaluate(()=>window.__rescueHouse.snapshot().doors.find(d=>d.id==='bano'));
    await page.waitForTimeout(300);assert.equal((await bathDoor()).state,'closed','Walking into range does not open a door');
    await page.click('#lab-interact');await page.waitForFunction(()=>window.__rescueHouse.snapshot().doors.find(d=>d.id==='bano').state==='open');
+   await page.keyboard.press('f');
+   await page.evaluate(()=>window.__rescueHouse.setPose({x:8.35,y:0,z:5.55,yaw:Math.PI/2,pitch:0}));
+   await page.waitForFunction(()=>window.__rescueHouse.snapshot().mirror.drawn&&!window.__rescueHouse.snapshot().flashlight&&window.__rescueHouse.mirrorPuzzle().noteLift===0);
+   assert(!(await state()).revealed,'The code stays hidden in darkness');
+   if(viewport.width<700)await page.keyboard.press('f');else await use('switch-bano');
    await page.evaluate(()=>window.__rescueHouse.setPose({x:8.35,y:0,z:5.55,yaw:-Math.PI/2,pitch:0}));
    await page.waitForFunction(()=>window.__rescueHouse.mirrorPuzzle().noteLift===1);
    assert(!(await state()).revealed,'The note rises as soon as Kitty enters, even when facing away from the mirror');

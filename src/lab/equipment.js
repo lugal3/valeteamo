@@ -15,11 +15,12 @@ export function phonePieces(){return [
 ];}
 
 export function notePieces(scale=1){
- const box=(id,x,y,z,w,h,d,color,emissive=false)=>chibiPiece(id,x,y,z,w,h,d,color,{shape:'box',smooth:false,emissive});
+ const box=(id,x,y,z,w,h,d,color)=>chibiPiece(id,x,y,z,w,h,d,color,{shape:'box',smooth:false,mat:'paper'});
  const paper=[
-  box('paper',0,.12,.044,.375,.228,.006,[1,.89,.67],true),
-  box('paper-crease',0,.19,.048,.35,.003,.002,[.78,.65,.50],true),
-  box('paper-rule',0,.054,.040,.35,.003,.002,[.76,.65,.52],true)
+  box('paper-edge',0,.12,.044,.377,.232,.004,[.71,.57,.41]),
+  box('paper',0,.12,.044,.375,.228,.006,[1,.89,.67]),
+  box('paper-crease',0,.19,.048,.35,.004,.002,[.78,.65,.50]),
+  box('paper-rule',0,.054,.040,.35,.003,.002,[.76,.65,.52])
  ];
  const segments=[[0,.052],[.022,.026],[.022,-.026],[0,-.052],[-.022,-.026],[-.022,.026],[0,0]];
  const digits={0:[0,1,2,3,4,5],1:[1,2],5:[0,5,6,2,3]};
@@ -27,8 +28,8 @@ export function notePieces(scale=1){
   for(const segment of digits[digit]){
    const [x,y]=segments[segment],horizontal=[0,3,6].includes(segment),center=(i-1.5)*.078;
    const width=horizontal?.04:.011,height=horizontal?.011:.04;
-   paper.push(box('ink-front-'+i+'-'+segment,center+x,.12+y,.049,width,height,.002,[.17,.11,.18],true));
-   paper.push(box('ink-back-'+i+'-'+segment,-center-x,.12+y,.039,width,height,.002,[.45,.33,.32],true));
+   paper.push(box('ink-front-'+i+'-'+segment,center+x,.12+y,.049,width,height,.002,[.17,.11,.18]));
+   paper.push(box('ink-back-'+i+'-'+segment,-center-x,.12+y,.039,width,height,.002,[.45,.33,.32]));
   }
  }
  // Resize the sheet around the gripping thumb so the reflected ink stays legible.

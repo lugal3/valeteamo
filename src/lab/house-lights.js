@@ -17,6 +17,7 @@ export function installHouseLights(add,obj,height){
    const flat=axis==='x',dx=flat?side*.035:0,dz=flat?0:side*.035;
    add(id+'-plate',x,y,z,flat?.034:.135,.187,flat?.135:.034,'cream',false,{shape:'rounded-box',segments:8,rings:5,roundness:.26});
    const rocker=add(id+'-rocker',x+dx,y+(on?.024:-.024),z+dz,flat?.031:.065,.087,flat?.065:.031,'torchmetal',false,{dynamic:true});
+   add(id+'-locator',x+dx*.57,y-.073,z+dz*.57,.014,.013,.014,'paper',false,{glow:true,color:[.33,.57,.50]});
    state.switches.push({rocker,y});
    obj(id,'light-switch','Interruptor · '+room,x+dx*1.6,y,z+dz*1.6,{circuit:state});
   }

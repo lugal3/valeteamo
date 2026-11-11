@@ -45,6 +45,7 @@ async function verifyShadows(page,url){
   return {samples,flashDepth,error};
  });
  for(const {quality,off,closed,open} of result.samples){
+  assert(off[1]<25,quality+' keeps the unlit interior dark');
   assert(closed[0]>off[0]+20,quality+' renders light on the near side');
   assert(Math.abs(closed[1]-off[1])<4,quality+' blocks light behind a closed door '+JSON.stringify({off,closed,open}));
   assert(open>closed[1]+12,quality+' updates the shadow when the door moves');
@@ -61,6 +62,8 @@ async function verifySwitches(page,url){
  await page.getByRole('button',{name:'Pruebas',exact:true}).click();
  await page.getByRole('button',{name:/^Casa 3D/}).click();
  await page.click('#lab-dialog [data-act=start]');await page.click('[data-act=skip-intro]');
+ const meter=page.getByRole('meter',{name:'Batería de la linterna'});
+ await meter.waitFor();assert.equal(await meter.getAttribute('aria-valuenow'),'100');
  await page.keyboard.press('f');
  await page.waitForFunction(()=>!window.__rescueHouse.snapshot().flashlight);
  const switches=await page.evaluate(async()=>{
@@ -83,6 +86,27 @@ async function verifySwitches(page,url){
  if(folder){
   await pose(study);await page.screenshot({path:path.join(folder,'estudio-apagado.png')});
  }
+ assert.equal(await meter.getAttribute('aria-valuenow'),'100','The lamp alone uses no battery');
+ await page.keyboard.press('f');
+ await page.waitForFunction(()=>Number(document.querySelector('#house-charge').getAttribute('aria-valuenow'))<100);
+ if(folder){
+  await pose(study);await page.screenshot({path:path.join(folder,'estudio-linterna.png')});
+  await use('note-hall',false);await page.screenshot({path:path.join(folder,'nota-papel.png')});
+  await use('battery-hall',false);await page.screenshot({path:path.join(folder,'pila-modelo.png')});
+ }
+ await use('battery-hall');
+ await page.keyboard.press('f');
+ await page.waitForFunction(()=>!window.__rescueHouse.snapshot().flashlight);
+ const remaining=await meter.getAttribute('aria-valuenow');
+ await page.keyboard.press('i');
+ const bag=page.getByRole('dialog',{name:'Mi mochila'});
+ assert.match(await bag.textContent(),new RegExp('Linterna: '+remaining+'%.*Pilas de repuesto: 2'));
+ await meter.waitFor({state:'hidden'});
+ await bag.getByRole('button',{name:/^Usar pila/}).click();
+ assert.match(await bag.textContent(),/Linterna: 100%.*Pilas de repuesto: 1/);
+ await bag.getByRole('button',{name:'Cerrar mochila'}).click();
+ await meter.waitFor();
+ assert.equal(await meter.getAttribute('aria-valuenow'),'100');
  for(const id of switches)await use(id);
  await use('switch-escalera-1',false);
  await page.getByRole('button',{name:'Encender luz',exact:true}).waitFor();
@@ -91,7 +115,7 @@ async function verifySwitches(page,url){
  if(folder)await page.screenshot({path:path.join(folder,'bano-encendido.png')});
  assert.equal(await page.locator('#lab-canvas').evaluate(canvas=>canvas.getContext('webgl').getError()),0);
  assert.deepEqual(errors,[]);
- console.log('PASS '+switches.length+' interruptores accesibles, control de escalera y espejo');
+ console.log('PASS '+switches.length+' interruptores, escalera, espejo, consumo y recarga de la linterna');
 }
 
 (async()=>{

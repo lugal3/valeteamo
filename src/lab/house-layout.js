@@ -196,7 +196,7 @@ export function buildHouse(spawn='ground'){
  for(const y of [.52,2.44])add('mirror-frame-'+y,9.83,y,5.55,.07,.07,1.63,'brass',false);
  add('towel',9.85,1.18,6.3,.05,.65,.45,'pink',false);
  // Hall consoles sit against walls, outside the walking strip.
- add('hall-console',4.68,.43,10.5,.35,.86,.9,'wood');obj('note-hall','note','Nota doblada',4.83,.92,10.5,{text:'Una nota espera junto a la entrada.'});
+ add('hall-console',4.68,.43,10.5,.35,.86,.9,'wood');obj('note-hall','note','Nota doblada',4.70,.911,10.5,{text:'Una nota espera junto a la entrada.'});
  add('hall-runner',5.95,.012,6.5,1.2,.024,9.5,'carpet',false,{ao:.86});frame('hall',6.05,1.85,.15,'south',3);
  obj('battery-hall','battery','Pila pequeña',6.7,.13,7.5);obj('battery-living','battery','Pila junto al sofá',3.6,.13,7.8);
  // Master bedroom: space beside the bed remains clear for the rescue and closet.

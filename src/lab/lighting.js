@@ -6,6 +6,7 @@ export const FLASH_SPREAD=1.36;
 export const LAMP_REACH=8;
 export const LAMP_SPREAD=3.2;
 export const VISIBLE_LAMPS=4;
+export const NIGHT_SKY=[.018,.024,.046];
 
 const DEPTH_VERTEX=`
 precision mediump float;
@@ -100,7 +101,7 @@ export class HouseShadows{
  end(width,height){
   const gl=this.gl;
   gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.disable(gl.SCISSOR_TEST);gl.enable(gl.CULL_FACE);
-  gl.viewport(0,0,width,height);gl.clearColor(.045,.065,.11,1);
+  gl.viewport(0,0,width,height);gl.clearColor(...NIGHT_SKY,1);
  }
  destroy(){
   const gl=this.gl;

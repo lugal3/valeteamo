@@ -147,6 +147,12 @@
 #lab3d.house-hud-editing .house-messages{visibility:hidden}
 #lab3d .lab-top button,#lab3d .lab-camera-settings>summary{min-height:44px;display:flex;align-items:center;justify-content:center;font-size:11px;border-color:#e7d1df4d;background:#211b2b75;padding:6px 9px;box-shadow:none}
 #lab3d .lab-top{left:auto;justify-content:flex-end;background:none;padding: max(8px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) 0 0;z-index:28}
+#lab3d .house-charge{position:absolute;top:max(12px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));z-index:23;display:flex;align-items:center;gap:7px;pointer-events:none;padding:5px 8px;border:1px solid #e7bfd453;border-radius:7px;background:#1a1521cc;color:#f6e7ef;font:600 11px/1 system-ui;font-variant-numeric:tabular-nums}
+#lab3d .house-charge-cell{position:relative;width:21px;height:10px;padding:1px;border:1px solid currentColor;border-radius:2px}
+#lab3d .house-charge-cell::after{content:"";position:absolute;right:-3px;top:2px;width:2px;height:4px;border-radius:0 1px 1px 0;background:currentColor}
+#lab3d .house-charge-cell i{display:block;width:100%;height:100%;border-radius:1px;background:#efc0d9}
+#lab3d .house-charge[data-level=low]{color:#ffcb91}
+#lab3d .house-charge[data-level=low] i{background:currentColor}
 #lab3d .lab-camera-settings>summary{display:grid;place-items:center;width:44px;height:44px;padding:0;font:21px system-ui;background:#271f32b5;border-color:#e7adcb84}
 #lab3d .lab-camera-panel{width:min(305px,76vw);max-height:calc(100dvh - 68px);gap:9px}
 #lab3d .house-menu-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
@@ -170,7 +176,9 @@
 @media(max-height:360px){#lab3d .house-messages>.lab-objective,#lab3d .house-messages>.lab-toast,#lab3d .house-messages>.phone-notice{font-size:10.5px}}
 
 /* The note is physically mirrored, including the shapes of the digits. */
-#lab3d .mirror-note-paper{position:relative;display:grid;justify-items:center;gap:12px;padding:20px 12px;margin:12px 0;background:repeating-linear-gradient(#fff4dc 0 27px,#d9c7af77 28px,#fff4dc 29px 30px);border:1px solid #c4a886;box-shadow:0 3px 9px #5038481a;transform:rotate(-1deg)}
+#lab3d .house-note-sheet{position:relative;margin:12px 1px;padding:17px 20px 17px 28px;border:1px solid #c8a98a;border-radius:2px 2px 7px 2px;background:linear-gradient(90deg,transparent 20px,#b77b7b50 21px,transparent 22px),repeating-linear-gradient(0deg,#95734c22 0 1px,transparent 1px 24px),repeating-linear-gradient(121deg,transparent 0 4px,#7c593507 5px 6px),linear-gradient(155deg,#fff7e6,#f7e4c4 82%,#e7ceaa);box-shadow:1px 3px 8px #50384830,inset 0 0 12px #a9814e24;color:#4b3847;font:italic 16px/24px Georgia,serif;transform:rotate(-1deg)}
+#lab3d .house-note-sheet::after{content:"";position:absolute;right:0;bottom:0;width:13px;height:13px;background:linear-gradient(135deg,#c4a17b 0,#fff4d9 50%,transparent 53%);pointer-events:none}
+#lab3d .mirror-note-paper{display:grid;justify-items:center;gap:12px;padding:20px 12px}
 #lab3d .mirror-note-writing{display:block;transform:scaleX(-1);font:500 clamp(38px,7vw,60px)/1.1 Georgia,serif;letter-spacing:.2em;color:#49394b;user-select:none}
 #lab3d .mirror-note-description{font:11px/1.5 system-ui;color:#80616c}
 #lab3d .mirror-note-reading{font:13px system-ui;text-align:center}

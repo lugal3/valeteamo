@@ -1,6 +1,7 @@
 import {FLASH_REACH,FLASH_SPREAD,LAMP_REACH,LAMP_SPREAD,SHADOW_ATLAS,SHADOW_GRID,SHADOW_TILE,VISIBLE_LAMPS} from './lighting.js';
 import {ATLAS_SIZE,TILE_SIZE,GUTTER,INNER} from './materials.js';
 import {MIRROR_PLANE} from './mirror.js';
+import {HOUSE} from './house-layout.js';
 export const VERTEX_SHADER=`
 precision mediump float;
 attribute vec3 aPos,aCol,aNormal,aTangent;
@@ -28,7 +29,7 @@ uniform float uFlash,uOcclude;
 uniform float uHasShadows;
 uniform vec4 uLamps[${VISIBLE_LAMPS}];
 uniform float uTime;
-uniform float uMirrorPass;
+uniform float uMirrorPass,uHeld;
 uniform float uAtlasSize,uTileSize,uGutter,uInner;
 float depthAt(vec2 pixel,vec2 corner,float reach){
  vec2 uv=(corner+clamp(pixel,vec2(.5),vec2(${(SHADOW_TILE-.5).toFixed(1)})))/${SHADOW_ATLAS.toFixed(1)};
@@ -79,18 +80,6 @@ void main(){
   vec3 B=cross(N,T);
   N=normalize(T*detail.x+B*detail.y+N*detail.z);
  }
- // Chibi surfaces use interpolated analytic normals and a broad studio key.
- // This keeps white paws readable in the dark without changing the house lighting.
- if(vStyle>63.5){
-  vec3 viewDir=normalize(uEye-vWorld);
-  float key=dot(N,normalize(vec3(-.45,.8,.6)))*.5+.5;
-  float wrap=smoothstep(.05,.95,key);
-  float rim=pow(1.0-max(0.0,dot(N,viewDir)),3.0);
-  float spec=pow(max(0.0,dot(N,normalize(viewDir+vec3(-.4,.8,.6)))),28.0);
-  vec3 soft=vColor*(.69+.32*wrap)+vec3(1.0,.89,.84)*rim*.065+vec3(1.0,.96,.90)*spec*.055;
-  if(vStyle>95.5)soft=mix(soft,vColor,.78);
-  gl_FragColor=vec4(clamp(soft,0.0,1.0),1.0);return;
- }
  vec3 world=vWorld;
  if(uMirrorPass>.5){world.x=${(2*MIRROR_PLANE).toFixed(4)}-world.x;N.x=-N.x;surfaceNormal.x=-surfaceNormal.x;}
  vec3 delta=world-uLightEye;float d=max(length(delta),.1);
@@ -112,8 +101,23 @@ void main(){
  }
  float warmth=0.0;
  for(int i=0;i<${VISIBLE_LAMPS};i++)warmth+=lampLight(uLamps[i],world,N,surfaceNormal);
+ if(vStyle>63.5){
+  // Keep the grip legible close to the camera, and light the reflected body in the room.
+  vec3 viewDir=normalize(uEye-vWorld);
+  float key=dot(surfaceNormal,normalize(vec3(-.45,.8,.6)))*.5+.5;
+  float wrap=smoothstep(.05,.95,key);
+  float rim=pow(1.0-max(0.0,dot(normalize(vNormal),viewDir)),3.0);
+  vec3 soft=vColor*(.72+.29*wrap)+vec3(1.0,.89,.84)*rim*.065;
+  if(tile==9.0)soft*=material.r*1.05;
+  float spill=uMirrorPass>.5?.28*uFlash:0.0;
+  float exposure=uHeld>.5?.62+.33*uFlash:clamp(.19+spill+beam+.78*warmth,.19,1.0);
+  if(vStyle>95.5)exposure=max(exposure,.85);
+  gl_FragColor=vec4(clamp(soft*exposure,0.0,1.0),1.0);return;
+ }
  float facing=.86+.14*max(0.0,dot(N,normalize(vec3(.3,.8,.4))));
- vec3 lighting=vec3(.46,.45,.49)*facing+vec3(.94,.97,1.0)*(beam+motes*.50)+vec3(1.0,.82,.60)*warmth;
+ float boundary=max(max(-world.x,world.x-${HOUSE.width.toFixed(1)}),max(-world.z,world.z-${HOUSE.depth.toFixed(1)}));
+ vec3 ambient=mix(vec3(.071,.076,.107),vec3(.20,.22,.32),smoothstep(.06,.48,boundary));
+ vec3 lighting=ambient*facing+vec3(.94,.97,1.0)*(beam+motes*.50)+vec3(1.0,.82,.60)*warmth;
  vec3 color=vColor*material.rrr*1.075;
  if(vArt>.5){vec4 painted=texture2D(uAtlas,vUV);color=mix(color,painted.rgb,painted.a*.96);}
  float rough=material.a,shine=0.0;
@@ -124,6 +128,6 @@ void main(){
  color=color*lighting/(1.0+.24*lighting)+vec3(1.0,.91,.79)*shine;
  if(vStyle>31.5)color=mix(color,vColor*.90,.82);
  float fog=clamp((vDistance-6.0)/25.0,0.0,.32);
- color=mix(color,vec3(.19,.16,.22),fog);
+ color=mix(color,vec3(.024,.030,.054),fog);
  gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);
 }`;

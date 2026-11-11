@@ -46,7 +46,8 @@ function sample(style,u,v,inner=60){
   const spine=Math.exp(-Math.pow(u-.5,2)*1800),branches=Math.exp(-Math.pow(Math.sin((v*7+Math.abs(u-.5)*4)*Math.PI),2)*70);
   shade=.85+Math.abs(u-.5)*.11+spine*.11+branches*.045;height=.48+spine*.16+branches*.055;rough=.67;
  }else if(style===9){
-  shade=.95+fine*.025+wave(u+v,45)*.007;height=.5+fine*.04;rough=.98;
+  const fleck=hash(Math.floor(u*24),Math.floor(v*32),9),fiber=wave(v+u,27)*wave(u,7);
+  shade=.91+.065*fine+.029*soft+.022*fiber-(fleck>.92?.075:0);height=.5+.038*fine+.020*fiber;rough=.94;
  }else if(style===10){
   // arcilla / stone: mineral micro-pores
   const specks=fine>.82?.06:0;
