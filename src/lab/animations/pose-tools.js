@@ -49,12 +49,12 @@ export function limb(out,upper,lower,tip,target,bend,tipRotation=[0,0,0],offset=
  const r=between(u,elbow),q=between(v,apply(transpose(r),forearm));
  jointRotation(out,upper,r);jointRotation(out,lower,q);jointRotation(out,tip,multiply(transpose(multiply(r,q)),rotation(tipRotation)));
 }
-export function arm(out,side,target,palm=[0,0,0],protract=false){
- const shift=protract?[side==='left'?.035:-.035,0,.035]:[0,0,0];
+export function arm(out,side,target,palm=[0,0,0],reach=0){
+ const shift=[(side==='left'?1:-1)*.09*reach,0,.06*reach];
  limb(out,side+'Arm',side+'Forearm',side+'Hand',target,[side==='left'?-1:1,-.6,.1],palm,shift);
  const i=JOINT_INDEX[side+'Arm']*6;for(let k=0;k<3;k++)out[i+3+k]=shift[k];
 }
-export function feet(out,{x=0,y=0,z=0,left=[-.16,.11,.005],right=[.16,.11,.005]}={}){
+export function feet(out,{x=0,y=0,z=0,left=[-.16,.11,.005],right=[.16,.11,.005],leftTilt=0,rightTilt=0}={}){
  setJoint(out,'root',0,0,0,x,y,z);
- for(const [side,target] of [['left',left],['right',right]])limb(out,side+'Leg',side+'Knee',side+'Foot',target,[0,0,1],[0,0,0],[x,y,z]);
+ for(const [side,target,tilt] of [['left',left,leftTilt],['right',right,rightTilt]])limb(out,side+'Leg',side+'Knee',side+'Foot',target,[0,0,1],[tilt,0,0],[x,y,z]);
 }

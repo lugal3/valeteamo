@@ -25,7 +25,7 @@ export function reflectedBathroom(boxes){
 // Winding must be reversed by the renderer because this transform has determinant -1.
 export function reflectMesh(vertices){for(let i=0;i<vertices.length;i+=16){vertices[i]=2*MIRROR_PLANE-vertices[i];vertices[i+6]*=-1;vertices[i+13]*=-1;}return vertices;}
 export function poseReflectedKitty(base,out,camera,motion={},binding=null){
- if(binding)skinCharacter(base,out,binding);else out.set(base);
+ if(binding)skinCharacter(base,out,binding,motion.blink);else out.set(base);
  const c=Math.cos(camera.yaw),s=Math.sin(camera.yaw),crouch=motion.crouched&&!binding?.68:1;
  const ground=motion.feetY??camera.y-(motion.crouched?1.03:1.63);
  for(let i=0;i<base.length;i+=16){

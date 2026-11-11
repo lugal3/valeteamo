@@ -30,7 +30,8 @@ export function smoothSurface(box,color,style){
     p=[c*r*box.w/2,s*r*box.h/2,axis*box.d];n=unit([c/box.w,s/box.h,-slope/(2*box.d)]);t=[-s,c,0];
    }
   }
-  vertices.push(box.x+p[0],box.y+p[1],box.z+p[2],...color,...n,u,v,0,style,...t);
+  const tint=box.vertexColor?box.vertexColor(p,color,box):color;
+  vertices.push(box.x+p[0],box.y+p[1],box.z+p[2],...tint,...n,u,v,0,style,...t);
  }
  for(let row=0;row<rings;row++)for(let col=0;col<segments;col++){
   const a=row*(segments+1)+col,b=a+1,c=a+segments+2,d=a+segments+1;

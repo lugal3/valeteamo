@@ -1,4 +1,5 @@
 import {createRigBinding,evaluateRig,JOINT_INDEX} from './character-rig.js';
+import {sampleBlink} from './animations/face.js';
 import {smoothSurface,torusSurface,roundedBoxSurface} from './chibi-geometry.js';
 import {BATH_MIRROR,mirrorVisible,kittyMirrorPieces,reflectedBathroom,reflectMesh,poseReflectedKitty} from './mirror.js';
 import {ART_COUNT,createArtworkCanvas} from './artwork.js';
@@ -61,7 +62,7 @@ export function geometry(boxes){
    const mesh=smoothSurface(box,color,style);
    for(const n of mesh.vertices)vertices.push(n);
    for(const i of mesh.indices)indices.push(offset+i);
-   groups.push({start:offset,end:offset+mesh.vertices.length/16,joint:box.joint||'root'});offset+=mesh.vertices.length/16;rotateMesh();continue;
+   groups.push({start:offset,end:offset+mesh.vertices.length/16,joint:box.joint||'root',blinkY:box.blinkY});offset+=mesh.vertices.length/16;rotateMesh();continue;
   }
   if(box.shape==='torus'){
    const mesh=torusSurface(box,color,style);
@@ -231,7 +232,8 @@ export class HouseRenderer {
     }
     evaluateRig(this.characterBinding,bones);
    }
-   poseReflectedKitty(this.mirrorMeshes[2].vertices,this.kittyVertices,camera,motion,animator?this.characterBinding:null);
+   const blink=animator?sampleBlink(animator.time,{reduced:animator.reduced}):0;
+   poseReflectedKitty(this.mirrorMeshes[2].vertices,this.kittyVertices,camera,{...motion,blink},animator?this.characterBinding:null);
    gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[4]);gl.bufferSubData(gl.ARRAY_BUFFER,0,this.kittyVertices);this.mirrorPose=pose;this.mirrorUploads++;
   }
   draw(2);
@@ -304,8 +306,12 @@ export class HouseRenderer {
  drawActor(subject,motion){
   const equipment=motion.equipment||'flashlight',gl=this.gl;
   if(this.actorEquipment!==equipment){this.actorEquipment=equipment;this.actorMesh=geometry(kittyMirrorPieces(equipment));this.actorVertices=new Float32Array(this.actorMesh.vertices.length);this.actorBinding=createRigBinding(this.actorMesh.groups);}
-  if(motion.animator)evaluateRig(this.actorBinding,motion.animator.sample('look-behind',.5));
-  poseReflectedKitty(this.actorMesh.vertices,this.actorVertices,subject,{feetY:motion.feetY},this.actorBinding);reflectMesh(this.actorVertices);
+  const animator=motion.animator;
+  if(animator)evaluateRig(this.actorBinding,animator.sample('look-behind',.5));
+  const blink=sampleBlink(motion.actorTime??animator?.time??0,{
+   reduced:animator?.reduced??motion.reduced,firstAt:motion.actorTime===undefined?undefined:.25
+  });
+  poseReflectedKitty(this.actorMesh.vertices,this.actorVertices,subject,{feetY:motion.feetY,blink},animator?this.actorBinding:null);reflectMesh(this.actorVertices);
   gl.bindBuffer(gl.ARRAY_BUFFER,this.handVbo);gl.bufferData(gl.ARRAY_BUFFER,this.actorVertices,gl.DYNAMIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.handIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,this.actorMesh.indices,gl.STATIC_DRAW);this.handIndexKind='actor';this.bind(this.handVbo,this.handIbo);gl.drawElements(gl.TRIANGLES,this.actorMesh.indices.length,gl.UNSIGNED_SHORT,0);
  }
  drawPursuer(actor,mirrored=false){

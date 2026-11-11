@@ -4,9 +4,27 @@ module.exports=async()=>{
  const {sampleEmote,EMOTES}=await import('../src/lab/animations/emotes.js'),{sampleWalk,footTarget}=await import('../src/lab/animations/walk.js');
  const {CharacterAnimator}=await import('../src/lab/animator.js'),{characterPieces}=await import('../src/lab/character-model.js'),{geometry}=await import('../src/lab/renderer.js'),{viewModelOffsets}=await import('../src/lab/viewmodel.js');
  const mesh=geometry(characterPieces('empty')),binding=createRigBinding(mesh.groups),vertices=new Float32Array(mesh.vertices.length),pose=createPose();
- const joints=(id,t)=>{evaluateRig(binding,sampleEmote(id,t,pose));return Object.fromEntries(['leftHand','rightHand','leftFoot','rightFoot'].map(name=>[name,jointPosition(binding,name)]));};
+ const joints=(id,t)=>{evaluateRig(binding,sampleEmote(id,t,pose));return Object.fromEntries(['root','leftHand','rightHand','leftFoot','rightFoot'].map(name=>[name,jointPosition(binding,name)]));};
  const low=joints('six-seven',.35),high=joints('six-seven',.72);assert(low.leftHand[1]<low.rightHand[1]-.10&&high.leftHand[1]>high.rightHand[1]+.10,'6–7 swaps the raised palm');
  const horse=joints('gangnam',.8);assert(Math.abs(horse.leftHand[0]-horse.rightHand[0])<.13&&horse.leftHand[2]>.23&&horse.rightHand[2]>.23,'Horseback wrists meet in front of the chest');
+ const rightLift=joints('gangnam',.92),leftLift=joints('gangnam',1.83);
+ assert(rightLift.rightFoot[1]>.24&&leftLift.leftFoot[1]>.24,'The high knee switches sides');
+ assert(Math.abs(rightLift.leftFoot[1]-.11)<.002&&Math.abs(leftLift.rightFoot[1]-.11)<.002,'The other shoe stays planted');
+ assert(rightLift.leftHand[0]>rightLift.rightHand[0]&&rightLift.rightHand[1]>rightLift.leftHand[1]+.1,'The wrists cross at distinct heights');
+ const leftStep=joints('six-seven',.49),rightStep=joints('six-seven',1.25);
+ assert(leftStep.root[0]<-.07&&rightStep.root[0]>.07,'6–7 travels side to side');
+ assert(leftStep.rightFoot[1]>.18&&rightStep.leftFoot[1]>.18,'The feet alternate the lateral step');
+ const {sampleBlink}=await import('../src/lab/animations/face.js'),eyes=binding.groups.filter(group=>group.blinkY!==undefined);
+ assert.equal(eyes.length,4,'Both eyes and their glints can blink');
+ const blink=sampleBlink(1.30);assert(blink>.95);assert.equal(sampleBlink(1.30,{reduced:true}),0);assert.equal(sampleBlink(2),0);
+ assert(sampleBlink(.33,{firstAt:.25})>.95,'A cinematic can cue the first blink relative to the cut');
+ evaluateRig(binding,createPose());skinCharacter(mesh.vertices,vertices,binding,blink);
+ for(const {start,end,blinkY} of eyes){
+  for(let i=start*16;i<end*16;i+=16){
+   assert(Math.abs(vertices[i+1]-(blinkY-.016*blink))<=Math.abs(mesh.vertices[i+1]-blinkY)*.15+1e-5);
+   assert(Math.abs(Math.hypot(...vertices.slice(i+6,i+9))-1)<1e-5);
+  }
+ }
  for(const clip of EMOTES){
   let previous=null;
   for(let frame=0;frame<=Math.ceil(clip.duration*120);frame++){

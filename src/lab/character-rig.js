@@ -32,14 +32,20 @@ export function evaluateRig(binding,pose){
  }
  binding.evaluations++;return m;
 }
-export function skinCharacter(base,out,binding){
+export function skinCharacter(base,out,binding,blink=0){
  out.set(base);const m=binding.matrices;
  for(const g of binding.groups){
   const o=g.joint*12,p=JOINTS[g.joint].pivot;
+  const closure=g.blinkY===undefined?0:blink,eyeScale=1-closure*.90;
   for(let i=g.start*16;i<g.end*16;i+=16){
-   const x=base[i]-p[0],y=base[i+1]-p[1],z=base[i+2]-p[2];
+   const eyeY=closure?g.blinkY+(base[i+1]-g.blinkY)*eyeScale-.016*closure:base[i+1];
+   const x=base[i]-p[0],y=eyeY-p[1],z=base[i+2]-p[2];
    out[i]=m[o]*x+m[o+1]*y+m[o+2]*z+m[o+3];out[i+1]=m[o+4]*x+m[o+5]*y+m[o+6]*z+m[o+7];out[i+2]=m[o+8]*x+m[o+9]*y+m[o+10]*z+m[o+11];
-   for(const k of [6,13]){const nx=base[i+k],ny=base[i+k+1],nz=base[i+k+2];out[i+k]=m[o]*nx+m[o+1]*ny+m[o+2]*nz;out[i+k+1]=m[o+4]*nx+m[o+5]*ny+m[o+6]*nz;out[i+k+2]=m[o+8]*nx+m[o+9]*ny+m[o+10]*nz;}
+   for(const k of [6,13]){
+    const nx=base[i+k],ny=k===6?base[i+k+1]/eyeScale:base[i+k+1]*eyeScale,nz=base[i+k+2];
+    const norm=closure?Math.hypot(nx,ny,nz)||1:1;
+    out[i+k]=(m[o]*nx+m[o+1]*ny+m[o+2]*nz)/norm;out[i+k+1]=(m[o+4]*nx+m[o+5]*ny+m[o+6]*nz)/norm;out[i+k+2]=(m[o+8]*nx+m[o+9]*ny+m[o+10]*nz)/norm;
+   }
   }
  }
  return out;
