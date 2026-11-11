@@ -10,7 +10,7 @@ export function interactionTarget(world,camera,previous=null){
   const distance=Math.hypot(dx,dy,dz),forward=dx*direction.x+dy*direction.y+dz*direction.z;
   if(forward<.18||distance>2.45)continue;
   const lateral=Math.sqrt(Math.max(0,distance*distance-forward*forward));
-  const width=object.kind==='door'?.81:object.kind==='bed'?.83:.57;
+  const width=object.kind==='door'?.81:object.kind==='bed'?.83:object.kind==='light-switch'?.28:.57;
   if(lateral>width)continue;
   if(lineBlocked(world.boxes,camera,object,object.kind==='door'||object.kind==='safe'?object.box?.id||'door-'+object.id:''))continue;
   const score=lateral*.95+distance*.2-(previous?.id===object.id?.14:0);

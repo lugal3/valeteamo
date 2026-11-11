@@ -1,35 +1,110 @@
-// A small CPU depth field bounds the flashlight without per-fragment ray loops
-// or shadow-map passes. Decorative/non-solid meshes never block the light.
-export const LIGHT_DEPTH_SIZE=16;
-export const LIGHT_REACH=18;
-export const LIGHT_SPREAD=1.2;
-const AXES=[['x','w'],['y','h'],['z','d']];
-export function rayDistance(boxes,origin,direction,reach=LIGHT_REACH){
- let nearest=reach;
- for(const box of boxes){
-  if(!box.solid)continue;
-  const c=box.yaw?Math.cos(box.yaw):1,s=box.yaw?Math.sin(box.yaw):0,rx=origin.x-box.x,rz=origin.z-box.z;
-  let near=0,far=nearest;
-  for(const [axis,size] of AXES){
-   const delta=axis==='x'?direction.x*c+direction.z*s:axis==='z'?-direction.x*s+direction.z*c:direction.y;
-   const offset=axis==='x'?-(rx*c+rz*s):axis==='z'?-(-rx*s+rz*c):box.y-origin.y,half=box[size]/2;
-   if(Math.abs(delta)<1e-8){if(Math.abs(offset)>half){far=-1;break;}continue;}
-   const a=(offset-half)/delta,b=(offset+half)/delta;
-   near=Math.max(near,Math.min(a,b));far=Math.min(far,Math.max(a,b));
-   if(near>far)break;
-  }
-  if(far>=near&&near>.015&&near<nearest)nearest=near;
- }
- return nearest;
+export const SHADOW_GRID=4;
+export const SHADOW_TILE=256;
+export const SHADOW_ATLAS=SHADOW_TILE*SHADOW_GRID;
+export const FLASH_REACH=18;
+export const FLASH_SPREAD=1.36;
+export const LAMP_REACH=8;
+export const LAMP_SPREAD=3.2;
+export const VISIBLE_LAMPS=4;
+
+const DEPTH_VERTEX=`
+precision mediump float;
+attribute vec3 aPos;
+uniform vec3 uOrigin,uRight,uUp,uForward;
+uniform float uSpread,uReach;
+varying float vDepth;
+void main(){
+ vec3 delta=aPos-uOrigin;
+ float z=dot(delta,uForward),near=.045;
+ // Keep vertices exactly on the light plane out of the perspective divide.
+ if(z==0.0)z=-.001;
+ gl_Position=vec4(dot(delta,uRight)/uSpread,dot(delta,uUp)/uSpread,
+  (z*(uReach+near)-2.0*uReach*near)/(uReach-near),z);
+ vDepth=z/uReach;
+}`;
+const DEPTH_FRAGMENT=`
+precision mediump float;
+varying float vDepth;
+void main(){
+ float depth=clamp(vDepth,0.0,1.0)*255.0;
+ gl_FragColor=vec4(floor(depth)/255.0,fract(depth),0.0,1.0);
+}`;
+const LAMP_BASIS={right:[1,0,0],up:[0,0,1],forward:[0,-1,0]};
+
+export function castsShadow(box){
+ return box.solid||/^(step-\d+$|upper-mattress$|sofa-pillow-|wardrobe-louver-)/.test(box.id);
 }
-export function lightDepthField(boxes,camera,right,up,forward,pixels=new Uint8Array(LIGHT_DEPTH_SIZE*LIGHT_DEPTH_SIZE)){
- const direction={x:0,y:0,z:0};
- for(let y=0;y<LIGHT_DEPTH_SIZE;y++)for(let x=0;x<LIGHT_DEPTH_SIZE;x++){
-  const sx=((x+.5)/LIGHT_DEPTH_SIZE*2-1)*LIGHT_SPREAD,sy=((y+.5)/LIGHT_DEPTH_SIZE*2-1)*LIGHT_SPREAD;
-  direction.x=forward[0]+sx*right[0]+sy*up[0];direction.y=forward[1]+sx*right[1]+sy*up[1];direction.z=forward[2]+sx*right[2]+sy*up[2];
-  const length=Math.hypot(direction.x,direction.y,direction.z);
-  direction.x/=length;direction.y/=length;direction.z/=length;
-  pixels[y*LIGHT_DEPTH_SIZE+x]=Math.ceil(rayDistance(boxes,camera,direction)/LIGHT_REACH*255);
+
+export function nearbyLights(fixtures,camera){
+ return fixtures.filter(light=>light.circuit.on)
+  .map(light=>({light,distance:Math.hypot(camera.x-light.x,camera.y-light.y,camera.z-light.z)}))
+  .filter(({distance})=>distance<LAMP_REACH+2)
+  .sort((a,b)=>a.distance-b.distance)
+  .slice(0,VISIBLE_LAMPS).map(({light})=>light);
+}
+
+export class HouseShadows{
+ constructor(gl){
+  this.gl=gl;
+  this.texture=gl.createTexture();
+  gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,this.texture);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,SHADOW_ATLAS,SHADOW_ATLAS,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  this.depth=gl.createRenderbuffer();
+  gl.bindRenderbuffer(gl.RENDERBUFFER,this.depth);
+  gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT16,SHADOW_ATLAS,SHADOW_ATLAS);
+  this.target=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,this.target);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,this.texture,0);
+  gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,this.depth);
+  this.available=gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE;
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+  gl.bindRenderbuffer(gl.RENDERBUFFER,null);
+  gl.activeTexture(gl.TEXTURE0);
+  if(!this.available)return;
+
+  this.program=gl.createProgram();
+  for(const [type,source] of [[gl.VERTEX_SHADER,DEPTH_VERTEX],[gl.FRAGMENT_SHADER,DEPTH_FRAGMENT]]){
+   const shader=gl.createShader(type);
+   gl.shaderSource(shader,source);gl.compileShader(shader);
+   if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader));
+   gl.attachShader(this.program,shader);gl.deleteShader(shader);
+  }
+  gl.linkProgram(this.program);
+  if(!gl.getProgramParameter(this.program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(this.program));
+  this.position=gl.getAttribLocation(this.program,'aPos');
+  this.uniform=Object.fromEntries(['uOrigin','uRight','uUp','uForward','uSpread','uReach'].map(name=>[name,gl.getUniformLocation(this.program,name)]));
  }
- return pixels;
+ begin(){
+  const gl=this.gl;
+  gl.bindFramebuffer(gl.FRAMEBUFFER,this.target);gl.useProgram(this.program);
+  gl.enable(gl.SCISSOR_TEST);gl.disable(gl.CULL_FACE);
+  gl.clearColor(1,0,0,1);
+ }
+ draw(tile,origin,meshes,basis=LAMP_BASIS,reach=LAMP_REACH,spread=LAMP_SPREAD){
+  const gl=this.gl,u=this.uniform,x=tile%SHADOW_GRID*SHADOW_TILE,y=Math.floor(tile/SHADOW_GRID)*SHADOW_TILE;
+  gl.scissor(x,y,SHADOW_TILE,SHADOW_TILE);gl.viewport(x,y,SHADOW_TILE,SHADOW_TILE);
+  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  gl.uniform3f(u.uOrigin,origin.x,origin.y,origin.z);
+  gl.uniform3fv(u.uRight,basis.right);gl.uniform3fv(u.uUp,basis.up);gl.uniform3fv(u.uForward,basis.forward);
+  gl.uniform1f(u.uSpread,spread);gl.uniform1f(u.uReach,reach);
+  for(const {vertices,indices,count} of meshes){
+   if(!count)continue;
+   gl.bindBuffer(gl.ARRAY_BUFFER,vertices);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indices);
+   gl.enableVertexAttribArray(this.position);gl.vertexAttribPointer(this.position,3,gl.FLOAT,false,16*4,0);
+   gl.drawElements(gl.TRIANGLES,count,gl.UNSIGNED_SHORT,0);
+  }
+ }
+ end(width,height){
+  const gl=this.gl;
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.disable(gl.SCISSOR_TEST);gl.enable(gl.CULL_FACE);
+  gl.viewport(0,0,width,height);gl.clearColor(.045,.065,.11,1);
+ }
+ destroy(){
+  const gl=this.gl;
+  gl.deleteProgram(this.program??null);gl.deleteFramebuffer(this.target);
+  gl.deleteRenderbuffer(this.depth);gl.deleteTexture(this.texture);
+ }
 }

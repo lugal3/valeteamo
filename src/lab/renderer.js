@@ -11,7 +11,7 @@ import {VERTEX_SHADER as VS,FRAGMENT_SHADER as FS} from './material-shaders.js';
 // No additional packages, CDNs, runtime downloads or concurrent Phaser loops.
 import {MATERIAL,lineBlocked} from './world.js';
 import {materialPixels,materialStyle,surfaceFrame,ATLAS_SIZE,TILE_SIZE,GUTTER,INNER,ATLAS_SIZE_MED,TILE_SIZE_MED,GUTTER_MED,INNER_MED} from './materials.js';
-import {lightDepthField,LIGHT_DEPTH_SIZE,LIGHT_REACH,LIGHT_SPREAD} from './lighting.js';
+import {HouseShadows,castsShadow,nearbyLights,FLASH_REACH,FLASH_SPREAD,LAMP_REACH,VISIBLE_LAMPS} from './lighting.js';
 function shader(gl,kind,source){const s=gl.createShader(kind);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){const msg=gl.getShaderInfoLog(s);gl.deleteShader(s);throw Error('Shader: '+msg);}return s;}
 function program(gl,low=false){const source=low?FS.replace('uniform float uFlash,uOcclude;','uniform float uFlash; const float uOcclude=0.0;'):FS;const p=gl.createProgram(),v=shader(gl,gl.VERTEX_SHADER,VS),f=shader(gl,gl.FRAGMENT_SHADER,source);gl.attachShader(p,v);gl.attachShader(p,f);gl.linkProgram(p);gl.deleteShader(v);gl.deleteShader(f);if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p)||'Shader linkage');return p;}
 function createAtlas(gl){
@@ -52,9 +52,9 @@ export function geometry(boxes){
   const baseColor=box.color||colors[box.mat]||colors.cream;
   const color=box.ao?[baseColor[0]*box.ao,baseColor[1]*box.ao,baseColor[2]*box.ao]:baseColor;
   const style=materialStyle(box)+(box.chibi?(box.emissive?96:64):(box.glow?32:0)),first=vertices.length;
-  const range={start:first,end:first};ranges.push(range);
+  const range={start:first,end:first,indexStart:indices.length,indexEnd:indices.length};ranges.push(range);
   const rotateMesh=()=>{
-   range.end=vertices.length;
+   range.end=vertices.length;range.indexEnd=indices.length;
    if(!box.yaw&&!box.pitch&&!box.roll)return;const c=Math.cos(box.yaw||0),s=Math.sin(box.yaw||0),cp=Math.cos(box.pitch||0),sp=Math.sin(box.pitch||0),cr=Math.cos(box.roll||0),sr=Math.sin(box.roll||0);
    for(let i=first;i<vertices.length;i+=16){const dx=vertices[i]-box.x,dy=vertices[i+1]-box.y,x=dx*cr-dy*sr,y=dx*sr+dy*cr,z=vertices[i+2]-box.z,pz=y*sp+z*cp;vertices[i]=box.x+x*c-pz*s;vertices[i+1]=box.y+y*cp-z*sp;vertices[i+2]=box.z+x*s+pz*c;for(const offset of [6,13]){const ax=vertices[i+offset],ay=vertices[i+offset+1],nx=ax*cr-ay*sr,ny=ax*sr+ay*cr,nz=vertices[i+offset+2],rz=ny*sp+nz*cp;vertices[i+offset]=nx*c-rz*s;vertices[i+offset+1]=ny*cp-nz*sp;vertices[i+offset+2]=nx*s+rz*c;}}
   };
@@ -149,6 +149,17 @@ export function geometry(boxes){
  }
  return {vertices:new Float32Array(vertices),indices:new Uint16Array(indices),groups,ranges};
 }
+function uploadShadowIndices(gl,buffer,mesh,flags){
+ const indices=new Uint16Array(mesh.indices.length);let count=0;
+ for(let i=0;i<flags.length;i++){
+  if(!flags[i])continue;
+  const {indexStart,indexEnd}=mesh.ranges[i],slice=mesh.indices.subarray(indexStart,indexEnd);
+  indices.set(slice,count);count+=slice.length;
+ }
+ gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,buffer);
+ gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices.subarray(0,count),gl.STATIC_DRAW);
+ return count;
+}
 export class HouseRenderer {
  constructor(canvas,quality='medium'){
   this.canvas=canvas;this.quality=quality;
@@ -159,15 +170,15 @@ export class HouseRenderer {
   this.vbo=gl.createBuffer();this.ibo=gl.createBuffer();this.count=0;
   this.dynamicVbo=gl.createBuffer();this.dynamicIbo=gl.createBuffer();this.dynamicCount=0;this.dynamicBoxes=[];
   this.handVbo=gl.createBuffer();this.handIbo=gl.createBuffer();this.handGeometry={};this.handVertices=null;this.handIndexReady=false;
-  this.lightPixels=new Uint8Array(LIGHT_DEPTH_SIZE*LIGHT_DEPTH_SIZE);this.occluders=[];this.lightPose='';
-  this.lightTexture=gl.createTexture();gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,this.lightTexture);
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.LUMINANCE,LIGHT_DEPTH_SIZE,LIGHT_DEPTH_SIZE,0,gl.LUMINANCE,gl.UNSIGNED_BYTE,this.lightPixels);
-  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  this.occluders=[];this.lightPose='';this.fixtures=[];this.dirtyLampShadows=new Set();
+  this.shadows=new HouseShadows(gl);
+  this.shadowMeshes=[this.vbo,this.dynamicVbo].map(vertices=>({vertices,indices:gl.createBuffer(),count:0}));
+  this.lampUniforms=new Float32Array(VISIBLE_LAMPS*4);
   this.locations={};
   for(const [quality,p] of Object.entries(this.programs)){
    const atrib={},uniform={};for(const key of ['aPos','aCol','aNormal','aUV','aArt','aStyle','aTangent'])atrib[key]=gl.getAttribLocation(p,key);
-   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass'])uniform[key]=gl.getUniformLocation(p,key);
+   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows'])uniform[key]=gl.getUniformLocation(p,key);
+   uniform.uLamps=gl.getUniformLocation(p,'uLamps[0]');
    this.locations[quality]={atrib,uniform};
   }
   Object.assign(this,this.locations[quality==='low'?'low':'medium']);
@@ -180,7 +191,8 @@ export class HouseRenderer {
   // Opaque room walls write depth before furniture and the large exterior slabs.
   // This avoids shading the garden and neighboring houses behind interior walls.
   const order=b=>/^(west-|east-|north-|south-|music-west|music-south|kitchen-divider|bath-divider|stairwell-side)/.test(b.id)?0:/^(garden-|neighbor-|distant-|tree-|car-|moon|road|pavement|front-path)/.test(b.id)?4:/^(base|floor-up-|ceiling|roof)/.test(b.id)?3:1;
-  const gl=this.gl,{vertices,indices}=geometry(boxes.filter(b=>!b.dynamic).sort((a,b)=>order(a)-order(b)));this.count=indices.length;
+  const gl=this.gl,staticBoxes=boxes.filter(b=>!b.dynamic).sort((a,b)=>order(a)-order(b)),mesh=geometry(staticBoxes);
+  const {vertices,indices}=mesh;this.count=indices.length;
   this.dynamicBoxes=boxes.filter(b=>b.dynamic);
   const dynamic=geometry(this.dynamicBoxes);this.dynamicCount=dynamic.indices.length;
   this.dynamicTemplate=dynamic.vertices;this.dynamicVertices=new Float32Array(dynamic.vertices);this.dynamicRanges=dynamic.ranges;
@@ -189,6 +201,11 @@ export class HouseRenderer {
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.dynamicIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,dynamic.indices,gl.STATIC_DRAW);
   this.vertexCount=(vertices.length+dynamic.vertices.length)/16;this.triangleCount=(indices.length+dynamic.indices.length)/3;
   this.occluders=boxes.filter(b=>b.solid);this.lightPose='';
+  this.fixtures=boxes.flatMap(box=>box.fixture?[box.fixture]:[]);
+  this.dirtyLampShadows=new Set(this.fixtures);
+  this.dynamicCasters=this.dynamicBoxes.map(castsShadow);
+  this.shadowMeshes[0].count=uploadShadowIndices(gl,this.shadowMeshes[0].indices,mesh,staticBoxes.map(castsShadow));
+  this.shadowMeshes[1].count=uploadShadowIndices(gl,this.shadowMeshes[1].indices,dynamic,this.dynamicCasters);
   if(vertices.length/16>65530)throw Error('Demasiada geometría para WebGL1');
   gl.bindBuffer(gl.ARRAY_BUFFER,this.vbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.ibo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
@@ -217,7 +234,7 @@ export class HouseRenderer {
   // Reset depth only inside the aperture, leaving the rest of the house intact.
   gl.depthMask(true);gl.depthFunc(gl.ALWAYS);gl.depthRange(1,1);draw(0);
   gl.depthRange(0,1);gl.depthFunc(gl.LESS);gl.colorMask(true,true,true,true);
-  gl.uniform1f(this.uniform.uFlash,0);gl.uniform1f(this.uniform.uOcclude,0);
+  gl.uniform1f(this.uniform.uOcclude,0);
   gl.uniform1f(this.uniform.uMirrorPass,1);gl.frontFace(gl.CW);draw(1);
   this.mirrorMeshes[3].vertices.set(this.dynamicVertices);reflectMesh(this.mirrorMeshes[3].vertices);gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[6]);gl.bufferData(gl.ARRAY_BUFFER,this.mirrorMeshes[3].vertices,gl.DYNAMIC_DRAW);draw(3);
   const animator=motion.animator;
@@ -242,7 +259,7 @@ export class HouseRenderer {
   gl.colorMask(true,true,true,true);gl.depthFunc(gl.LESS);gl.stencilMask(0xff);gl.disable(gl.STENCIL_TEST);this.mirrorDrawn=true;
  }
  updateDynamic(time=0,motion={}){
-  const gl=this.gl;let changed=false;
+  const gl=this.gl;
   gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamicVbo);
   const reduced=motion.reduced||false;
   const bobAmp=reduced?0:0.012,swayAmp=reduced?0:0.14;
@@ -259,30 +276,52 @@ export class HouseRenderer {
    } else if(box.ambient==='curtain'){
     const orig=this.dynamicOrigins[i];
     box.x=orig[0]+(reduced?0:Math.sin(time*1.8+(orig[0]+orig[2])*1.5)*0.014);
-   } else if(box.ambient==='pendulum'){
-    const orig=this.dynamicOrigins[i];
-    const swing=reduced?0:Math.sin(time*1.6+(orig[0]+orig[2]))*0.018;
-    box.x=orig[0]+swing;box.z=orig[2]+swing*0.6;
    }
    const o4=i*4,bx=box.x,by=box.y,bz=box.z,byaw=box.yaw||0;
-   if(Math.fround(bx)===this.dynamicPositions[o4]&&Math.fround(by)===this.dynamicPositions[o4+1]&&Math.fround(bz)===this.dynamicPositions[o4+2]&&Math.fround(byaw)===this.dynamicPositions[o4+3])continue;
+   const {start,end}=this.dynamicRanges[i],glow=box.fixture?.circuit.on?32:0;
+   const moved=Math.fround(bx)!==this.dynamicPositions[o4]||Math.fround(by)!==this.dynamicPositions[o4+1]||Math.fround(bz)!==this.dynamicPositions[o4+2]||Math.fround(byaw)!==this.dynamicPositions[o4+3];
+   if(!moved&&this.dynamicVertices[start+12]===this.dynamicTemplate[start+12]+glow)continue;
    this.dynamicPositions[o4]=bx;this.dynamicPositions[o4+1]=by;this.dynamicPositions[o4+2]=bz;this.dynamicPositions[o4+3]=byaw;
-   const {start,end}=this.dynamicRanges[i],origin=this.dynamicOrigins[i];
+   const origin=this.dynamicOrigins[i];
    const angle=byaw-origin[3],c=Math.cos(angle),s=Math.sin(angle);
    for(let v=start;v<end;v+=16){
     const x=this.dynamicTemplate[v]-origin[0],z=this.dynamicTemplate[v+2]-origin[2];
     this.dynamicVertices[v]=bx+x*c-z*s;
     this.dynamicVertices[v+1]=this.dynamicTemplate[v+1]+by-origin[1];
     this.dynamicVertices[v+2]=bz+x*s+z*c;
+    this.dynamicVertices[v+12]=this.dynamicTemplate[v+12]+glow;
     for(const offset of [6,13]){
      const nx=this.dynamicTemplate[v+offset],nz=this.dynamicTemplate[v+offset+2];
      this.dynamicVertices[v+offset]=nx*c-nz*s;
      this.dynamicVertices[v+offset+2]=nx*s+nz*c;
     }
    }
-   gl.bufferSubData(gl.ARRAY_BUFFER,start*4,this.dynamicVertices.subarray(start,end));changed=true;
+   gl.bufferSubData(gl.ARRAY_BUFFER,start*4,this.dynamicVertices.subarray(start,end));
+   if(moved&&this.dynamicCasters[i]){
+    this.lightPose='';
+    const reach=LAMP_REACH+Math.hypot(box.w,box.h,box.d)/2;
+    for(const lamp of this.fixtures)if(Math.hypot(lamp.x-bx,lamp.y-by,lamp.z-bz)<reach)this.dirtyLampShadows.add(lamp);
+   }
   }
-  if(changed)this.lightPose='';
+ }
+ updateShadows(camera,flash,light,basis){
+  const lamps=nearbyLights(this.fixtures,camera);
+  this.lampUniforms.fill(0);
+  lamps.forEach(({x,y,z,tile},i)=>this.lampUniforms.set([x,y,z,tile],i*4));
+  if(!this.shadows.available)return;
+  const pose=flash?[camera.x,camera.y,camera.z,camera.yaw,camera.pitch].join(','):'';
+  const torchChanged=flash&&pose!==this.lightPose,dirty=lamps.filter(lamp=>this.dirtyLampShadows.has(lamp));
+  if(!torchChanged&&!dirty.length)return;
+  this.shadows.begin();
+  if(torchChanged){
+   this.shadows.draw(0,light,this.shadowMeshes,basis,FLASH_REACH,FLASH_SPREAD);
+   this.lightPose=pose;
+  }
+  for(const lamp of dirty){
+   this.shadows.draw(lamp.tile,lamp,this.shadowMeshes);
+   this.dirtyLampShadows.delete(lamp);
+  }
+  this.shadows.end(this.canvas.width,this.canvas.height);
  }
  bind(vertexBuffer,indexBuffer){
   const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indexBuffer);
@@ -338,6 +377,12 @@ export class HouseRenderer {
    for(const t of this.materialTextures)gl.deleteTexture(t);
    this.materialTextures=createMaterials(gl,quality);
   }
+  this.updateDynamic(time,motion);
+  const cy=Math.cos(camera.yaw),sy=Math.sin(camera.yaw),cp=Math.cos(camera.pitch),sp=Math.sin(camera.pitch);
+  const right=[cy,0,-sy],forward=[sy*cp,sp,cy*cp],up=[-sy*sp,cp,-cy*sp];
+  // Keep the light source inside the player's collision radius near walls.
+  const light={x:camera.x+right[0]*.12+forward[0]*.06,y:camera.y+forward[1]*.06-.12,z:camera.z+right[2]*.12+forward[2]*.06};
+  this.updateShadows(camera,flash,light,{right,up,forward});
   this.program=this.programs[quality];Object.assign(this,this.locations[quality]);gl.useProgram(this.program);
   gl.uniform1i(this.uniform.uAtlas,0);gl.uniform1i(this.uniform.uLightDepth,1);gl.uniform1i(this.uniform.uMaterials,2);
   const isLow=quality==='low';
@@ -345,11 +390,9 @@ export class HouseRenderer {
   gl.uniform1f(this.uniform.uTileSize,isLow?TILE_SIZE:TILE_SIZE_MED);
   gl.uniform1f(this.uniform.uGutter,isLow?GUTTER:GUTTER_MED);
   gl.uniform1f(this.uniform.uInner,isLow?INNER:INNER_MED);
-  gl.uniform1f(this.uniform.uMirrorPass,0);this.updateDynamic(time,motion);
-  const cy=Math.cos(camera.yaw),sy=Math.sin(camera.yaw),cp=Math.cos(camera.pitch),sp=Math.sin(camera.pitch);
-  const right=[cy,0,-sy],forward=[sy*cp,sp,cy*cp],up=[-sy*sp,cp,-cy*sp];
-  // Keep the light source inside the player's collision radius near walls.
-  const light={x:camera.x+right[0]*.07+forward[0]*.06-up[0]*.04,y:camera.y+forward[1]*.06-up[1]*.04,z:camera.z+right[2]*.07+forward[2]*.06-up[2]*.04};
+  gl.uniform1f(this.uniform.uMirrorPass,0);
+  gl.uniform1f(this.uniform.uHasShadows,this.shadows.available?1:0);
+  gl.uniform4fv(this.uniform.uLamps,this.lampUniforms);
   gl.uniform3f(this.uniform.uEye,camera.x,camera.y,camera.z);
   gl.uniform3f(this.uniform.uLightEye,light.x,light.y,light.z);
   gl.uniform3fv(this.uniform.uRight,right);gl.uniform3fv(this.uniform.uUp,up);gl.uniform3fv(this.uniform.uForward,forward);
@@ -357,17 +400,6 @@ export class HouseRenderer {
   gl.uniform1f(this.uniform.uNear,.07);gl.uniform1f(this.uniform.uFar,45);
   gl.uniform1f(this.uniform.uFlash,flash?1:0);gl.uniform1f(this.uniform.uTime,time);
   gl.uniform1f(this.uniform.uOcclude,this.quality==='low'?0:1);
-  // Update only when the camera or collision geometry changes. One tiny texture
-  // lookup replaces multiple ray/box tests in every illuminated pixel.
-  if(flash&&this.quality!=='low'){
-   const pose=[camera.x,camera.y,camera.z,camera.yaw,camera.pitch].join(',');
-   if(pose!==this.lightPose){
-    lightDepthField(this.occluders,light,right,up,forward,this.lightPixels);this.lightPose=pose;
-    gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,this.lightTexture);
-    gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,LIGHT_DEPTH_SIZE,LIGHT_DEPTH_SIZE,gl.LUMINANCE,gl.UNSIGNED_BYTE,this.lightPixels);
-    gl.activeTexture(gl.TEXTURE0);
-   }
-  }
   gl.stencilMask(0xff);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT|gl.STENCIL_BUFFER_BIT);
   // Closed doors are useful depth occluders too. All these surfaces are opaque.
   if(this.dynamicCount){this.bind(this.dynamicVbo,this.dynamicIbo);gl.drawElements(gl.TRIANGLES,this.dynamicCount,gl.UNSIGNED_SHORT,0);}
@@ -378,7 +410,7 @@ export class HouseRenderer {
   if(motion.introHands)this.drawClimbingHands(motion.introHands);
   if(showHand)this.drawFirstPerson(camera,right,up,forward,time,flash,motion);
  }
- destroy(){const gl=this.gl;if(this.pursuerVbo)gl.deleteBuffer(this.pursuerVbo);if(this.pursuerIbo)gl.deleteBuffer(this.pursuerIbo);for(const b of this.mirrorBuffers)gl.deleteBuffer(b);gl.deleteTexture(this.texture);gl.deleteTexture(this.lightTexture);for(const texture of this.materialTextures)gl.deleteTexture(texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.dynamicVbo);gl.deleteBuffer(this.dynamicIbo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);for(const p of Object.values(this.programs))gl.deleteProgram(p);this.canvas.width=1;this.canvas.height=1;}
+ destroy(){const gl=this.gl;if(this.pursuerVbo)gl.deleteBuffer(this.pursuerVbo);if(this.pursuerIbo)gl.deleteBuffer(this.pursuerIbo);for(const b of this.mirrorBuffers)gl.deleteBuffer(b);gl.deleteTexture(this.texture);this.shadows.destroy();for(const mesh of this.shadowMeshes)gl.deleteBuffer(mesh.indices);for(const texture of this.materialTextures)gl.deleteTexture(texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.dynamicVbo);gl.deleteBuffer(this.dynamicIbo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);for(const p of Object.values(this.programs))gl.deleteProgram(p);this.canvas.width=1;this.canvas.height=1;}
 }
 export function pickupGeometry(objects){
  return objects.filter(o=>!o.taken&&(!o.concealed||o.dynamic)&&['battery','note','key'].includes(o.kind)).flatMap(o=>{

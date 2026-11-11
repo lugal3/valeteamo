@@ -1,5 +1,6 @@
 import {BATH_MIRROR,MIRROR_SPAWN} from './mirror.js';
 import {BALUSTER_PROFILE,CUP_PROFILE,CANDLE_PROFILE,CLOCK_PROFILE} from './chibi-geometry.js';
+import {installHouseLights} from './house-lights.js';
 // V5: generous landings and an independent, open stairwell. Dimensions in metres.
 export const HEIGHT=3.15;
 export const HOUSE=Object.freeze({width:14,depth:12});
@@ -134,8 +135,7 @@ export function buildHouse(spawn='ground'){
  function orient(first,x,z,yaw){if(!yaw)return;const c=Math.cos(yaw),s=Math.sin(yaw);for(const b of boxes.slice(first)){const dx=b.x-x,dz=b.z-z;b.x=x+dx*c-dz*s;b.z=z+dx*s+dz*c;b.yaw=yaw;}}
  function chair(id,x,y,z,yaw=0){const first=boxes.length;add(id,x,y+.36,z,.60,.13,.58,'velvet',true,{shape:'rounded-box',roundness:.32});add(id+'-back',x,y+.72,z+.25,.60,.65,.08,'pink',true,{shape:'rounded-box',roundness:.35});for(const sx of [-1,1])for(const sz of [-1,1])add(id+'-leg-'+sx+sz,x+sx*.22,y+.17,z+sz*.20,.07,.34,.07,'wood');orient(first,x,z,yaw);}
  function shelf(id,x,y,z,yaw=0){const first=boxes.length;add(id+'-back',x,y+1,z,.70,2,.15,'wood');for(let i=0;i<4;i++){add(id+'-shelf-'+i,x,y+.2+i*.5,z+.18,.72,.08,.50,'wood');for(let j=0;j<4;j++)add(id+'-book-'+i+j,x-.23+j*.15,y+.4+i*.5,z+.18,.1,.30,.26,j%2?'pink':'paper',false);}orient(first,x,z,yaw);}
- function pendantLamp(id,x,y,z){add(id+'-cord',x,y+HEIGHT-.4,z,.02,.8,.02,'dark',false,{dynamic:true,ambient:'pendulum'});add(id+'-shade',x,y+HEIGHT-.85,z,.36,.18,.36,'cream',false,{shape:'lathe',profile:CUP_PROFILE,segments:6,pitch:Math.PI,dynamic:true,ambient:'pendulum'});add(id+'-bulb',x,y+HEIGHT-.92,z,.12,.12,.12,'torchglass',false,{glow:true,shape:'round',dynamic:true,ambient:'pendulum'});}
-  function lamp(id,x,y,z){add(id+'-base',x,y+.035,z,.24,.07,.24,'brass',false,{shape:'round'});add(id+'-stem',x,y+.24,z,.04,.35,.04,'brass',false,{shape:'cylinder'});add(id+'-shade',x,y+.38,z,.28,.20,.28,'cream',false,{shape:'lathe',profile:CUP_PROFILE,segments:6,pitch:Math.PI});add(id+'-glass',x,y+.30,z,.10,.12,.10,'torchglass',false,{glow:true,shape:'round'});add(id+'-cap',x,y+.49,z,.05,.04,.05,'brass',false,{shape:'round'});}
+ function lamp(id,x,y,z){add(id+'-base',x,y+.035,z,.24,.07,.24,'brass',false,{shape:'round'});add(id+'-stem',x,y+.24,z,.04,.35,.04,'brass',false,{shape:'cylinder'});add(id+'-shade',x,y+.38,z,.28,.20,.28,'cream',false,{shape:'lathe',profile:CUP_PROFILE,segments:6,pitch:Math.PI});add(id+'-glass',x,y+.30,z,.10,.12,.10,'paper',false,{shape:'round'});add(id+'-cap',x,y+.49,z,.05,.04,.05,'brass',false,{shape:'round'});}
  function plant(id,x,y,z){
   add(id+'-pot',x,y+.22,z,.40,.44,.40,'terracotta');add(id+'-lip',x,y+.44,z,.44,.07,.44,'brass',false);add(id+'-stem',x,y+.70,z,.03,.53,.03,'stem',false);
   for(let n=0;n<7;n++){const angle=n*Math.PI*2/7;add(id+'-leaf-'+n,x+Math.cos(angle)*.18,y+.67+.12*(n%3),z+Math.sin(angle)*.18,.24,.48,.08,'foliage',false,{shape:'leaf',yaw:angle,lean:.16});}
@@ -159,7 +159,7 @@ export function buildHouse(spawn='ground'){
  add('media-clock-body',1.7,.76,5.02,.18,.20,.12,'wood',false,{shape:'rounded-box',roundness:.35});
  add('media-clock-face',1.7,.76,5.085,.12,.12,.02,'paper',false,{shape:'round'});
  add('media-clock-rim',1.7,.76,5.085,.14,.14,.02,'brass',false,{shape:'torus',majorRadius:.06,tubeRadius:.008});
- lamp('table-lantern',2.2,.92,8.1);pendantLamp('salon-pendant',2.2,0,8.1);plant('salon-plant',.65,0,11.2);frame('stain',3.65,1.8,4.84,'south',1);frame('living-tour',.15,1.8,5.35,'east',0);
+ lamp('table-lantern',2.2,.92,8.1);plant('salon-plant',.65,0,11.2);frame('stain',3.65,1.8,4.84,'south',1);frame('living-tour',.15,1.8,5.35,'east',0);
  // A shallow safe against the wall, clear of the living-room circulation.
  add('safe-bottom',.66,.10,5.10,.84,.12,.66,'dark');add('safe-top',.66,.91,5.10,.84,.10,.66,'torchmetal');
  add('safe-left',.27,.50,5.10,.08,.74,.66,'torchmetal');add('safe-right',1.05,.50,5.10,.08,.74,.66,'torchmetal');add('safe-back',.66,.50,4.81,.70,.74,.08,'dark');
@@ -274,5 +274,6 @@ export function buildHouse(spawn='ground'){
   add('decal-bath-drip',9.88,0.6,4.45,.01,.55,.12,'stain',false);
   add('decal-study-dust',.12,.005,1.5,.12,.01,2.8,'stain',false);
   const spawns={mirror:{...MIRROR_SPAWN},ground:{x:5.95,y:0,z:10.65,yaw:Math.PI},upstairs:{x:12,y:HEIGHT,z:4.15,yaw:-Math.PI/2,items:{key:1}},sound:{x:2.2,y:0,z:11.0,yaw:Math.PI},interactions:{x:3.3,y:0,z:3.6,yaw:-2.8,items:{key:1,batteries:1}}};
- return {boxes,objects,entryWindow,spawn:spawns[spawn]||spawns.ground,spawns,rooms:ROOMS,bounds:WORLD_BOUNDS,stair:STAIR,house:HOUSE};
+ const lights=installHouseLights(add,obj,HEIGHT);
+ return {boxes,objects,lights,entryWindow,spawn:spawns[spawn]||spawns.ground,spawns,rooms:ROOMS,bounds:WORLD_BOUNDS,stair:STAIR,house:HOUSE};
 }
