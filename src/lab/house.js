@@ -19,7 +19,7 @@ import {interactionTarget} from './interactions.js';
 import {toggleCircuit} from './house-lights.js';
 import {turnOnTelevision} from './television.js';
 import {animateFurniture,updateFurniture,sweepClear} from './furniture-motion.js';
-import {createHousePuzzle,puzzleEvent,canOpenDrawer,canOpenBedroom,canRescue,PUZZLE_HINTS} from '../demo/house-puzzles.js';
+import {createHousePuzzle,puzzleEvent,canOpenDrawer,canRescue,PUZZLE_HINTS} from '../demo/house-puzzles.js';
 import './house.css';
 const FLASH_DRAIN=.24,FLASH_LOW=15,SPARE_CHARGE=55;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -168,7 +168,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    const key=world.objects.find(o=>o.id==='key');key.taken=puzzle.key;
    setDrawer(world.objects.find(o=>o.id==='drawer'),puzzle.drawer);
    world.objects.find(o=>o.id==='note-hall').text=PUZZLE_HINTS.note;
-   world.objects.find(o=>o.id==='picture-stain').text='El corazón del cuadro también aparece en la caja fuerte del salón. Su contenido guarda la segunda pista del dormitorio.';
+   world.objects.find(o=>o.id==='picture-stain').text='El corazón del cuadro también aparece en la caja fuerte del dormitorio.';
    const door=world.objects.find(o=>o.id==='dormitorio');if(puzzle.door)setDoor(door,true);
    world.objects.push({id:'rescue-louis',kind:'rescue',label:'Rescatar a Louis',x:3.1,y:HEIGHT+1.25,z:.97,taken:false});
    world.boxes.push({id:'louis-head',x:3.1,y:HEIGHT+1.13,z:.97,w:.45,h:.52,d:.37,mat:'cream',solid:false});
@@ -240,11 +240,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }else if(o.kind==='tap'){
    o.on=!o.on;o.water.y=o.on?1.01:-100;play('click',o);say(o.on?'Llave de agua abierta':'Llave de agua cerrada');
   }else if(o.kind==='door'||o.kind==='cupboard'){
-   if(demo&&o.id==='dormitorio'&&!canOpenBedroom(puzzle)){say(puzzle.key?'La segunda pista está dentro de la caja fuerte del salón.':'Busca la llave con lazo en el cajón del estudio.',4);play('latch',o);return;}
+   if(demo&&o.id==='dormitorio'&&!puzzle.key){say('Busca la llave con lazo en el cajón del estudio.',4);play('latch',o);return;}
    if(o.locked&&!s.inventory.key){say('La puerta tiene un pequeño candado. Busca una llave.');play('latch',o);return;}
     const opening=!o.open;if(pursuer.active&&!sweepClear(o,o.amount,opening?1:0,pursuer)){say('No puedes mover la puerta mientras alguien ocupa el paso.');return;}const result=animateFurniture(o,opening,{player:s,reducedMotion:reducedMotion.matches});
     if(!result.started){if(result.reason==='blocked')say('No puedes mover la puerta mientras estás en el paso.');return;}
-    if(demo&&o.id==='dormitorio'&&opening&&result.complete)puzzle=puzzleEvent(puzzle,'door');
+    if(demo&&o.id==='dormitorio'&&opening&&result.complete)puzzle.door=true;
     play(o.kind==='cupboard'?'drawer':opening?'door-open':'door-close',o);
     say(o.kind==='cupboard'?(opening?'Refrigerador abierto':'Refrigerador cerrado'):(opening?'Abriendo puerta…':'Cerrando puerta…'));
   }else if(o.kind==='drawer'){
@@ -292,7 +292,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  function showSafe(object){
   if(object.motion){say('La caja se está abriendo…');return;}
-  if(mirrorSafe.opened){showModal('Dentro de la caja fuerte','<p>En el sobre está el símbolo del corazón. Con la llave con lazo ya puedes abrir el dormitorio.</p>');return;}
+  if(mirrorSafe.opened){showModal('Dentro de la caja fuerte','<p>En el sobre está el símbolo del corazón.</p>');return;}
   activeSafe=object;safeInput='';
   showModal('Caja fuerte','<p class="safe-instruction">Introduce la combinación de cuatro cifras.</p><output id="safe-code" class="safe-code" aria-label="Combinación introducida" aria-live="polite">· · · ·</output><div class="safe-keypad" role="group" aria-label="Teclado de la caja fuerte">'+[1,2,3,4,5,6,7,8,9,'clear',0,'back'].map(n=>`<button data-act="safe:${n}"${n==='back'?' aria-label="Borrar última cifra"':n==='clear'?' aria-label="Borrar combinación"':''}>${n==='clear'?'C':n==='back'?'⌫':n}</button>`).join('')+'</div><p id="safe-feedback" class="safe-feedback" role="status"></p>',[['Abrir caja','safe:submit'],['Cerrar','close']]);
   dialog.querySelector('.lab-paper').classList.add('safe-paper');
@@ -307,7 +307,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(result==='blocked'){feedback.textContent='Deja un poco de espacio delante de la caja para abrirla.';return;}
    if(result==='opened'){
     if(demo)puzzle=puzzleEvent(puzzle,'symbol');
-    s.inventory.notes.push({id:'safe-heart',label:'Sobre de la caja fuerte',text:'El símbolo del corazón es la segunda pista del dormitorio. Usa también la llave con lazo.'});
+    s.inventory.notes.push({id:'safe-heart',label:'Sobre de la caja fuerte',text:'El sobre guarda el mismo corazón que aparece en el cuadro del salón.'});
     modalClose();play('keys',object);say('Caja abierta · símbolo del corazón obtenido',4);return;
    }
   }else{feedback.textContent='';if(action==='clear')safeInput='';else if(action==='back')safeInput=safeInput.slice(0,-1);else if(/^\d$/.test(action)&&safeInput.length<4)safeInput+=action;}
@@ -403,7 +403,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const canEmote=inBathroom()&&!noteLift;
   root.querySelector('[data-act=emotes]').hidden=!canEmote;
   if(!canEmote)$('house-emotes').hidden=true;
-  $('lab-objective').textContent=config.entry==='mirror'?'◇ Prueba de espejo':demo?(puzzle.rescued?'♥ ¡Louis está a salvo!':!puzzle.note?'✉ Busca la nota del pasillo':!puzzle.key?'⚿ Abre el cajón del estudio y recoge la llave':!puzzle.symbol?(!mirrorSafe.collected?'✉ Busca la nota del escritorio':mirrorSafe.revealed?'◇ Abre la caja fuerte del salón':mirrorSafe.hintShown?'◇ Prueba el espejo del baño':'✉ Descifra la nota de escritura extraña'):!puzzle.door?'🚪 Sube y abre el dormitorio':'♡ Encuentra a Louis dentro del dormitorio'):'Explora libremente · E interactuar';
+  $('lab-objective').textContent=config.entry==='mirror'?'◇ Prueba de espejo':demo?(puzzle.rescued?'♥ ¡Louis está a salvo!':!puzzle.note?'✉ Busca la nota del pasillo':!puzzle.key?'⚿ Abre el cajón del estudio y recoge la llave':!puzzle.door?'🚪 Sube y abre el dormitorio':'♡ Encuentra a Louis dentro del dormitorio'):'Explora libremente · E interactuar';
   if(events.phase==='hide')$('lab-objective').textContent='Busca un escondite · armario o bajo la cama';
   if(events.phase==='hunt')$('lab-objective').textContent='Evita su mirada · escóndete sin que te vea entrar';
   if(events.phase==='evaded')$('lab-objective').textContent='El paso está libre · encuentra a Louis en el dormitorio';
@@ -435,7 +435,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function tick(dt){
   if(isPaused())return;
   updateFurniture(world.objects,dt,s);
-  if(demo&&!puzzle.door&&world.objects.find(o=>o.id==='dormitorio').open)puzzle=puzzleEvent(puzzle,'door');
+  if(demo&&puzzle.key&&!puzzle.door&&world.objects.find(o=>o.id==='dormitorio').open)puzzle.door=true;
   handAction=Math.max(0,handAction-dt*3.5);
   clickAction=Math.max(0,clickAction-dt*6.0);
   const turn=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0);
@@ -542,7 +542,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const mirrorLit=torch||bathCircuit.on;
   if(!isPaused()&&!phone.open){
    if(noteHold>0)noteHold=Math.max(0,noteHold-dt);
-   const wantsNote=mirrorLit&&inBathroom()&&mirrorSafe.collected&&!mirrorSafe.opened&&(!mirrorSafe.revealed||noteHold>0)&&events.phase==='explore';
+   const canReadNote=events.phase==='explore'||events.phase==='evaded';
+   const wantsNote=mirrorLit&&inBathroom()&&mirrorSafe.collected&&!mirrorSafe.opened&&(!mirrorSafe.revealed||noteHold>0)&&canReadNote;
    noteLift=reducedMotion.matches?Number(wantsNote):clamp(noteLift+(wantsNote?1:-1)*dt*2.6,0,1);
   }
   const raisedNote=noteLift>0&&!phone.open&&!cinematic&&events.phase!=='arrival'&&!s.hidden;
@@ -683,7 +684,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   root.querySelector('[data-setting="invertX"]').checked=options.invertX;
   root.querySelectorAll('[data-setting="quality"]').forEach(el=>el.value=options.quality);
   if(demo&&!config.trial&&checkpoint==='ground')runAction('start');
-  else showModal(demo?'Rescata a Louis':'Explora la casa',`<p>Modo ${escapeHTML(points[checkpoint]||'Planta baja')}. Camina con el joystick izquierdo, mira arrastrando a la derecha y pulsa USAR sobre objetos cercanos.</p><p>${demo?'Lee la nota del pasillo y busca el cajón del estudio. Otra nota guarda la combinación de la caja fuerte del salón. Con la llave y el símbolo de su interior podrás entrar en el dormitorio.':'Hay dos plantas, recuerdos, una linterna y secretos pequeños.'}</p><p>Enciende las luces para ahorrar carga. Puedes cambiar la pila desde la mochila.</p>`,[['Entrar / activar sonido','start'],['Volver a pruebas','exit']]);
+  else showModal(demo?'Rescata a Louis':'Explora la casa',`<p>Modo ${escapeHTML(points[checkpoint]||'Planta baja')}. Camina con el joystick izquierdo, mira arrastrando a la derecha y pulsa USAR sobre objetos cercanos.</p><p>${demo?'Lee la nota del pasillo y busca la llave en el cajón del estudio. La llave abre el dormitorio, donde hay una caja fuerte y una nota con su combinación.':'Hay dos plantas, recuerdos, una linterna y secretos pequeños.'}</p><p>Enciende las luces para ahorrar carga. Puedes cambiar la pila desde la mochila.</p>`,[['Entrar / activar sonido','start'],['Volver a pruebas','exit']]);
   raf=requestAnimationFrame(frame);
  }
  // Browser-only diagnostic hook: exercise real contextual picking and puzzle rules from

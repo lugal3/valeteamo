@@ -3,7 +3,7 @@ export class HouseEvents{
  constructor({pursuit=false}={}){this.pursuit=pursuit;this.reset();}
  reset(){this.phase='explore';this.time=0;this.remaining=10;this.messages=[];this.notified=false;this.replied=false;this.replyAt=null;this.cues=new Set();}
  observe(puzzle){
-  if(puzzle.key&&puzzle.symbol&&!this.notified){this.notified=true;this.messages.push({from:'Mi Luis ❤️',text:'Creo que está a punto de llegar a la casa.'});return 'message';}
+  if(puzzle.key&&!this.notified){this.notified=true;this.messages.push({from:'Mi Luis ❤️',text:'Creo que está a punto de llegar a la casa.'});return 'message';}
   if(puzzle.door&&this.phase==='explore'){this.phase='arrival';this.time=0;return 'arrival';}return null;
  }
  read(){if(this.notified&&!this.replied&&this.replyAt===null)this.replyAt=.9;}

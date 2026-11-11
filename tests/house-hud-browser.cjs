@@ -17,7 +17,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     const result={viewport,name,pass:!collisions.length&&!phoneCollision&&compact&&bounds&&priority&&messageNodes.length<=1,collisions,phoneCollision,compact,bounds,priority,nodes};results.push(result);await shot(name);if(!observe)assert(result.pass,JSON.stringify(result));
    };
    await page.keyboard.press('7');await page.waitForTimeout(100);await check('01-exploracion');
-   await use('note-hall');await page.keyboard.press('Escape');await use('drawer');await use('key');await use('picture-stain');await page.keyboard.press('Escape');await require('./helpers/solve-mirror-safe.cjs')(page);await page.waitForFunction(()=>window.__rescueHouse.story().messages.length===1);await page.keyboard.press('7');await page.waitForTimeout(80);await check('02-telefono-y-aviso');
+   await use('note-hall');await page.keyboard.press('Escape');await use('drawer');await use('key');await page.waitForFunction(()=>window.__rescueHouse.story().messages.length===1);await page.keyboard.press('7');await page.waitForTimeout(80);await check('02-telefono-y-aviso');
    if(!observe){
     await page.locator('.phone-notice').click();await page.locator('.phone-chat .incoming').waitFor();
     await page.locator('.phone-chat .outgoing').waitFor();

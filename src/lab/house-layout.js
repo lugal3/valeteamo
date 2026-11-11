@@ -174,14 +174,6 @@ export function buildHouse(spawn='ground'){
  orient(tvStand,4.04,9.42,Math.PI/2);
  obj('television','television','Televisor',3.86,1.03,9.42,{power});
  lamp('table-lantern',2.10,.92,9.5);plant('salon-plant',.38,0,11.55);frame('stain',3.65,1.8,4.84,'south',1);frame('living-tour',.15,1.8,5.35,'east',0);
- // A shallow safe against the wall, clear of the living-room circulation.
- add('safe-bottom',.66,.10,5.10,.84,.12,.66,'dark');add('safe-top',.66,.91,5.10,.84,.10,.66,'torchmetal');
- add('safe-left',.27,.50,5.10,.08,.74,.66,'torchmetal');add('safe-right',1.05,.50,5.10,.08,.74,.66,'torchmetal');add('safe-back',.66,.50,4.81,.70,.74,.08,'dark');
- const safeDoor=add('safe-door',.66,.50,5.43,.76,.73,.075,'torchmetal',true,{dynamic:true});
- const safeParts=[add('safe-keypad',.82,.61,5.48,.18,.24,.025,'dark',false,{dynamic:true}),add('safe-handle',.47,.52,5.50,.065,.22,.05,'brass',false,{dynamic:true})];
- for(let i=0;i<9;i++)safeParts.push(add('safe-key-'+i,.77+(i%3)*.05,.67-Math.floor(i/3)*.06,5.50,.027,.027,.014,'cream',false,{dynamic:true}));
- obj('mirror-safe','safe','Caja fuerte del salón',.66,.59,5.49,{box:safeDoor,parts:safeParts.map(box=>({box,origin:{x:box.x,z:box.z}})),origin:{x:.66,z:5.43},hinge:{x:.28,z:5.43},swingAngle:Math.PI*.48,slideDistance:.76,amount:0,open:false,state:'closed'});
- add('safe-envelope',.66,.18,5.10,.33,.035,.24,'paper',false);add('safe-seal',.66,.205,5.10,.08,.014,.07,'pink',false);
  // Study with the same existing drawer/key progression.
  table('study-desk',2.6,0,2.7,1.35,.65);chair('study-chair',2.55,0,1.31,Math.PI);shelf('study-shelf',.19,0,3.6,-Math.PI/2);plant('study-plant',4.00,0,4.32);
  obj('study-books','inspect','Libros del estudio',.42,1.16,3.62,{text:'Entre los manuales hay un álbum vacío. Han arrancado todas las fotos de la misma página.'});
@@ -191,7 +183,6 @@ export function buildHouse(spawn='ground'){
  const drawer=obj('drawer','drawer','Cajón del escritorio',2.6,.73,2.335,{box:front,parts:parts.map(box=>({box,origin:{x:box.x,z:box.z}})),origin:{x:2.6,z:2.365},slideAxis:'z',slideDistance:-.42,open:false,amount:0,state:'closed'});
  const key=obj('key','key','Llave con lazo',2.58,.68,2.58,{dynamic:true,concealed:true,interactable:false});drawer.contents=[{object:key,origin:{x:key.x,z:key.z}}];
  add('study-papers',2.65,.94,2.75,.38,.06,.27,'paper',false);lamp('study-lamp',2.15,.92,2.72);frame('study',.95,1.8,.15,'south',2);
- obj('mirror-note','note','Nota con escritura extraña',3.03,.965,2.65,{text:'Cuatro cifras trazadas con una escritura extraña.',mirrored:true});
  // Kitchen and bathroom are recognizable rooms, not corridor props.
  add('kitchen-floor',10.75,.012,2.2,6.2,.024,4.1,'tile',false,{ao:.91});
  add('kitchen-counter',10.20,.925,.48,4.34,.075,.73,'tile');add('kitchen-counter-base',9.76,.44,.47,1.70,.88,.67,'wood');
@@ -252,6 +243,22 @@ export function buildHouse(spawn='ground'){
  add('plush-bow',3.88,HEIGHT+.94,1.34,.05,.04,.03,'bow',false,{shape:'round'});
  obj('bedside-plush','inspect','Peluche del velador',3.85,HEIGHT+.94,1.42,{text:'El peluche está mirando hacia la puerta. En la etiqueta está bordado el nombre de Louis.'});
  plant('bedroom-plant',.60,HEIGHT,1.2);
+ // Face the open side of the bedroom so the leaf can swing clear of the bed and wardrobe.
+ const safeX=3.98,safeZ=4.18,safeFront=3.68;
+ add('safe-bottom',safeX,HEIGHT+.10,safeZ,.60,.12,.70,'dark');
+ add('safe-top',safeX,HEIGHT+.91,safeZ,.60,.10,.70,'torchmetal');
+ for(const side of [-1,1])add('safe-side-'+side,safeX,HEIGHT+.50,safeZ+side*.32,.60,.74,.06,'torchmetal');
+ add('safe-back',4.24,HEIGHT+.50,safeZ,.08,.74,.58,'dark');
+ const safeDoor=add('safe-door',safeFront,HEIGHT+.50,safeZ,.075,.73,.63,'torchmetal',true,{dynamic:true});
+ const safeParts=[add('safe-keypad',safeFront-.05,HEIGHT+.61,safeZ-.15,.025,.24,.18,'dark',false,{dynamic:true}),
+  add('safe-handle',safeFront-.07,HEIGHT+.52,safeZ+.16,.05,.22,.065,'brass',false,{dynamic:true})];
+ for(let i=0;i<9;i++)safeParts.push(add('safe-key-'+i,safeFront-.07,HEIGHT+.67-Math.floor(i/3)*.06,safeZ-.20+(i%3)*.05,.014,.027,.027,'cream',false,{dynamic:true}));
+ obj('mirror-safe','safe','Caja fuerte del dormitorio',safeFront-.06,HEIGHT+.59,safeZ,{box:safeDoor,
+  parts:safeParts.map(box=>({box,origin:{x:box.x,z:box.z}})),origin:{x:safeFront,z:safeZ},hinge:{x:safeFront,z:safeZ+.315},
+  swingAngle:-Math.PI*.48,slideDistance:.63,amount:0,open:false,state:'closed'});
+ add('safe-envelope',safeX,HEIGHT+.18,safeZ,.24,.035,.33,'paper',false);
+ add('safe-seal',safeX,HEIGHT+.205,safeZ,.07,.014,.08,'pink',false);
+ obj('mirror-note','note','Nota con escritura extraña',safeX,HEIGHT+1.012,safeZ,{text:'Cuatro cifras trazadas con una escritura extraña.',mirrored:true});
  frame('bed',3.8,HEIGHT+1.95,.15,'south',4);obj('note-upper','note','Carta en el dormitorio',3.85,HEIGHT+.79,1.5,{text:'Hay una canción que siempre me recuerda a ti.'});obj('battery-upper','battery','Pila del dormitorio',3.85,HEIGHT+.85,1.0);
  obj('bed','bed','Cama con lazo',2.5,HEIGHT+1.0,2.75,{returnX:3.85,returnZ:3.4});
  obj('underbed','hide','Esconderse bajo la cama',2.5,HEIGHT+.32,3.0,{hideType:'underbed',returnX:2.5,returnZ:3.55,hideCamera:{x:2.5,y:HEIGHT+.28,z:2.35,yaw:0,pitch:0}});
