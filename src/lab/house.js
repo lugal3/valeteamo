@@ -23,6 +23,8 @@ import {HouseTelevision} from './television.js';
 import {updateWallClock} from './wall-clock.js';
 import {animateFurniture,updateFurniture,sweepClear} from './furniture-motion.js';
 import {BATTERY_SWAP_SECONDS} from './viewmodel.js';
+import {createRC,deployRC,driveRC,beepRC,updateRC,stopRC,crashRC,recoverRC,rcCamera,canTrapPursuer} from './rc-car.js';
+import {createLouisEscape,updateLouisEscape,freeLouis,louisCamera} from './louis-escape.js';
 import {createHousePuzzle,puzzleEvent,canOpenDrawer,canRescue,PUZZLE_HINTS} from '../demo/house-puzzles.js';
 import './house.css';
 const FLASH_DRAIN=.24,FLASH_LOW=15,SPARE_CHARGE=55;
@@ -97,12 +99,15 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   <button data-act="crouch" id="lab-crouch" aria-label="Agacharse" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2"/><path d="m13 8-3 4 5 2-2 3h5m-8-5-4 5M7 21h10m-7-12-3 2"/></svg><small>Agachar</small></button>
  </div>
  <div class="house-emotes" id="house-emotes" hidden role="group" aria-label="Emotes"><span>En el espejo · moverte cancela</span>${EMOTES.map(e=>`<button data-act="emote:${e.id}">${e.key} · ${e.label}</button>`).join('')}<button data-act="emote:stop">Detener</button></div>
+ <div class="house-rc-hud" id="house-rc-hud" hidden role="group" aria-label="Tablet de control RC"><div class="house-rc-display"><strong>♡ KITTY RC</strong><span>W/S acelerar · A/D girar · joystick táctil</span><output id="house-rc-status">Señal conectada</output></div><div class="house-rc-actions"><button data-act="rc:noise">♪ Hacer ruido</button><button data-act="rc:trap" id="rc-trap-button" hidden>▣ Activar trampa</button><button data-act="rc:stop">✕ Dejar de usar</button></div></div>
+ <div class="house-rc-caption" id="house-rc-caption" hidden role="status"></div>
  <div id="lab-turn" class="lab-turn"><div><span>↻</span><h2>Gira tu teléfono</h2><p>La casa se explora en horizontal. Tu lugar se conserva y el mundo queda en pausa.</p><button data-act="exit">Volver a pruebas</button></div></div>
  <div id="lab-dialog" class="lab-dialog lab-hidden"></div>`;
  document.body.appendChild(root);
  const events=new HouseEvents({pursuit:config.entry!=='rescue',twoActs:true}),floorSounds=new FloorSounds();let pursuer=null,equipment='flashlight',equipmentAge=1,encounterCheckpoint=null,thirdView=null;
  const mirrorSafe=new MirrorSafePuzzle(),television=new HouseTelevision();
  let safeInput='',activeSafe=null,noteLift=0,noteHold=0,notePresentation=false,capturePhoto=false,piano=null;
+ let rc=null,louis=null,rcTrap={armed:false,closed:false},finalCutscene=null;
  let equipmentBeforeNote='empty',batterySwap=null;
  const canUseHotbar=()=>ready&&!isSuspended()&&!cinematic&&events.phase!=='arrival'&&events.phase!=='failed'&&events.phase!=='safe';
  const phone=new PhoneUI(root,(kind,toggle=true)=>equip(kind,toggle),()=>resetInput(),{canEquip:canUseHotbar,canUse:()=>canUseHotbar()&&!notePresentation,onEdit:()=>{releaseMouse();resetInput();if(isSuspended())sound.pause();else sound.resume();},onPhoto:()=>{capturePhoto=true;}});phone.equip(equipment);
@@ -140,7 +145,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function equip(kind,toggle=false){
   const inventory=s.inventory;
   if(notePresentation&&kind!=='flashlight')return;
-  if(kind==='flashlight'&&!inventory.torch||kind==='key'&&!inventory.key||kind==='red-key'&&!inventory.redKey||kind==='paper'&&!inventory.notes.length&&!inventory.pendingNote)return;
+  if(kind==='rc'&&!inventory.rc||kind==='flashlight'&&!inventory.torch||kind==='key'&&!inventory.key||kind==='red-key'&&!inventory.redKey||kind==='paper'&&!inventory.notes.length&&!inventory.pendingNote)return;
   cancelEmote();equipment=toggle&&equipment===kind?'empty':kind;equipmentAge=0;phone.equip(notePresentation?'empty':equipment);resetInput();
  }
  function releaseCapture(element,pointer){try{if(pointer!==null&&element?.hasPointerCapture(pointer))element.releasePointerCapture(pointer);}catch{}}
@@ -177,12 +182,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  function reset(){
   television.sync(false,false);notePresentation=false;
+  louis=null;rcTrap={armed:false,closed:false};finalCutscene=null;
   releaseMouse();events.reset();mirrorSafe.reset();hudMessages.reset();phone.close();encounterCheckpoint=null;danger.hidden=true;
   batterySwap=null;equipmentBeforeNote='empty';
   animator.reset();sound.stopEmote();floorSounds.reset();if(phone.editing)void phone.layoutAction('done');$('house-emotes').hidden=true;cinematic=null;poseTransition=null;paused=false;lastInteraction=-Infinity;handAction=0;clickAction=0;noteLift=0;noteHold=0;capturePhoto=false;
   sound.setTension(.55);
   root.classList.remove('lab-intro-active');$('lab-window-intro').classList.add('lab-hidden');$('lab-camera-settings').open=false;
   world=createHouse(checkpoint);puzzle=createHousePuzzle(config.entry);pursuer=new Pursuer(world);sound.setThreat(false);
+  rc=createRC(world.objects.find(o=>o.id==='rc-car'));
   bathCircuit=world.lights.circuits.find(circuit=>circuit.id==='bano');
   poseFurniture(world.entryWindow,1);handDrift.x=handDrift.y=handDrift.vx=handDrift.vy=0;
   if(demo){
@@ -196,7 +203,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const torchAvailable=!demo||checkpoint!=='ground'||['drawer','lock','rescue'].includes(config.entry);
   equipment=torchAvailable?'flashlight':'empty';
   s={x:p.x,z:p.z,y:p.y,yaw:p.yaw,pitch:0,eye:1.63,crouched:false,hidden:null,lying:false,bob:0,
-    flashlight:torchAvailable&&demo,battery:100,stamina:SPRINT_SECONDS,sprinting:false,exhausted:false,recoveryDelay:0,reduceBob:!options.bob||reducedMotion.matches,inventory:{notes:[],batteries:p.items?.batteries??Number(demo),key:demo?puzzle.key&&!puzzle.door:!!p.items?.key,redKey:false,torch:torchAvailable},distanceSteps:0};
+    flashlight:torchAvailable&&demo,battery:100,stamina:SPRINT_SECONDS,sprinting:false,exhausted:false,recoveryDelay:0,reduceBob:!options.bob||reducedMotion.matches,inventory:{notes:[],batteries:p.items?.batteries??Number(demo),key:demo?puzzle.key&&!puzzle.door:!!p.items?.key,redKey:false,torch:torchAvailable,rc:false},distanceSteps:0};
   world.objects.find(o=>o.id==='media-flashlight').taken=torchAvailable;
   phone.setInventory(s.inventory);phone.equip(equipment);
   focus=null;lookTarget={yaw:s.yaw,pitch:s.pitch};modalClose();keys.clear();rebuild();say('Escenario reiniciado · '+(points[checkpoint]||'planta baja'));
@@ -324,6 +331,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    }
    phone.setInventory(s.inventory);rebuild();play('note',o);
   }
+  else if(o.kind==='rc-car'){
+   if(rc.mode==='packed'||recoverRC(rc)){
+    rc.mode='packed';o.taken=true;o.interactable=false;s.inventory.rc=true;
+    phone.setInventory(s.inventory);equip('rc');rebuild();play('pickup',o);
+    say('Auto de carreras rosa y tablet guardados como un solo objeto. Pulsa USAR.',4);
+   }
+  }
   else if(o.kind==='piano')openPiano(o);
   else if(o.kind==='safe')showSafe(o);
   else if(o.kind==='television'){
@@ -398,7 +412,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const actions=[['Cerrar mochila','close']];
   const charge=Math.ceil(s.battery);
   if(charge<100&&s.inventory.batteries>0)actions.unshift(['Usar pila (hasta +'+SPARE_CHARGE+'%)','recharge']);
-  showModal('Mi mochila',`<p><b>⚿ Llave:</b> ${s.inventory.key?'Llave con lazo · abre el dormitorio':'Sin llave'}</p><p><b>Linterna:</b> ${charge}% · <b>Pilas de repuesto:</b> ${s.inventory.batteries}</p><div class="lab-note-list">${notes}</div>`,actions);
+  showModal('Mi mochila',`<p><b>Auto RC:</b> ${s.inventory.rc?'Auto y tablet listos':'Sin recoger'}</p><p><b>⚿ Llave:</b> ${s.inventory.key?'Llave con lazo · abre el dormitorio':'Sin llave'}</p><p><b>Linterna:</b> ${charge}% · <b>Pilas de repuesto:</b> ${s.inventory.batteries}</p><div class="lab-note-list">${notes}</div>`,actions);
  }
  function startBatterySwap(){
   if(batterySwap!==null||!s.inventory.torch||s.inventory.batteries<1||Math.ceil(s.battery)>=100||s.hidden||s.lying)return false;
@@ -432,6 +446,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const inBathroom=()=>roomAt(s.x,s.z,s.y)==='Baño';
  function useEquipment(){
   if(s.hidden||s.lying)return;
+  if(equipment==='rc'){
+   if(!deployRC(rc,s,world)){say('Necesitas un suelo libre para colocar el auto.');return;}
+   cancelEmote({immediate:true});releaseMouse();resetInput();
+   equipment='rc-tablet';equipmentAge=0;phone.equip('rc');
+   rebuild();play('cloth');say('Kitty se agacha y coloca el autito con sus dos patitas…',2.5);
+   return;
+  }
   if(equipment==='phone'&&!noteLift){releaseMouse();cancelEmote();phone.show();resetInput();}
   if(equipment==='paper'){const note=s.inventory.pendingNote??s.inventory.notes.at(-1);if(note?.id==='mirror-note')showMirrorNote();else if(note)showNote(note);}
   if(equipment==='flashlight')toggleFlash();
