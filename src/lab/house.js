@@ -703,8 +703,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  let statsAt=performance.now(),frameCount=0,slowSeconds=0;
  function updateStory(delta){
-  if(!demo||config.entry==='rescue'||isSuspended()||cinematic)return;
-  const change=events.observe(puzzle);
+  if(!demo||isSuspended()||cinematic)return;
+  const finalPhase=['rc-rescue','rc-setup','escape','ending'].includes(events.phase);
+  if(config.entry==='rescue'&&!finalPhase)return;
+  const change=finalPhase?null:events.observe(puzzle);
   if(change==='message')sound.sequence('notification');
   if(change==='arrival'){
    sound.setThreat(true);
