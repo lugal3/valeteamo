@@ -8,7 +8,7 @@ export class MirrorSafePuzzle{
  reset(completed=false){this.collected=completed;this.revealed=completed;this.opened=completed;this.activeSeconds=0;this.hintShown=false;}
  collect(){if(this.collected)return false;this.collected=true;return true;}
  advance(dt,{active=true,mirror=false}={}){
-  if(!active||!this.collected||this.opened||this.revealed)return null;
+  if(!active||!this.collected||this.revealed)return null;
   if(mirror){this.revealed=true;return 'revealed';}
   this.activeSeconds+=Math.max(0,Number.isFinite(dt)?dt:0);
   if(this.activeSeconds>MIRROR_HINT_SECONDS&&!this.hintShown){this.hintShown=true;return 'hint';}

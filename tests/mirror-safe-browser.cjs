@@ -21,15 +21,19 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
    await use('media-cabinet');await use('media-flashlight');await use('note-hall');await page.keyboard.press('Escape');await use('drawer');await use('key');
    const bedroom=await use('dormitorio');assert(bedroom.puzzle.door&&!bedroom.puzzle.symbol,'The key alone unlocks the bedroom');
    await page.waitForFunction(()=>window.__rescueHouse.story().phase==='evaded');
-   await use('mirror-note');await page.getByRole('dialog',{name:'Nota con escritura extraña',exact:true}).waitFor();const transform=await page.locator('.mirror-note-writing').evaluate(el=>getComputedStyle(el).transform);assert(transform.startsWith('matrix(-1,'),'The glyphs themselves are reflected');assert.equal(await page.locator('.mirror-note-reading').count(),0);const back=await page.getByRole('button',{name:'Volver',exact:true}).boundingBox();assert(back.y+back.height<=viewport.height,'The note fits with its return button');await shot('01-nota-invertida');await page.waitForTimeout(650);assert.equal((await state()).activeSeconds,0,'Reading the note is paused');await page.keyboard.press('Escape');
-   await page.waitForFunction(()=>window.__rescueHouse.mirrorPuzzle().hintShown);await page.waitForFunction(()=>document.querySelector('#lab-toast').textContent.includes('espejo del baño'));await shot('02-pista-demorada');await page.keyboard.press('i');await page.click('[data-act=read][data-id=mirror-note]');assert(await page.locator('.mirror-note-writing').isVisible());await page.keyboard.press('Escape');
+   assert.equal((await state()).safe.state,'closed');
+   await use('mirror-note');assert.equal(await page.locator('[data-equip=paper]').getAttribute('aria-pressed'),'true');
+   await page.keyboard.press('i');assert.equal(await page.locator('[data-act=read][data-id=mirror-note]').count(),0);await page.keyboard.press('Escape');
+   await page.getByRole('button',{name:'Observar nota',exact:true}).click();
+   const transform=await page.locator('.mirror-note-writing').evaluate(el=>getComputedStyle(el).transform);assert(transform.startsWith('matrix(-1,'),'The glyphs themselves are reflected');assert.equal(await page.locator('.mirror-note-reading').count(),0);const back=await page.getByRole('button',{name:'Volver',exact:true}).boundingBox();assert(back.y+back.height<=viewport.height,'The note fits with its return button');await shot('01-nota-invertida');const active=(await state()).activeSeconds;await page.waitForTimeout(650);assert.equal((await state()).activeSeconds,active,'Reading the note is paused');await page.keyboard.press('Escape');
+   await page.waitForFunction(()=>window.__rescueHouse.mirrorPuzzle().hintShown);await page.waitForFunction(()=>document.querySelector('#lab-toast').textContent.includes('espejo del baño'));await shot('02-pista-demorada');
    // A wall / looking away cannot satisfy the mirror; the actual mirror render must be visible.
    await page.evaluate(()=>window.__rescueHouse.setPose({x:6,y:0,z:8,yaw:Math.PI/2,pitch:0}));await page.waitForTimeout(120);assert(!(await state()).revealed);
    await use('bano',false);
    const bathDoor=()=>page.evaluate(()=>window.__rescueHouse.snapshot().doors.find(d=>d.id==='bano'));
    await page.waitForTimeout(300);assert.equal((await bathDoor()).state,'closed','Walking into range does not open a door');
    await page.click('#lab-interact');await page.waitForFunction(()=>window.__rescueHouse.snapshot().doors.find(d=>d.id==='bano').state==='open');
-   await page.keyboard.press('f');
+   await page.keyboard.press('2');await page.keyboard.press('f');
    await page.keyboard.press('3');
    await page.evaluate(()=>window.__rescueHouse.setPose({x:8.35,y:0,z:5.55,yaw:Math.PI/2,pitch:0}));
    await page.waitForFunction(()=>window.__rescueHouse.snapshot().mirror.drawn&&!window.__rescueHouse.snapshot().flashlight&&window.__rescueHouse.mirrorPuzzle().noteLift===0&&window.__rescueHouse.amenities().notePresentation);
@@ -46,7 +50,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
    await use('mirror-safe');await page.getByRole('dialog',{name:'Caja fuerte',exact:true}).waitFor();for(const n of ['0','0','0','0'])await page.click('[data-act="safe:'+n+'"]');await page.click('[data-act="safe:submit"]');assert(!(await state()).opened);assert((await page.locator('#safe-feedback').textContent()).includes('no coincide'));await shot('04-teclado');
    if(viewport.width<700){for(const n of ['1','5','0','5'])await page.click('[data-act="safe:'+n+'"]');await page.click('[data-act="safe:submit"]');}else{await page.keyboard.type('1508');await page.keyboard.press('Backspace');await page.keyboard.press('5');await page.keyboard.press('Enter');}
    await page.waitForFunction(()=>window.__rescueHouse.mirrorPuzzle().safe.state==='open');assert((await state()).opened);assert((await page.evaluate(()=>window.__rescueHouse.snapshot())).puzzle.symbol);await shot('05-caja-abierta');
-   await page.keyboard.press('i');await page.click('[data-act=read][data-id=mirror-note]');assert((await page.locator('.mirror-note-reading').textContent()).includes('1505'));await page.keyboard.press('Escape');
+   await page.keyboard.press('i');assert((await page.locator('[data-act=read][data-id=mirror-note]').textContent()).includes('resuelta'));await page.click('[data-act=read][data-id=mirror-note]');assert((await page.locator('.mirror-note-reading').textContent()).includes('1505'));await page.keyboard.press('Escape');
    const gl=await page.locator('#lab-canvas').evaluate(c=>c.getContext('webgl').getError());assert.equal(gl,0);assert.deepEqual(errors,[]);results.push({viewport,mirroredGlyphs:true,pausedHint:true,delayedHint:true,mirrorVisibility:true,wrongCode:true,keypad:true,bagReading:true,bedroomProgress:true,gl,errors});await page.evaluate(()=>window.stopHouse());await context.close();
   }
   fs.writeFileSync(path.join(folder,'verificacion.json'),JSON.stringify(results,null,2));console.log('PASS mirror safe browser: mirrored note, minute hint wiring, view-gated reveal, keyboard/touch keypad, contents and bedroom progression');

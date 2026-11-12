@@ -8,7 +8,7 @@
   "railToEastWall": 0.40250000000000163,
   "bathWidth": 2.5,
   "bodyWidth": 0.64,
-  "reachableSamples": 4267,
+  "reachableSamples": 4243,
   "routes": [
     {
       "name": "hall",

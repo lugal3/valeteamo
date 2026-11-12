@@ -2,6 +2,8 @@
 
 El [README principal](../README.md) es la guía actual del repositorio. Este contexto reúne decisiones de versiones anteriores. El [índice de documentación](INDICE-INFORMES.md) enlaza los informes y las anotaciones de diseño.
 
+La caja fuerte comienza cerrada en las entradas de la casa. La hoja con las cifras invertidas está en la mesa del dormitorio, se equipa al recogerla y se archiva como resuelta después de leerla en el espejo. La linterna consume un repuesto al agotar su carga, anima el cambio y recupera hasta 55 puntos. El piano interactivo está en el descansillo superior, junto a la escalera. La cocina tiene un estante con frascos, fruta, paños y un recetario.
+
 **Contador y emote What Is Love? (12 de noviembre de 2026).** La entrada muestra el tiempo hasta las 00:00 del 5 de diciembre de 2026 en Santiago de Chile. El engranaje admite `LP` para pasar a la portada original antes de la fecha. Este acceso de vista previa se evalúa en el navegador. El título visible y los íconos de la app usan «Feliz cumpleaños Vale» y la foto aportada de Kitty. La puerta de entrada se monta por encima de `StoryApp`; el cambio dentro de `StoryApp` se limita al título y la marca.
 
 El emote usa el tramo 00:48–00:58 de «TWICE _What is Love__ Dance Video.mp4», aportado por el propietario. La pista `src/lab/audio/emote-what-is-love.mp3` sincroniza las poses de la bailarina de camiseta blanca con los apoyos y gestos de `src/lab/animations/what-is-love.js`. La secuencia incluye el gesto frente a la boca, el talón, la ola de muñeca, los brazos en ángulos alternados, la mano en la sien hacia 00:53, la flexión de rodillas con las palmas hacia afuera y el corazón con una mano durante el giro de 00:56. Se activa con **9** o «Emotes» en el baño.

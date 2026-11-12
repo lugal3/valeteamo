@@ -33,8 +33,18 @@ const {chromium}=require('playwright');
   await use('media-cabinet');await use('media-flashlight');
   assert(await page.locator('[data-equip=flashlight]').isVisible());
   await use('piano');await page.getByRole('dialog',{name:'Piano antiguo'}).waitFor();
+  assert((await snapshot()).view.y>4,'The piano seat is on the upper landing');
   for(const letter of ['a','d','g','h','g','d','s','a'])await page.keyboard.press(letter);
   await page.getByText('Melodía completa',{exact:true}).waitFor();await shot('piano');await close();
+  const spares=(await amenities()).battery.spares;
+  await page.evaluate(()=>{
+   const {position,camera}=window.__rescueHouse.snapshot();
+   window.__rescueHouse.setPose({...position,yaw:camera.yaw,pitch:camera.pitch,battery:.02});
+  });
+  await page.waitForFunction(()=>window.__rescueHouse.amenities().battery.swap!==null);
+  assert.equal((await amenities()).battery.spares,spares-1);
+  await page.waitForFunction(()=>window.__rescueHouse.amenities().battery.charge>50);
+  assert.equal((await amenities()).battery.swap,null);
   await use('hide-trunk');await page.waitForFunction(()=>window.__rescueHouse.snapshot().hideType==='trunk');
   await page.keyboard.press('e');await page.waitForFunction(()=>!window.__rescueHouse.snapshot().hidden);
 

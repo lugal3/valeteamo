@@ -6,7 +6,7 @@ import {installLouisAltar} from './louis-altar.js';
 import {installWallClock} from './wall-clock.js';
 import {STUDY_SIGN} from './artwork.js';
 import {HATCH,floorAroundHatch,installBasement} from './basement.js';
-import {installPiano,installKitchenBar,installExtraHides} from './house-additions.js';
+import {decorateKitchen,installPiano,installKitchenBar,installExtraHides} from './house-additions.js';
 // V5: generous landings and an independent, open stairwell. Dimensions in metres.
 export const HEIGHT=3.15;
 export const HOUSE=Object.freeze({width:14,depth:12});
@@ -198,7 +198,6 @@ export function buildHouse(spawn='ground'){
  add('living-rug',2.05,.014,9.12,3.55,.025,3.05,'carpet',false,{ao:.88});
  installCabinet(add,obj,{id:'media-cabinet',label:'Cajón de los mandos',x:2.63,z:5.04,w:1.56,h:.61,d:.46,
   items:[{id:'media-battery',kind:'battery',label:'Pila del control remoto',dx:.49},{id:'media-flashlight',kind:'flashlight',label:'Linterna',dx:-.40}]});
- installPiano(add,obj);
  const tvStand=boxes.length,tvPower={on:false};
  add('tv-table',4.04,.31,9.42,1.49,.62,.47,'wood');
  for(const x of [3.65,4.42])add('tv-foot-'+x,x,.65,9.42,.12,.06,.24,'dark',false);
@@ -262,6 +261,7 @@ export function buildHouse(spawn='ground'){
  add('tap-aerator',10.05,1.216,.447,.042,.055,.042,'dark',false,{shape:'round',segments:8});
  add('tap-lever',10.13,1.065,.214,.105,.027,.028,'torchmetal',false);
  installKitchenBar(add,obj);
+ decorateKitchen(add);
  add('kitchen-mug-a',11.5,1.01,.46,.09,.09,.09,'cream',false,{shape:'lathe',profile:CUP_PROFILE,segments:9});
  add('kitchen-mug-b',11.7,1.01,.46,.09,.09,.09,'pink',false,{shape:'lathe',profile:CUP_PROFILE,segments:9});
  const rugZ=(HATCH.minZ+HATCH.maxZ)/2;
@@ -327,7 +327,10 @@ export function buildHouse(spawn='ground'){
   swingAngle:-Math.PI*.48,slideDistance:.63,amount:0,open:false,state:'closed'});
  add('safe-envelope',safeX,HEIGHT+.18,safeZ,.24,.035,.33,'paper',false);
  add('safe-seal',safeX,HEIGHT+.205,safeZ,.07,.014,.08,'pink',false);
- obj('mirror-note','note','Nota con escritura extraña',safeX,HEIGHT+1.012,safeZ,{text:'Cuatro cifras trazadas con una escritura extraña.',mirrored:true});
+ table('bedroom-writing-table',3.89,HEIGHT,1.32,.73,.85);
+ add('bedroom-writing-book',4.04,HEIGHT+.945,1.08,.23,.06,.30,'wood',false,{color:[.44,.25,.31],yaw:.18});
+ add('bedroom-writing-book-pages',4.04,HEIGHT+.961,1.08,.21,.012,.27,'paper',false,{yaw:.18});
+ obj('mirror-note','note','Nota con el código invertido',3.81,HEIGHT+.926,1.47,{text:'Cuatro cifras trazadas con una escritura extraña.',mirrored:true});
  frame('bed',3.8,HEIGHT+1.95,.15,'south',4);
  obj('note-upper','note','Carta en el dormitorio',bedsideX-.15,HEIGHT+.755,bedsideZ+.19,{text:'Hay una canción que siempre me recuerda a ti.'});
  obj('battery-upper','battery','Pila del dormitorio',bedsideX+.17,HEIGHT+.78,bedsideZ+.13);
@@ -363,6 +366,11 @@ export function buildHouse(spawn='ground'){
  installCabinet(add,obj,{id:'reading-cabinet',label:'Cajón de la sala de lectura',x:2.05,y:HEIGHT,z:5.12,w:1.28,d:.60,
   items:[{id:'reading-battery',kind:'battery',label:'Pila de la sala de lectura',dx:.24}]});
  add('reading-rug',1.92,HEIGHT+.012,8.0,2.9,.024,4,'carpet',false,{ao:.88});add('upper-bench',4.95,HEIGHT+.43,11.65,1.15,.18,.48,'velvet');for(const x of [4.55,5.35])add('bench-leg-'+x,x,HEIGHT+.20,11.65,.08,.4,.35,'wood');plant('landing-plant',8.3,HEIGHT,11.54);frame('landing',8.0,HEIGHT+1.85,11.83,'north',0);
+ installPiano(add,obj,{x:13.55,z:3.99,floor:HEIGHT});
+ add('reading-tea-saucer',1.69,HEIGHT+.927,7.98,.18,.018,.18,'ceramica',false,{shape:'round'});
+ add('reading-tea-cup',1.69,HEIGHT+.98,7.98,.10,.10,.10,'cream',false,{shape:'lathe',profile:CUP_PROFILE,segments:9});
+ add('living-folded-throw',.85,.66,8.59,.28,.065,.37,'velvet',false,{color:[.53,.36,.45],yaw:.08});
+ add('living-magazine',2.00,.946,9.41,.22,.025,.31,'paper',false,{color:[.68,.51,.42],yaw:-.23});
  // Exterior is built geometry, with a grounded garden and recognizable neighborhood.
  add('front-path',5.9,-.005,16.25,1.65,.025,8.5,'stone',false);add('road',8,-.005,23,36,.025,3.4,'asphalt',false);add('pavement',8,0,20.5,36,.04,1.3,'stone',false);
  for(const x of [-4.8,19.5]){

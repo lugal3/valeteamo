@@ -53,7 +53,7 @@ export class PhoneUI{
  }
  equip(kind){for(const b of this.host.querySelectorAll('[data-equip]'))b.setAttribute('aria-pressed',String(b.dataset.equip===kind));if(kind!=='phone')this.close();}
  setInventory(inventory){
-  const available={flashlight:inventory.torch,phone:true,key:inventory.key,'red-key':inventory.redKey,paper:inventory.notes.length>0};
+  const available={flashlight:inventory.torch,phone:true,key:inventory.key,'red-key':inventory.redKey,paper:!!inventory.pendingNote||inventory.notes.length>0};
   for(const button of this.host.querySelectorAll('[data-equip]'))button.hidden=!available[button.dataset.equip];
   this.applyLayout();
  }

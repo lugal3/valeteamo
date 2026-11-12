@@ -22,6 +22,7 @@ import {PIANO_NOTES,PIANO_KEYS,PIANO_SCORE,poseTrunk} from './house-additions.js
 import {HouseTelevision} from './television.js';
 import {updateWallClock} from './wall-clock.js';
 import {animateFurniture,updateFurniture,sweepClear} from './furniture-motion.js';
+import {BATTERY_SWAP_SECONDS} from './viewmodel.js';
 import {createHousePuzzle,puzzleEvent,canOpenDrawer,canRescue,PUZZLE_HINTS} from '../demo/house-puzzles.js';
 import './house.css';
 const FLASH_DRAIN=.24,FLASH_LOW=15,SPARE_CHARGE=55;
@@ -102,6 +103,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const events=new HouseEvents({pursuit:config.entry!=='rescue',twoActs:true}),floorSounds=new FloorSounds();let pursuer=null,equipment='flashlight',equipmentAge=1,encounterCheckpoint=null,thirdView=null;
  const mirrorSafe=new MirrorSafePuzzle(),television=new HouseTelevision();
  let safeInput='',activeSafe=null,noteLift=0,noteHold=0,notePresentation=false,capturePhoto=false,piano=null;
+ let equipmentBeforeNote='empty',batterySwap=null;
  const canUseHotbar=()=>ready&&!isSuspended()&&!cinematic&&events.phase!=='arrival'&&events.phase!=='failed'&&events.phase!=='safe';
  const phone=new PhoneUI(root,(kind,toggle=true)=>equip(kind,toggle),()=>resetInput(),{canEquip:canUseHotbar,canUse:()=>canUseHotbar()&&!notePresentation,onEdit:()=>{releaseMouse();resetInput();if(isSuspended())sound.pause();else sound.resume();},onPhoto:()=>{capturePhoto=true;}});phone.equip(equipment);
  const danger=document.createElement('div');danger.className='house-danger';danger.hidden=true;danger.setAttribute('role','status');root.querySelector('#house-messages').append(danger);
@@ -125,7 +127,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const isPortrait=()=>window.innerHeight>window.innerWidth;
  const isSuspended=()=>!ready||paused||!!modal||phone.editing||$('lab-camera-settings').open||isPortrait()||document.hidden||!hasFocus||contextLost;
  const isPaused=()=>isSuspended()||!!cinematic||!!poseTransition;
- const flashlightBeam=()=>s.flashlight&&equipment==='flashlight'&&!s.hidden&&!s.lying&&!animator.performing&&!phone.open&&events.phase!=='arrival';
+ const flashlightBeam=()=>s.flashlight&&batterySwap===null&&equipment==='flashlight'&&!s.hidden&&!s.lying&&!animator.performing&&!phone.open&&events.phase!=='arrival';
  const desktop=window.matchMedia('(hover: hover) and (pointer: fine)');
  const mouseLocked=()=>document.pointerLockElement===canvas;
  function releaseMouse(){if(mouseLocked())document.exitPointerLock();}
@@ -138,7 +140,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function equip(kind,toggle=false){
   const inventory=s.inventory;
   if(notePresentation&&kind!=='flashlight')return;
-  if(kind==='flashlight'&&!inventory.torch||kind==='key'&&!inventory.key||kind==='red-key'&&!inventory.redKey||kind==='paper'&&!inventory.notes.length)return;
+  if(kind==='flashlight'&&!inventory.torch||kind==='key'&&!inventory.key||kind==='red-key'&&!inventory.redKey||kind==='paper'&&!inventory.notes.length&&!inventory.pendingNote)return;
   cancelEmote();equipment=toggle&&equipment===kind?'empty':kind;equipmentAge=0;phone.equip(notePresentation?'empty':equipment);resetInput();
  }
  function releaseCapture(element,pointer){try{if(pointer!==null&&element?.hasPointerCapture(pointer))element.releasePointerCapture(pointer);}catch{}}
@@ -151,7 +153,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if($('lab-stick'))$('lab-stick').style.transform='translate(0,0)';
   if(s){lookTarget={yaw:s.yaw,pitch:s.pitch};s.sprinting=false;}
  }
- const modalClose=()=>{if(piano&&s){s.poseCamera=null;for(const key of piano.object.keys)key.y=.95;}piano=null;modal='';activeSafe=null;safeInput='';dialog.classList.remove('house-piano-dialog');dialog.classList.add('lab-hidden');dialog.innerHTML='';resetInput();if(!isSuspended())sound.resume();};
+ const modalClose=()=>{if(piano&&s){s.poseCamera=null;for(const key of piano.object.keys)key.y=piano.object.keyHeight;}piano=null;modal='';activeSafe=null;safeInput='';dialog.classList.remove('house-piano-dialog');dialog.classList.add('lab-hidden');dialog.innerHTML='';resetInput();if(!isSuspended())sound.resume();};
  function showModal(title,body,actions=[['Cerrar','close']]){
   modal=title;dialog.classList.remove('lab-hidden');
   $('house-messages').hidden=true;
@@ -175,13 +177,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  function reset(){
   television.sync(false,false);notePresentation=false;
-  releaseMouse();events.reset();mirrorSafe.reset(['lock','rescue'].includes(config.entry));hudMessages.reset();phone.close();encounterCheckpoint=null;danger.hidden=true;
+  releaseMouse();events.reset();mirrorSafe.reset();hudMessages.reset();phone.close();encounterCheckpoint=null;danger.hidden=true;
+  batterySwap=null;equipmentBeforeNote='empty';
   animator.reset();sound.stopEmote();floorSounds.reset();if(phone.editing)void phone.layoutAction('done');$('house-emotes').hidden=true;cinematic=null;poseTransition=null;paused=false;lastInteraction=-Infinity;handAction=0;clickAction=0;noteLift=0;noteHold=0;capturePhoto=false;
   sound.setTension(.55);
   root.classList.remove('lab-intro-active');$('lab-window-intro').classList.add('lab-hidden');$('lab-camera-settings').open=false;
   world=createHouse(checkpoint);puzzle=createHousePuzzle(config.entry);pursuer=new Pursuer(world);sound.setThreat(false);
   bathCircuit=world.lights.circuits.find(circuit=>circuit.id==='bano');
-  if(mirrorSafe.opened){poseFurniture(world.objects.find(o=>o.id==='mirror-safe'),1);world.objects.find(o=>o.id==='mirror-note').taken=true;}
   poseFurniture(world.entryWindow,1);handDrift.x=handDrift.y=handDrift.vx=handDrift.vy=0;
   if(demo){
    const key=world.objects.find(o=>o.id==='key');key.taken=puzzle.key;
@@ -207,9 +209,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const occluded=source?lineBlocked(world.boxes,loc,source,o?.kind==='door'?'door-'+o.id:''):false;
   sound.effect(name,source,{...loc,yaw:s.yaw},occluded,{level});
  };
- function toggleFlash(){if(s.hidden||s.lying)return;
+ function toggleFlash(){if(s.hidden||s.lying||batterySwap!==null)return;
   sound.resume();
-  if(!s.flashlight&&s.battery<=0){say('Sin carga · cambia la pila en la mochila o busca un interruptor.');return;}
+  if(!s.flashlight&&s.battery<=0){
+   if(startBatterySwap())s.flashlight=true;
+   else say('Sin carga · busca una pila o un interruptor.');
+   return;
+  }
   s.flashlight=!s.flashlight;play('light');say(s.flashlight?'Linterna encendida':'Linterna apagada');
   handAction=1;clickAction=1;
  }
@@ -302,7 +308,22 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }else if(o.kind==='battery'){o.taken=true;s.inventory.batteries++;rebuild();play('pickup',o);say('Pila guardada en la mochila');}
   else if(o.kind==='flashlight'){o.taken=true;s.inventory.torch=true;s.flashlight=true;phone.setInventory(s.inventory);equip('flashlight');rebuild();play('pickup',o);say('Linterna guardada');}
   else if(o.kind==='key'){o.taken=true;if(o.red)s.inventory.redKey=true;else{s.inventory.key=true;if(demo)puzzle=puzzleEvent(puzzle,'key');}phone.setInventory(s.inventory);rebuild();play('pickup',o);say(o.label+' obtenida');}
-  else if(o.kind==='note'){o.taken=true;s.inventory.notes.push({id:o.id,label:o.label,text:o.text});phone.setInventory(s.inventory);if(demo&&o.id==='note-hall')puzzle=puzzleEvent(puzzle,'note');rebuild();play('note',o);if(o.mirrored){mirrorSafe.collect();showMirrorNote();}else showNote(o);}
+  else if(o.kind==='note'){
+   o.taken=true;
+   const note={id:o.id,label:o.label,text:o.text};
+   if(o.mirrored){
+    mirrorSafe.collect();
+    s.inventory.pendingNote=note;
+    equipmentBeforeNote=equipment==='paper'?'empty':equipment;
+    equip('paper');
+    say('Nota equipada · puedes observarla en tu mano',4);
+   }else{
+    s.inventory.notes.push(note);
+    if(demo&&o.id==='note-hall')puzzle=puzzleEvent(puzzle,'note');
+    showNote(o);
+   }
+   phone.setInventory(s.inventory);rebuild();play('note',o);
+  }
   else if(o.kind==='piano')openPiano(o);
   else if(o.kind==='safe')showSafe(o);
   else if(o.kind==='television'){
@@ -366,7 +387,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(result==='blocked'){feedback.textContent='Deja un poco de espacio delante de la caja para abrirla.';return;}
    if(result==='opened'){
     if(demo)puzzle=puzzleEvent(puzzle,'symbol');
-    s.inventory.notes.push({id:'safe-heart',label:'Sobre de la caja fuerte',text:'El sobre guarda el mismo corazón que aparece en el cuadro del salón.'});
+    s.inventory.notes.push({id:'safe-heart',label:'Sobre de la caja fuerte',text:'El sobre guarda el mismo corazón que aparece en el cuadro del salón.'});phone.setInventory(s.inventory);
     modalClose();play('keys',object);say('Caja abierta · símbolo del corazón obtenido',4);return;
    }
   }else{feedback.textContent='';if(action==='clear')safeInput='';else if(action==='back')safeInput=safeInput.slice(0,-1);else if(/^\d$/.test(action)&&safeInput.length<4)safeInput+=action;}
@@ -379,14 +400,32 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(charge<100&&s.inventory.batteries>0)actions.unshift(['Usar pila (hasta +'+SPARE_CHARGE+'%)','recharge']);
   showModal('Mi mochila',`<p><b>⚿ Llave:</b> ${s.inventory.key?'Llave con lazo · abre el dormitorio':'Sin llave'}</p><p><b>Linterna:</b> ${charge}% · <b>Pilas de repuesto:</b> ${s.inventory.batteries}</p><div class="lab-note-list">${notes}</div>`,actions);
  }
+ function startBatterySwap(){
+  if(batterySwap!==null||!s.inventory.torch||s.inventory.batteries<1||Math.ceil(s.battery)>=100||s.hidden||s.lying)return false;
+  s.inventory.batteries--;
+  batterySwap=0;
+  play('click');say('Cambiando pila…');
+  return true;
+ }
  function recharge(){
-  if(Math.ceil(s.battery)>=100||s.inventory.batteries<1)return;
-  s.inventory.batteries--;s.battery=Math.min(100,s.battery+SPARE_CHARGE);bag();
+  if(!startBatterySwap())return;
+  modalClose();
+  equip('flashlight');
+ }
+ function updateBatterySwap(dt){
+  if(batterySwap===null||isPaused()||phone.open||events.phase==='arrival')return;
+  const before=batterySwap;
+  batterySwap+=dt;
+  if(before<BATTERY_SWAP_SECONDS*.68&&batterySwap>=BATTERY_SWAP_SECONDS*.68)play('click');
+  if(batterySwap<BATTERY_SWAP_SECONDS)return;
+  s.battery=Math.min(100,s.battery+SPARE_CHARGE);
+  batterySwap=null;
+  play('light');say('Pila cambiada · '+Math.ceil(s.battery)+'%');
  }
  function drainFlashlight(dt){
   const before=s.battery;
   s.battery=Math.max(0,before-dt*FLASH_DRAIN);
-  if(!s.battery){s.flashlight=false;play('light');say('La linterna se apagó · usa una pila de la mochila o enciende una luz.',5);}
+  if(!s.battery&&!startBatterySwap()){s.flashlight=false;play('light');say('La linterna se apagó · busca una pila o un interruptor.',5);}
   else if(before>FLASH_LOW&&s.battery<=FLASH_LOW)say('Batería baja · quedan '+FLASH_LOW+'%',4);
  }
  function togglePause(){if(!ready||contextLost)return;$('lab-camera-settings').open=false;paused=!paused;if(paused){sound.pause();showModal('Pausa',`<p>El tiempo de la casa y sus sonidos se han detenido.</p>`,[['Continuar','resume'],['Volver a pruebas','exit']]);}else{modalClose();sound.resume();}}
@@ -394,7 +433,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function useEquipment(){
   if(s.hidden||s.lying)return;
   if(equipment==='phone'&&!noteLift){releaseMouse();cancelEmote();phone.show();resetInput();}
-  if(equipment==='paper'){const note=s.inventory.notes.at(-1);if(note?.id==='mirror-note')showMirrorNote();else if(note)showNote(note);}
+  if(equipment==='paper'){const note=s.inventory.pendingNote??s.inventory.notes.at(-1);if(note?.id==='mirror-note')showMirrorNote();else if(note)showNote(note);}
   if(equipment==='flashlight')toggleFlash();
  }
  async function previewAudio(kind){
@@ -467,7 +506,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   root.classList.toggle('lab-flash-off',!s.flashlight);
   $('house-light').hidden=equipment!=='flashlight'||!!s.hidden||!!s.lying;
   $('house-use-phone').hidden=!['phone','paper'].includes(equipment)||notePresentation||!!noteLift||!!s.hidden||!!s.lying;
-  $('house-use-phone').setAttribute('aria-label',equipment==='paper'?'Leer nota':'Usar teléfono');
+  $('house-use-phone').setAttribute('aria-label',equipment==='paper'?'Observar nota':'Usar teléfono');
+  $('house-use-phone').querySelector('small').textContent=equipment==='paper'?'Observar':'Usar';
   const canEmote=inBathroom()&&!notePresentation&&!noteLift;
   root.querySelector('[data-act=emotes]').hidden=!canEmote;
   if(!canEmote)$('house-emotes').hidden=true;
@@ -622,6 +662,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(!s||!renderer)return;
   updateHiding(dt);
   updateStory(shotDelta);
+  updateBatterySwap(shotDelta);
   let view=cameraOf(s),hand=!s.hidden&&!s.lying&&!poseTransition&&!animator.performing&&!phone.open,torch=flashlightBeam(),introHands=null,distance=0;
   if(mouseLocked()&&(isPaused()||phone.open||events.phase==='arrival'))releaseMouse();
   if(cinematic){
@@ -651,10 +692,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(piano){
    hand=false;
    const home=piano.object.keys;
-   introHands=[{x:1.035,y:1.002,z:home[5].z},{x:1.035,y:1.002,z:home[2].z}];
+   const handAt=(index,press=0)=>({x:home[index].x+piano.object.handOffsetX,y:piano.object.keyHeight+.052-press,z:home[index].z});
+   introHands=[handAt(5),handAt(2)];
    for(const [index,start] of piano.pressed){
-    const t=Math.min(1,(now-start)/180);piano.object.keys[index].y=.95-Math.sin(Math.PI*t)*.027;
-    introHands[index<4?1:0]={x:1.019,y:1.002-Math.sin(Math.PI*t)*.037,z:home[index].z};
+    const t=Math.min(1,(now-start)/180),press=Math.sin(Math.PI*t);
+    home[index].y=piano.object.keyHeight-press*.027;
+    introHands[index<4?1:0]=handAt(index,press*.037);
     if(t===1){piano.pressed.delete(index);dialog.querySelector('[data-act="piano:'+index+'"]')?.classList.remove('pressed');}
    }
   }
@@ -676,7 +719,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(!isPaused()){
    if(noteHold>0)noteHold=Math.max(0,noteHold-dt);
    const canReadNote=events.phase==='explore'||events.phase==='evaded';
-   const showNote=inBathroom()&&mirrorSafe.collected&&!mirrorSafe.opened&&(!mirrorSafe.revealed||noteHold>0)&&canReadNote;
+   const showNote=inBathroom()&&mirrorSafe.collected&&(!mirrorSafe.revealed||noteHold>0)&&canReadNote;
    if(showNote!==notePresentation){
     notePresentation=showNote;phone.equip(showNote?'empty':equipment);equipmentAge=0;
     if(showNote)cancelEmote({immediate:true});
@@ -685,14 +728,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    noteLift=reducedMotion.matches?Number(wantsNote):clamp(noteLift+(wantsNote?1:-1)*dt*2.6,0,1);
   }
   const raisedNote=noteLift>0&&!phone.open&&!cinematic&&events.phase!=='arrival'&&!s.hidden;
-  const visualEquipment=raisedNote||equipment==='paper'&&s.inventory.notes.at(-1)?.id==='mirror-note'?'note':notePresentation?'empty':equipment,noteRaise=noteLift*noteLift*(3-2*noteLift);
+  const visualEquipment=raisedNote||equipment==='paper'&&(s.inventory.pendingNote??s.inventory.notes.at(-1))?.id==='mirror-note'?'note':notePresentation?'empty':equipment,noteRaise=noteLift*noteLift*(3-2*noteLift);
   if(roomAt(s.x,s.z,s.y)!=='Sala de estar')world.television.power.on=false;
   television.sync(world.television.power.on,!isPaused()&&!phone.open);
   if(updateWallClock(world.clock)&&!isPaused()&&Math.hypot(s.x-world.clock.x,s.y,s.z-world.clock.z)<4.5)play('clock-tick',world.clock,.55);
   const outdoor=s.y<-.12?0:view.x<0||view.x>HOUSE.width||view.z<0||view.z>HOUSE.depth?1:Math.max(0,1-Math.min(view.x,HOUSE.width-view.x,view.z,HOUSE.depth-view.z)/1.5)*.22;
   sound.locate({room:roomAt(view.x,view.z,s.y),outdoor,hidden:!!s.hidden,powered:world.lights.power.on});
   try{
-   renderer.render(view,torch,elapsed,hand,{bob:s.bob,action:handAction,clickAction,speed:animator.speed,acceleration:animator.acceleration,walkWeight:animator.weight,reduced:s.reduceBob,swayX:handDrift.x,swayY:handDrift.y,introHands,animator,feetY:s.y,crouched:s.crouched,equipment:visualEquipment,noteRaise,equipLift:raisedNote?-.52*(1-noteRaise):reducedMotion.matches?0:-.22*Math.pow(1-Math.min(1,equipmentAge/.3),2),bathDoorAmount:world.objects.find(o=>o.id==='bano').amount,thirdPerson,actorTime,pursuer:pursuer.snapshot(),television});
+   renderer.render(view,torch,elapsed,hand,{bob:s.bob,action:handAction,clickAction,speed:animator.speed,acceleration:animator.acceleration,walkWeight:animator.weight,reduced:s.reduceBob,swayX:handDrift.x,swayY:handDrift.y,introHands,animator,feetY:s.y,crouched:s.crouched,equipment:visualEquipment,noteRaise,batterySwap,equipLift:raisedNote?-.52*(1-noteRaise):reducedMotion.matches?0:-.22*Math.pow(1-Math.min(1,equipmentAge/.3),2),bathDoorAmount:world.objects.find(o=>o.id==='bano').amount,thirdPerson,actorTime,pursuer:pursuer.snapshot(),television});
    if(capturePhoto){capturePhoto=false;if(phone.open&&phone.app==='camera')phone.takePhoto(canvas);}
    phone.updateCamera(canvas,now);
   }catch(e){contextLost=true;showModal('Error de renderizado',`<p>${escapeHTML(String(e.message||e))}</p>`,[['Volver a pruebas','exit']]);}
@@ -700,7 +743,20 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const readingMirror=mirrorLit&&inBathroom()&&renderer.mirrorDrawn&&mirrorDistance<3&&Math.abs(view.pitch-Math.atan2(BATH_MIRROR.y-view.y,mirrorDistance))<.57&&!phone.open;
   const mirrorCue=mirrorSafe.advance(shotDelta,{active:!isPaused()&&!phone.open,mirror:readingMirror&&noteLift>=.95});
   if(mirrorCue==='hint')say(MIRROR_HINT,6);
-  if(mirrorCue==='revealed'){noteHold=4;play('pickup');}
+  if(mirrorCue==='revealed'){
+   noteHold=4;
+   const note=s.inventory.pendingNote;
+   if(note){
+    s.inventory.notes.push({...note,label:'Nota del espejo · resuelta'});
+    s.inventory.pendingNote=null;
+    if(equipment==='paper'){
+     equipment=equipmentBeforeNote;
+     equipmentAge=0;
+    }
+    phone.setInventory(s.inventory);phone.equip('empty');
+   }
+   play('pickup');
+  }
   hudMessages.update({dt:isPaused()?0:shotDelta,blocked:isSuspended()||!!cinematic,danger:danger.hidden?'':danger.textContent,revelation:readingMirror&&mirrorSafe.collected&&mirrorSafe.revealed&&!mirrorSafe.opened?'En el espejo: '+SAFE_CODE+' · combinación de la caja fuerte':'',unread:phone.messageCount>phone.readCount,messageCount:phone.messageCount,phoneOpen:phone.open,dock:phone.rect});
   frameCount++;
   if(now-statsAt>1000){
@@ -844,6 +900,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   window.__rescueHouse={
    mirrorPuzzle:()=>({...mirrorSafe.snapshot(),noteLift,safe:(()=>{const o=world.objects.find(o=>o.id==='mirror-safe');return {amount:o.amount,state:o.state};})()}),
    amenities:()=>({power:world.lights.power.on,lights:world.lights.circuits.filter(circuitPowered).map(c=>c.id),
+    battery:{charge:s.battery,spares:s.inventory.batteries,swap:batterySwap},
     television:{on:television.powered,time:television.video.currentTime,duration:television.video.duration,frame:renderer.tvFrame},
     clock:{second:world.clock.second,hands:world.clock.hands.map(({hand})=>hand.roll)},
     rug:world.hatchRug.amount,hatch:world.hatch.amount,stamina:s.stamina,sprinting:s.sprinting,notePresentation}),

@@ -1,6 +1,9 @@
-import {chibiPiece,placePieces,torchModel,grippingPaw} from './chibi-model.js';
+import {CHIBI,chibiPiece,placePieces,torchModel,grippingPaw} from './chibi-model.js';
 import {geometry} from './renderer.js';
 import {notePieces,phonePieces,keyPieces} from './equipment.js';
+import {curve,ease} from './animations/pose-tools.js';
+
+export const BATTERY_SWAP_SECONDS=1.35;
 
 // V4 View-Model configuration. Variant C (compact, clear reticle on mobile & desktop).
 export const VIEWMODEL_CONFIG = Object.freeze({
@@ -37,6 +40,38 @@ export function flashlightPieces(flash=true){
  return cache[flash?'on':'off'] ??= viewModelPieces('flashlight', flash);
 }
 
+function batterySwapPieces(){
+ const cell=[
+  chibiPiece('replacement-cell',0,0,-.145,.092,.092,.163,[.25,.39,.56],{joint:'cell',shape:'cylinder',segments:10}),
+  chibiPiece('replacement-copper',0,0,-.072,.092,.092,.037,[.85,.52,.29],{joint:'cell',shape:'cylinder',segments:10}),
+  chibiPiece('replacement-contact',0,0,-.052,.04,.04,.018,CHIBI.metal,{joint:'cell',shape:'cylinder',segments:8})
+ ];
+ const torch=torchModel(false).map(piece=>piece.id==='torch-end-cap'?{...piece,joint:'cap'}:piece);
+ return placePieces([...torch,...grippingPaw(),...cell],{...VIEWMODEL_CONFIG.flashlight,prefix:'swap-'});
+}
+
+function animateBatterySwap(vertices,groups,offset,elapsed,reduced){
+ const t=elapsed/BATTERY_SWAP_SECONDS;
+ const opening=ease((t-.11)/.22)*ease((.95-t)/.19);
+ const offsets={
+  cap:[.15*opening,.076*opening,-.14*opening],
+  cell:[
+   curve([[0,0],[.32,0],[.47,-.18],[.52,-.24],[.61,-.06],[.78,0]],t),
+   curve([[0,0],[.37,0],[.49,-.23],[.58,-.17],[.68,0]],t),
+   curve([[0,0],[.30,0],[.45,-.28],[.57,-.31],[.76,0]],t)
+  ]
+ };
+ for(const {joint,start,end} of groups){
+  const displacement=offsets[joint];
+  if(!displacement)continue;
+  for(let i=start*16;i<end*16;i+=16){
+   vertices[i]+=displacement[0];vertices[i+1]+=displacement[1];vertices[i+2]+=displacement[2];
+  }
+ }
+ offset.x-=.10*opening;offset.y+=.115*opening;
+ if(!reduced){offset.pitch+=.42*opening;offset.roll-=.64*opening;}
+}
+
 export function viewModelOffsets(time,motion={}){
  const act=Math.min(1,Math.max(0,motion.action||0)),click=Math.min(1,Math.max(0,motion.clickAction||0)),drop=(motion.crouched?-.040:0)+(motion.equipLift||0);
  if(motion.reduced)return {x:0,y:drop,z:0,pitch:0,roll:0};
@@ -51,16 +86,19 @@ export function drawViewModel(renderer, kind='flashlight', state={}){
  const gl = renderer.gl;
 
  if(kind==='empty')return;
- const cacheKey=kind!=='flashlight'?kind:flash?'on':'off';
- const pieces=kind!=='flashlight'?(cache[kind]??=viewModelPieces(kind)):flashlightPieces(flash);
- const {vertices: base, indices} = renderer.handGeometry[cacheKey] ??= geometry(pieces);
+ const swapping=kind==='flashlight'&&Number.isFinite(motion.batterySwap);
+ const cacheKey=swapping?'battery-swap':kind!=='flashlight'?kind:flash?'on':'off';
+ const pieces=swapping?(cache[cacheKey]??=batterySwapPieces()):kind!=='flashlight'?(cache[kind]??=viewModelPieces(kind)):flashlightPieces(flash);
+ const {vertices: base,indices,groups}=renderer.handGeometry[cacheKey]??=geometry(pieces);
  const vertices = (renderer.viewVertices??={})[cacheKey] ??= new Float32Array(base.length);
  vertices.set(base);
 
  const reduced = !!motion.reduced;
 
  // Smoothed actual speed and a small grip rotation settle naturally after a stop.
- const offset=viewModelOffsets(time,motion),cp=Math.cos(offset.pitch),sp=Math.sin(offset.pitch),cr=Math.cos(offset.roll),sr=Math.sin(offset.roll);
+ const offset=viewModelOffsets(time,motion);
+ if(swapping)animateBatterySwap(vertices,groups,offset,motion.batterySwap,reduced);
+ const cp=Math.cos(offset.pitch),sp=Math.sin(offset.pitch),cr=Math.cos(offset.roll),sr=Math.sin(offset.roll);
  const grip=kind==='phone'?{x:.37,y:-.25,z:.85}:kind==='flashlight'?VIEWMODEL_CONFIG.flashlight:noteGrip;
 
  // Transform vertices into camera-oriented world space
@@ -99,9 +137,9 @@ export function drawViewModel(renderer, kind='flashlight', state={}){
  gl.bindBuffer(gl.ARRAY_BUFFER, renderer.handVbo);
  gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.DYNAMIC_DRAW);
  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, renderer.handIbo);
- if(renderer.handIndexKind !== kind){
+ if(renderer.handIndexKind !== cacheKey){
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
-  renderer.handIndexKind = kind;
+  renderer.handIndexKind = cacheKey;
  }
  renderer.bind(renderer.handVbo, renderer.handIbo);
  gl.clear(gl.DEPTH_BUFFER_BIT);
