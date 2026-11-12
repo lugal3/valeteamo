@@ -109,7 +109,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  let safeInput='',activeSafe=null,noteLift=0,noteHold=0,notePresentation=false,capturePhoto=false,piano=null;
  let rc=null,louis=null,rcTrap={armed:false,closed:false},finalCutscene=null;
  let equipmentBeforeNote='empty',batterySwap=null;
- const canUseHotbar=()=>ready&&!isSuspended()&&!cinematic&&events.phase!=='arrival'&&events.phase!=='failed'&&events.phase!=='safe';
+ const canUseHotbar=()=>ready&&!isSuspended()&&!cinematic&&events.phase!=='arrival'&&events.phase!=='failed'&&events.phase!=='safe'&&rc?.mode!=='driving'&&rc?.mode!=='deploying';
  const phone=new PhoneUI(root,(kind,toggle=true)=>equip(kind,toggle),()=>resetInput(),{canEquip:canUseHotbar,canUse:()=>canUseHotbar()&&!notePresentation,onEdit:()=>{releaseMouse();resetInput();if(isSuspended())sound.pause();else sound.resume();},onPhoto:()=>{capturePhoto=true;}});phone.equip(equipment);
  const danger=document.createElement('div');danger.className='house-danger';danger.hidden=true;danger.setAttribute('role','status');root.querySelector('#house-messages').append(danger);
  const enableSound=document.createElement('button');enableSound.className='house-enable-sound';enableSound.textContent='Activar sonido';enableSound.hidden=true;root.querySelector('.house-mixer').before(enableSound);
@@ -572,6 +572,17 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(target?.kind==='cupboard')interactButton.querySelector('small').textContent=target.open?'Cerrar refrigerador':'Abrir refrigerador';
   if(target?.kind==='safe')interactButton.querySelector('small').textContent=mirrorSafe.opened?'Ver contenido':'Introducir código';
   if(target?.kind==='light-switch')interactButton.querySelector('small').textContent=!world.lights.power.on?'Sin corriente':target.circuit.on?'Apagar luz':'Encender luz';
+  const remote=rc?.mode==='driving';
+  $('house-rc-hud').hidden=!remote;
+  if(remote){
+   $('house-rc-status').textContent=rc.noise>0?'Emitiendo señal sonora · '+Math.ceil(rc.noise)+' s':'Señal conectada · '+Math.round(rc.velocity*10)/10+' m/s';
+   $('rc-trap-button').hidden=!canTrapPursuer(pursuer,world.hatch,rcTrap.armed);
+   interactButton.hidden=true;
+  }
+  const announce=rc?.mode==='deploying'||louis&&['climb','hide'].includes(louis.phase)||!!finalCutscene;
+  $('house-rc-caption').hidden=!announce;
+  if(announce)$('house-rc-caption').textContent=finalCutscene?'¡Libres! Kitty y Louis cruzan el jardín…':louis&&['climb','hide'].includes(louis.phase)?'Louis sube del sótano y busca refugio tras la barra americana…':'Kitty se agacha y despliega el autito con las dos patitas…';
+  root.classList.toggle('house-rc-driving',remote);
   if(poseTransition)interactButton.querySelector('small').textContent=poseTransition.entering?'Entrando…':'Saliendo…';
   if(target?.motion)interactButton.querySelector('small').textContent=target.state==='opening'?'Abriendo…':'Cerrando…';
   interactButton.classList.toggle('lab-available',!!target||!!s.hidden||!!s.lying);
@@ -638,6 +649,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const dz=(Math.cos(s.yaw)*velocity.forward-Math.sin(s.yaw)*velocity.side)*speed*dt;
   const body=s.crouched?1.04:1.64;
   const moved=navigate(s,world,dx,dz,body);
+  if(events.phase==='escape'&&louis?.phase==='follow'&&s.z>12.35&&s.x>4.6&&s.x<7.2){
+   finalCutscene={elapsed:0};events.phase='ending';resetInput();
+   Object.assign(louis,{x:s.x-.35,y:0,z:s.z-.25,yaw:s.yaw});
+   play('notification');
+  }
   s.sprinting=sprint&&moved>.002;
   if(s.sprinting){
    s.stamina=Math.max(0,s.stamina-dt);s.recoveryDelay=.60;
@@ -738,6 +754,28 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    }
   }
   let thirdPerson=null,actorTime;
+  if(louis&&['climb','hide'].includes(louis.phase)){
+   view=louisCamera(louis);hand=false;torch=false;
+  }
+  if(rc?.mode==='deploying'){
+   const t=Math.min(1,rc.elapsed);
+   view={x:s.x,y:s.y+1.63-.81*t,z:s.z,yaw:s.yaw,pitch:-.85*t};
+   const forward={x:Math.sin(s.yaw),z:Math.cos(s.yaw)},right={x:Math.cos(s.yaw),z:-Math.sin(s.yaw)};
+   introHands=[-1,1].map(side=>({x:rc.x+right.x*side*.18,y:rc.y+.16+.18*(1-t),z:rc.z+right.z*side*.18}));
+   hand=false;torch=false;
+  }
+  if(rc?.mode==='driving'){
+   view=rcCamera(rc,world);hand=false;torch=false;
+  }
+  if(finalCutscene){
+   if(!isSuspended())finalCutscene.elapsed+=shotDelta;
+   const t=Math.min(1,finalCutscene.elapsed/4);
+   view={x:7.4+Math.sin(t*Math.PI)*.8,y:2.7,z:15.8+t*1.2,yaw:Math.PI+.12*t,pitch:-.24};
+   thirdPerson=cameraOf(s);hand=false;torch=false;
+   if(t===1&&events.phase==='ending'){
+    events.phase='safe';showModal('¡Kitty y Louis escaparon!', '<p>La escotilla quedó asegurada. El secuestrador sigue encerrado en el sótano mientras los dos salen juntos hacia el jardín.</p><p>Fin del rescate ♡</p>',[[config.onRescue?'Ver final':'Volver a pruebas',config.onRescue?'finish':'exit']]);
+   }
+  }
   if(events.phase==='arrival'){
    hand=false;phone.close();
    const timeSinceCut=events.time-2.9;
