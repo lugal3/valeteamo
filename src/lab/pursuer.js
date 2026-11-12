@@ -26,7 +26,15 @@ export class Pursuer{
   for(const n of this.nodes){n.neighbors=[];for(const [di,dj]of [[1,0],[-1,0],[0,1],[0,-1]])for(const next of this.cells.get((n.i+di)+','+(n.j+dj))||[]){if(Math.abs(next.y-n.y)>.34)continue;let clear=true;for(let k=1;k<=4;k++){const t=k/4;if(blocked(boxes,n.x+(next.x-n.x)*t,n.y+(next.y-n.y)*t,n.z+(next.z-n.z)*t,.16,1.72)){clear=false;break;}}if(clear)n.neighbors.push(next.index);}}
  }
  plan(goal){
-  this.buildGraph();const boxes=this.planningBoxes(),available=n=>!blocked(boxes,n.x,n.y,n.z,.16,1.72),nearest=p=>{let best=null,d=Infinity;for(const n of this.nodes){const v=dist(n,p);if(v<d&&available(n)){best=n;d=v;}}return best;};
+  this.buildGraph();
+  // Cache occupancy only for this planning pass: the door/furniture state may change
+  // between plans, but remains fixed while the synchronous search is running.
+  const boxes=this.planningBoxes(),availability=new Map();
+  const available=n=>{
+   if(!availability.has(n.index))availability.set(n.index,!blocked(boxes,n.x,n.y,n.z,.16,1.72));
+   return availability.get(n.index);
+  };
+  const nearest=p=>{let best=null,d=Infinity;for(const n of this.nodes){const v=dist(n,p);if(v<d&&available(n)){best=n;d=v;}}return best;};
   const start=nearest(this),end=nearest(goal);this.goal={...goal};this.path=[];this.replan=.8;if(!start||!end)return false;
   const open=new Set([start.index]),cost=new Map([[start.index,0]]),parent=new Map();let found=false;
   while(open.size){let id=null,best=Infinity;for(const i of open){const f=cost.get(i)+dist(this.nodes[i],end);if(f<best){best=f;id=i;}}open.delete(id);if(id===end.index){found=true;break;}
