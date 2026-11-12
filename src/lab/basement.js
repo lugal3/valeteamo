@@ -115,7 +115,8 @@ export function installBasement(add,obj,lights){
    add('tunnel-iron-'+i+'-'+side,px,y+1.69,at-.102,.101,.108,.023,'torchmetal',false,iron);
    add('tunnel-bolt-'+i+'-'+side,px,y+1.69,at-.118,.041,.041,.026,'brass',false,{shape:'cylinder',segments:6});
   }
-  add('tunnel-beam-'+i,X,y+1.86,at,half*2+.18,.16,.20,'wood',true,wood);
+  // Maintain physical headroom for both Kitty and the pursuer at the tunnel throat.
+  add('tunnel-beam-'+i,X,y+2.06,at,half*2+.18,.16,.20,'wood',true,wood);
  }
  for(const [i,at] of [6.28,12.72].entries()){
   const y=floor(at),px=X+(i===0?-.36:.44);
