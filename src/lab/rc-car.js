@@ -27,7 +27,7 @@ export function deployRC(rc,player,world){
  syncRCObject(rc);return true;
 }
 export function syncRCObject(rc){
- Object.assign(rc.object,{x:rc.x,y:rc.y+.14,z:rc.z,yaw:rc.yaw});
+ Object.assign(rc.object,{x:rc.x,y:rc.y+.14,z:rc.z,yaw:rc.yaw,mode:rc.mode});
 }
 export function driveRC(rc,world,input,dt){
  if(rc.mode!=='driving'||dt<=0)return 0;
