@@ -49,7 +49,8 @@ export class Pursuer{
   return !lineBlocked(this.world.boxes,{x:this.x,y:this.y+1.4,z:this.z},{x:p.x,y:p.y+(p.crouched?.75:1.1),z:p.z});
  }
  update(dt,p,onDoor=()=>{},decoy=null){
-  const cues=[];if(!this.active||dt<=0||this.mode==='trapped')return cues;
+  const cues=[];if(!this.active||dt<=0)return cues;
+  if(this.mode==='trapped'){this.age+=dt;this.speed=0;return cues;}
   if(this.mode==='sleeping'){this.age+=dt;return cues;}
   const bait=decoy?.active&&(decoy.noisy||this.canSee(decoy));
   if(bait){
@@ -70,7 +71,7 @@ export class Pursuer{
   for(const door of this.world.objects)if(door.kind==='door'&&door.state!=='open'&&Math.abs(door.y-1.1-this.y)<1.2&&Math.hypot(door.x-this.x,door.z-this.z)<1.6)onDoor(door);
   let moved=0;
   const next=this.path[0];if(next){const dx=next.x-this.x,dz=next.z-this.z,d=Math.hypot(dx,dz);if(d<.07){this.path.shift();}else{
-   this.yaw=Math.atan2(dx,dz);const step=Math.min(d,dt*(this.mode==='chase'?2.15:1.45));moved=navigate(this,this.world,dx/d*step,dz/d*step,1.72);this.walk+=moved;this.stepDistance+=moved;this.stuck=moved<.003?this.stuck+dt:0;
+   this.yaw=Math.atan2(dx,dz);const step=Math.min(d,dt*(['chase','rc-chase'].includes(this.mode)?2.15:1.45));moved=navigate(this,this.world,dx/d*step,dz/d*step,1.72);this.walk+=moved;this.stepDistance+=moved;this.stuck=moved<.003?this.stuck+dt:0;
    if(this.stepDistance>.65){this.stepDistance%=.65;cues.push('step');}
   }}else if(this.goal&&dist(this,this.goal)<.8){
    if(this.mode==='to-bed'){this.mode='sleeping';this.task=null;}
