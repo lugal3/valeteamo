@@ -1,4 +1,4 @@
-import {lineBlocked} from './world.js';
+import {lineBlocked,roomAt} from './world.js';
 
 // Reachable targets only; hysteresis never retains an object through a wall.
 export function interactionTarget(world,camera,previous=null){
@@ -6,6 +6,8 @@ export function interactionTarget(world,camera,previous=null){
  let best=null,bestScore=Infinity;
  for(const object of world.objects){
   if(object.taken||object.concealed||object.interactable===false)continue;
+  // A shower inside the bathroom must never be used through the corridor wall.
+  if(object.id==='hide-shower'&&roomAt(camera.x,camera.z,camera.y-1.1)!=='Baño')continue;
   const dx=object.x-camera.x,dy=object.y-camera.y,dz=object.z-camera.z;
   const distance=Math.hypot(dx,dy,dz),forward=dx*direction.x+dy*direction.y+dz*direction.z;
   if(forward<.18||distance>2.45)continue;
