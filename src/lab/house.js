@@ -496,6 +496,28 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   if(act==='exit'){stop();onExit();return;}
   if(act==='finish'){config.onRescue?.();return;}
+  if(act==='rc:stop'){
+   if(stopRC(rc)){equipment='rc';equipmentAge=0;phone.equip('rc');resetInput();say('Tablet guardada · el autito queda en el suelo. Pulsa USAR para conducir de nuevo.',4);}
+   return;
+  }
+  if(act==='rc:noise'){
+   if(beepRC(rc)){
+    if(events.phase==='rc-setup'&&!pursuer.active){pursuer.start();pursuer.nodes=null;}
+    play('notification',rc,1.7);say('¡BIP BIP! El autito llama la atención del perseguidor.',2.8);
+   }return;
+  }
+  if(act==='rc:trap'){
+   if(!canTrapPursuer(pursuer,world.hatch,rcTrap.armed)){say('Espera a que el secuestrador entre por completo al túnel.');return;}
+   rcTrap.closed=true;rcTrap.armed=false;
+   world.hatch.open=false;poseHatch(world.hatch,0);pursuer.mode='trapped';pursuer.path=[];
+   stopRC(rc);equipment='rc';phone.equip('rc');
+   const entrance=world.objects.find(o=>o.id==='entrada');entrance.sealed=false;entrance.locked=false;setDoor(entrance,true);
+   for(const box of world.boxes)if(box.id.startsWith('entry-padlock'))box.hiddenGeometry=true;
+   freeLouis(louis);events.phase='escape';sound.setThreat(false);resetInput();rebuild();
+   play('door-close',world.hatch);play('latch',world.hatch);
+   say('¡Atrapado! El secuestrador está encerrado. Louis sale de su escondite: escapen juntos por la puerta principal.',8);
+   return;
+  }
   if(act==='mouse'){lockMouse();return;}
   if(act.startsWith('piano:')){playPiano(Number(act.slice(6)));return;}
   if(act==='skip-intro'){if(cinematic)finishWindowIntro();return;}
@@ -512,12 +534,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(act==='recharge'){recharge();return;}
   if(act.startsWith('safe:')){safeAction(act.slice(5));return;}
   if(act==='read'){const note=s.inventory.notes.find(n=>n.id===node.dataset.id);if(note?.id==='mirror-note')showMirrorNote('bag');else if(note)showNote(note,'bag');return;}
-  if(act==='bag'){bag();return;}
+  if(act==='bag'){if(rc?.mode==='driving')return;bag();return;}
   if(act==='reset'){reset();if(ready&&!isPaused())sound.resume();return;}
   if(act==='hud'&&ready&&!cinematic){$('lab-camera-settings').open=false;phone.edit();return;}
   if(act==='copy-mix'){void copyMix();return;}
   if(act.startsWith('audio:')){void previewAudio(act.slice(6));return;}
   if(isPaused())return;
+  if(rc?.mode==='driving'||rc?.mode==='deploying')return;
   if(events.phase==='arrival'||events.phase==='safe'||events.phase==='failed')return;
   if(act==='emotes'&&inBathroom()&&!notePresentation&&!noteLift){$('house-emotes').hidden=!$('house-emotes').hidden;resetInput();return;}
   if(act.startsWith('emote:')&&inBathroom()&&!notePresentation&&!noteLift){
@@ -936,6 +959,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(modal==='Caja fuerte'&&e.key!=='Tab'){if(/^\d$/.test(e.key)){e.preventDefault();safeAction(e.key);}else if(e.key==='Backspace'||e.key==='Delete'){e.preventDefault();safeAction(e.key==='Delete'?'clear':'back');}else if(e.key==='Enter'){e.preventDefault();safeAction('submit');}else if(e.key==='Escape'){e.preventDefault();modalClose();}return;}
   if((events.phase==='safe'||events.phase==='failed')&&!['Tab','Enter',' '].includes(e.key)){e.preventDefault();return;}
   if(['1','2','3','4','5','6'].includes(e.key)&&!isPaused()&&events.phase!=='arrival'){if(!e.repeat&&rc.mode!=='driving'&&rc.mode!=='deploying')equip([s.inventory.redKey?'red-key':'empty','flashlight','phone','key','paper','rc'][Number(e.key)-1],true);return;}
+  if(rc?.mode==='driving'&&!e.repeat&&['q','x','t'].includes(e.key.toLowerCase())){
+   e.preventDefault();runAction({q:'rc:noise',x:'rc:stop',t:'rc:trap'}[e.key.toLowerCase()]);return;
+  }
   if(e.key.toLowerCase()==='r'&&!e.repeat&&!isPaused()&&!phone.open){if(mouseLocked())releaseMouse();else lockMouse();return;}
   if(phone.open){if(e.key==='Escape'){e.preventDefault();phone.close();resetInput();}else if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'].includes(e.key)){e.preventDefault();phone.key(e.key);}else if(e.key==='Tab'){const b=[...root.querySelectorAll('.phone-screen button')],first=b[0],last=b.at(-1);if((e.shiftKey&&document.activeElement===first)||(!e.shiftKey&&document.activeElement===last)){e.preventDefault();(e.shiftKey?last:first).focus();}}return;}
   if((e.key==='p'||e.key==='P')&&equipment==='phone'){runAction('phone');return;}
