@@ -2,12 +2,16 @@ import {blocked,groundHeight,lineBlocked,HEIGHT} from './world.js';
 import {navigate} from './navigation.js';
 
 const CELL=.4,dist=(a,b)=>Math.hypot(a.x-b.x,(a.y-b.y)*2,a.z-b.z);
-export const SEARCH_ROUTE=Object.freeze([{x:12,y:HEIGHT,z:4.2},{x:6,y:HEIGHT,z:2.8},{x:2.5,y:HEIGHT,z:3.6},{x:6,y:HEIGHT,z:5.8}]);
+export const SEARCH_ROUTE=Object.freeze([{x:12,y:HEIGHT,z:4.2},{x:6,y:HEIGHT,z:2.8},{x:2.5,y:HEIGHT,z:3.6},{x:6,y:HEIGHT,z:5.8},{x:6,y:0,z:8.7},{x:8.67,y:0,z:2.20}]);
+const BED_APPROACH={x:2.66,y:HEIGHT,z:1.77},ENTRY_APPROACH={x:5.8,y:0,z:11};
 export class Pursuer{
  constructor(world){this.world=world;this.reset();}
- reset(){this.x=5.8;this.y=0;this.z=11;this.yaw=this.facing=Math.PI;this.mode='dormant';this.awareness=0;this.lost=10;this.witnessed=null;this.lastSeen=null;this.path=[];this.route=0;this.visited=0;this.replan=0;this.walk=this.speed=this.age=0;this.stepDistance=0;this.caught=false;this.stuck=0;}
+ reset(){this.x=5.8;this.y=0;this.z=11;this.yaw=this.facing=Math.PI;this.mode='dormant';this.awareness=0;this.lost=10;this.witnessed=null;this.lastSeen=null;this.path=[];this.route=0;this.visited=0;this.replan=0;this.walk=this.speed=this.age=0;this.stepDistance=0;this.caught=false;this.stuck=0;this.task=null;}
  get active(){return this.mode!=='dormant'&&this.mode!=='gone';}
  start(){this.reset();this.mode='search';this.plan(SEARCH_ROUTE[0]);}
+ goToBed(){this.mode='to-bed';this.task=BED_APPROACH;this.plan(this.task);}
+ wake(){this.mode='to-entry';this.task=ENTRY_APPROACH;this.plan(this.task);}
+ resumeSearch(){this.task=null;this.mode='search';this.route=4;this.visited=0;this.witnessed=null;this.lastSeen=null;this.awareness=0;this.plan(SEARCH_ROUTE[this.route]);}
  retreat(){this.mode='retreat';this.witnessed=null;this.lastSeen=null;this.awareness=0;this.plan({x:5.8,y:0,z:11});}
  planningBoxes(){const leaves=new Set(this.world.objects.filter(o=>o.kind==='door'&&o.state!=='open').flatMap(o=>[o.box,...(o.parts||[]).map(p=>p.box)]));return this.world.boxes.filter(b=>!leaves.has(b));}
  buildGraph(){
@@ -38,7 +42,8 @@ export class Pursuer{
  }
  update(dt,p,onDoor=()=>{}){
   const cues=[];if(!this.active||dt<=0)return cues;
-  const visible=this.mode!=='retreat'&&this.canSee(p);this.lost=visible?0:this.lost+dt;
+  if(this.mode==='sleeping'){this.age+=dt;return cues;}
+  const visible=this.mode!=='retreat'&&!this.task&&this.canSee(p);this.lost=visible?0:this.lost+dt;
   this.awareness=Math.max(0,Math.min(1,this.awareness+dt*(visible?(p.crouched?1:1.7):-.5)));
   if(visible){this.lastSeen={x:p.x,y:p.y,z:p.z};if(p.entering)this.witnessed=p.hideId;}
   if(this.awareness>=1&&this.mode!=='chase'){this.mode='chase';cues.push('spotted');this.replan=0;}
@@ -46,14 +51,19 @@ export class Pursuer{
   const witnessed=p.hidden&&this.witnessed===p.hideId;
   if((visible||witnessed)&&Math.abs(this.y-p.y)<.6&&Math.hypot(this.x-p.x,this.z-p.z)<(witnessed?1.5:.85)){this.caught=true;cues.push('caught');return cues;}
   this.replan-=dt;
-  const target=this.mode==='retreat'?{x:5.8,y:0,z:11}:witnessed?(p.hideExit||this.lastSeen):this.lastSeen&&this.lost<4?this.lastSeen:SEARCH_ROUTE[this.route];
+  const target=this.task||(this.mode==='retreat'?ENTRY_APPROACH:witnessed?(p.hideExit||this.lastSeen):this.lastSeen&&this.lost<4?this.lastSeen:SEARCH_ROUTE[this.route]);
   if(this.replan<=0&&(this.mode==='chase'||!this.path.length||this.stuck>.5||!this.goal||dist(target,this.goal)>.5))this.plan(target);
   for(const door of this.world.objects)if(door.kind==='door'&&door.state!=='open'&&Math.abs(door.y-1.1-this.y)<1.2&&Math.hypot(door.x-this.x,door.z-this.z)<1.6)onDoor(door);
   let moved=0;
   const next=this.path[0];if(next){const dx=next.x-this.x,dz=next.z-this.z,d=Math.hypot(dx,dz);if(d<.07){this.path.shift();}else{
    this.yaw=Math.atan2(dx,dz);const step=Math.min(d,dt*(this.mode==='chase'?2.15:1.45));moved=navigate(this,this.world,dx/d*step,dz/d*step,1.72);this.walk+=moved;this.stepDistance+=moved;this.stuck=moved<.003?this.stuck+dt:0;
    if(this.stepDistance>.65){this.stepDistance%=.65;cues.push('step');}
-  }}else if(this.goal&&dist(this,this.goal)<.8){if(this.mode==='retreat'){this.mode='gone';cues.push('gone');}else{this.lastSeen=null;this.witnessed=null;this.visited++;this.route=(this.route+1)%SEARCH_ROUTE.length;this.plan(SEARCH_ROUTE[this.route]);}}
+  }}else if(this.goal&&dist(this,this.goal)<.8){
+   if(this.mode==='to-bed'){this.mode='sleeping';this.task=null;}
+   else if(this.mode==='to-entry')cues.push('at-entry');
+   else if(this.mode==='retreat'){this.mode='gone';cues.push('gone');}
+   else{this.lastSeen=null;this.witnessed=null;this.visited++;this.route=(this.route+1)%SEARCH_ROUTE.length;this.plan(SEARCH_ROUTE[this.route]);}
+  }
   this.age+=dt;
   this.speed+=(moved/dt-this.speed)*(1-Math.exp(-8*dt));
   const turn=this.yaw-this.facing;

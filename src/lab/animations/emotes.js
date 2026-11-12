@@ -1,10 +1,12 @@
 import {setJoint} from '../character-rig.js';
 import {arm,feet,curve,ease} from './pose-tools.js';
+import {sampleWhatIsLove} from './what-is-love.js';
 
 export const EMOTES=Object.freeze([
  {id:'six-seven',label:'6–7',key:'6',duration:7.5},
  {id:'gangnam',label:'Gangnam',key:'7',duration:7},
- {id:'wave',label:'Saludar',key:'8',duration:2.4}
+ {id:'wave',label:'Saludar',key:'8',duration:2.4},
+ {id:'what-is-love',label:'What Is Love?',key:'9',duration:10}
 ]);
 
 const palmAccents=[[0,-1],[.09,-1],[.38,1],[.47,1],[.76,-1]];
@@ -69,6 +71,7 @@ export function sampleEmote(id,time,out,{reduced=false,envelope=true}={}){
  if(!weight)return out;
  if(id==='six-seven')sampleSixSeven(out,time,reduced);
  else if(id==='gangnam')sampleGangnam(out,time,reduced);
+ else if(id==='what-is-love')sampleWhatIsLove(out,time,reduced);
  else{
   const wave=reduced?0:curve([[0,-1],[.20,1],[.40,-1]],Math.max(0,time-.3)%.4);
   feet(out,{y:-.01});arm(out,'left',[-.37,.56,.08]);arm(out,'right',[.57,1.015,.10],[0,0,-.25+wave*.28]);setJoint(out,'head',-.015,0,-.045);

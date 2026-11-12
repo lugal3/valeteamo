@@ -1,3 +1,4 @@
+const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
 // House-only regressions. CDP sends two real browser touch contacts; pose setup
 // is DEV-only and is never used during the measured movement/rotation interval.
 const assert=require('node:assert/strict');
@@ -33,7 +34,7 @@ async function main(){
    localStorage.setItem('valeteamo-story-v1',story);localStorage.setItem('valeteamo-rescue-v2',rescue);
    return {story,rescue};
   });
-  await page.reload();await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');
+  await page.reload();await passBirthdayCountdown(page);await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');
   await page.getByRole('button',{name:'Pruebas',exact:true}).click();
   await page.getByRole('button',{name:/^Casa 3D/}).click();await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');
   await page.locator('#lab-dialog [data-act="start"]').click();

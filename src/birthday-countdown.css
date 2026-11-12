@@ -1,0 +1,110 @@
+.birthday-countdown {
+ min-height: 100dvh;
+ box-sizing: border-box;
+ display: grid;
+ place-items: center;
+ padding: max(72px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(32px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+ background: radial-gradient(ellipse at 50% 35%,#492031,#240e1c 58%,#160b14 100%);
+ color: #fff2ee;
+ font-family: system-ui,sans-serif;
+}
+.birthday-countdown-content {
+ width: min(100%,42rem);
+ text-align: center;
+}
+.birthday-countdown-content h1 {
+ margin: 0;
+ color: inherit;
+ font: 400 clamp(2.2rem,8vw,5rem)/1.02 Georgia,serif;
+ letter-spacing: -.035em;
+}
+.birthday-countdown-content h1 em {color: #ffb5cb}
+.birthday-countdown-content p {margin: 1.1rem 0 1.8rem;color: #edbfcb}
+.birthday-time {
+ display: grid;
+ grid-template-columns: repeat(4,minmax(0,1fr));
+ gap: clamp(5px,1.7vw,14px);
+ margin: 0;
+}
+.birthday-time>div {
+ display: flex;
+ flex-direction: column-reverse;
+ align-items: center;
+ gap: .4rem;
+ padding: clamp(.65rem,3vw,1.3rem) .12rem;
+ border: 1px solid #ef9eb455;
+ border-radius: clamp(.6rem,2vw,1.2rem);
+ background: #f6b7ca12;
+}
+.birthday-time dt {color: #ffd0de;font-size: clamp(.61rem,2.6vw,.85rem)}
+.birthday-time dd {
+ margin: 0;
+ font: 500 clamp(1.55rem,7vw,3.8rem)/1 system-ui,sans-serif;
+ font-variant-numeric: tabular-nums;
+ letter-spacing: -.045em;
+}
+.birthday-admin-toggle,.birthday-admin-close {
+ display: grid;
+ place-items: center;
+ width: 44px;
+ height: 44px;
+ padding: 0;
+ border: 1px solid #ef9eb470;
+ border-radius: 50%;
+ background: #f6b7ca12;
+ color: #fff2ee;
+ font-size: 1.45rem;
+ line-height: 1;
+ cursor: pointer;
+}
+.birthday-admin-toggle {
+ position: absolute;
+ top: max(16px,env(safe-area-inset-top));
+ right: max(16px,env(safe-area-inset-right));
+}
+.birthday-admin {
+ box-sizing: border-box;
+ width: min(22rem,calc(100% - 2rem));
+ max-height: calc(100dvh - 2rem);
+ padding: 1.2rem;
+ border: 1px solid #ef9eb470;
+ border-radius: 1.25rem;
+ background: #301624;
+ color: #fff2ee;
+}
+.birthday-admin::backdrop {background: #100810bc}
+.birthday-admin form {display: grid;gap: .75rem}
+.birthday-admin-header {display: flex;align-items: center;justify-content: space-between;gap: 1rem}
+.birthday-admin h2 {margin: 0;color: inherit;font: 400 1.5rem Georgia,serif}
+.birthday-admin input {
+ min-width: 0;
+ border: 1px solid #ef9eb490;
+ border-radius: .65rem;
+ padding: .7rem .8rem;
+ background: #140a10;
+ color: #fff2ee;
+ font: inherit;
+}
+.birthday-admin [role="alert"] {margin: 0;color: #ffb5cb;font-size: .9rem}
+.birthday-submit {
+ min-height: 44px;
+ padding: .65rem 1.25rem;
+ border: 0;
+ border-radius: .7rem;
+ background: #ffb5cb;
+ color: #2e1422;
+ font: 650 .95rem system-ui,sans-serif;
+ cursor: pointer;
+}
+.birthday-countdown :focus-visible {outline: 2px solid #fff2ee;outline-offset: 3px}
+.story-brand .birthday-brand-icon {
+ width: 30px;
+ height: 30px;
+ margin-right: 8px;
+ border-radius: 50%;
+ object-fit: cover;
+ vertical-align: middle;
+}
+@media(max-width:600px) {
+ .story-brand .birthday-brand-icon {width: 24px;height: 24px;margin-right: 5px}
+}

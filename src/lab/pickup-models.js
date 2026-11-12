@@ -36,14 +36,15 @@ function batteryModel(piece){
  ];
 }
 
-function keyModel(piece){
+function keyModel(piece,red){
  const pieces=[];
+ const tint=red?{color:[.79,.14,.15],glow:true}:{glow:true};
  for(let i=0;i<8;i++){
   const angle=i*Math.PI/4;
-  pieces.push(piece('ring-'+i,Math.cos(angle)*.065,0,Math.sin(angle)*.065-.055,.045,.025,.045,'brass',{glow:true}));
+  pieces.push(piece('ring-'+i,Math.cos(angle)*.065,0,Math.sin(angle)*.065-.055,.045,.025,.045,'brass',tint));
  }
- pieces.push(piece('shaft',0,0,.08,.035,.025,.18,'brass',{glow:true}),piece('tooth',.028,0,.13,.07,.025,.025,'brass',{glow:true}),
-  piece('bow-left',-.045,.025,-.055,.065,.035,.04,'pink',{glow:true,baseYaw:-.15}),piece('bow-right',.045,.025,-.055,.065,.035,.04,'pink',{glow:true,baseYaw:.15}));
+ pieces.push(piece('shaft',0,0,.08,.035,.025,.18,'brass',tint),piece('tooth',.028,0,.13,.07,.025,.025,'brass',tint));
+ if(!red)pieces.push(piece('bow-left',-.045,.025,-.055,.065,.035,.04,'pink',{glow:true,baseYaw:-.15}),piece('bow-right',.045,.025,-.055,.065,.035,.04,'pink',{glow:true,baseYaw:.15}));
  return pieces;
 }
 
@@ -54,7 +55,8 @@ export function pickupGeometry(objects){
    solid:false,dynamic:true,source:o,sourceOffset:[dx,dy,dz],...extra});
   if(o.kind==='note')return noteModel(piece,o);
   if(o.kind==='battery')return batteryModel(piece);
-  if(o.kind==='key')return keyModel(piece);
+  if(o.kind==='key')return keyModel(piece,o.red);
+  if(o.kind==='flashlight')return [piece('body',0,-.02,0,.075,.075,.19,'torchmetal',{shape:'cylinder',segments:8,color:[.24,.32,.43]}),piece('lens',0,-.02,.105,.111,.111,.06,'brass',{shape:'cylinder',segments:8,glow:true})];
   return [];
  });
 }

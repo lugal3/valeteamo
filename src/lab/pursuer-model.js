@@ -99,6 +99,14 @@ export function pursuerPose(actor,reduced=false){
 
 export function posePursuer(base,out,groups,actor,reduced=false){
  out.set(base);
+ if(actor.mode==='sleeping'){
+  const breath=reduced?0:Math.sin(actor.age*2)*.009;
+  for(let i=0;i<out.length;i+=16){
+   out[i]=base[i]+1.76;out[i+1]=HEIGHT+1.03+base[i+2]+breath;out[i+2]=2.15-base[i+1];
+   for(const k of [6,13]){out[i+k+1]=base[i+k+2];out[i+k+2]=-base[i+k+1];}
+  }
+  return;
+ }
  const facing=actor.facing??actor.yaw,c=Math.cos(facing),s=Math.sin(facing),pose=pursuerPose(actor,reduced);
  for(const {joint,start,end} of groups){
   const {py=0,x=0,y=0,z=0,pitch=0,yaw=0,roll=0}=pose[joint]||{};

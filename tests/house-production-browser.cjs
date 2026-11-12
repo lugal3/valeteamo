@@ -1,3 +1,4 @@
+const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
 // Smoke test for the actual built site, also usable against Firebase after deploy.
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
@@ -18,8 +19,8 @@ const {chromium}=require('playwright');
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   let rootCache=null;
   if(process.env.HOUSE_PREVIEW_URL){const response=await context.request.head(new URL('/',url).href);rootCache=response.headers()['cache-control'];assert(rootCache?.includes('no-cache'),'Firebase root HTML must revalidate after deployments');}
-  await page.goto(url);await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');
-  await page.getByText('Feliz cumpleaños, Valentina').waitFor();
+  await page.goto(url);await passBirthdayCountdown(page);await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');
+  await page.getByRole('heading',{name:'Feliz cumpleaños Vale',exact:true}).waitFor();
   await page.getByRole('button',{name:'Pruebas',exact:true}).click();
   await page.getByRole('button',{name:/^Casa 3D/}).click();
   await page.locator('#lab-dialog [data-act="start"]').click();

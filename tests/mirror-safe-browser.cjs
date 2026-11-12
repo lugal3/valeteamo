@@ -8,7 +8,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   import {HouseEvents} from '/src/lab/story-events.js';
   const mirrorAdvance=MirrorSafePuzzle.prototype.advance,storyAdvance=HouseEvents.prototype.advance;
   MirrorSafePuzzle.prototype.advance=function(dt,options){return mirrorAdvance.call(this,dt*120,options);};
-  HouseEvents.prototype.advance=function(dt,hidden){return storyAdvance.call(this,dt*120,hidden,{clear:true,visited:2});};
+  HouseEvents.prototype.advance=function(dt,hidden){this.twoActs=false;return storyAdvance.call(this,dt*120,hidden,{clear:true,visited:2});};
   document.querySelector('button').onclick=()=>{window.stopHouse=launchHouse(()=>{},'ground',{demo:true,trial:true});};
  </script></body></html>`;
  const server=await(await import('vite')).createServer({configFile:false,logLevel:'silent',server:{host:'127.0.0.1',port,strictPort:true},plugins:[{name:'mirror-safe-harness',configureServer(s){s.middlewares.use((req,res,next)=>{if(req.url!='/__safe')return next();res.setHeader('Content-Type','text/html');res.end(html);});}}]});await server.listen();let browser;const results=[];
@@ -18,7 +18,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
    console.log('Mirror safe QA:',viewport.width);const context=await browser.newContext({viewport,hasTouch:true,isMobile:viewport.width<700}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.emulateMedia({reducedMotion:'reduce'});await page.goto(`http://127.0.0.1:${port}/__safe`);await page.click('#launch');await page.click('[data-act=start]');const state=()=>page.evaluate(()=>window.__rescueHouse.mirrorPuzzle()),use=(id,activate=true)=>page.evaluate(({id,activate})=>window.__rescueHouse.interactWith(id,activate),{id,activate}),shot=name=>page.screenshot({path:path.join(folder,viewport.width+'-'+name+'.png')});
    await page.evaluate(()=>window.__rescueHouse.setPose({x:8.35,y:0,z:5.55,yaw:Math.PI/2,pitch:0}));await page.waitForTimeout(150);assert(!(await state()).revealed,'Seeing a mirror without the note cannot disclose the code');
    assert(!(await use('dormitorio')).puzzle.door,'The bedroom stays locked until the key is found');
-   await use('note-hall');await page.keyboard.press('Escape');await use('drawer');await use('key');
+   await use('media-cabinet');await use('media-flashlight');await use('note-hall');await page.keyboard.press('Escape');await use('drawer');await use('key');
    const bedroom=await use('dormitorio');assert(bedroom.puzzle.door&&!bedroom.puzzle.symbol,'The key alone unlocks the bedroom');
    await page.waitForFunction(()=>window.__rescueHouse.story().phase==='evaded');
    await use('mirror-note');await page.getByRole('dialog',{name:'Nota con escritura extraña',exact:true}).waitFor();const transform=await page.locator('.mirror-note-writing').evaluate(el=>getComputedStyle(el).transform);assert(transform.startsWith('matrix(-1,'),'The glyphs themselves are reflected');assert.equal(await page.locator('.mirror-note-reading').count(),0);const back=await page.getByRole('button',{name:'Volver',exact:true}).boundingBox();assert(back.y+back.height<=viewport.height,'The note fits with its return button');await shot('01-nota-invertida');await page.waitForTimeout(650);assert.equal((await state()).activeSeconds,0,'Reading the note is paused');await page.keyboard.press('Escape');

@@ -1,6 +1,6 @@
 import {chibiPiece,placePieces,torchModel,grippingPaw} from './chibi-model.js';
 import {geometry} from './renderer.js';
-import {notePieces,phonePieces} from './equipment.js';
+import {notePieces,phonePieces,keyPieces} from './equipment.js';
 
 // V4 View-Model configuration. Variant C (compact, clear reticle on mobile & desktop).
 export const VIEWMODEL_CONFIG = Object.freeze({
@@ -25,6 +25,8 @@ export function dustPieces(flash=true){
 export function viewModelPieces(kind='flashlight', flash=true){
  if(kind==='phone')return placePieces(phonePieces(),{x:.37,y:-.25,z:.85,scale:1,prefix:'view-phone-'});
  if(kind==='note')return placePieces(notePieces(),{...noteGrip,prefix:'view-note-'});
+ if(kind==='paper')return placePieces(notePieces(.9,false),{...noteGrip,prefix:'view-paper-'});
+ if(kind==='key'||kind==='red-key')return placePieces(keyPieces(kind==='red-key'),{...noteGrip,prefix:'view-key-'});
  const cfg = VIEWMODEL_CONFIG[kind] || VIEWMODEL_CONFIG.flashlight;
  const base = [...torchModel(flash), ...grippingPaw(), ...dustPieces(flash)];
  return placePieces(base, {x: cfg.x, y: cfg.y, z: cfg.z, scale: cfg.scale, prefix: 'view-'});
@@ -49,8 +51,8 @@ export function drawViewModel(renderer, kind='flashlight', state={}){
  const gl = renderer.gl;
 
  if(kind==='empty')return;
- const cacheKey=kind==='phone'||kind==='note'?kind:flash?'on':'off';
- const pieces = kind==='phone'||kind==='note'?(cache[kind]??=viewModelPieces(kind)):flashlightPieces(flash);
+ const cacheKey=kind!=='flashlight'?kind:flash?'on':'off';
+ const pieces=kind!=='flashlight'?(cache[kind]??=viewModelPieces(kind)):flashlightPieces(flash);
  const {vertices: base, indices} = renderer.handGeometry[cacheKey] ??= geometry(pieces);
  const vertices = (renderer.viewVertices??={})[cacheKey] ??= new Float32Array(base.length);
  vertices.set(base);
@@ -59,7 +61,7 @@ export function drawViewModel(renderer, kind='flashlight', state={}){
 
  // Smoothed actual speed and a small grip rotation settle naturally after a stop.
  const offset=viewModelOffsets(time,motion),cp=Math.cos(offset.pitch),sp=Math.sin(offset.pitch),cr=Math.cos(offset.roll),sr=Math.sin(offset.roll);
- const grip=kind==='note'?noteGrip:kind==='phone'?{x:.37,y:-.25,z:.85}:VIEWMODEL_CONFIG.flashlight;
+ const grip=kind==='phone'?{x:.37,y:-.25,z:.85}:kind==='flashlight'?VIEWMODEL_CONFIG.flashlight:noteGrip;
 
  // Transform vertices into camera-oriented world space
  for(let i=0; i<vertices.length; i+=16){

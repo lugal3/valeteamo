@@ -8,7 +8,7 @@
   "railToEastWall": 0.40250000000000163,
   "bathWidth": 2.5,
   "bodyWidth": 0.64,
-  "reachableSamples": 4081,
+  "reachableSamples": 4267,
   "routes": [
     {
       "name": "hall",
@@ -73,6 +73,14 @@
       "reachable": true
     },
     {
+      "id": "mirror-note",
+      "reachable": true
+    },
+    {
+      "id": "mirror-safe",
+      "reachable": true
+    },
+    {
       "id": "picture-stain",
       "reachable": true
     },
@@ -89,11 +97,59 @@
       "reachable": true
     },
     {
-      "id": "rescue-louis",
+      "id": "basement-note",
+      "reachable": true
+    },
+    {
+      "id": "hatch-rug",
       "reachable": true
     },
     {
       "id": "basement-hatch",
+      "reachable": true
+    },
+    {
+      "id": "house-power",
+      "reachable": true
+    },
+    {
+      "id": "television",
+      "reachable": true
+    },
+    {
+      "id": "media-cabinet",
+      "reachable": true
+    },
+    {
+      "id": "basin-cabinet",
+      "reachable": true
+    },
+    {
+      "id": "bath-tap",
+      "reachable": true
+    },
+    {
+      "id": "kitchen-drawer",
+      "reachable": true
+    },
+    {
+      "id": "fridge",
+      "reachable": true
+    },
+    {
+      "id": "reading-cabinet",
+      "reachable": true
+    },
+    {
+      "id": "record-player",
+      "reachable": true
+    },
+    {
+      "id": "louis-altar",
+      "reachable": true
+    },
+    {
+      "id": "president-dossier",
       "reachable": true
     }
   ]

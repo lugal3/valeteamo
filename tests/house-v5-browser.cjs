@@ -1,3 +1,4 @@
+const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),net=require('node:net'),{chromium}=require('playwright');
 (async()=>{
  const folder=path.resolve('docs/capturas/casa-v5');fs.mkdirSync(folder,{recursive:true});
@@ -11,7 +12,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   };
   let context=await newContext(true),page=await context.newPage();page.on('pageerror',e=>errors.push(e.stack));
   const snap=()=>page.evaluate(()=>window.__rescueHouse.snapshot()),shot=name=>page.screenshot({path:path.join(folder,name+'.png')});
-  const enter=async()=>{await page.goto('http://127.0.0.1:'+port+'/');await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');await page.getByRole('button',{name:'Pruebas',exact:true}).click();await page.getByRole('button',{name:/^Casa 3D/}).click();await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');await page.locator('#lab-dialog [data-act="start"]').click();};
+  const enter=async()=>{await page.goto('http://127.0.0.1:'+port+'/');await passBirthdayCountdown(page);await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');await page.getByRole('button',{name:'Pruebas',exact:true}).click();await page.getByRole('button',{name:/^Casa 3D/}).click();await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');await page.locator('#lab-dialog [data-act="start"]').click();};
   console.log('V5: first checkpoint presents actual window climb, hands and pause');
   await enter();await page.waitForFunction(()=>window.__rescueHouse?.intro()?.elapsed>.9);await shot('01-ventana-acercarse');
   await page.getByRole('button',{name:'Pausar entrada',exact:true}).click();await page.getByRole('dialog',{name:'Pausa',exact:true}).waitFor();const frozen=await page.evaluate(()=>window.__rescueHouse.intro());await page.waitForTimeout(350);assert.deepEqual(await page.evaluate(()=>window.__rescueHouse.intro()),frozen,'Pause freezes camera, hands and sash');

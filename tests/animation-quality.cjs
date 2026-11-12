@@ -14,6 +14,10 @@ module.exports=async()=>{
  const leftStep=joints('six-seven',.49),rightStep=joints('six-seven',1.25);
  assert(leftStep.root[0]<-.07&&rightStep.root[0]>.07,'6–7 travels side to side');
  assert(leftStep.rightFoot[1]>.18&&rightStep.leftFoot[1]>.18,'The feet alternate the lateral step');
+ const twiceTouch=joints('what-is-love',2.6),twiceRelease=joints('what-is-love',2.96);
+ const pawToShoe=pose=>Math.hypot(...pose.leftHand.map((value,i)=>value-pose.leftFoot[i]));
+ assert(twiceTouch.leftFoot[1]>.39&&Math.abs(twiceTouch.rightFoot[1]-.11)<.015,'The TWICE heel flick lifts the shoe over the planted foot');
+ assert(pawToShoe(twiceTouch)<.14&&pawToShoe(twiceRelease)>.3,'The paw reaches the lifted shoe and releases it with the reference');
  const {sampleBlink}=await import('../src/lab/animations/face.js'),eyes=binding.groups.filter(group=>group.blinkY!==undefined);
  assert.equal(eyes.length,4,'Both eyes and their glints can blink');
  const blink=sampleBlink(1.30);assert(blink>.95);assert.equal(sampleBlink(1.30,{reduced:true}),0);assert.equal(sampleBlink(2),0);

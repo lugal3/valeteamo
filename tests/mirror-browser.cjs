@@ -1,3 +1,4 @@
+const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
 // Integration coverage for the simplified menu, independent audio and mirror renderer.
 const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=require('playwright');
 (async()=>{
@@ -9,7 +10,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=requ
   page.on('pageerror',e=>errors.push(String(e)));
   await page.addInitScript(()=>{const Base=window.AudioContext;window.__audioContexts=[];window.AudioContext=class extends Base{constructor(...a){super(...a);window.__audioContexts.push(this);}};});
   await page.route('**/src/iso-game.ts*',async route=>{const response=await route.fetch(),body=await response.text();await route.fulfill({response,body:body.replace('buildArt(this);','globalThis.__testIso=this;buildArt(this);')});});
-  console.log('Opening local app');await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/');await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');
+  console.log('Opening local app');await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/');await passBirthdayCountdown(page);await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');
   await page.waitForFunction(()=>window.__audioContexts.some(c=>c.state==='running'));
   await page.getByRole('button',{name:'Pruebas',exact:true}).click();
   await page.waitForFunction(()=>window.__audioContexts.every(c=>c.state==='closed'));

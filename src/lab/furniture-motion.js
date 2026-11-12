@@ -4,7 +4,10 @@ export const FURNITURE_SECONDS=.42;
 const ease=t=>t*t*(3-2*t);
 
 function doorEase(u,opening){
- if(!opening)return ease(u);
+ if(!opening){
+  const approach=.90,contact=.84;
+  return u<contact?approach*ease(u/contact):approach+(1-approach)*ease((u-contact)/(1-contact));
+ }
  if(u<.84){
   const s=u/.84;
   return 1.024*(s*s*(3-2*s));

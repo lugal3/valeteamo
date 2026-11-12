@@ -1,3 +1,4 @@
+const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
@@ -10,9 +11,9 @@ const {chromium}=require('playwright');
  try{
   browser=await chromium.launch({args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   const page=await browser.newPage({viewport:{width:844,height:390},hasTouch:true,isMobile:true}),errors=[],posters=[];
-  page.on('pageerror',error=>errors.push(error.message));
+  page.setDefaultTimeout(90000);page.on('pageerror',error=>errors.push(error.message));
   page.on('response',response=>{if(/poster-(titanes|archivo)\.jpg$/.test(response.url()))posters.push(response.status());});
-  await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/');
+  await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/');await passBirthdayCountdown(page);
   await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');
   await page.getByRole('button',{name:'Pruebas',exact:true}).click();
   await page.getByRole('button',{name:/^Casa 3D/}).click();
@@ -27,11 +28,21 @@ const {chromium}=require('playwright');
    fs.mkdirSync(process.env.HOUSE_QA_DIR,{recursive:true});await page.screenshot({path:path.join(process.env.HOUSE_QA_DIR,name+'.png')});
   };
 
+  assert(await page.locator('[data-equip=flashlight]').isHidden());
+  assert(await page.locator('#house-lock-mouse').isHidden());
+  await use('media-cabinet');await use('media-flashlight');
+  assert(await page.locator('[data-equip=flashlight]').isVisible());
+  await use('piano');await page.getByRole('dialog',{name:'Piano antiguo'}).waitFor();
+  for(const letter of ['a','d','g','h','g','d','s','a'])await page.keyboard.press(letter);
+  await page.getByText('Melodía completa',{exact:true}).waitFor();await shot('piano');await close();
+  await use('hide-trunk');await page.waitForFunction(()=>window.__rescueHouse.snapshot().hideType==='trunk');
+  await page.keyboard.press('e');await page.waitForFunction(()=>!window.__rescueHouse.snapshot().hidden);
+
   await use('television',false);await page.getByRole('button',{name:'Encender tele',exact:true}).click();
   await page.waitForFunction(()=>{const tv=window.__rescueHouse.amenities().television;return tv.on&&tv.duration===2&&tv.frame>1;});
   assert.equal(await page.evaluate(()=>window.__rescueHouse.story().audio.lastEffect),'tv-static');
   assert.equal(await page.locator('iframe').count(),0);
-  await pose(1.52,7.63,.96,-.18);await shot('televisor-en-el-salon');
+  await pose(1.64,7.83,.96,-.18);await shot('televisor-en-el-salon');
   await use('television');await page.waitForFunction(()=>!window.__rescueHouse.amenities().television.on);
   await use('television');await page.waitForFunction(()=>window.__rescueHouse.amenities().television.on);
   await use('picture-living-tour',false);await shot('poster-titanes');
@@ -75,6 +86,8 @@ const {chromium}=require('playwright');
   await page.getByRole('button',{name:'Salir',exact:true}).click();await page.waitForFunction(()=>!window.__rescueHouse.snapshot().hidden);
 
   await use('bano');await use('switch-bano');
+  await use('hide-shower');await page.waitForFunction(()=>window.__rescueHouse.snapshot().hideType==='shower');
+  await page.keyboard.press('e');await page.waitForFunction(()=>!window.__rescueHouse.snapshot().hidden);
   await assert.rejects(use('bath-battery',false),/No line-of-sight/);
   await use('basin-cabinet',false);
   await page.getByRole('button',{name:'Abrir cajón',exact:true}).waitFor();
@@ -86,10 +99,17 @@ const {chromium}=require('playwright');
   assert(!(await snapshot()).puzzle.drawer,'The bathroom drawer does not advance the desk puzzle');
 
   await use('cocina');await use('switch-cocina');
+  await pose(10.20,4.09,Math.PI/2,-.09);await page.keyboard.press('c');
+  await page.waitForFunction(()=>window.__rescueHouse.snapshot().target==='hide-kitchen');
+  await page.keyboard.press('e');await page.waitForFunction(()=>window.__rescueHouse.snapshot().hideType==='kitchen');
+  await page.keyboard.press('e');await page.waitForFunction(()=>!window.__rescueHouse.snapshot().hidden);
   await assert.rejects(use('basement-hatch',false),/No line-of-sight/);
   await use('hatch-rug');await page.waitForFunction(()=>window.__rescueHouse.amenities().rug===1);
-  await use('basement-hatch',false);await page.getByRole('button',{name:'Abrir trampilla',exact:true}).click();
+  await use('basement-hatch');assert.equal((await amenities()).hatch,0);
+  await use('red-key');assert(await page.locator('[data-equip=red-key]').isVisible());
+  await use('basement-hatch',false);await page.getByRole('button',{name:'Abrir candado',exact:true}).click();
   await page.waitForFunction(()=>window.__rescueHouse.amenities().hatch===1);await shot('trampilla-revelada');
+  assert(await page.locator('[data-equip=red-key]').isHidden());
   await use('basement-hatch');await page.waitForFunction(()=>window.__rescueHouse.amenities().hatch===0);
   await use('hatch-rug');await page.waitForFunction(()=>window.__rescueHouse.amenities().rug===0);
   await use('kitchen-drawer');await use('pantry-note');await close();

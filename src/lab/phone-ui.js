@@ -13,24 +13,30 @@ export class PhoneUI{
   <section class="phone-screen" hidden role="dialog" aria-modal="true" aria-label="Teléfono de Kitty"><div class="phone-shell" data-page="home"><div class="phone-status"><time></time><i aria-hidden="true"></i><svg viewBox="0 0 44 14" aria-hidden="true"><path fill="currentColor" d="M1 10h2v3H1zm4-3h2v6H5zm4-3h2v9H9zm4-3h2v12h-2zm8 3h17v6H21z"/><rect x="19" y="2" width="21" height="10" rx="2" stroke="currentColor" fill="none"/><path d="M42 5v4" stroke="currentColor"/></svg></div><header><button data-app="home" aria-label="Volver al inicio del teléfono">‹</button><b></b><button data-app="close" aria-label="Guardar teléfono">×</button></header><main tabindex="-1"></main><button class="phone-home-indicator" data-app="home" aria-label="Inicio del teléfono"></button></div></section>
   <section class="hud-editor" hidden role="dialog" aria-label="Editar controles"><h2>Coloca tu hotbar</h2><p>La casa queda en pausa mientras ajustas.</p><label>Anclaje <select data-hud="anchor"><option value="left">Izquierda</option><option value="right">Derecha</option><option value="bottom">Abajo</option><option value="top">Arriba</option></select></label><label>Tamaño <input data-hud="size" type="range" min="40" max="64" step="2"></label><label>Desplazar X <input data-hud="x" type="range" min="-180" max="180" step="1"></label><label>Desplazar Y <input data-hud="y" type="range" min="-120" max="120" step="1"></label><label>Opacidad <input data-hud="opacity" type="range" min=".25" max=".9" step=".05"></label><output class="hud-measure"></output><div><button data-layout="copy">Copiar ajuste</button><button data-layout="reset">Restablecer</button><button data-layout="preview">Vista previa</button><button data-layout="done">Listo</button></div><small class="hud-copy-status" role="status"></small></section><div class="hud-preview-tools" hidden><output></output><button data-layout="back">Volver al editor</button><button data-layout="done">Listo</button></div>`;root.append(host);this.host=host;
   const feed=root.querySelector('#house-messages');this.managedNotice=!!feed;if(feed){host.append(feed);feed.append(host.querySelector('.phone-notice'));}
+  const nav=host.querySelector('.house-hotbar');nav.querySelector('[data-equip=empty]').remove();
+  for(const [kind,label,key,icon] of [['key','Llave con lazo',4,'⚿'],['red-key','Llave roja',1,'⚿'],['paper','Nota',5,'▤']]){
+   const button=document.createElement('button');button.type='button';button.dataset.equip=kind;button.setAttribute('aria-label',label);button.title=key+' · '+label;
+   button.innerHTML='<span aria-hidden="true"></span><small>'+key+'</small>';button.querySelector('span').textContent=icon;nav.append(button);
+  }
   host.addEventListener('click',e=>{
    const action=e.target.closest('[data-layout]')?.dataset.layout;if(action){this.layoutAction(action);return;}
    if(this.editing)return;
    const equip=e.target.closest('[data-equip]');if(equip){if(canEquip())onEquip(equip.dataset.equip);return;}
    if(!canUse())return;
-   if(e.target.closest('.phone-notice')){onEquip('phone');this.show('messages');return;}
+   if(e.target.closest('.phone-notice')){onEquip('phone',false);this.show('messages');return;}
    const b=e.target.closest('[data-app]');if(b){if(b.dataset.app==='close'){this.close();onClose();}else{this.app=b.dataset.app;this.selectedPhoto=null;if(this.app==='snake')this.resetSnake();this.last='';}}
    if(e.target.closest('[data-photo=take]'))onPhoto();
    const photo=e.target.closest('[data-photo-index]');if(photo){this.selectedPhoto=this.gallery[Number(photo.dataset.photoIndex)];this.last='';}
    if(e.target.classList.contains('phone-screen')){this.close();onClose();}
    const d=e.target.closest('[data-dir]');if(d)this.turn(Number(d.dataset.dir));
   });
-  for(const button of host.querySelectorAll('[data-equip]'))button.querySelector('span').innerHTML=dockIcon(button.dataset.equip);
+  for(const kind of ['flashlight','phone'])host.querySelector('[data-equip='+kind+'] span').innerHTML=dockIcon(kind);
   host.addEventListener('input',e=>{const key=e.target.dataset.hud;if(!key)return;this.layout=normalizeHUD({...this.layout,[key]:e.target.value});this.applyLayout();try{writeHUD(window.localStorage,this.layout);}catch{}});
   this.resize=()=>this.applyLayout();window.addEventListener('resize',this.resize);this.applyLayout();
  }
  applyLayout(){
-  const rect=hudRect(this.layout,this.root.clientWidth,this.root.clientHeight),nav=this.host.querySelector('.house-hotbar');this.rect=rect;
+  const nav=this.host.querySelector('.house-hotbar'),count=nav.querySelectorAll('button:not([hidden])').length;
+  const rect=hudRect(this.layout,this.root.clientWidth,this.root.clientHeight,count);this.rect=rect;
   this.root.dataset.hotbarAnchor=this.layout.anchor;this.root.style.setProperty('--hud-slot',rect.slot+'px');this.root.style.setProperty('--hud-opacity',this.layout.opacity);
   Object.assign(nav.style,{left:rect.x+'px',top:rect.y+'px',width:rect.w+'px',height:rect.h+'px'});nav.classList.toggle('vertical',rect.vertical);
   const text=`X ${rect.x} · Y ${rect.y} · ${Math.round(rect.w)} × ${Math.round(rect.h)} px · botón ${Math.round(rect.slot)} px`;
@@ -46,6 +52,11 @@ export class PhoneUI{
   if(action==='copy'){const text=JSON.stringify({...this.layout,viewport:[this.root.clientWidth,this.root.clientHeight],rect:this.rect});try{await navigator.clipboard.writeText(text);this.host.querySelector('.hud-copy-status').textContent='Ajuste copiado. Puedes pegarlo junto a tu captura.';}catch{this.host.querySelector('.hud-copy-status').textContent=text;}}
  }
  equip(kind){for(const b of this.host.querySelectorAll('[data-equip]'))b.setAttribute('aria-pressed',String(b.dataset.equip===kind));if(kind!=='phone')this.close();}
+ setInventory(inventory){
+  const available={flashlight:inventory.torch,phone:true,key:inventory.key,'red-key':inventory.redKey,paper:inventory.notes.length>0};
+  for(const button of this.host.querySelectorAll('[data-equip]'))button.hidden=!available[button.dataset.equip];
+  this.applyLayout();
+ }
  show(app='home'){
   if(!this.canUse()||this.editing||this.open)return;
   this.open=true;this.root.classList.add('house-phone-open');this.app=app;this.selectedPhoto=null;this.last='';this.previousFocus=document.activeElement;

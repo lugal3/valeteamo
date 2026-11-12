@@ -1,3 +1,4 @@
+const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),net=require('node:net');
 const {chromium}=require('playwright');
 (async()=>{
@@ -14,7 +15,7 @@ const {chromium}=require('playwright');
   const pose=async p=>{await page.evaluate(p=>window.__rescueHouse.setPose(p),p);await page.waitForTimeout(220);};
   await page.goto('http://127.0.0.1:'+port+'/');
   const saves=await page.evaluate(()=>{const story=JSON.stringify({version:1,index:0,unlocked:0,character:'louis',muted:true,started:true,answers:{}}),rescue=JSON.stringify({version:2,phase:'trail',heart:true,abducted:true,trail:true,house:false,rescued:false});localStorage.setItem('valeteamo-story-v1',story);localStorage.setItem('valeteamo-rescue-v2',rescue);return {story,rescue};});
-  await page.reload();await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');await page.getByRole('button',{name:'Pruebas',exact:true}).click();await page.getByRole('button',{name:/^Casa 3D/}).click();await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');await page.locator('#lab-dialog [data-act="start"]').click();
+  await page.reload();await passBirthdayCountdown(page);await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');await page.getByRole('button',{name:'Pruebas',exact:true}).click();await page.getByRole('button',{name:/^Casa 3D/}).click();await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');await page.locator('#lab-dialog [data-act="start"]').click();
   await page.waitForFunction(()=>window.__rescueHouse&&!window.__rescueHouse.snapshot().paused);
   console.log('V4: room gallery and first person');
   const views=[

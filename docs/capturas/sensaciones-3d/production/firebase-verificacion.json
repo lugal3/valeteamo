@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-11-10T15:16:12.585Z",
+  "commit": "b89613537ed860611527a8b69accc6b41d53c8f3",
+  "workflow": "https://github.com/lugal3/valeteamo/actions/runs/42842268895",
+  "url": "https://valefc.web.app/?v=b896135",
+  "beforeRootCache": "max-age=3600",
+  "afterRootCache": "no-cache",
+  "entry": "/assets/index-Ci-FAS2R.js",
+  "house": "house-Biln9PXH.js",
+  "localHouse": "house-Biln9PXH.js",
+  "exactBundle": true,
+  "features": {
+    "hudEditor": true,
+    "phoneFrame": true,
+    "gangnam": true,
+    "sixSeven": true,
+    "floorCreaks": true
+  }
+}

@@ -1,3 +1,4 @@
+const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
@@ -57,7 +58,7 @@ async function verifyShadows(page,url){
 
 async function verifySwitches(page,url){
  const errors=[];page.on('pageerror',error=>errors.push(error.message));
- await page.goto(url);
+ await page.goto(url);await passBirthdayCountdown(page);
  await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');
  await page.getByRole('button',{name:'Pruebas',exact:true}).click();
  await page.getByRole('button',{name:/^Casa 3D/}).click();

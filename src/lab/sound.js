@@ -73,6 +73,20 @@ export class HouseSound {
  }
  get emoteElapsed(){return this.emoteVoice?this.context.currentTime-this.emoteStartedAt:null;}
  stopEmote(){this.emoteVoice?.stop();this.emoteVoice=null;}
+ piano(index){
+  const ctx=this.context;if(!ctx||this.settings.muted)return;
+  const frequency=261.626*2**([0,2,4,5,7,9,11,12][index]/12);
+  void ctx.resume().then(()=>{
+   if(this.context!==ctx||ctx.state!=='running'||this.settings.muted)return;
+   const at=ctx.currentTime;
+   for(const [multiple,level,decay] of [[1,.13,.85],[2.005,.045,.46],[3.013,.024,.22],[4.026,.013,.12]]){
+    const note=ctx.createOscillator(),gain=ctx.createGain();note.frequency.value=frequency*multiple;
+    gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(level,at+.009);gain.gain.exponentialRampToValueAtTime(.0001,at+decay);
+    note.connect(gain);gain.connect(this.channels.objects);this.sequenceNodes.add(note);
+    note.onended=()=>{note.disconnect();gain.disconnect();this.sequenceNodes.delete(note);};note.start(at);note.stop(at+decay+.02);
+   }
+  }).catch(()=>{});
+ }
  // Simple location-dependent stereo and attenuation, including room/floor obstruction.
  effect(kind,origin,listener,occluded=false,{level=1}={}){
   const ctx=this.context;if(!ctx||this.paused||ctx.state!=='running'||this.settings.muted)return;
@@ -111,7 +125,7 @@ export class HouseSound {
   oscillator.connect(vol);oscillator.start(now);oscillator.stop(now+duration+.02);
   oscillator.onended=()=>{oscillator.disconnect();vol.disconnect();pan.disconnect();};
  }
- sequence(kind){const ctx=this.context;if(!ctx||this.paused||ctx.state!=='running'||this.settings.muted)return;const output=this.channels[effectChannel(kind)];if(this.recordings?.kind(kind,{gain:kind==='notification'?.30:.38,output}))return;for(let i=0;i<3;i++){const osc=ctx.createOscillator(),gain=ctx.createGain(),at=ctx.currentTime+i*(kind==='keys'?.11:.28);osc.type=kind==='keys'?'sine':'triangle';osc.frequency.setValueAtTime(kind==='keys'?1700+i*330:85,at);osc.frequency.exponentialRampToValueAtTime(kind==='keys'?1100:38,at+.12);gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(kind==='keys'?.14:.50,at+.008);gain.gain.exponentialRampToValueAtTime(.0001,at+.17);osc.connect(gain);gain.connect(output);osc.start(at);osc.stop(at+.2);this.sequenceNodes.add(osc);osc.onended=()=>{osc.disconnect();gain.disconnect();this.sequenceNodes.delete(osc);};}}
+ sequence(kind,loud=false){const ctx=this.context;if(!ctx||this.paused||ctx.state!=='running'||this.settings.muted)return;const output=this.channels[effectChannel(kind)];if(this.recordings?.kind(kind,{gain:kind==='notification'?(loud?.68:.30):.38,output}))return;for(let i=0;i<3;i++){const osc=ctx.createOscillator(),gain=ctx.createGain(),at=ctx.currentTime+i*(kind==='keys'?.11:.28);osc.type=kind==='keys'?'sine':'triangle';osc.frequency.setValueAtTime(kind==='keys'?1700+i*330:85,at);osc.frequency.exponentialRampToValueAtTime(kind==='keys'?1100:38,at+.12);gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(kind==='keys'?.14:.50,at+.008);gain.gain.exponentialRampToValueAtTime(.0001,at+.17);osc.connect(gain);gain.connect(output);osc.start(at);osc.stop(at+.2);this.sequenceNodes.add(osc);osc.onended=()=>{osc.disconnect();gain.disconnect();this.sequenceNodes.delete(osc);};}}
  pause(){this.paused=true;this.recordings?.pause(this.emoteVoice);this.stopMusic();for(const node of this.sequenceNodes||[])try{node.stop();}catch{}for(const voice of this.foleyVoices||[])voice.stop();this.atmosphere?.pause();try{if(this.context?.state==='running')void this.context.suspend().catch(()=>{});}catch{}}
  resume(){if(!this.context)return;this.paused=false;const ctx=this.context;try{void ctx.resume().then(()=>{if(this.context===ctx&&!this.paused){this.atmosphere?.resume();this.startMusic();this.recordings?.setMood(this.threat?'tension':'ambient');}}).catch(()=>{});}catch{}}
  destroy(){this.stopEmote();this.pause();this.recordings?.destroy();this.atmosphere?.destroy();this.atmosphere=null;this.ambientNodes=[];if(this.context){void this.context.close().catch(()=>{});this.context=null;}}

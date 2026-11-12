@@ -9,6 +9,7 @@ import {CONFIG as C,ROOMS} from './config';
 import './style.css';
 import './birthday.css';
 import {StoryApp} from './StoryApp';
+import {BirthdayCountdown} from './BirthdayCountdown';
 type IconName='coin'|'bomb'|'key'|'poop'|'head'|'pause'|'sound'|'mute'|'expand'|'shrink';
 function Icon({name}:{name:IconName}){
  const paths:Record<IconName,string>={
@@ -92,5 +93,5 @@ function ClassicApp(){
  {loading&&<section className="loading-screen" aria-busy={!loadError} aria-label="Cargando el juego"><span className="eyebrow">UNA AVENTURA PARA VALENTINA</span><h2>El jardín<br/><em>de los deseos</em></h2><div className="loading-path"><img src={characterPreview(character)} alt={CHARACTERS[character].name}/><span>✿</span><span>✦</span></div>{loadError?<><p role="alert">{loadError}</p><button className="primary" onClick={()=>RA(v=>v+1)}>Reintentar</button><button onClick={returnToCover}>Volver a la portada</button></>:<><div className="loading-track" role="progressbar" aria-label="Preparando el jardín" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><i style={{width:progress+'%'}}/></div><p role="status">{progress<60?'Abriendo el libro de los deseos…':progress<100?'Preparando personajes y flores…':'¡Tu aventura está lista!'}</p><small>Un regalo pequeño, hecho con mucho amor.</small></>}</section>}
  </>}</main>;
 }
-createRoot(document.getElementById('root')!).render(<StoryApp ClassicApp={ClassicApp}/>);
+createRoot(document.getElementById('root')!).render(<BirthdayCountdown><StoryApp ClassicApp={ClassicApp}/></BirthdayCountdown>);
 

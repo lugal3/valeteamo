@@ -1,7 +1,8 @@
 // Short original rhythms for the two dances, aligned with their pose accents.
 const rhythms={
  'six-seven':{beat:.36,notes:[48,48,55,50,53,53,57,50]},
- gangnam:{beat:.48,notes:[43,55,46,55,48,58,46,53]}
+ gangnam:{beat:.48,notes:[43,55,46,55,48,58,46,53]},
+ 'what-is-love':{beat:.44,notes:[65,69,72,69,62,67,70,74]}
 };
 
 export function playEmoteRhythm(context,output,id,duration){

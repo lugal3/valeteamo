@@ -1,3 +1,4 @@
+const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
 // Real browser smoke test, not an iPhone physical-device test.
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
@@ -13,7 +14,7 @@ const {chromium}=require('playwright');
   browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   const context=await browser.newContext({viewport:{width:960,height:540},hasTouch:true,isMobile:true});
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.stack||e.message));
-  await page.goto(url);
+  await page.goto(url);await passBirthdayCountdown(page);
   await page.getByRole('button',{name:/Presiona cualquier botón para iniciar/}).waitFor({timeout:15000});
   await page.waitForFunction(()=>{const image=document.querySelector('.splash-frame img');return image?.complete&&image.naturalWidth>=1200&&image.currentSrc.includes('portada-v2.webp');});
   const assets=await page.evaluate(async()=>Promise.all(['001','005','014','019'].map(async id=>{const r=await fetch('/demo-assets/referencias/'+id+'.webp');return [id,r.status,r.headers.get('content-type')]})));
@@ -27,7 +28,7 @@ const {chromium}=require('playwright');
   await page.screenshot({path:path.join(folder,'01-portada.png')});
   // The title image itself is a click-to-start surface, as it is for the player.
   await page.mouse.click(480,478);
-  await page.getByText('Feliz cumpleaños, Valentina').waitFor();await page.waitForTimeout(1100);
+  await page.getByRole('heading',{name:'Feliz cumpleaños Vale',exact:true}).waitFor();await page.waitForTimeout(1100);
   await page.screenshot({path:path.join(folder,'02-cumpleanos.png')});
   await page.getByRole('button',{name:/Jugar la demo de rescate 2D/}).click();
   await page.mouse.click(480,478);

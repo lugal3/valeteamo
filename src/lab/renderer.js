@@ -223,7 +223,7 @@ export class HouseRenderer {
   this.dynamicBoxes=boxes.filter(b=>b.dynamic);
   const dynamic=geometry(this.dynamicBoxes);this.dynamicCount=dynamic.indices.length;
   this.dynamicTemplate=dynamic.vertices;this.dynamicVertices=new Float32Array(dynamic.vertices);this.dynamicRanges=dynamic.ranges;
-  this.dynamicOrigins=this.dynamicBoxes.map(b=>[b.x,b.y,b.z,b.yaw||0,b.roll||0]);this.dynamicPositions=new Float32Array(this.dynamicBoxes.length*5);this.dynamicPositions.fill(Infinity);
+  this.dynamicOrigins=this.dynamicBoxes.map(b=>[b.x,b.y,b.z,b.yaw||0,b.roll||0,b.pitch||0]);this.dynamicPositions=new Float32Array(this.dynamicBoxes.length*6);this.dynamicPositions.fill(Infinity);
   gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamicVbo);gl.bufferData(gl.ARRAY_BUFFER,this.dynamicVertices,gl.DYNAMIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.dynamicIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,dynamic.indices,gl.STATIC_DRAW);
   this.vertexCount=(vertices.length+dynamic.vertices.length)/16;this.triangleCount=(indices.length+dynamic.indices.length)/3;
@@ -303,25 +303,26 @@ export class HouseRenderer {
    } else if(box.ambient==='captive-breath'){
     box.y=this.dynamicOrigins[i][1]+(reduced||motion.feetY>-.3?0:Math.sin(time*2.3)*.010);
    }
-   const at=i*5,bx=box.x,by=box.y,bz=box.z,byaw=box.yaw||0,roll=box.roll||0;
+   const at=i*6,bx=box.x,by=box.y,bz=box.z,byaw=box.yaw||0,roll=box.roll||0,pitch=box.pitch||0;
    const {start,end}=this.dynamicRanges[i],glow=circuitPowered(box.fixture?.circuit)||box.power?.on?32:0;
-   const moved=Math.fround(bx)!==this.dynamicPositions[at]||Math.fround(by)!==this.dynamicPositions[at+1]||Math.fround(bz)!==this.dynamicPositions[at+2]||Math.fround(byaw)!==this.dynamicPositions[at+3]||Math.fround(roll)!==this.dynamicPositions[at+4];
+   const moved=Math.fround(bx)!==this.dynamicPositions[at]||Math.fround(by)!==this.dynamicPositions[at+1]||Math.fround(bz)!==this.dynamicPositions[at+2]||Math.fround(byaw)!==this.dynamicPositions[at+3]||Math.fround(roll)!==this.dynamicPositions[at+4]||Math.fround(pitch)!==this.dynamicPositions[at+5];
    if(!moved&&this.dynamicVertices[start+12]===this.dynamicTemplate[start+12]+glow)continue;
-   this.dynamicPositions.set([bx,by,bz,byaw,roll],at);
+   this.dynamicPositions.set([bx,by,bz,byaw,roll,pitch],at);
    const origin=this.dynamicOrigins[i];
    const angle=byaw-origin[3],c=Math.cos(angle),s=Math.sin(angle),cr=Math.cos(roll-origin[4]),sr=Math.sin(roll-origin[4]);
+   const cp=Math.cos(pitch-origin[5]),sp=Math.sin(pitch-origin[5]);
    for(let v=start;v<end;v+=16){
     const localX=this.dynamicTemplate[v]-origin[0],localY=this.dynamicTemplate[v+1]-origin[1];
-    const x=localX*cr-localY*sr,z=this.dynamicTemplate[v+2]-origin[2];
+    const x=localX*cr-localY*sr,y=localX*sr+localY*cr,localZ=this.dynamicTemplate[v+2]-origin[2],z=y*sp+localZ*cp;
     this.dynamicVertices[v]=bx+x*c-z*s;
-    this.dynamicVertices[v+1]=by+localX*sr+localY*cr;
+    this.dynamicVertices[v+1]=by+y*cp-localZ*sp;
     this.dynamicVertices[v+2]=bz+x*s+z*c;
     this.dynamicVertices[v+12]=this.dynamicTemplate[v+12]+glow;
     for(const offset of [6,13]){
      const tx=this.dynamicTemplate[v+offset],ty=this.dynamicTemplate[v+offset+1];
-     const nx=tx*cr-ty*sr,nz=this.dynamicTemplate[v+offset+2];
+     const nx=tx*cr-ty*sr,ny=tx*sr+ty*cr,tz=this.dynamicTemplate[v+offset+2],nz=ny*sp+tz*cp;
      this.dynamicVertices[v+offset]=nx*c-nz*s;
-     this.dynamicVertices[v+offset+1]=tx*sr+ty*cr;
+     this.dynamicVertices[v+offset+1]=ny*cp-tz*sp;
      this.dynamicVertices[v+offset+2]=nx*s+nz*c;
     }
    }

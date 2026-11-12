@@ -1,3 +1,4 @@
+const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=require('playwright');
 (async()=>{
  const server=await (await import('vite')).createServer({configFile:false,logLevel:'silent',server:{host:'127.0.0.1',port:0}});await server.listen();let browser;
@@ -5,7 +6,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=requ
   browser=await chromium.launch({headless:true,executablePath:process.env.BROWSER_EXECUTABLE_PATH||undefined,args:['--no-sandbox','--no-zygote','--single-process','--in-process-gpu','--disable-dev-shm-usage','--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   const page=await browser.newPage({viewport:{width:960,height:540},hasTouch:true,isMobile:true}),errors=[];
   page.on('pageerror',e=>errors.push(String(e)));
-  await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/');await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');await page.getByRole('button',{name:'Pruebas',exact:true}).click();await page.getByRole('button',{name:'Espejo',exact:true}).click();await page.locator('#lab-dialog [data-act="start"]').click();
+  await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/');await passBirthdayCountdown(page);await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');await page.getByRole('button',{name:'Pruebas',exact:true}).click();await page.getByRole('button',{name:'Espejo',exact:true}).click();await page.locator('#lab-dialog [data-act="start"]').click();
   await page.waitForFunction(()=>window.__rescueHouse?.snapshot().mirror.drawn);
   const snap=()=>page.evaluate(()=>window.__rescueHouse.snapshot());
   await page.waitForTimeout(2000);const initial=await snap();assert(initial.mirror.vertices<14000);

@@ -6,6 +6,7 @@ import {installLouisAltar} from './louis-altar.js';
 import {installWallClock} from './wall-clock.js';
 import {STUDY_SIGN} from './artwork.js';
 import {HATCH,floorAroundHatch,installBasement} from './basement.js';
+import {installPiano,installKitchenBar,installExtraHides} from './house-additions.js';
 // V5: generous landings and an independent, open stairwell. Dimensions in metres.
 export const HEIGHT=3.15;
 export const HOUSE=Object.freeze({width:14,depth:12});
@@ -106,10 +107,15 @@ export function buildHouse(spawn='ground'){
   const shape=add('door-'+id,x,y+1.1,z,w,2.2,d,'wood',true,{dynamic:true});
   const handle=add('handle-'+id,x+(alongX?width*.34:.09),y+1.03,z+(alongX?-.09:width*.34),.085,.085,.085,'brass',false,{dynamic:true,shape:'round',segments:6,rings:3});
   const plate=add('handle-plate-'+id,x+(alongX?width*.34:.068),y+1.03,z+(alongX?-.068:width*.34),alongX?.06:.01,alongX?.14:.14,alongX?.01:.06,'brass',false,{dynamic:true});
-  const panel=add('panel-'+id,x+(alongX?0:.063),y+1.28,z+(alongX?-.063:0),alongX?width*.72:.025,1.4,alongX?.025:width*.72,'trim',false,{dynamic:true,surface:'paint'});
+  const panel=add('panel-'+id,x+(alongX?0:.063),y+1.28,z+(alongX?-.063:0),alongX?width*.72:.025,1.4,alongX?.025:width*.72,'wood',false,{dynamic:true,color:[.49,.30,.26]});
   const hingeA=add('hinge-a-'+id,hinge.x+(alongX?0:.045),y+.45,hinge.z+(alongX?.045:0),.03,.09,.03,'brass',false,{dynamic:true,shape:'cylinder',segments:6});
   const hingeB=add('hinge-b-'+id,hinge.x+(alongX?0:.045),y+1.75,hinge.z+(alongX?.045:0),.03,.09,.03,'brass',false,{dynamic:true,shape:'cylinder',segments:6});
   const parts=[handle,plate,panel,hingeA,hingeB];
+  for(const side of [-1,1])for(const height of [.52,1.11,1.94])parts.push(add('door-moulding-'+id+side+height,x+(alongX?0:side*.069),y+height,z+(alongX?side*.069:0),alongX?width*.79:.025,.055,alongX?.025:width*.79,'trim',false,{dynamic:true,color:[.42,.25,.21]}));
+  if(id==='entrada'){
+   parts.push(add('entry-padlock',x+.36,y+.95,z-.11,.116,.13,.086,'brass',false,{dynamic:true,hiddenGeometry:true}));
+   parts.push(add('entry-padlock-shackle',x+.36,y+1.029,z-.11,.092,.095,.035,'torchmetal',false,{dynamic:true,hiddenGeometry:true,shape:'torus',majorRadius:.035,tubeRadius:.010,segments:9,rings:5}));
+  }
   if(locked){
    const px=x+(alongX?width*.34:.105),pz=z+(alongX?-.105:width*.34),py=y+1.03;
    const lockBody=add('padlock-body-'+id,px,py-.04,pz,.055,.07,.04,'brass',false,{dynamic:true});
@@ -128,9 +134,10 @@ export function buildHouse(spawn='ground'){
  door('habitación',9,HEIGHT,3,1.3,.11,'Sala de música y recuerdos',Math.PI/2);
  const sash=add('entry-window-sash',2.2,1.6,12,1.38,1.34,.045,'glass',false,{dynamic:true});
  const windowParts=[];
+ const windowLatch=add('entry-window-latch',2.80,1.17,11.94,.15,.075,.06,'brass',false,{hiddenGeometry:true});
  for(const x of [1.5,2.9])windowParts.push(add('entry-sash-stile-'+x,x,1.6,12,.055,1.4,.07,'wood',false,{dynamic:true}));
  for(const y of [.91,2.29])windowParts.push(add('entry-sash-rail-'+y,2.2,y,12,1.45,.055,.07,'wood',false,{dynamic:true}));
- const entryWindow={kind:'window',box:sash,parts:windowParts.map(box=>({box,origin:{x:box.x,z:box.z}})),origin:{x:2.2,z:12},hinge:{x:1.5,z:12},swingAngle:Math.PI/2,amount:0};
+ const entryWindow={kind:'window',box:sash,latch:windowLatch,parts:windowParts.map(box=>({box,origin:{x:box.x,z:box.z}})),origin:{x:2.2,z:12},hinge:{x:1.5,z:12},swingAngle:Math.PI/2,amount:0};
  // A continuous ramp follows sixteen visible, correctly sized treads.
  const length=STAIR.zBottom-STAIR.zTop;
  for(let i=0;i<16;i++){
@@ -190,7 +197,8 @@ export function buildHouse(spawn='ground'){
  obj('coffee-cup','inspect','Taza de café',2.0,.99,8.9,{text:'Todavía queda café en el fondo. La taza está fría.'});
  add('living-rug',2.05,.014,9.12,3.55,.025,3.05,'carpet',false,{ao:.88});
  installCabinet(add,obj,{id:'media-cabinet',label:'Cajón de los mandos',x:2.63,z:5.04,w:1.56,h:.61,d:.46,
-  items:[{id:'media-battery',kind:'battery',label:'Pila del control remoto',dx:.49}]});
+  items:[{id:'media-battery',kind:'battery',label:'Pila del control remoto',dx:.49},{id:'media-flashlight',kind:'flashlight',label:'Linterna',dx:-.40}]});
+ installPiano(add,obj);
  const tvStand=boxes.length,tvPower={on:false};
  add('tv-table',4.04,.31,9.42,1.49,.62,.47,'wood');
  for(const x of [3.65,4.42])add('tv-foot-'+x,x,.65,9.42,.12,.06,.24,'dark',false);
@@ -253,10 +261,9 @@ export function buildHouse(spawn='ground'){
  add('tap-spout',10.05,1.236,.33,.043,.046,.25,'torchmetal',false);
  add('tap-aerator',10.05,1.216,.447,.042,.055,.042,'dark',false,{shape:'round',segments:8});
  add('tap-lever',10.13,1.065,.214,.105,.027,.028,'torchmetal',false);
- table('dining-table',11.15,0,2.62,1.6,.75);add('dining-cloth',11.15,.918,2.62,1.35,.012,.55,'velvet',false);
+ installKitchenBar(add,obj);
  add('kitchen-mug-a',11.5,1.01,.46,.09,.09,.09,'cream',false,{shape:'lathe',profile:CUP_PROFILE,segments:9});
  add('kitchen-mug-b',11.7,1.01,.46,.09,.09,.09,'pink',false,{shape:'lathe',profile:CUP_PROFILE,segments:9});
- chair('dining-chair-a',11.15,0,1.96,Math.PI);chair('dining-chair-b',11.15,0,3.25);lamp('dining-light',11.15,.92,2.62);
  const rugZ=(HATCH.minZ+HATCH.maxZ)/2;
  const rug=[add('hatch-rug',8.55,.120,rugZ,1.48,.030,1.81,'carpet',false,{dynamic:true,color:[.62,.17,.30]})];
  for(const offset of [-.74,.74])rug.push(add('hatch-rug-band-'+offset,8.55,.137,rugZ+offset,1.44,.009,.125,'velvet',false,{dynamic:true,color:[.84,.56,.32]}));
@@ -277,6 +284,7 @@ export function buildHouse(spawn='ground'){
  for(const y of [.52,2.44])add('mirror-frame-'+y,9.83,y,5.55,.07,.07,1.63,'brass',false);
  add('towel-rail',9.81,1.57,6.67,.06,.044,.52,'brass',false);
  add('towel',9.78,1.29,6.67,.05,.55,.42,'pink',false);
+ installExtraHides(add,obj);
  // Hall consoles sit against walls, outside the walking strip.
  add('hall-console',4.682,.43,10.5,.35,.86,.9,'wood');obj('note-hall','note','Nota doblada',4.70,.911,10.5,{text:'Una nota espera junto a la entrada.'});
  add('hall-runner',5.95,.012,6.5,1.2,.024,9.5,'carpet',false,{ao:.86});const clock=installWallClock(add,6.05,1.85,.19);

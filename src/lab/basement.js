@@ -84,7 +84,10 @@ export function installBasement(add,obj,lights){
  parts.push(add('hatch-handle',x-.31,.109,z,.286,.041,.055,'brass',false,{dynamic:true}));
  for(const dz of [-.54,.54])add('hatch-hinge-'+dz,HATCH.maxX,.050,z+dz,.093,.082,.21,'torchmetal',false,iron);
  const guard=add('hatch-open-guard',HATCH.maxX,.60,z,.11,1.20,THROAT-START,'wood',false,{hiddenGeometry:true});
- const hatch=obj('basement-hatch','hatch','Trampilla del sótano',x-.31,.097,z,{concealed:true,open:false,amount:0,guard,parts:parts.map(box=>({box,x:box.x,y:box.y}))});
+ const chains=[];
+ for(let i=0;i<14;i++)chains.push(add('hatch-chain-'+i,x-.56+i*.085,.073,z+.25,.105,.042,.052,'torchmetal',false,{shape:'torus',majorRadius:.036,tubeRadius:.009,pitch:i%2?Math.PI/2:0,segments:7,rings:4,color:[.34,.34,.38]}));
+ chains.push(add('hatch-padlock',x-.25,.092,z+.27,.13,.07,.118,'bow',false,{color:[.64,.19,.16]}));
+ const hatch=obj('basement-hatch','hatch','Trampilla del sótano',x-.31,.097,z,{concealed:true,locked:true,chains,open:false,amount:0,guard,parts:parts.map(box=>({box,x:box.x,y:box.y}))});
 
  const earth=[.47,.32,.24],dark=[.36,.25,.21];
  for(const [i,[from,to,half]] of SECTIONS.entries()){

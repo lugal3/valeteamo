@@ -1,3 +1,4 @@
+const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{chromium}=require('playwright');
 (async()=>{
  const server=await (await import('vite')).createServer({configFile:false,logLevel:'silent',server:{host:'127.0.0.1',port:0}});await server.listen();let browser;
@@ -7,7 +8,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   const context=await browser.newContext({viewport:{width:960,height:540},hasTouch:true,isMobile:true,recordVideo:{dir:path.join(folder,'video-temporal'),size:{width:960,height:540}}}),page=await context.newPage(),errors=[];
   page.on('pageerror',e=>errors.push(String(e)));
   const snap=()=>page.evaluate(()=>window.__rescueHouse.snapshot());
-  await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/');await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');await page.getByRole('button',{name:'Pruebas',exact:true}).click();await page.getByRole('button',{name:'Espejo',exact:true}).click();await page.locator('#lab-dialog [data-act="start"]').click();await page.waitForFunction(()=>window.__rescueHouse?.snapshot().mirror.drawn);
+  await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/');await passBirthdayCountdown(page);await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');await page.getByRole('button',{name:'Pruebas',exact:true}).click();await page.getByRole('button',{name:'Espejo',exact:true}).click();await page.locator('#lab-dialog [data-act="start"]').click();await page.waitForFunction(()=>window.__rescueHouse?.snapshot().mirror.drawn);
   await page.waitForTimeout(1700);const idle=await snap();assert.equal(idle.animation.state,'idle');assert.equal(idle.animation.distance,0);await page.screenshot({path:path.join(folder,'01-reposo.png')});
   await page.waitForTimeout(500);const breathing=await snap();assert(breathing.animation.evaluations>idle.animation.evaluations);assert.equal(breathing.animation.phase,idle.animation.phase);
   await page.keyboard.press('Escape');const paused=await snap();await page.waitForTimeout(400);assert.deepEqual((await snap()).animation,paused.animation);assert.equal((await snap()).mirror.uploads,paused.mirror.uploads);await page.getByRole('button',{name:'Continuar',exact:true}).click();

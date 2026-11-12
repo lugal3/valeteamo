@@ -6,9 +6,10 @@ export function normalizeHUD(v={}){
  v=v&&typeof v==='object'?v:{};
  return {anchor:['left','right','bottom','top'].includes(v.anchor)?v.anchor:DEFAULT_HUD.anchor,size:clamp(v.size,40,64,44),x:clamp(v.x,-180,180,0),y:clamp(v.y,-120,120,0),opacity:clamp(v.opacity,.25,.9,.55)};
 }
-export function hudRect(value,width,height){
+export function hudRect(value,width,height,count=3){
  const v=normalizeHUD(value),vertical=v.anchor==='left'||v.anchor==='right';
- const slot=Math.min(v.size,Math.max(40,(height-92)/3-4)),w=(vertical?slot:slot*3+8)+14,h=(vertical?slot*3+8:slot)+14;
+ const slot=Math.min(v.size,Math.max(30,((vertical?height-92:width-30)-(count-1)*4)/count),Math.max(40,(height-92)/3-4));
+ const length=slot*count+(count-1)*4,w=(vertical?slot:length)+14,h=(vertical?length:slot)+14;
  let x=v.anchor==='left'?12:v.anchor==='right'?width-w-12:(width-w)/2;
  let y=v.anchor==='top'?64:v.anchor==='bottom'?height-h-12:Math.max(70,(height-h)*.43);
  return {x:Math.round(Math.max(8,Math.min(width-w-8,x+v.x))),y:Math.round(Math.max(60,Math.min(height-h-8,y+v.y))),w,h,slot,vertical};
