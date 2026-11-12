@@ -20,7 +20,7 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
  try{
   browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   page=await browser.newPage({viewport:{width:960,height:540},hasTouch:true});
-  page.setDefaultTimeout(90000);
+  page.setDefaultTimeout(15000);
   const errors=[];page.on('pageerror',error=>{errors.push(error.stack||error.message);console.error('PAGE ERROR:',error.message);});
   await page.emulateMedia({reducedMotion:'reduce'});
   await page.goto('http://127.0.0.1:'+port+'/__rc');
