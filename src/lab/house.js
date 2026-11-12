@@ -526,8 +526,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   $('lab-focus').textContent=label;
   root.classList.toggle('lab-flash-off',!s.flashlight);
   $('house-light').hidden=equipment!=='flashlight'||!!s.hidden||!!s.lying;
-  $('house-use-phone').hidden=!['phone','paper'].includes(equipment)||notePresentation||!!noteLift||!!s.hidden||!!s.lying;
-  $('house-use-phone').setAttribute('aria-label',equipment==='paper'?'Observar nota':'Usar teléfono');
+  $('house-use-phone').hidden=!['phone','paper','rc'].includes(equipment)||notePresentation||!!noteLift||!!s.hidden||!!s.lying;
+  $('house-use-phone').setAttribute('aria-label',equipment==='rc'?'Usar auto RC':equipment==='paper'?'Observar nota':'Usar teléfono');
   $('house-use-phone').querySelector('small').textContent=equipment==='paper'?'Observar':'Usar';
   const canEmote=inBathroom()&&!notePresentation&&!noteLift;
   root.querySelector('[data-act=emotes]').hidden=!canEmote;
@@ -563,6 +563,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(target?.kind==='battery')interactButton.querySelector('small').textContent='Recoger pila';
   if(target?.kind==='flashlight')interactButton.querySelector('small').textContent='Recoger linterna';
   if(target?.kind==='piano')interactButton.querySelector('small').textContent='Sentarse y tocar';
+  if(target?.kind==='rc-car')interactButton.querySelector('small').textContent='Recoger auto RC';
   if(target?.kind==='television')interactButton.querySelector('small').textContent=target.power.on?'Apagar tele':'Encender tele';
   if(target?.kind==='power-switch')interactButton.querySelector('small').textContent=target.power.on?'Cortar corriente':'Restablecer corriente';
   if(target?.kind==='rug')interactButton.querySelector('small').textContent=target.aside?'Volver a cubrir':'Apartar tapete';
@@ -579,8 +580,22 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(!demo&&$('lab-camera-settings').open)$('lab-metrics').textContent=`${fps} FPS · ${ctxRoom(s)} · altura ${s.y.toFixed(1)} m · rumbo ${Math.round((s.yaw*180/Math.PI%360+360)%360)}°`;
  }
  function tick(dt){
-  if(isPaused())return;
+  if(isPaused()||finalCutscene)return;
   updateFurniture(world.objects,dt,s);
+  const louisCue=updateLouisEscape(louis,dt,s);
+  if(louisCue==='hidden'){
+   events.phase='rc-setup';say('Louis se escondió tras la barra de la cocina. Prepara la trampa en la escotilla.',6);
+  }
+  if(louis&&['climb','hide'].includes(louis.phase))return;
+  if(rc){
+   updateRC(rc,dt);
+   if(rc.mode==='driving'){
+    const steer=Number(keys.has('d')||keys.has('ArrowRight'))-Number(keys.has('a')||keys.has('ArrowLeft'))+joystick.x;
+    const throttle=Number(keys.has('w')||keys.has('ArrowUp'))-Number(keys.has('s')||keys.has('ArrowDown'))-joystick.z;
+    driveRC(rc,world,{steer,throttle},dt);return;
+   }
+   if(rc.mode==='deploying')return;
+  }
   updatePowerLever(world.lights.meter,reducedMotion.matches?1:dt);
   const hatch=world.hatch,hatchTarget=Number(hatch.open);
   if(hatch.amount!==hatchTarget)poseHatch(hatch,clamp(hatch.amount+Math.sign(hatchTarget-hatch.amount)*dt/.64,0,1));
@@ -870,7 +885,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   if(modal==='Caja fuerte'&&e.key!=='Tab'){if(/^\d$/.test(e.key)){e.preventDefault();safeAction(e.key);}else if(e.key==='Backspace'||e.key==='Delete'){e.preventDefault();safeAction(e.key==='Delete'?'clear':'back');}else if(e.key==='Enter'){e.preventDefault();safeAction('submit');}else if(e.key==='Escape'){e.preventDefault();modalClose();}return;}
   if((events.phase==='safe'||events.phase==='failed')&&!['Tab','Enter',' '].includes(e.key)){e.preventDefault();return;}
-  if(['1','2','3','4','5'].includes(e.key)&&!isPaused()&&events.phase!=='arrival'){if(!e.repeat)equip([s.inventory.redKey?'red-key':'empty','flashlight','phone','key','paper'][Number(e.key)-1],true);return;}
+  if(['1','2','3','4','5','6'].includes(e.key)&&!isPaused()&&events.phase!=='arrival'){if(!e.repeat&&rc.mode!=='driving'&&rc.mode!=='deploying')equip([s.inventory.redKey?'red-key':'empty','flashlight','phone','key','paper','rc'][Number(e.key)-1],true);return;}
   if(e.key.toLowerCase()==='r'&&!e.repeat&&!isPaused()&&!phone.open){if(mouseLocked())releaseMouse();else lockMouse();return;}
   if(phone.open){if(e.key==='Escape'){e.preventDefault();phone.close();resetInput();}else if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'].includes(e.key)){e.preventDefault();phone.key(e.key);}else if(e.key==='Tab'){const b=[...root.querySelectorAll('.phone-screen button')],first=b[0],last=b.at(-1);if((e.shiftKey&&document.activeElement===first)||(!e.shiftKey&&document.activeElement===last)){e.preventDefault();(e.shiftKey?last:first).focus();}}return;}
   if((e.key==='p'||e.key==='P')&&equipment==='phone'){runAction('phone');return;}
