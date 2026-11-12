@@ -23,7 +23,7 @@ export class Pursuer{
    const cell=this.cells.get(key)||[];if(cell.some(n=>Math.abs(n.y-y)<.1))continue;
    const n={x,y,z,i,j,index:this.nodes.length};cell.push(n);this.cells.set(key,cell);this.nodes.push(n);
   }
-  for(const n of this.nodes){n.neighbors=[];for(const [di,dj]of [[1,0],[-1,0],[0,1],[0,-1]])for(const next of this.cells.get((n.i+di)+','+(n.j+dj))||[]){if(Math.abs(next.y-n.y)>(n.y<0||next.y<0?.60:.34))continue;let clear=true;for(let k=1;k<=4;k++){const t=k/4;if(blocked(boxes,n.x+(next.x-n.x)*t,n.y+(next.y-n.y)*t,n.z+(next.z-n.z)*t,.16,1.72)){clear=false;break;}}if(clear)n.neighbors.push(next.index);}}
+  for(const n of this.nodes){n.neighbors=[];for(const [di,dj]of [[1,0],[-1,0],[0,1],[0,-1]])for(const next of this.cells.get((n.i+di)+','+(n.j+dj))||[]){if(Math.abs(next.y-n.y)>((n.y<0||next.y<0)?0.60:0.34))continue;let clear=true;for(let k=1;k<=4;k++){const t=k/4;if(blocked(boxes,n.x+(next.x-n.x)*t,n.y+(next.y-n.y)*t,n.z+(next.z-n.z)*t,.16,1.72)){clear=false;break;}}if(clear)n.neighbors.push(next.index);}}
  }
  plan(goal){
   this.buildGraph();
