@@ -37,7 +37,16 @@ const assert=require('node:assert/strict');
  assert(!canTrapPursuer({active:true,x:8.55,y:0,z:3},tunnel,true));
  assert(!canTrapPursuer({active:true,x:8.55,y:-2.5,z:7},tunnel,false));
  const hunter=new Pursuer(world);hunter.start();hunter.nodes=null;
- assert(hunter.plan({x:8.55,y:-3.55,z:12.4}),'Enemy can plan a route into an OPEN basement');
+ const planned=hunter.plan({x:8.55,y:-3.55,z:12.4});
+ if(!planned){
+  const end=hunter.nodes.reduce((a,n)=>Math.hypot(n.x-8.55,(n.y+3.55)*2,n.z-12.4)<Math.hypot(a.x-8.55,(a.y+3.55)*2,a.z-12.4)?n:a,hunter.nodes[0]);
+  const start=hunter.nodes.reduce((a,n)=>Math.hypot(n.x-hunter.x,(n.y-hunter.y)*2,n.z-hunter.z)<Math.hypot(a.x-hunter.x,(a.y-hunter.y)*2,a.z-hunter.z)?n:a,hunter.nodes[0]);
+  const reachable=new Set([start.index]),queue=[start.index];for(const id of queue)for(const ni of hunter.nodes[id].neighbors)if(!reachable.has(ni)){reachable.add(ni);queue.push(ni);}
+  console.log('RC_BASEMENT_ROUTE_DIAGNOSTIC',JSON.stringify({nodes:hunter.nodes.length,start,end,reachable:reachable.size,underground:hunter.nodes.filter(n=>n.y<-0.2).length,
+   connectedUnderground:hunter.nodes.filter(n=>n.y<-0.2&&reachable.has(n.index)).length,
+   nearby:hunter.nodes.filter(n=>Math.abs(n.x-8.6)<.45&&n.z>2.2&&n.z<5.8).map(n=>({x:n.x,y:n.y,z:n.z,connections:n.neighbors.length,reachable:reachable.has(n.index)})).slice(0,50)}));
+ }
+ assert(planned,'Enemy can plan a route into an OPEN basement');
  const louis=createLouisEscape(world);
  assert(louisModel((id,x,y,z,w,h,d)=>({id,x,y,z,w,h,d})).length>25);
  for(let i=0;i<800&&louis.phase!=='hidden';i++){
