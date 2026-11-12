@@ -14,7 +14,7 @@ export class PhoneUI{
   <section class="hud-editor" hidden role="dialog" aria-label="Editar controles"><h2>Coloca tu hotbar</h2><p>La casa queda en pausa mientras ajustas.</p><label>Anclaje <select data-hud="anchor"><option value="left">Izquierda</option><option value="right">Derecha</option><option value="bottom">Abajo</option><option value="top">Arriba</option></select></label><label>Tamaño <input data-hud="size" type="range" min="40" max="64" step="2"></label><label>Desplazar X <input data-hud="x" type="range" min="-180" max="180" step="1"></label><label>Desplazar Y <input data-hud="y" type="range" min="-120" max="120" step="1"></label><label>Opacidad <input data-hud="opacity" type="range" min=".25" max=".9" step=".05"></label><output class="hud-measure"></output><div><button data-layout="copy">Copiar ajuste</button><button data-layout="reset">Restablecer</button><button data-layout="preview">Vista previa</button><button data-layout="done">Listo</button></div><small class="hud-copy-status" role="status"></small></section><div class="hud-preview-tools" hidden><output></output><button data-layout="back">Volver al editor</button><button data-layout="done">Listo</button></div>`;root.append(host);this.host=host;
   const feed=root.querySelector('#house-messages');this.managedNotice=!!feed;if(feed){host.append(feed);feed.append(host.querySelector('.phone-notice'));}
   const nav=host.querySelector('.house-hotbar');nav.querySelector('[data-equip=empty]').remove();
-  for(const [kind,label,key,icon] of [['key','Llave con lazo',4,'⚿'],['red-key','Llave roja',1,'⚿'],['paper','Nota',5,'▤']]){
+  for(const [kind,label,key,icon] of [['key','Llave con lazo',4,'⚿'],['red-key','Llave roja',1,'⚿'],['paper','Nota',5,'▤'],['rc','Auto RC y tablet',6,'🏎']]){
    const button=document.createElement('button');button.type='button';button.dataset.equip=kind;button.setAttribute('aria-label',label);button.title=key+' · '+label;
    button.innerHTML='<span aria-hidden="true"></span><small>'+key+'</small>';button.querySelector('span').textContent=icon;nav.append(button);
   }
@@ -53,7 +53,7 @@ export class PhoneUI{
  }
  equip(kind){for(const b of this.host.querySelectorAll('[data-equip]'))b.setAttribute('aria-pressed',String(b.dataset.equip===kind));if(kind!=='phone')this.close();}
  setInventory(inventory){
-  const available={flashlight:inventory.torch,phone:true,key:inventory.key,'red-key':inventory.redKey,paper:!!inventory.pendingNote||inventory.notes.length>0};
+  const available={flashlight:inventory.torch,phone:true,key:inventory.key,'red-key':inventory.redKey,paper:!!inventory.pendingNote||inventory.notes.length>0,rc:!!inventory.rc};
   for(const button of this.host.querySelectorAll('[data-equip]'))button.hidden=!available[button.dataset.equip];
   this.applyLayout();
  }
