@@ -38,7 +38,7 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   assert(await page.locator('[data-equip=rc]').isVisible(),'RC kit added to the inventory');
   await shot('01-rc-pickup');
   await page.evaluate(()=>window.__rescueHouse.setPose({x:10.0,y:3.15,z:4.2,yaw:Math.PI/2,pitch:0}));
-  await page.keyboard.press('6');
+  // Picking up and parking the kit already selects RC; pressing its slot again would toggle it off.
   await page.locator('#house-use-phone').click();
   await page.waitForFunction(()=>window.__rescueHouse.rc().mode==='driving');
   await page.locator('#house-rc-hud').waitFor();
@@ -72,7 +72,7 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   assert.equal((await rc()).trap.armed,true,'Kitchen hatch trap is armed');
 
   console.log('RC browser: lure active pursuer into basement and activate trap');
-  await page.keyboard.press('6');
+  // Picking up and parking the kit already selects RC; pressing its slot again would toggle it off.
   await page.locator('#house-use-phone').click();
   await page.waitForFunction(()=>window.__rescueHouse.rc().mode==='driving');
   await page.evaluate(()=>window.__rescueHouse.placeRC({x:8.55,y:-3,z:7,yaw:0}));
