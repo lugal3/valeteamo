@@ -296,10 +296,18 @@ export class HouseRenderer {
     const offset=box.sourceOffset||[0,0,0];
     const bob=source.kind==='key'?Math.sin(time*3.2+(source.x+source.z)*2.5)*bobAmp:0;
     const sway=(box.id.includes('bow-left')||box.id.includes('bow-right'))?Math.sin(time*4.2)*swayAmp:0;
-    box.x=source.x+offset[0];
-    box.y=source.concealed?-100:source.y+offset[1]+bob;
-    box.z=source.z+offset[2];
-    if(sway)box.yaw=(box.baseYaw||0)+sway;
+    if(source.kind==='rc-car'||source.kind==='louis-companion'){
+     const angle=-(source.yaw||0),c=Math.cos(angle),s=Math.sin(angle);
+     box.x=source.x+offset[0]*c-offset[2]*s;
+     box.y=source.concealed?-100:source.y+offset[1];
+     box.z=source.z+offset[0]*s+offset[2]*c;
+     box.yaw=angle+(box.baseYaw||0);
+    }else{
+     box.x=source.x+offset[0];
+     box.y=source.concealed?-100:source.y+offset[1]+bob;
+     box.z=source.z+offset[2];
+     if(sway)box.yaw=(box.baseYaw||0)+sway;
+    }
    } else if(box.ambient==='captive-breath'){
     box.y=this.dynamicOrigins[i][1]+(reduced||motion.feetY>-.3?0:Math.sin(time*2.3)*.010);
    }
