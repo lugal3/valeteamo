@@ -283,6 +283,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    o.aside=!o.aside;o.hatch.concealed=true;play('cloth',o);
   }else if(o.kind==='hatch'){
    if(o.amount!==Number(o.open))return;
+   if(puzzle.rescued&&louis?.phase==='hidden'&&o.open&&!rcTrap.armed){
+    rcTrap.armed=true;say('Trampa preparada. Usa el auto para atraer al secuestrador al sótano y activa la escotilla.',7);play('latch',o);return;
+   }
+   if(rcTrap.armed&&!rcTrap.closed){say('La trampa está preparada. Espera a que el secuestrador baje y activa el cierre desde la tablet.',5);return;}
    if(s.y<-.04||inHatch(s.x,s.z,.14)){say('Apártate del borde para mover la trampilla');return;}
    if(o.locked){
     if(!s.inventory.redKey){play('latch',o);say('Candado rojo · busca la llave sobre la barra de la cocina',4);return;}
@@ -352,11 +356,19 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(demo&&!canRescue(puzzle)){say('No es seguro sacarlo todavía. Investiga el dormitorio primero.',4);return;}
    if(demo&&config.entry!=='rescue'&&events.phase!=='evaded'){say('Primero despista al perseguidor para que puedan salir.',4);return;}
    puzzle=puzzleEvent(puzzle,'rescue');o.taken=true;
-   for(const box of world.boxes)if(box.id.startsWith('captive-rope-'))box.hiddenGeometry=true;
-   rebuild();phone.close();resetInput();pursuer.reset();sound.setThreat(false);
-   if(!events.complete())events.phase='safe';
-   play('cloth',o);play('pickup',o);
-   showModal('¡Louis está a salvo!', '<p>Kitty le suelta las manos. Louis murmura: «Sabía que ibas a venir».</p>',[[config.onRescue?'Terminar el juego':'Volver a pruebas',config.onRescue?'finish':'exit']]);
+   if(demo){
+    for(const box of world.boxes)if(box.id.startsWith('captive-')&&!box.id.startsWith('captive-chair-'))box.hiddenGeometry=true;
+    louis=createLouisEscape(world);world.objects.push(louis);
+    events.phase='rc-rescue';pursuer.reset();sound.setThreat(false);
+    phone.close();resetInput();rebuild();play('cloth',o);play('pickup',o);
+    say('¡Louis está libre! Kitty le indica que suba y se esconda tras la barra de la cocina.',7);
+   }else{
+    for(const box of world.boxes)if(box.id.startsWith('captive-rope-'))box.hiddenGeometry=true;
+    rebuild();phone.close();resetInput();pursuer.reset();sound.setThreat(false);
+    if(!events.complete())events.phase='safe';
+    play('cloth',o);play('pickup',o);
+    showModal('¡Louis está a salvo!', '<p>Kitty le suelta las manos. Louis murmura: «Sabía que ibas a venir».</p>',[[config.onRescue?'Terminar el juego':'Volver a pruebas',config.onRescue?'finish':'exit']]);
+   }
   }
   else if(o.kind==='bed'){
    s.lying={returnX:o.returnX,returnZ:o.returnZ};s.x=o.x;s.z=o.z-.25;s.pitch=-.08;
