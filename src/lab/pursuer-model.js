@@ -94,6 +94,16 @@ export function pursuerPose(actor,reduced=false){
   joints['arm'+side]={py:SHOULDER,x:sway,y:hips,z:shoulderZ,pitch:swing};
   joints['forearm'+side]={py:ELBOW,x:sway,y:hips+(SHOULDER-ELBOW)*(1-Math.cos(swing)),z:shoulderZ-(SHOULDER-ELBOW)*Math.sin(swing),pitch:swing-.13-amount*.20-hurry*.35};
  }
+ if(actor.mode==='trapped'){
+  // Frustrated rhythmic pounding and head turns, retained in low-motion mode.
+  const beat=reduced?0:Math.max(0,Math.sin((actor.age||0)*4.2));
+  joints.chest={...joints.chest,pitch:.08+beat*.08,roll:Math.sin((actor.age||0)*1.8)*.035};
+  joints.head={...joints.head,pitch:-.12+beat*.045,yaw:reduced?0:Math.sin((actor.age||0)*1.6)*.22};
+  for(const side of [-1,1]){
+   joints['arm'+side]={py:SHOULDER,pitch:-1.05-beat*.4,roll:side*.17};
+   joints['forearm'+side]={py:ELBOW,pitch:-1.32-beat*.5,roll:side*.14};
+  }
+ }
  return joints;
 }
 
