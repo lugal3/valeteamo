@@ -714,9 +714,17 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    setDoor(world.objects.find(o=>o.id==='entrada'),false);
   }
   if(pursuer.active){
+   const decoy=rc?.mode==='driving'&&(rc.noise>0||pursuer.canSee({x:rc.x,y:rc.y,z:rc.z,hidden:false,crouched:true,flashlight:false}))
+    ?{active:true,noisy:rc.noise>0,x:rc.x,y:rc.y,z:rc.z,crouched:true,flashlight:false,hidden:false}:null;
    const hiding=s.hidden?world.objects.find(o=>o.id===s.hidden.objectId):poseTransition?.object;
-   for(const signal of pursuer.update(Math.min(.055,delta),{x:s.x,y:s.y,z:s.z,crouched:s.crouched,flashlight:flashlightBeam(),hidden:!!s.hidden&&!poseTransition,entering:!!poseTransition?.entering,hideId:hiding?.id,hideExit:hiding?{x:hiding.returnX,y:s.y,z:hiding.returnZ}:null},door=>{if(door.id!=='entrada'&&!door.sealed&&!door.locked&&!door.motion&&sweepClear(door,door.amount,1,pursuer)){const result=animateFurniture(door,true,{player:s,reducedMotion:reducedMotion.matches});if(result.started)play('door-open',door);}})){
+   for(const signal of pursuer.update(Math.min(.055,delta),{x:s.x,y:s.y,z:s.z,crouched:s.crouched,flashlight:flashlightBeam(),hidden:!!s.hidden&&!poseTransition,entering:!!poseTransition?.entering,hideId:hiding?.id,hideExit:hiding?{x:hiding.returnX,y:s.y,z:hiding.returnZ}:null},door=>{if(door.id!=='entrada'&&!door.sealed&&!door.locked&&!door.motion&&sweepClear(door,door.amount,1,pursuer)){const result=animateFurniture(door,true,{player:s,reducedMotion:reducedMotion.matches});if(result.started)play('door-open',door);}},decoy)){
     if(signal==='step')play(pursuer.y>.1&&pursuer.y<HEIGHT-.1?'stair':'wood',pursuer,.8);
+    if(signal==='rc-hit'){
+     const pos=crashRC(rc,world);s.inventory.rc=false;equipment='empty';
+     phone.setInventory(s.inventory);phone.equip('empty');resetInput();rebuild();
+     play('alert',pursuer,1.1);
+     say('El secuestrador golpeó el auto. Se perdió la señal; lo dejó en otro lugar de la casa ('+Math.round(pos.x)+', '+Math.round(pos.z)+'). Ve a recuperarlo.',7);
+    }
     if(signal==='spotted'){phone.close();sound.sequence('alert');say('¡Te ha visto! Corre y rompe su línea de visión.',3);}
     if(signal==='lost')say('Te ha perdido de vista. Busca un escondite.',3);
     if(signal==='at-entry'){
