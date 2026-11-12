@@ -299,7 +299,7 @@ export class HouseRenderer {
     if(source.kind==='rc-car'||source.kind==='louis-companion'){
      const angle=-(source.yaw||0),c=Math.cos(angle),s=Math.sin(angle);
      box.x=source.x+offset[0]*c-offset[2]*s;
-     box.y=source.concealed?-100:source.y+offset[1];
+     box.y=source.kind==='louis-companion'?source.y+offset[1]-(source.crouch||0)*.68:source.concealed?-100:source.y+offset[1];
      box.z=source.z+offset[0]*s+offset[2]*c;
      box.yaw=angle+(box.baseYaw||0);
     }else{
