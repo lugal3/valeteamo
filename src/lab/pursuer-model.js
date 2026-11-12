@@ -78,9 +78,9 @@ export function pursuerPose(actor,reduced=false){
   hips=Math.min(hips,ANKLE+foot.lift+reach-HIP);
   return {side,cycle,foot};
  });
- const hurry=actor.mode==='chase'?amount:0;
+ const hurry=['chase','rc-chase'].includes(actor.mode)?amount:0;
  const joints={hips:{y:hips},chest:{py:1.07,x:sway,y:hips,pitch:.06+hurry*.15,yaw:-Math.sin(step)*.11*amount,roll:sway*.8},
-  head:{py:1.52,x:sway,y:hips-.005,z:.033+hurry*.065,yaw:reduced?0:Math.sin((actor.age??0)*2.1)*.17*(1-hurry),pitch:-.02-hurry*.04}};
+  head:{py:1.52,x:sway,y:hips-.005,z:.033+hurry*.065,yaw:reduced?0:Math.sin((actor.age??0)*(hurry?3.7:2.1))*(hurry?.065:.17),pitch:-.02-hurry*.07}};
  for(const {side,cycle,foot} of feet){
   const dy=HIP+hips-ANKLE-foot.lift;
   const thigh=Math.atan2(foot.z,dy)+Math.acos(clamp(Math.hypot(foot.z,dy)/(2*SEGMENT),0,1));
