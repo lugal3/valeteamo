@@ -18,6 +18,21 @@ module.exports=async()=>{
  const pawToShoe=pose=>Math.hypot(...pose.leftHand.map((value,i)=>value-pose.leftFoot[i]));
  assert(twiceTouch.leftFoot[1]>.39&&Math.abs(twiceTouch.rightFoot[1]-.11)<.015,'The TWICE heel flick lifts the shoe over the planted foot');
  assert(pawToShoe(twiceTouch)<.14&&pawToShoe(twiceRelease)>.3,'The paw reaches the lifted shoe and releases it with the reference');
+ for(const time of [2.43,2.75]){
+  const {rightFoot}=joints('what-is-love',time);
+  assert(Math.hypot(...rightFoot.map((value,i)=>value-twiceTouch.rightFoot[i]))<.003,'The support shoe stays in place during the heel flick');
+ }
+ const openArms=joints('what-is-love',1.12),mouthGesture=joints('what-is-love',1.46),reopenedArms=joints('what-is-love',1.72);
+ assert(Math.abs(mouthGesture.leftHand[0]-mouthGesture.root[0])<.13&&mouthGesture.leftHand[2]>.32,'The paw reaches the front of the face');
+ assert([openArms,reopenedArms].every(p=>p.rightHand[0]-p.leftHand[0]>.80),'Both paws open before and after the mouth gesture');
+ const nearHigh=joints('what-is-love',3.55),farHigh=joints('what-is-love',3.81);
+ assert(nearHigh.leftHand[1]-nearHigh.rightHand[1]>.15&&farHigh.rightHand[1]-farHigh.leftHand[1]>.23,'The arms alternate the high and low corners');
+ const sweepStart=joints('what-is-love',4.09),sweepPeak=joints('what-is-love',4.68);
+ assert(['leftHand','rightHand'].every(hand=>sweepPeak[hand][1]-sweepStart[hand][1]>.17),'Both paws rise during the diagonal sweep');
+ const heartStart=joints('what-is-love',8.05),heartLobe=joints('what-is-love',8.21);
+ const heartNotch=joints('what-is-love',8.32),otherLobe=joints('what-is-love',8.4),heartEnd=joints('what-is-love',8.61);
+ assert(heartLobe.leftHand[1]-heartStart.leftHand[1]>.16&&otherLobe.leftHand[1]-heartEnd.leftHand[1]>.17,'The raised paw returns to the bottom point of the heart');
+ assert(Math.min(heartLobe.leftHand[1],otherLobe.leftHand[1])-heartNotch.leftHand[1]>.028,'The two lobes are separated by a notch');
  const {sampleBlink}=await import('../src/lab/animations/face.js'),eyes=binding.groups.filter(group=>group.blinkY!==undefined);
  assert.equal(eyes.length,4,'Both eyes and their glints can blink');
  const blink=sampleBlink(1.30);assert(blink>.95);assert.equal(sampleBlink(1.30,{reduced:true}),0);assert.equal(sampleBlink(2),0);
