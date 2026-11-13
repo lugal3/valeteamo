@@ -38,7 +38,7 @@ export function updateLouisEscape(louis,dt,kitty=null){
   louis.walk+=step;louis.speed=step/Math.max(dt,.0001);
  }else if(louis.phase==='hide'){
   louis.crouch=Math.min(1,louis.age/1.1);
-  if(louis.age>=1.5){louis.phase='hidden';louis.concealed=true;return 'hidden';}
+  if(louis.age>=1.5){louis.phase='hidden';louis.age=0;louis.concealed=true;return 'hidden';}
  }else if(louis.phase==='follow'&&kitty){
   const behind={x:kitty.x-Math.sin(kitty.yaw)*.90,z:kitty.z-Math.cos(kitty.yaw)*.90};
   const dx=behind.x-louis.x,dz=behind.z-louis.z,d=Math.hypot(dx,dz);
@@ -56,9 +56,24 @@ export function freeLouis(louis){
  return true;
 }
 export function louisCamera(louis){
- if(louis.phase==='untying')return {x:louis.x-.44,y:louis.y+1.28,z:louis.z-1.22,yaw:Math.atan2(.44,1.22),pitch:-.075};
- return {x:louis.x-1.3,y:louis.y+1.48,z:louis.z+1.9,
-  yaw:Math.atan2(1.3,-1.9),pitch:-.20};
+ // The old shoulder camera crossed the narrow tunnel wall and produced a
+ // pitch-black shot. Keep the lens on the physical walkable tunnel ramp.
+ if(louis.phase==='untying'){
+  const z=louis.z-1.18;
+  return {x:louis.x,y:louis.y+1.24,z,yaw:0,pitch:.10};
+ }
+ if(louis.phase==='climb'&&louis.y<-.18){
+  const z=Math.max(2.63,louis.z-.73);
+  const floor=groundHeight(8.55,z,louis.y,true);
+  const y=Number.isFinite(floor)?floor+1.20:louis.y+1.25;
+  const dz=louis.z-z;
+  return {x:8.55,y,z,yaw:Math.atan2(louis.x-8.55,dz),pitch:Math.atan2(louis.y+1.42-y,Math.max(.1,dz))};
+ }
+ // Across the open kitchen, framed to show his face while he crouches
+ // behind the American-style breakfast bar.
+ const x=10.65,z=2.75,y=1.52;
+ const dx=louis.x-x,dz=louis.z-z;
+ return {x,y,z,yaw:Math.atan2(dx,dz),pitch:Math.atan2(louis.y+1.25-y,Math.hypot(dx,dz))};
 }
 // Stylized 2025-era Louis Tomlinson reference: narrow oval face, asymmetrical
 // eyebrow-length chestnut fringe, cool blue-grey irises, straight nose and
