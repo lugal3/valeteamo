@@ -615,9 +615,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    $('rc-trap-button').hidden=!canTrapPursuer(pursuer,world.hatch,rcTrap.armed);
    interactButton.hidden=true;
   }
-  const announce=rc?.mode==='deploying'||louis&&['untying','climb','hide'].includes(louis.phase)||!!finalCutscene;
+  const announce=rc?.mode==='deploying'||louis&&(['untying','climb','hide'].includes(louis.phase)||(louis.phase==='hidden'&&louis.age<1.6))||!!finalCutscene;
   $('house-rc-caption').hidden=!announce;
-  if(announce)$('house-rc-caption').textContent=finalCutscene?'¡Libres! Kitty y Louis cruzan el jardín…':louis?.phase==='untying'?'Kitty desata las cuerdas mientras Louis espera en silencio…':louis&&['climb','hide'].includes(louis.phase)?'Louis sube del sótano y busca refugio tras la barra americana…':'Kitty se agacha y despliega el autito con las dos patitas…';
+  if(announce)$('house-rc-caption').textContent=finalCutscene?'¡Libres! Kitty y Louis cruzan el jardín…':louis?.phase==='untying'?'Kitty desata las cuerdas mientras Louis espera en silencio…':louis?.phase==='hidden'?'Louis se agacha tras la barra americana y mira alrededor…':louis&&['climb','hide'].includes(louis.phase)?'Louis sube del sótano y busca refugio tras la barra americana…':'Kitty se agacha y despliega el autito con las dos patitas…';
   root.classList.toggle('house-rc-driving',remote);
   if(poseTransition)interactButton.querySelector('small').textContent=poseTransition.entering?'Entrando…':'Saliendo…';
   if(target?.motion)interactButton.querySelector('small').textContent=target.state==='opening'?'Abriendo…':'Cerrando…';
@@ -637,7 +637,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(louisCue==='hidden'){
    events.phase='rc-setup';say('Louis se escondió tras la barra de la cocina. Prepara la trampa en la escotilla.',6);
   }
-  if(louis&&['untying','climb','hide'].includes(louis.phase))return;
+  if(louis&&(['untying','climb','hide'].includes(louis.phase)||(louis.phase==='hidden'&&louis.age<1.6)))return;
   if(rc){
    updateRC(rc,dt);
    if(rc.mode==='driving'){
@@ -804,8 +804,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    }
   }
   let thirdPerson=null,actorTime;
-  if(louis&&['untying','climb','hide'].includes(louis.phase)){
-   view=louisCamera(louis);hand=false;torch=false;
+  if(louis&&(['untying','climb','hide'].includes(louis.phase)||(louis.phase==='hidden'&&louis.age<1.6))){
+   view=louisCamera(louis);hand=false;
+   // Kitty's flashlight illuminates the otherwise unlit tunnel and Louis'
+   // face throughout this framed scene; no global house lighting is altered.
+   torch=true;
    if(louis.phase==='untying'){
     const t=louis.age||0,reach=Math.min(1,t/.7),knot=Math.sin(t*8)*.023;
     introHands=[-1,1].map(side=>({
