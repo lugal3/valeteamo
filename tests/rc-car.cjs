@@ -55,13 +55,14 @@ const assert=require('node:assert/strict');
  real.plan({x:8.55,y:-3.55,z:12.4});
  const distantKitty={x:6.1,y:0,z:8.7,hidden:true};
  const noisyToy={active:true,noisy:true,x:8.55,y:-3.55,z:12.4,crouched:true,hidden:false};
- for(let i=0;i<1700&&real.y>-.55;i++){
+ for(let i=0;i<300&&real.y>-.55;i++){
   real.update(.05,distantKitty,()=>{},noisyToy);
   assert(Number.isFinite(real.x)&&Number.isFinite(real.y)&&Number.isFinite(real.z),'NPC position remains finite on basement ramp');
  }
  if(!(real.y<-.55&&real.z>4.35)){
   console.log('RC_LIP_DIAGNOSTIC',JSON.stringify({pos:{x:real.x,y:real.y,z:real.z},mode:real.mode,goal:real.goal,path:real.path.slice(0,9).map(n=>({x:n.x,y:n.y,z:n.z})),
    blockers:world.boxes.filter(b=>blocked([b],real.x,real.y,real.z,.16,1.72)).map(b=>b.id),
+   probes:[.005,.02,.04,.08,.16,.32].map(dz=>{const z=real.z+dz,y=groundHeight(real.x,z,real.y,true);return {z,y,step:y-real.y,blockers:world.boxes.filter(b=>blocked([b],real.x,y,z,.155,1.72)).map(b=>b.id),nav:!Number.isFinite(y)||Math.abs(y-real.y)>.35};}),
    samples:[7.8,7.9,8,8.1,8.2,8.4,8.55].map(x=>({x,y:groundHeight(x,2.6,real.y,true),blocked:world.boxes.filter(b=>blocked([b],x,groundHeight(x,2.6,real.y,true),.16,1.72)).map(b=>b.id).slice(0,5)}))}));
  }
  assert(real.y<-.55&&real.z>4.35,'NPC physically descends below the basement hatch without path stalls');
