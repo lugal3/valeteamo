@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');
 (async()=>{
- const {createHouse,blocked,groundHeight,HEIGHT}=await import('../src/lab/world.js');
+ const {createHouse,blocked,groundHeight,setDoor,HEIGHT}=await import('../src/lab/world.js');
  const {poseHatch}=await import('../src/lab/basement.js');
  const {Pursuer}=await import('../src/lab/pursuer.js');
  const rcModule=await import('../src/lab/rc-car.js');
@@ -47,6 +47,19 @@ const assert=require('node:assert/strict');
    nearby:hunter.nodes.filter(n=>Math.abs(n.x-8.6)<.45&&n.z>2.2&&n.z<5.8).map(n=>({x:n.x,y:n.y,z:n.z,connections:n.neighbors.length,reachable:reachable.has(n.index)})).slice(0,50)}));
  }
  assert(planned,'Enemy can plan a route into an OPEN basement');
+ // Regression: an NPC approaching from the kitchen door must not get stuck on the
+ // 7.91 m lip where the flat kitchen floor meets the descending tunnel.
+ setDoor(world.objects.find(o=>o.id==='cocina'),true);
+ const real=new Pursuer(world);
+ Object.assign(real,{x:7.9076075,y:0,z:2.6,mode:'rc-chase'});
+ real.plan({x:8.55,y:-3.55,z:12.4});
+ const distantKitty={x:6.1,y:0,z:8.7,hidden:true};
+ const noisyToy={active:true,noisy:true,x:8.55,y:-3.55,z:12.4,crouched:true,hidden:false};
+ for(let i=0;i<1700&&real.y>-.55;i++){
+  real.update(.05,distantKitty,()=>{},noisyToy);
+  assert(Number.isFinite(real.x)&&Number.isFinite(real.y)&&Number.isFinite(real.z),'NPC position remains finite on basement ramp');
+ }
+ assert(real.y<-.55&&real.z>4.35,'NPC physically descends below the basement hatch without path stalls');
  const louis=createLouisEscape(world);
  assert(louisModel((id,x,y,z,w,h,d)=>({id,x,y,z,w,h,d})).length>25);
  for(let i=0;i<800&&louis.phase!=='hidden';i++){
