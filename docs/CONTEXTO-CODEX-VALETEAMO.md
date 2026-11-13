@@ -4,6 +4,8 @@ El [README principal](../README.md) es la guía actual del repositorio. Este con
 
 La caja fuerte comienza cerrada en las entradas de la casa. La hoja con las cifras invertidas está en la mesa del dormitorio, se equipa al recogerla y se archiva como resuelta después de leerla en el espejo. La linterna consume un repuesto al agotar su carga, anima el cambio y recupera hasta 55 puntos. El piano interactivo está en el descansillo superior, junto a la escalera. La cocina tiene un estante con frascos, fruta, paños y un recetario.
 
+**Llegada y escondite.** El auto entra por el jardín al comienzo de la llegada y queda estacionado, con la colisión del chasis. Kitty puede levantarse y caminar hasta el armario con una toma de cuerpo entero antes de entrar. El secuestrador tiene un modelo retocado y se incorpora de la cama antes de bajar tras el mensaje de Luis. En **Pruebas → Cinemáticas y escondites** se pueden repetir las tres escenas por separado.
+
 **Contador y emote What Is Love? (12 de noviembre de 2026).** La entrada muestra el tiempo hasta las 00:00 del 5 de diciembre de 2026 en Santiago de Chile. El engranaje admite `LP` para pasar a la portada original antes de la fecha. Este acceso de vista previa se evalúa en el navegador. El título visible y los íconos de la app usan «Feliz cumpleaños Vale» y la foto aportada de Kitty. La puerta de entrada se monta por encima de `StoryApp`; el cambio dentro de `StoryApp` se limita al título y la marca.
 
 El emote usa el tramo 00:48–00:58 de «TWICE _What is Love__ Dance Video.mp4», aportado por el propietario. La pista `src/lab/audio/emote-what-is-love.mp3` sincroniza las poses de la bailarina de camiseta blanca con los apoyos y gestos de `src/lab/animations/what-is-love.js`. La secuencia incluye el gesto frente a la boca, el talón, la ola de muñeca, los brazos en ángulos alternados, la mano en la sien hacia 00:53, la flexión de rodillas con las palmas hacia afuera y el corazón con una mano durante el giro de 00:56. Se activa con **9** o «Emotes» en el baño.
@@ -54,7 +56,7 @@ El emote usa el tramo 00:48–00:58 de «TWICE _What is Love__ Dance Video.mp4»
 | **B. Aventura clásica 2D** | «Jugar la aventura clásica» | React + Phaser 3 | Juego anterior de seis salas, enemigos, tesoro, tienda, jefe, economía, objetos y combate | **CONGELADA: NO TOCAR** |
 | **C. Prólogo de rescate 2D** | «Jugar la demo de rescate 2D → 3D» | React + Phaser 3 | Jardín, corazón, secuestro no violento de Louis, pétalos/pistas, puerta y transición | **CONGELADO: NO TOCAR** |
 | **D. Casa del rescate 3D** | Después del prólogo de rescate | WebGL1 propio (no Three.js, no Phaser para la casa) | Casa única de dos pisos, cámara en primera persona, ventana cinematográfica, escaleras, linterna, pistas, dos puzzles y rescate | Área de desarrollo FUTURA, siempre por rama y revisión |
-| **E. Menú «Pruebas»** | Botón pequeño «Pruebas» en la portada de cumpleaños | React, checkpoints aislados | Tres accesos principales: 2D Corazones (isométrico nivel 2), Rescate 2D → 3D y Casa 3D. Abajo: Espejo, Cajón y pistas, Dormitorio y rescate, Aventura clásica, Historia y preguntas. | No quitar sin permiso; se puede estudiar ocultarlo al público en una tarea futura |
+| **E. Menú «Pruebas»** | Botón «Pruebas» en la portada de cumpleaños | React, checkpoints aislados | Casa completa y escenas rápidas agrupadas por mecánica, con su estado inicial descrito. También incluye 2D Corazones, Rescate 2D → 3D, Aventura clásica e Historia y preguntas. | No quitar sin permiso; se puede estudiar ocultarlo al público en una tarea futura |
 | **F. Menú de laboratorio antiguo** | Código `src/lab/index.js` | HTML+JS/WebGL1 | Menú experimental histórico con entradas de planta baja/alta/interacciones | **No está montado por `index.html` actual**, que carga solo `/src/main.tsx`. No confundir archivo que existe con pantalla activa |
 
 ### Flujo real
@@ -110,7 +112,8 @@ index.html → src/main.tsx → StoryApp.tsx → Splash (PLAY)
 - `src/lab/world.js`: colisiones, alturas y transformación de piezas móviles; `src/lab/house-layout.js` define la distribución V4, habitaciones, muebles, escalera y entorno.
 - `src/lab/navigation.js`: movimiento barrido, colisiones y escaleras.
 - `src/lab/camera-controls.js`: giro y suavizado, inversión horizontal, sensibilidad; preferencias locales.
-- `src/lab/mirror.js`: modelo procedural de Kitty y reflejo acotado del baño; el checkpoint `mirror` se abre desde «Pruebas».
+- `src/lab/mirror.js`: modelo procedural de Kitty y reflejo acotado del baño.
+- `src/PlaytestMenu.tsx` y `src/lab/house-trials.ts`: menú de Pruebas y configuración de los inicios rápidos de la casa. Al reiniciar se repone el estado inicial de esa escena.
 - `src/lab/window-intro.js`: secuencia por la ventana, salto opcional y aterrizaje.
 - `src/lab/renderer.js`: WebGL1, geometría real, shaders de materiales, luces y linterna/mano 3D.
 - `src/lab/sound.js`: ambiente y efectos 3D con Web Audio.

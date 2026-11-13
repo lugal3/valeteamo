@@ -1,4 +1,4 @@
-import {createRigBinding,evaluateRig,JOINT_INDEX} from './character-rig.js';
+import {createPose,createRigBinding,evaluateRig,JOINT_INDEX} from './character-rig.js';
 import {sampleBlink} from './animations/face.js';
 import {smoothSurface,torusSurface,roundedBoxSurface} from './chibi-geometry.js';
 import {BATH_MIRROR,mirrorVisible,kittyMirrorPieces,reflectedBathroom,reflectMesh,poseReflectedKitty} from './mirror.js';
@@ -6,6 +6,7 @@ import {ART_SIZE,ART_COLUMNS,ART_ROWS,POSTER_IMAGES,artTile,createArtworkCanvas}
 import {climbingHandPieces} from './first-person.js';
 import {drawViewModel} from './viewmodel.js';
 import {pursuerPieces,posePursuer} from './pursuer-model.js';
+import {sampleWardrobeWalk} from './animations/wardrobe-entry.js';
 import {VERTEX_SHADER as VS,FRAGMENT_SHADER as FS} from './material-shaders.js';
 // Minimal WebGL1 3D renderer: real perspective, depth buffer, world geometry and spotlight.
 // No additional packages, CDNs, runtime downloads or concurrent Phaser loops.
@@ -204,7 +205,7 @@ export class HouseRenderer {
   this.locations={};
   for(const [quality,p] of Object.entries(this.programs)){
    const atrib={},uniform={};for(const key of ['aPos','aCol','aNormal','aUV','aArt','aStyle','aTangent'])atrib[key]=gl.getAttribLocation(p,key);
-   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld','uTV','uTVSignal'])uniform[key]=gl.getUniformLocation(p,key);
+   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld','uTV','uTVSignal','uShot'])uniform[key]=gl.getUniformLocation(p,key);
    uniform.uLamps=gl.getUniformLocation(p,'uLamps[0]');
    this.locations[quality]={atrib,uniform};
   }
@@ -373,10 +374,13 @@ export class HouseRenderer {
   }
  }
  drawActor(subject,motion){
-  const equipment=motion.equipment||'flashlight',gl=this.gl;
+  const equipment=motion.actorWalk?'empty':motion.equipment||'flashlight',gl=this.gl;
   if(this.actorEquipment!==equipment){this.actorEquipment=equipment;this.actorMesh=geometry(kittyMirrorPieces(equipment));this.actorVertices=new Float32Array(this.actorMesh.vertices.length);this.actorBinding=createRigBinding(this.actorMesh.groups);}
   const animator=motion.animator;
-  if(animator)evaluateRig(this.actorBinding,animator.sample('look-behind',.5));
+  if(motion.actorWalk){
+   this.actorPose??=createPose();this.actorScratch??=createPose();
+   evaluateRig(this.actorBinding,sampleWardrobeWalk(motion.actorWalk,this.actorPose,this.actorScratch));
+  }else if(animator)evaluateRig(this.actorBinding,animator.sample('look-behind',.5));
   const blink=sampleBlink(motion.actorTime??animator?.time??0,{
    reduced:animator?.reduced??motion.reduced,firstAt:motion.actorTime===undefined?undefined:.25
   });
@@ -448,6 +452,7 @@ export class HouseRenderer {
   gl.uniform2f(this.uniform.uProjection,1.30*this.canvas.height/this.canvas.width,1.30);
   gl.uniform1f(this.uniform.uNear,.07);gl.uniform1f(this.uniform.uFar,45);
   gl.uniform1f(this.uniform.uFlash,flash?1:0);gl.uniform1f(this.uniform.uTime,time);
+  gl.uniform1f(this.uniform.uShot,motion.shotLight??0);
   gl.uniform1f(this.uniform.uOcclude,this.quality==='low'?0:1);
   gl.stencilMask(0xff);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT|gl.STENCIL_BUFFER_BIT);
   // Closed doors are useful depth occluders too. All these surfaces are opaque.

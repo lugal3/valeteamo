@@ -7,6 +7,7 @@ import {installWallClock} from './wall-clock.js';
 import {STUDY_SIGN} from './artwork.js';
 import {HATCH,floorAroundHatch,installBasement} from './basement.js';
 import {decorateKitchen,installPiano,installKitchenBar,installExtraHides} from './house-additions.js';
+import {installArrivalCar} from './arrival-car.js';
 // V5: generous landings and an independent, open stairwell. Dimensions in metres.
 export const HEIGHT=3.15;
 export const HOUSE=Object.freeze({width:14,depth:12});
@@ -382,9 +383,7 @@ export function buildHouse(spawn='ground'){
   add('tree-trunk-'+i,x,1.1,z,.25,2.2,.25,'wood');for(let n=0;n<3;n++)add('tree-crown-'+i+n,x+(n-1)*.45,2.6+(n%2)*.45,z+(n%2)*.30,1.7,1.9,1.6,'foliage',false,{shape:'round',segments:8,rings:4});
  }
  for(let i=0;i<8;i++){const x=i%2?8.2:3.6,z=13.5+Math.floor(i/2)*1.4;plant('garden-plant-'+i,x,0,z);}
- const carX=10.1,carZ=16.6;add('car-body',carX,.65,carZ,1.65,.65,3.3,'carpaint');add('car-cabin',carX,1.18,carZ+.12,1.4,.65,1.8,'carpaint',false,{shape:'round'});add('car-windshield',carX,1.24,carZ-.65,1.24,.43,.07,'glass',false);
- for(const x of [-.82,.82])for(const z of [-1.05,1.05])add('car-wheel-'+x+z,carX+x,.34,carZ+z,.56,.56,.20,'dark',false,{shape:'cylinder',yaw:Math.PI/2});
- for(const x of [-.52,.52])add('car-headlight-'+x,carX+x,.72,carZ-1.67,.30,.18,.04,'torchglass',false,{glow:true});
+ const car=installArrivalCar(add);
  for(const x of [-9.7,25.7])add('garden-boundary-x'+x,x,.65,12,.15,1.3,40,'wood');for(const z of [-7.7,31.7])add('garden-boundary-z'+z,8,.65,z,36,1.3,.15,'wood');
  add('moon',-2,15,-6,1.4,1.4,1.4,'paper',false,{shape:'round',glow:true});
  
@@ -404,5 +403,5 @@ export function buildHouse(spawn='ground'){
  const lights=installHouseLights(add,obj,HEIGHT);
  const hatch=installBasement(add,obj,lights);
  hatchRug.hatch=hatch;
- return {boxes,objects,lights,television,clock,hatch,hatchRug,entryWindow,spawn:spawns[spawn]||spawns.ground,spawns,rooms:ROOMS,bounds:WORLD_BOUNDS,stair:STAIR,house:HOUSE};
+ return {boxes,objects,lights,television,clock,hatch,hatchRug,entryWindow,car,spawn:spawns[spawn]||spawns.ground,spawns,rooms:ROOMS,bounds:WORLD_BOUNDS,stair:STAIR,house:HOUSE};
 }

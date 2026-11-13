@@ -1,16 +1,18 @@
 import {blocked,groundHeight,lineBlocked,HEIGHT} from './world.js';
 import {navigate} from './navigation.js';
+import {BED_EXIT,RISE_SECONDS} from './pursuer-model.js';
 
 const CELL=.4,dist=(a,b)=>Math.hypot(a.x-b.x,(a.y-b.y)*2,a.z-b.z);
 export const SEARCH_ROUTE=Object.freeze([{x:12,y:HEIGHT,z:4.2},{x:6,y:HEIGHT,z:2.8},{x:2.5,y:HEIGHT,z:3.6},{x:6,y:HEIGHT,z:5.8},{x:6,y:0,z:8.7},{x:8.67,y:0,z:2.20}]);
-const BED_APPROACH={x:2.66,y:HEIGHT,z:1.77},ENTRY_APPROACH={x:5.8,y:0,z:11};
+const ENTRY_APPROACH={x:5.8,y:0,z:11};
 export class Pursuer{
  constructor(world){this.world=world;this.reset();}
- reset(){this.x=5.8;this.y=0;this.z=11;this.yaw=this.facing=Math.PI;this.mode='dormant';this.awareness=0;this.lost=10;this.witnessed=null;this.lastSeen=null;this.path=[];this.route=0;this.visited=0;this.replan=0;this.walk=this.speed=this.age=0;this.stepDistance=0;this.caught=false;this.stuck=0;this.task=null;}
+ reset(){this.x=5.8;this.y=0;this.z=11;this.yaw=this.facing=Math.PI;this.mode='dormant';this.awareness=0;this.lost=10;this.witnessed=null;this.lastSeen=null;this.path=[];this.route=0;this.visited=0;this.replan=0;this.walk=this.speed=this.age=this.bedTime=0;this.stepDistance=0;this.caught=false;this.stuck=0;this.task=null;}
  get active(){return this.mode!=='dormant'&&this.mode!=='gone';}
  start(){this.reset();this.mode='search';this.plan(SEARCH_ROUTE[0]);}
- goToBed(){this.mode='to-bed';this.task=BED_APPROACH;this.plan(this.task);}
- wake(){this.mode='to-entry';this.task=ENTRY_APPROACH;this.plan(this.task);}
+ goToBed(){this.mode='to-bed';this.task=BED_EXIT;this.plan(this.task);}
+ sleep(){this.mode='sleeping';this.speed=0;this.task=null;Object.assign(this,BED_EXIT,{facing:BED_EXIT.yaw});}
+ wake(){this.mode='rising';this.bedTime=0;}
  resumeSearch(){this.task=null;this.mode='search';this.route=4;this.visited=0;this.witnessed=null;this.lastSeen=null;this.awareness=0;this.plan(SEARCH_ROUTE[this.route]);}
  retreat(){this.mode='retreat';this.witnessed=null;this.lastSeen=null;this.awareness=0;this.plan({x:5.8,y:0,z:11});}
  planningBoxes(){const leaves=new Set(this.world.objects.filter(o=>o.kind==='door'&&o.state!=='open').flatMap(o=>[o.box,...(o.parts||[]).map(p=>p.box)]));return this.world.boxes.filter(b=>!leaves.has(b));}
@@ -43,6 +45,14 @@ export class Pursuer{
  update(dt,p,onDoor=()=>{}){
   const cues=[];if(!this.active||dt<=0)return cues;
   if(this.mode==='sleeping'){this.age+=dt;return cues;}
+  if(this.mode==='lying-down'||this.mode==='rising'){
+   this.bedTime=Math.min(RISE_SECONDS,this.bedTime+dt);this.age+=dt;
+   if(this.bedTime===RISE_SECONDS){
+    if(this.mode==='lying-down')this.sleep();
+    else{this.mode='to-entry';this.task=ENTRY_APPROACH;this.plan(this.task);cues.push('stood');}
+   }
+   return cues;
+  }
   const visible=this.mode!=='retreat'&&!this.task&&this.canSee(p);this.lost=visible?0:this.lost+dt;
   this.awareness=Math.max(0,Math.min(1,this.awareness+dt*(visible?(p.crouched?1:1.7):-.5)));
   if(visible){this.lastSeen={x:p.x,y:p.y,z:p.z};if(p.entering)this.witnessed=p.hideId;}
@@ -59,7 +69,15 @@ export class Pursuer{
    this.yaw=Math.atan2(dx,dz);const step=Math.min(d,dt*(this.mode==='chase'?2.15:1.45));moved=navigate(this,this.world,dx/d*step,dz/d*step,1.72);this.walk+=moved;this.stepDistance+=moved;this.stuck=moved<.003?this.stuck+dt:0;
    if(this.stepDistance>.65){this.stepDistance%=.65;cues.push('step');}
   }}else if(this.goal&&dist(this,this.goal)<.8){
-   if(this.mode==='to-bed'){this.mode='sleeping';this.task=null;}
+   if(this.mode==='to-bed'){
+    const distance=Math.hypot(BED_EXIT.x-this.x,BED_EXIT.z-this.z);
+    const turn=Math.atan2(Math.sin(BED_EXIT.yaw-this.facing),Math.cos(BED_EXIT.yaw-this.facing));
+    this.yaw=BED_EXIT.yaw;
+    if(distance>.025){
+     const step=Math.min(distance,dt*.85),scale=step/distance;
+     moved=navigate(this,this.world,(BED_EXIT.x-this.x)*scale,(BED_EXIT.z-this.z)*scale,1.72);this.walk+=moved;
+    }else if(Math.abs(turn)<.09){this.sleep();this.mode='lying-down';this.bedTime=0;}
+   }
    else if(this.mode==='to-entry')cues.push('at-entry');
    else if(this.mode==='retreat'){this.mode='gone';cues.push('gone');}
    else{this.lastSeen=null;this.witnessed=null;this.visited++;this.route=(this.route+1)%SEARCH_ROUTE.length;this.plan(SEARCH_ROUTE[this.route]);}
@@ -70,5 +88,5 @@ export class Pursuer{
   this.facing+=Math.atan2(Math.sin(turn),Math.cos(turn))*(1-Math.exp(-12*dt));
   return cues;
  }
- snapshot(){return {x:this.x,y:this.y,z:this.z,yaw:this.yaw,facing:this.facing,mode:this.mode,awareness:this.awareness,lost:this.lost,walk:this.walk,speed:this.speed,age:this.age,active:this.active,witnessed:this.witnessed,path:this.path.length,caught:this.caught};}
+ snapshot(){return {x:this.x,y:this.y,z:this.z,yaw:this.yaw,facing:this.facing,mode:this.mode,awareness:this.awareness,lost:this.lost,walk:this.walk,speed:this.speed,age:this.age,bedTime:this.bedTime,active:this.active,witnessed:this.witnessed,path:this.path.length,caught:this.caught};}
 }

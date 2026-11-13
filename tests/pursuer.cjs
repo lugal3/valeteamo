@@ -13,7 +13,7 @@ module.exports=async()=>{
  const manifest=JSON.parse(fs.readFileSync('src/lab/audio/manifest.json'));assert.equal(manifest.length,16);let total=0;
  for(const clip of manifest){const bytes=fs.readFileSync('src/lab/audio/'+clip.id+'.wav');assert.equal(bytes.toString('ascii',0,4),'RIFF');assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'),clip.sha256);assert(clip.peak<=.8);assert(clip.end>clip.start);total+=bytes.length;}
  assert(total<3000000);const open=manifest.find(c=>c.id==='door-open'),close=manifest.find(c=>c.id==='door-close');assert.equal(open.source,close.source);assert(open.end<close.start,'Opening and closing are distinct actions, not the same sound');
- const {pursuerPose,pursuerPieces,posePursuer}=await import('../src/lab/pursuer-model.js'),{geometry}=await import('../src/lab/renderer.js');
+ const {pursuerPose,pursuerPieces,posePursuer,BED_EXIT,RISE_SECONDS}=await import('../src/lab/pursuer-model.js'),{geometry}=await import('../src/lab/renderer.js');
  const mesh=geometry(pursuerPieces()),vertices=new Float32Array(mesh.vertices.length);
  const actor={x:2,y:3.15,z:5,yaw:0,facing:.32,walk:0,speed:1.45,age:0,mode:'search'};
  const first=pursuerPose(actor)['foot-1'],next=pursuerPose({...actor,walk:.20})['foot-1'];
@@ -23,6 +23,22 @@ module.exports=async()=>{
   assert(vertices.every(Number.isFinite),'All posed mesh positions and normals are finite');
   for(let j=1;j<vertices.length;j+=16)assert(vertices[j]>=actor.y-.028,'Feet clear the floor through the gait cycle');
  }
+ p.sleep();assert(!blocked(world.boxes,BED_EXIT.x,BED_EXIT.y,BED_EXIT.z,.16,1.72));
+ const asleep=p.snapshot();p.wake();p.update(RISE_SECONDS*.5,hidden);
+ assert.equal(p.mode,'rising');assert.equal(p.x,asleep.x,'NPC stands before starting the route');
+ posePursuer(mesh.vertices,vertices,mesh.groups,p.snapshot());assert(vertices.every(Number.isFinite));
+ posePursuer(mesh.vertices,vertices,mesh.groups,{...p.snapshot(),age:p.age+RISE_SECONDS*.5,bedTime:RISE_SECONDS});const upright=vertices.slice();
+ assert(p.update(RISE_SECONDS*.5,hidden).includes('stood'));assert.equal(p.mode,'to-entry');
+ posePursuer(mesh.vertices,vertices,mesh.groups,p.snapshot());
+ assert(vertices.every((value,i)=>Math.abs(value-upright[i])<.00001),'Rise blends continuously into standing');
+ const {CAR_ARRIVAL_SECONDS,poseArrivalCar,arrivalCarCamera}=await import('../src/lab/arrival-car.js');
+ const vehicleScene=new HouseEvents({arrivalLead:CAR_ARRIVAL_SECONDS});vehicleScene.observe({door:true});
+ assert.deepEqual(vehicleScene.advance(CAR_ARRIVAL_SECONDS,false),[],'Door cues wait until the car arrives');
+ assert(vehicleScene.advance(.46,false).includes('keys'));
+ poseArrivalCar(world.car,1);const body=world.boxes.find(box=>box.id==='car-body');
+ assert(blocked(world.boxes,body.x,0,body.z),'Car collision follows the body');
+ const view=arrivalCarCamera(1);assert(Math.hypot(body.x-view.x,body.z-view.z)>2);
+ poseArrivalCar(world.car,0);assert(!blocked(world.boxes,10.15,0,16.65),'Replaying resets car collision');
  console.log('PASS pursuit: physical stair/door navigation, LOS, witnessed/unseen hiding, retry/completion, 16 bounded separate audio cuts and hashes');
 };
 if(require.main===module)module.exports().catch(e=>{console.error(e);process.exitCode=1;});

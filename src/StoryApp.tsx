@@ -1,4 +1,4 @@
-import {useEffect,useRef,useState,type ComponentType} from 'react';
+import {useCallback,useEffect,useRef,useState,type ComponentType} from 'react';
 import {CHARACTERS,type CharacterId} from './characters';
 import {CONTENT_IS_SAMPLE,STORY,type MemoryPhoto} from './story-content';
 import {advance,goTo,initialProgress,readProgress,writeProgress,type StoryProgress} from './story-progress';
@@ -7,6 +7,8 @@ import {Sound} from './audio';
 import {FullscreenControl} from './FullscreenControl';
 import {Splash} from './demo/Splash';
 import {RescueDemo} from './demo/RescueDemo';
+import {PlaytestHouse,PlaytestMenu} from './PlaytestMenu';
+import type {HouseTrialId} from './lab/house-trials';
 import './story.css';
 import {stopWelcomeMelody} from './demo/welcome-melody';
 
@@ -35,6 +37,8 @@ export function StoryApp({ClassicApp}:{ClassicApp:ComponentType}){
  const [screen,setScreen]=useState<'splash'|'cover'|'story'|'game'|'classic'|'rescue'|'tests'|'arcade'>('splash');
  const [demoEntry,setDemoEntry]=useState<'garden'|'abduction'|'trail'|'house'|'drawer'|'lock'|'rescue'|'mirror'>('garden');
  const [demoTrial,setDemoTrial]=useState(false);const [saved,setSaved]=useState(progress.started);const [storageOK,setStorageOK]=useState(true);
+ const [houseTrial,setHouseTrial]=useState<HouseTrialId|null>(null);
+ const closeHouseTrial=useCallback(()=>setHouseTrial(null),[]);
  const [audioNotice,setAudioNotice]=useState('');
  const [comicOpen,setComicOpen]=useState(false);
  const chapter=STORY[progress.index];
@@ -54,21 +58,18 @@ export function StoryApp({ClassicApp}:{ClassicApp:ComponentType}){
  const openDemo=(entry:typeof demoEntry,trial:boolean)=>{setDemoEntry(entry);setDemoTrial(trial);audio.current.destroy();stopWelcomeMelody();setScreen('rescue');};
  if(screen==='splash')return <Splash muted={progress.muted} onStart={()=>{if(!progress.muted)tryAudio(true);setScreen('cover');}}/>;
  if(screen==='rescue')return <RescueDemo key={demoEntry+(demoTrial?'-trial':'-story')} entry={demoEntry} test={demoTrial} onExit={()=>{setScreen(demoTrial?'tests':'cover');if(!demoTrial)unlockAudio();}}/>;
- if(screen==='tests')return <section className="rescue-test-menu" aria-label="Menú de pruebas"><div>
-  <span>VALETEAMO · PRUEBAS</span><h1>Elige dónde jugar</h1><p>Tres accesos principales. Las pruebas no cambian tu historia ni tu partida de rescate.</p>
-  <div className="rescue-test-grid rescue-main-trials">
-   <button onClick={()=>{unlockAudio();setScreen('arcade');}}><b>2D · Corazones</b><small>Kitty animada, disparos y enemigos. Entrar directo al desafío.</small></button>
-   <button onClick={()=>openDemo('garden',true)}><b>Rescate · 2D → 3D</b><small>Un solo recorrido: jardín, desaparición, pistas y casa.</small></button>
-   <button onClick={()=>openDemo('house',true)}><b>Casa 3D</b><small>Explorar la casa desde la entrada por la ventana.</small></button>
-  </div>
-  <h2>Pruebas puntuales</h2><nav className="rescue-trial-tools" aria-label="Herramientas de pruebas">
-   <button onClick={()=>openDemo('mirror',true)}>Espejo</button>
-   <button onClick={()=>openDemo('drawer',true)}>Cajón y pistas</button>
-   <button onClick={()=>openDemo('lock',true)}>Dormitorio y rescate</button>
-   <button onClick={()=>{audio.current.destroy();setScreen('classic');}}>Aventura clásica</button>
-   <button onClick={()=>{unlockAudio();setScreen('story');}}>Historia y preguntas</button>
-  </nav><button className="back-to-birthday" onClick={()=>{unlockAudio();setScreen('cover');}}>← Volver a Feliz cumpleaños</button></div>
- </section>;
+ if(screen==='tests')return houseTrial?<PlaytestHouse id={houseTrial} onExit={closeHouseTrial}/>:<PlaytestMenu
+  onExit={()=>{unlockAudio();setScreen('cover');}}
+  onSelect={id=>{
+   switch(id){
+    case 'house':openDemo('house',true);break;
+    case 'rescue':openDemo('garden',true);break;
+    case 'arcade':unlockAudio();setScreen('arcade');break;
+    case 'classic':audio.current.destroy();setScreen('classic');break;
+    case 'story':unlockAudio();setScreen('story');break;
+    default:setHouseTrial(id);
+   }
+  }}/>;
  if(screen==='arcade')return <StoryGame level={2} character="kitty" muted={progress.muted} audio={audio.current} audioNotice={audioNotice} onUnlockAudio={unlockAudio} onToggleAudio={toggleAudio} onComplete={()=>setScreen('tests')} onExit={()=>setScreen('tests')}/>;
  if(screen==='classic')return <><ClassicApp/><button className="classic-return" onClick={()=>{unlockAudio();setScreen('cover');}}>← Volver a la historia</button></>;
  if(screen==='game'&&chapter.kind==='game')return <StoryGame level={chapter.level} character={progress.character} muted={progress.muted} audio={audio.current} audioNotice={audioNotice} onUnlockAudio={unlockAudio} onToggleAudio={toggleAudio} onComplete={next} onExit={()=>{unlockAudio();setScreen('story');}}/>;

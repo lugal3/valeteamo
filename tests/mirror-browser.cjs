@@ -1,5 +1,5 @@
 const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
-// Integration coverage for the simplified menu, independent audio and mirror renderer.
+// Integration coverage for the trial menu, independent audio and mirror renderer.
 const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=require('playwright');
 (async()=>{
  const server=await (await import('vite')).createServer({configFile:false,logLevel:'silent',server:{host:'127.0.0.1',port:0}});await server.listen();let browser;
@@ -14,10 +14,10 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=requ
   await page.waitForFunction(()=>window.__audioContexts.some(c=>c.state==='running'));
   await page.getByRole('button',{name:'Pruebas',exact:true}).click();
   await page.waitForFunction(()=>window.__audioContexts.every(c=>c.state==='closed'));
-  assert.equal(await page.locator('.rescue-main-trials>button').count(),3);
+  for(const name of ['Casa 3D','Rescate · 2D → 3D','2D · Corazones'])assert(await page.getByRole('button',{name,exact:true}).isVisible());
   const saves=await page.evaluate(()=>({story:localStorage.getItem('valeteamo-story-v1'),rescue:localStorage.getItem('valeteamo-rescue-v2')}));
   fs.mkdirSync('/tmp/valeteamo-qa',{recursive:true});await page.screenshot({path:'/tmp/valeteamo-qa/pruebas.png'});
-  await page.setViewportSize({width:390,height:844});await page.getByRole('heading',{name:'Elige dónde jugar'}).scrollIntoViewIfNeeded();assert((await page.getByRole('heading',{name:'Elige dónde jugar'}).boundingBox()).y>=0);await page.getByRole('button',{name:'Espejo',exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:'/tmp/valeteamo-qa/pruebas-movil.png'});await page.setViewportSize({width:960,height:540});
+  await page.setViewportSize({width:390,height:844});await page.getByRole('heading',{name:'Pruebas',exact:true}).scrollIntoViewIfNeeded();assert((await page.getByRole('heading',{name:'Pruebas',exact:true}).boundingBox()).y>=0);await page.getByRole('button',{name:'Espejo',exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:'/tmp/valeteamo-qa/pruebas-movil.png'});await page.setViewportSize({width:960,height:540});
   await page.getByRole('button',{name:/^2D · Corazones/}).click();await page.waitForFunction(()=>window.__testIso?.keys&&window.__testIso.level===2);
   assert.equal(await page.evaluate(()=>window.__testIso.character),'kitty');
   await page.keyboard.down('ArrowRight');await page.waitForFunction(()=>window.__testIso.shots.some(s=>!s.enemy));await page.keyboard.up('ArrowRight');
@@ -46,6 +46,6 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=requ
   await page.waitForFunction(()=>!window.__rescueHouse.snapshot().cinematic);assert.equal(await page.locator('.rescue-demo canvas').count(),0);
   // Context loss restores the canvas fallback rather than leaving a broken input loop.
   await page.locator('#lab-canvas').evaluate(c=>c.dispatchEvent(new Event('webglcontextlost',{cancelable:true})));await page.getByRole('dialog',{name:'Gráficos interrumpidos'}).waitFor();await page.getByRole('button',{name:'Volver a pruebas',exact:true}).click();
-  assert.deepEqual(errors,[]);console.log('PASS browser: 3 main entries, animated Kitty hearts, mirrored avatar/torch, movement, culling, audio ownership, intro, context loss and unchanged saves');
+  assert.deepEqual(errors,[]);console.log('PASS browser: trial menu, animated Kitty hearts, mirrored avatar/torch, movement, culling, audio ownership, intro, context loss and unchanged saves');
  }finally{await browser?.close();await server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

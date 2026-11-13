@@ -18,7 +18,7 @@ Abre la dirección que muestre Vite. Desde la portada, después de pulsar **PLAY
 | **Jugar la demo de rescate 2D → 3D** | Jardín en Phaser, transición a la casa y rescate final | [RescueDemo.tsx](src/demo/RescueDemo.tsx) → [house.js](src/lab/house.js) |
 | **Pruebas → Casa 3D** | Casa desde la entrada por la ventana | [StoryApp.tsx](src/StoryApp.tsx) → [RescueDemo.tsx](src/demo/RescueDemo.tsx) → [house.js](src/lab/house.js) |
 
-**Espejo**, **Cajón y pistas** y **Dormitorio y rescate** son puntos de prueba de la misma casa. **Pruebas** también ofrece accesos a los modos 2D. Para móvil en la misma red, consulta [Probar en iPhone](PROBAR-IPHONE.md).
+**Pruebas** ofrece el recorrido completo de la casa y accesos directos a la llegada, el dormitorio, la trampilla, las pistas, el espejo, la pila, el tablero eléctrico, el piano y el televisor. Cada prueba rápida abre con su posición, inventario y condiciones preparados. Para repetirla usa **Ajustes → Reiniciar prueba**. El menú también ofrece los accesos a los modos 2D. Para móvil en la misma red, consulta [Probar en iPhone](PROBAR-IPHONE.md).
 
 ## Mapa de carpetas
 
