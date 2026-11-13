@@ -28,7 +28,7 @@ export function updateLouisEscape(louis,dt,kitty=null){
  }
  if(louis.phase==='climb'){
   const target=ROUTE[louis.waypoint];
-  if(!target){louis.phase='hide';louis.age=0;louis.yaw=Math.atan2(10.65-louis.x,2.75-louis.z);return 'arrived';}
+  if(!target){louis.phase='hide';louis.age=0;louis.yaw=Math.PI;return 'arrived';}
   const dx=target.x-louis.x,dz=target.z-louis.z,d=Math.hypot(dx,dz);
   if(d<.055){louis.waypoint++;return null;}
   const step=Math.min(d,dt*2.10);
@@ -95,10 +95,8 @@ export function louisModel(piece){
  add('collar',0,1.155,.075,.246,.085,.19,'cream',[.91,.88,.81],soft);
  add('neck',0,1.195,.026,.135,.19,.132,'paper',skin,round);
  add('face',0,1.468,-.018,.309,.438,.307,'paper',skin,round);
- add('forehead',0,1.552,.112,.256,.137,.123,'paper',skin,detail);
  for(const side of [-1,1]){
-  add('cheek-'+side,side*.109,1.398,.068,.071,.097,.097,'paper',warm,detail);
-  add('jaw-'+side,side*.073,1.314,.052,.112,.119,.118,'paper',skin,{...detail,roll:side*.14});
+  add('jaw-'+side,side*.072,1.312,.033,.095,.105,.093,'paper',skin,{...detail,roll:side*.12});
   add('stubble-cheek-'+side,side*.117,1.327,.117,.039,.058,.018,'paper',beard,detail);
   add('sideburn-'+side,side*.166,1.506,.016,.047,.126,.075,'wood',hair,detail);
  }
@@ -118,8 +116,8 @@ export function louisModel(piece){
  add('hair-cap',-.02,1.716,-.012,.344,.136,.324,'wood',hairLight,soft);
  add('crown',.025,1.766,-.052,.303,.09,.234,'wood',hair,soft);
  for(const [i,x,y,z,w,h,roll] of [
-  [0,-.137,1.648,.152,.083,.126,.23],[1,-.068,1.637,.176,.078,.139,.18],
-  [2,.007,1.648,.183,.078,.135,-.12],[3,.078,1.655,.158,.084,.129,-.30],
+  [0,-.137,1.624,.152,.078,.162,.26],[1,-.068,1.620,.176,.076,.170,.22],
+  [2,.007,1.636,.183,.078,.156,-.12],[3,.078,1.649,.158,.084,.135,-.30],
   [4,.143,1.665,.085,.079,.105,-.38]
  ])add('fringe-'+i,x,y,z,w,h,.071,'wood',i%2?hair:hairLight,{...soft,roundness:.48,roll});
  for(const side of [-1,1]){
@@ -161,7 +159,7 @@ export function louisPartPose(source,box,offset,reduced=false){
  let [x,y,z]=offset,roll=box.baseRoll||0,pitch=box.basePitch||0,yaw=box.baseYaw||0;
  const breathing=(reduced?0:.009*Math.sin(clock*2.1));
  if(head){
-  y-=crouch*.43;y+=breathing;
+  y-=crouch*.35;y+=breathing;
   roll+=(reduced?0:.022*Math.sin(clock*.95))+(hiding?.07*Math.sin(clock*2):0);
   yaw+=(phase==='hidden'||phase==='hide'?Math.sin(clock*.83)*.20:0);
  }else if(id==='torso'||id==='shirt'||id==='collar'||id==='neck'){
