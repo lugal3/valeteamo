@@ -59,6 +59,11 @@ const assert=require('node:assert/strict');
   real.update(.05,distantKitty,()=>{},noisyToy);
   assert(Number.isFinite(real.x)&&Number.isFinite(real.y)&&Number.isFinite(real.z),'NPC position remains finite on basement ramp');
  }
+ if(!(real.y<-.55&&real.z>4.35)){
+  console.log('RC_LIP_DIAGNOSTIC',JSON.stringify({pos:{x:real.x,y:real.y,z:real.z},mode:real.mode,goal:real.goal,path:real.path.slice(0,9).map(n=>({x:n.x,y:n.y,z:n.z})),
+   blockers:world.boxes.filter(b=>blocked([b],real.x,real.y,real.z,.16,1.72)).map(b=>b.id),
+   samples:[7.8,7.9,8,8.1,8.2,8.4,8.55].map(x=>({x,y:groundHeight(x,2.6,real.y,true),blocked:world.boxes.filter(b=>blocked([b],x,groundHeight(x,2.6,real.y,true),.16,1.72)).map(b=>b.id).slice(0,5)}))}));
+ }
  assert(real.y<-.55&&real.z>4.35,'NPC physically descends below the basement hatch without path stalls');
  const louis=createLouisEscape(world);
  assert(louisModel((id,x,y,z,w,h,d)=>({id,x,y,z,w,h,d})).length>25);
