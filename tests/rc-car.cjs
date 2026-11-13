@@ -62,7 +62,7 @@ const assert=require('node:assert/strict');
  const louis=createLouisEscape(world);
  const model=louisModel((id,x,y,z,w,h,d,mat,extra)=>({id,x,y,z,w,h,d,mat,extra}));
  assert(model.length>55,'Louis face and body have layered, detailed geometry');
- for(const detail of ['fringe-0','fringe-4','iris--1','beard-chin','nose-tip','lid--1','cheek--1','upper-arm--1','hand-1'])
+ for(const detail of ['fringe-0','fringe-4','iris--1','beard-chin','nose-tip','lid--1','jaw--1','upper-arm--1','hand-1'])
   assert(model.some(p=>p.id===detail),'Missing recognizable face/animation feature: '+detail);
  assert.equal(louis.phase,'untying','Rescue starts with a cinematic release, not an instant teleport');
  let releases=0;
