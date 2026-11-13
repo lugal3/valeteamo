@@ -72,13 +72,25 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   assert.equal((await rc()).trap.armed,true,'Kitchen hatch trap is armed');
 
   console.log('RC browser: lure active pursuer into basement and activate trap');
+  // Kitty must clear the kitchen doorway before the pursuer can swing it open.
+  // In the real game the player can step aside; the test deliberately verifies this.
+  await page.evaluate(()=>window.__rescueHouse.setPose({x:6.1,y:0,z:8.7,yaw:Math.PI,pitch:0}));
   // Picking up and parking the kit already selects RC; pressing its slot again would toggle it off.
   await page.locator('#house-use-phone').click();
   await page.waitForFunction(()=>window.__rescueHouse.rc().mode==='driving');
   await page.evaluate(()=>window.__rescueHouse.placeRC({x:8.55,y:-3,z:7,yaw:0}));
   await page.locator('[data-act="rc:noise"]').click();
   await page.waitForFunction(()=>window.__rescueHouse.rc().pursuer.mode==='rc-chase',null,{timeout:15000});
-  await page.waitForFunction(()=>{const r=window.__rescueHouse.rc();return r.pursuer.y<-.55&&r.pursuer.z>4.35;},null,{timeout:85000});
+  // The toy emits a short beep, not an infinite signal. Keep calling it every few
+  // seconds while the pursuer follows the full physical path and opens real doors.
+  let descended=false;
+  for(let attempt=0;attempt<18;attempt++){
+   const state=await rc();
+   if(state.pursuer.y<-.55&&state.pursuer.z>4.35){descended=true;break;}
+   if(attempt)await page.locator('[data-act="rc:noise"]').click();
+   await page.waitForTimeout(4600);
+  }
+  assert(descended||(await rc()).pursuer.y<-.55,'Pursuer must physically enter the basement');
   await page.locator('[data-act="rc:trap"]').click();
   assert.equal((await story()).phase,'escape');
   assert.equal((await rc()).trap.closed,true);
