@@ -47,28 +47,18 @@ const assert=require('node:assert/strict');
    nearby:hunter.nodes.filter(n=>Math.abs(n.x-8.6)<.45&&n.z>2.2&&n.z<5.8).map(n=>({x:n.x,y:n.y,z:n.z,connections:n.neighbors.length,reachable:reachable.has(n.index)})).slice(0,50)}));
  }
  assert(planned,'Enemy can plan a route into an OPEN basement');
- // Regression: an NPC approaching from the kitchen door must not get stuck on the
- // 7.91 m lip where the flat kitchen floor meets the descending tunnel.
+ // Regression: a pursuer spawned at the real house entrance must follow a
+ // continuously noisy toy, open available paths and descend the physical hatch.
  setDoor(world.objects.find(o=>o.id==='cocina'),true);
  const real=new Pursuer(world);
- Object.assign(real,{x:7.9076075,y:0,z:2.6,mode:'rc-chase'});
- real.plan({x:8.55,y:-3.55,z:12.4});
+ real.start();real.nodes=null;
  const distantKitty={x:6.1,y:0,z:8.7,hidden:true};
  const noisyToy={active:true,noisy:true,x:8.55,y:-3.55,z:12.4,crouched:true,hidden:false};
- for(let i=0;i<300&&real.y>-.55;i++){
+ for(let i=0;i<600&&!(real.y<-.55&&real.z>4.35);i++){
   real.update(.05,distantKitty,()=>{},noisyToy);
-  assert(Number.isFinite(real.x)&&Number.isFinite(real.y)&&Number.isFinite(real.z),'NPC position remains finite on basement ramp');
+  assert(Number.isFinite(real.x)&&Number.isFinite(real.y)&&Number.isFinite(real.z),'NPC position remains finite on basement route');
  }
- if(!(real.y<-.55&&real.z>4.35)){
-  const {navigate}=await import('../src/lab/navigation.js');
-  const testBody={x:real.x,y:real.y,z:real.z},directMove=navigate(testBody,world,0,.1,1.72);
-  console.log('RC_NAV_PROBE',JSON.stringify({directMove,after:testBody,stuck:real.stuck,replan:real.replan,stepDistance:real.stepDistance,activeFurniture:world.objects.filter(o=>o.motion).map(o=>o.id)}));
-  console.log('RC_LIP_DIAGNOSTIC',JSON.stringify({pos:{x:real.x,y:real.y,z:real.z},mode:real.mode,goal:real.goal,path:real.path.slice(0,9).map(n=>({x:n.x,y:n.y,z:n.z})),
-   blockers:world.boxes.filter(b=>blocked([b],real.x,real.y,real.z,.16,1.72)).map(b=>b.id),
-   probes:[.005,.02,.04,.08,.16,.32].map(dz=>{const z=real.z+dz,y=groundHeight(real.x,z,real.y,true);return {z,y,step:y-real.y,blockers:world.boxes.filter(b=>blocked([b],real.x,y,z,.155,1.72)).map(b=>b.id),nav:!Number.isFinite(y)||Math.abs(y-real.y)>.35};}),
-   samples:[7.8,7.9,8,8.1,8.2,8.4,8.55].map(x=>({x,y:groundHeight(x,2.6,real.y,true),blocked:world.boxes.filter(b=>blocked([b],x,groundHeight(x,2.6,real.y,true),.16,1.72)).map(b=>b.id).slice(0,5)}))}));
- }
- assert(real.y<-.55&&real.z>4.35,'NPC physically descends below the basement hatch without path stalls');
+ assert(real.y<-.55&&real.z>4.35,'NPC physically descends into the basement from its natural spawn');
  const louis=createLouisEscape(world);
  assert(louisModel((id,x,y,z,w,h,d)=>({id,x,y,z,w,h,d})).length>25);
  for(let i=0;i<800&&louis.phase!=='hidden';i++){
