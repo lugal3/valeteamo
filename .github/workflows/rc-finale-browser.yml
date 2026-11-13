@@ -1,0 +1,29 @@
+name: RC Finale — navegador 3D sin publicar
+on:
+  push:
+    branches:
+      - perf/pursuer-cache-no-visual-changes
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rc-finale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install chromium --with-deps
+      - name: Recorrido completo del auto RC
+        run: node tests/rc-browser.cjs
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc-finale-capturas
+          path: docs/capturas/rc-finale/
+          if-no-files-found: ignore

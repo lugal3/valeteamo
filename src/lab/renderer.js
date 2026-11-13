@@ -7,6 +7,7 @@ import {climbingHandPieces} from './first-person.js';
 import {drawViewModel} from './viewmodel.js';
 import {pursuerPieces,posePursuer} from './pursuer-model.js';
 import {sampleWardrobeWalk} from './animations/wardrobe-entry.js';
+import {louisPartPose} from './louis-escape.js';
 import {VERTEX_SHADER as VS,FRAGMENT_SHADER as FS} from './material-shaders.js';
 // Minimal WebGL1 3D renderer: real perspective, depth buffer, world geometry and spotlight.
 // No additional packages, CDNs, runtime downloads or concurrent Phaser loops.
@@ -225,6 +226,7 @@ export class HouseRenderer {
   const dynamic=geometry(this.dynamicBoxes);this.dynamicCount=dynamic.indices.length;
   this.dynamicTemplate=dynamic.vertices;this.dynamicVertices=new Float32Array(dynamic.vertices);this.dynamicRanges=dynamic.ranges;
   this.dynamicOrigins=this.dynamicBoxes.map(b=>[b.x,b.y,b.z,b.yaw||0,b.roll||0,b.pitch||0]);this.dynamicPositions=new Float32Array(this.dynamicBoxes.length*6);this.dynamicPositions.fill(Infinity);
+  this.dynamicEyeScale=new Float32Array(this.dynamicBoxes.length);this.dynamicEyeScale.fill(-1);
   gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamicVbo);gl.bufferData(gl.ARRAY_BUFFER,this.dynamicVertices,gl.DYNAMIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.dynamicIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,dynamic.indices,gl.STATIC_DRAW);
   this.vertexCount=(vertices.length+dynamic.vertices.length)/16;this.triangleCount=(indices.length+dynamic.indices.length)/3;
@@ -293,27 +295,40 @@ export class HouseRenderer {
   const bobAmp=reduced?0:0.012,swayAmp=reduced?0:0.14;
   for(let i=0;i<this.dynamicBoxes.length;i++){
    const box=this.dynamicBoxes[i],source=box.source;
+   let eyeScale=1;
    if(source){
     const offset=box.sourceOffset||[0,0,0];
     const bob=source.kind==='key'?Math.sin(time*3.2+(source.x+source.z)*2.5)*bobAmp:0;
     const sway=(box.id.includes('bow-left')||box.id.includes('bow-right'))?Math.sin(time*4.2)*swayAmp:0;
-    box.x=source.x+offset[0];
-    box.y=source.concealed?-100:source.y+offset[1]+bob;
-    box.z=source.z+offset[2];
-    if(sway)box.yaw=(box.baseYaw||0)+sway;
+    if(source.kind==='rc-car'||source.kind==='louis-companion'){
+     const angle=-(source.yaw||0),c=Math.cos(angle),s=Math.sin(angle);
+     const pose=source.kind==='louis-companion'?louisPartPose(source,box,offset,reduced):null;
+     const ox=pose?.x??offset[0],oy=pose?.y??offset[1],oz=pose?.z??offset[2];
+     box.x=source.x+ox*c-oz*s;
+     box.y=source.kind==='louis-companion'?source.y+oy:source.concealed?-100:source.y+oy;
+     box.z=source.z+ox*s+oz*c;
+     box.yaw=angle+(pose?.yaw??box.baseYaw??0);
+     if(pose){box.roll=pose.roll;box.pitch=pose.pitch;eyeScale=pose.eyeScale;}
+    }else{
+     box.x=source.x+offset[0];
+     box.y=source.concealed?-100:source.y+offset[1]+bob;
+     box.z=source.z+offset[2];
+     if(sway)box.yaw=(box.baseYaw||0)+sway;
+    }
    } else if(box.ambient==='captive-breath'){
     box.y=this.dynamicOrigins[i][1]+(reduced||motion.feetY>-.3?0:Math.sin(time*2.3)*.010);
    }
    const at=i*6,bx=box.x,by=box.y,bz=box.z,byaw=box.yaw||0,roll=box.roll||0,pitch=box.pitch||0;
    const {start,end}=this.dynamicRanges[i],glow=circuitPowered(box.fixture?.circuit)||box.power?.on?32:0;
-   const moved=Math.fround(bx)!==this.dynamicPositions[at]||Math.fround(by)!==this.dynamicPositions[at+1]||Math.fround(bz)!==this.dynamicPositions[at+2]||Math.fround(byaw)!==this.dynamicPositions[at+3]||Math.fround(roll)!==this.dynamicPositions[at+4]||Math.fround(pitch)!==this.dynamicPositions[at+5];
+   const moved=Math.abs(eyeScale-(this.dynamicEyeScale?.[i]??1))>.00001||Math.fround(bx)!==this.dynamicPositions[at]||Math.fround(by)!==this.dynamicPositions[at+1]||Math.fround(bz)!==this.dynamicPositions[at+2]||Math.fround(byaw)!==this.dynamicPositions[at+3]||Math.fround(roll)!==this.dynamicPositions[at+4]||Math.fround(pitch)!==this.dynamicPositions[at+5];
    if(!moved&&this.dynamicVertices[start+12]===this.dynamicTemplate[start+12]+glow)continue;
    this.dynamicPositions.set([bx,by,bz,byaw,roll,pitch],at);
+   if(this.dynamicEyeScale)this.dynamicEyeScale[i]=eyeScale;
    const origin=this.dynamicOrigins[i];
    const angle=byaw-origin[3],c=Math.cos(angle),s=Math.sin(angle),cr=Math.cos(roll-origin[4]),sr=Math.sin(roll-origin[4]);
    const cp=Math.cos(pitch-origin[5]),sp=Math.sin(pitch-origin[5]);
    for(let v=start;v<end;v+=16){
-    const localX=this.dynamicTemplate[v]-origin[0],localY=this.dynamicTemplate[v+1]-origin[1];
+    const localX=this.dynamicTemplate[v]-origin[0],localY=(this.dynamicTemplate[v+1]-origin[1])*eyeScale;
     const x=localX*cr-localY*sr,y=localX*sr+localY*cr,localZ=this.dynamicTemplate[v+2]-origin[2],z=y*sp+localZ*cp;
     this.dynamicVertices[v]=bx+x*c-z*s;
     this.dynamicVertices[v+1]=by+y*cp-localZ*sp;

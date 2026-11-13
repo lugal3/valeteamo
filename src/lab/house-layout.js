@@ -368,6 +368,8 @@ export function buildHouse(spawn='ground'){
   items:[{id:'reading-battery',kind:'battery',label:'Pila de la sala de lectura',dx:.24}]});
  add('reading-rug',1.92,HEIGHT+.012,8.0,2.9,.024,4,'carpet',false,{ao:.88});add('upper-bench',4.95,HEIGHT+.43,11.65,1.15,.18,.48,'velvet');for(const x of [4.55,5.35])add('bench-leg-'+x,x,HEIGHT+.20,11.65,.08,.4,.35,'wood');plant('landing-plant',8.3,HEIGHT,11.54);frame('landing',8.0,HEIGHT+1.85,11.83,'north',0);
  installPiano(add,obj,{x:13.55,z:3.99,floor:HEIGHT});
+ // One collectible contains both the pink RC racing car and its touch tablet.
+ obj('rc-car','rc-car','Auto RC y tablet',12.36,HEIGHT+.14,4.19,{yaw:Math.PI,mode:'packed'});
  add('reading-tea-saucer',1.69,HEIGHT+.927,7.98,.18,.018,.18,'ceramica',false,{shape:'round'});
  add('reading-tea-cup',1.69,HEIGHT+.98,7.98,.10,.10,.10,'cream',false,{shape:'lathe',profile:CUP_PROFILE,segments:9});
  add('living-folded-throw',.85,.66,8.59,.28,.065,.37,'velvet',false,{color:[.53,.36,.45],yaw:.08});

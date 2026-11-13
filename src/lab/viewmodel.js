@@ -1,6 +1,7 @@
 import {CHIBI,chibiPiece,placePieces,torchModel,grippingPaw} from './chibi-model.js';
 import {geometry} from './renderer.js';
 import {notePieces,phonePieces,keyPieces} from './equipment.js';
+import {rcCarModel} from './rc-car.js';
 import {curve,ease} from './animations/pose-tools.js';
 
 export const BATTERY_SWAP_SECONDS=1.35;
@@ -25,7 +26,22 @@ export function dustPieces(flash=true){
  });
 }
 
+function rcHeldPieces(tabletOnly=false){
+ const part=(id,x,y,z,w,h,d,mat,extra)=>chibiPiece(id,x,y,z,w,h,d,extra.color,{...extra,mat});
+ if(!tabletOnly)return rcCarModel(part,true);
+ return [
+  chibiPiece('tablet-back',0,.10,0,.48,.34,.050,[.93,.49,.68],{shape:'rounded-box'}),
+  chibiPiece('tablet-screen',0,.10,-.029,.42,.28,.009,[.21,.38,.51],{emissive:true}),
+  chibiPiece('tablet-joystick-left',-.13,.075,-.038,.074,.074,.008,[.98,.88,.88],{shape:'round'}),
+  chibiPiece('tablet-joystick-right',.13,.075,-.038,.074,.074,.008,[.98,.88,.88],{shape:'round'}),
+  chibiPiece('paw-left',-.25,-.05,.037,.16,.16,.13,[1,.93,.91],{shape:'round'}),
+  chibiPiece('paw-right',.25,-.05,.037,.16,.16,.13,[1,.93,.91],{shape:'round'}),
+  chibiPiece('paw-pad-left',-.25,-.05,-.035,.07,.058,.008,[.96,.67,.73]),
+  chibiPiece('paw-pad-right',.25,-.05,-.035,.07,.058,.008,[.96,.67,.73])
+ ];
+}
 export function viewModelPieces(kind='flashlight', flash=true){
+ if(kind==='rc'||kind==='rc-tablet')return placePieces(rcHeldPieces(kind==='rc-tablet'),{...noteGrip,scale:.84,prefix:'view-rc-'});
  if(kind==='phone')return placePieces(phonePieces(),{x:.37,y:-.25,z:.85,scale:1,prefix:'view-phone-'});
  if(kind==='note')return placePieces(notePieces(),{...noteGrip,prefix:'view-note-'});
  if(kind==='paper')return placePieces(notePieces(.9,false),{...noteGrip,prefix:'view-paper-'});

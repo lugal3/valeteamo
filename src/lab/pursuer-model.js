@@ -89,9 +89,9 @@ export function pursuerPose(actor,reduced=false){
   hips=Math.min(hips,ANKLE+foot.lift+reach-HIP);
   return {side,cycle,foot};
  });
- const hurry=actor.mode==='chase'?amount:0;
+ const hurry=['chase','rc-chase'].includes(actor.mode)?amount:0;
  const joints={hips:{y:hips},chest:{py:1.07,x:sway,y:hips,pitch:.06+hurry*.15,yaw:-Math.sin(step)*.11*amount,roll:sway*.8},
-  head:{py:1.52,x:sway,y:hips-.005,z:.033+hurry*.065,yaw:reduced?0:Math.sin((actor.age??0)*2.1)*.17*(1-hurry),pitch:-.02-hurry*.04}};
+  head:{py:1.52,x:sway,y:hips-.005,z:.033+hurry*.065,yaw:reduced?0:Math.sin((actor.age??0)*(hurry?3.7:2.1))*(hurry?.065:.17),pitch:-.02-hurry*.07}};
  for(const {side,cycle,foot} of feet){
   const dy=HIP+hips-ANKLE-foot.lift;
   const thigh=Math.atan2(foot.z,dy)+Math.acos(clamp(Math.hypot(foot.z,dy)/(2*SEGMENT),0,1));
@@ -104,6 +104,16 @@ export function pursuerPose(actor,reduced=false){
   const shoulderZ=(side*-.037*Math.sin(step)+.033)*amount;
   joints['arm'+side]={py:SHOULDER,x:sway,y:hips,z:shoulderZ,pitch:swing};
   joints['forearm'+side]={py:ELBOW,x:sway,y:hips+(SHOULDER-ELBOW)*(1-Math.cos(swing)),z:shoulderZ-(SHOULDER-ELBOW)*Math.sin(swing),pitch:swing-.13-amount*.20-hurry*.35};
+ }
+ if(actor.mode==='trapped'){
+  // Frustrated rhythmic pounding and head turns, retained in low-motion mode.
+  const beat=reduced?0:Math.max(0,Math.sin((actor.age||0)*4.2));
+  joints.chest={...joints.chest,pitch:.08+beat*.08,roll:Math.sin((actor.age||0)*1.8)*.035};
+  joints.head={...joints.head,pitch:-.12+beat*.045,yaw:reduced?0:Math.sin((actor.age||0)*1.6)*.22};
+  for(const side of [-1,1]){
+   joints['arm'+side]={py:SHOULDER,pitch:-1.05-beat*.4,roll:side*.17};
+   joints['forearm'+side]={py:ELBOW,pitch:-1.32-beat*.5,roll:side*.14};
+  }
  }
  return joints;
 }

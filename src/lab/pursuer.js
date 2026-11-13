@@ -20,15 +20,36 @@ export class Pursuer{
   if(this.nodes)return;
   const doors=new Set(this.world.objects.filter(o=>o.kind==='door').flatMap(o=>[o.box,...(o.parts||[]).map(p=>p.box)])),boxes=this.world.boxes.filter(b=>!doors.has(b));
   this.nodes=[];this.cells=new Map();
-  for(let i=0;i<35;i++)for(let j=0;j<30;j++)for(const level of [0,HEIGHT]){
-   const x=.2+i*CELL,z=.2+j*CELL,y=groundHeight(x,z,level),key=i+','+j;if(!Number.isFinite(y)||blocked(boxes,x,y,z,.16,1.72))continue;
+  for(let i=0;i<35;i++)for(let j=0;j<38;j++)for(const level of [0,HEIGHT,-3.55]){
+   const x=.2+i*CELL,z=.2+j*CELL,y=groundHeight(x,z,level,this.world.hatch?.amount>.92),key=i+','+j;if(!Number.isFinite(y)||blocked(boxes,x,y,z,.16,1.72))continue;
    const cell=this.cells.get(key)||[];if(cell.some(n=>Math.abs(n.y-y)<.1))continue;
    const n={x,y,z,i,j,index:this.nodes.length};cell.push(n);this.cells.set(key,cell);this.nodes.push(n);
   }
-  for(const n of this.nodes){n.neighbors=[];for(const [di,dj]of [[1,0],[-1,0],[0,1],[0,-1]])for(const next of this.cells.get((n.i+di)+','+(n.j+dj))||[]){if(Math.abs(next.y-n.y)>.34)continue;let clear=true;for(let k=1;k<=4;k++){const t=k/4;if(blocked(boxes,n.x+(next.x-n.x)*t,n.y+(next.y-n.y)*t,n.z+(next.z-n.z)*t,.16,1.72)){clear=false;break;}}if(clear)n.neighbors.push(next.index);}}
+  for(const n of this.nodes){n.neighbors=[];for(const [di,dj]of [[1,0],[-1,0],[0,1],[0,-1]])for(const next of this.cells.get((n.i+di)+','+(n.j+dj))||[]){
+   if(Math.abs(next.y-n.y)>((n.y<0||next.y<0)?0.60:0.34))continue;
+   let clear=true,sampleY=n.y;
+   // Check the real walking surface on each substep, not a linear interpolation
+   // between endpoints. At the hatch edge, that interpolation previously let
+   // A* enter a wall that navigate() correctly refused to cross.
+   for(let k=1;k<=8;k++){
+    const t=k/8,x=n.x+(next.x-n.x)*t,z=n.z+(next.z-n.z)*t;
+    const y=groundHeight(x,z,sampleY,this.world.hatch?.amount>.92);
+    if(!Number.isFinite(y)||Math.abs(y-sampleY)>.35||blocked(boxes,x,y,z,.16,1.72)){clear=false;break;}
+    sampleY=y;
+   }
+   if(clear&&Math.abs(sampleY-next.y)<.08)n.neighbors.push(next.index);
+  }}
  }
  plan(goal){
-  this.buildGraph();const boxes=this.planningBoxes(),available=n=>!blocked(boxes,n.x,n.y,n.z,.16,1.72),nearest=p=>{let best=null,d=Infinity;for(const n of this.nodes){const v=dist(n,p);if(v<d&&available(n)){best=n;d=v;}}return best;};
+  this.buildGraph();
+  // Cache occupancy only for this planning pass: the door/furniture state may change
+  // between plans, but remains fixed while the synchronous search is running.
+  const boxes=this.planningBoxes(),availability=new Map();
+  const available=n=>{
+   if(!availability.has(n.index))availability.set(n.index,!blocked(boxes,n.x,n.y,n.z,.16,1.72));
+   return availability.get(n.index);
+  };
+  const nearest=p=>{let best=null,d=Infinity;for(const n of this.nodes){const v=dist(n,p);if(v<d&&available(n)){best=n;d=v;}}return best;};
   const start=nearest(this),end=nearest(goal);this.goal={...goal};this.path=[];this.replan=.8;if(!start||!end)return false;
   const open=new Set([start.index]),cost=new Map([[start.index,0]]),parent=new Map();let found=false;
   while(open.size){let id=null,best=Infinity;for(const i of open){const f=cost.get(i)+dist(this.nodes[i],end);if(f<best){best=f;id=i;}}open.delete(id);if(id===end.index){found=true;break;}
@@ -42,8 +63,9 @@ export class Pursuer{
   if(d>1.6&&(dx*Math.sin(this.yaw)+dz*Math.cos(this.yaw))/Math.max(.01,d)<.05)return false;
   return !lineBlocked(this.world.boxes,{x:this.x,y:this.y+1.4,z:this.z},{x:p.x,y:p.y+(p.crouched?.75:1.1),z:p.z});
  }
- update(dt,p,onDoor=()=>{}){
+ update(dt,p,onDoor=()=>{},decoy=null){
   const cues=[];if(!this.active||dt<=0)return cues;
+  if(this.mode==='trapped'){this.age+=dt;this.speed=0;return cues;}
   if(this.mode==='sleeping'){this.age+=dt;return cues;}
   if(this.mode==='lying-down'||this.mode==='rising'){
    this.bedTime=Math.min(RISE_SECONDS,this.bedTime+dt);this.age+=dt;
@@ -53,20 +75,26 @@ export class Pursuer{
    }
    return cues;
   }
-  const visible=this.mode!=='retreat'&&!this.task&&this.canSee(p);this.lost=visible?0:this.lost+dt;
+  const bait=decoy?.active&&(decoy.noisy||this.canSee(decoy));
+  if(bait){
+   if(this.mode!=='rc-chase'){this.mode='rc-chase';this.replan=0;}
+   this.lastSeen={x:decoy.x,y:decoy.y,z:decoy.z};this.task=null;this.witnessed=null;
+  }else if(this.mode==='rc-chase'){this.mode='search';this.lastSeen=null;this.replan=0;}
+  const visible=!bait&&this.mode!=='retreat'&&!this.task&&this.canSee(p);this.lost=visible||bait?0:this.lost+dt;
   this.awareness=Math.max(0,Math.min(1,this.awareness+dt*(visible?(p.crouched?1:1.7):-.5)));
   if(visible){this.lastSeen={x:p.x,y:p.y,z:p.z};if(p.entering)this.witnessed=p.hideId;}
   if(this.awareness>=1&&this.mode!=='chase'){this.mode='chase';cues.push('spotted');this.replan=0;}
   if(this.mode==='chase'&&this.lost>3&&!this.witnessed){this.mode='search';cues.push('lost');}
   const witnessed=p.hidden&&this.witnessed===p.hideId;
-  if((visible||witnessed)&&Math.abs(this.y-p.y)<.6&&Math.hypot(this.x-p.x,this.z-p.z)<(witnessed?1.5:.85)){this.caught=true;cues.push('caught');return cues;}
+  if(bait&&Math.abs(this.y-decoy.y)<.55&&Math.hypot(this.x-decoy.x,this.z-decoy.z)<.75){this.mode='search';this.lastSeen=null;cues.push('rc-hit');return cues;}
+  if(!bait&&(visible||witnessed)&&Math.abs(this.y-p.y)<.6&&Math.hypot(this.x-p.x,this.z-p.z)<(witnessed?1.5:.85)){this.caught=true;cues.push('caught');return cues;}
   this.replan-=dt;
-  const target=this.task||(this.mode==='retreat'?ENTRY_APPROACH:witnessed?(p.hideExit||this.lastSeen):this.lastSeen&&this.lost<4?this.lastSeen:SEARCH_ROUTE[this.route]);
-  if(this.replan<=0&&(this.mode==='chase'||!this.path.length||this.stuck>.5||!this.goal||dist(target,this.goal)>.5))this.plan(target);
+  const target=bait?this.lastSeen:this.task||(this.mode==='retreat'?ENTRY_APPROACH:witnessed?(p.hideExit||this.lastSeen):this.lastSeen&&this.lost<4?this.lastSeen:SEARCH_ROUTE[this.route]);
+  if(this.replan<=0&&(this.mode==='chase'||this.mode==='rc-chase'||!this.path.length||this.stuck>.5||!this.goal||dist(target,this.goal)>.5))this.plan(target);
   for(const door of this.world.objects)if(door.kind==='door'&&door.state!=='open'&&Math.abs(door.y-1.1-this.y)<1.2&&Math.hypot(door.x-this.x,door.z-this.z)<1.6)onDoor(door);
   let moved=0;
   const next=this.path[0];if(next){const dx=next.x-this.x,dz=next.z-this.z,d=Math.hypot(dx,dz);if(d<.07){this.path.shift();}else{
-   this.yaw=Math.atan2(dx,dz);const step=Math.min(d,dt*(this.mode==='chase'?2.15:1.45));moved=navigate(this,this.world,dx/d*step,dz/d*step,1.72);this.walk+=moved;this.stepDistance+=moved;this.stuck=moved<.003?this.stuck+dt:0;
+   this.yaw=Math.atan2(dx,dz);const step=Math.min(d,dt*(['chase','rc-chase'].includes(this.mode)?2.15:1.45));moved=navigate(this,this.world,dx/d*step,dz/d*step,1.72);this.walk+=moved;this.stepDistance+=moved;this.stuck=moved<.003?this.stuck+dt:0;
    if(this.stepDistance>.65){this.stepDistance%=.65;cues.push('step');}
   }}else if(this.goal&&dist(this,this.goal)<.8){
    if(this.mode==='to-bed'){

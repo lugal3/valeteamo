@@ -220,3 +220,26 @@
 #lab3d .safe-feedback{grid-column:1;min-height:3em;margin:4px 0;font:11px/1.4 system-ui;color:#8b3c54}
 #lab3d .safe-paper .lab-paper-actions{margin-top:9px}
 #lab3d .safe-paper .lab-paper-actions button{min-height:44px;padding:8px;font:12px system-ui}
+
+
+/* RC controller: floating pink touchscreen overlays the existing mobile joystick. */
+#lab3d .house-rc-hud{position:absolute;inset:0;z-index:26;pointer-events:none;color:#fff7fa;font:600 12px/1.3 system-ui}
+#lab3d .house-rc-display{position:absolute;left:50%;top:max(10px,env(safe-area-inset-top));transform:translateX(-50%);width:min(420px,55vw);display:grid;gap:3px;text-align:center;padding:7px 15px;background:linear-gradient(155deg,#442c4be8,#242439e8);border:2px solid #ffb4d6;border-radius:13px;box-shadow:0 4px 22px #120b24b8,inset 0 0 0 1px #ffe1f477}
+#lab3d .house-rc-display strong{color:#ffbeda;letter-spacing:.12em;font-size:15px}
+#lab3d .house-rc-display span{font-weight:400;font-size:10px}
+#lab3d .house-rc-display output{font:700 10px system-ui;color:#d7f5ee}
+#lab3d .house-rc-actions{position:absolute;right:max(10px,env(safe-area-inset-right));bottom:max(11px,env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(2,minmax(86px,130px));gap:8px;pointer-events:auto}
+#lab3d .house-rc-actions button{min-height:44px;border:2px solid #ffd6e6;border-radius:12px;background:linear-gradient(#b15482e8,#6d3159ef);color:#fff5fc;font:700 12px system-ui;padding:6px;touch-action:manipulation}
+#lab3d .house-rc-actions button[data-act="rc:stop"]{background:#282636ea}
+#lab3d .house-rc-actions button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+#lab3d .house-rc-caption{position:absolute;left:50%;bottom:19%;transform:translateX(-50%);width:min(600px,75vw);text-align:center;z-index:26;color:#fff4f7;text-shadow:0 2px 7px #191226;font:italic clamp(13px,2.2vw,22px)/1.35 Georgia,serif;pointer-events:none}
+#lab3d.house-rc-driving .house-hotbar,#lab3d.house-rc-driving .lab-buttons,#lab3d.house-rc-driving .lab-look,#lab3d.house-rc-driving .house-charge,#lab3d.house-rc-driving .house-stamina{visibility:hidden;pointer-events:none}
+#lab3d.house-rc-driving .lab-joystick{opacity:1;z-index:28}
+#lab3d.house-rc-driving .lab-focus{visibility:hidden}
+@media(max-height:390px){
+ #lab3d .house-rc-display{padding:3px 8px;width:min(360px,55vw);gap:1px}
+ #lab3d .house-rc-display strong{font-size:12px}
+ #lab3d .house-rc-display span{font-size:9px}
+ #lab3d .house-rc-actions button{min-height:40px;padding:3px;font-size:10px}
+ #lab3d .house-rc-actions{grid-template-columns:repeat(2,minmax(76px,102px));gap:4px}
+}
