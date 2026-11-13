@@ -60,6 +60,9 @@ const assert=require('node:assert/strict');
   assert(Number.isFinite(real.x)&&Number.isFinite(real.y)&&Number.isFinite(real.z),'NPC position remains finite on basement ramp');
  }
  if(!(real.y<-.55&&real.z>4.35)){
+  const {navigate}=await import('../src/lab/navigation.js');
+  const testBody={x:real.x,y:real.y,z:real.z},directMove=navigate(testBody,world,0,.1,1.72);
+  console.log('RC_NAV_PROBE',JSON.stringify({directMove,after:testBody,stuck:real.stuck,replan:real.replan,stepDistance:real.stepDistance,activeFurniture:world.objects.filter(o=>o.motion).map(o=>o.id)}));
   console.log('RC_LIP_DIAGNOSTIC',JSON.stringify({pos:{x:real.x,y:real.y,z:real.z},mode:real.mode,goal:real.goal,path:real.path.slice(0,9).map(n=>({x:n.x,y:n.y,z:n.z})),
    blockers:world.boxes.filter(b=>blocked([b],real.x,real.y,real.z,.16,1.72)).map(b=>b.id),
    probes:[.005,.02,.04,.08,.16,.32].map(dz=>{const z=real.z+dz,y=groundHeight(real.x,z,real.y,true);return {z,y,step:y-real.y,blockers:world.boxes.filter(b=>blocked([b],real.x,y,z,.155,1.72)).map(b=>b.id),nav:!Number.isFinite(y)||Math.abs(y-real.y)>.35};}),
