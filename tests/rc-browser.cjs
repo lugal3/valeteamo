@@ -55,7 +55,9 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
 
   console.log('RC browser: free Louis, climb basement steps, hide behind American-style kitchen bar');
   await use('rescue-louis');
-  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='climb');
+  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='untying');
+  await shot('04a-louis-untying');
+  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='climb',null,{timeout:12000});
   await shot('04-louis-basement');
   await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='hidden',null,{timeout:50000});
   assert.equal((await louis()).phase,'hidden');
@@ -106,15 +108,19 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
 
   console.log('RC browser: Kitty and Louis escape using the physical front door');
   await page.evaluate(()=>window.__rescueHouse.setPose({x:5.95,y:0,z:11.30,yaw:0,pitch:0}));
-  await page.keyboard.down('w');await page.waitForTimeout(1600);await page.keyboard.up('w');
-  await page.getByRole('dialog',{name:/Kitty y Louis escaparon/}).waitFor({timeout:20000});
+  // Frame time on headless SwiftShader varies; don't release W before Kitty
+  // actually crosses the exterior trigger at z>12.35.
+  await page.keyboard.down('w');
+  try{await page.waitForFunction(()=>['ending','safe'].includes(window.__rescueHouse.story().phase),null,{timeout:15000});}
+  finally{await page.keyboard.up('w');}
+  await page.getByRole('dialog',{name:/Kitty y Louis escaparon/}).waitFor({timeout:30000});
   await shot('07-final-cinematic');
   assert.equal((await story()).phase,'safe');
   assert.deepEqual(errors,[],'No page errors through complete RC finale');
   const gl=await page.locator('#lab-canvas').evaluate(canvas=>canvas.getContext('webgl').getError());
   assert.equal(gl,0,'No WebGL errors');
   await page.evaluate(()=>window.stopHouse());
-  console.log('PASS RC browser: model/equip, placement, tablet, drive, audio lure, Louis climb/hide, hatch trap, enemy basement chase, playable ending');
+  console.log('PASS RC browser: model/equip, placement, tablet, drive, audio lure, Kitty untying, Louis climb/hide, hatch trap, enemy basement chase, playable ending');
  }catch(e){
   try{const state=await page?.evaluate(()=>({rc:window.__rescueHouse?.rc?.(),louis:window.__rescueHouse?.louis?.(),story:window.__rescueHouse?.story?.(),snapshot:window.__rescueHouse?.snapshot?.(),modal:document.querySelector('#lab-dialog')?.innerText}));console.log('RC_QA_FAILURE',JSON.stringify(state));await page?.screenshot({path:path.join(folder,'failure.png'),timeout:7000});}catch{}
   throw e;
