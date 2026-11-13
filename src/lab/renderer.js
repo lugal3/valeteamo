@@ -319,10 +319,10 @@ export class HouseRenderer {
    }
    const at=i*6,bx=box.x,by=box.y,bz=box.z,byaw=box.yaw||0,roll=box.roll||0,pitch=box.pitch||0;
    const {start,end}=this.dynamicRanges[i],glow=circuitPowered(box.fixture?.circuit)||box.power?.on?32:0;
-   const moved=Math.abs(eyeScale-this.dynamicEyeScale[i])>.00001||Math.fround(bx)!==this.dynamicPositions[at]||Math.fround(by)!==this.dynamicPositions[at+1]||Math.fround(bz)!==this.dynamicPositions[at+2]||Math.fround(byaw)!==this.dynamicPositions[at+3]||Math.fround(roll)!==this.dynamicPositions[at+4]||Math.fround(pitch)!==this.dynamicPositions[at+5];
+   const moved=Math.abs(eyeScale-(this.dynamicEyeScale?.[i]??1))>.00001||Math.fround(bx)!==this.dynamicPositions[at]||Math.fround(by)!==this.dynamicPositions[at+1]||Math.fround(bz)!==this.dynamicPositions[at+2]||Math.fround(byaw)!==this.dynamicPositions[at+3]||Math.fround(roll)!==this.dynamicPositions[at+4]||Math.fround(pitch)!==this.dynamicPositions[at+5];
    if(!moved&&this.dynamicVertices[start+12]===this.dynamicTemplate[start+12]+glow)continue;
    this.dynamicPositions.set([bx,by,bz,byaw,roll,pitch],at);
-   this.dynamicEyeScale[i]=eyeScale;
+   if(this.dynamicEyeScale)this.dynamicEyeScale[i]=eyeScale;
    const origin=this.dynamicOrigins[i];
    const angle=byaw-origin[3],c=Math.cos(angle),s=Math.sin(angle),cr=Math.cos(roll-origin[4]),sr=Math.sin(roll-origin[4]);
    const cp=Math.cos(pitch-origin[5]),sp=Math.sin(pitch-origin[5]);
