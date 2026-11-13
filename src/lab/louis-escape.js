@@ -60,7 +60,10 @@ export function louisCamera(louis){
  // pitch-black shot. Keep the lens on the physical walkable tunnel ramp.
  if(louis.phase==='untying'){
   const z=louis.z-1.18;
-  return {x:louis.x,y:louis.y+1.24,z,yaw:0,pitch:.10};
+  const shot=clamp((louis.age||0)/LOUIS_UNTIE_SECONDS,0,1);
+  const ease=shot*shot*(3-2*shot);
+  // Open on Kitty's paws working the knot; finish on Louis' relieved face.
+  return {x:louis.x,y:louis.y+1.24,z,yaw:0,pitch:-.34+.28*ease};
  }
  if(louis.phase==='climb'&&louis.y<-.18){
   const z=Math.max(2.63,louis.z-.73);
