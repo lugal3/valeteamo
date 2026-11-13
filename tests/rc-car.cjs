@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
  const {poseHatch}=await import('../src/lab/basement.js');
  const {Pursuer}=await import('../src/lab/pursuer.js');
  const rcModule=await import('../src/lab/rc-car.js');
- const {createLouisEscape,updateLouisEscape,freeLouis,louisModel}=await import('../src/lab/louis-escape.js');
+ const {createLouisEscape,updateLouisEscape,freeLouis,louisModel,louisPartPose,LOUIS_UNTIE_SECONDS}=await import('../src/lab/louis-escape.js');
  const {interactionTarget}=await import('../src/lab/interactions.js');
  const {createRC,deployRC,driveRC,updateRC,stopRC,beepRC,crashRC,recoverRC,rcCamera,canTrapPursuer,rcCarModel}=rcModule;
  const world=createHouse(),kit=world.objects.find(o=>o.id==='rc-car');
@@ -60,13 +60,38 @@ const assert=require('node:assert/strict');
  }
  assert(real.y<-.55&&real.z>4.35,'NPC physically descends into the basement from its natural spawn');
  const louis=createLouisEscape(world);
- assert(louisModel((id,x,y,z,w,h,d)=>({id,x,y,z,w,h,d})).length>25);
+ const model=louisModel((id,x,y,z,w,h,d,mat,extra)=>({id,x,y,z,w,h,d,mat,extra}));
+ assert(model.length>55,'Louis face and body have layered, detailed geometry');
+ for(const detail of ['fringe-0','fringe-4','iris--1','beard-chin','nose-tip','lid--1','cheek--1','upper-arm--1','hand-1'])
+  assert(model.some(p=>p.id===detail),'Missing recognizable face/animation feature: '+detail);
+ assert.equal(louis.phase,'untying','Rescue starts with a cinematic release, not an instant teleport');
+ let releases=0;
  for(let i=0;i<800&&louis.phase!=='hidden';i++){
-  updateLouisEscape(louis,.05);
+  const cue=updateLouisEscape(louis,.05);
+  if(cue==='untied'){releases++;assert(louis.age<.051,'Untying cuts to the escape only after the full sequence');}
   assert(Number.isFinite(louis.x)&&Number.isFinite(louis.y)&&Number.isFinite(louis.z),'Cinematic positions remain finite');
  }
+ assert.equal(releases,1,'The rope release must happen exactly once');
+ assert(LOUIS_UNTIE_SECONDS>=2.5,'Untying must show more than a single frame');
  assert.equal(louis.phase,'hidden','Louis climbs from basement and hides by the kitchen bar');
+ assert(louis.crouch>.99,'Louis crouches physically while hidden');
+ const mock=(id)=>({id:'pickup-louis-escape-'+id,baseRoll:0,basePitch:0,baseYaw:0});
+ const eye=mock('eye--1'),arm=mock('hand--1'),offset=[-.076,1.473,.158];
+ let minBlink=1,maxBlink=0;
+ for(let i=0;i<500;i++){
+  const pose=louisPartPose({id:louis.id,phase:'hidden',age:i*.027,walk:0,speed:0,crouch:1},eye,offset);
+  minBlink=Math.min(minBlink,pose.eyeScale);maxBlink=Math.max(maxBlink,pose.eyeScale);
+  assert([pose.x,pose.y,pose.z,pose.roll,pose.yaw,pose.pitch].every(Number.isFinite));
+ }
+ assert(minBlink<.30&&maxBlink>.99,'Louis closes and opens both eyes during spontaneous blinks');
+ const idle=louisPartPose({id:louis.id,phase:'follow',age:1,walk:.23,speed:0,crouch:0},arm,[-.3,.559,.111]);
+ const walking=louisPartPose({id:louis.id,phase:'follow',age:1,walk:.23,speed:2.1,crouch:0},arm,[-.3,.559,.111]);
+ assert.notEqual(walking.pitch,idle.pitch,'Following Kitty swings the arms instead of sliding');
+ const hiding=louisPartPose({id:louis.id,phase:'hidden',age:1,walk:0,speed:0,crouch:1},arm,[-.3,.559,.111]);
+ assert(hiding.y>idle.y+.2,'Louis brings his hand toward his mouth while hidden');
  assert(freeLouis(louis));assert.equal(louis.phase,'follow');
+ updateLouisEscape(louis,.3,{x:11.8,y:0,z:4.08,yaw:Math.PI});
+ assert(louis.crouch>0&&louis.crouch<1,'Louis rises progressively from the kitchen hiding posture');
  const corridor={x:7.33,y:1.64,z:6.65,yaw:Math.PI/2,pitch:-.4};
  const target=interactionTarget(world,corridor);
  assert.notEqual(target?.id,'hide-shower','Hallway cannot activate the shower hiding spot');
