@@ -357,11 +357,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(demo&&config.entry!=='rescue'&&events.phase!=='evaded'){say('Primero despista al perseguidor para que puedan salir.',4);return;}
    puzzle=puzzleEvent(puzzle,'rescue');o.taken=true;
    if(demo){
-    for(const box of world.boxes)if(box.id.startsWith('captive-')&&!box.id.startsWith('captive-chair-'))box.hiddenGeometry=true;
+    // Leave the ropes on Louis until Kitty visibly unties them; the chair stays.
+    for(const box of world.boxes)if(box.id.startsWith('captive-')&&!box.id.startsWith('captive-chair-')&&!box.id.startsWith('captive-rope-'))box.hiddenGeometry=true;
     louis=createLouisEscape(world);world.objects.push(louis);
     events.phase='rc-rescue';pursuer.reset();sound.setThreat(false);
     phone.close();resetInput();rebuild();play('cloth',o);play('pickup',o);
-    say('¡Louis está libre! Kitty le indica que suba y se esconda tras la barra de la cocina.',7);
+    say('Kitty se arrodilla junto a Louis para soltar las cuerdas. Mantén silencio…',4);
    }else{
     for(const box of world.boxes)if(box.id.startsWith('captive-rope-'))box.hiddenGeometry=true;
     rebuild();phone.close();resetInput();pursuer.reset();sound.setThreat(false);
@@ -614,9 +615,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    $('rc-trap-button').hidden=!canTrapPursuer(pursuer,world.hatch,rcTrap.armed);
    interactButton.hidden=true;
   }
-  const announce=rc?.mode==='deploying'||louis&&['climb','hide'].includes(louis.phase)||!!finalCutscene;
+  const announce=rc?.mode==='deploying'||louis&&['untying','climb','hide'].includes(louis.phase)||!!finalCutscene;
   $('house-rc-caption').hidden=!announce;
-  if(announce)$('house-rc-caption').textContent=finalCutscene?'¡Libres! Kitty y Louis cruzan el jardín…':louis&&['climb','hide'].includes(louis.phase)?'Louis sube del sótano y busca refugio tras la barra americana…':'Kitty se agacha y despliega el autito con las dos patitas…';
+  if(announce)$('house-rc-caption').textContent=finalCutscene?'¡Libres! Kitty y Louis cruzan el jardín…':louis?.phase==='untying'?'Kitty desata las cuerdas mientras Louis espera en silencio…':louis&&['climb','hide'].includes(louis.phase)?'Louis sube del sótano y busca refugio tras la barra americana…':'Kitty se agacha y despliega el autito con las dos patitas…';
   root.classList.toggle('house-rc-driving',remote);
   if(poseTransition)interactButton.querySelector('small').textContent=poseTransition.entering?'Entrando…':'Saliendo…';
   if(target?.motion)interactButton.querySelector('small').textContent=target.state==='opening'?'Abriendo…':'Cerrando…';
@@ -629,10 +630,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(isPaused()||finalCutscene)return;
   updateFurniture(world.objects,dt,s);
   const louisCue=updateLouisEscape(louis,dt,s);
+  if(louisCue==='untied'){
+   for(const box of world.boxes)if(box.id.startsWith('captive-rope-'))box.hiddenGeometry=true;
+   rebuild();play('cloth',louis);say('¡Las cuerdas cedieron! Louis sube con cuidado hacia la cocina.',5);
+  }
   if(louisCue==='hidden'){
    events.phase='rc-setup';say('Louis se escondió tras la barra de la cocina. Prepara la trampa en la escotilla.',6);
   }
-  if(louis&&['climb','hide'].includes(louis.phase))return;
+  if(louis&&['untying','climb','hide'].includes(louis.phase))return;
   if(rc){
    updateRC(rc,dt);
    if(rc.mode==='driving'){
@@ -799,8 +804,16 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    }
   }
   let thirdPerson=null,actorTime;
-  if(louis&&['climb','hide'].includes(louis.phase)){
+  if(louis&&['untying','climb','hide'].includes(louis.phase)){
    view=louisCamera(louis);hand=false;torch=false;
+   if(louis.phase==='untying'){
+    const t=louis.age||0,reach=Math.min(1,t/.7),knot=Math.sin(t*8)*.023;
+    introHands=[-1,1].map(side=>({
+     x:louis.x+side*(.22-.09*reach),
+     y:louis.y+.58+.05*(1-reach)+knot,
+     z:louis.z-.34+.16*reach
+    }));
+   }
   }
   if(rc?.mode==='deploying'){
    const t=Math.min(1,rc.elapsed);
@@ -1028,7 +1041,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     rug:world.hatchRug.amount,hatch:world.hatch.amount,stamina:s.stamina,sprinting:s.sprinting,notePresentation}),
    story:()=>({pursuer:pursuer.snapshot(),samples:{loaded:sound.recordings?.buffers.size||0,played:sound.recordings?.played||0,last:sound.recordings?.lastPlayed,errors:sound.recordings?.errors||[]},phase:events.phase,time:events.time,remaining:events.remaining,messages:events.messages.map(m=>({...m})),equipment,phoneOpen:phone.open,hud:{...phone.layout,rect:phone.rect,editing:phone.editing},floorSounds:{steps:floorSounds.steps,triggers:floorSounds.triggers},audio:{lastEffect:sound.lastEffect,effects:sound.effectCount||0,voices:sound.foleyVoices?.size||0}}),
    rc:()=>({mode:rc.mode,position:{x:rc.x,y:rc.y,z:rc.z,yaw:rc.yaw},noise:rc.noise,crashes:rc.crashes,inventory:!!s.inventory.rc,trap:{...rcTrap},pursuer:{x:pursuer.x,y:pursuer.y,z:pursuer.z,mode:pursuer.mode}}),
-   louis:()=>louis?{x:louis.x,y:louis.y,z:louis.z,phase:louis.phase,waypoint:louis.waypoint,age:louis.age}:null,
+   louis:()=>louis?{x:louis.x,y:louis.y,z:louis.z,phase:louis.phase,waypoint:louis.waypoint,age:louis.age,walk:louis.walk,speed:louis.speed,crouch:louis.crouch}:null,
    // DEV-only route harness for deterministic test setup; not in the production build.
    placeRC:(pose)=>{if(rc.mode!=='driving')throw Error('RC must be deployed first');const y=groundHeight(pose.x,pose.z,pose.y??rc.y,world.hatch?.amount>.92);if(!Number.isFinite(y)||blocked(world.boxes,pose.x,y,pose.z,.155,.38))throw Error('Blocked RC test position');rc.x=pose.x;rc.y=y;rc.z=pose.z;rc.yaw=pose.yaw??rc.yaw;rc.noise=0;syncRCObject(rc);return {x:rc.x,y:rc.y,z:rc.z};},
    intro:()=>cinematic?{elapsed:cinematic.elapsed,...windowIntroState(cinematic.elapsed/WINDOW_SHOT_SECONDS),camera:windowIntroCamera(cinematic.elapsed/WINDOW_SHOT_SECONDS)}:null,
