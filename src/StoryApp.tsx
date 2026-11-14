@@ -32,11 +32,11 @@ function ComicDialog({close}:{close:()=>void}){
  useEffect(()=>{const previous=document.activeElement as HTMLElement|null;dialog.current?.querySelector<HTMLButtonElement>('button')?.focus();const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();onClose.current();}else if(e.key==='Tab'){e.preventDefault();dialog.current?.querySelector<HTMLButtonElement>('button')?.focus();}};window.addEventListener('keydown',key,true);return()=>{window.removeEventListener('keydown',key,true);previous?.focus();};},[]);
  return <div className="comic-backdrop" onClick={e=>{if(e.target===e.currentTarget)close();}}><div className="comic-dialog" ref={dialog} role="dialog" aria-modal="true" aria-labelledby="comic-title"><div className="comic-heading"><div><span className="story-kicker">UNA SORPRESA PARA TI ✦</span><h2 id="comic-title">jaja uno XD</h2></div><button className="comic-close" onClick={close} aria-label="Cerrar cómic">×</button></div><img src={new URL('./comics/jaja-uno-xd.png',document.baseURI).href} alt="Cuatro viñetas: Kitty encuentra una invitación, prepara una torta con Louis y ambos siguen unas luces para celebrar un cumpleaños con regalos."/><p>Una pequeña sorpresa, preparada con mucho cariño. ♡</p></div></div>;
 }
-export function StoryApp({ClassicApp}:{ClassicApp:ComponentType}){
+export function StoryApp({ClassicApp,initialRoute}:{ClassicApp:ComponentType;initialRoute?:'classic'}){
  const container=useRef<HTMLDivElement>(null);
  const audio=useRef<Sound>(new Sound());
  const [progress,setProgress]=useState<StoryProgress>(()=>readProgress(STORY.length));
- const [screen,setScreen]=useState<'splash'|'cover'|'story'|'game'|'classic'|'rescue'|'tests'|'arcade'|'cosmos'>('splash');
+ const [screen,setScreen]=useState<'splash'|'cover'|'story'|'game'|'classic'|'rescue'|'tests'|'arcade'|'cosmos'>(initialRoute==='classic'?'classic':'splash');
  const [demoEntry,setDemoEntry]=useState<'garden'|'abduction'|'trail'|'house'|'drawer'|'lock'|'rescue'|'mirror'>('garden');
  const [demoTrial,setDemoTrial]=useState(false);const [saved,setSaved]=useState(progress.started);const [storageOK,setStorageOK]=useState(true);
  const [houseTrial,setHouseTrial]=useState<HouseTrialId|null>(null);
@@ -60,7 +60,7 @@ export function StoryApp({ClassicApp}:{ClassicApp:ComponentType}){
  const unlockAudio=()=>{if(!progress.muted)tryAudio();};
  const openDemo=(entry:typeof demoEntry,trial:boolean)=>{setDemoEntry(entry);setDemoTrial(trial);audio.current.destroy();stopWelcomeMelody();setScreen('rescue');};
  if(screen==='splash')return <Splash muted={progress.muted} onStart={()=>{if(!progress.muted)tryAudio(true);setScreen('cover');}}/>;
- if(screen==='cosmos')return <Suspense fallback={<main role="status" style={{display:'grid',placeItems:'center',background:'#0a0719',color:'#ffddf1'}}>Preparando las estrellas…</main>}><CosmosExperience preview startAt={cosmosEntry} onExit={()=>setScreen('tests')} onEnterGame={()=>setScreen('tests')}/></Suspense>;
+ if(screen==='cosmos')return <Suspense fallback={<main role="status" style={{display:'grid',placeItems:'center',background:'#0a0719',color:'#ffddf1'}}>Preparando las estrellas…</main>}><CosmosExperience preview startAt={cosmosEntry} onExit={()=>setScreen('tests')} onEnterGame={()=>{audio.current.destroy();stopWelcomeMelody();setScreen('classic');}}/></Suspense>;
  if(screen==='rescue')return <RescueDemo key={demoEntry+(demoTrial?'-trial':'-story')} entry={demoEntry} test={demoTrial} onExit={()=>{setScreen(demoTrial?'tests':'cover');if(!demoTrial)unlockAudio();}}/>;
  if(screen==='tests')return houseTrial?<PlaytestHouse id={houseTrial} onExit={closeHouseTrial}/>:<PlaytestMenu
   onExit={()=>{unlockAudio();setScreen('cover');}}

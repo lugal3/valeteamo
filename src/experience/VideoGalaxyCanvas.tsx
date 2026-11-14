@@ -7,7 +7,7 @@ type Star={x:number;y:number;z:number;px:number;py:number;pz:number;size:number;
 type HeartDot=Star&{pulse:number};
 type Projected={x:number;y:number;scale:number;depth:number};
 type Hotspot={id:string;x:number;y:number};
-type Props={visible:boolean;interactive:boolean;palette:CosmosPalette;quality:Quality;onSelect?:(memory:GalaxyMemory)=>void;onArrivalComplete?:()=>void;replaySignal?:number;skipSignal?:number;startCompleted?:boolean};
+type Props={visible:boolean;interactive:boolean;palette:CosmosPalette;quality:Quality;onSelect?:(memory:GalaxyMemory)=>void;onHeartSelect?:()=>void;onArrivalComplete?:()=>void;replaySignal?:number;skipSignal?:number;startCompleted?:boolean};
 
 function rand(seed=12052026){let a=seed>>>0;return()=>{a=(Math.imul(a,1664525)+1013904223)>>>0;return a/4294967296;};}
 const random=rand();
@@ -42,9 +42,10 @@ function clamp(v:number,min=0,max=1){return Math.max(min,Math.min(max,v));}
 function ease(v:number){const x=clamp(v);return x*x*(3-2*x);}
 function colorCss(hex:string,alpha:number){const h=hex.replace('#','');const x=parseInt(h,16);return 'rgba('+((x>>16)&255)+','+((x>>8)&255)+','+(x&255)+','+alpha+')';}
 
-export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,onArrivalComplete,replaySignal=0,skipSignal=0,startCompleted=false}:Props){
+export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,onHeartSelect,onArrivalComplete,replaySignal=0,skipSignal=0,startCompleted=false}:Props){
  const canvas=useRef<HTMLCanvasElement>(null);
  const callback=useRef(onSelect);callback.current=onSelect;
+ const heartCallback=useRef(onHeartSelect);heartCallback.current=onHeartSelect;
  // These refs deliberately DO NOT restart WebGL/Canvas when loading -> galaxy
  // changes interactive from false to true.
  const interaction=useRef(interactive);interaction.current=interactive;
@@ -69,6 +70,7 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
   const pointers=new Map<number,{x:number;y:number}>();
   let pinch:{startDistance:number;startZoom:number}|null=null;
   let hot:Hotspot[]=[];
+  let heartBoundary:{x:number;y:number}[]=[];
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(reduced)seconds=GALAXY_ARRIVAL_SECONDS;
   const low=quality==='suave'||(quality==='auto'&&(window.innerWidth<620||(navigator.hardwareConcurrency||6)<=4));
@@ -175,63 +177,59 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
     ctx.fillStyle=neb;ctx.fillRect(0,0,w,h);
     for(const r of [.41,.67,1.15,1.8,2.56])ring(r*(.10+.90*arrival.unfold),camYaw,camPitch,t,ringProgress*(r<.7?.34:.08),r<.7?3.3:.7);
    }
-   // Incoming particle tunnel. The SAME stars later form the spiral galaxy:
-   // their screen positions interpolate continuously into their 3D disc slots.
-   const count=Math.floor(total*(.14+.86*ease(t/2.9)));
-   const discScale=.075+.925*arrival.unfold;
-   const side=Math.min(w,h);
+   // RADIAL FLY-THROUGH — sampled from the attached 4.37-second clip:
+   // tiny dark center, increasingly large lights fly past the lens, rotation
+   // accelerates, and the SAME stars then become the spiral (no cut).
+   const count=Math.floor(total*(.13+.87*ease(t/2.15)));
+   const discScale=.028+.972*arrival.unfold;
+   const span=Math.max(w,h)*.82;
+   const centerX=w*.5+Math.sin(t*1.14)*w*.017*(1-arrival.worldBlend);
+   const centerY=h*(.53-.035*arrival.descent);
    const blend=arrival.worldBlend;
-   const tunnelCenterY=h*(.20+.33*arrival.descent);
-   const tunnelCenterX=w*.5;
-   const tunnelSpan=side*(.32+.72*arrival.tunnel+.12*arrival.approach);
-   const tunnelVisible=arrival.tunnel*(1-blend);
-   if(tunnelVisible>.025){
-    // Loose rotating arcs suggest tunnel depth without becoming the finished
-    // neat concentric rings of the galaxy.
-    ctx.save();ctx.translate(tunnelCenterX,tunnelCenterY);ctx.scale(1,.88);
-    for(let i=0;i<7;i++){
-     const radius=tunnelSpan*(.09+i*.105);
-     const a=arrival.spin*(.61+i*.07)+i*1.17;
-     ctx.lineWidth=.7+(i%3)*.35;
-     ctx.strokeStyle='rgba(255,47,154,'+(tunnelVisible*(.055+i*.01))+')';
-     ctx.beginPath();ctx.arc(0,0,radius,a,a+1.0+arrival.tunnel*.3);ctx.stroke();
-    }
-    ctx.restore();
-    const haze=ctx.createRadialGradient(tunnelCenterX,tunnelCenterY,0,tunnelCenterX,tunnelCenterY,tunnelSpan*.42);
-    haze.addColorStop(0,'rgba(255,38,133,'+(tunnelVisible*.13)+')');
-    haze.addColorStop(1,'rgba(255,38,133,0)');
-    ctx.fillStyle=haze;ctx.fillRect(0,0,w,h);
-   }
+   const swirl=arrival.spin*.72;
    for(let i=0;i<count;i++){
     const star=spiral[i];
-    const p=project(star.x*discScale,star.y*discScale,star.z*discScale,camYaw,camPitch);
-    // A moving perspective depth makes stars fly past the camera instead of
-    // merely circling on a flat plane.
-    const depth=(star.seed+t*.205)%1;
-    const a=i*2.39996323+star.seed*TAU*1.65+arrival.spin*(1.12-depth*.32);
-    const radial=Math.pow(depth,1.62);
-    const radiusTunnel=tunnelSpan*(.025+radial*.76);
-    const tx=tunnelCenterX+Math.cos(a)*radiusTunnel;
-    const ty=tunnelCenterY+Math.sin(a)*radiusTunnel*.9+(depth-.5)*h*.11*arrival.descent;
-    const x=tx*(1-blend)+p.x*blend;
-    const y=ty*(1-blend)+p.y*blend;
-    if(p.depth<=.5||x<-18||y<-18||x>w+18||y>h+18)continue;
-    const twinkle=reduced?1:.77+.23*Math.sin(t*2.6+star.seed*25);
-    const alpha=(.15+.82*arrival.tunnel)*twinkle*(star.color>.93?1:.76);
-    const rDisc=Math.max(.7,Math.min(2.5,star.size*p.scale/85));
-    const rTunnel=.3+2.55*radial*radial;
+    const projected=project(star.x*discScale,star.y*discScale,star.z*discScale,camYaw,camPitch);
+    // Moving cylindrical tunnel: advancing depth drives perspective radius.
+    // Each particle starts near the distant central vanishing point, flies
+    // alongside the camera, then exits at the edges and repeats.
+    const flyDepth=(star.seed+t*(.33+.11*arrival.approach))%1;
+    const depthScale=Math.pow(flyDepth,2.25);
+    const angle=i*2.399963229728653+star.seed*1.23+swirl*(.44+.46*flyDepth);
+    const tunnelRadius=span*(.012+depthScale*.83);
+    const tx=centerX+Math.cos(angle)*tunnelRadius;
+    const ty=centerY+Math.sin(angle)*tunnelRadius*.91;
+    const x=tx*(1-blend)+projected.x*blend;
+    const y=ty*(1-blend)+projected.y*blend;
+    if(projected.depth<=.5||x<-24||y<-24||x>w+24||y>h+24)continue;
+    const twinkle=reduced?1:.79+.21*Math.sin(t*3.1+star.seed*26);
+    const alpha=(.43+.54*arrival.tunnel)*twinkle*(star.color>.93?1:.86);
+    const rDisc=Math.max(.65,Math.min(2.6,star.size*projected.scale/82));
+    const rTunnel=.65+4.1*depthScale*depthScale;
     const radius=rTunnel*(1-blend)+rDisc*blend;
     const col=tinted[Math.floor(star.color*tinted.length)];
-    ctx.fillStyle='rgba('+col+','+alpha+')';
-    if(blend<.94&&depth>.38&&star.color>.875){
-     const trail=(1-blend)*(.9+13*depth*depth)*arrival.approach;
-     const dx=Math.cos(a)*trail,dy=Math.sin(a)*trail;
-     ctx.strokeStyle='rgba('+col+','+(alpha*.60)+')';
-     ctx.lineWidth=Math.max(.55,radius*.55);
+    if(blend<.95&&flyDepth>.32&&star.color>.50){
+     const trail=(1-blend)*(1.4+23*depthScale)*(.4+.6*arrival.tunnel);
+     const dx=Math.cos(angle)*trail,dy=Math.sin(angle)*trail*.91;
+     ctx.lineWidth=Math.max(.6,radius*.62);
+     ctx.strokeStyle='rgba('+col+','+(alpha*.5)+')';
      ctx.beginPath();ctx.moveTo(x-dx,y-dy);ctx.lineTo(x,y);ctx.stroke();
     }
-    if(star.color>.989)circle(x,y,radius*2.1,'rgba(255,199,232,'+alpha+')',4);
+    ctx.fillStyle='rgba('+col+','+alpha+')';
+    if(star.color>.987)circle(x,y,radius*1.55,'rgba(255,210,240,'+alpha+')',4);
     else ctx.fillRect(x,y,radius,radius);
+   }
+   // The dark central vanishing point becomes the spiral nucleus. Its
+   // rotating halo shrinks away exactly as the galaxy disk unfolds.
+   if(blend<.94){
+    const k=1-blend;
+    const vanishing=ctx.createRadialGradient(centerX,centerY,1,centerX,centerY,Math.min(w,h)*.26);
+    vanishing.addColorStop(0,'rgba(0,0,0,'+(.94*k)+')');
+    vanishing.addColorStop(.24,'rgba(28,0,18,'+(.48*k)+')');
+    vanishing.addColorStop(.6,'rgba(255,22,126,'+(.06*k)+')');
+    vanishing.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=vanishing;
+    ctx.beginPath();ctx.arc(centerX,centerY,Math.min(w,h)*.26,0,TAU);ctx.fill();
    }
    // Central compact ring / black hole, bright fuchsia lens and white pink core.
    if(ringProgress>0){
@@ -283,6 +281,22 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
     circle(tip.x,tip.y,2.3*hProgress,'rgba(255,237,250,.8)',9);
    }
    hot=[];
+   heartBoundary=[];
+   if(hProgress>.9){
+    // The tall luminous heart is selectable without adding any visible UI.
+    // This polygon follows the rendered heart under drag, pinch and zoom.
+    for(let j=0;j<=120;j++){
+     const hp=heartPoint(j/120*TAU);
+     const p=project(hp.x*1.05,1.50+hp.y*1.16,0,camYaw,camPitch);
+     heartBoundary.push({x:p.x,y:p.y});
+    }
+    const center=project(0,1.48,0,camYaw,camPitch);
+    element.dataset.heartX=center.x.toFixed(1);
+    element.dataset.heartY=center.y.toFixed(1);
+    element.dataset.heartSelectable='true';
+   }else{
+    element.dataset.heartSelectable='false';
+   }
    if(labelProgress>0){
     // Circular orbit of luminous phrases from the video. They move with perspective.
     ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
@@ -368,6 +382,14 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
    grab=null;
    if(movement>12)return;
    const rect=el.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top;
+   // Ray-casting inside the actual rendered heart outline, not a fixed
+   // invisible rectangular button that would block gestures or memories.
+   let inside=false;
+   for(let i=0,j=heartBoundary.length-1;i<heartBoundary.length;j=i++){
+    const a=heartBoundary[i],b=heartBoundary[j];
+    if((a.y>y)!==(b.y>y) && x<(b.x-a.x)*(y-a.y)/(b.y-a.y)+a.x)inside=!inside;
+   }
+   if(inside){heartCallback.current?.();return;}
    const closest=hot.map(p=>({...p,d:Math.hypot(p.x-x,p.y-y)})).sort((a,b)=>a.d-b.d)[0];
    if(closest&&closest.d<48){
     const selected=MEMORIES.find(m=>m.id===closest.id);

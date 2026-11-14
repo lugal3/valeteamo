@@ -1,4 +1,4 @@
-import {lazy,Suspense,useEffect,useRef,useState,type FormEvent,type ReactNode} from 'react';
+import {cloneElement,isValidElement,lazy,Suspense,useEffect,useRef,useState,type FormEvent,type ReactElement,type ReactNode} from 'react';
 import {CosmosCanvas} from './experience/CosmosCanvas';
 import './birthday-countdown.css';
 
@@ -10,6 +10,7 @@ const remaining = () => Math.max(0,Math.ceil((opensAt-Date.now())/1000));
 
 export function BirthdayCountdown({children}:{children:ReactNode}){
  const [entered,setEntered]=useState(false);
+ const [launchClassic,setLaunchClassic]=useState(false);
  const [giftLaunched,setGiftLaunched]=useState(false);
  const [installOpen,setInstallOpen]=useState(false);
  const [seconds,setSeconds]=useState(remaining);
@@ -43,8 +44,8 @@ export function BirthdayCountdown({children}:{children:ReactNode}){
   }else setInvalid(true);
  }
 
- if(entered)return children;
- if(giftLaunched)return <Suspense fallback={<main className="birthday-countdown" role="status">Abriendo el universo…</main>}><CosmosExperience startAt="gift" onExit={()=>setEntered(true)} onEnterGame={()=>setEntered(true)}/></Suspense>;
+ if(entered)return launchClassic&&isValidElement(children)?cloneElement(children as ReactElement<{initialRoute?:'classic'}>,{initialRoute:'classic'}):children;
+ if(giftLaunched)return <Suspense fallback={<main className="birthday-countdown" role="status">Abriendo el universo…</main>}><CosmosExperience startAt="gift" onExit={()=>setEntered(true)} onEnterGame={()=>{setLaunchClassic(true);setEntered(true);}}/></Suspense>;
  const parts=[
   ['Días',Math.floor(seconds/86400)],
   ['Horas',Math.floor(seconds/3600)%24],
