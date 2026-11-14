@@ -71,6 +71,8 @@ async function main(){
   await page.getByRole('heading',{name:/El jardín/}).waitFor({timeout:12000});
   await page.getByRole('button',{name:/Comenzar aventura/}).click();
   await page.locator('#game canvas').waitFor({timeout:25000});
+  await page.locator('.loading-screen').waitFor({state:'hidden',timeout:30000});
+  assert.equal(await page.locator('.game-shell').count(),1,'the real Phaser 2D scene is active');
   await page.screenshot({path:'artifacts/public-original-2d-game.png'});
   assert.deepEqual(errors,[],'No JavaScript exceptions in the locked → unlocked → 2D flow');
   await context.close();
