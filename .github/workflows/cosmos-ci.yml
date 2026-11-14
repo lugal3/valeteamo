@@ -18,6 +18,8 @@ on:
       - 'tests/cosmos-public-flow.cjs'
       - 'tests/cosmos-browser.cjs'
       - 'tests/landscape-gate.cjs'
+      - 'tests/birthday-icon-assets.cjs'
+      - 'public/experience/icons/**'
       - '.github/workflows/cosmos-ci.yml'
   workflow_dispatch:
 permissions:
@@ -36,6 +38,7 @@ jobs:
       - run: node tests/cosmos.cjs
       - run: node tests/galaxy-arrival.cjs
       - run: node tests/tunnel-perspective.cjs
+      - run: node tests/birthday-icon-assets.cjs
       - run: npm run build
       - run: npx playwright install chromium --with-deps
       - run: node tests/landscape-gate.cjs
