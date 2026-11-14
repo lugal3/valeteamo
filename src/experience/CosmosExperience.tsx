@@ -57,6 +57,9 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
  const [quality,setQuality]=useState<Quality>('auto');
  const [clock,setClock]=useState(()=>secondsUntil());
  const [giftOpening,setGiftOpening]=useState(false);
+ const [arrivalReady,setArrivalReady]=useState(false);
+ const [replaySignal,setReplaySignal]=useState(0);
+ const [skipSignal,setSkipSignal]=useState(0);
  const [installOpen,setInstallOpen]=useState(false);
  const [letterOpen,setLetterOpen]=useState(false);
  const [selected,setSelected]=useState<GalaxyMemory>(MEMORIES[0]);
@@ -70,11 +73,6 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
   return()=>{window.clearInterval(timer);document.removeEventListener('visibilitychange',tick);};
  },[]);
  useEffect(()=>()=>window.clearTimeout(timeout.current),[]);
- useEffect(()=>{
-  if(scene!=='loading')return;
-  const timer=window.setTimeout(()=>setScene('galaxy'),2900);
-  return()=>window.clearTimeout(timer);
- },[scene]);
  const colors=PALETTES[palette];
  const vars={'--cx-pink':colors.pink,'--cx-purple':colors.purple,'--cx-blue':colors.blue,'--cx-gold':colors.gold,'--cx-dark':colors.dark} as CSSProperties;
  const enterGame=useCallback(()=>{
@@ -91,14 +89,37 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
  const parts=useMemo(()=>countdownParts(clock),[clock]);
  const isGalaxy=scene==='galaxy';
  const isVideoCosmos=scene==='loading'||scene==='galaxy';
+ const arrivalComplete=useCallback(()=>{
+  setArrivalReady(true);
+  // Same live canvas continues when the loading scene turns into galaxy.
+  setScene(current=>current==='loading'?'galaxy':current);
+ },[]);
  const enterFromVideo=()=>{
-  setScene('loading');window.clearTimeout(timeout.current);
+  window.clearTimeout(timeout.current);
+  setArrivalReady(false);
+  setReplaySignal(n=>n+1);
+  setScene('loading');
  };
- const skipVideo=()=>{window.clearTimeout(timeout.current);setScene('galaxy');};
+ const skipVideo=()=>{
+  setSkipSignal(n=>n+1);
+  setArrivalReady(true);
+  setScene('galaxy');
+ };
+ const openPreviewScene=(next:CosmosScene)=>{
+  window.clearTimeout(timeout.current);setGiftOpening(false);
+  if(next==='galaxy'||next==='loading'){
+   setArrivalReady(false);
+   setReplaySignal(n=>n+1);
+  }
+  setScene(next);
+ };
  const leave=()=>{window.clearTimeout(timeout.current);onExit();};
  return <main className={'cosmos-experience cosmos-'+scene+' cosmos-palette-'+palette} style={vars}>
   <CosmosCanvas interactive={false} quality={quality}/>
-  <VideoGalaxyCanvas visible={isVideoCosmos} interactive={isGalaxy} quality={quality} palette={palette} onSelect={selectMemory}/>
+  <VideoGalaxyCanvas visible={isVideoCosmos} interactive={isGalaxy&&arrivalReady}
+   quality={quality} palette={palette} onSelect={selectMemory}
+   onArrivalComplete={arrivalComplete} startCompleted={arrivalReady}
+   replaySignal={replaySignal} skipSignal={skipSignal}/>
   <div className="cosmos-vignette" aria-hidden="true"/><Particles/>
   <header className="cosmos-topbar">
    <div className="cosmos-signature"><span className="cosmos-signature-icon">✦</span><span>PARA VALE<small>UN UNIVERSO SOLO TUYO</small></span></div>
@@ -155,7 +176,7 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
    <button className="video-reference-skip" type="button" onClick={skipVideo}>Saltar animación ↗</button>
   </section>}
 
-  {scene==='galaxy'&&<section className="cosmos-galaxy-ui" aria-labelledby="cx-galaxy-title">
+  {scene==='galaxy'&&arrivalReady&&<section className="cosmos-galaxy-ui" aria-labelledby="cx-galaxy-title">
    <div className="cosmos-galaxy-heading">
     <span className="cosmos-kicker">✦ UNA GALAXIA DE AMOR PARA TI ✦</span>
     <h1 id="cx-galaxy-title">Nuestro <em>universo.</em></h1>
@@ -223,7 +244,7 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
 
   <footer className="cosmos-bottomline"><span>✦ HECHO PARA VALE</span><span>{scene==='galaxy'?'EXPLORA TU UNIVERSO':'UN RECUERDO A LA VEZ'}</span><span>05.12.2026 ♡</span></footer>
   {preview&&<div className="cosmos-preview-controls" aria-label="Escenas para pruebas">
-   {(['countdown','gift','intro','loading','galaxy','suspense','finale'] as const).map(s=><button key={s} onClick={()=>{window.clearTimeout(timeout.current);setGiftOpening(false);setScene(s);}} className={scene===s?'active':''}>{({countdown:'Contador',gift:'Regalo',intro:'Inicio video',loading:'Animación',galaxy:'Galaxia',suspense:'Misterio',finale:'Final'})[s]}</button>)}
+   {(['countdown','gift','intro','loading','galaxy','suspense','finale'] as const).map(s=><button key={s} onClick={()=>openPreviewScene(s)} className={scene===s?'active':''}>{({countdown:'Contador',gift:'Regalo',intro:'Inicio video',loading:'Animación',galaxy:'Galaxia',suspense:'Misterio',finale:'Final'})[s]}</button>)}
    <select aria-label="Paleta visual" value={palette} onChange={e=>setPalette(e.target.value as CosmosPalette)}><option value="rosado">Rosado</option><option value="aurora">Aurora</option><option value="medianoche">Medianoche</option></select>
    <select aria-label="Calidad gráfica" value={quality} onChange={e=>setQuality(e.target.value as Quality)}><option value="auto">Auto</option><option value="suave">Ligera</option><option value="alta">Alta</option></select>
   </div>}
