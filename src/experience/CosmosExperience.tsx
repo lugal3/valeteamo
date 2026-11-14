@@ -1,14 +1,17 @@
 import {useCallback,useEffect,useMemo,useRef,useState,type CSSProperties} from 'react';
 import {CosmosCanvas} from './CosmosCanvas';
+import {VideoGalaxyCanvas} from './VideoGalaxyCanvas';
+import {GalaxyCouple,PixelMascot} from './ReferenceCharacters';
 import {createPreviewBridge} from './game-bridge';
 import {ASSET_GUIDE,DEFAULT_PALETTE,MEMORIES,PALETTES,UNLOCK_AT,countdownParts,secondsUntil,type CosmosPalette,type CosmosScene,type GalaxyMemory,type Quality} from './cosmos-config';
 import './cosmos.css';
+import './video-reference.css';
 
 type Props={preview?:boolean;startAt?:CosmosScene;onExit:()=>void;onEnterGame?:()=>void};
 function Particles(){return <div className="cosmos-sparks" aria-hidden="true">{Array.from({length:24},(_,i)=><i key={i} style={{left:((i*37+17)%100)+'%',top:((i*53+11)%100)+'%',animationDelay:(-i*.37)+'s',animationDuration:(3+i%5)+'s'}}/>)}</div>;}
 function PhotoPlaceholder({label,portrait=false}:{label:string;portrait?:boolean}){
  return <div className={'cosmos-photo-placeholder'+(portrait?' portrait':'')} role="img" aria-label={'Espacio para '+label}>
-  <span className="cosmos-photo-sun" aria-hidden="true"/><span className="cosmos-photo-hill one" aria-hidden="true"/><span className="cosmos-photo-hill two" aria-hidden="true"/>
+  <GalaxyCouple className="cosmos-placeholder-couple"/>
   <div className="cosmos-photo-caption"><span aria-hidden="true">✧</span><strong>{label}</strong><small>IMAGEN POR AÑADIR</small></div>
  </div>;
 }
@@ -67,6 +70,11 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
   return()=>{window.clearInterval(timer);document.removeEventListener('visibilitychange',tick);};
  },[]);
  useEffect(()=>()=>window.clearTimeout(timeout.current),[]);
+ useEffect(()=>{
+  if(scene!=='loading')return;
+  const timer=window.setTimeout(()=>setScene('galaxy'),2900);
+  return()=>window.clearTimeout(timer);
+ },[scene]);
  const colors=PALETTES[palette];
  const vars={'--cx-pink':colors.pink,'--cx-purple':colors.purple,'--cx-blue':colors.blue,'--cx-gold':colors.gold,'--cx-dark':colors.dark} as CSSProperties;
  const enterGame=useCallback(()=>{
@@ -75,16 +83,22 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
  const openGift=()=>{
   if(giftOpening)return;setGiftOpening(true);
   window.clearTimeout(timeout.current);
-  timeout.current=window.setTimeout(()=>{setScene('galaxy');setGiftOpening(false);},2500);
+  timeout.current=window.setTimeout(()=>{setScene('intro');setGiftOpening(false);},1550);
  };
  const selectMemory=useCallback((memory:GalaxyMemory)=>{
   setSelected(memory);setSeen(v=>v.includes(memory.id)?v:[...v,memory.id]);setLetterOpen(false);setScene('memory');
  },[]);
  const parts=useMemo(()=>countdownParts(clock),[clock]);
  const isGalaxy=scene==='galaxy';
+ const isVideoCosmos=scene==='loading'||scene==='galaxy';
+ const enterFromVideo=()=>{
+  setScene('loading');window.clearTimeout(timeout.current);
+ };
+ const skipVideo=()=>{window.clearTimeout(timeout.current);setScene('galaxy');};
  const leave=()=>{window.clearTimeout(timeout.current);onExit();};
  return <main className={'cosmos-experience cosmos-'+scene+' cosmos-palette-'+palette} style={vars}>
-  <CosmosCanvas interactive={isGalaxy} quality={quality} onSelect={selectMemory}/>
+  <CosmosCanvas interactive={false} quality={quality}/>
+  <VideoGalaxyCanvas visible={isVideoCosmos} interactive={isGalaxy} quality={quality} palette={palette} onSelect={selectMemory}/>
   <div className="cosmos-vignette" aria-hidden="true"/><Particles/>
   <header className="cosmos-topbar">
    <div className="cosmos-signature"><span className="cosmos-signature-icon">✦</span><span>PARA VALE<small>UN UNIVERSO SOLO TUYO</small></span></div>
@@ -120,16 +134,33 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
     <span className="cosmos-gift-core">✦</span>
    </button>
    <button type="button" className="cosmos-cta" disabled={giftOpening} onClick={openGift}>{giftOpening?'Abriendo nuestro universo…':'Toca para abrir'} <span>✦</span></button>
-   {giftOpening&&<button className="cosmos-skip" onClick={()=>{window.clearTimeout(timeout.current);setGiftOpening(false);setScene('galaxy');}}>Omitir animación</button>}
+   {giftOpening&&<button className="cosmos-skip" onClick={()=>{window.clearTimeout(timeout.current);setGiftOpening(false);setScene('intro');}}>Omitir animación</button>}
    <span className="cosmos-micro">UN PEQUEÑO INSTANTE DE MAGIA</span>
+  </section>}
+
+  {scene==='intro'&&<section className="video-reference-intro" aria-labelledby="video-reference-title">
+   <div className="video-reference-intro-haze" aria-hidden="true"/>
+   <div className="video-reference-intro-card">
+    <span className="video-intro-tiny-heart" aria-hidden="true">♥</span>
+    <h1 id="video-reference-title">Una Galaxia de<br/>Amor para Ti</h1>
+    <GalaxyCouple/>
+    <p>FELIZ CUMPLEAÑOS, MI VIDA</p>
+    <button type="button" className="video-reference-enter" onClick={enterFromVideo}>ENTRAR A NUESTRO UNIVERSO <span>✧</span></button>
+   </div>
+   {preview&&<button type="button" className="video-reference-replay" onClick={()=>setScene('gift')}>← Volver al regalo</button>}
+  </section>}
+
+  {scene==='loading'&&<section className="video-reference-loading" aria-label="Animación de nacimiento de la galaxia">
+   <div className="video-reference-loading-inner"><PixelMascot/><span>Encendiendo nuestro universo</span><div className="video-loading-indicator"><i/></div></div>
+   <button className="video-reference-skip" type="button" onClick={skipVideo}>Saltar animación ↗</button>
   </section>}
 
   {scene==='galaxy'&&<section className="cosmos-galaxy-ui" aria-labelledby="cx-galaxy-title">
    <div className="cosmos-galaxy-heading">
-    <span className="cosmos-kicker">CAPÍTULO II · MAPA ESTELAR</span>
+    <span className="cosmos-kicker">✦ UNA GALAXIA DE AMOR PARA TI ✦</span>
     <h1 id="cx-galaxy-title">Nuestro <em>universo.</em></h1>
-    <p>Cada constelación guarda una pequeña historia. Toca una estrella para descubrirla.</p>
-    <span className="cosmos-gesture">↔ ARRASTRA PARA EXPLORAR · TOCA UNA CONSTELACIÓN</span>
+    <p>Un corazón, mil estrellas y nuestros recuerdos flotando entre ellas.</p>
+    <span className="cosmos-gesture">DESLIZA PARA GIRAR · TOCA UN CORAZÓN</span>
    </div>
    <div className="cosmos-galaxy-navigation" aria-label="Constelaciones disponibles">
     {MEMORIES.map((memory,i)=><button key={memory.id} type="button" onClick={()=>selectMemory(memory)}>
@@ -192,7 +223,7 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
 
   <footer className="cosmos-bottomline"><span>✦ HECHO PARA VALE</span><span>{scene==='galaxy'?'EXPLORA TU UNIVERSO':'UN RECUERDO A LA VEZ'}</span><span>05.12.2026 ♡</span></footer>
   {preview&&<div className="cosmos-preview-controls" aria-label="Escenas para pruebas">
-   {(['countdown','gift','galaxy','suspense','finale'] as const).map(s=><button key={s} onClick={()=>{window.clearTimeout(timeout.current);setGiftOpening(false);setScene(s);}} className={scene===s?'active':''}>{({countdown:'Contador',gift:'Regalo',galaxy:'Galaxia',suspense:'Misterio',finale:'Final'})[s]}</button>)}
+   {(['countdown','gift','intro','loading','galaxy','suspense','finale'] as const).map(s=><button key={s} onClick={()=>{window.clearTimeout(timeout.current);setGiftOpening(false);setScene(s);}} className={scene===s?'active':''}>{({countdown:'Contador',gift:'Regalo',intro:'Inicio video',loading:'Animación',galaxy:'Galaxia',suspense:'Misterio',finale:'Final'})[s]}</button>)}
    <select aria-label="Paleta visual" value={palette} onChange={e=>setPalette(e.target.value as CosmosPalette)}><option value="rosado">Rosado</option><option value="aurora">Aurora</option><option value="medianoche">Medianoche</option></select>
    <select aria-label="Calidad gráfica" value={quality} onChange={e=>setQuality(e.target.value as Quality)}><option value="auto">Auto</option><option value="suave">Ligera</option><option value="alta">Alta</option></select>
   </div>}

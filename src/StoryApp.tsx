@@ -40,7 +40,7 @@ export function StoryApp({ClassicApp}:{ClassicApp:ComponentType}){
  const [demoEntry,setDemoEntry]=useState<'garden'|'abduction'|'trail'|'house'|'drawer'|'lock'|'rescue'|'mirror'>('garden');
  const [demoTrial,setDemoTrial]=useState(false);const [saved,setSaved]=useState(progress.started);const [storageOK,setStorageOK]=useState(true);
  const [houseTrial,setHouseTrial]=useState<HouseTrialId|null>(null);
- const [cosmosEntry,setCosmosEntry]=useState<'countdown'|'gift'|'galaxy'>('countdown');
+ const [cosmosEntry,setCosmosEntry]=useState<'countdown'|'gift'|'intro'|'loading'|'galaxy'>('countdown');
  const closeHouseTrial=useCallback(()=>setHouseTrial(null),[]);
  const [audioNotice,setAudioNotice]=useState('');
  const [comicOpen,setComicOpen]=useState(false);
@@ -66,8 +66,8 @@ export function StoryApp({ClassicApp}:{ClassicApp:ComponentType}){
   onExit={()=>{unlockAudio();setScreen('cover');}}
   onSelect={id=>{
    switch(id){
-    case 'cosmos-countdown':case 'cosmos-gift':case 'cosmos-galaxy':
-     setCosmosEntry(id==='cosmos-gift'?'gift':id==='cosmos-galaxy'?'galaxy':'countdown');setScreen('cosmos');break;
+    case 'cosmos-countdown':case 'cosmos-gift':case 'cosmos-intro':case 'cosmos-loading':case 'cosmos-galaxy':
+     setCosmosEntry(id==='cosmos-gift'?'gift':id==='cosmos-intro'?'intro':id==='cosmos-loading'?'loading':id==='cosmos-galaxy'?'galaxy':'countdown');setScreen('cosmos');break;
     case 'house':openDemo('house',true);break;
     case 'rescue':openDemo('garden',true);break;
     case 'arcade':unlockAudio();setScreen('arcade');break;
