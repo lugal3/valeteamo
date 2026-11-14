@@ -47,8 +47,9 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect}
  const callback=useRef(onSelect);callback.current=onSelect;
  useEffect(()=>{
   if(!visible)return;
-  const el=canvas.current,ctx=el?.getContext('2d',{alpha:false});
-  if(!el||!ctx)return;
+  const el=canvas.current,context=el?.getContext('2d',{alpha:false});
+  if(!el||!context)return;
+  const ctx=context;
   let w=0,h=0,dpr=1,raf=0,last=0,alive=true;
   let yaw=-.08,pitch=.53,zoom=1;
   let grab:{id:number;lastX:number;lastY:number;startX:number;startY:number}|null=null;
