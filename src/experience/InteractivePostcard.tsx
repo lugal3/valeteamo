@@ -38,7 +38,7 @@ export function InteractivePostcard({photo,letter,title}:Props){
  const setZoomBy=(v:number)=>setZoom(z=>clamp(z+v,.80,1.72));
  const onPointerDown=(e:ReactPointerEvent<HTMLDivElement>)=>{
   if(phase!=='inspecting')return;
-  e.currentTarget.setPointerCapture(e.pointerId);
+  try{e.currentTarget.setPointerCapture(e.pointerId);}catch{/* synthetic gestures in browser tests */}
   const position={x:e.clientX,y:e.clientY};
   pointers.current.set(e.pointerId,position);
   suppressClick.current=false;
@@ -91,7 +91,7 @@ export function InteractivePostcard({photo,letter,title}:Props){
  const normalized=(yaw%360+360)%360;
  const side=normalized>90&&normalized<270?'back':'front';
  const transformStyle={'--card-yaw':yaw+'deg','--card-pitch':pitch+'deg','--card-zoom':zoom} as CSSProperties;
- return <div className="cx-postcard-experience" data-postcard-phase={phase} data-postcard-side={side} data-postcard-zoom={zoom.toFixed(2)} aria-label="Sorpresa: postal tridimensional">
+ return <div className="cx-postcard-experience" data-postcard-phase={phase} data-postcard-side={side} data-postcard-zoom={zoom.toFixed(2)} data-postcard-yaw={yaw.toFixed(2)} data-postcard-pitch={pitch.toFixed(2)} aria-label="Sorpresa: postal tridimensional">
   <div className="cx-postcard-scene" aria-label={phase==='sealed'?'Sobre cerrado':'Postal de Robin y Starfire'}>
    <div className="cx-postcard-envelope" aria-hidden="true">
     <div className="cx-postcard-envelope-back"/>
