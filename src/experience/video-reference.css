@@ -373,3 +373,78 @@
  .cosmos-gear-panel,.cosmos-loading .video-reference-loading-inner{animation:none!important}
  .cosmos-loading .video-reference-loading-inner{opacity:0}
 }
+
+
+/* Cinema-only loading: never hide the tunnel under any loading indicator.
+   Also defeats stale auxiliary CSS if the app is resumed from PWA cache. */
+.cosmos-experience.cosmos-loading .video-reference-loading,
+.cosmos-experience.cosmos-loading .video-reference-loading-inner,
+.cosmos-experience.cosmos-loading .video-loading-indicator,
+.cosmos-experience.cosmos-loading .cosmos-preview-controls,
+.cosmos-experience.cosmos-loading .cosmos-topbar,
+.cosmos-experience.cosmos-loading .cosmos-bottomline,
+.cosmos-experience.cosmos-loading .cosmos-decor-side{
+ display:none!important;
+}
+.cosmos-experience.cosmos-loading .cosmos-video-canvas{
+ opacity:1!important;
+ visibility:visible!important;
+}
+/* Selecting the outlined particle-heart opens a small, nonblocking card.
+   The rest of the galaxy remains visible through the dark scrim. */
+.cosmos-heart-backdrop {
+ position:absolute;z-index:26;inset:0;
+ display:grid;place-items:center;
+ padding:max(40px,env(safe-area-inset-top)) 18px max(40px,env(safe-area-inset-bottom));
+ background:rgba(3,0,7,.35);
+ backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
+ animation:cosmos-heart-reveal .23s ease-out both;
+}
+.cosmos-heart-menu {
+ position:relative;width:min(308px,calc(100vw - 36px));
+ display:flex;flex-direction:column;align-items:center;
+ gap:10px;text-align:center;
+ padding:25px 22px 21px;border-radius:18px;
+ border:1px solid rgba(255,163,217,.45);
+ background:linear-gradient(153deg,rgba(44,9,29,.96),rgba(13,2,14,.97));
+ box-shadow:0 19px 65px #000b,0 0 32px #f5177826;
+ color:#fff0f7;
+}
+.cosmos-heart-menu-icon {
+ font:400 39px/1 Georgia,serif;color:#ff73b9;
+ filter:drop-shadow(0 0 13px #ef3c93);
+}
+.cosmos-heart-menu h2 {
+ margin:0;font:400 clamp(21px,6.1vw,27px)/1.2 Georgia,serif!important;
+ color:#fff2fa!important;letter-spacing:-.02em!important;
+}
+.cosmos-heart-menu p {
+ margin:0 0 6px;line-height:1.55;font:12px system-ui;
+ color:#dfb8cb;
+}
+.cosmos-experience .cosmos-heart-menu button {
+ display:flex;align-items:center;justify-content:center;gap:12px;
+ min-height:42px;width:100%;border-radius:99px!important;
+ font:600 12px system-ui!important;
+ letter-spacing:.025em!important;
+ padding:10px 15px!important;
+}
+.cosmos-experience .cosmos-heart-start {
+ color:#42112c!important;
+ background:linear-gradient(110deg,#ff9ac9,#f8c3dd)!important;
+ border:1px solid #ffd6ee!important;
+ box-shadow:0 6px 24px #ed3f8e47!important;
+}
+.cosmos-experience .cosmos-heart-continue {
+ color:#edc1da!important;
+ border:1px solid #bf669b54!important;
+ background:transparent!important;
+ box-shadow:none!important;
+}
+@keyframes cosmos-heart-reveal{
+ from{opacity:0;transform:scale(.97)}
+ to{opacity:1;transform:scale(1)}
+}
+@media(prefers-reduced-motion:reduce){
+ .cosmos-heart-backdrop{animation:none!important}
+}
