@@ -1,1 +1,24 @@
-{"name":"Feliz cumpleaños Vale","short_name":"Cumple Vale","lang":"es","start_url":"./","scope":"./","display":"standalone","background_color":"#240e1c","theme_color":"#240e1c","icons":[{"src":"./birthday-kitty-192.png","sizes":"192x192","type":"image/png","purpose":"any"},{"src":"./birthday-kitty-512.png","sizes":"512x512","type":"image/png","purpose":"any"}]}
+{
+  "name": "Feliz cumpleaños Vale",
+  "short_name": "Cumple Vale",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f57ca5",
+  "theme_color": "#240e1c",
+  "icons": [
+    {
+      "src": "./vale-icon-v1-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./vale-icon-v1-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

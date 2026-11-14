@@ -1,0 +1,27 @@
+name: Verificar ícono de ValeTeAmo
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'public/manifest.webmanifest'
+      - 'public/vale-icon-v1-192.png'
+      - 'package.json'
+      - 'scripts/prepare-site-icons.mjs'
+      - 'tests/site-icons.cjs'
+      - '.github/workflows/app-icon-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  icon-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: node tests/site-icons.cjs

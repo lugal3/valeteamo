@@ -1,3 +1,8 @@
 node_modules/
 dist/
 *.log
+
+# Generated PWA icons: source is public/vale-icon-v1-192.png
+public/vale-icon-v1-180.png
+public/vale-icon-v1-512.png
+public/vale-favicon-v1-32.png
