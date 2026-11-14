@@ -448,3 +448,22 @@
 @media(prefers-reduced-motion:reduce){
  .cosmos-heart-backdrop{animation:none!important}
 }
+
+
+/* V3: all preview navigation lives in the discreet top-left gear.
+   No bottom scene rail is rendered; this safeguard prevents stale
+   stylesheet variants from resurrecting a previous layout. */
+.cosmos-experience .cosmos-preview-controls,
+.cosmos-experience .cosmos-bottomline,
+.cosmos-experience .cosmos-decor-side,
+.cosmos-experience .cosmos-topbar{
+ display:none!important;
+}
+.cosmos-gear-label{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:7px 0;color:#e2bdd2;font:11px system-ui}
+.cosmos-experience .cosmos-gear-label select{
+ flex:1;max-width:154px;min-height:32px;padding:4px 6px;
+ border-radius:8px;border:1px solid #965077;background:#220c1c;
+ color:#fce7f3;font:11px system-ui;
+}
+.cosmos-experience.cosmos-loading .cosmos-gear-wrap,
+.cosmos-experience.cosmos-galaxy .cosmos-gear-wrap{z-index:28}
