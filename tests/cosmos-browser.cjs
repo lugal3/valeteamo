@@ -87,6 +87,62 @@ async function main(){
   await page.getByRole('button',{name:/Abrir sobre de carta/}).click();
   await page.getByText(/Aquí irá una carta/).waitFor();
   await page.getByRole('button',{name:/Volver a la galaxia/}).click();
+  // The fifth constellation owns the NEW reversible Robin/Starfire souvenir.
+  await page.getByRole('button',{name:'Ajustes de la galaxia'}).click();
+  await page.getByRole('button',{name:/Siempre juntos/}).click();
+  await page.getByRole('heading',{name:/Siempre juntos/}).waitFor();
+  await page.getByRole('button',{name:/Abrir nuestra carta/}).click();
+  const postcard=page.locator('.cx-postcard-experience');
+  await postcard.waitFor();
+  assert.equal(await postcard.getAttribute('data-postcard-phase'),'sealed');
+  await page.screenshot({path:'artifacts/postcard-sealed-envelope.png'});
+  const postcardAsset=await page.request.get('http://127.0.0.1:'+port+'/experience/postcards/robin-starfire.webp');
+  assert.equal(postcardAsset.status(),200,'the submitted Robin/Starfire image must be shipped with the app');
+  assert((postcardAsset.headers()['content-type']||'').includes('image/webp'));
+  await page.getByRole('button',{name:'Abrir sobre y sacar postal'}).click();
+  await page.locator('.cx-postcard-experience[data-postcard-phase="inspecting"]').waitFor({timeout:5000});
+  await page.waitForTimeout(900);
+  await page.screenshot({path:'artifacts/postcard-front-3d.png'});
+  const card=page.locator('.cx-postcard-object');
+  const yawBefore=Number(await postcard.getAttribute('data-postcard-yaw'));
+  await card.evaluate(el=>{
+   const r=el.getBoundingClientRect();
+   const fire=(type,id,x,y)=>el.dispatchEvent(new PointerEvent(type,{
+    bubbles:true,pointerType:'touch',pointerId:id,isPrimary:true,clientX:r.left+x,clientY:r.top+y
+   }));
+   fire('pointerdown',47,30,30);
+   fire('pointermove',47,95,54);
+   fire('pointerup',47,95,54);
+  });
+  assert(Math.abs(Number(await postcard.getAttribute('data-postcard-yaw'))-yawBefore)>20,'drag rotates the actual 3D object');
+  // Native iPhone two-finger pinch should increase zoom without triggering a flip.
+  const zoomBeforePinch=Number(await postcard.getAttribute('data-postcard-zoom'));
+  await card.evaluate(el=>{
+   const r=el.getBoundingClientRect();
+   const fire=(type,id,x,y)=>el.dispatchEvent(new PointerEvent(type,{
+    bubbles:true,pointerType:'touch',pointerId:id,isPrimary:id===51,clientX:r.left+x,clientY:r.top+y
+   }));
+   fire('pointerdown',51,80,90);
+   fire('pointerdown',52,120,90);
+   fire('pointermove',51,55,90);
+   fire('pointermove',52,150,90);
+   fire('pointerup',51,55,90);
+   fire('pointerup',52,150,90);
+  });
+  assert(Number(await postcard.getAttribute('data-postcard-zoom'))>zoomBeforePinch,'postcard supports two-finger zoom');
+  await page.getByRole('button',{name:'Centrar postal'}).click();
+  assert.equal(await postcard.getAttribute('data-postcard-zoom'),'1.00','the postcard returns to its original size');
+  await page.getByRole('button',{name:'Voltear postal'}).click();
+  await page.locator('.cx-postcard-experience[data-postcard-side="back"]').waitFor();
+  await page.getByText(/Lorem ipsum dolor sit amet/).waitFor();
+  await page.waitForTimeout(400);
+  await page.screenshot({path:'artifacts/postcard-back-letter.png'});
+  const initialZoom=Number(await postcard.getAttribute('data-postcard-zoom'));
+  await page.getByRole('button',{name:'Acercar postal'}).click();
+  assert(Number(await postcard.getAttribute('data-postcard-zoom'))>initialZoom,'postcard zoom button works');
+  await page.getByRole('button',{name:'Centrar postal'}).click();
+  assert.equal(await postcard.getAttribute('data-postcard-side'),'front','centering restores orientation');
+  await page.getByRole('button',{name:/Volver a la galaxia/}).click();
   await page.getByRole('button',{name:'Ajustes de la galaxia'}).click();
   await page.getByRole('button',{name:/Continuar la historia/}).click();
   await page.getByRole('heading',{name:/A veces, hasta las estrellas/}).waitFor();
