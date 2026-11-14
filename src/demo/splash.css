@@ -50,3 +50,7 @@
 .splash-petals,.splash-petal{pointer-events:none!important}
 @media(prefers-reduced-motion:reduce){.splash-petal,.splash-frame img{animation:none!important}}
 @media(max-width:600px){.splash-petal{font-size:12px}.splash-frame img{animation:none}}
+
+/* Keep the PLAY hit area anchored on touch. The global button:active scale
+   must NOT replace translateX(-50%) while pointerdown is in progress. */
+.splash-start:active{transform:translateX(-50%) scale(.985)!important}
