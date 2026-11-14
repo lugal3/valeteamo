@@ -143,6 +143,7 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
    seconds+=dt/1000;
    const arrival=galaxyArrivalAt(seconds,reduced);
    const t=seconds;
+   element.dataset.cinematicSeconds=t.toFixed(3);
    if(previousStage!==arrival.stage){
     previousStage=arrival.stage;
     element.dataset.arrivalStage=arrival.stage;
