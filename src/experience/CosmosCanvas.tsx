@@ -23,7 +23,7 @@ export function CosmosCanvas({onSelect,interactive=false,quality='auto'}:{
   const ctx=canvas?.getContext('2d',{alpha:false});
   if(!canvas||!ctx)return;
   let width=0,height=0,dpr=1,frame=0,id=0,last=0,visible=!document.hidden;
-  let yaw=-.26,pitch=.1,zoom=1,velocity=.00038;
+  let yaw=-.26,pitch=-.56,zoom=1,velocity=.00038;
   let drag:{id:number;x:number;y:number;startX:number;startY:number}|null=null;
   let hotspots:Hotspot[]=[];
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -64,6 +64,53 @@ export function CosmosCanvas({onSelect,interactive=false,quality='auto'}:{
    nebula(width*.34,height*.67,width*.5,height*.3,'rgba(91,150,245,0.14)',.3);
    for(const f of flecks){ctx.fillStyle='rgba(230,220,255,'+f.a+')';ctx.fillRect(f.x*width,f.y*height,f.r,f.r);}
    ctx.globalCompositeOperation='screen';
+   if(interactive){
+    // Núcleo galáctico y cuatro brazos espirales, sin texturas externas.
+    ctx.save();ctx.translate(width*.5,height*.51);
+    const discScale=Math.min(width,height)*.32;
+    const glow=ctx.createRadialGradient(0,0,1,0,0,discScale*1.3);
+    glow.addColorStop(0,'rgba(255,220,242,.23)');
+    glow.addColorStop(.22,'rgba(255,116,205,.16)');
+    glow.addColorStop(.58,'rgba(145,91,233,.08)');
+    glow.addColorStop(1,'rgba(100,60,185,0)');
+    ctx.fillStyle=glow;ctx.beginPath();ctx.arc(0,0,discScale*1.3,0,TAU);ctx.fill();
+    ctx.rotate(-.42);ctx.scale(1,.68);
+    for(let arm=0;arm<4;arm++){
+     ctx.beginPath();
+     for(let j=0;j<=155;j++){
+      const a=arm*Math.PI/2+j*.041+(reduced?0:t*.000025);
+      const r=j/155*discScale*1.23;
+      const x=Math.cos(a)*r,y=Math.sin(a)*r;
+      if(j===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+     }
+     ctx.strokeStyle=arm%2===0?'rgba(253,126,210,.13)':'rgba(138,149,255,.12)';
+     ctx.lineWidth=low?8:12;ctx.shadowColor=arm%2===0?'#ff86d0':'#a791ff';
+     ctx.shadowBlur=low?8:22;ctx.stroke();
+    }
+    ctx.restore();
+    // Anillos orbitales tridimensionales alrededor del centro.
+    for(const [radius,speed,alpha] of [[1.65,.00011,.18],[2.2,-.00007,.12]]){
+     ctx.beginPath();
+     for(let j=0;j<=128;j++){
+      const a=j/128*TAU+t*speed;
+      const p=project(Math.cos(a)*radius,Math.sin(a)*radius*.42,Math.sin(a)*radius);
+      if(j===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
+     }
+     ctx.lineWidth=1.1;ctx.strokeStyle='rgba(255,183,230,'+alpha+')';ctx.shadowColor='#ffa4da';ctx.shadowBlur=6;ctx.stroke();
+    }
+    // Corazón estelar pequeño en el centro: un guiño a la referencia rosa.
+    ctx.save();ctx.translate(width*.5,height*.505);ctx.scale(.99,.99);
+    ctx.beginPath();
+    for(let j=0;j<=100;j++){
+     const a=j/100*TAU;
+     const hx=16*Math.pow(Math.sin(a),3)*2.3;
+     const hy=(13*Math.cos(a)-5*Math.cos(2*a)-2*Math.cos(3*a)-Math.cos(4*a))*-2.1;
+     if(j===0)ctx.moveTo(hx,hy);else ctx.lineTo(hx,hy);
+    }
+    ctx.closePath();ctx.lineWidth=1;ctx.strokeStyle='rgba(255,185,224,.22)';
+    ctx.shadowBlur=14;ctx.shadowColor='#ffa2db';ctx.stroke();ctx.restore();
+    ctx.shadowBlur=0;
+   }
    for(let i=0;i<count;i++){
     const s=stars[i],p=project(s.x,s.y,s.z);
     if(!p.visible||p.x<-20||p.x>width+20||p.y<-20||p.y>height+20)continue;
