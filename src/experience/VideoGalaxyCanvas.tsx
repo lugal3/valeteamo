@@ -1,5 +1,5 @@
 import {useEffect,useRef} from 'react';
-import {MEMORIES,PALETTES,type CosmosPalette,type GalaxyMemory,type Quality} from './cosmos-config';
+import {MEMORIES,type CosmosPalette,type GalaxyMemory,type Quality} from './cosmos-config';
 import {galaxyArrivalAt,GALAXY_ARRIVAL_SECONDS} from './galaxy-arrival';
 
 const TAU=Math.PI*2;
@@ -67,10 +67,10 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
   let grab:{id:number;lastX:number;lastY:number;startX:number;startY:number}|null=null;
   let hot:Hotspot[]=[];
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced)seconds=GALAXY_ARRIVAL_SECONDS;
   const low=quality==='suave'||(quality==='auto'&&(window.innerWidth<620||(navigator.hardwareConcurrency||6)<=4));
   const total=low?3500:quality==='alta'?11500:7700;
   const heartCount=low?1600:quality==='alta'?3400:2500;
-  const paletteData=PALETTES[palette];
   const tinted=palette==='rosado'?roseColors:palette==='aurora'?['255,212,241','206,146,235','249,112,188','255,247,236','180,197,255']:['255,163,207','180,117,235','255,76,166','255,233,248','145,122,210'];
 
   const resize=()=>{
