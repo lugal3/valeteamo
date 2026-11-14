@@ -1,6 +1,7 @@
 import {useCallback,useEffect,useMemo,useRef,useState,type CSSProperties} from 'react';
 import {CosmosCanvas} from './CosmosCanvas';
 import {VideoGalaxyCanvas} from './VideoGalaxyCanvas';
+import {InteractivePostcard} from './InteractivePostcard';
 import {GalaxyCouple} from './ReferenceCharacters';
 import {createPreviewBridge} from './game-bridge';
 import {ASSET_GUIDE,DEFAULT_PALETTE,MEMORIES,PALETTES,UNLOCK_AT,countdownParts,secondsUntil,type CosmosPalette,type CosmosScene,type GalaxyMemory,type Quality} from './cosmos-config';
@@ -251,9 +252,11 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
   {scene==='letter'&&<section className="cosmos-content cosmos-letter-content" aria-labelledby="cx-letter-title">
    <span className="cosmos-kicker">UN MENSAJE ENTRE LAS ESTRELLAS</span>
    <h1 id="cx-letter-title">Una carta <em>para ti.</em></h1>
-   {!letterOpen?<button type="button" className="cosmos-envelope" onClick={()=>setLetterOpen(true)} aria-label="Abrir sobre de carta"><span className="cosmos-envelope-top"/><span className="cosmos-envelope-heart">♥</span><span className="cosmos-envelope-hint">TOCA PARA ABRIR</span></button>:<div className="cosmos-letter-paper">
-    <span>✦ PARA VALE ✦</span><h2>{selected.title}</h2><p>{selected.letter}</p><small>Texto provisional · edita cosmos-config.ts</small>
-   </div>}
+   {selected.id==='cartas'?
+    <InteractivePostcard key={selected.id} photo="/experience/postcards/robin-starfire.webp" letter={selected.letter} title="Nuestra historia"/>
+    :!letterOpen?<button type="button" className="cosmos-envelope" onClick={()=>setLetterOpen(true)} aria-label="Abrir sobre de carta"><span className="cosmos-envelope-top"/><span className="cosmos-envelope-heart">♥</span><span className="cosmos-envelope-hint">TOCA PARA ABRIR</span></button>:<div className="cosmos-letter-paper">
+     <span>✦ PARA VALE ✦</span><h2>{selected.title}</h2><p>{selected.letter}</p><small>Texto provisional · edita cosmos-config.ts</small>
+    </div>}
    <button className="cosmos-link" onClick={()=>setScene('galaxy')}>← Volver a la galaxia</button>
   </section>}
 
