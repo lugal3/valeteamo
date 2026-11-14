@@ -120,8 +120,9 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
   function ring(radius:number,camYaw:number,camPitch:number,t:number,alpha:number,linewidth=1){
    ctx.beginPath();
    for(let j=0;j<=160;j++){
-    const a=j/160*TAU+t*.05;
-    const p=project(Math.cos(a)*radius,0,Math.sin(a)*radius,camYaw,camPitch);
+    const a=j/160*TAU+t*.14;
+    const wave=1+.033*Math.sin(a*3.3-t*.95);
+    const p=project(Math.cos(a)*radius*wave,0,Math.sin(a)*radius*wave,camYaw,camPitch);
     if(j===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
    }
    ctx.strokeStyle='rgba(255,57,151,'+alpha+')';
@@ -188,18 +189,29 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
    const centerY=h*(.53-.035*arrival.descent);
    const blend=arrival.worldBlend;
    const swirl=arrival.spin*.72;
+   // All stages share the same projected points; after the transition the
+   // galaxy slowly turns in place instead of becoming a static particle disk.
+   const galaxyRotation=.016*Math.max(0,t-2.25);
+   const cosDisk=Math.cos(galaxyRotation),sinDisk=Math.sin(galaxyRotation);
    for(let i=0;i<count;i++){
     const star=spiral[i];
-    const projected=project(star.x*discScale,star.y*discScale,star.z*discScale,camYaw,camPitch);
+    const discX=star.x*cosDisk-star.z*sinDisk;
+    const discZ=star.x*sinDisk+star.z*cosDisk;
+    const projected=project(discX*discScale,star.y*discScale,discZ*discScale,camYaw,camPitch);
     // Moving cylindrical tunnel: advancing depth drives perspective radius.
     // Each particle starts near the distant central vanishing point, flies
     // alongside the camera, then exits at the edges and repeats.
-    const flyDepth=(star.seed+t*(.33+.11*arrival.approach))%1;
+    // Accelerating motion THROUGH the tunnel (optical flow) rather than
+    // translating uniformly across the view. Near particles move much faster.
+    const flyDepth=(star.seed+arrival.travel*1.16)%1;
     const depthScale=Math.pow(flyDepth,2.25);
     const originalAngle=i*2.399963229728653+star.seed*1.23;
     const angle=softFilamentAngle(originalAngle,star.color,arrival.tunnel)
-     +swirl*(.44+.46*flyDepth);
-    const tunnelRadius=span*(.012+depthScale*.83)*tunnelAperture(arrival.approach);
+     +swirl*(.44+.46*flyDepth)
+     +arrival.cinematicRoll
+     +.12*Math.sin(flyDepth*5.6+star.seed*6.28+swirl*.4)*(1-blend);
+    const tunnelRadius=span*(.012+depthScale*.83)
+     *tunnelAperture(arrival.approach)*arrival.tunnelLens;
     const tx=centerX+Math.cos(angle)*tunnelRadius;
     const ty=centerY+Math.sin(angle)*tunnelRadius*.91;
     const x=tx*(1-blend)+projected.x*blend;
@@ -212,7 +224,8 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
     const radius=rTunnel*(1-blend)+rDisc*blend;
     const col=tinted[Math.floor(star.color*tinted.length)];
     if(blend<.95&&flyDepth>.32&&star.color>.50){
-     const trail=(1-blend)*(1.4+23*depthScale)*(.4+.6*arrival.tunnel);
+     const trail=(1-blend)*(1.1+25*depthScale)*(.34+.62*arrival.tunnel)
+      *(.82+.42*arrival.approach);
      const dx=Math.cos(angle)*trail,dy=Math.sin(angle)*trail*.91;
      ctx.lineWidth=Math.max(.6,radius*.62);
      ctx.strokeStyle='rgba('+col+','+(alpha*.5)+')';
@@ -254,7 +267,9 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
    // Tall heart made of thousands of pink, shining dots (not a flat SVG outline).
    if(hProgress>0){
     for(let i=0;i<heartCount;i++){
-     const q=heart[i],k=ease((t-3.02-q.seed*.60)/1.26);
+     // The heart starts rising *as* the disk finishes unfolding, as in
+     // reference frames ~68–94; individual dots climb with small delays.
+     const q=heart[i],k=ease((t-2.12-q.seed*.22)/.82);
      const s=1+.018*Math.sin(t*2.2+q.pulse);
      // Dots rise from the galactic nucleus, instead of materializing in place.
      const p=project(q.px*.035*(1-k)+q.x*k*s,
