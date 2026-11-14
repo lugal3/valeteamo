@@ -2,15 +2,15 @@
  * A scripted, deterministic camera arrival reconstructed from the supplied
  * 23-second reference video (roughly 2.65–7.2s).
  *
- * 0–1.2s  First stars fall while the camera descends into the dark.
- * 1.2–3.3s  A full vortex of rotating, approaching lights surrounds the viewer.
- * 3.3–4.25s Camera advances through the tunnel into its pink nucleus.
- * 4.25–5.75s The tunnel particles UNFOLD into a galactic spiral (same particles).
- * 5.75–7.4s Rising stardust forms a heart above the nucleus.
- * 7.4–9.1s Camera reveals the whole galaxy; orbiting memories appear.
- * >9.1s  Interactive continuous canvas; pinch, drag and wheel available.
+ * 0–.7s    Dark star field; first particles fall past the descending camera.
+ * .7–2.4s  Rapid travel through a rotating radial particle tunnel.
+ * 2.4–3.1s Final approach to the tiny luminous galaxy nucleus.
+ * 3.1–4.1s The same particles spiral outward to reveal the full galaxy.
+ * 4.1–5.3s Particles rise from the core and form the tall pink heart.
+ * 5.3–6.1s The reveal settles and the galaxy becomes explorable.
+ * >6.1s   Pinch, drag, wheel and interactive heart available.
  */
-export const GALAXY_ARRIVAL_SECONDS=9.1;
+export const GALAXY_ARRIVAL_SECONDS=6.1;
 
 export type GalaxyArrivalStage=
  | 'descent'|'star-tunnel'|'approach'|'unfold'|'heart-rise'|'camera-reveal'|'explore';
@@ -44,29 +44,29 @@ function ramp(seconds:number,start:number,duration:number):number {
 /** Absolute time → scene state; no React renders required for animation. */
 export function galaxyArrivalAt(seconds:number,reduceMotion=false):GalaxyArrivalFrame{
  const t=reduceMotion?GALAXY_ARRIVAL_SECONDS:Math.max(0,seconds);
- const descent=ramp(t,0,2.0);
- const tunnel=ramp(t,.32,2.5);
- const approach=ramp(t,2.45,2.1);
- const unfold=ramp(t,3.95,1.85);
- const heart=ramp(t,5.55,1.8);
- const phrases=ramp(t,7.35,1.25);
- const reveal=ramp(t,7.0,2.0);
- const worldBlend=ramp(t,3.28,2.40);
+ const descent=ramp(t,0,1.15);
+ const tunnel=ramp(t,.13,1.55);
+ const approach=ramp(t,1.38,1.67);
+ const unfold=ramp(t,2.53,1.62);
+ const heart=ramp(t,3.90,1.30);
+ const phrases=ramp(t,5.05,.85);
+ const reveal=ramp(t,4.45,1.55);
+ const worldBlend=ramp(t,2.26,1.85);
  const stage:GalaxyArrivalStage=
-  t<1.20?'descent':
-  t<3.30?'star-tunnel':
-  t<4.25?'approach':
-  t<5.75?'unfold':
-  t<7.40?'heart-rise':
+  t<.70?'descent':
+  t<2.4?'star-tunnel':
+  t<3.10?'approach':
+  t<4.12?'unfold':
+  t<5.30?'heart-rise':
   t<GALAXY_ARRIVAL_SECONDS?'camera-reveal':'explore';
  return {
   stage,descent,tunnel,approach,unfold,heart,phrases,reveal,worldBlend,
-  yaw:-1.00+.52*ramp(t,.55,3.2)+.31*ramp(t,4.1,2.3),
-  // Camera drops through the spiral tunnel, then levels above the galaxy.
-  pitch:.16+.84*descent-.47*ramp(t,4.2,2.25),
-  zoom:.44+.17*descent+.48*approach+.17*reveal,
-  focusY:.18+.24*descent+.12*approach,
-  spin:t*(2.0-.62*approach),
+  yaw:-1.15+.62*ramp(t,.32,2.5)+.34*ramp(t,3.2,1.9),
+  // Descend through the tunnel, level off over the newly formed disk.
+  pitch:.17+.85*descent-.49*ramp(t,2.8,1.6),
+  zoom:.45+.18*descent+.48*approach+.19*reveal,
+  focusY:.22+.19*descent+.13*approach,
+  spin:t*(2.7-.78*approach),
   completed:t>=GALAXY_ARRIVAL_SECONDS
  };
 }
