@@ -9,7 +9,7 @@ async function main(){
   await server.listen();
   const port=server.httpServer.address().port;
   browser=await chromium.launch({headless:true});
-  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1});
+  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1,recordVideo:{dir:'artifacts',size:{width:390,height:844}}});
   const page=await context.newPage(),errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   fs.mkdirSync('artifacts',{recursive:true});
@@ -105,7 +105,9 @@ async function main(){
   await page.getByRole('button',{name:/Comenzar juego 2D/}).click();
   await page.getByRole('heading',{name:/El jardín/}).waitFor({timeout:12000});
   assert.deepEqual(errors,[],'Sin errores JavaScript');
+  const video=page.video();
   await context.close();
+  if(video){const videoFile=await video.path();fs.renameSync(videoFile,'artifacts/cosmos-cinematic-motion.webm');}
   console.log('PASS: iPhone LP, contador, regalo, galaxia, recuerdo, carta, misterio, final y horizontal.');
  }finally{await browser?.close();await server.close();}
 }
