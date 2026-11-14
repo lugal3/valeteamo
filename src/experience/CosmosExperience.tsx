@@ -287,7 +287,7 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
     <h2 id="cosmos-install-title">Llévame contigo ♡</h2>
     <p>Para disfrutar la experiencia sin la barra habitual del navegador:</p>
     <ol><li>Abre el enlace en <strong>Safari</strong>.</li><li>Toca el botón <strong>Compartir</strong> (cuadrado con flecha).</li><li>Elige <strong>Añadir a pantalla de inicio</strong>.</li><li>Si aparece, activa <strong>Abrir como app web</strong> y pulsa Añadir.</li><li>Abre el nuevo icono desde la pantalla de inicio.</li></ol>
-    <p className="cosmos-install-note">La experiencia está pensada en vertical. El juego 2D/3D podrá solicitar horizontal cuando corresponda.</p>
+    <p className="cosmos-install-note">La experiencia está diseñada para jugar en horizontal. Si tienes el iPhone vertical, gíralo para continuar.</p>
     <button className="cosmos-cta" onClick={()=>setInstallOpen(false)}>Entendido ♡</button>
    </div>
   </div>}

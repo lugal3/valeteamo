@@ -69,7 +69,7 @@ export function BirthdayCountdown({children}:{children:ReactNode}){
     </div>)}
    </dl>:<button className="birthday-submit" type="button" onClick={()=>setGiftLaunched(true)}>Abrir mi sorpresa</button>}
    <button className="birthday-iphone-help" type="button" onClick={()=>setInstallOpen(v=>!v)} aria-expanded={installOpen}>✦ iPhone: cómo abrir sin las barras de Safari</button>
-   {installOpen&&<div className="birthday-iphone-panel"><p>1. Abre este enlace en Safari.</p><p>2. Pulsa Compartir → Añadir a pantalla de inicio.</p><p>3. Si aparece, activa «Abrir como app web».</p><p>4. Abre el icono recién creado. La experiencia visual funciona en vertical.</p></div>}
+   {installOpen&&<div className="birthday-iphone-panel"><p>1. Abre este enlace en Safari.</p><p>2. Pulsa Compartir → Añadir a pantalla de inicio.</p><p>3. Si aparece, activa «Abrir como app web».</p><p>4. Abre el icono recién creado. La experiencia está diseñada para verse en horizontal. Gira tu iPhone para continuar.</p></div>}
   </section>
   <dialog ref={dialog} className="birthday-admin" aria-labelledby="birthday-admin-title">
    <form onSubmit={enterAdmin}>

@@ -10,6 +10,7 @@ import './style.css';
 import './birthday.css';
 import {StoryApp} from './StoryApp';
 import {BirthdayCountdown} from './BirthdayCountdown';
+import {LandscapeGate,isPhonePortrait} from './LandscapeGate';
 type IconName='coin'|'bomb'|'key'|'poop'|'head'|'pause'|'sound'|'mute'|'expand'|'shrink';
 function Icon({name}:{name:IconName}){
  const paths:Record<IconName,string>={
@@ -47,7 +48,11 @@ function ClassicApp(){
  const host=useRef<HTMLDivElement>(null),scene=useRef<Garden|undefined>(undefined),audio=useRef(new Sound());
  const [started,S]=useState(false),[paused,P]=useState(false),[muted,M]=useState(false),[hud,H]=useState<Hud>(),[end,E]=useState(''),[full,F]=useState(false),[canFull,CF]=useState(false),[fullNote,FN]=useState('');
  const [character,selectCharacter]=useState<CharacterId>('kitty'),[loading,L]=useState(false),[progress,LP]=useState(0),[loadError,LE]=useState(''),[attempt,RA]=useState(0);
+ const portraitAutoPaused=useRef(false),userPaused=useRef(false),pausedActual=useRef(false);
  const choose=React.useCallback((accept:boolean)=>scene.current?.chooseItem(accept),[]);
+ const updatePaused=(value:boolean)=>{pausedActual.current=value;if(!value)userPaused.current=false;P(value);};
+ const pauseManually=()=>{userPaused.current=true;scene.current?.setPaused(true);};
+ const resumeManually=()=>{userPaused.current=false;scene.current?.setPaused(false);};
  useEffect(()=>{CF(!!document.fullscreenEnabled&&typeof document.documentElement.requestFullscreen==='function');const f=()=>F(!!document.fullscreenElement);document.addEventListener('fullscreenchange',f);return()=>document.removeEventListener('fullscreenchange',f);},[]);
  useEffect(()=>{
   if(!started||!host.current)return;
@@ -56,13 +61,26 @@ function ClassicApp(){
   const boot=async()=>{try{
    const [{default:Engine},{Garden:Scene}]=await Promise.all([import('phaser'),import('./game')]);if(cancelled)return;LP(60);
    const ready=()=>{LP(100);complete=setTimeout(()=>{if(!cancelled)L(false);},400);};
-   const s=new Scene(H,E,P,audio.current,character,ready,LP);scene.current=s;
+   const s=new Scene(H,E,updatePaused,audio.current,character,ready,LP);scene.current=s;
    game=new Engine.Game({type:Engine.AUTO,parent:el,width:el.clientWidth,height:el.clientHeight,backgroundColor:'#f5e3d3',pixelArt:true,render:{antialias:false,roundPixels:true},audio:{noAudio:true},scale:{mode:Engine.Scale.RESIZE,autoCenter:Engine.Scale.NO_CENTER,expandParent:false},scene:s,input:{activePointers:4}});
-   blur=()=>s.setPaused(true);vis=()=>{if(document.hidden)blur();};resize=()=>{s.clearInput();if(innerHeight>innerWidth)blur();if(el.clientWidth>0&&el.clientHeight>0)game?.scale.resize(el.clientWidth,el.clientHeight);};
-   observer=new ResizeObserver(resize);observer.observe(el);window.addEventListener('blur',blur);document.addEventListener('visibilitychange',vis);window.addEventListener('orientationchange',blur);window.addEventListener('resize',resize);window.visualViewport?.addEventListener('resize',resize);
+   const handlePortrait=()=>{
+    if(isPhonePortrait()){
+     if(!userPaused.current){
+      portraitAutoPaused.current=true;
+      if(!pausedActual.current)s.setPaused(true);
+     }
+    }else if(portraitAutoPaused.current){
+     portraitAutoPaused.current=false;
+     if(!document.hidden&&!userPaused.current)s.setPaused(false);
+    }
+   };
+   blur=()=>{if(document.hidden||isPhonePortrait())s.setPaused(true);};
+   vis=()=>{if(document.hidden)blur();else handlePortrait();};
+   resize=()=>{s.clearInput();if(el.clientWidth>0&&el.clientHeight>0)game?.scale.resize(el.clientWidth,el.clientHeight);handlePortrait();};
+   observer=new ResizeObserver(resize);observer.observe(el);window.addEventListener('blur',blur);document.addEventListener('visibilitychange',vis);window.addEventListener('orientationchange',resize);window.addEventListener('resize',resize);window.visualViewport?.addEventListener('resize',resize);
   }catch(error){if(cancelled)return;LE('No se pudo abrir el jardín. Comprueba la conexión y vuelve a intentarlo.');console.error(error);}};
   void boot();
-  return()=>{cancelled=true;clearTimeout(complete);observer?.disconnect();window.removeEventListener('blur',blur);document.removeEventListener('visibilitychange',vis);window.removeEventListener('orientationchange',blur);window.removeEventListener('resize',resize);window.visualViewport?.removeEventListener('resize',resize);game?.destroy(true);scene.current=undefined;};
+  return()=>{cancelled=true;clearTimeout(complete);observer?.disconnect();window.removeEventListener('blur',blur);document.removeEventListener('visibilitychange',vis);window.removeEventListener('orientationchange',resize);window.removeEventListener('resize',resize);window.visualViewport?.removeEventListener('resize',resize);game?.destroy(true);scene.current=undefined;};
  },[started,attempt]);
  useEffect(()=>()=>audio.current.destroy(),[]);
  const fullscreen=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();FN('');}catch{FN('Pantalla completa no disponible. Puedes seguir jugando.');}};
@@ -81,17 +99,16 @@ function ClassicApp(){
  <div id="game" ref={host}/>
  <header className="hud"><div className="resources"><Hearts hp={hud?.hp??6}/><div className="counters"><span aria-label={(hud?.coins??12)+' monedas'}><Icon name="coin"/>{hud?.coins??12}</span><span aria-label={(hud?.bombs??5)+' bombas'}><Icon name="bomb"/>{hud?.bombs??5}</span><span aria-label={(hud?.keys??1)+' llaves'}><Icon name="key"/>{hud?.keys??1}</span>{hud?.shield&&<span className="mantle-tag" title="Holy Mantle listo">✧</span>}</div></div>
  <div className="location"><Map hud={hud}/><span>{hud?.room}<small>{CHARACTERS[character].name.toUpperCase()} · EL JARDÍN DE LOS DESEOS</small></span></div>
- <nav><button onClick={()=>scene.current?.setPaused(!paused)} aria-label={paused?'Continuar':'Pausa'}><Icon name="pause"/></button><button aria-label={muted?'Activar sonido':'Silenciar sonido'} onClick={()=>{const m=!muted;M(m);audio.current.muted=m;audio.current.resume();}}><Icon name={muted?'mute':'sound'}/></button>{canFull&&<button aria-label={full?'Salir de pantalla completa':'Pantalla completa'} onClick={fullscreen}><Icon name={full?'shrink':'expand'}/></button>}</nav></header>
+ <nav><button onClick={paused?resumeManually:pauseManually} aria-label={paused?'Continuar':'Pausa'}><Icon name="pause"/></button><button aria-label={muted?'Activar sonido':'Silenciar sonido'} onClick={()=>{const m=!muted;M(m);audio.current.muted=m;audio.current.resume();}}><Icon name={muted?'mute':'sound'}/></button>{canFull&&<button aria-label={full?'Salir de pantalla completa':'Pantalla completa'} onClick={fullscreen}><Icon name={full?'shrink':'expand'}/></button>}</nav></header>
  {hud?.message&&!hud.offer&&<div className={'toast '+(hud.state==='hurt'?'damage':'')} role="status" key={hud.message}>{hud.message}</div>}
  {hud?.bossHp!==undefined&&<div className="boss-hud" aria-label={'Mega Kuromi: '+Math.ceil(hud.bossHp)+' de '+C.bossHp+' de vida'}><span>MEGA KUROMI</span><div><i style={{width:((hud.bossHp/C.bossHp)*100)+'%'}}/></div></div>}
  <div className="actions"><button aria-label="Colocar bomba" title="Bomba · B" onPointerDown={e=>{e.preventDefault();scene.current?.bomb();}}><Icon name="bomb"/><span>{hud?.bombs??5}</span><kbd>B</kbd></button><button aria-label="Usar objeto activo" aria-disabled={!hud?.charge} title={hud?.active==='head'?'Kitty Cat’s head · Espacio':'Pila adorable · Espacio'} className={hud?.charge?'charged':'empty'} onPointerDown={e=>{e.preventDefault();scene.current?.active();}}><Icon name={hud?.active==='head'?'head':'poop'}/><small>{hud?.charge?'LISTO':(hud?.chargeRooms??1)+' SALA'}</small><kbd>␣</kbd><i className="charge-bar" style={{width:hud?.charge?'75%':'8%'}}/></button></div>
  </div>
  {hud?.offer&&!paused&&!end&&!loading&&<ItemDialog offer={hud.offer} choose={choose}/>}
- {paused&&!end&&!loading&&<div className="overlay"><span className="eyebrow">UN MOMENTO ENTRE LAS FLORES</span><h2>Una pequeña pausa</h2><button className="primary" onClick={()=>scene.current?.setPaused(false)}>Continuar</button><button onClick={restart}>Volver a empezar</button><button onClick={returnToCover}>Elegir personaje</button>{canFull&&<button onClick={fullscreen}>{full?'Salir de pantalla completa':'Pantalla completa'}</button>}<p>Dos dedos: izquierda mueve, derecha dispara.<br/>Bomba y activo están en la esquina inferior.</p>{fullNote&&<p role="status">{fullNote}</p>}</div>}
+ {paused&&!end&&!loading&&<div className="overlay"><span className="eyebrow">UN MOMENTO ENTRE LAS FLORES</span><h2>Una pequeña pausa</h2><button className="primary" onClick={resumeManually}>Continuar</button><button onClick={restart}>Volver a empezar</button><button onClick={returnToCover}>Elegir personaje</button>{canFull&&<button onClick={fullscreen}>{full?'Salir de pantalla completa':'Pantalla completa'}</button>}<p>Dos dedos: izquierda mueve, derecha dispara.<br/>Bomba y activo están en la esquina inferior.</p>{fullNote&&<p role="status">{fullNote}</p>}</div>}
  {end&&<div className="overlay"><span className="welcome-bow">{end==='win'?'✿':'♡'}</span><h2>{end==='win'?'El jardín vuelve a florecer':'Un respiro, '+CHARACTERS[character].name}</h2><p>{end==='win'?'¡Feliz cumpleaños Valentina! Tu aventura está completa.':'Las flores te esperan para intentarlo otra vez.'}</p><button className="primary" onClick={restart}>Jugar otra vez</button><button onClick={returnToCover}>Elegir personaje</button></div>}
- <div className="rotate"><span>↻</span><h2>Gira tu teléfono</h2><p>El jardín te espera en horizontal.<br/>Tu partida está en pausa.</p></div>
  {loading&&<section className="loading-screen" aria-busy={!loadError} aria-label="Cargando el juego"><span className="eyebrow">UNA AVENTURA PARA VALENTINA</span><h2>El jardín<br/><em>de los deseos</em></h2><div className="loading-path"><img src={characterPreview(character)} alt={CHARACTERS[character].name}/><span>✿</span><span>✦</span></div>{loadError?<><p role="alert">{loadError}</p><button className="primary" onClick={()=>RA(v=>v+1)}>Reintentar</button><button onClick={returnToCover}>Volver a la portada</button></>:<><div className="loading-track" role="progressbar" aria-label="Preparando el jardín" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><i style={{width:progress+'%'}}/></div><p role="status">{progress<60?'Abriendo el libro de los deseos…':progress<100?'Preparando personajes y flores…':'¡Tu aventura está lista!'}</p><small>Un regalo pequeño, hecho con mucho amor.</small></>}</section>}
  </>}</main>;
 }
-createRoot(document.getElementById('root')!).render(<BirthdayCountdown><StoryApp ClassicApp={ClassicApp}/></BirthdayCountdown>);
+createRoot(document.getElementById('root')!).render(<LandscapeGate><BirthdayCountdown><StoryApp ClassicApp={ClassicApp}/></BirthdayCountdown></LandscapeGate>);
 

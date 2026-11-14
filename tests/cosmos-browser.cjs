@@ -9,7 +9,7 @@ async function main(){
   await server.listen();
   const port=server.httpServer.address().port;
   browser=await chromium.launch({headless:true});
-  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1,recordVideo:{dir:'artifacts',size:{width:390,height:844}}});
+  const context=await browser.newContext({viewport:{width:844,height:390},isMobile:true,hasTouch:true,deviceScaleFactor:1,recordVideo:{dir:'artifacts',size:{width:844,height:390}}});
   const page=await context.newPage(),errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   fs.mkdirSync('artifacts',{recursive:true});
@@ -57,7 +57,7 @@ async function main(){
   await page.screenshot({path:'artifacts/cosmos-galaxia-iphone.png'});
 
   const zoomBefore=Number(await cinematicCanvas.getAttribute('data-zoom-target'));
-  await page.mouse.move(190,470);
+  await page.mouse.move(190,200);
   await page.mouse.wheel(0,-440);
   await page.waitForTimeout(180);
   const zoomAfterWheel=Number(await cinematicCanvas.getAttribute('data-zoom-target'));
@@ -65,9 +65,9 @@ async function main(){
   await cinematicCanvas.evaluate(el=>{
    const rect=el.getBoundingClientRect();
    const fire=(type,id,x,y)=>el.dispatchEvent(new PointerEvent(type,{bubbles:true,pointerType:'touch',pointerId:id,isPrimary:id===901,clientX:rect.left+x,clientY:rect.top+y}));
-   fire('pointerdown',901,135,460);fire('pointerdown',902,225,460);
-   fire('pointermove',901,97,460);fire('pointermove',902,263,460);
-   fire('pointerup',901,97,460);fire('pointerup',902,263,460);
+   fire('pointerdown',901,135,205);fire('pointerdown',902,225,205);
+   fire('pointermove',901,97,205);fire('pointermove',902,263,205);
+   fire('pointerup',901,97,205);fire('pointerup',902,263,205);
   });
   await page.waitForTimeout(180);
   const zoomAfterPinch=Number(await cinematicCanvas.getAttribute('data-zoom-target'));

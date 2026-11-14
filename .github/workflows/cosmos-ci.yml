@@ -5,6 +5,10 @@ on:
     paths:
       - 'src/experience/**'
       - 'src/BirthdayCountdown.tsx'
+      - 'src/main.tsx'
+      - 'src/StoryGame.tsx'
+      - 'src/LandscapeGate.tsx'
+      - 'src/landscape-gate.css'
       - 'src/StoryApp.tsx'
       - 'src/PlaytestMenu.tsx'
       - 'src/birthday-countdown.css'
@@ -13,6 +17,7 @@ on:
       - 'tests/tunnel-perspective.cjs'
       - 'tests/cosmos-public-flow.cjs'
       - 'tests/cosmos-browser.cjs'
+      - 'tests/landscape-gate.cjs'
       - '.github/workflows/cosmos-ci.yml'
   workflow_dispatch:
 permissions:
@@ -33,6 +38,7 @@ jobs:
       - run: node tests/tunnel-perspective.cjs
       - run: npm run build
       - run: npx playwright install chromium --with-deps
+      - run: node tests/landscape-gate.cjs
       - run: node tests/cosmos-browser.cjs
       - run: node tests/cosmos-public-flow.cjs
       - name: Guardar capturas de la experiencia
