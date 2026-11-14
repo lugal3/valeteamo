@@ -57,6 +57,7 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
   const el=canvas.current,context=el?.getContext('2d',{alpha:false});
   if(!el||!context)return;
   const ctx=context;
+  const element:HTMLCanvasElement=el;
   let w=0,h=0,dpr=1,raf=0,last=0,alive=true;
   let seconds=completedOnMount.current?GALAXY_ARRIVAL_SECONDS:0;
   let completed=completedOnMount.current;
@@ -137,7 +138,7 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
    const t=seconds;
    if(previousStage!==arrival.stage){
     previousStage=arrival.stage;
-    el.dataset.arrivalStage=arrival.stage;
+    element.dataset.arrivalStage=arrival.stage;
    }
    if(arrival.completed&&!completed){
     completed=true;
