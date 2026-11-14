@@ -1,4 +1,4 @@
-import {useEffect,useRef,useState,type CSSProperties,type PointerEvent as ReactPointerEvent,type WheelEvent as ReactWheelEvent} from 'react';
+import {useEffect,useRef,useState,type CSSProperties,type PointerEvent as ReactPointerEvent,type WheelEvent as ReactWheelEvent,type KeyboardEvent as ReactKeyboardEvent} from 'react';
 import './interactive-postcard.css';
 
 const clamp=(v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
@@ -78,7 +78,7 @@ export function InteractivePostcard({photo,letter,title}:Props){
   e.preventDefault();
   setZoom(z=>clamp(z*Math.exp(-e.deltaY*.0011),.80,1.72));
  };
- const onKeyDown=(e:React.KeyboardEvent<HTMLDivElement>)=>{
+ const onKeyDown=(e:ReactKeyboardEvent<HTMLDivElement>)=>{
   if(phase!=='inspecting')return;
   if(e.key==='Enter'||e.key===' '){e.preventDefault();rotate();}
   else if(e.key==='ArrowLeft'){e.preventDefault();setYaw(y=>y-15);}
