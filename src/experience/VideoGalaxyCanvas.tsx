@@ -203,13 +203,13 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
     const y=ty*(1-blend)+projected.y*blend;
     if(projected.depth<=.5||x<-24||y<-24||x>w+24||y>h+24)continue;
     const twinkle=reduced?1:.79+.21*Math.sin(t*3.1+star.seed*26);
-    const alpha=(.28+.67*arrival.tunnel)*twinkle*(star.color>.93?1:.76);
+    const alpha=(.43+.54*arrival.tunnel)*twinkle*(star.color>.93?1:.86);
     const rDisc=Math.max(.65,Math.min(2.6,star.size*projected.scale/82));
-    const rTunnel=.4+3.8*depthScale*depthScale;
+    const rTunnel=.65+4.1*depthScale*depthScale;
     const radius=rTunnel*(1-blend)+rDisc*blend;
     const col=tinted[Math.floor(star.color*tinted.length)];
-    if(blend<.95&&flyDepth>.35&&star.color>.62){
-     const trail=(1-blend)*(.9+19*depthScale)*(0.38+.62*arrival.approach);
+    if(blend<.95&&flyDepth>.32&&star.color>.50){
+     const trail=(1-blend)*(1.4+23*depthScale)*(.4+.6*arrival.tunnel);
      const dx=Math.cos(angle)*trail,dy=Math.sin(angle)*trail*.91;
      ctx.lineWidth=Math.max(.6,radius*.62);
      ctx.strokeStyle='rgba('+col+','+(alpha*.5)+')';
