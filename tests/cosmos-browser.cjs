@@ -30,9 +30,10 @@ async function main(){
   await page.getByRole('button',{name:/ENTRAR A NUESTRO UNIVERSO/}).click();
   await page.getByText('Encendiendo nuestro universo').waitFor();
   await page.getByRole('heading',{name:/Nuestro universo/}).waitFor({timeout:10000});
+  await page.waitForTimeout(2400); // Captura el corazón ya formado, no solo el primer fotograma.
   await page.screenshot({path:'artifacts/cosmos-galaxia-iphone.png'});
-  await page.getByRole('button',{name:/El primer destello/}).click();
-  await page.getByRole('heading',{name:/El primer destello/}).waitFor();
+  await page.getByRole('button',{name:/Amor de mi Vida/}).click();
+  await page.getByRole('heading',{name:/Amor de mi Vida/}).waitFor();
   await page.screenshot({path:'artifacts/cosmos-recuerdo-iphone.png'});
   await page.getByRole('button',{name:/Abrir nuestra carta/}).click();
   await page.getByRole('button',{name:/Abrir sobre de carta/}).click();
