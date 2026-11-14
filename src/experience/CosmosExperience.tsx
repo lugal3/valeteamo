@@ -126,7 +126,7 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
  };
  const leave=()=>{setGearOpen(false);window.clearTimeout(timeout.current);onExit();};
  return <main className={'cosmos-experience cosmos-'+scene+' cosmos-palette-'+palette} style={vars}>
-  <CosmosCanvas interactive={false} quality={quality}/>
+  {!isVideoCosmos&&<CosmosCanvas interactive={false} quality={quality}/>}
   <VideoGalaxyCanvas visible={isVideoCosmos} interactive={isGalaxy&&arrivalReady}
    quality={quality} palette={palette} onSelect={selectMemory}
    onArrivalComplete={arrivalComplete} startCompleted={arrivalReady}

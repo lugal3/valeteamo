@@ -32,6 +32,7 @@ async function main(){
   const cinematicCanvas=page.locator('canvas.cosmos-video-canvas');
   await cinematicCanvas.evaluate(el=>{el.dataset.qaPersistent='yes';});
   await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="star-tunnel"]').waitFor({timeout:14000});
+  await page.waitForTimeout(850); // Mostrar el túnel girando y acercándose, no solo el primer frame.
   await page.screenshot({path:'artifacts/galaxy-arrival-1-tunnel.png'});
   await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="unfold"]').waitFor({timeout:14000});
   await page.screenshot({path:'artifacts/galaxy-arrival-2-unfold.png'});
