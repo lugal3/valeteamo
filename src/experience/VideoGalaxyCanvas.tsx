@@ -1,12 +1,13 @@
 import {useEffect,useRef} from 'react';
 import {MEMORIES,PALETTES,type CosmosPalette,type GalaxyMemory,type Quality} from './cosmos-config';
+import {galaxyArrivalAt,GALAXY_ARRIVAL_SECONDS} from './galaxy-arrival';
 
 const TAU=Math.PI*2;
 type Star={x:number;y:number;z:number;px:number;py:number;pz:number;size:number;seed:number;color:number};
 type HeartDot=Star&{pulse:number};
 type Projected={x:number;y:number;scale:number;depth:number};
 type Hotspot={id:string;x:number;y:number};
-type Props={visible:boolean;interactive:boolean;palette:CosmosPalette;quality:Quality;onSelect?:(memory:GalaxyMemory)=>void};
+type Props={visible:boolean;interactive:boolean;palette:CosmosPalette;quality:Quality;onSelect?:(memory:GalaxyMemory)=>void;onArrivalComplete?:()=>void;replaySignal?:number;skipSignal?:number;startCompleted?:boolean};
 
 function rand(seed=12052026){let a=seed>>>0;return()=>{a=(Math.imul(a,1664525)+1013904223)>>>0;return a/4294967296;};}
 const random=rand();
@@ -41,17 +42,28 @@ function clamp(v:number,min=0,max=1){return Math.max(min,Math.min(max,v));}
 function ease(v:number){const x=clamp(v);return x*x*(3-2*x);}
 function colorCss(hex:string,alpha:number){const h=hex.replace('#','');const x=parseInt(h,16);return 'rgba('+((x>>16)&255)+','+((x>>8)&255)+','+(x&255)+','+alpha+')';}
 
-export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect}:Props){
+export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,onArrivalComplete,replaySignal=0,skipSignal=0,startCompleted=false}:Props){
  const canvas=useRef<HTMLCanvasElement>(null);
- const whenStarted=useRef(0);
  const callback=useRef(onSelect);callback.current=onSelect;
+ // These refs deliberately DO NOT restart WebGL/Canvas when loading -> galaxy
+ // changes interactive from false to true.
+ const interaction=useRef(interactive);interaction.current=interactive;
+ const onComplete=useRef(onArrivalComplete);onComplete.current=onArrivalComplete;
+ const replay=useRef(replaySignal);replay.current=replaySignal;
+ const skip=useRef(skipSignal);skip.current=skipSignal;
+ const completedOnMount=useRef(startCompleted);completedOnMount.current=startCompleted;
  useEffect(()=>{
   if(!visible)return;
   const el=canvas.current,context=el?.getContext('2d',{alpha:false});
   if(!el||!context)return;
   const ctx=context;
   let w=0,h=0,dpr=1,raf=0,last=0,alive=true;
-  let yaw=-.08,pitch=.53,zoom=1;
+  let seconds=completedOnMount.current?GALAXY_ARRIVAL_SECONDS:0;
+  let completed=completedOnMount.current;
+  let previousStage='';
+  let seenReplay=replay.current,seenSkip=skip.current;
+  let userYaw=0,userPitch=0,userZoom=1;
+  let camZoom=1,camFocusY=.55;
   let grab:{id:number;lastX:number;lastY:number;startX:number;startY:number}|null=null;
   let hot:Hotspot[]=[];
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -72,9 +84,9 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect}
    const x2=x*c-z*s,z2=x*s+z*c;
    const q=y-.58;
    const y2=q*Math.cos(camPitch)-z2*Math.sin(camPitch);
-   const depth=6.3/zoom+z2*Math.cos(camPitch)+q*Math.sin(camPitch);
+   const depth=6.3/camZoom+z2*Math.cos(camPitch)+q*Math.sin(camPitch);
    const scale=Math.min(w*(h>w?1.95:.9),h*(h>w?1.1:1.1))/Math.max(1,depth);
-   return {x:w*.5+x2*scale,y:h*(h>w?.55:.56)-y2*scale,scale,depth};
+   return {x:w*.5+x2*scale,y:h*camFocusY-y2*scale,scale,depth};
   }
   function circle(x:number,y:number,r:number,col:string,shadow=0){
    if(r<=0)return;
@@ -111,17 +123,34 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect}
   }
   function draw(now:number){
    if(!alive)return;
-   if(!whenStarted.current)whenStarted.current=now;
-   const t=reduced?5:(now-whenStarted.current)/1000;
-   const dt=Math.min(50,now-last||16);last=now;
-   if(!grab&&!reduced)yaw+=dt*.000028;
-   const camYaw=yaw+.07*Math.sin(t*.14);
-   const camPitch=pitch+.018*Math.sin(t*.36);
-   const progress=ease((t-.25)/2.3);
-   const hProgress=ease((t-1.10)/2.15);
-   const ringProgress=ease((t-1.6)/1.5);
-   const labelProgress=ease((t-2.4)/1.05);
-   const rose=paletteData.pink;
+   const dt=last===0?0:Math.min(65,Math.max(0,now-last));
+   last=now;
+   if(replay.current!==seenReplay){
+    seenReplay=replay.current;
+    seconds=0;completed=false;userYaw=0;userPitch=0;userZoom=1;
+   }
+   if(skip.current!==seenSkip){
+    seenSkip=skip.current;seconds=GALAXY_ARRIVAL_SECONDS;
+   }
+   seconds+=dt/1000;
+   const arrival=galaxyArrivalAt(seconds,reduced);
+   const t=seconds;
+   if(previousStage!==arrival.stage){
+    previousStage=arrival.stage;
+    el.dataset.arrivalStage=arrival.stage;
+   }
+   if(arrival.completed&&!completed){
+    completed=true;
+    onComplete.current?.();
+   }
+   const camYaw=arrival.yaw+userYaw+(arrival.completed&&!reduced?.025*Math.sin(t*.17):0);
+   const camPitch=clamp(arrival.pitch+userPitch,.16,1.24);
+   camZoom=clamp(arrival.zoom*userZoom,.5,1.85);
+   camFocusY=arrival.focusY;
+   const progress=arrival.tunnel;
+   const hProgress=arrival.heart;
+   const ringProgress=arrival.unfold;
+   const labelProgress=arrival.phrases;
    // Almost black stage, just as in the video. No navy-purple nebula backdrop.
    ctx.fillStyle='#050104';ctx.fillRect(0,0,w,h);
    const soft=ctx.createRadialGradient(w*.5,h*.59,1,w*.5,h*.60,Math.min(w,h)*.71);
@@ -137,22 +166,42 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect}
     const neb=ctx.createRadialGradient(center.x,center.y,2,center.x,center.y,Math.min(w,h)*.32);
     neb.addColorStop(0,'rgba(255,49,157,'+(.26*ringProgress)+')');neb.addColorStop(.5,'rgba(255,22,118,'+(.1*ringProgress)+')');neb.addColorStop(1,'rgba(0,0,0,0)');
     ctx.fillStyle=neb;ctx.fillRect(0,0,w,h);
-    for(const r of [.41,.67,1.15,1.8,2.56])ring(r,camYaw,camPitch,t,ringProgress*(r<.7?.34:.08),r<.7?3.3:.7);
+    for(const r of [.41,.67,1.15,1.8,2.56])ring(r*(.10+.90*arrival.unfold),camYaw,camPitch,t,ringProgress*(r<.7?.34:.08),r<.7?3.3:.7);
    }
-   // Pink particle vortex condenses from a starfield and reveals a spiral disc.
-   const count=Math.floor(total*(.12+.88*ease(t/1.8)));
+   // Reference shot 1: falling stars twist into a tunnel while the camera
+   // descends. Their projected pixels blend smoothly into the emerging disc.
+   const count=Math.floor(total*(.10+.90*ease(t/2.1)));
+   const discScale=.08+.92*arrival.unfold;
+   const minSide=Math.min(w,h);
+   const tunnelRadius=minSide*(.13+.48*arrival.tunnel+.14*arrival.approach);
+   const tunnelY=h*(.22+.34*arrival.descent);
+   const tunnelCenterX=w*.5;
    for(let i=0;i<count;i++){
-    const s=spiral[i],k=ease((t-s.seed*.78)/1.9);
-    const x=s.px*(1-k)+s.x*k,z=s.pz*(1-k)+s.z*k,y=s.py*(1-k)+s.y*k;
-    const p=project(x,y,z,camYaw,camPitch);
-    if(p.depth<=.5||p.x<-5||p.y<-5||p.x>w+5||p.y>h+5)continue;
+    const s=spiral[i];
+    const p=project(s.x*discScale,s.y*discScale,s.z*discScale,camYaw,camPitch);
+    const a=Math.atan2(s.pz,s.px)+arrival.spin+s.seed*.48;
+    const radial=Math.hypot(s.px,s.pz)/7.6;
+    const px=tunnelCenterX+Math.cos(a)*radial*tunnelRadius;
+    const py=tunnelY+Math.sin(a)*radial*tunnelRadius*.94;
+    const blend=arrival.worldBlend;
+    const sx=px*(1-blend)+p.x*blend;
+    const sy=py*(1-blend)+p.y*blend;
+    if(p.depth<=.5||sx<-8||sy<-8||sx>w+8||sy>h+8)continue;
     const twinkle=reduced?1:.77+.23*Math.sin(t*2.6+s.seed*25);
-    const alpha=(.31+.67*progress)*twinkle*(s.color>.94?1:.78);
-    const radius=Math.max(.7,Math.min(2.5,s.size*p.scale/85));
+    const alpha=(.25+.69*progress)*twinkle*(s.color>.94?1:.78);
+    const radius=Math.max(.65,Math.min(2.45,s.size*p.scale/82));
     const col=tinted[Math.floor(s.color*tinted.length)];
     ctx.fillStyle='rgba('+col+','+alpha+')';
-    if(s.color>.986){circle(p.x,p.y,radius*2.2,'rgba(255,174,220,'+alpha+')',4);}
-    else ctx.fillRect(p.x,p.y,radius,radius);
+    // Subtle radial streaks give the illusion of falling toward the lens.
+    if(blend<.9 && s.color>.962){
+     const length=(1-blend)*(1.1+4.1*arrival.approach)*(.45+s.seed);
+     const dx=Math.cos(a)*length,dy=Math.sin(a)*length;
+     ctx.lineWidth=Math.max(.5,radius*.6);
+     ctx.strokeStyle='rgba('+col+','+alpha*.45+')';
+     ctx.beginPath();ctx.moveTo(sx-dx,sy-dy);ctx.lineTo(sx,sy);ctx.stroke();
+    }
+    if(s.color>.986){circle(sx,sy,radius*2,'rgba(255,174,220,'+alpha+')',4);}
+    else ctx.fillRect(sx,sy,radius,radius);
    }
    // Central compact ring / black hole, bright fuchsia lens and white pink core.
    if(ringProgress>0){
@@ -174,9 +223,12 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect}
    // Tall heart made of thousands of pink, shining dots (not a flat SVG outline).
    if(hProgress>0){
     for(let i=0;i<heartCount;i++){
-     const q=heart[i],k=ease((t-1.08-q.seed*.68)/1.6);
+     const q=heart[i],k=ease((t-3.02-q.seed*.60)/1.26);
      const s=1+.018*Math.sin(t*2.2+q.pulse);
-     const p=project(q.px*(1-k)+q.x*k*s,q.py*(1-k)+q.y*k*s,q.pz*(1-k)+q.z*k,camYaw,camPitch);
+     // Dots rise from the galactic nucleus, instead of materializing in place.
+     const p=project(q.px*.035*(1-k)+q.x*k*s,
+      (.12+q.py*.024)*(1-k)+q.y*k*s,
+      q.pz*.038*(1-k)+q.z*k,camYaw,camPitch);
      if(p.depth<.4||p.x<-5||p.y<-5||p.x>w+5||p.y>h+5)continue;
      const alpha=hProgress*(.69+.28*(.5+.5*Math.sin(t*2.5+q.seed*15)));
      const radius=Math.max(.9,Math.min(3.0,q.size*p.scale/80));
@@ -244,18 +296,18 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect}
    raf=requestAnimationFrame(draw);
   }
   const pointerDown=(e:PointerEvent)=>{
-   if(!interactive)return;
+   if(!interaction.current||seconds<GALAXY_ARRIVAL_SECONDS)return;
    grab={id:e.pointerId,lastX:e.clientX,lastY:e.clientY,startX:e.clientX,startY:e.clientY};
    el.setPointerCapture(e.pointerId);
   };
   const pointerMove=(e:PointerEvent)=>{
-   if(!interactive||!grab||grab.id!==e.pointerId)return;
-   yaw-=(e.clientX-grab.lastX)*.005;
-   pitch=clamp(pitch+(e.clientY-grab.lastY)*.003,.2,1.12);
+   if(!interaction.current||!grab||grab.id!==e.pointerId)return;
+   userYaw-=(e.clientX-grab.lastX)*.005;
+   userPitch=clamp(userPitch+(e.clientY-grab.lastY)*.003,-.40,.54);
    grab.lastX=e.clientX;grab.lastY=e.clientY;
   };
   const pointerUp=(e:PointerEvent)=>{
-   if(!interactive||!grab||grab.id!==e.pointerId)return;
+   if(!interaction.current||!grab||grab.id!==e.pointerId)return;
    const movement=Math.hypot(e.clientX-grab.startX,e.clientY-grab.startY);
    grab=null;
    if(movement>12)return;
@@ -266,7 +318,7 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect}
     if(selected)callback.current?.(selected);
    }
   };
-  const wheel=(e:WheelEvent)=>{if(!interactive)return;e.preventDefault();zoom=clamp(zoom-e.deltaY*.0005,.71,1.48);};
+  const wheel=(e:WheelEvent)=>{if(!interaction.current||seconds<GALAXY_ARRIVAL_SECONDS)return;e.preventDefault();userZoom=clamp(userZoom-e.deltaY*.0005,.72,1.38);};
   const onVisibility=()=>{if(!document.hidden){last=performance.now();cancelAnimationFrame(raf);raf=requestAnimationFrame(draw);}else cancelAnimationFrame(raf);};
   const resizeObserver=new ResizeObserver(resize);
   resizeObserver.observe(el);resize();
@@ -286,6 +338,6 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect}
    el.removeEventListener('wheel',wheel);
    document.removeEventListener('visibilitychange',onVisibility);
   };
- },[visible,interactive,quality,palette]);
+ },[visible,quality,palette]);
  return <canvas ref={canvas} className={'cosmos-video-canvas'+(interactive?' interactive':'')} aria-label="Galaxia espiral rosa con un corazón de partículas y constelaciones interactivas" role="img" style={{display:visible?'block':'none'}}/>;
 }
