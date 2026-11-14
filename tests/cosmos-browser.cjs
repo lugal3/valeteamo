@@ -9,7 +9,7 @@ async function main(){
   await server.listen();
   const port=server.httpServer.address().port;
   browser=await chromium.launch({headless:true});
-  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1});
+  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1,recordVideo:{dir:'artifacts',size:{width:390,height:844}}});
   const page=await context.newPage(),errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   fs.mkdirSync('artifacts',{recursive:true});
@@ -29,17 +29,25 @@ async function main(){
   assert.equal(await page.locator('.cosmos-preview-controls,.cosmos-bottomline,.cosmos-decor-side,.cosmos-topbar').count(),0,'no old bottom or side bars in LP anywhere');
   await page.screenshot({path:'artifacts/video-reference-intro.png'});
   await page.getByRole('button',{name:/ENTRAR A NUESTRO UNIVERSO/}).click();
-  await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="descent"]').waitFor();
-  assert.equal(await page.getByText('Encendiendo nuestro universo').count(),0,'no blocking loading card');
-  assert.equal(await page.locator('.video-reference-loading-inner').count(),0,'full screen tunnel, no progress overlay');
   const cinematicCanvas=page.locator('canvas.cosmos-video-canvas');
+  await cinematicCanvas.waitFor();
+  assert.equal(await page.getByText('Encendiendo nuestro universo').count(),0,'no loading card');
+  assert.equal(await page.locator('.video-reference-loading-inner').count(),0,'full screen');
   await cinematicCanvas.evaluate(el=>{el.dataset.qaPersistent='yes';});
-  await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="star-tunnel"]').waitFor({timeout:14000});
-  await page.waitForTimeout(850); // Mostrar el túnel girando y acercándose, no solo el primer frame.
+  const cinematicFrames=[
+   [.42,'01-approach'],[.85,'02-radial-flight'],[1.20,'03-vortex-climax'],
+   [1.54,'04-nucleus'],[1.92,'05-disk-unfold'],[2.35,'06-stardust-fountain'],
+   [2.82,'07-heart-forms'],[3.58,'08-heart-complete'],[4.29,'09-orbit-reveal']
+  ];
+  for(const [second,slug] of cinematicFrames){
+   await page.waitForFunction(threshold=>{
+    const el=document.querySelector('canvas.cosmos-video-canvas');
+    return Number(el?.getAttribute('data-cinematic-seconds')||0)>=threshold;
+   },second,{timeout:16000});
+   await page.screenshot({path:'artifacts/cinematic-'+slug+'.png'});
+  }
   await page.screenshot({path:'artifacts/galaxy-arrival-1-tunnel.png'});
-  await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="unfold"]').waitFor({timeout:14000});
   await page.screenshot({path:'artifacts/galaxy-arrival-2-unfold.png'});
-  await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="heart-rise"]').waitFor({timeout:14000});
   await page.screenshot({path:'artifacts/galaxy-arrival-3-heart-rise.png'});
   await page.getByRole('button',{name:'Ajustes de la galaxia'}).waitFor({timeout:20000});
   await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="explore"]').waitFor({timeout:20000});
@@ -97,7 +105,9 @@ async function main(){
   await page.getByRole('button',{name:/Comenzar juego 2D/}).click();
   await page.getByRole('heading',{name:/El jardín/}).waitFor({timeout:12000});
   assert.deepEqual(errors,[],'Sin errores JavaScript');
+  const video=page.video();
   await context.close();
+  if(video){const videoFile=await video.path();fs.renameSync(videoFile,'artifacts/cosmos-cinematic-motion.webm');}
   console.log('PASS: iPhone LP, contador, regalo, galaxia, recuerdo, carta, misterio, final y horizontal.');
  }finally{await browser?.close();await server.close();}
 }

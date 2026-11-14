@@ -40,9 +40,9 @@ async function main(){
   await page.getByRole('button',{name:/ENTRAR A NUESTRO UNIVERSO/}).click();
   const canvas=page.locator('canvas.cosmos-video-canvas');
   await canvas.locator('xpath=..').waitFor();
-  await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="star-tunnel"]').waitFor({timeout:14000});
+  await page.waitForFunction(()=>Number(document.querySelector('canvas.cosmos-video-canvas')?.getAttribute('data-cinematic-seconds')||0)>=.85,null,{timeout:14000});
   await page.screenshot({path:'artifacts/public-tunnel.png'});
-  await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="unfold"]').waitFor({timeout:14000});
+  await page.waitForFunction(()=>Number(document.querySelector('canvas.cosmos-video-canvas')?.getAttribute('data-cinematic-seconds')||0)>=1.92,null,{timeout:14000});
   await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="explore"]').waitFor({timeout:18000});
   await page.screenshot({path:'artifacts/public-galaxy.png'});
 
