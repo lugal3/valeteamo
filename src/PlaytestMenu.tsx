@@ -2,15 +2,17 @@ import {useEffect,useState} from 'react';
 import {HOUSE_TRIALS,type HouseTrial,type HouseTrialId} from './lab/house-trials';
 import './playtest-menu.css';
 
-type MenuAction='cosmos-countdown'|'cosmos-gift'|'cosmos-galaxy'|'house'|'rescue'|'arcade'|'classic'|'story'|HouseTrialId;
+type MenuAction='cosmos-countdown'|'cosmos-gift'|'cosmos-intro'|'cosmos-loading'|'cosmos-galaxy'|'house'|'rescue'|'arcade'|'classic'|'story'|HouseTrialId;
 type MenuCard={id:MenuAction;title:string;description:string};
 
 const trialCard=(id:HouseTrialId):MenuCard=>({id,...HOUSE_TRIALS[id]});
 const groups:{title:string;cards:MenuCard[]}[]=[
  {title:'Cumpleaños · experiencia cósmica',cards:[
   {id:'cosmos-countdown',title:'✦ Contador y colores',description:'Prueba el contador real, las animaciones y la apertura sin esperar al 5 de diciembre.'},
-  {id:'cosmos-gift',title:'♡ Regalo animado',description:'Abre la caja de regalo y observa la transición hacia el universo.'},
-  {id:'cosmos-galaxy',title:'✧ Galaxia y constelaciones',description:'Explora estrellas, seis recuerdos, cartas, misterio y el final. Incluye ajustes de paleta.'}
+  {id:'cosmos-gift',title:'♡ Regalo animado',description:'Abre la caja y entra a la secuencia del video.'},
+  {id:'cosmos-intro',title:'♡ Inicio del video y personajes',description:'Pantalla negra, mascotas abrazadas y el botón Entrar a nuestro universo.'},
+  {id:'cosmos-loading',title:'✧ Animación de partículas',description:'Mira cómo las estrellas rosadas se reúnen, nace la espiral y se forma el corazón.'},
+  {id:'cosmos-galaxy',title:'✧ Galaxia rosa del video',description:'Corazón de partículas, espiral y frases orbitando. Toca los recuerdos y prueba las tarjetas.'}
  ]},
  {title:'Casa 3D',cards:[
   {id:'house',title:'Casa 3D',description:'Empieza con la entrada por la ventana. Explora las dos plantas y sigue el recorrido del rescate desde el principio.'},

@@ -40,3 +40,17 @@ npm test, npm run build y node tests/cosmos.cjs. Los tests del resto del juego s
 
 ## Material visual pendiente
 Los dos videos originales de referencia, la foto exacta y una paleta definitiva no están en este repositorio. Esta versión usa una interpretación editable rosa/violeta/azul y arte generado por código, no una reproducción exacta de esas referencias.
+
+
+## Referencia audiovisual de 23,1 segundos (14 noviembre 2026)
+La referencia es un clip vertical de TikTok con un ejemplo visual en su mitad superior; el código y los elementos externos de TikTok **no son parte de la web**.
+- 1,5–2,4 s: panel granate/negro con título «Una Galaxia de Amor para Ti», dos mascotas blancas, subtítulo y botón rosa alargado.
+- 2,5–4,6 s: el panel se apaga y las partículas fucsias se concentran en un torbellino, desde puntos dispersos hacia el núcleo.
+- 4,6–6,4 s: aparece la galaxia plana en espiral, núcleo rosa vibrante y un corazón vertical de miles de puntos luminosos.
+- 6,4–10,5 s: movimiento orbital suave con etiquetas rosas como «MI AMOR ETERNO», «HAPPY BIRTHDAY», corazones y mascotas pequeñas.
+- 10,5–18,0 s: al tocar una constelación, aparece una tarjeta compacta granate con ilustración, título en serif, descripción y opción para volver.
+Esta implementación usa partículas renderizadas en Canvas 2D y dos mascotas SVG **originales** para permitir cambiar después a imágenes personalizadas. NO reutiliza fotogramas, música o recursos de TikTok.
+
+### Pruebas directas desde LP
+En Pruebas se ofrecen cinco entradas: contador, regalo, inicio con personajes, formación de partículas y galaxia lista.
+Las fechas, guardados del juego, casa WebGL1 y modos Phaser siguen intactos. El video original muestra una escena ajena: no se puede prometer identidad cuadro a cuadro sin su código y assets originales. Las transiciones/colores/estructura se reproducen desde cero.
