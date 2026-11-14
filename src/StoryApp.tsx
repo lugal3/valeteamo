@@ -1,4 +1,4 @@
-import {useCallback,useEffect,useRef,useState,type ComponentType} from 'react';
+import {lazy,Suspense,useCallback,useEffect,useRef,useState,type ComponentType} from 'react';
 import {CHARACTERS,type CharacterId} from './characters';
 import {CONTENT_IS_SAMPLE,STORY,type MemoryPhoto} from './story-content';
 import {advance,goTo,initialProgress,readProgress,writeProgress,type StoryProgress} from './story-progress';
@@ -11,6 +11,8 @@ import {PlaytestHouse,PlaytestMenu} from './PlaytestMenu';
 import type {HouseTrialId} from './lab/house-trials';
 import './story.css';
 import {stopWelcomeMelody} from './demo/welcome-melody';
+
+const CosmosExperience=lazy(()=>import('./experience/CosmosExperience'));
 
 function Portrait({character}:{character:CharacterId}){
  return <span className="kitty-reference-portrait" aria-hidden="true" style={{backgroundImage:`url(${new URL(`./sprites/${character}-reference-sheet.png`,document.baseURI).href})`}}/>;
@@ -34,10 +36,11 @@ export function StoryApp({ClassicApp}:{ClassicApp:ComponentType}){
  const container=useRef<HTMLDivElement>(null);
  const audio=useRef<Sound>(new Sound());
  const [progress,setProgress]=useState<StoryProgress>(()=>readProgress(STORY.length));
- const [screen,setScreen]=useState<'splash'|'cover'|'story'|'game'|'classic'|'rescue'|'tests'|'arcade'>('splash');
+ const [screen,setScreen]=useState<'splash'|'cover'|'story'|'game'|'classic'|'rescue'|'tests'|'arcade'|'cosmos'>('splash');
  const [demoEntry,setDemoEntry]=useState<'garden'|'abduction'|'trail'|'house'|'drawer'|'lock'|'rescue'|'mirror'>('garden');
  const [demoTrial,setDemoTrial]=useState(false);const [saved,setSaved]=useState(progress.started);const [storageOK,setStorageOK]=useState(true);
  const [houseTrial,setHouseTrial]=useState<HouseTrialId|null>(null);
+ const [cosmosEntry,setCosmosEntry]=useState<'countdown'|'gift'|'galaxy'>('countdown');
  const closeHouseTrial=useCallback(()=>setHouseTrial(null),[]);
  const [audioNotice,setAudioNotice]=useState('');
  const [comicOpen,setComicOpen]=useState(false);
@@ -57,11 +60,14 @@ export function StoryApp({ClassicApp}:{ClassicApp:ComponentType}){
  const unlockAudio=()=>{if(!progress.muted)tryAudio();};
  const openDemo=(entry:typeof demoEntry,trial:boolean)=>{setDemoEntry(entry);setDemoTrial(trial);audio.current.destroy();stopWelcomeMelody();setScreen('rescue');};
  if(screen==='splash')return <Splash muted={progress.muted} onStart={()=>{if(!progress.muted)tryAudio(true);setScreen('cover');}}/>;
+ if(screen==='cosmos')return <Suspense fallback={<main role="status" style={{display:'grid',placeItems:'center',background:'#0a0719',color:'#ffddf1'}}>Preparando las estrellas…</main>}><CosmosExperience preview startAt={cosmosEntry} onExit={()=>setScreen('tests')} onEnterGame={()=>setScreen('tests')}/></Suspense>;
  if(screen==='rescue')return <RescueDemo key={demoEntry+(demoTrial?'-trial':'-story')} entry={demoEntry} test={demoTrial} onExit={()=>{setScreen(demoTrial?'tests':'cover');if(!demoTrial)unlockAudio();}}/>;
  if(screen==='tests')return houseTrial?<PlaytestHouse id={houseTrial} onExit={closeHouseTrial}/>:<PlaytestMenu
   onExit={()=>{unlockAudio();setScreen('cover');}}
   onSelect={id=>{
    switch(id){
+    case 'cosmos-countdown':case 'cosmos-gift':case 'cosmos-galaxy':
+     setCosmosEntry(id==='cosmos-gift'?'gift':id==='cosmos-galaxy'?'galaxy':'countdown');setScreen('cosmos');break;
     case 'house':openDemo('house',true);break;
     case 'rescue':openDemo('garden',true);break;
     case 'arcade':unlockAudio();setScreen('arcade');break;
