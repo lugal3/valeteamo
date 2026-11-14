@@ -1,46 +1,32 @@
-/** Shared directional geometry for the birthday star fly-through.
- *
- * Each particle belongs to one of 28 slender, slightly curved streams aimed
- * at the same vanishing point. The advancing camera moves through the streams
- * while their aperture slowly contracts, as in the supplied short video.
- * After the approach the SAME particles blend into their galactic 3D slots.
+/** Gentle, non-uniform star currents for the tunnel.
+ * The attractive PR #9 scattered radial fly-through is retained. Only
+ * a majority of the existing particles are subtly pulled toward curved,
+ * moving directions; the remaining dust stays free and organic.
+ * No drawn spoke lines, no new particle system and no change to galaxy/heart.
  */
-export const TUNNEL_STREAMS=28;
+export const TUNNEL_STREAMS=16;
 const TAU=Math.PI*2;
 const smooth=(v:number)=>{const t=Math.max(0,Math.min(1,v));return t*t*(3-2*t);};
 
-export interface TunnelPoint{
- x:number;y:number;angle:number;radius:number;aperture:number;depth:number;
-}
-
-/** Shrinks the field of visible streams as the lens approaches the nucleus. */
+/** Subtle narrowing as the camera approaches: never collapse the tunnel. */
 export function tunnelAperture(approach:number):number{
- return 1-.47*smooth(approach);
+ return 1-.19*smooth(approach);
 }
 
-export function tunnelStreamPoint(
- lane:number,
+/** Snap a portion of the original angles toward soft perspective streams.
+ * Math.round chooses the nearest lane for any angle, even angles >2π.
+ * Star-specific jitter and the untouched background dust keep it natural.
+ */
+export function softFilamentAngle(
+ originalAngle:number,
  seed:number,
- depth:number,
- spin:number,
- approach:number,
- width:number,
- height:number
-):TunnelPoint{
- const d=Math.max(0,Math.min(.99999,depth));
- const aperture=tunnelAperture(approach);
- const index=((lane%TUNNEL_STREAMS)+TUNNEL_STREAMS)%TUNNEL_STREAMS;
- const lanePhase=(index/TUNNEL_STREAMS)*TAU;
- // Shared lane heading makes stars draw coherent perspective ribbons.
- // A tiny deterministic angular variation prevents hard artificial spokes.
- const gentleTwist=.25*d + .075*Math.sin(d*5.4+index*.38);
- const variation=(seed-.5)*(.020+.055*d);
- const angle=lanePhase + spin*.21 + gentleTwist + variation;
- const depthScale=Math.pow(d,1.88);
- const radius=Math.max(width,height)*.78*(.004+depthScale*.93)*aperture;
- return {
-  x:width*.5+Math.cos(angle)*radius,
-  y:height*.505+Math.sin(angle)*radius*.90,
-  angle,radius,aperture,depth:d
- };
+ progress:number
+):number{
+ const sector=TAU/TUNNEL_STREAMS;
+ const nearest=Math.round(originalAngle/sector)*sector;
+ const alignment=seed>.18?.67:.04; // 82% faint directional currents + 18% free stars
+ const current=smooth(progress);
+ const offset=(nearest-originalAngle)*alignment*(.30+.70*current);
+ const shimmer=.025*Math.sin(seed*21+current*2.8);
+ return originalAngle+offset+shimmer;
 }
