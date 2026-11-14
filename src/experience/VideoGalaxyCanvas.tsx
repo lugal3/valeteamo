@@ -183,9 +183,14 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
    // Restored from the visually richer PR #9: organic star tunnel, smooth
    // forward flow, bright pink dust. Only the particle directions are nudged
    // into soft rotating filaments inspired by the video reference.
-   const count=Math.floor(total*(.13+.87*ease(t/2.15)));
+   // Fill the iPhone viewport with many softly curved points rather than
+   // a few isolated long streaks. By 0.8s most particles are already alive.
+   const count=Math.floor(total*(.36+.64*ease(t/1.35)));
    const discScale=.028+.972*arrival.unfold;
-   const span=Math.max(w,h)*.82;
+   // Fit the radial field to portrait and landscape independently. Earlier
+   // max(w,h) scaling pushed most mobile particles far beyond screen edges.
+   const spanX=Math.max(w*.72,Math.min(w,h)*.76);
+   const spanY=Math.max(h*.44,Math.min(w,h)*.80);
    const centerX=w*.5+Math.sin(t*1.14)*w*.017*(1-arrival.worldBlend);
    const centerY=h*(.53-.035*arrival.descent);
    const blend=arrival.worldBlend;
@@ -211,25 +216,26 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
      +swirl*(.44+.46*flyDepth)
      +arrival.cinematicRoll
      +.12*Math.sin(flyDepth*5.6+star.seed*6.28+swirl*.4)*(1-blend);
-    const tunnelRadius=span*(.012+depthScale*.83)
-     *tunnelAperture(arrival.approach)*arrival.tunnelLens;
-    const tx=centerX+Math.cos(angle)*tunnelRadius;
-    const ty=centerY+Math.sin(angle)*tunnelRadius*.91;
+    const radial=(.012+depthScale*.83)*tunnelAperture(arrival.approach)*arrival.tunnelLens;
+    const tx=centerX+Math.cos(angle)*radial*spanX;
+    const ty=centerY+Math.sin(angle)*radial*spanY;
     const x=tx*(1-blend)+projected.x*blend;
     const y=ty*(1-blend)+projected.y*blend;
     if(projected.depth<=.5||x<-24||y<-24||x>w+24||y>h+24)continue;
     const twinkle=reduced?1:.79+.21*Math.sin(t*3.1+star.seed*26);
-    const alpha=(.43+.54*arrival.tunnel)*twinkle*(star.color>.93?1:.86);
+    const arrivalFade=ease((t-.07)/.29);
+    const alpha=(.43+.54*arrival.tunnel)*twinkle*(star.color>.93?1:.86)
+     *(.12+.88*arrivalFade);
     const rDisc=Math.max(.65,Math.min(2.6,star.size*projected.scale/82));
     const rTunnel=.65+4.1*depthScale*depthScale;
     const radius=rTunnel*(1-blend)+rDisc*blend;
     const col=tinted[Math.floor(star.color*tinted.length)];
-    if(blend<.95&&flyDepth>.32&&star.color>.50){
-     const trail=(1-blend)*(1.1+25*depthScale)*(.34+.62*arrival.tunnel)
-      *(.82+.42*arrival.approach);
+    if(blend<.95&&flyDepth>.38&&star.color>.66){
+     const trail=(1-blend)*(0.6+11.5*depthScale)*(.32+.62*arrival.tunnel)
+      *(.85+.18*arrival.approach);
      const dx=Math.cos(angle)*trail,dy=Math.sin(angle)*trail*.91;
      ctx.lineWidth=Math.max(.6,radius*.62);
-     ctx.strokeStyle='rgba('+col+','+(alpha*.5)+')';
+     ctx.strokeStyle='rgba('+col+','+(alpha*.36)+')';
      ctx.beginPath();ctx.moveTo(x-dx,y-dy);ctx.lineTo(x,y);ctx.stroke();
     }
     ctx.fillStyle='rgba('+col+','+alpha+')';
