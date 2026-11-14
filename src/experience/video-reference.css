@@ -264,3 +264,13 @@
  .video-reference-enter,.video-galaxy-couple>g,.video-reference-loading .video-pixel-mascot,
  .video-loading-indicator i,.cosmos-memory .cosmos-memory-shell{animation:none!important}
 }
+
+
+/* Modo LP: la barra de escenas no debe cubrir «Continuar el viaje». */
+@media(max-width:760px) and (orientation:portrait){
+ .cosmos-experience .cosmos-preview-controls{bottom:max(3px,env(safe-area-inset-bottom))!important}
+}
+@media(max-height:600px) and (orientation:landscape){
+ .cosmos-experience .cosmos-preview-controls{bottom:0!important}
+ .cosmos-galaxy .cosmos-galaxy-footer{bottom:56px!important}
+}

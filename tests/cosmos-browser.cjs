@@ -34,6 +34,7 @@ async function main(){
   await page.screenshot({path:'artifacts/cosmos-galaxia-iphone.png'});
   await page.getByRole('button',{name:/Amor de mi Vida/}).click();
   await page.getByRole('heading',{name:/Amor de mi Vida/}).waitFor();
+  await page.waitForTimeout(700);
   await page.screenshot({path:'artifacts/cosmos-recuerdo-iphone.png'});
   await page.getByRole('button',{name:/Abrir nuestra carta/}).click();
   await page.getByRole('button',{name:/Abrir sobre de carta/}).click();

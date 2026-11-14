@@ -147,8 +147,8 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect}
     const p=project(x,y,z,camYaw,camPitch);
     if(p.depth<=.5||p.x<-5||p.y<-5||p.x>w+5||p.y>h+5)continue;
     const twinkle=reduced?1:.77+.23*Math.sin(t*2.6+s.seed*25);
-    const alpha=(.21+.62*progress)*twinkle*(s.color>.94?1:.63);
-    const radius=Math.max(.35,Math.min(2.3,s.size*p.scale/110));
+    const alpha=(.31+.67*progress)*twinkle*(s.color>.94?1:.78);
+    const radius=Math.max(.7,Math.min(2.5,s.size*p.scale/85));
     const col=tinted[Math.floor(s.color*tinted.length)];
     ctx.fillStyle='rgba('+col+','+alpha+')';
     if(s.color>.986){circle(p.x,p.y,radius*2.2,'rgba(255,174,220,'+alpha+')',4);}
@@ -178,13 +178,25 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect}
      const s=1+.018*Math.sin(t*2.2+q.pulse);
      const p=project(q.px*(1-k)+q.x*k*s,q.py*(1-k)+q.y*k*s,q.pz*(1-k)+q.z*k,camYaw,camPitch);
      if(p.depth<.4||p.x<-5||p.y<-5||p.x>w+5||p.y>h+5)continue;
-     const alpha=hProgress*(.35+.58*(.5+.5*Math.sin(t*2.5+q.seed*15)));
-     const radius=Math.max(.4,Math.min(2.7,q.size*p.scale/116));
+     const alpha=hProgress*(.69+.28*(.5+.5*Math.sin(t*2.5+q.seed*15)));
+     const radius=Math.max(.9,Math.min(3.0,q.size*p.scale/80));
      const co=q.color>.88?'255,244,252':q.color>.45?'255,156,211':'255,42,156';
      ctx.fillStyle='rgba('+co+','+alpha+')';
      if(q.color>.985)circle(p.x,p.y,radius*2.2,'rgba(255,231,247,'+alpha+')',5);
      else ctx.fillRect(p.x,p.y,radius,radius);
     }
+    // A dotted glow contour makes the shape legible on small iPhone screens.
+    ctx.save();
+    ctx.beginPath();
+    for(let j=0;j<=192;j++){
+     const pt=heartPoint(j/192*TAU);
+     const pp=project(pt.x*1.05,1.50+pt.y*1.16,0,camYaw,camPitch);
+     if(j===0)ctx.moveTo(pp.x,pp.y);else ctx.lineTo(pp.x,pp.y);
+    }
+    ctx.closePath();ctx.lineWidth=1.3;ctx.setLineDash([1.5,3.1]);
+    ctx.strokeStyle='rgba(255,139,207,'+(.67*hProgress)+')';
+    ctx.shadowColor='#ff48a6';ctx.shadowBlur=12;ctx.stroke();
+    ctx.shadowBlur=0;ctx.setLineDash([]);ctx.restore();
     const tip=project(0,.37,0,camYaw,camPitch);
     circle(tip.x,tip.y,2.3*hProgress,'rgba(255,237,250,.8)',9);
    }
