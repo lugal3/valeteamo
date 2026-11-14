@@ -101,6 +101,33 @@ async function main(){
   await page.getByRole('button',{name:'Abrir sobre y sacar postal'}).click();
   await page.locator('.cx-postcard-experience[data-postcard-phase="inspecting"]').waitFor({timeout:5000});
   await page.screenshot({path:'artifacts/postcard-front-3d.png'});
+  const card=page.locator('.cx-postcard-object');
+  const yawBefore=Number(await postcard.getAttribute('data-postcard-yaw'));
+  await card.evaluate(el=>{
+   const r=el.getBoundingClientRect();
+   const fire=(type,id,x,y)=>el.dispatchEvent(new PointerEvent(type,{
+    bubbles:true,pointerType:'touch',pointerId:id,isPrimary:true,clientX:r.left+x,clientY:r.top+y
+   }));
+   fire('pointerdown',47,30,30);
+   fire('pointermove',47,95,54);
+   fire('pointerup',47,95,54);
+  });
+  assert(Math.abs(Number(await postcard.getAttribute('data-postcard-yaw'))-yawBefore)>20,'drag rotates the actual 3D object');
+  // Native iPhone two-finger pinch should increase zoom without triggering a flip.
+  const zoomBeforePinch=Number(await postcard.getAttribute('data-postcard-zoom'));
+  await card.evaluate(el=>{
+   const r=el.getBoundingClientRect();
+   const fire=(type,id,x,y)=>el.dispatchEvent(new PointerEvent(type,{
+    bubbles:true,pointerType:'touch',pointerId:id,isPrimary:id===51,clientX:r.left+x,clientY:r.top+y
+   }));
+   fire('pointerdown',51,80,90);
+   fire('pointerdown',52,120,90);
+   fire('pointermove',51,55,90);
+   fire('pointermove',52,150,90);
+   fire('pointerup',51,55,90);
+   fire('pointerup',52,150,90);
+  });
+  assert(Number(await postcard.getAttribute('data-postcard-zoom'))>zoomBeforePinch,'postcard supports two-finger zoom');
   await page.getByRole('button',{name:'Voltear postal'}).click();
   await page.locator('.cx-postcard-experience[data-postcard-side="back"]').waitFor();
   await page.getByText(/Lorem ipsum dolor sit amet/).waitFor();
