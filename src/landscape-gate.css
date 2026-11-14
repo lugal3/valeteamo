@@ -1,0 +1,73 @@
+/* Global portrait notice — a single horizontal-only layout for all scenes. */
+.landscape-app-content{position:relative;width:100%;height:100%;height:100dvh}
+.blossom-landscape-gate[hidden]{display:none!important}
+.blossom-landscape-gate{
+ position:fixed;inset:0;z-index:2147483000;
+ display:flex;align-items:center;justify-content:center;
+ padding:max(20px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right))
+ max(18px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));
+ overflow:hidden;overscroll-behavior:none;
+ background:linear-gradient(145deg,#ffeaf2 0%,#fbd1e2 40%,#f6c2dc 77%,#efd3e8 100%);
+ font-family:Georgia,'Times New Roman',serif;color:#673d60;
+ text-align:center;isolation:isolate;
+}
+.blossom-landscape-gate:before{
+ content:'';pointer-events:none;position:absolute;inset:12px;
+ border:1px solid #fffaf4ab;border-radius:30px;
+ box-shadow:inset 0 0 48px #fff9f48c;
+}
+.blossom-turn-background{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.blossom-glow{position:absolute;display:block;width:80vw;aspect-ratio:1;border-radius:50%;filter:blur(15px)}
+.blossom-glow-a{top:-24%;left:-34%;background:radial-gradient(circle,#fffefaad,transparent 67%)}
+.blossom-glow-b{right:-31%;bottom:-25%;background:radial-gradient(circle,#f5a7d9a6,transparent 70%)}
+.blossom-petal{
+ position:absolute;width:clamp(11px,4vw,19px);height:clamp(8px,3vw,14px);
+ border-radius:90% 12% 80% 20%;background:linear-gradient(145deg,#fff8fb,#f7a2c4);
+ transform:rotate(20deg);box-shadow:0 2px 8px #c476a535;
+ opacity:.65;animation:blossom-drift linear infinite;
+}
+.blossom-petal:nth-of-type(3n){background:linear-gradient(145deg,#fff9e8,#fbd3e6);opacity:.85}
+.blossom-turn-card{
+ position:relative;z-index:1;box-sizing:border-box;width:min(410px,100%);
+ display:flex;flex-direction:column;align-items:center;gap:12px;
+ padding:clamp(22px,6vw,37px) clamp(20px,6vw,34px);
+ border:1px solid #fffaf6e0;border-radius:28px;
+ background:linear-gradient(154deg,#fffaf8ec,#fff1f4e8 69%,#ffe4efe8);
+ box-shadow:0 18px 65px #a45d8852,inset 0 1px #fff;
+ backdrop-filter:blur(12px);
+}
+.blossom-turn-emblem{height:115px;width:130px;position:relative;display:grid;place-items:center}
+.blossom-turn-device{width:100px;height:55px;border:5px solid #ba7599;border-radius:15px;background:#fff9f6;
+ display:grid;place-items:center;box-shadow:0 7px 21px #ac6c8d50;animation:blossom-turn 2.8s ease-in-out infinite}
+.blossom-turn-device-screen{display:grid;place-items:center;width:79px;height:36px;border-radius:8px;
+ background:linear-gradient(140deg,#ffc8e0,#e9a9d2);color:#9e4c80;font:26px Georgia}
+.blossom-turn-flower{position:absolute;top:2px;left:-5px;color:#ed82b0;font:45px Georgia;
+ text-shadow:1px 2px #fff;animation:blossom-bob 3s ease-in-out infinite}
+.blossom-turn-sparkle{position:absolute;right:-3px;top:3px;color:#d477a3;font:38px Georgia}
+.blossom-turn-eyebrow{font:700 10px/1.5 system-ui,sans-serif;letter-spacing:2px;color:#b37b9b}
+.blossom-turn-card h2{margin:0;font:normal clamp(31px,8vw,43px)/1.14 Georgia,serif;color:#764466}
+.blossom-turn-card p{margin:0;color:#855b78;font:14px/1.65 system-ui,sans-serif}
+.blossom-turn-card p strong{color:#a35c8f}
+.blossom-turn-divider{display:flex;align-items:center;gap:12px;width:80%;color:#cf87aa}
+.blossom-turn-divider i{height:1px;flex:1;background:linear-gradient(90deg,transparent,#d7a1bb,transparent)}
+.blossom-turn-card .blossom-turn-footnote{font-size:12px;color:#9c7890}
+.blossom-turn-card .blossom-turn-locknote{font-size:11px;line-height:1.5;color:#b1859c}
+.blossom-turn-caption{position:absolute;bottom:max(20px,env(safe-area-inset-bottom));left:0;right:0;
+ font:700 9px system-ui,sans-serif;letter-spacing:2px;color:#ac7392}
+@keyframes blossom-drift{
+ from{transform:translate3d(-16px,-20px,0) rotate(0deg)}
+ to{transform:translate3d(55px,80px,0) rotate(340deg)}
+}
+@keyframes blossom-turn{0%,100%{transform:rotate(-17deg) scale(.94)}50%{transform:rotate(0deg) scale(1)}}
+@keyframes blossom-bob{50%{transform:translateY(-5px) rotate(9deg)}}
+@media(max-height:580px){
+ .blossom-turn-card{gap:8px;padding:17px 23px}
+ .blossom-turn-emblem{height:78px}
+ .blossom-turn-card h2{font-size:28px}
+ .blossom-turn-card p{font-size:12px}
+ .blossom-turn-card .blossom-turn-locknote{font-size:10px}
+ .blossom-turn-caption{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+ .blossom-petal,.blossom-turn-device,.blossom-turn-flower{animation:none}
+}
