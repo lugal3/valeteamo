@@ -26,6 +26,7 @@ async function main(){
   await page.getByRole('heading',{name:/Hay algo/}).waitFor();
   await page.getByRole('button',{name:/Toca para abrir/}).click();
   await page.getByRole('heading',{name:/Una Galaxia de/}).waitFor({timeout:10000});
+  assert.equal(await page.locator('.cosmos-preview-controls,.cosmos-bottomline,.cosmos-decor-side,.cosmos-topbar').count(),0,'no old bottom or side bars in LP anywhere');
   await page.screenshot({path:'artifacts/video-reference-intro.png'});
   await page.getByRole('button',{name:/ENTRAR A NUESTRO UNIVERSO/}).click();
   await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="descent"]').waitFor();

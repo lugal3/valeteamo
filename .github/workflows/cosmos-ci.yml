@@ -10,6 +10,8 @@ on:
       - 'src/birthday-countdown.css'
       - 'tests/cosmos.cjs'
       - 'tests/galaxy-arrival.cjs'
+      - 'tests/tunnel-perspective.cjs'
+      - 'tests/cosmos-public-flow.cjs'
       - 'tests/cosmos-browser.cjs'
       - '.github/workflows/cosmos-ci.yml'
   workflow_dispatch:
@@ -28,9 +30,11 @@ jobs:
       - run: npm test
       - run: node tests/cosmos.cjs
       - run: node tests/galaxy-arrival.cjs
+      - run: node tests/tunnel-perspective.cjs
       - run: npm run build
       - run: npx playwright install chromium --with-deps
       - run: node tests/cosmos-browser.cjs
+      - run: node tests/cosmos-public-flow.cjs
       - name: Guardar capturas de la experiencia
         if: always()
         uses: actions/upload-artifact@v4
