@@ -272,7 +272,7 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
    <h1 id="cx-finale-title">Y esto es solo <em>el comienzo.</em></h1>
    <p className="cosmos-subtitle">La siguiente aventura continúa en nuestro mundo. Esta puerta ya está preparada para conectar el juego existente.</p>
    <div className="cosmos-finale-actions">
-    <button className="cosmos-cta" onClick={enterGame}>{preview?'Volver al panel de pruebas':'Comenzar la aventura'} <span>↗</span></button>
+    <button className="cosmos-cta" onClick={preview?onExit:enterGame}>{preview?'Volver al panel de pruebas':'Comenzar la aventura'} <span>↗</span></button>
     <button className="cosmos-link" onClick={()=>setScene('galaxy')}>Explorar otra vez ✧</button>
    </div>
   </section>}
