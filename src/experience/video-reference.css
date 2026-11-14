@@ -256,7 +256,7 @@
 @keyframes video-card-appear{from{opacity:0;transform:translateY(20px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes video-couple-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 @keyframes video-mascot-wave{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
-@keyframes video-button-breath{0%,100%{box-shadow:0 3px 20px #ff7da668;transform:scale(1)}50%{box-shadow:0 3px 30px #ff7da6ad;transform:scale(1.025)}}
+@keyframes video-button-breath{0%,100%{box-shadow:0 3px 20px #ff7da668}50%{box-shadow:0 3px 30px #ff7da6ad}}
 @keyframes video-mascot-run{0%{transform:translateY(0) scaleX(1)}50%{transform:translateY(-5px) scaleX(.96)}}
 @keyframes video-loading-pulse{0%{left:0}100%{left:69%}}
 @media(prefers-reduced-motion:reduce){
