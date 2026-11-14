@@ -58,6 +58,7 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
  const [clock,setClock]=useState(()=>secondsUntil());
  const [giftOpening,setGiftOpening]=useState(false);
  const [arrivalReady,setArrivalReady]=useState(false);
+ const [gearOpen,setGearOpen]=useState(false);
  const [replaySignal,setReplaySignal]=useState(0);
  const [skipSignal,setSkipSignal]=useState(0);
  const [installOpen,setInstallOpen]=useState(false);
@@ -84,6 +85,7 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
   timeout.current=window.setTimeout(()=>{setScene('intro');setGiftOpening(false);},1550);
  };
  const selectMemory=useCallback((memory:GalaxyMemory)=>{
+  setGearOpen(false);
   setSelected(memory);setSeen(v=>v.includes(memory.id)?v:[...v,memory.id]);setLetterOpen(false);setScene('memory');
  },[]);
  const parts=useMemo(()=>countdownParts(clock),[clock]);
@@ -95,17 +97,20 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
   setScene(current=>current==='loading'?'galaxy':current);
  },[]);
  const enterFromVideo=()=>{
+  setGearOpen(false);
   window.clearTimeout(timeout.current);
   setArrivalReady(false);
   setReplaySignal(n=>n+1);
   setScene('loading');
  };
  const skipVideo=()=>{
+  setGearOpen(false);
   setSkipSignal(n=>n+1);
   setArrivalReady(true);
   setScene('galaxy');
  };
  const openPreviewScene=(next:CosmosScene)=>{
+  setGearOpen(false);
   window.clearTimeout(timeout.current);setGiftOpening(false);
   if(next==='galaxy'||next==='loading'){
    setArrivalReady(false);
@@ -113,7 +118,13 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
   }
   setScene(next);
  };
- const leave=()=>{window.clearTimeout(timeout.current);onExit();};
+ const replayTunnel=()=>{
+  setGearOpen(false);
+  setArrivalReady(false);
+  setReplaySignal(n=>n+1);
+  setScene('loading');
+ };
+ const leave=()=>{setGearOpen(false);window.clearTimeout(timeout.current);onExit();};
  return <main className={'cosmos-experience cosmos-'+scene+' cosmos-palette-'+palette} style={vars}>
   <CosmosCanvas interactive={false} quality={quality}/>
   <VideoGalaxyCanvas visible={isVideoCosmos} interactive={isGalaxy&&arrivalReady}
@@ -121,15 +132,43 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
    onArrivalComplete={arrivalComplete} startCompleted={arrivalReady}
    replaySignal={replaySignal} skipSignal={skipSignal}/>
   <div className="cosmos-vignette" aria-hidden="true"/><Particles/>
-  <header className="cosmos-topbar">
+  {!isVideoCosmos&&<header className="cosmos-topbar">
    <div className="cosmos-signature"><span className="cosmos-signature-icon">✦</span><span>PARA VALE<small>UN UNIVERSO SOLO TUYO</small></span></div>
    <div className="cosmos-top-actions">
     <button type="button" onClick={()=>setInstallOpen(true)} title="Cómo abrir en iPhone">iPhone <span aria-hidden="true">↗</span></button>
     <button type="button" onClick={toggleAudio} aria-label={audioEnabled?'Silenciar ambiente':'Activar ambiente original'}>{audioEnabled?'♫ ON':'♫ OFF'}</button>
     <button type="button" onClick={leave} aria-label="Salir de la experiencia">✕</button>
    </div>
-  </header>
-  <div className="cosmos-decor-side" aria-hidden="true">EST. 05 · 12 · 2026 <span>✦</span> EL UNIVERSO DE VALE</div>
+  </header>}
+  {!isVideoCosmos&&<div className="cosmos-decor-side" aria-hidden="true">EST. 05 · 12 · 2026 <span>✦</span> EL UNIVERSO DE VALE</div>}
+  {isVideoCosmos&&<>
+   {gearOpen&&<div className="cosmos-gear-dismiss" onClick={()=>setGearOpen(false)} aria-hidden="true"/>}
+   <div className="cosmos-gear-wrap">
+    <button type="button" className="cosmos-gear-button" onClick={()=>setGearOpen(v=>!v)}
+     aria-label="Ajustes de la galaxia" aria-controls="cosmos-gear-panel" aria-expanded={gearOpen}
+     title="Pruebas y opciones">
+     <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10.1 2.6h3.8l.6 2.1 1.9.8 1.9-1.1 2.7 2.7-1.1 1.9.8 1.9 2.1.6v3.8l-2.1.6-.8 1.9 1.1 1.9-2.7 2.7-1.9-1.1-1.9.8-.6 2.1h-3.8l-.6-2.1-1.9-.8-1.9 1.1-2.7-2.7 1.1-1.9-.8-1.9-2.1-.6v-3.8l2.1-.6.8-1.9-1.1-1.9 2.7-2.7 1.9 1.1 1.9-.8z"/><circle cx="12" cy="12" r="3.3"/></svg>
+    </button>
+    {gearOpen&&<aside id="cosmos-gear-panel" className="cosmos-gear-panel" aria-label="Controles y pruebas">
+     <div className="cosmos-gear-panel-header"><strong>Universo</strong><button type="button" onClick={()=>setGearOpen(false)} aria-label="Cerrar opciones">×</button></div>
+     <p>Arrastra para girar · pellizca o usa la rueda para acercarte.</p>
+     <button onClick={replayTunnel}>↻ Repetir túnel y formación</button>
+     {scene==='loading'&&<button onClick={skipVideo}>✧ Ir a la galaxia</button>}
+     <div className="cosmos-gear-divider"/>
+     <span className="cosmos-gear-subhead">Recuerdos</span>
+     <div className="cosmos-gear-memory-list">
+      {MEMORIES.map(memory=><button key={memory.id} onClick={()=>selectMemory(memory)}>{memory.title}{seen.includes(memory.id)?' · visto':''}</button>)}
+     </div>
+     <div className="cosmos-gear-divider"/>
+     <button onClick={()=>{setGearOpen(false);setScene('suspense');}}>Continuar la historia</button>
+     {preview&&<><span className="cosmos-gear-subhead">Pruebas</span><div className="cosmos-gear-scene-list">
+      {(['countdown','gift','intro','loading','galaxy','suspense','finale'] as const).map(s=><button key={s} onClick={()=>openPreviewScene(s)}>{({countdown:'Contador',gift:'Regalo',intro:'Inicio',loading:'Túnel',galaxy:'Galaxia',suspense:'Misterio',finale:'Final'})[s]}</button>)}
+     </div></>}
+     <button className="cosmos-gear-exit" onClick={leave}>{preview?'← Volver al menú de pruebas':'← Salir del universo'}</button>
+    </aside>}
+   </div>
+  </>}
+
 
   {scene==='countdown'&&<section className="cosmos-content cosmos-countdown-content" aria-labelledby="cx-title">
    <span className="cosmos-kicker">✦ ALGO MÁGICO ESTÁ POR COMENZAR ✦</span>
@@ -173,27 +212,10 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
 
   {scene==='loading'&&<section className="video-reference-loading" aria-label="Animación de nacimiento de la galaxia">
    <div className="video-reference-loading-inner"><PixelMascot/><span>Encendiendo nuestro universo</span><div className="video-loading-indicator"><i/></div></div>
-   <button className="video-reference-skip" type="button" onClick={skipVideo}>Saltar animación ↗</button>
+
   </section>}
 
-  {scene==='galaxy'&&arrivalReady&&<section className="cosmos-galaxy-ui" aria-labelledby="cx-galaxy-title">
-   <div className="cosmos-galaxy-heading">
-    <span className="cosmos-kicker">✦ UNA GALAXIA DE AMOR PARA TI ✦</span>
-    <h1 id="cx-galaxy-title">Nuestro <em>universo.</em></h1>
-    <p>Un corazón, mil estrellas y nuestros recuerdos flotando entre ellas.</p>
-    <span className="cosmos-gesture">DESLIZA PARA GIRAR · TOCA UN CORAZÓN</span>
-   </div>
-   <div className="cosmos-galaxy-navigation" aria-label="Constelaciones disponibles">
-    {MEMORIES.map((memory,i)=><button key={memory.id} type="button" onClick={()=>selectMemory(memory)}>
-     <span className="cosmos-cluster-number">{String(i+1).padStart(2,'0')}</span>
-     <strong>{memory.title}</strong><small>{seen.includes(memory.id)?'VISITADA':'DESCUBRIR ✧'}</small>
-    </button>)}
-   </div>
-   <div className="cosmos-galaxy-footer">
-    <span>{seen.length} / {MEMORIES.length} CONSTELACIONES DESCUBIERTAS</span>
-    <button type="button" onClick={()=>setScene('suspense')}>Continuar el viaje <span>↗</span></button>
-   </div>
-  </section>}
+  {scene==='galaxy'&&arrivalReady&&<span className="cosmos-screenreader" aria-live="polite">Galaxia interactiva. Toca los corazones para descubrir recuerdos; engranaje para pruebas.</span>}
 
   {scene==='memory'&&<section className="cosmos-content cosmos-memory-content" aria-labelledby="cx-memory-title">
    <div className="cosmos-memory-shell">
@@ -242,8 +264,8 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
    </div>
   </section>}
 
-  <footer className="cosmos-bottomline"><span>✦ HECHO PARA VALE</span><span>{scene==='galaxy'?'EXPLORA TU UNIVERSO':'UN RECUERDO A LA VEZ'}</span><span>05.12.2026 ♡</span></footer>
-  {preview&&<div className="cosmos-preview-controls" aria-label="Escenas para pruebas">
+  {!isVideoCosmos&&<footer className="cosmos-bottomline"><span>✦ HECHO PARA VALE</span><span>UN RECUERDO A LA VEZ</span><span>05.12.2026 ♡</span></footer>}
+  {preview&&!isVideoCosmos&&<div className="cosmos-preview-controls" aria-label="Escenas para pruebas">
    {(['countdown','gift','intro','loading','galaxy','suspense','finale'] as const).map(s=><button key={s} onClick={()=>openPreviewScene(s)} className={scene===s?'active':''}>{({countdown:'Contador',gift:'Regalo',intro:'Inicio video',loading:'Animación',galaxy:'Galaxia',suspense:'Misterio',finale:'Final'})[s]}</button>)}
    <select aria-label="Paleta visual" value={palette} onChange={e=>setPalette(e.target.value as CosmosPalette)}><option value="rosado">Rosado</option><option value="aurora">Aurora</option><option value="medianoche">Medianoche</option></select>
    <select aria-label="Calidad gráfica" value={quality} onChange={e=>setQuality(e.target.value as Quality)}><option value="auto">Auto</option><option value="suave">Ligera</option><option value="alta">Alta</option></select>
