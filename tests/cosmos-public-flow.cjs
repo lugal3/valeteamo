@@ -11,7 +11,7 @@ async function main(){
   const port=server.httpServer.address().port;
   browser=await chromium.launch({headless:true});
   const context=await browser.newContext({
-   viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1
+   viewport:{width:844,height:390},isMobile:true,hasTouch:true,deviceScaleFactor:1
   });
   const page=await context.newPage();
   const errors=[];

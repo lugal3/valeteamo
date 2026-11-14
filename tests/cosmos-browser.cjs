@@ -9,7 +9,7 @@ async function main(){
   await server.listen();
   const port=server.httpServer.address().port;
   browser=await chromium.launch({headless:true});
-  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1,recordVideo:{dir:'artifacts',size:{width:390,height:844}}});
+  const context=await browser.newContext({viewport:{width:844,height:390},isMobile:true,hasTouch:true,deviceScaleFactor:1,recordVideo:{dir:'artifacts',size:{width:844,height:390}}});
   const page=await context.newPage(),errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   fs.mkdirSync('artifacts',{recursive:true});
