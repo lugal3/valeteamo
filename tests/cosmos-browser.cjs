@@ -37,11 +37,30 @@ async function main(){
   await page.screenshot({path:'artifacts/galaxy-arrival-2-unfold.png'});
   await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="heart-rise"]').waitFor({timeout:14000});
   await page.screenshot({path:'artifacts/galaxy-arrival-3-heart-rise.png'});
-  await page.getByRole('heading',{name:/Nuestro universo/}).waitFor({timeout:18000});
+  await page.getByRole('button',{name:'Ajustes de la galaxia'}).waitFor({timeout:20000});
+  await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="explore"]').waitFor({timeout:20000});
   assert.equal(await cinematicCanvas.getAttribute('data-qa-persistent'),'yes','loading-to-galaxy must preserve the same canvas/camera');
-  assert.equal(await cinematicCanvas.getAttribute('data-arrival-stage'),'explore');
-  await page.waitForTimeout(400); // El corazón y las constelaciones ya están completamente formados.
+  assert.equal(await page.locator('main.cosmos-galaxy button:visible').count(),1,'only the tiny gear is visible over the galaxy');
+  await page.waitForTimeout(350);
   await page.screenshot({path:'artifacts/cosmos-galaxia-iphone.png'});
+
+  const zoomBefore=Number(await cinematicCanvas.getAttribute('data-zoom-target'));
+  await page.mouse.move(190,470);
+  await page.mouse.wheel(0,-440);
+  await page.waitForTimeout(180);
+  const zoomAfterWheel=Number(await cinematicCanvas.getAttribute('data-zoom-target'));
+  assert(zoomAfterWheel>zoomBefore,'mouse wheel zooms into the galaxy');
+  await cinematicCanvas.evaluate(el=>{
+   const rect=el.getBoundingClientRect();
+   const fire=(type,id,x,y)=>el.dispatchEvent(new PointerEvent(type,{bubbles:true,pointerType:'touch',pointerId:id,isPrimary:id===901,clientX:rect.left+x,clientY:rect.top+y}));
+   fire('pointerdown',901,135,460);fire('pointerdown',902,225,460);
+   fire('pointermove',901,97,460);fire('pointermove',902,263,460);
+   fire('pointerup',901,97,460);fire('pointerup',902,263,460);
+  });
+  await page.waitForTimeout(180);
+  const zoomAfterPinch=Number(await cinematicCanvas.getAttribute('data-zoom-target'));
+  assert(zoomAfterPinch>zoomAfterWheel,'two-finger pinch expands the zoom');
+  await page.getByRole('button',{name:'Ajustes de la galaxia'}).click();
   await page.getByRole('button',{name:/Amor de mi Vida/}).click();
   await page.getByRole('heading',{name:/Amor de mi Vida/}).waitFor();
   await page.waitForTimeout(700);
@@ -50,14 +69,15 @@ async function main(){
   await page.getByRole('button',{name:/Abrir sobre de carta/}).click();
   await page.getByText(/Aquí irá una carta/).waitFor();
   await page.getByRole('button',{name:/Volver a la galaxia/}).click();
-  await page.getByRole('button',{name:/Continuar el viaje/}).click();
+  await page.getByRole('button',{name:'Ajustes de la galaxia'}).click();
+  await page.getByRole('button',{name:/Continuar la historia/}).click();
   await page.getByRole('heading',{name:/A veces, hasta las estrellas/}).waitFor();
   await page.getByRole('button',{name:/Seguir la luz/}).click();
   await page.getByRole('heading',{name:/Y esto es solo/}).waitFor();
   await page.getByRole('button',{name:/Volver al panel de pruebas/}).click();
   await page.getByRole('heading',{name:'Pruebas'}).waitFor();
   await page.getByRole('button',{name:/Galaxia rosa del video/}).click();
-  await page.getByRole('heading',{name:/Nuestro universo/}).waitFor();
+  await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="explore"]').waitFor({timeout:20000});
   await page.setViewportSize({width:932,height:430});
   await page.screenshot({path:'artifacts/cosmos-galaxia-horizontal.png'});
   assert.deepEqual(errors,[],'Sin errores JavaScript');
