@@ -25,6 +25,10 @@ async function main(){
   await page.getByRole('button',{name:/Simular desbloqueo/}).click();
   await page.getByRole('heading',{name:/Hay algo/}).waitFor();
   await page.getByRole('button',{name:/Toca para abrir/}).click();
+  await page.getByRole('heading',{name:/Una Galaxia de/}).waitFor({timeout:10000});
+  await page.screenshot({path:'artifacts/video-reference-intro.png'});
+  await page.getByRole('button',{name:/ENTRAR A NUESTRO UNIVERSO/}).click();
+  await page.getByText('Encendiendo nuestro universo').waitFor();
   await page.getByRole('heading',{name:/Nuestro universo/}).waitFor({timeout:10000});
   await page.screenshot({path:'artifacts/cosmos-galaxia-iphone.png'});
   await page.getByRole('button',{name:/El primer destello/}).click();

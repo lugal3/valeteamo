@@ -2,7 +2,7 @@
 // Todas las fechas, textos, colores y placeholders se editan aquí.
 export const UNLOCK_AT = '2026-12-05T00:00:00-03:00';
 export const UNLOCK_TIME_ZONE = 'America/Santiago';
-export type CosmosScene = 'countdown'|'gift'|'galaxy'|'memory'|'letter'|'suspense'|'finale';
+export type CosmosScene = 'countdown'|'gift'|'intro'|'loading'|'galaxy'|'memory'|'letter'|'suspense'|'finale';
 export type CosmosPalette = 'rosado'|'aurora'|'medianoche';
 export type Quality = 'auto'|'suave'|'alta';
 export interface GalaxyMemory {
@@ -19,7 +19,7 @@ export interface GalaxyMemory {
  tint:string;
 }
 export const PALETTES:Record<CosmosPalette,{pink:string;purple:string;blue:string;gold:string;dark:string}>={
- rosado:{pink:'#ff92c9',purple:'#aa79f8',blue:'#77b7ff',gold:'#ffe6aa',dark:'#090719'},
+ rosado:{pink:'#ff3198',purple:'#c03b92',blue:'#ff8ec9',gold:'#ffd2e6',dark:'#050104'},
  aurora:{pink:'#ffd0e4',purple:'#9a7de5',blue:'#73dfed',gold:'#fff0b9',dark:'#07141d'},
  medianoche:{pink:'#ed79ae',purple:'#7664da',blue:'#6a8dc8',gold:'#e7ca97',dark:'#080916'}
 };
