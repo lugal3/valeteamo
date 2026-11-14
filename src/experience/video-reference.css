@@ -274,3 +274,102 @@
  .cosmos-experience .cosmos-preview-controls{bottom:0!important}
  .cosmos-galaxy .cosmos-galaxy-footer{bottom:56px!important}
 }
+
+
+/* Immersive mode: the entire galaxy is the interface, except a tiny gear. */
+.cosmos-experience.cosmos-galaxy,.cosmos-experience.cosmos-loading {
+ overflow:hidden;
+ touch-action:none;
+}
+.cosmos-experience.cosmos-galaxy .cosmos-canvas,
+.cosmos-experience.cosmos-loading .cosmos-canvas {
+ visibility:hidden;
+}
+.cosmos-gear-dismiss {
+ position:fixed;inset:0;z-index:18;background:transparent;
+}
+.cosmos-gear-wrap {
+ position:absolute;z-index:24;
+ top:max(12px,env(safe-area-inset-top,0px));
+ left:max(12px,env(safe-area-inset-left,0px));
+ pointer-events:none;
+}
+.cosmos-experience .cosmos-gear-button {
+ pointer-events:auto;display:flex;align-items:center;justify-content:center;
+ padding:0!important;width:40px;height:40px;
+ border:1px solid rgba(255,177,218,.22)!important;
+ border-radius:50%!important;background:rgba(12,5,17,.28)!important;
+ color:rgba(255,216,237,.78)!important;
+ box-shadow:0 1px 12px rgba(0,0,0,.1)!important;
+ backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+ transition:background .15s,border-color .15s,opacity .15s;
+ opacity:.65;
+}
+.cosmos-experience .cosmos-gear-button:hover,
+.cosmos-experience .cosmos-gear-button:focus-visible,
+.cosmos-experience .cosmos-gear-button[aria-expanded="true"]{
+ opacity:1;background:rgba(39,9,27,.8)!important;
+ border-color:rgba(255,177,218,.6)!important;
+}
+.cosmos-gear-panel {
+ pointer-events:auto;position:absolute;left:0;top:50px;
+ width:min(288px,calc(100vw - 24px));max-height:calc(100dvh - 105px);
+ overflow:auto;overscroll-behavior:contain;
+ padding:14px;border:1px solid rgba(255,158,207,.36);
+ border-radius:14px;color:#ffedf6;text-align:left;
+ background:linear-gradient(155deg,rgba(27,8,24,.97),rgba(13,5,17,.95));
+ box-shadow:0 15px 55px rgba(0,0,0,.7),0 0 26px rgba(255,49,136,.08);
+ backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+ font:12px/1.4 system-ui,-apple-system,sans-serif;
+ animation:cosmos-gear-appear .16s ease-out both;
+ scrollbar-color:#713b5c transparent;scrollbar-width:thin;
+}
+.cosmos-gear-panel-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.cosmos-gear-panel-header strong{font:600 13px system-ui;letter-spacing:.03em}
+.cosmos-gear-panel-header button{
+ width:32px!important;height:32px!important;display:grid;place-items:center;
+ font-size:22px!important;padding:0!important;
+}
+.cosmos-gear-panel p{margin:3px 0 12px;color:#dbadbf;font-size:11px;line-height:1.5}
+.cosmos-gear-panel button:not(.cosmos-gear-button){
+ width:100%;text-align:left;min-height:34px;padding:9px 10px!important;
+ margin:1px 0;border:1px solid rgba(255,178,217,.08)!important;
+ border-radius:7px!important;background:rgba(255,179,217,.045)!important;
+ color:#ffdeef!important;box-shadow:none!important;
+ font:500 11px/1.3 system-ui!important;letter-spacing:0!important;
+}
+.cosmos-gear-panel button:hover,.cosmos-gear-panel button:focus-visible{
+ background:rgba(255,135,196,.17)!important;
+ border-color:rgba(255,172,213,.35)!important;
+}
+.cosmos-gear-panel-header button{width:30px!important;min-height:30px!important;text-align:center!important}
+.cosmos-gear-divider{height:1px;margin:10px 0 9px;background:rgba(255,179,224,.15)}
+.cosmos-gear-subhead{display:block;margin:6px 0 5px;font-size:9px;letter-spacing:.16em;color:#eaa7c8;text-transform:uppercase}
+.cosmos-gear-memory-list{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.cosmos-gear-memory-list button{font-size:10px!important;min-height:34px}
+.cosmos-gear-scene-list{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.cosmos-gear-scene-list button{text-align:center!important;min-height:34px!important;padding:6px 4px!important}
+.cosmos-gear-panel .cosmos-gear-exit{
+ margin-top:11px!important;border:1px solid rgba(255,174,215,.32)!important;
+ background:rgba(255,111,185,.13)!important;
+}
+@keyframes cosmos-gear-appear{
+ from{opacity:0;transform:translateY(-5px)}
+ to{opacity:1;transform:translateY(0)}
+}
+/* The tunnel must remain visible: loading label disappears quickly. */
+.cosmos-loading .video-reference-loading-inner{
+ animation:cosmos-loading-whisper 2.5s ease-in forwards;
+}
+@keyframes cosmos-loading-whisper{
+ 0%,18%{opacity:.8}
+ 88%,100%{opacity:0}
+}
+@media(max-height:520px) and (orientation:landscape){
+ .cosmos-gear-panel{max-height:calc(100dvh - 70px);top:45px;width:275px}
+ .cosmos-gear-wrap{top:6px;left:max(8px,env(safe-area-inset-left,0px))}
+}
+@media(prefers-reduced-motion:reduce){
+ .cosmos-gear-panel,.cosmos-loading .video-reference-loading-inner{animation:none!important}
+ .cosmos-loading .video-reference-loading-inner{opacity:0}
+}

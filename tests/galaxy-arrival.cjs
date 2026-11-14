@@ -7,20 +7,23 @@ const output=ts.transpileModule(code,{compilerOptions:{module:ts.ModuleKind.Comm
 const mod={};
 vm.runInNewContext(output,{exports:mod,Math});
 const at=mod.galaxyArrivalAt,seconds=mod.GALAXY_ARRIVAL_SECONDS;
-assert.equal(seconds,6.65);
-const stages=[[0,'descent'],[1.5,'star-tunnel'],[2.4,'approach'],[3.2,'unfold'],[4.2,'heart-rise'],[5.55,'camera-reveal'],[6.65,'explore']];
+assert.equal(seconds,9.1);
+const stages=[[0,'descent'],[1.8,'star-tunnel'],[3.7,'approach'],[4.8,'unfold'],[6.4,'heart-rise'],[8.1,'camera-reveal'],[9.1,'explore']];
 for(const [t,expected] of stages)assert.equal(at(t).stage,expected,'at '+t+'s');
-assert(at(0).focusY<at(1.5).focusY,'the camera must visibly descend');
-assert(at(1.3).spin>at(.3).spin,'star tunnel rotates over time');
-assert(at(0).zoom<at(2.5).zoom,'camera moves towards nucleus');
-assert(at(2.4).unfold<at(3.5).unfold,'spiral opens gradually');
-assert.equal(at(2.5).heart,0,'heart does not materialize before galaxy opens');
-assert(at(4.25).heart>0&&at(4.25).heart<1,'heart rises progressively');
-assert.equal(at(4).phrases,0,'orbital text waits for the reveal');
-assert(at(5.4).zoom>at(4.2).zoom,'camera performs a second final push');
-assert.equal(at(6.65).completed,true);
+assert(at(0).focusY<at(2.3).focusY,'the camera must visibly descend');
+assert(at(2.5).spin>at(.3).spin,'star tunnel rotates over time');
+assert(at(0).zoom<at(3.5).zoom,'camera moves towards nucleus');
+assert(at(4.35).unfold<at(5.75).unfold,'spiral opens gradually');
+assert.equal(at(4.9).heart,0,'heart does not materialize before galaxy opens');
+assert(at(6.45).heart>0&&at(6.45).heart<1,'heart rises progressively');
+assert.equal(at(7).phrases,0,'orbital text waits for the reveal');
+assert(at(8.75).zoom>at(7.1).zoom,'camera performs a second final push');
+assert.equal(at(9.1).completed,true);
 assert.equal(at(0,true).completed,true,'reduced-motion shows final view immediately');
-for(let i=0;i<=70;i++){
+assert.equal(mod.galaxyPinchZoom(1,100,200),2);
+assert.equal(mod.galaxyPinchZoom(1,100,50),.5);
+assert.equal(mod.galaxyPinchZoom(2,100,1000),2.65);
+for(let i=0;i<=100;i++){
  const a=at(i*.1),b=at((i+1)*.1);
  for(const k of ['descent','tunnel','approach','unfold','heart','phrases','reveal','worldBlend'])
   assert(a[k]>=0&&a[k]<=1&&a[k]<=b[k]+1e-9,k+' needs continuous nondecreasing progress');

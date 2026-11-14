@@ -1,6 +1,6 @@
 import {useEffect,useRef} from 'react';
 import {MEMORIES,type CosmosPalette,type GalaxyMemory,type Quality} from './cosmos-config';
-import {galaxyArrivalAt,GALAXY_ARRIVAL_SECONDS} from './galaxy-arrival';
+import {galaxyArrivalAt,galaxyPinchZoom,GALAXY_ARRIVAL_SECONDS} from './galaxy-arrival';
 
 const TAU=Math.PI*2;
 type Star={x:number;y:number;z:number;px:number;py:number;pz:number;size:number;seed:number;color:number};
@@ -63,9 +63,11 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
   let completed=completedOnMount.current;
   let previousStage='';
   let seenReplay=replay.current,seenSkip=skip.current;
-  let userYaw=0,userPitch=0,userZoom=1;
+  let userYaw=0,userPitch=0,userZoom=1,targetZoom=1;
   let camZoom=1,camFocusY=.55;
   let grab:{id:number;lastX:number;lastY:number;startX:number;startY:number}|null=null;
+  const pointers=new Map<number,{x:number;y:number}>();
+  let pinch:{startDistance:number;startZoom:number}|null=null;
   let hot:Hotspot[]=[];
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(reduced)seconds=GALAXY_ARRIVAL_SECONDS;
@@ -128,7 +130,8 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
    last=now;
    if(replay.current!==seenReplay){
     seenReplay=replay.current;
-    seconds=0;completed=false;userYaw=0;userPitch=0;userZoom=1;
+    seconds=0;completed=false;userYaw=0;userPitch=0;userZoom=1;targetZoom=1;
+    pointers.clear();pinch=null;grab=null;
    }
    if(skip.current!==seenSkip){
     seenSkip=skip.current;seconds=GALAXY_ARRIVAL_SECONDS;
@@ -146,8 +149,11 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
    }
    const camYaw=arrival.yaw+userYaw+(arrival.completed&&!reduced?.025*Math.sin(t*.17):0);
    const camPitch=clamp(arrival.pitch+userPitch,.16,1.24);
-   camZoom=clamp(arrival.zoom*userZoom,.5,1.85);
+   userZoom+=(targetZoom-userZoom)*Math.min(1,dt/100);
+   camZoom=clamp(arrival.zoom*userZoom,.35,3.3);
    camFocusY=arrival.focusY;
+   element.dataset.zoom=camZoom.toFixed(3);
+   element.dataset.zoomTarget=targetZoom.toFixed(3);
    const progress=arrival.tunnel;
    const hProgress=arrival.heart;
    const ringProgress=arrival.unfold;
@@ -169,40 +175,63 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
     ctx.fillStyle=neb;ctx.fillRect(0,0,w,h);
     for(const r of [.41,.67,1.15,1.8,2.56])ring(r*(.10+.90*arrival.unfold),camYaw,camPitch,t,ringProgress*(r<.7?.34:.08),r<.7?3.3:.7);
    }
-   // Reference shot 1: falling stars twist into a tunnel while the camera
-   // descends. Their projected pixels blend smoothly into the emerging disc.
-   const count=Math.floor(total*(.10+.90*ease(t/2.1)));
-   const discScale=.08+.92*arrival.unfold;
-   const minSide=Math.min(w,h);
-   const tunnelRadius=minSide*(.13+.48*arrival.tunnel+.14*arrival.approach);
-   const tunnelY=h*(.22+.34*arrival.descent);
+   // Incoming particle tunnel. The SAME stars later form the spiral galaxy:
+   // their screen positions interpolate continuously into their 3D disc slots.
+   const count=Math.floor(total*(.14+.86*ease(t/2.9)));
+   const discScale=.075+.925*arrival.unfold;
+   const side=Math.min(w,h);
+   const blend=arrival.worldBlend;
+   const tunnelCenterY=h*(.20+.33*arrival.descent);
    const tunnelCenterX=w*.5;
-   for(let i=0;i<count;i++){
-    const s=spiral[i];
-    const p=project(s.x*discScale,s.y*discScale,s.z*discScale,camYaw,camPitch);
-    const a=Math.atan2(s.pz,s.px)+arrival.spin+s.seed*.48;
-    const radial=Math.hypot(s.px,s.pz)/7.6;
-    const px=tunnelCenterX+Math.cos(a)*radial*tunnelRadius;
-    const py=tunnelY+Math.sin(a)*radial*tunnelRadius*.94;
-    const blend=arrival.worldBlend;
-    const sx=px*(1-blend)+p.x*blend;
-    const sy=py*(1-blend)+p.y*blend;
-    if(p.depth<=.5||sx<-8||sy<-8||sx>w+8||sy>h+8)continue;
-    const twinkle=reduced?1:.77+.23*Math.sin(t*2.6+s.seed*25);
-    const alpha=(.25+.69*progress)*twinkle*(s.color>.94?1:.78);
-    const radius=Math.max(.65,Math.min(2.45,s.size*p.scale/82));
-    const col=tinted[Math.floor(s.color*tinted.length)];
-    ctx.fillStyle='rgba('+col+','+alpha+')';
-    // Subtle radial streaks give the illusion of falling toward the lens.
-    if(blend<.9 && s.color>.962){
-     const length=(1-blend)*(1.1+4.1*arrival.approach)*(.45+s.seed);
-     const dx=Math.cos(a)*length,dy=Math.sin(a)*length;
-     ctx.lineWidth=Math.max(.5,radius*.6);
-     ctx.strokeStyle='rgba('+col+','+alpha*.45+')';
-     ctx.beginPath();ctx.moveTo(sx-dx,sy-dy);ctx.lineTo(sx,sy);ctx.stroke();
+   const tunnelSpan=side*(.32+.72*arrival.tunnel+.12*arrival.approach);
+   const tunnelVisible=arrival.tunnel*(1-blend);
+   if(tunnelVisible>.025){
+    // Loose rotating arcs suggest tunnel depth without becoming the finished
+    // neat concentric rings of the galaxy.
+    ctx.save();ctx.translate(tunnelCenterX,tunnelCenterY);ctx.scale(1,.88);
+    for(let i=0;i<7;i++){
+     const radius=tunnelSpan*(.09+i*.105);
+     const a=arrival.spin*(.61+i*.07)+i*1.17;
+     ctx.lineWidth=.7+(i%3)*.35;
+     ctx.strokeStyle='rgba(255,47,154,'+(tunnelVisible*(.055+i*.01))+')';
+     ctx.beginPath();ctx.arc(0,0,radius,a,a+1.0+arrival.tunnel*.3);ctx.stroke();
     }
-    if(s.color>.986){circle(sx,sy,radius*2,'rgba(255,174,220,'+alpha+')',4);}
-    else ctx.fillRect(sx,sy,radius,radius);
+    ctx.restore();
+    const haze=ctx.createRadialGradient(tunnelCenterX,tunnelCenterY,0,tunnelCenterX,tunnelCenterY,tunnelSpan*.42);
+    haze.addColorStop(0,'rgba(255,38,133,'+(tunnelVisible*.13)+')');
+    haze.addColorStop(1,'rgba(255,38,133,0)');
+    ctx.fillStyle=haze;ctx.fillRect(0,0,w,h);
+   }
+   for(let i=0;i<count;i++){
+    const star=spiral[i];
+    const p=project(star.x*discScale,star.y*discScale,star.z*discScale,camYaw,camPitch);
+    // A moving perspective depth makes stars fly past the camera instead of
+    // merely circling on a flat plane.
+    const depth=(star.seed+t*.205)%1;
+    const a=i*2.39996323+star.seed*TAU*1.65+arrival.spin*(1.12-depth*.32);
+    const radial=Math.pow(depth,1.62);
+    const radiusTunnel=tunnelSpan*(.025+radial*.76);
+    const tx=tunnelCenterX+Math.cos(a)*radiusTunnel;
+    const ty=tunnelCenterY+Math.sin(a)*radiusTunnel*.9+(depth-.5)*h*.11*arrival.descent;
+    const x=tx*(1-blend)+p.x*blend;
+    const y=ty*(1-blend)+p.y*blend;
+    if(p.depth<=.5||x<-18||y<-18||x>w+18||y>h+18)continue;
+    const twinkle=reduced?1:.77+.23*Math.sin(t*2.6+star.seed*25);
+    const alpha=(.15+.82*arrival.tunnel)*twinkle*(star.color>.93?1:.76);
+    const rDisc=Math.max(.7,Math.min(2.5,star.size*p.scale/85));
+    const rTunnel=.3+2.55*radial*radial;
+    const radius=rTunnel*(1-blend)+rDisc*blend;
+    const col=tinted[Math.floor(star.color*tinted.length)];
+    ctx.fillStyle='rgba('+col+','+alpha+')';
+    if(blend<.94&&depth>.38&&star.color>.875){
+     const trail=(1-blend)*(.9+13*depth*depth)*arrival.approach;
+     const dx=Math.cos(a)*trail,dy=Math.sin(a)*trail;
+     ctx.strokeStyle='rgba('+col+','+(alpha*.60)+')';
+     ctx.lineWidth=Math.max(.55,radius*.55);
+     ctx.beginPath();ctx.moveTo(x-dx,y-dy);ctx.lineTo(x,y);ctx.stroke();
+    }
+    if(star.color>.989)circle(x,y,radius*2.1,'rgba(255,199,232,'+alpha+')',4);
+    else ctx.fillRect(x,y,radius,radius);
    }
    // Central compact ring / black hole, bright fuchsia lens and white pink core.
    if(ringProgress>0){
@@ -296,19 +325,45 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
    ctx.globalCompositeOperation='source-over';
    raf=requestAnimationFrame(draw);
   }
+  const distance=(a:{x:number;y:number},b:{x:number;y:number})=>Math.hypot(a.x-b.x,a.y-b.y);
   const pointerDown=(e:PointerEvent)=>{
    if(!interaction.current||seconds<GALAXY_ARRIVAL_SECONDS)return;
+   if(e.pointerType==='mouse'&&e.button!==0)return;
+   pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+   try{el.setPointerCapture(e.pointerId);}catch{/* synthetic tests need not capture */}
+   if(pointers.size>=2){
+    const [a,b]=[...pointers.values()];
+    pinch={startDistance:Math.max(1,distance(a,b)),startZoom:targetZoom};
+    grab=null;return;
+   }
+   pinch=null;
    grab={id:e.pointerId,lastX:e.clientX,lastY:e.clientY,startX:e.clientX,startY:e.clientY};
-   el.setPointerCapture(e.pointerId);
   };
   const pointerMove=(e:PointerEvent)=>{
-   if(!interaction.current||!grab||grab.id!==e.pointerId)return;
+   if(!interaction.current||!pointers.has(e.pointerId))return;
+   pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+   if(pointers.size>=2){
+    if(!pinch){
+     const [a,b]=[...pointers.values()];
+     pinch={startDistance:Math.max(1,distance(a,b)),startZoom:targetZoom};
+    }
+    const [a,b]=[...pointers.values()];
+    targetZoom=galaxyPinchZoom(pinch.startZoom,pinch.startDistance,distance(a,b));
+    grab=null;return;
+   }
+   if(!grab||grab.id!==e.pointerId)return;
    userYaw-=(e.clientX-grab.lastX)*.005;
    userPitch=clamp(userPitch+(e.clientY-grab.lastY)*.003,-.40,.54);
    grab.lastX=e.clientX;grab.lastY=e.clientY;
   };
   const pointerUp=(e:PointerEvent)=>{
-   if(!interaction.current||!grab||grab.id!==e.pointerId)return;
+   if(!interaction.current||!pointers.has(e.pointerId))return;
+   const wasPinching=pinch!==null||pointers.size>1;
+   pointers.delete(e.pointerId);
+   if(wasPinching){
+    pinch=null;grab=null;return; // suppress accidental memory taps
+   }
+   if(!grab||grab.id!==e.pointerId)return;
    const movement=Math.hypot(e.clientX-grab.startX,e.clientY-grab.startY);
    grab=null;
    if(movement>12)return;
@@ -319,14 +374,22 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
     if(selected)callback.current?.(selected);
    }
   };
-  const wheel=(e:WheelEvent)=>{if(!interaction.current||seconds<GALAXY_ARRIVAL_SECONDS)return;e.preventDefault();userZoom=clamp(userZoom-e.deltaY*.0005,.72,1.38);};
+  const pointerCancel=(e:PointerEvent)=>{
+   pointers.delete(e.pointerId);pinch=null;grab=null;
+  };
+  const wheel=(e:WheelEvent)=>{
+   if(!interaction.current||seconds<GALAXY_ARRIVAL_SECONDS)return;
+   e.preventDefault();
+   const normalized=e.deltaY*(e.deltaMode===1?18:e.deltaMode===2?220:1);
+   targetZoom=clamp(targetZoom*Math.exp(-normalized*.00115),.50,2.65);
+  };
   const onVisibility=()=>{if(!document.hidden){last=performance.now();cancelAnimationFrame(raf);raf=requestAnimationFrame(draw);}else cancelAnimationFrame(raf);};
   const resizeObserver=new ResizeObserver(resize);
   resizeObserver.observe(el);resize();
   el.addEventListener('pointerdown',pointerDown);
   el.addEventListener('pointermove',pointerMove);
   el.addEventListener('pointerup',pointerUp);
-  el.addEventListener('pointercancel',pointerUp);
+  el.addEventListener('pointercancel',pointerCancel);
   el.addEventListener('wheel',wheel,{passive:false});
   document.addEventListener('visibilitychange',onVisibility);
   raf=requestAnimationFrame(draw);
@@ -335,7 +398,7 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
    el.removeEventListener('pointerdown',pointerDown);
    el.removeEventListener('pointermove',pointerMove);
    el.removeEventListener('pointerup',pointerUp);
-   el.removeEventListener('pointercancel',pointerUp);
+   el.removeEventListener('pointercancel',pointerCancel);
    el.removeEventListener('wheel',wheel);
    document.removeEventListener('visibilitychange',onVisibility);
   };
