@@ -28,7 +28,9 @@ async function main(){
   await page.getByRole('heading',{name:/Una Galaxia de/}).waitFor({timeout:10000});
   await page.screenshot({path:'artifacts/video-reference-intro.png'});
   await page.getByRole('button',{name:/ENTRAR A NUESTRO UNIVERSO/}).click();
-  await page.getByText('Encendiendo nuestro universo').waitFor();
+  await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="descent"]').waitFor();
+  assert.equal(await page.getByText('Encendiendo nuestro universo').count(),0,'no blocking loading card');
+  assert.equal(await page.locator('.video-reference-loading-inner').count(),0,'full screen tunnel, no progress overlay');
   const cinematicCanvas=page.locator('canvas.cosmos-video-canvas');
   await cinematicCanvas.evaluate(el=>{el.dataset.qaPersistent='yes';});
   await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="star-tunnel"]').waitFor({timeout:14000});
@@ -61,6 +63,12 @@ async function main(){
   await page.waitForTimeout(180);
   const zoomAfterPinch=Number(await cinematicCanvas.getAttribute('data-zoom-target'));
   assert(zoomAfterPinch>zoomAfterWheel,'two-finger pinch expands the zoom');
+  // The actual glowing heart, not the gear, must accept a tap.
+  const heartCenter=await cinematicCanvas.evaluate(el=>({x:Number(el.dataset.heartX),y:Number(el.dataset.heartY)}));
+  assert(Number.isFinite(heartCenter.x)&&Number.isFinite(heartCenter.y),'visible heart has a hit target');
+  await page.mouse.click(heartCenter.x,heartCenter.y);
+  await page.getByRole('dialog',{name:/Comenzamos nuestra aventura/}).waitFor();
+  await page.getByRole('button',{name:'Seguir explorando'}).click();
   await page.getByRole('button',{name:'Ajustes de la galaxia'}).click();
   await page.getByRole('button',{name:/Amor de mi Vida/}).click();
   await page.getByRole('heading',{name:/Amor de mi Vida/}).waitFor();
@@ -81,6 +89,12 @@ async function main(){
   await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="explore"]').waitFor({timeout:20000});
   await page.setViewportSize({width:932,height:430});
   await page.screenshot({path:'artifacts/cosmos-galaxia-horizontal.png'});
+  // Verify that the new heart menu really opens the ORIGINAL Phaser 2D entry.
+  await page.getByRole('button',{name:'Ajustes de la galaxia'}).click();
+  await page.getByRole('button',{name:/Abrir corazón/}).click();
+  await page.getByRole('dialog',{name:/Comenzamos nuestra aventura/}).waitFor();
+  await page.getByRole('button',{name:/Comenzar juego 2D/}).click();
+  await page.getByRole('heading',{name:/El jardín/}).waitFor({timeout:12000});
   assert.deepEqual(errors,[],'Sin errores JavaScript');
   await context.close();
   console.log('PASS: iPhone LP, contador, regalo, galaxia, recuerdo, carta, misterio, final y horizontal.');
