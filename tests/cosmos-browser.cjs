@@ -46,7 +46,7 @@ async function main(){
   await page.getByRole('heading',{name:/Y esto es solo/}).waitFor();
   await page.getByRole('button',{name:/Volver al panel de pruebas/}).click();
   await page.getByRole('heading',{name:'Pruebas'}).waitFor();
-  await page.getByRole('button',{name:/Galaxia y constelaciones/}).click();
+  await page.getByRole('button',{name:/Galaxia rosa del video/}).click();
   await page.getByRole('heading',{name:/Nuestro universo/}).waitFor();
   await page.setViewportSize({width:932,height:430});
   await page.screenshot({path:'artifacts/cosmos-galaxia-horizontal.png'});
