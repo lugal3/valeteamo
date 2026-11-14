@@ -228,7 +228,7 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
     <button type="button" className="cosmos-heart-start" onClick={()=>{setHeartMenuOpen(false);enterGame();}}>Comenzar juego 2D <span aria-hidden="true">↗</span></button>
     <button type="button" className="cosmos-heart-continue" onClick={()=>setHeartMenuOpen(false)}>Seguir explorando</button>
    </section>
-  </div>
+  </div>}
 
   {scene==='memory'&&<section className="cosmos-content cosmos-memory-content" aria-labelledby="cx-memory-title">
    <div className="cosmos-memory-shell">
