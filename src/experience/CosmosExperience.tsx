@@ -1,7 +1,7 @@
 import {useCallback,useEffect,useMemo,useRef,useState,type CSSProperties} from 'react';
 import {CosmosCanvas} from './CosmosCanvas';
 import {VideoGalaxyCanvas} from './VideoGalaxyCanvas';
-import {GalaxyCouple,PixelMascot} from './ReferenceCharacters';
+import {GalaxyCouple} from './ReferenceCharacters';
 import {createPreviewBridge} from './game-bridge';
 import {ASSET_GUIDE,DEFAULT_PALETTE,MEMORIES,PALETTES,UNLOCK_AT,countdownParts,secondsUntil,type CosmosPalette,type CosmosScene,type GalaxyMemory,type Quality} from './cosmos-config';
 import './cosmos.css';
@@ -59,6 +59,7 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
  const [giftOpening,setGiftOpening]=useState(false);
  const [arrivalReady,setArrivalReady]=useState(false);
  const [gearOpen,setGearOpen]=useState(false);
+ const [heartMenuOpen,setHeartMenuOpen]=useState(false);
  const [replaySignal,setReplaySignal]=useState(0);
  const [skipSignal,setSkipSignal]=useState(0);
  const [installOpen,setInstallOpen]=useState(false);
@@ -85,6 +86,7 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
   timeout.current=window.setTimeout(()=>{setScene('intro');setGiftOpening(false);},1550);
  };
  const selectMemory=useCallback((memory:GalaxyMemory)=>{
+  setHeartMenuOpen(false);
   setGearOpen(false);
   setSelected(memory);setSeen(v=>v.includes(memory.id)?v:[...v,memory.id]);setLetterOpen(false);setScene('memory');
  },[]);
@@ -97,6 +99,7 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
   setScene(current=>current==='loading'?'galaxy':current);
  },[]);
  const enterFromVideo=()=>{
+  setHeartMenuOpen(false);
   setGearOpen(false);
   window.clearTimeout(timeout.current);
   setArrivalReady(false);
@@ -104,12 +107,14 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
   setScene('loading');
  };
  const skipVideo=()=>{
+  setHeartMenuOpen(false);
   setGearOpen(false);
   setSkipSignal(n=>n+1);
   setArrivalReady(true);
   setScene('galaxy');
  };
  const openPreviewScene=(next:CosmosScene)=>{
+  setHeartMenuOpen(false);
   setGearOpen(false);
   window.clearTimeout(timeout.current);setGiftOpening(false);
   if(next==='galaxy'||next==='loading'){
@@ -119,16 +124,17 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
   setScene(next);
  };
  const replayTunnel=()=>{
+  setHeartMenuOpen(false);
   setGearOpen(false);
   setArrivalReady(false);
   setReplaySignal(n=>n+1);
   setScene('loading');
  };
- const leave=()=>{setGearOpen(false);window.clearTimeout(timeout.current);onExit();};
+ const leave=()=>{setHeartMenuOpen(false);setGearOpen(false);window.clearTimeout(timeout.current);onExit();};
  return <main className={'cosmos-experience cosmos-'+scene+' cosmos-palette-'+palette} style={vars}>
   {!isVideoCosmos&&<CosmosCanvas interactive={false} quality={quality}/>}
   <VideoGalaxyCanvas visible={isVideoCosmos} interactive={isGalaxy&&arrivalReady}
-   quality={quality} palette={palette} onSelect={selectMemory}
+   quality={quality} palette={palette} onSelect={selectMemory} onHeartSelect={()=>{setGearOpen(false);setHeartMenuOpen(true);}}
    onArrivalComplete={arrivalComplete} startCompleted={arrivalReady}
    replaySignal={replaySignal} skipSignal={skipSignal}/>
   <div className="cosmos-vignette" aria-hidden="true"/><Particles/>
@@ -153,6 +159,7 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
      <div className="cosmos-gear-panel-header"><strong>Universo</strong><button type="button" onClick={()=>setGearOpen(false)} aria-label="Cerrar opciones">×</button></div>
      <p>Arrastra para girar · pellizca o usa la rueda para acercarte.</p>
      <button onClick={replayTunnel}>↻ Repetir túnel y formación</button>
+     <button onClick={()=>{setGearOpen(false);setHeartMenuOpen(true);}}>♡ Abrir corazón</button>
      {scene==='loading'&&<button onClick={skipVideo}>✧ Ir a la galaxia</button>}
      <div className="cosmos-gear-divider"/>
      <span className="cosmos-gear-subhead">Recuerdos</span>
@@ -210,12 +217,18 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
    {preview&&<button type="button" className="video-reference-replay" onClick={()=>setScene('gift')}>← Volver al regalo</button>}
   </section>}
 
-  {scene==='loading'&&<section className="video-reference-loading" aria-label="Animación de nacimiento de la galaxia">
-   <div className="video-reference-loading-inner"><PixelMascot/><span>Encendiendo nuestro universo</span><div className="video-loading-indicator"><i/></div></div>
-
-  </section>}
+  {/* La llegada se dibuja sin recuadro de carga: deja el túnel completamente visible. */}
 
   {scene==='galaxy'&&arrivalReady&&<span className="cosmos-screenreader" aria-live="polite">Galaxia interactiva. Toca los corazones para descubrir recuerdos; engranaje para pruebas.</span>}
+  {heartMenuOpen&&scene==='galaxy'&&arrivalReady&&<div className="cosmos-heart-backdrop" onClick={e=>{if(e.target===e.currentTarget)setHeartMenuOpen(false);}}>
+   <section className="cosmos-heart-menu" role="dialog" aria-modal="true" aria-labelledby="cosmos-heart-menu-title">
+    <span className="cosmos-heart-menu-icon" aria-hidden="true">♡</span>
+    <h2 id="cosmos-heart-menu-title">¿Comenzamos nuestra aventura?</h2>
+    <p>La historia continúa en el juego 2D original.</p>
+    <button type="button" className="cosmos-heart-start" onClick={()=>{setHeartMenuOpen(false);enterGame();}}>Comenzar juego 2D <span aria-hidden="true">↗</span></button>
+    <button type="button" className="cosmos-heart-continue" onClick={()=>setHeartMenuOpen(false)}>Seguir explorando</button>
+   </section>
+  </div>
 
   {scene==='memory'&&<section className="cosmos-content cosmos-memory-content" aria-labelledby="cx-memory-title">
    <div className="cosmos-memory-shell">
