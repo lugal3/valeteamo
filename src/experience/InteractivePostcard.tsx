@@ -35,7 +35,7 @@ export function InteractivePostcard({photo,letter,title}:Props){
   setYaw(y=>y+180);
  };
  const reset=()=>{setYaw(0);setPitch(-6);setZoom(1);};
- const setZoomBy=(v:number)=>setZoom(z=>clamp(z+v,.80,1.72));
+ const setZoomBy=(v:number)=>setZoom(z=>clamp(z+v,.80,1.45));
  const onPointerDown=(e:ReactPointerEvent<HTMLDivElement>)=>{
   if(phase!=='inspecting')return;
   try{e.currentTarget.setPointerCapture(e.pointerId);}catch{/* synthetic gestures in browser tests */}
@@ -57,7 +57,7 @@ export function InteractivePostcard({photo,letter,title}:Props){
   if(pointers.current.size>=2){
    const [a,b]=[...pointers.current.values()];
    if(!gesture.current)gesture.current={pinchDistance:Math.max(1,distance(a,b)),pinchZoom:zoom};
-   setZoom(clamp(gesture.current.pinchZoom*distance(a,b)/gesture.current.pinchDistance,.80,1.72));
+   setZoom(clamp(gesture.current.pinchZoom*distance(a,b)/gesture.current.pinchDistance,.80,1.45));
    suppressClick.current=true;
    return;
   }
@@ -76,7 +76,7 @@ export function InteractivePostcard({photo,letter,title}:Props){
  const onWheel=(e:ReactWheelEvent<HTMLDivElement>)=>{
   if(phase!=='inspecting')return;
   e.preventDefault();
-  setZoom(z=>clamp(z*Math.exp(-e.deltaY*.0011),.80,1.72));
+  setZoom(z=>clamp(z*Math.exp(-e.deltaY*.0011),.80,1.45));
  };
  const onKeyDown=(e:ReactKeyboardEvent<HTMLDivElement>)=>{
   if(phase!=='inspecting')return;
