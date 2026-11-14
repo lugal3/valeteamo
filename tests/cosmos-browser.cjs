@@ -29,8 +29,18 @@ async function main(){
   await page.screenshot({path:'artifacts/video-reference-intro.png'});
   await page.getByRole('button',{name:/ENTRAR A NUESTRO UNIVERSO/}).click();
   await page.getByText('Encendiendo nuestro universo').waitFor();
-  await page.getByRole('heading',{name:/Nuestro universo/}).waitFor({timeout:10000});
-  await page.waitForTimeout(2400); // Captura el corazón ya formado, no solo el primer fotograma.
+  const cinematicCanvas=page.locator('canvas.cosmos-video-canvas');
+  await cinematicCanvas.evaluate(el=>{el.dataset.qaPersistent='yes';});
+  await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="star-tunnel"]').waitFor({timeout:14000});
+  await page.screenshot({path:'artifacts/galaxy-arrival-1-tunnel.png'});
+  await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="unfold"]').waitFor({timeout:14000});
+  await page.screenshot({path:'artifacts/galaxy-arrival-2-unfold.png'});
+  await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="heart-rise"]').waitFor({timeout:14000});
+  await page.screenshot({path:'artifacts/galaxy-arrival-3-heart-rise.png'});
+  await page.getByRole('heading',{name:/Nuestro universo/}).waitFor({timeout:18000});
+  assert.equal(await cinematicCanvas.getAttribute('data-qa-persistent'),'yes','loading-to-galaxy must preserve the same canvas/camera');
+  assert.equal(await cinematicCanvas.getAttribute('data-arrival-stage'),'explore');
+  await page.waitForTimeout(400); // El corazón y las constelaciones ya están completamente formados.
   await page.screenshot({path:'artifacts/cosmos-galaxia-iphone.png'});
   await page.getByRole('button',{name:/Amor de mi Vida/}).click();
   await page.getByRole('heading',{name:/Amor de mi Vida/}).waitFor();

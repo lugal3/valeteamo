@@ -9,6 +9,8 @@ on:
       - 'src/PlaytestMenu.tsx'
       - 'src/birthday-countdown.css'
       - 'tests/cosmos.cjs'
+      - 'tests/galaxy-arrival.cjs'
+      - 'tests/cosmos-browser.cjs'
       - '.github/workflows/cosmos-ci.yml'
   workflow_dispatch:
 permissions:
@@ -25,6 +27,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: node tests/cosmos.cjs
+      - run: node tests/galaxy-arrival.cjs
       - run: npm run build
       - run: npx playwright install chromium --with-deps
       - run: node tests/cosmos-browser.cjs
