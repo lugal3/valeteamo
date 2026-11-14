@@ -62,8 +62,9 @@ async function main(){
    ready:el.dataset.heartSelectable
   }));
   assert.equal(heart.ready,'true');
-  assert(heart.x>30&&heart.x<360&&heart.y>30&&heart.y<800,
-   'heart is physically tappable in iPhone viewport');
+  const view=await canvas.evaluate(el=>({width:el.clientWidth,height:el.clientHeight}));
+  assert(heart.x>20&&heart.x<view.width-20&&heart.y>20&&heart.y<view.height-20,
+   'heart remains physically tappable in the LANDSCAPE iPhone viewport');
   await page.mouse.click(heart.x,heart.y);
   await page.getByRole('dialog',{name:/Comenzamos nuestra aventura/}).waitFor();
   await page.screenshot({path:'artifacts/public-heart-2d-choice.png'});
