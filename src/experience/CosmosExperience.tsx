@@ -131,23 +131,14 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
   setScene('loading');
  };
  const leave=()=>{setHeartMenuOpen(false);setGearOpen(false);window.clearTimeout(timeout.current);onExit();};
- return <main className={'cosmos-experience cosmos-'+scene+' cosmos-palette-'+palette} style={vars}>
+ return <main data-visual-version="directional-tunnel-v3" className={'cosmos-experience cosmos-'+scene+' cosmos-palette-'+palette} style={vars}>
   {!isVideoCosmos&&<CosmosCanvas interactive={false} quality={quality}/>}
   <VideoGalaxyCanvas visible={isVideoCosmos} interactive={isGalaxy&&arrivalReady}
    quality={quality} palette={palette} onSelect={selectMemory} onHeartSelect={()=>{setGearOpen(false);setHeartMenuOpen(true);}}
    onArrivalComplete={arrivalComplete} startCompleted={arrivalReady}
    replaySignal={replaySignal} skipSignal={skipSignal}/>
   <div className="cosmos-vignette" aria-hidden="true"/><Particles/>
-  {!isVideoCosmos&&<header className="cosmos-topbar">
-   <div className="cosmos-signature"><span className="cosmos-signature-icon">✦</span><span>PARA VALE<small>UN UNIVERSO SOLO TUYO</small></span></div>
-   <div className="cosmos-top-actions">
-    <button type="button" onClick={()=>setInstallOpen(true)} title="Cómo abrir en iPhone">iPhone <span aria-hidden="true">↗</span></button>
-    <button type="button" onClick={toggleAudio} aria-label={audioEnabled?'Silenciar ambiente':'Activar ambiente original'}>{audioEnabled?'♫ ON':'♫ OFF'}</button>
-    <button type="button" onClick={leave} aria-label="Salir de la experiencia">✕</button>
-   </div>
-  </header>}
-  {!isVideoCosmos&&<div className="cosmos-decor-side" aria-hidden="true">EST. 05 · 12 · 2026 <span>✦</span> EL UNIVERSO DE VALE</div>}
-  {isVideoCosmos&&<>
+  {preview&&<>
    {gearOpen&&<div className="cosmos-gear-dismiss" onClick={()=>setGearOpen(false)} aria-hidden="true"/>}
    <div className="cosmos-gear-wrap">
     <button type="button" className="cosmos-gear-button" onClick={()=>setGearOpen(v=>!v)}
@@ -171,7 +162,16 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
      {preview&&<><span className="cosmos-gear-subhead">Pruebas</span><div className="cosmos-gear-scene-list">
       {(['countdown','gift','intro','loading','galaxy','suspense','finale'] as const).map(s=><button key={s} onClick={()=>openPreviewScene(s)}>{({countdown:'Contador',gift:'Regalo',intro:'Inicio',loading:'Túnel',galaxy:'Galaxia',suspense:'Misterio',finale:'Final'})[s]}</button>)}
      </div></>}
-     <button className="cosmos-gear-exit" onClick={leave}>{preview?'← Volver al menú de pruebas':'← Salir del universo'}</button>
+     <span className="cosmos-gear-subhead">Pantalla y sonido</span>
+     <button onClick={toggleAudio}>{audioEnabled?'♪ Silenciar ambiente':'♪ Activar ambiente'}</button>
+     <button onClick={()=>setInstallOpen(true)}>iPhone · Pantalla completa</button>
+     <label className="cosmos-gear-label">Paleta
+      <select aria-label="Paleta visual" value={palette} onChange={e=>setPalette(e.target.value as CosmosPalette)}><option value="rosado">Rosado</option><option value="aurora">Aurora</option><option value="medianoche">Medianoche</option></select>
+     </label>
+     <label className="cosmos-gear-label">Calidad
+      <select aria-label="Calidad gráfica" value={quality} onChange={e=>setQuality(e.target.value as Quality)}><option value="auto">Automática</option><option value="suave">Ligera</option><option value="alta">Alta</option></select>
+     </label>
+     <button className="cosmos-gear-exit" onClick={leave}>← Volver al menú de pruebas</button>
     </aside>}
    </div>
   </>}
@@ -277,12 +277,6 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
    </div>
   </section>}
 
-  {!isVideoCosmos&&<footer className="cosmos-bottomline"><span>✦ HECHO PARA VALE</span><span>UN RECUERDO A LA VEZ</span><span>05.12.2026 ♡</span></footer>}
-  {preview&&!isVideoCosmos&&<div className="cosmos-preview-controls" aria-label="Escenas para pruebas">
-   {(['countdown','gift','intro','loading','galaxy','suspense','finale'] as const).map(s=><button key={s} onClick={()=>openPreviewScene(s)} className={scene===s?'active':''}>{({countdown:'Contador',gift:'Regalo',intro:'Inicio video',loading:'Animación',galaxy:'Galaxia',suspense:'Misterio',finale:'Final'})[s]}</button>)}
-   <select aria-label="Paleta visual" value={palette} onChange={e=>setPalette(e.target.value as CosmosPalette)}><option value="rosado">Rosado</option><option value="aurora">Aurora</option><option value="medianoche">Medianoche</option></select>
-   <select aria-label="Calidad gráfica" value={quality} onChange={e=>setQuality(e.target.value as Quality)}><option value="auto">Auto</option><option value="suave">Ligera</option><option value="alta">Alta</option></select>
-  </div>}
   {installOpen&&<div className="cosmos-install-overlay" onClick={e=>{if(e.target===e.currentTarget)setInstallOpen(false);}}>
    <div className="cosmos-install-dialog" role="dialog" aria-modal="true" aria-labelledby="cosmos-install-title">
     <button className="cosmos-install-close" onClick={()=>setInstallOpen(false)} aria-label="Cerrar guía">✕</button>
