@@ -1,0 +1,37 @@
+name: Verificar experiencia cósmica (sin publicar)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/experience/**'
+      - 'src/BirthdayCountdown.tsx'
+      - 'src/StoryApp.tsx'
+      - 'src/PlaytestMenu.tsx'
+      - 'src/birthday-countdown.css'
+      - 'tests/cosmos.cjs'
+      - '.github/workflows/cosmos-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: node tests/cosmos.cjs
+      - run: npm run build
+      - run: npx playwright install chromium --with-deps
+      - run: node tests/cosmos-browser.cjs
+      - name: Guardar capturas de la experiencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cosmos-visual-check
+          path: artifacts/
+          if-no-files-found: ignore

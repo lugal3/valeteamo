@@ -1,0 +1,52 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const {chromium}=require('playwright');
+async function main(){
+ const {createServer}=await import('vite');
+ const server=await createServer({configFile:false,server:{host:'127.0.0.1',port:0,strictPort:true},logLevel:'silent'});
+ let browser;
+ try{
+  await server.listen();
+  const port=server.httpServer.address().port;
+  browser=await chromium.launch({headless:true});
+  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1});
+  const page=await context.newPage(),errors=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  fs.mkdirSync('artifacts',{recursive:true});
+  await page.goto('http://127.0.0.1:'+port+'/');
+  await page.getByRole('button',{name:'Administración'}).click();
+  await page.getByLabel('Código de acceso').fill('LP');
+  await page.getByRole('dialog',{name:'Administración'}).getByRole('button',{name:'Entrar'}).click();
+  await page.getByRole('button',{name:'Presiona cualquier botón para iniciar'}).click();
+  await page.getByRole('button',{name:'Pruebas',exact:true}).click();
+  await page.getByRole('button',{name:/Contador y colores/}).click();
+  await page.getByRole('heading',{name:/Hay momentos que/}).waitFor();
+  await page.screenshot({path:'artifacts/cosmos-contador-iphone.png'});
+  await page.getByRole('button',{name:/Simular desbloqueo/}).click();
+  await page.getByRole('heading',{name:/Hay algo/}).waitFor();
+  await page.getByRole('button',{name:/Toca para abrir/}).click();
+  await page.getByRole('heading',{name:/Nuestro universo/}).waitFor({timeout:10000});
+  await page.screenshot({path:'artifacts/cosmos-galaxia-iphone.png'});
+  await page.getByRole('button',{name:/El primer destello/}).click();
+  await page.getByRole('heading',{name:/El primer destello/}).waitFor();
+  await page.screenshot({path:'artifacts/cosmos-recuerdo-iphone.png'});
+  await page.getByRole('button',{name:/Abrir nuestra carta/}).click();
+  await page.getByRole('button',{name:/Abrir sobre de carta/}).click();
+  await page.getByText(/Aquí irá una carta/).waitFor();
+  await page.getByRole('button',{name:/Volver a la galaxia/}).click();
+  await page.getByRole('button',{name:/Continuar el viaje/}).click();
+  await page.getByRole('heading',{name:/A veces, hasta las estrellas/}).waitFor();
+  await page.getByRole('button',{name:/Seguir la luz/}).click();
+  await page.getByRole('heading',{name:/Y esto es solo/}).waitFor();
+  await page.getByRole('button',{name:/Volver al panel de pruebas/}).click();
+  await page.getByRole('heading',{name:'Pruebas'}).waitFor();
+  await page.getByRole('button',{name:/Galaxia y constelaciones/}).click();
+  await page.getByRole('heading',{name:/Nuestro universo/}).waitFor();
+  await page.setViewportSize({width:932,height:430});
+  await page.screenshot({path:'artifacts/cosmos-galaxia-horizontal.png'});
+  assert.deepEqual(errors,[],'Sin errores JavaScript');
+  await context.close();
+  console.log('PASS: iPhone LP, contador, regalo, galaxia, recuerdo, carta, misterio, final y horizontal.');
+ }finally{await browser?.close();await server.close();}
+}
+main().catch(error=>{console.error(error);process.exitCode=1;});
