@@ -38,8 +38,9 @@ export const MEMORIES:GalaxyMemory[]=[
  description:'Un rincón para un recuerdo relacionado con la música.',letter:'Espacio reservado para una dedicatoria musical.',
  image:'',pixelPortrait:'',x:1.45,y:-.28,z:.06,tint:'#87d9ff'},
  {id:'cartas',title:'Siempre juntos',eyebrow:'CONSTELACIÓN 05',
- description:'Una carta que se abrirá como un sobre entre las estrellas.',letter:'Querida Vale: [escribe aquí tu carta definitiva].',
- image:'',pixelPortrait:'',x:-.2,y:-.72,z:.54,tint:'#ffb9f2'},
+ description:'Un sobre con nuestra postal de Robin y Starfire. Al darle la vuelta, descubrirás una carta para ti.',
+ letter:'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas eget nulla nec urna feugiat blandit. Donec varius, eros sed accumsan cursus, lectus neque varius dolor, vel tincidunt lorem lectus eu nibh.\n\nAenean vitae nibh vitae eros cursus feugiat. Donec at lectus non leo accumsan cursus. Un día escribiré aquí nuestra historia.',
+ image:'/experience/postcards/robin-starfire.webp',pixelPortrait:'',x:-.2,y:-.72,z:.54,tint:'#ffb9f2'},
  {id:'lo-que-viene',title:'Lo que viene',eyebrow:'CONSTELACIÓN 06',
  description:'Un espacio para imaginar y recordar momentos nuevos.',letter:'Una página en blanco para todo lo que viene.',
  image:'',pixelPortrait:'',x:1.04,y:.72,z:.5,tint:'#ffe7a2'}
