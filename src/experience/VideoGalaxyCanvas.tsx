@@ -1,7 +1,7 @@
 import {useEffect,useRef} from 'react';
 import {MEMORIES,type CosmosPalette,type GalaxyMemory,type Quality} from './cosmos-config';
 import {galaxyArrivalAt,galaxyPinchZoom,GALAXY_ARRIVAL_SECONDS} from './galaxy-arrival';
-import {TUNNEL_STREAMS,tunnelStreamPoint} from './tunnel-perspective';
+import {softFilamentAngle,tunnelAperture} from './tunnel-perspective';
 
 const TAU=Math.PI*2;
 type Star={x:number;y:number;z:number;px:number;py:number;pz:number;size:number;seed:number;color:number};
@@ -178,65 +178,48 @@ export function VideoGalaxyCanvas({visible,interactive,palette,quality,onSelect,
     ctx.fillStyle=neb;ctx.fillRect(0,0,w,h);
     for(const r of [.41,.67,1.15,1.8,2.56])ring(r*(.10+.90*arrival.unfold),camYaw,camPitch,t,ringProgress*(r<.7?.34:.08),r<.7?3.3:.7);
    }
-   // Video-matched fly-through: stars travel in concentrated, directional
-   // streams converging on a vanishing point, NOT random independent angles.
-   // During the approach the stream aperture contracts; only then do these
-   // exact same particles unfold into their already-assigned galaxy positions.
-   const count=Math.floor(total*(.17+.83*ease(t/2.2)));
+   // Restored from the visually richer PR #9: organic star tunnel, smooth
+   // forward flow, bright pink dust. Only the particle directions are nudged
+   // into soft rotating filaments inspired by the video reference.
+   const count=Math.floor(total*(.13+.87*ease(t/2.15)));
    const discScale=.028+.972*arrival.unfold;
+   const span=Math.max(w,h)*.82;
+   const centerX=w*.5+Math.sin(t*1.14)*w*.017*(1-arrival.worldBlend);
+   const centerY=h*(.53-.035*arrival.descent);
    const blend=arrival.worldBlend;
-   const streamPresence=arrival.tunnel*(1-blend);
-   const centerX=w*.5,centerY=h*.505;
-   if(streamPresence>.02){
-    // Extremely soft guide ribbons: their tightly clustered stars form the
-    // main lines. The lines themselves must not look like stiff spokes.
-    ctx.save();ctx.lineWidth=.75;
-    for(let lane=0;lane<TUNNEL_STREAMS;lane++){
-     ctx.beginPath();
-     for(let j=0;j<=23;j++){
-      const d=.025+j/23*.92;
-      const p=tunnelStreamPoint(lane,.5,d,arrival.spin,arrival.approach,w,h);
-      if(j===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
-     }
-     const laneGlow=lane%4===0?1:.6;
-     ctx.strokeStyle='rgba(255,65,162,'+(streamPresence*.09*laneGlow)+')';
-     ctx.stroke();
-    }
-    ctx.restore();
-    // A dim center strengthens the depth illusion without a flat UI spinner.
-    const haze=ctx.createRadialGradient(centerX,centerY,1,centerX,centerY,Math.min(w,h)*.27);
-    haze.addColorStop(0,'rgba(7,0,10,'+(.35*streamPresence)+')');
-    haze.addColorStop(.4,'rgba(226,21,111,'+(.05*streamPresence)+')');
-    haze.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=haze;ctx.fillRect(0,0,w,h);
-   }
+   const swirl=arrival.spin*.72;
    for(let i=0;i<count;i++){
-    const star=spiral[i],lane=i%TUNNEL_STREAMS;
+    const star=spiral[i];
     const projected=project(star.x*discScale,star.y*discScale,star.z*discScale,camYaw,camPitch);
-    const flyDepth=(star.seed+t*(.34+.075*arrival.approach))%1;
-    const stream=tunnelStreamPoint(lane,star.color,flyDepth,arrival.spin,arrival.approach,w,h);
-    const x=stream.x*(1-blend)+projected.x*blend;
-    const y=stream.y*(1-blend)+projected.y*blend;
-    if(projected.depth<=.5||x<-23||y<-23||x>w+23||y>h+23)continue;
-    const twinkle=reduced?1:.82+.18*Math.sin(t*3.1+star.seed*26);
-    const laneBoost=lane%4===0?1.06:.87;
-    const alpha=Math.min(.99,(.39+.6*arrival.tunnel)*twinkle*laneBoost);
+    // Moving cylindrical tunnel: advancing depth drives perspective radius.
+    // Each particle starts near the distant central vanishing point, flies
+    // alongside the camera, then exits at the edges and repeats.
+    const flyDepth=(star.seed+t*(.33+.11*arrival.approach))%1;
+    const depthScale=Math.pow(flyDepth,2.25);
+    const originalAngle=i*2.399963229728653+star.seed*1.23;
+    const angle=softFilamentAngle(originalAngle,star.color,arrival.tunnel)
+     +swirl*(.44+.46*flyDepth);
+    const tunnelRadius=span*(.012+depthScale*.83)*tunnelAperture(arrival.approach);
+    const tx=centerX+Math.cos(angle)*tunnelRadius;
+    const ty=centerY+Math.sin(angle)*tunnelRadius*.91;
+    const x=tx*(1-blend)+projected.x*blend;
+    const y=ty*(1-blend)+projected.y*blend;
+    if(projected.depth<=.5||x<-24||y<-24||x>w+24||y>h+24)continue;
+    const twinkle=reduced?1:.79+.21*Math.sin(t*3.1+star.seed*26);
+    const alpha=(.43+.54*arrival.tunnel)*twinkle*(star.color>.93?1:.86);
     const rDisc=Math.max(.65,Math.min(2.6,star.size*projected.scale/82));
-    const near=Math.pow(flyDepth,2.2);
-    const rTunnel=.55+3.6*near*near;
+    const rTunnel=.65+4.1*depthScale*depthScale;
     const radius=rTunnel*(1-blend)+rDisc*blend;
     const col=tinted[Math.floor(star.color*tinted.length)];
-    // Forward motion produces aligned streaks following each lane's heading.
-    // Their lengths scale with depth, preserving a clear perspective.
-    if(blend<.94&&flyDepth>.23&&star.color>.39){
-     const trail=(1-blend)*(1.6+24*near)*(.38+.62*arrival.tunnel);
-     const dx=Math.cos(stream.angle)*trail,dy=Math.sin(stream.angle)*trail*.9;
-     ctx.lineWidth=Math.max(.65,radius*.53);
-     ctx.strokeStyle='rgba('+col+','+(alpha*.38)+')';
+    if(blend<.95&&flyDepth>.32&&star.color>.50){
+     const trail=(1-blend)*(1.4+23*depthScale)*(.4+.6*arrival.tunnel);
+     const dx=Math.cos(angle)*trail,dy=Math.sin(angle)*trail*.91;
+     ctx.lineWidth=Math.max(.6,radius*.62);
+     ctx.strokeStyle='rgba('+col+','+(alpha*.5)+')';
      ctx.beginPath();ctx.moveTo(x-dx,y-dy);ctx.lineTo(x,y);ctx.stroke();
     }
     ctx.fillStyle='rgba('+col+','+alpha+')';
-    if(star.color>.987)circle(x,y,radius*1.45,'rgba(255,210,240,'+alpha+')',4);
+    if(star.color>.987)circle(x,y,radius*1.55,'rgba(255,210,240,'+alpha+')',4);
     else ctx.fillRect(x,y,radius,radius);
    }
    // The dark central vanishing point becomes the spiral nucleus. Its
