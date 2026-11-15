@@ -60,7 +60,7 @@ async function play(){
     await btn.waitFor({state:'visible',timeout:6000});
     if(stage==='talk-luis'){
      const idleTexture=await page.evaluate(()=>window.__valePrologue.scene()?.storyLuis?.texture?.key);
-     assert(/^story-person-luis-(down|up|right)-idle-\\d$/.test(idleTexture??''),
+     assert(/^story-person-luis-(down|up|right)-idle-\d$/.test(idleTexture??''),
       'Luis must use the redesigned chibi idle sprite in the original scene');
      await page.screenshot({path:'artifacts/story-luis-chibi-idle.png'});
     }
@@ -68,7 +68,7 @@ async function play(){
     if(stage==='talk-luis'){
      await page.waitForFunction(()=>{
       const key=window.__valePrologue?.scene()?.storyLuis?.texture?.key??'';
-      return /story-person-luis-(down|up|right)-talk-\\d$/.test(key);
+      return /story-person-luis-(down|up|right)-talk-\d$/.test(key);
      },null,{timeout:6000});
      await page.screenshot({path:'artifacts/story-luis-chibi-talking.png'});
     }
