@@ -160,7 +160,7 @@ async function main(){
   await page.getByRole('dialog',{name:/Comenzamos nuestra aventura/}).waitFor();
   await page.getByRole('button',{name:/Comenzar juego 2D/}).click();
   await page.locator('.story-prologue .adventure-canvas canvas').waitFor({timeout:25000});
-  await page.getByRole('dialog',{name:'Conversación'}).waitFor({timeout:12000});
+  await page.locator('.story-prologue .prologue-guide').waitFor({timeout:12000});
   assert.deepEqual(errors,[],'Sin errores JavaScript');
   const video=page.video();
   await context.close();
