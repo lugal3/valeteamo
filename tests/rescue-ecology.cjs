@@ -89,7 +89,8 @@ assert(Math.abs(sample(30)-sample(60))<.005,
 assert(Math.abs(sample(60)-sample(120))<.005,
  'animal alarm response is frame-independent 60/120Hz');
 assert(E.ecologyHash(3,6,7)>=0&&E.ecologyHash(3,6,7)<1);
-assert(!/Math\\.random\\s*\\(/.test(source)&&!/setTimeout\\s*\\(/.test(source),
+const executable=source.split('\n').filter(line=>!line.trimStart().startsWith('//')).join('\n');
+assert(!executable.includes('Math.random(')&&!executable.includes('setTimeout('),
  'ecosystem must not generate nondeterministic events or running timers');
 assert(E.ECOLOGY_CAPS.wildlife<=8&&E.ECOLOGY_CAPS.flora<=18&&
  E.ECOLOGY_CAPS.particleMotes<=40,'mobile CPU/particle budget is finite');
