@@ -2,7 +2,7 @@
 
 **Rama de trabajo:** `feature/lois-ps2-option-b-rig`  
 **Base:** `e06061c55490b49709d697fe21becb24cc5ba0aa` (main, 15 nov 2026).  
-**Estado:** fase 1 iniciada, sin publicación a Firebase ni merge. Cada “.” del usuario autoriza avanzar UNA fase y crear el siguiente commit en esta misma rama.
+**Estado:** fase 2 — geometría alternativa PS2 B implementada y con pruebas de regresión. Sin publicación a Firebase ni merge. Cada “.” del usuario autoriza avanzar UNA fase y crear el siguiente commit en esta misma rama.
 
 ## Alcance y separación de identidad
 
@@ -27,18 +27,28 @@
 
 ## Fases (una por “.”)
 
-### Fase 1 — Auditoría y contrato técnico (esta entrega)
+### Fase 1 — Auditoría y contrato técnico (completada)
 - Rama aislada y contrato de identidad visual PS2 B (`src/lab/lois-ps2-profile.js`).
 - Especificación de proporciones, paleta, límite de triángulos, atlas, esqueleto humano y canales expresivos.
 - Adaptador determinista que muestrea las fases existentes sin alterar lógica o posición; metadato `visualPreset` no cambia el dibujo.
 - Test automático sin navegador y flujo CI exclusivo de rama; el modelo original debe renderizar igual.
 - **Criterio de salida:** `npm test`, `npm run build`, prueba del contrato PS2 y `tests/rc-car.cjs` aprobados. Ningún asset nuevo en producción.
 
-### Fase 2 — Geometría PS2 B alternativa
+### Fase 2 — Geometría PS2 B alternativa (implementada; QA en la rama)
 - Construir cuerpo low-poly: blazer oscuro, camiseta, pantalón, zapatos y manos, silueta y proporciones del diseño elegido.
 - Cara en malla continua (no 20 volúmenes superpuestos) con nariz, barbilla, pómulos y labios; cabello por mechones simplificados.
 - Conmutador reversible antiguo/nuevo **solo en la rama**; validación frontal, perfil, 3/4, fondo iluminado y oscuro.
 - Presupuestos diferenciados móvil y escritorio. **No reemplazar definitivamente hasta pasar visuales**.
+
+#### Implementación y verificación de la fase 2
+
+- Modelo alternativo: \`src/lab/lois-ps2-model.js\`, silueta de adulto esbelto, blazer oscuro con solapas y bolsillos, camiseta clara, pantalón oscuro, zapatos y flequillo castaño lateral.
+- Cabeza nueva: \`src/lab/lois-ps2-face.js\` aporta **una sola superficie paramétrica** con mandíbula, nariz, pómulos, labios y mentón modelados; \`u=0.5\` corresponde al frente, y la costura UV está atrás. Hay ojos y pelo como capas de geometría, no múltiples esferas para la cara.
+- Integración: \`geometry()\` reconoce \`shape:'lois-face'\`; \`pickupGeometry()\` selecciona PS2-B cuando \`visualPreset=lois-ps2-b-v1\`; \`louisPartPose()\` conserva el movimiento de todas las piezas usando \`rigGroup\` y \`rigSide\`.
+- Reversión: **establecer \`visualVariant:'legacy'\` en el NPC y reconstruir la geometría** para volver al modelo anterior, sin modificar guardados ni lógica. La función \`louisModel(piece)\` sin opciones sigue creando el modelo heredado.
+- Presupuestos medidos por \`tests/lois-ps2-mesh.cjs\`: **3.472 triángulos / 4.267 vértices** móvil y **6.376 triángulos / 8.245 vértices** escritorio. La integración actual escoge el preset móvil para todos los dispositivos, como opción conservadora. El modelo antiguo suma más triángulos y se mantiene como respaldo.
+- \`tests/lois-ps2-browser.cjs\` usa Vite/Playwright/SwiftShader y genera capturas del propio renderizador WebGL1, con vista frontal, perfil, 3/4, primer plano y modo fluido, además de un control con el modelo antiguo. La iluminación de las capturas es diagnóstica, no representa todas las condiciones de la casa.
+- El objetivo **todavía no** es parecido fotográfico definitivo: sin el atlas UV de fase 3, la cara es geométrica con colores planos, y la pose sigue usando la animación procedimental anterior (rig completo en fase 4). No presentar esta fase como textura final o modelo perfectamente igual a la referencia.
 
 ### Fase 3 — UV y texturas faciales
 - Desplegado UV estable para rostro/orejas/cuello, mapas sRGB; 512 px móvil y 1024 px escritorio si el dispositivo lo soporta.
