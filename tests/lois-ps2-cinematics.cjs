@@ -84,7 +84,7 @@ const fs=require('node:fs');
  for(const phase of ['untying','climb','hide','hidden','follow'])
   assert(typeof loisShotLabel(phase)==='string'&&LOIS_SCENE_TIMING[phase]>0);
  // Check real house placement and hooks, not simply isolated mathematical helpers.
- const house=fs.readFileSync(new URL('../src/lab/house.js',import.meta.url),'utf8');
+ const house=fs.readFileSync(require('node:path').join(__dirname,'../src/lab/house.js'),'utf8');
  for(const line of ['createLoisShotDirector()','advanceLoisShot(loisShotDirector','finishLoisShot(loisShotDirector',
   'loisShotDirector=null'])assert(house.includes(line),'house needs actual camera integration: '+line);
  assert(!house.includes("startLoisReaction(louis,'speak'"),
