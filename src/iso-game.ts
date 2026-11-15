@@ -606,6 +606,70 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   }
   this.checkStoryExit();
  }
+ // Small expressive glyphs are NOT RPG dialogue and cannot block input.
+ showStoryBubble(anchor:'kitty'|'louis'|'luis'|'target'|'van',emotion:RescueEmotion){
+  if(!this.story)return false;
+  const position=this.storyBubbleAnchor(anchor);
+  if(!position)return false;
+  const cue=storyBubble(emotion);
+  while(this.storyBubbles.length>=3)this.storyBubbles.shift()?.sprite.destroy();
+  const node=this.add.text(position.x,position.y-53,cue.text,{
+   fontFamily:'Georgia',fontSize:emotion==='fear'?'19px':'17px',
+   fontStyle:'bold',color:cue.color,
+   backgroundColor:'#51445a',padding:{x:7,y:3},
+   stroke:'#3a3049',strokeThickness:2
+  }).setOrigin(.5,1).setDepth(position.y+23).setAlpha(.95);
+  this.storyBubbles.push({sprite:node,at:this.clock,anchor});
+  return true;
+ }
+ storyBubbleAnchor(anchor:'kitty'|'louis'|'luis'|'target'|'van'){
+  if(anchor==='kitty')return toScreen(this.p);
+  if(anchor==='target')return toScreen(this.storyTarget);
+  if(anchor==='van')return toScreen(VAN_NIGHT_POSITION);
+  const sprite=anchor==='luis'?this.storyLuis:this.storyLouis;
+  return sprite?.active&&sprite.visible?{x:sprite.x,y:sprite.y}:null;
+ }
+ clearStoryBubbles(){
+  for(const bubble of this.storyBubbles)bubble.sprite.destroy();
+  this.storyBubbles=[];
+ }
+ updateStoryPerformance(dt:number){
+  if(!this.story)return;
+  const beat=storyboardBeat(this.storyStage,this.clock-this.storyStageAt);
+  if(beat&&!this.storyBeatPlayed){
+   const target=this.storyStage==='talk-luis'?'luis':
+    this.storyStage==='talk-louis'?'louis':
+    ['ribbon','petals','wheel'].includes(this.storyStage)?'target':'kitty';
+   this.showStoryBubble(target,beat);
+   this.storyBeatPlayed=true;
+  }
+  // Maintain expressive idle while Kitty moves, while dialogue locks and
+  // during story hints, without taking over scripted walks or the kidnapping.
+  if(!this.storyLouisWalk&&!this.storyAbduction&&this.storyLouis?.active&&
+   this.storyStage!=='walk-together'){
+   const npc=this.storyLouis,kitty=toScreen(this.p);
+   const face=storyActorFacing(kitty.x-npc.x,kitty.y-npc.y,this.storyLouisFacing);
+   this.storyLouisFacing=face;
+   const idle=storyActorIdle(this.clock,this.reducedMotion);
+   const texture=`chibi-louis-${face==='left'?'right':face}-${idle.frame}`;
+   if(this.textures.exists(texture)&&npc.texture.key!==texture)npc.setTexture(texture);
+   npc.setFlipX(face==='left');
+   npc.setAngle(idle.lean);
+   npc.setScale(1.3*(1+idle.breath),1.3*(1-idle.breath));
+  }
+  const remaining:typeof this.storyBubbles=[];
+  for(const bubble of this.storyBubbles){
+   const age=this.clock-bubble.at;
+   if(age>=1200||!bubble.sprite.active){bubble.sprite.destroy();continue;}
+   const p=this.storyBubbleAnchor(bubble.anchor);
+   if(!p){bubble.sprite.destroy();continue;}
+   bubble.sprite.setPosition(p.x,p.y-52-(this.reducedMotion?0:Math.sin(age/1200*Math.PI)*9))
+    .setDepth(p.y+23)
+    .setAlpha(Math.min(1,age/115)*(age>850?(1200-age)/350:1));
+   remaining.push(bubble);
+  }
+  this.storyBubbles=remaining;
+ }
  resetStoryFeel(){
   this.storyVelocity={u:0,v:0};
   this.storyLookAhead={x:0,y:0};
@@ -619,7 +683,16 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.storyLookAhead=feelCameraOffset(this.storyLookAhead,this.storyVelocity,dt,this.reducedMotion);
   // Preserve exactly the original zoom/follow formula; no camera shake or
   // dramatic forced pans during ordinary exploration.
-  this.cameras.main.setFollowOffset?.(-this.storyLookAhead.x,-this.storyLookAhead.y);
+  const abduction=this.storyAbduction,kitty=toScreen(this.p);
+  const shot=abduction?abductionFrame(abduction.elapsed,abduction.origin):undefined;
+  const target=shot?toScreen(['struggle','load'].includes(shot.phase)?
+   shot.victim:shot.van):kitty;
+  const focus=kidnappingFrameFocus(this.storyStage,shot?.phase,
+   abduction?.elapsed??0,kitty,target,this.reducedMotion);
+  this.storyDramaOffset=smoothCinematicFocus(this.storyDramaOffset,focus,dt,!abduction);
+  this.cameras.main.setFollowOffset?.(
+   -this.storyLookAhead.x-this.storyDramaOffset.x,
+   -this.storyLookAhead.y-this.storyDramaOffset.y);
  }
  storyFootfall(deltaDistance:number){
   this.storyStepTravel+=deltaDistance;
