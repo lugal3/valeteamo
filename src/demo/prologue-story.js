@@ -73,9 +73,9 @@ export function resetPrologue(){
 // character (young, 1D-era hairstyle), who will be kidnapped.
 export const PROLOGUE_DIALOGUES={
  intro:[
-  {speaker:'Kitty',text:'¡Qué bonito está el jardín! Voy a pasear un ratito antes de que caiga el sol.'},
-  {speaker:'Kitty',text:'Camino con el joystick o WASD. Cuando aparezcan sombras, puedo lanzar corazones con ♡ o ESPACIO.'},
-  {speaker:'Kitty',text:'¡¿Escuché a alguien pedir ayuda cerca de los cerezos?!'}
+  {speaker:'Kitty',text:'¡Qué bonito el sendero, el puente y esas flores! Escuché gritos cerca del jardín…'},
+  {speaker:'Kitty',text:'Ya aprendí: a la izquierda camino, a la derecha apunto y disparo. En PC uso WASD y las flechas o el mouse.'},
+  {speaker:'Kitty',text:'¡Allí! Hay alguien entre los cerezos. ¡Tengo que ayudarlo!'}
  ],
  victory:[
   {speaker:'Louis',text:'¡Uf! Gracias por salvarme. Esas cosas salieron de los árboles y no dejaban de seguirme.'},
@@ -99,7 +99,7 @@ export const PROLOGUE_DIALOGUES={
  ],
  abducted:[
   {speaker:'Kitty',text:'¡LOUIS! ¡No, no, no! ¡Desapareció delante de mí!'},
-  {speaker:'Kitty',text:'Dejó algo brillante en el suelo. Tengo que seguir las pistas antes de que anochezca.'},
+  {speaker:'Kitty',text:'Dejó algo brillante en el suelo. Tengo que seguir las pistas aunque el bosque se esté oscureciendo.'},
   {speaker:'Luis',text:'[Mensaje] Kitty, ¿estás bien? Vi unas huellas que van hacia las casas viejas. Te voy a ayudar.'}
  ],
  ribbon:[
@@ -126,15 +126,15 @@ export const PROLOGUE_DIALOGUES={
  ]
 };
 export const PROLOGUE_OBJECTIVES={
- intro:'Conoce los controles y comienza la aventura',
+ intro:'Explora el sendero y cruza el puente hacia el jardín',
  defend:'Protege a Louis: derrota a las sombras con corazones',
  'talk-louis':'Habla con Louis entre los cerezos',
- 'talk-luis':'Busca a Luis, tu novio, al final del jardín',
+ 'talk-luis':'Sigue el camino hasta Luis, tu novio',
  'walk-together':'Acompaña a Louis hasta el claro del bosque',
  disappearance:'¿Qué le ocurrió a Louis?',
  ribbon:'Busca la pulsera de Louis',
  petals:'Sigue los pétalos brillantes',
- wheel:'Investiga las huellas de ruedas junto a la casa',
+ wheel:'Investiga las huellas en la vereda del vecindario',
  door:'Comprueba la puerta principal',
  window:'Encuentra la ventana abierta',
  house:'Explora la casa en 3D'
