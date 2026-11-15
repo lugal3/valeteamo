@@ -56,7 +56,13 @@ async function check(){
     'player retains her existing chibi sprites rather than a new engine');
    await page.screenshot({path:'artifacts/feel-desktop-kitty-walking.png'});
    await page.keyboard.up('d');
-   await page.waitForTimeout(530);
+   // CI can throttle canvas frames during concurrent browser jobs. Wait for
+   // the actual simulated movement to settle instead of wall-clock guessing.
+   await page.waitForFunction(()=>{
+    const s=window.__valePrologue?.scene();
+    return s&&Math.hypot(s.storyVelocity.u,s.storyVelocity.v)<.12&&
+     Math.abs(s.storyLookAhead.x)<4;
+   },null,{timeout:2200});
    const rest=await page.evaluate(()=>{
     const s=window.__valePrologue.scene();
     return {p:{...s.p},v:{...s.storyVelocity},texture:s.player.texture.key,
@@ -91,7 +97,10 @@ async function check(){
    const a=Math.hypot(gentle.u-start.u,gentle.v-start.v);
    const b=Math.hypot(strong.u-gentle.u,strong.v-gentle.v);
    assert(a>.1&&b>a*1.5,'mobile analog stick must allow slow precision and faster full tilt');
-   await page.waitForTimeout(500);
+   await page.waitForFunction(()=>{
+    const s=window.__valePrologue?.scene();
+    return s&&Math.hypot(s.storyVelocity.u,s.storyVelocity.v)<.15;
+   },null,{timeout:1800});
    const state=await page.evaluate(()=>{
     const s=window.__valePrologue.scene();
     return {speed:Math.hypot(s.storyVelocity.u,s.storyVelocity.v),
