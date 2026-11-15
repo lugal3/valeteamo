@@ -30,7 +30,7 @@ assert.equal(P.kidnappingReaction('struggle','approach'),'fear');
 assert.equal(P.kidnappingReaction('load','struggle'),'fear');
 assert.equal(P.kidnappingReaction('escape','close'),'uneasy');
 assert.equal(P.kidnappingReaction('escape','escape'),null,'no repeated effects each frame');
-const from={x:40,y:45},to={x:400,y:260};
+const from={x:40,y:45},to={x:110,y:95};
 const timeline=['arrival','doors','disembark','approach','struggle','load','board','close','escape'];
 const offsets=timeline.map((phase,i)=>P.kidnappingFrameFocus('disappearance',phase,1900+i*500,from,to));
 assert(offsets.every(o=>Number.isFinite(o.x)&&Number.isFinite(o.y) &&
