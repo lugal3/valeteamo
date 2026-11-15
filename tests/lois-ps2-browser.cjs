@@ -16,7 +16,9 @@ const {chromium}=require('playwright');
   ]});
   const page=await browser.newPage({viewport:{width:844,height:580},deviceScaleFactor:1});
   const errors=[];page.on('pageerror',e=>errors.push(String(e)));
-  await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/');
+  // Isolated HTML avoids mounting the birthday app and its service-worker redirects.
+  await page.route('**/__lois_ps2_qa__',route=>route.fulfill({status:200,contentType:'text/html',body:'<!doctype html><html lang="es"><meta charset="utf-8"><title>Lois render QA</title><body></body></html>'}));
+  await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/__lois_ps2_qa__');
   fs.mkdirSync('artifacts',{recursive:true});
   const capture=async(variant,shot,quality='medium')=>{
    const data=await page.evaluate(async ({variant,shot,quality})=>{
