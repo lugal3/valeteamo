@@ -51,7 +51,8 @@ export function paintLuisChibi(
  const frameIndex=((Math.floor(frame)%LUIS_FRAME_COUNTS[pose])+LUIS_FRAME_COUNTS[pose])%LUIS_FRAME_COUNTS[pose];
  const walk=pose==='walk',talk=pose==='talk',wave=pose==='wave';
  const gait=walk?[0,3,0,-3][frameIndex]:0;
- const bob=walk?[0,-1,0,-2][frameIndex]:pose==='idle'&&frameIndex===2?-1:0;
+ const bob=walk?[0,-1,0,-2][frameIndex]:talk?[0,-1,1][frameIndex]:
+  pose==='idle'&&frameIndex===2?-1:0;
  const blink=pose==='idle'&&frameIndex===3;
  const mouthOpen=talk&&frameIndex!==0;
  const armSwing=walk?[1,-2,0,2][frameIndex]:wave?[0,-2,2,1][frameIndex]:0;
@@ -71,6 +72,7 @@ export function paintLuisChibi(
  b(15,bodyY+2,19,16,p.top);
  b(15,bodyY+11,19,5,p.topShade);
  b(16,bodyY+17,18,2,'#222a3d');
+ if(pose==='idle'&&frameIndex===1)b(16,bodyY+5,2,4,'#606982');
  b(20,bodyY,8,3,p.skinShade);
  b(21,bodyY-2,6,5,p.skin);
  if(!back){
