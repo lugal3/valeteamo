@@ -29,16 +29,29 @@
 - `tests/rescue-game-feel.cjs` valida 30/60/120 FPS, controles, frenado, idle/parpadeo, superficies, cámara, acompañante y separación del arcade.
 - `tests/rescue-feel-browser.cjs` valida movimientos reales en ventana de **1280×720** y paisaje de **844×390**: teclado, parada, cámara, pisadas, joystick suave/fuerte y animaciones. El flujo completo existente de los cuatro escenarios y del 3D también pasó.
 
-**Gate:** fase 2 NO debe iniciarse hasta que el usuario escriba literalmente `.`. No merge a `main` ni despliegue en Firebase hasta finalizar la fase 3 y aprobar la QA de las tres fases.
+**Gate de fase 1: aprobado.** El usuario envió `.` y se implementó la fase 2. No merge a `main` ni despliegue en Firebase hasta finalizar la fase 3 y aprobar la QA de las tres fases.
 
-## Fase 2 — Mundo vivo (PENDIENTE: primer punto)
+## Fase 2 — Mundo vivo (COMPLETADA Y VALIDADA)
 
 - Cuatro biomas diferenciados: ramas/vegetación que se mecen; flores que reaccionan al pasar Kitty; río con reflejos y ondas; mariposas, aves y animales tímidos, hojas y pétalos con sentido del viento.
 - Capas de profundidad, iluminación de tarde, niebla y luciérnagas, faroles nocturnos, iluminación suave de casas y ventanas, sonido ambiental localizado que se mezcla sin cortes.
 - Eventitos pasivos no repetitivos sin forzar diálogos; determinismo y recuentos máximos por pantalla para móviles.
 - Respetar atmósfera: mañana romántica → tarde cálida → crepúsculo misterioso → vecindario inquietante.
 
-## Fase 3 — Personajes, escenas y cine (PENDIENTE: segundo punto)
+### Entrega de fase 2 y control de calidad
+
+- **18 plantas** por mapa, con movimiento de ramas/flores/pasto, variación del viento y respuesta al paso de Kitty; **6–7 animales** visibles según el bioma (mariposas, gorriones, conejos, ardillas, zorros, búhos, polillas, gatos y cuervos). Se asustan y se apartan de manera continua, y regresan suavemente después. Nada de teletransporte ni diálogos.
+- Mañana: ondulaciones y reflejos extra en el río; tarde: luz dorada y sombras; bosque: neblina y luciérnagas; noche: brillo variable de ventanas, cortinas que se mecen, faroles y bruma. Microeventos discretos y no repetitivos (pétalos, destellos, ráfagas y ondas), con posiciones deterministas.
+- Audio original generado por WebAudio: río, pájaros, viento, insectos y un motor distante, con panoramización estéreo cuando el dispositivo la soporta, `mute` y cadencia baja para evitar fatiga.
+- Recursos acotados: solo objetos Phaser Graphics reutilizables, aproximadamente 30 FPS visuales, 18 plantas, 6–7 animales, 25–40 motas existentes, solo los elementos cercanos se redibujan. `prefers-reduced-motion` congela efectos decorativos. Todos los objetos se destruyen al abandonar cada mapa.
+- `tests/rescue-ecology.cjs` valida cuatro biomas, semillas, respuesta de vegetación, desplazamiento y vuelta de animales a 30/60/120 FPS, microeventos, límites móviles y reducción de movimiento.
+- `tests/prologue-browser.cjs` prueba **los cuatro ecosistemas en el navegador real**, las capturas de cada mapa, el secuestro con furgoneta LUNA-07, las pistas, entrada a ventana y el 3D. `tests/rescue-feel-browser.cjs` valida nuevamente la fase 1 en PC/iPhone; `tests/prologue-desktop.cjs` y `tests/emotes-browser.cjs` validan el resto.
+- **CI completamente aprobada (último cambio funcional):** https://github.com/lugal3/valeteamo/actions/runs/43749139228; capturas: https://github.com/lugal3/valeteamo/actions/runs/43749139228/artifacts/14175548066.
+- Diseño y QA documentados en `docs/RESCATE-FASE2-MUNDO-VIVO.md`. PR #22 en borrador, sin merge ni publicación.
+
+**Gate:** NO comenzar fase 3 antes del próximo `.` del usuario.
+
+## Fase 3 — Personajes, escenas y cine (PENDIENTE: siguiente punto)
 
 - Gesto y mirada contextual de Kitty, Luis y Louis; NPC que observan objetos/se acercan/se detienen; burbujas simples no bloqueantes en lugar de muchas conversaciones.
 - Transiciones suaves, mejores planos, ritmo y coreografía: combate, diálogo, aparición/despedida de Luis, secuestro con van zorro/conejo, investigación de pulsera/pétalos/huellas, hallazgo del vehículo LUNA-07 y ventana a la casa 3D.
@@ -48,5 +61,5 @@
 ## Seguimiento
 
 - **Fase 1: completada y validada.** CI final: https://github.com/lugal3/valeteamo/actions/runs/43743461803 (npm test, build, paisaje móvil, recorrido 2D completo, PC/teclado, nuevo test de sensibilidad en iPhone y PC, interior 3D y emotes). Capturas en https://github.com/lugal3/valeteamo/actions/runs/43743461803/artifacts/14173597640. **No publicada ni fusionada.**
-- Fase 2: pendiente de `.`.
-- Fase 3: pendiente de un segundo `.`.
+- **Fase 2: completada y validada.** CI verde: https://github.com/lugal3/valeteamo/actions/runs/43749139228. Capturas de los cuatro biomas: https://github.com/lugal3/valeteamo/actions/runs/43749139228/artifacts/14175548066. **No publicada ni fusionada.**
+- Fase 3: pendiente del próximo `.`. Solo después de esa fase y QA final se fusionará en `main` y publicará en Firebase.
