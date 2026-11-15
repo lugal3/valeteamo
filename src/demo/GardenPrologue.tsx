@@ -2,6 +2,11 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type Phaser from 'phaser';
 import {installReferenceCharacter} from '../reference-characters';
+import {buildArt} from '../art';
+import {buildChibi} from '../chibi-art';
+import {facingOf,type Facing} from '../animation';
+import {Sound} from '../audio';
+import {drawRescueIsoWorld} from './rescue-iso-world';
 import {installProloguePeople} from './prologue-art';
 import {
  PROLOGUE_START,PROLOGUE_DIALOGUES,PROLOGUE_OBJECTIVES,
@@ -13,7 +18,7 @@ import {isPhonePortrait} from '../LandscapeGate';
 import './garden-prologue.css';
 
 type Dialog={lines:PrologueLine[];index:number};
-type Enemy={body:Phaser.GameObjects.Container;hp:number;speed:number;hitAt:number;seed:number};
+type Enemy={body:Phaser.GameObjects.Sprite;hp:number;speed:number;hitAt:number;seed:number};
 type Shot={shape:Phaser.GameObjects.Text;vx:number;vy:number;ttl:number};
 const WORLD_W=2840,W=960,H=540;
 const min=(v:number,a:number,b:number)=>Math.max(a,Math.min(b,v));
@@ -54,6 +59,12 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
  const fireRef=useRef<()=>void>(()=>{}),actRef=useRef<()=>void>(()=>{});
  const stickRef=useRef({x:0,y:0}),stickId=useRef<number|null>(null);
  const heldFire=useRef(false),transitioning=useRef(false);
+ const audio=useRef(new Sound());
+ useEffect(()=>()=>audio.current.destroy(),[]);
+ useEffect(()=>{
+  audio.current.setTheme(run.stage==='defend'?'battle':
+   ['disappearance','ribbon','petals','wheel','door','window','house'].includes(run.stage)?'final':'garden');
+ },[run.stage]);
  const changed=useCallback((event:PrologueEvent)=>{
   const next=advancePrologue(phaseRef.current,event);
   if(next.stage===phaseRef.current.stage)return next;
@@ -98,6 +109,7 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
  },[dialog,letters]);
  useEffect(()=>{
   const handle=(e:KeyboardEvent)=>{
+   if(!e.repeat)void audio.current.start();
    if(!dialogRef.current)return;
    if(['Enter',' ','e','E'].includes(e.key)){
     e.preventDefault();e.stopImmediatePropagation();nextDialogRef.current();
@@ -144,7 +156,7 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
     const {default:Engine}=await import('phaser');
     if(cancelled||!stageRef.current)return;
     class StoryGarden extends Engine.Scene{
-     kitty!:Phaser.GameObjects.Image;
+     kitty!:Phaser.GameObjects.Sprite;
      louis!:Phaser.GameObjects.Image;
      luis!:Phaser.GameObjects.Image;
      shadow!:Phaser.GameObjects.Container;
@@ -152,19 +164,22 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
      enemies:Enemy[]=[];shots:Shot[]=[];
      keys!:Record<string,Phaser.Input.Keyboard.Key>;
      velocity={x:0,y:0};lastShot=0;lastHurt=0;fightOver=false;
+     facing:Facing='down';shootingUntil=0;
      actionPressed=false;introRan=false;abductionRan=false;lastPrompt='';
      worldMoon!:Phaser.GameObjects.Arc;
      clueMarkers:Phaser.GameObjects.Container[]=[];
      constructor(){super('vale-story-prologue');}
      preload(){
       this.load.image('kitty-reference-source',new URL('./sprites/kitty-reference-sheet.png',document.baseURI).href);
+      this.load.image('kitty-walk-source',new URL('./sprites/kitty-walk-sheet.png',document.baseURI).href);
      }
      create(){
       sceneRef.current=this;
-      this.cameras.main.setBackgroundColor('#f5cbdc');
+      this.cameras.main.setBackgroundColor('#f1e5d2');
       this.keys=this.input.keyboard!.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,E,SPACE,F') as Record<string,Phaser.Input.Keyboard.Key>;
       this.cameras.main.setBounds(0,0,WORLD_W,H);
-      this.drawWorld();
+      buildArt(this);buildChibi(this);
+      this.worldMoon=drawRescueIsoWorld(this,WORLD_W);
       installReferenceCharacter(this,'kitty');
       const faces=installProloguePeople(this);
       const kittyFrame=this.textures.get('chibi-kitty-down-0').getSourceImage() as HTMLCanvasElement;
@@ -174,32 +189,41 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
       kittyContext.imageSmoothingEnabled=false;
       kittyContext.drawImage(kittyFrame,0,0,48,60);
       setPortraits({...faces,kitty:kittyAvatar.toDataURL('image/png')});
-      this.kitty=this.add.image(posForStage(phaseRef.current.stage),337,'chibi-kitty-down-0').setScale(2.5).setDepth(18);
-      this.louis=this.add.image(722,326,'story-person-louis').setScale(1.83).setDepth(17);
-      this.luis=this.add.image(1220,326,'story-person-luis').setScale(1.83).setDepth(17);
-      this.add.text(713,253,'LOUIS',{fontFamily:'system-ui',fontStyle:'bold',fontSize:'13px',color:'#71375c',stroke:'#ffeff5',strokeThickness:4}).setOrigin(.5).setDepth(18);
-      this.add.text(1220,253,'LUIS ♡',{fontFamily:'system-ui',fontStyle:'bold',fontSize:'13px',color:'#71375c',stroke:'#ffeff5',strokeThickness:4}).setOrigin(.5).setDepth(18);
+      this.kitty=this.add.sprite(posForStage(phaseRef.current.stage),337,'chibi-kitty-down-0').setOrigin(.5,.9).setScale(1.3).setDepth(337);
+      this.louis=this.add.image(722,326,'story-person-louis').setOrigin(.5,1).setScale(.87).setDepth(326);
+      this.luis=this.add.image(1220,326,'story-person-luis').setOrigin(.5,1).setScale(.87).setDepth(326);
+      this.add.text(722,247,'LOUIS',{fontFamily:'monospace',fontStyle:'bold',fontSize:'12px',color:'#71375c',stroke:'#ffeff5',strokeThickness:3}).setOrigin(.5).setDepth(326);
+      this.add.text(1220,247,'LUIS ♡',{fontFamily:'monospace',fontStyle:'bold',fontSize:'12px',color:'#71375c',stroke:'#ffeff5',strokeThickness:3}).setOrigin(.5).setDepth(326);
       this.tweens.add({targets:[this.louis,this.luis],y:'-=3',duration:930,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
       this.cameras.main.startFollow(this.kitty,true,.12,.12,0,0);
+      const fitCamera=(width:number,height:number)=>{
+       if(width<=0||height<=0)return;
+       const zoom=Math.min(width/800,height/450)*1.08;
+       this.cameras.main.setZoom(zoom);
+       if(this.veil)this.veil.setSize(Math.ceil(width/zoom)+2,Math.ceil(height/zoom)+2);
+      };
+      fitCamera(this.scale.width,this.scale.height);
+      this.scale.on('resize',(size:{width:number;height:number})=>fitCamera(size.width,size.height));
       this.shadow=this.add.container(1620,315,[
        this.add.ellipse(0,0,92,128,0x271f48,.82),
        this.add.circle(-12,-24,3,0xff6ca8,1),this.add.circle(12,-24,3,0xff6ca8,1),
        this.add.ellipse(0,49,103,16,0x15142d,.23)
-      ]).setDepth(22).setAlpha(0).setVisible(false);
+      ]).setDepth(337).setAlpha(0).setVisible(false);
       for(const item of CLUES){
        const sprite=this.add.container(item.x,item.y,[
         this.add.circle(0,0,31,0xffe4ab,.30),
         this.add.text(0,-2,item.symbol,{fontFamily:'Georgia',fontSize:'37px',color:'#fff0c0',stroke:'#c177ab',strokeThickness:4}).setOrigin(.5)
-       ]).setVisible(false).setDepth(15);
+       ]).setVisible(false).setDepth(item.y+2);
        this.tweens.add({targets:sprite,y:item.y-9,duration:820,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
        this.clueMarkers.push(sprite);
       }
       // fixed-screen blue-violet dusk + deepening darkness, always a single scene
-      this.veil=this.add.rectangle(0,0,W,H,0x1a2248,1).setOrigin(0).setScrollFactor(0).setDepth(80).setAlpha(0);
+      this.veil=this.add.rectangle(0,0,W,H,0x1a2248,1).setOrigin(0).setScrollFactor(0).setDepth(8000).setAlpha(0);
+      this.veil.setSize(Math.ceil(this.scale.width/this.cameras.main.zoom)+2,Math.ceil(this.scale.height/this.cameras.main.zoom)+2);
       // Normal alpha compositing gives a perceptible blue-violet night in Canvas
       // and WebGL. Multiply was too subtle on some mobile renderers.
       this.veil.setBlendMode(Engine.BlendModes.NORMAL);
-      this.worldMoon.setDepth(81);
+      this.worldMoon.setDepth(8001);
       if(phaseRef.current.stage==='intro')showDialog(PROLOGUE_DIALOGUES.intro,()=>{changed('begin');this.spawnEnemies();});
       if(phaseRef.current.stage==='defend')this.spawnEnemies();
       if(['ribbon','petals','wheel','door','window'].includes(phaseRef.current.stage))this.louis.setVisible(false);
@@ -215,70 +239,12 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
        };
       }
      }
-     drawWorld(){
-      const g=this.add.graphics().setDepth(0);
-      g.fillStyle(0xffdce7).fillRect(0,0,WORLD_W,H);
-      g.fillStyle(0xd1e5bf).fillRect(0,164,WORLD_W,H-164);
-      g.fillStyle(0xbad8b2).fillRect(0,430,WORLD_W,110);
-      g.fillStyle(0xffe7c7).fillRoundedRect(34,270,WORLD_W-50,173,70);
-      g.fillStyle(0xf3d2b6).fillRoundedRect(74,300,WORLD_W-130,112,54);
-      g.fillStyle(0xaacba6).fillRect(0,171,WORLD_W,8);
-      // Blossom trees and floating petals create a consistent pink 2D daytime
-      // palette. The latter part gradually becomes violet without a scene cut.
-      for(let i=0;i<50;i++){
-       const x=53+i*53+(i*13)%22;
-       const y=i%3===0?122:i%2===0?175:474;
-       const far=i%4===0;
-       g.fillStyle(0x8a6b78).fillRoundedRect(x-7,y-16,14,53,4);
-       g.fillStyle(0xf2a8c8).fillCircle(x,y-22,far?29:37);
-       g.fillStyle(0xf7bed4).fillCircle(x-15,y-29,far?20:25);
-       g.fillStyle(0xffd2e1).fillCircle(x+12,y-38,far?16:23);
-       for(let j=0;j<3;j++){
-        g.fillStyle(0xffe6ed).fillCircle(x+(j*17-18),y+(j%2?5:-15),2.5);
-       }
-      }
-      for(let i=0;i<135;i++){
-       const x=(i*91+77)%WORLD_W;
-       const y=190+(i*67)%230;
-       g.fillStyle(i%5===0?0xe8a3bb:0xfff3d3,.8);
-       g.fillCircle(x,y,i%3===0?3:1.8);
-      }
-      for(let i=0;i<26;i++){
-       const x=i*110+53,y=247+(i%3)*105;
-       g.fillStyle(0xf5abc7).fillCircle(x,y,5);
-       g.fillStyle(0xfce2ed).fillCircle(x+4,y+3,3);
-      }
-      // Fairy-tale -> nightmare: an unmistakably closed house and a visible
-      // upper window that matches the 3D entry animation.
-      g.fillStyle(0x66516f).fillRoundedRect(2420,143,365,327,12);
-      g.fillStyle(0x3c3256).fillRoundedRect(2440,164,323,302,6);
-      g.fillStyle(0x3a2b4e).fillTriangle(2396,167,2600,45,2810,167);
-      g.fillStyle(0x7e5576).fillRect(2470,277,99,190);
-      g.lineStyle(7,0xe3aac5).strokeRect(2470,277,99,190);
-      g.fillStyle(0x3c2941).fillRect(2480,286,80,171);
-      g.fillStyle(0xefa5c9).fillCircle(2548,385,5);
-      g.fillStyle(0x9bd3df).fillRect(2653,208,89,106);
-      g.lineStyle(9,0xe6bcd3).strokeRect(2653,208,89,106);
-      g.lineStyle(5,0xfdf0f3).lineBetween(2695,208,2695,314);
-      g.lineStyle(5,0xfdf0f3).lineBetween(2653,263,2742,263);
-      g.fillStyle(0xffb7c7,.55).fillTriangle(2744,203,2794,183,2794,313);
-      this.add.text(2581,128,'CASA DEL BOSQUE',{fontFamily:'Georgia',fontStyle:'bold',fontSize:'19px',color:'#ffe7f6',stroke:'#211d32',strokeThickness:3}).setOrigin(.5);
-      this.add.text(2484,484,'PUERTA CERRADA',{fontFamily:'system-ui',fontSize:'14px',fontStyle:'bold',color:'#ffebf1',stroke:'#292034',strokeThickness:3}).setOrigin(.5);
-      this.add.text(2693,328,'VENTANA ABIERTA',{fontFamily:'system-ui',fontSize:'14px',fontStyle:'bold',color:'#ffebf1',stroke:'#292034',strokeThickness:3}).setOrigin(.5);
-      this.worldMoon=this.add.circle(2330,91,43,0xfaf5eb).setDepth(1).setAlpha(0);
-      this.add.text(340,125,'EL JARDÍN DE LOS DESEOS',{fontFamily:'Georgia',fontSize:'35px',color:'#a96b97',stroke:'#fff7f3',strokeThickness:5}).setOrigin(.5);
-      this.add.text(1520,113,'CLARO DE LOS CEREZOS',{fontFamily:'Georgia',fontSize:'27px',color:'#9c6091',stroke:'#ffeafa',strokeThickness:4}).setOrigin(.5);
-     }
      spawnEnemies(){
       if(this.enemies.length)return;
+      // Enemigos, escala y frames reutilizados del arcade 2D Corazones.
       for(const [i,x,y] of [[0,535,292],[1,650,376],[2,800,324]] as const){
-       const body=this.add.container(x,y,[
-        this.add.ellipse(0,4,47,39,0x3d2e57,.9),
-        this.add.ellipse(0,-10,30,28,0x57446e,.92),
-        this.add.circle(-8,-11,3.2,0xffcfec),this.add.circle(8,-11,3.2,0xffcfec),
-        this.add.ellipse(0,28,35,8,0x7c6181,.32)
-       ]).setDepth(14);
-       this.tweens.add({targets:body,scale:1.09,duration:660+i*140,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
+       const body=this.add.sprite(x,y,'kuromi-0')
+        .setOrigin(.5,.85).setScale(1.7).setTint(0xb3a0cc).setDepth(y);
        this.enemies.push({body,hp:i===2?4:3,speed:38+i*8,hitAt:0,seed:i*1.4});
       }
       setEnemyCount(this.enemies.length);
