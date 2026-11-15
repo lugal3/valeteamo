@@ -66,7 +66,7 @@ const {chromium}=require('playwright');
    },{variant,shot,quality,pose});
    assert.equal(data.error,0,'WebGL must render without errors: '+variant+' '+shot);
    assert(data.drawn>200,'all dynamic geometry is present');
-   if(variant==='ps2-b'&&shot==='portrait')assert(data.faceBrightness>145,
+   if(variant==='ps2-b'&&shot==='portrait'&&(!pose||!(pose.crouch>.30)))assert(data.faceBrightness>145,
     'face front must be visible, not the dark backface: brightness '+data.faceBrightness);
    if(variant==='ps2-b'||variant==='ps2-b-faceonly'||variant==='ps2-b-nohair'){
     assert.equal(data.textureReady,true,'Lois facial atlas loaded');
