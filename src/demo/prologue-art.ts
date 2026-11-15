@@ -54,7 +54,7 @@ export function paintLuisChibi(
  const bob=walk?[0,-1,0,-2][frameIndex]:pose==='idle'&&frameIndex===2?-1:0;
  const blink=pose==='idle'&&frameIndex===3;
  const mouthOpen=talk&&frameIndex!==0;
- const armSwing=walk?[1,-2,0,2][frameIndex]:0;
+ const armSwing=walk?[1,-2,0,2][frameIndex]:wave?[0,-2,2,1][frameIndex]:0;
  const waveUp=wave&&(frameIndex%3!==0);
  const b=(x:number,y:number,w:number,h:number,color:string)=>{
   c.fillStyle=color;c.fillRect(Math.round(x),Math.round(y),w,h);
@@ -79,6 +79,7 @@ export function paintLuisChibi(
   b(17,bodyY+3,2,5,p.skinLight);
   b(30,bodyY+3,2,5,p.skinLight);
   // Little stitched pink heart on the boyfriend's charcoal vest.
+  if(pose==='idle'&&frameIndex===1)b(18,bodyY+6,2,4,'#646e85');
   b(21,bodyY+8,3,2,'#f19bb5');b(25,bodyY+8,3,2,'#f19bb5');
   b(22,bodyY+10,5,3,'#dc7899');b(23,bodyY+13,3,2,'#e8a0b5');
  }else{
@@ -154,7 +155,7 @@ export function paintLuisChibi(
    // Warm blush, tiny nose, soft expression, clear spectacles.
    b(13,hy+25,6,2,'#efa0a0');b(33,hy+25,5,2,'#efa0a0');
    b(24,hy+25,2,2,p.skinShade);
-   if(mouthOpen){b(22,hy+28,7,4,'#82495a');b(24,hy+30,3,1,'#edabb0');}
+   if(mouthOpen){b(22,hy+28,7,frameIndex===2?3:4,'#82495a');b(24,hy+30,3,1,'#edabb0');}
    else{b(22,hy+28,7,1,'#925c62');b(24,hy+29,4,1,'#d18886');}
    b(14,hy+17,12,2,p.glass);b(27,hy+17,11,2,p.glass);
    b(14,hy+18,2,9,p.glass);b(24,hy+18,2,9,p.glass);
@@ -195,24 +196,85 @@ export function paintLuisChibi(
 
 // Louis keeps his established distinct identity/wardrobe; his walking and
 // combat sprites are still produced by buildChibi + installReferenceCharacter.
+// Historical Louis art is preserved unchanged; only Luis is redesigned.
 function paintLouisPortrait():HTMLCanvasElement{
+ const person:ProloguePerson='louis';
+ const DARK='#30243f',SKIN='#f5c9a9',SHADOW='#c38b82',HIGHLIGHT='#ffead7';
  const canvas=document.createElement('canvas');canvas.width=48;canvas.height=64;
  const c=canvas.getContext('2d')!;c.imageSmoothingEnabled=false;
- const b=(x:number,y:number,w:number,h:number,color:string)=>{c.fillStyle=color;c.fillRect(x,y,w,h);};
- const outline='#453343',skin='#f3c8a4';
- b(12,56,11,6,outline);b(27,56,11,6,outline);
- b(13,47,10,12,'#b94e61');b(27,47,10,12,'#b94e61');
- b(12,34,26,16,outline);b(14,35,22,14,'#f9f5ec');
- for(let y=38;y<47;y+=4)b(14,y,22,2,'#527495');
- b(9,36,6,13,skin);b(37,36,6,13,skin);
- b(21,30,8,7,skin);
- b(10,12,30,20,outline);b(12,12,26,20,skin);b(14,27,23,5,'#dca69b');
- b(16,19,8,5,'#fff9ed');b(29,19,7,5,'#fff9ed');
- b(19,20,3,4,'#619dc6');b(31,20,3,4,'#619dc6');
- b(22,29,8,1,'#ac727a');b(15,26,5,2,'#efadb2');b(32,26,5,2,'#efadb2');
- b(10,7,31,12,'#50382f');b(14,4,23,8,'#63453a');
- b(12,10,26,5,'#795449');b(14,14,17,5,'#4a322b');
- b(27,13,12,4,'#6d4a3c');b(34,16,5,5,'#4a322b');
+ const block=(x:number,y:number,w:number,h:number,color:string)=>{
+  c.fillStyle=color;c.fillRect(x,y,w,h);
+ };
+ const louis=person==='louis',hair=louis?'#4b302b':'#171b2d',
+  hairLight=louis?'#795044':'#303746';
+ // shoes and trousers
+ block(12,57,12,4,DARK);block(26,57,12,4,DARK);
+ block(13,45,10,13,louis?'#b6435c':'#303954');
+ block(26,45,10,13,louis?'#b6435c':'#303954');
+ block(13,51,10,2,louis?'#8b3348':'#273149');
+ block(26,51,10,2,louis?'#8b3348':'#273149');
+ block(12,59,12,3,'#221e34');block(25,59,13,3,'#221e34');
+ // upper arms; from viewer right is the character's anatomical LEFT
+ block(8,34,7,14,DARK);block(9,35,6,13,SKIN);
+ block(35,34,7,14,DARK);block(35,35,6,13,SKIN);
+ block(9,43,6,4,SHADOW);block(35,43,6,4,SHADOW);
+ // anatomical LEFT arm tattoo of Luis, clearly visible on viewer's right
+ if(!louis){
+  block(36,37,4,2,'#333446');block(35,40,5,2,'#45405a');
+  block(37,43,3,3,'#333446');block(35,46,5,1,'#32344c');
+  block(38,35,2,3,'#333446');
+ }
+ block(13,32,23,17,DARK);
+ block(15,34,19,13,louis?'#fff7f1':'#161d32');
+ if(louis){
+  for(let y=36;y<47;y+=4)block(15,y,19,2,'#455b8a');
+  block(20,33,11,2,'#faf8f6');
+ }else{
+  block(18,34,12,4,'#1b2539'); // sleeveless black tank
+  block(24,37,2,7,'#374460');
+ }
+ block(21,29,8,7,DARK);block(22,28,6,7,SKIN);
+ // large chibi face
+ block(10,9,30,25,DARK);
+ block(12,10,26,23,SKIN);
+ block(13,23,25,7,SHADOW);
+ block(13,10,25,18,SKIN);
+ block(16,27,4,2,'#eb9b9f');block(32,27,4,2,'#eb9b9f');
+ // ears
+ block(8,20,4,7,DARK);block(9,21,3,5,SKIN);
+ block(39,20,4,7,DARK);block(39,21,3,5,SKIN);
+ // eye whites + distinctive Louis blue irises, Luis warm brown
+ block(16,20,8,5,'#fff5ea');block(29,20,7,5,'#fff5ea');
+ block(19,21,3,4,louis?'#529ac0':'#5d453e');
+ block(31,21,3,4,louis?'#529ac0':'#5d453e');
+ block(20,22,1,2,'#1f233b');block(32,22,1,2,'#1f233b');
+ block(18,21,1,1,HIGHLIGHT);block(31,21,1,1,HIGHLIGHT);
+ // eyebrows
+ block(16,18,9,2,hair);block(29,18,8,2,hair);
+ // nose, smile
+ block(26,25,2,2,SHADOW);
+ block(22,29,8,1,'#9d5664');block(24,30,5,1,'#c47a82');
+ // hair, shadowed swept bangs
+ block(10,7,30,10,DARK);block(13,4,25,8,hair);
+ block(11,10,30,4,hair);block(11,14,7,6,hair);
+ block(34,12,6,7,hair);
+ if(louis){
+  block(9,11,11,5,hairLight);block(12,6,20,5,hairLight);
+  block(18,8,19,4,hair);block(28,10,11,5,hairLight);
+  block(15,14,16,4,hair); // iconic diagonal fringe
+  block(24,16,9,3,hairLight);
+  block(11,8,5,5,hairLight);block(33,5,4,7,hair);
+ }else{
+  block(12,6,24,7,hairLight);block(10,13,8,5,hair);
+  block(13,8,25,7,hair);block(17,13,11,3,hairLight);
+  // rectangular black spectacles; centers retain eye pupils
+  block(14,19,11,2,'#171c2b');block(29,19,9,2,'#171c2b');
+  block(14,19,2,8,'#171c2b');block(23,19,2,8,'#171c2b');
+  block(29,19,2,8,'#171c2b');block(36,19,2,8,'#171c2b');
+  block(25,21,4,2,'#171c2b');block(11,21,3,2,'#171c2b');
+  block(38,21,3,2,'#171c2b');
+  block(17,20,2,1,'#dde8ef');block(32,20,2,1,'#dde8ef');
+ }
  return canvas;
 }
 export function paintProloguePerson(person:ProloguePerson):HTMLCanvasElement{
