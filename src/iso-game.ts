@@ -805,7 +805,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
     moving=isoDistance(next,this.p)>.001;this.p=next;
     if(guidePoint&&isoDistance(this.p,guidePoint)<.18)this.houseRoute.shift();
     if(guidePoint&&!moving){
-     this.houseRoute=[];this.story?.guide('Hay una pared cerca. Sigue la vereda para rodear la casa.');
+     this.houseRoute=[]; // No story bridge in classic Corazones.
     }
     if(moving){
      this.moveClock+=dt*(.45+.55*strength);
