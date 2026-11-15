@@ -56,8 +56,23 @@ for(const id of ids)for(const u of [
 }
 const stages=['intro','defend','talk-louis','talk-luis','walk-together','disappearance',
  'ribbon','petals','wheel','door','window'];
-for(let i=1;i<stages.length;i++)assert(world.STORY_POSITIONS[stages[i]].u>
- world.STORY_POSITIONS[stages[i-1]].u,'all scenes retain increasing narrative progression');
+for(let i=1;i<stages.length;i++){
+ if(stages[i]==='window')continue;
+ assert(world.STORY_POSITIONS[stages[i]].u>world.STORY_POSITIONS[stages[i-1]].u,
+  'separate scenes retain forward narrative progression');
+}
+assert(world.STORY_POSITIONS.window.u<world.STORY_POSITIONS.door.u,
+ 'Kitty must turn BACK along the facade for the separate side window, not keep following a line');
+const toPixel=p=>({x:400+(p.u-p.v)*41,y:68+(p.u+p.v)*20});
+const footprint=toPixel({u:78.7,v:9.0});
+const frontDoor={x:footprint.x-225*.58+225*5.9/14,y:footprint.y-5};
+const portalDoor=toPixel(world.STORY_POSITIONS.door);
+assert(Math.hypot(portalDoor.x-frontDoor.x,portalDoor.y-frontDoor.y)<35,
+ 'locked door target is physically at the correct 3D facade entrance');
+const westWindow={x:footprint.x-225*.44,y:footprint.y-161*.27+105*.16};
+const portalWindow=toPixel(world.STORY_POSITIONS.window);
+assert(Math.hypot(portalWindow.x-westWindow.x,portalWindow.y-westWindow.y)<32,
+ 'window target is physically located at the actual south-west 3D intro window');
 assert.equal(world.darknessAt(5,'intro','morning_garden'),0);
 assert(world.darknessAt(32,'defend','afternoon_meeting')>0);
 assert(world.darknessAt(44,'disappearance','afternoon_meeting')>=.28);
@@ -82,7 +97,8 @@ assert(src.includes('drawBridge(scene)')&&src.includes('water.clear()')&&
  'animated river, accurate two-storey home and controlled scene cleanup');
 const house=fs.readFileSync('src/lab/house-layout.js','utf8');
 assert(house.includes('width:14,depth:12')&&house.includes('HEIGHT=3.15')&&
- src.includes('14×12 metres, 3.15m per floor')&&src.includes('5.9/14'),
+ src.includes('14×12 metres, 3.15m per floor')&&src.includes('5.9/14')&&
+ src.includes('the OPEN intro window in')&&src.includes('The other south windows have barricade boards.'),
  'isometric entrance, facade and floor proportions must match the 3D layout');
 assert(!src.includes('new Phaser.Game'),'no new Phaser game or secondary renderer');
 const house3d=fs.readFileSync('src/lab/house.js','utf8'),css3d=fs.readFileSync('src/lab/house.css','utf8');
