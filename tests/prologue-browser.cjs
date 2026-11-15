@@ -62,7 +62,18 @@ async function play(){
     await finishDialogue();
    }
   }
+  const intro=await page.evaluate(()=>{
+   const scene=window.__valePrologue.scene();
+   return {area:window.__valePrologue.area(),npc:!!scene.storyLouis,
+    river:!!scene.storyWorld?.water,stage:window.__valePrologue.stage()};
+  });
+  assert.equal(intro.area,'sendero','the story starts on the new path');
+  assert.equal(intro.npc,false,'Kitty starts ALONE; NPCs appear after exploring');
+  assert.equal(intro.river,true,'animated water must be built in the original Phaser scene');
+  assert.equal(await convo.isVisible(),false,'no intrusive dialog until after the bridge');
   await page.screenshot({path:'artifacts/story-acts1-2-introduction.png'});
+  // Exercise the exploration threshold rather than auto-starting combat.
+  await page.evaluate(()=>window.__valePrologue.teleport(999));
   await finishDialogue();
   await game.locator('xpath=self::*[@data-prologue-stage="defend"]').waitFor({timeout:10000});
   // Original Corazones controls: WASD for movement, arrows for hearts.
@@ -90,6 +101,15 @@ async function play(){
   await game.locator('xpath=self::*[@data-prologue-stage="door"]').waitFor();
   await page.waitForTimeout(2100);
   const dusk=await page.evaluate(()=>window.__valePrologue.dusk());
+  const night=await page.locator('.prologue-night').evaluate(element=>{
+   const bounds=element.getBoundingClientRect();
+   return {x:bounds.x,y:bounds.y,width:bounds.width,height:bounds.height,
+    pointer:getComputedStyle(element).pointerEvents};
+  });
+  assert.equal(night.x,0);
+  assert.equal(night.y,0);
+  assert(night.width>=844&&night.height>=390,'night layer covers the ENTIRE viewport');
+  assert.equal(night.pointer,'none','night does not eat desktop clicks');
   assert(dusk.alpha>.5&&dusk.fillAlpha===1,'night must visibly darken the garden; fillAlpha cannot be zero');
   await page.screenshot({path:'artifacts/story-three-clues-night.png'});
   await step('door',2490,/Probar puerta/);
