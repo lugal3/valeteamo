@@ -87,7 +87,7 @@ for(const key of ['feelMotion(this.storyVelocity','this.storyFootfall(traveled)'
  'RESCUE_FEEL.interactMs','if(this.story){\n   // Kinetic movement']){
  assert(original.includes(key),'rescue must integrate actual story game feel: '+key);
 }
-assert(original.includes('else{\n   const frame=moving?1+Math.floor(this.moveClock/115)%4'),
+assert(original.includes('else {\n   const frame=moving?1+Math.floor(this.moveClock/115)%4'),
  'classic Corazones animation branch must retain original animation expressions');
 assert(original.includes("camera.setZoom(Math.min(width/800,height/450)*1.08)"),
  'do not alter original camera zoom formula');
