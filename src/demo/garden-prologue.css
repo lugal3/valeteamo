@@ -183,3 +183,31 @@
 @media(max-height:440px){
  .story-prologue .prologue-van-clue{font-size:9px;padding:5px 6px}
 }
+
+/* FASE 1 · Reacción táctil, sin bloquear la cámara ni las zonas de joystick. */
+.story-prologue .prologue-interact{
+ min-height:48px;
+ min-width:156px;
+ font-weight:800;
+ border-width:2px;
+ border-color:#deb3c3;
+ box-shadow:0 4px 0 #ab8295,0 8px 16px #34273833;
+ -webkit-tap-highlight-color:transparent;
+ transition:transform 115ms ease,box-shadow 115ms ease,background 115ms ease;
+}
+.story-prologue .prologue-interact:active{
+ transform:translateY(3px) scale(.985);
+ box-shadow:0 1px 0 #ab8295,0 3px 7px #34273833;
+ background:#ffe8f0;
+}
+.story-prologue .prologue-interact:focus-visible{
+ outline:3px solid #ae658d;
+ outline-offset:3px;
+}
+@media(max-height:440px){
+ .story-prologue .prologue-interact{min-height:46px;min-width:148px}
+}
+@media(prefers-reduced-motion:reduce){
+ .story-prologue .prologue-interact{transition:none}
+ .story-prologue .prologue-interact:active{transform:none}
+}
