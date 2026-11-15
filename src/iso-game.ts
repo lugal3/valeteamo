@@ -8,7 +8,7 @@ import {ISO,constrain,isoDistance,screenVector,toScreen,type IsoPoint} from './i
 import {Sound} from './audio';
 import {installProloguePeople} from './demo/prologue-art';
 import {buildRescueOverworld,constrainRescue,darknessAt,STORY_POSITIONS,storyArrivalPoint,
- type RescueOverworld} from './demo/rescue-overworld';
+ type RescueOverworld,type RouteArea} from './demo/rescue-overworld';
 
 export type AdventureOffer={name:string,description:string};
 export type AdventureHud={hp:number,objective:string,complete:number,total:number,bombs:number,shield:boolean,offer?:AdventureOffer,bossHp?:number,bossMax?:number};
@@ -37,6 +37,7 @@ export type IsoStoryBridge={
  arrive:()=>void;
  guide:(message:string)=>void;
  dusk:(value:number)=>void;
+ area:(area:RouteArea)=>void;
 };
 type StoryActor=Phaser.GameObjects.Image;
 
@@ -54,6 +55,7 @@ export class IsoAdventure extends Phaser.Scene {
  storyObjects:Phaser.GameObjects.GameObject[]=[];
  storyLouis?:StoryActor;storyLuis?:StoryActor;storyVillain?:StoryActor;
  storyWorld?:RescueOverworld;storyDusk=0;storyGuideStep=-1;
+ storyArea:RouteArea='sendero';
  storyActionPressed=false;storyNear='';storyWalkTriggered=false;storyVictoryEmitted=false;
  storyTarget:IsoPoint={u:22,v:4.5};
  constructor(public level:1|2|3,public character:CharacterId,public report:(h:AdventureHud)=>void,public finish:(outcome:'win'|'dead')=>void,public onPause:(v:boolean)=>void,public audio:Sound,public ready:()=>void,public progress:(n:number)=>void=()=>{},public story?:IsoStoryBridge){super('iso-adventure');}
@@ -103,6 +105,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.story.near('');
   if(force)this.p=storyArrivalPoint(stage);
   this.p=constrainRescue(this.p);this.positionPlayer();
+  const startArea=this.storyWorld?.area(this.p.u);
+  if(startArea){this.storyArea=startArea;this.story.area(startArea);}
   this.total=stage==='defend'?3:0;this.collected=0;
   const actor=(id:'louis'|'luis',p:IsoPoint)=>{
    const xy=toScreen(p);
@@ -168,6 +172,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  updateStoryActors(dt:number){
   if(!this.story)return;
   const stage=this.storyStage;
+  const area=this.storyWorld?.area(this.p.u);
+  if(area&&area!==this.storyArea){this.storyArea=area;this.story.area(area);}
   const dusk=darknessAt(this.p.u,stage);
   if(Math.abs(dusk-this.storyDusk)>.018){
    this.storyDusk=dusk;this.story.dusk(dusk);
