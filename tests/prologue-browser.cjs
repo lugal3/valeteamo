@@ -30,7 +30,7 @@ async function play(){
 
   const game=page.locator('.story-prologue');
   await game.waitFor({timeout:20000});
-  await page.waitForFunction(()=>Boolean(window.__valePrologue),null,{timeout:15000});
+  await page.waitForFunction(()=>Boolean(window.__valePrologue?.scene()?.player?.texture),null,{timeout:15000});
   const realScene=await page.evaluate(()=>{
    const scene=window.__valePrologue.scene();
    return {key:scene.scene.key,zoom:scene.cameras.main.zoom,width:scene.scale.width,height:scene.scale.height,
