@@ -78,7 +78,7 @@ export function abductionFrame(time:number,center:IsoPoint):AbductionPose{
   doorOpen:t>=v.arrival&&t<v.close,
   victimVisible:t<v.close,
   captorsVisible:t>=v.doors&&t<v.board,
-  victimBehindVan:t>=v.struggle,
+  victimBehindVan:t>=v.struggle+(v.load-v.struggle)*.67,
   dust:t<v.arrival?Math.min(1,t/v.arrival):t>=v.close&&t<v.escape?
    Math.min(1,part(t,v.close,v.escape)*2):0,
   brake:t>=v.arrival&&t<v.close
