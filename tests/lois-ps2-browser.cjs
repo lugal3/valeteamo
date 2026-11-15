@@ -47,6 +47,7 @@ const {chromium}=require('playwright');
      shot==='threequarter'?{x:1.40,y:1.20,z:2.10,yaw:Math.PI+Math.atan(1.40/2.10),pitch:0}:
      {x:0,y:1.10,z:2.2,yaw:Math.PI,pitch:0};
     renderer.render(camera,true,1,false,{reduced:true,shotLight:.8});
+    const initialPerf={...renderer.loisRigMetrics};
     renderer.render(camera,true,1.02,false,{reduced:true,shotLight:.8});
     const perf={...renderer.loisRigMetrics}; // batch VBO updates in phase 6
     const gl=renderer.gl;gl.finish();
@@ -61,18 +62,21 @@ const {chromium}=require('playwright');
     const output={dataURL:canvas.toDataURL('image/png'),triangles:renderer.triangleCount,
       vertices:renderer.vertexCount,error,drawn:renderer.dynamicCount,
       textureReady:renderer.loisFaceTexture.ready,textureUploads:renderer.loisFaceTexture.uploads,
-      textureSize:renderer.loisFaceTexture.size,faceBrightness,perf};
+      textureSize:renderer.loisFaceTexture.size,faceBrightness,perf,initialPerf};
     renderer.destroy();
     return output;
    },{variant,shot,quality,pose});
    assert.equal(data.error,0,'WebGL must render without errors: '+variant+' '+shot);
    assert(data.drawn>200,'all dynamic geometry is present');
-   if(variant==='ps2-b'||variant==='ps2-b-faceonly'||variant==='ps2-b-nohair'){
-    assert.equal(data.perf.samples,1,'rig sampled only once for the NPC');
+   if(variant!=='legacy'){
+    assert.equal(data.perf.samples,1,'rig sampled once per actor each rendered frame');
     assert(data.perf.uploads<=1,'coalesced contiguous rig updates in one GPU bufferSubData call');
-    assert(data.perf.parts>=1,'rig actually updates vertex segments');
+    assert(data.initialPerf.parts>=1,'first frame updates the actual vertex segments');
     assert(data.perf.bytes<400000,'rig GPU transfer remains under 400 KB per frame');
-   }else assert.equal(data.perf.samples,0,'fallback does not run the extra rig');
+    assert(data.initialPerf.uploads<=1,'no one-upload-per-joint regression');
+    // The scene is static between these two frames: no unnecessary uploads.
+    assert.equal(data.perf.uploads,0,'static rig geometry must be reused across identical poses');
+   }else assert.equal(data.perf.samples,0,'legacy fallback does not run the extra rig');
    if(variant==='ps2-b'&&shot==='portrait'&&(!pose||!(pose.crouch>.30)))assert(data.faceBrightness>145,
     'face front must be visible, not the dark backface: brightness '+data.faceBrightness);
    if(variant==='ps2-b'||variant==='ps2-b-faceonly'||variant==='ps2-b-nohair'){
