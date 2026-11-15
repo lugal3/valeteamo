@@ -19,9 +19,22 @@ jobs:
       - run: npm ci
       - name: Probar contrato de apariencia y estados
         run: node tests/lois-ps2-profile.cjs
+      - name: Verificar malla, continuidad y presupuestos 3D
+        run: node tests/lois-ps2-mesh.cjs
       - name: Probar rescate y animaciones existentes
         run: node tests/rc-car.cjs
       - name: Verificar todas las pruebas
         run: npm test
       - name: Compilar y verificar tipos
         run: npm run build
+      - name: Instalar navegador WebGL
+        run: npx playwright install chromium --with-deps
+      - name: Capturar vistas frontal, lateral, 3/4 y modelo anterior
+        run: node tests/lois-ps2-browser.cjs
+      - name: Guardar capturas comparativas de Lois
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lois-ps2-b-stage2-visuals
+          path: artifacts/lois-*.png
+          if-no-files-found: ignore
