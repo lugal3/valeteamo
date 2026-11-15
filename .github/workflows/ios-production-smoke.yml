@@ -20,3 +20,7 @@ jobs:
       - run: npx playwright install --with-deps chromium webkit
       - name: Comprobar acceso LP, universo, 2D y 3D con HTML compilado
         run: node tests/ios-production-smoke.cjs
+      - name: Comprobar Firebase público restaurado en Safari
+        env:
+          SMOKE_URL: https://valefc.web.app/?cachecheck=20261115-restore
+        run: node tests/ios-production-smoke.cjs
