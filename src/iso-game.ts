@@ -688,7 +688,10 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.storyFootprints=[];
   this.storyCompanionClock=0;this.storyFollowHeading={x:1,y:0};
   this.storyCompanionFacing='down';
-  this.cameras?.main?.setFollowOffset?.(0,0);
+  // Keep the current dramatic offset across a story beat; interpolate it
+  // back to zero instead of abruptly recentering at the end of the kidnapping.
+  this.cameras?.main?.setFollowOffset?.(
+   -this.storyDramaOffset.x,-this.storyDramaOffset.y);
  }
  updateStoryCameraFeel(dt:number){
   this.storyLookAhead=feelCameraOffset(this.storyLookAhead,this.storyVelocity,dt,this.reducedMotion);
