@@ -81,7 +81,8 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
 
  const actions=useRef({
   ready:()=>{},interact:(_stage:IsoStoryStage)=>{},clearing:()=>{},
-  victory:()=>{},health:(_hp:number)=>{},retry:()=>{}
+  victory:()=>{},health:(_hp:number)=>{},retry:()=>{},
+  arrive:()=>{},guide:(_message:string)=>{},dusk:(_value:number)=>{}
  });
  actions.current={
   ready:()=>{
