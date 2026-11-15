@@ -210,7 +210,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
      <p aria-live="polite">{Array.from(currentLine.text).slice(0,letters).join('')}</p>
      <div className="prologue-dialog-counter">{dialog!.index+1} / {dialog!.lines.length}</div>
     </div>
-    <button type="button" className="prologue-next" onClick={nextDialog}>
+    <button type="button" className="prologue-next" onClick={nextDialog} aria-label="Continuar diálogo">
      {letters<Array.from(currentLine.text).length?'Mostrar todo':'Continuar'} ▸
     </button>
    </div>
