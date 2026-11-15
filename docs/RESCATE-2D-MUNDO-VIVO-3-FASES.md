@@ -49,17 +49,29 @@
 - **CI completamente aprobada (último cambio funcional):** https://github.com/lugal3/valeteamo/actions/runs/43749139228; capturas: https://github.com/lugal3/valeteamo/actions/runs/43749139228/artifacts/14175548066.
 - Diseño y QA documentados en `docs/RESCATE-FASE2-MUNDO-VIVO.md`. PR #22 en borrador, sin merge ni publicación.
 
-**Gate:** NO comenzar fase 3 antes del próximo `.` del usuario.
+**Gate de fase 2: aprobado.** El usuario envió su tercer mensaje `.` y autorizó comenzar la fase 3.
 
-## Fase 3 — Personajes, escenas y cine (PENDIENTE: siguiente punto)
+## Fase 3 — Personajes, escenas y cine (IMPLEMENTADA; QA FINAL COMO CONDICIÓN DE PUBLICACIÓN)
 
 - Gesto y mirada contextual de Kitty, Luis y Louis; NPC que observan objetos/se acercan/se detienen; burbujas simples no bloqueantes en lugar de muchas conversaciones.
 - Transiciones suaves, mejores planos, ritmo y coreografía: combate, diálogo, aparición/despedida de Luis, secuestro con van zorro/conejo, investigación de pulsera/pétalos/huellas, hallazgo del vehículo LUNA-07 y ventana a la casa 3D.
 - Señales narrativas ambientales y eventos breves variables; coherencia entre geografía isométrica y exterior 3D.
 - QA visual y funcional exhaustivo iPhone/desktop, controles, accesibilidad, rendimiento, continuidad 2D→3D y regresión Corazones original. Recién al aprobar: merge a `main`, verificar Action de Firebase Hosting y comunicar enlace final.
 
+### Entrega técnica de fase 3
+
+- `src/demo/rescue-performance.ts`: reacciones pequeñas no bloqueantes por situación, mirada y parpadeo de Louis, y camera tracking suave de la furgoneta y del cautivo, limitado a **83 px × 45 px**. Una sola ventana de texto larga nunca puede ser invocada por estos gestos. No se mueve físicamente a Kitty por un corte cinematográfico.
+- `src/iso-game.ts`: emoticonos breves (`♡`, `!`, `?`, `✧`, `…`) sobre personajes y pistas con **máximo 3** y desaparición en **1,2 segundos**. Se destruyen al cambiar de mapa o etapa. Louis mira a Kitty, respira y parpadea, excepto cuando ya está animado caminando o secuestrado. Luis gira según la tangente de su camino y Kitty mira hacia la furgoneta al abrirse y cuando los enmascarados forcejean.
+- La cámara recupera de modo gradual su seguimiento normal **incluso al cambiar de etapa**, en vez de saltar entre la escena del secuestro y las pistas. Respeta `prefers-reduced-motion`; no altera la cámara del modo clásico.
+- Las pistas de pulsera, pétalos, ruedas, puerta y ventana tienen una expresión contextual al acercarse Kitty y confirmación al tocarlas, sin diálogos nuevos ni saltos de etapa.
+- La misma furgoneta **LUNA-07** del secuestro sigue aparcada cerca de la fachada 3D, inspeccionable caminando y sin saltar obstáculos; se mantienen la guía por senderos y la ruta a la ventana abierta.
+- `tests/rescue-performance.cjs` verifica en 30/60/120 FPS los límites y la estabilidad del encuadre, miradas, parpadeo y cortas reacciones, separación del arcade y reducción de movimiento. `tests/prologue-browser.cjs` comprueba el secuestro físico, plano de cámara, reacciones limitadas, recuperación tras el corte, las pistas y la entrada real al 3D.
+- Guion visual, decisiones, recursos y regresiones en `docs/RESCATE-FASE3-CINEMATOGRAFIA.md`.
+
+**Puerta de publicación:** únicamente con `npm test`, `npm run build`, navegador móvil, escritorio, cuatro biomas, secuestro y acceso 3D **todos en verde**. La PR #22 debe permanecer DRAFT hasta entonces.
+
 ## Seguimiento
 
 - **Fase 1: completada y validada.** CI final: https://github.com/lugal3/valeteamo/actions/runs/43743461803 (npm test, build, paisaje móvil, recorrido 2D completo, PC/teclado, nuevo test de sensibilidad en iPhone y PC, interior 3D y emotes). Capturas en https://github.com/lugal3/valeteamo/actions/runs/43743461803/artifacts/14173597640. **No publicada ni fusionada.**
 - **Fase 2: completada y validada.** CI verde: https://github.com/lugal3/valeteamo/actions/runs/43749139228. Capturas de los cuatro biomas: https://github.com/lugal3/valeteamo/actions/runs/43749139228/artifacts/14175548066. **No publicada ni fusionada.**
-- Fase 3: pendiente del próximo `.`. Solo después de esa fase y QA final se fusionará en `main` y publicará en Firebase.
+- **Fase 3: implementada.** El usuario envió `.` y se completaron las actuaciones y cinemáticas. **La fusión y el despliegue quedan supeditados a que el último run de CI termine verde.**
