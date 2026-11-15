@@ -462,11 +462,16 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const x=motion.from.x+(motion.to.x-motion.from.x)*e;
   const y=motion.from.y+(motion.to.y-motion.from.y)*e;
   npc.setPosition(x,y).setDepth(y);
-  const key='chibi-louis-down-'+(1+Math.floor(this.clock/160)%4);
+  const facing=storyActorFacing(motion.to.x-x,motion.to.y-y,this.storyLouisFacing);
+  this.storyLouisFacing=facing;
+  const key=`chibi-louis-${facing==='left'?'right':facing}-${1+Math.floor(this.clock/160)%4}`;
   if(this.textures.exists(key)&&npc.texture.key!==key)npc.setTexture(key);
+  npc.setFlipX(facing==='left');
   if(motion.elapsed>=motion.duration){
    this.storyLouisWalk=undefined;
-   if(this.textures.exists('chibi-louis-down-0'))npc.setTexture('chibi-louis-down-0');
+   const facing=this.storyLouisFacing==='left'?'right':this.storyLouisFacing;
+   const idle=`chibi-louis-${facing}-0`;
+   if(this.textures.exists(idle))npc.setTexture(idle);
   }
  }
  updateStoryAbduction(dt:number){
@@ -594,6 +599,12 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const mainTarget=canInteract&&labels[stage]&&isoDistance(this.p,this.storyTarget)<radius?
    labels[stage]!:'';
   this.storyVanNear=!mainTarget&&vanIsClose;
+  // First discovery is a physical, nonblocking expression beside the object.
+  if(mainTarget&&!this.storyTargetCuePlayed&&
+   ['ribbon','petals','wheel','door','window'].includes(stage)){
+   this.storyTargetCuePlayed=true;
+   this.showStoryBubble('target',stage==='door'?'uneasy':'discover');
+  }
   const target=mainTarget||(this.storyVanNear?'Inspeccionar furgoneta':'');
   if(target!==this.storyNear){
    this.storyNear=target;this.story.near(target);
