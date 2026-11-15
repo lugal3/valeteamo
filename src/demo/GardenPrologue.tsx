@@ -24,6 +24,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  const [run,setRun]=useState<PrologueState>(()=>initial(test,checkpoint));
  const [dialog,setDialog]=useState<Dialog|null>(null),[letters,setLetters]=useState(0);
  const [near,setNear]=useState(''),[muted,setMuted]=useState(false);
+ const [guide,setGuide]=useState(''),[dusk,setDusk]=useState(0);
  const [portraits,setPortraits]=useState<Record<string,string>>({});
  const [restartKey,setRestartKey]=useState(0);
 
@@ -99,9 +100,17 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
     }
     setPortraits(avatars);
    }
-   if(phaseRef.current.stage==='intro')showDialog(PROLOGUE_DIALOGUES.intro,()=>changed('begin'));
+   if(phaseRef.current.stage==='intro')setGuide('Camina por el sendero · WASD o joystick izquierdo');
+   // El inicio no tiene NPC ni diálogos bloqueantes. La aventura comienza al andar.
   },
-  victory:()=>{changed('victory');audioRef.current.tone(880,.19,.03);},
+  arrive:()=>{
+   if(phaseRef.current.stage!=='intro'||dialogRef.current)return;
+   setGuide('');
+   showDialog(PROLOGUE_DIALOGUES.intro,()=>changed('begin'));
+  },
+  guide:(message)=>setGuide(message),
+  dusk:(value)=>setDusk(value),
+  victory:()=>{changed('victory');setGuide('¡Bien! Sigue el camino para encontrar a Louis.');audioRef.current.tone(880,.19,.03);},
   clearing:()=>{
    if(phaseRef.current.stage!=='walk-together')return;
    changed('clearing');
@@ -148,7 +157,10 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   victory:()=>actions.current.victory(),
   clearing:()=>actions.current.clearing(),
   health:(hp)=>actions.current.health(hp),
-  retry:()=>actions.current.retry()
+  retry:()=>actions.current.retry(),
+  arrive:()=>actions.current.arrive(),
+  guide:(message)=>actions.current.guide(message),
+  dusk:(value)=>actions.current.dusk(value)
  }),[]);
 
  const toggleAudio=()=>{
@@ -160,7 +172,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   const next=initial(test,checkpoint);
   phaseRef.current=next;setRun(next);setDialog(null);setLetters(0);
   dialogRef.current=null;dialogDone.current=null;lockedRef.current=false;enteringRef.current=false;
-  setNear('');setRestartKey(value=>value+1);
+  setNear('');setGuide('');setDusk(0);setRestartKey(value=>value+1);
  };
  useEffect(()=>()=>{audioRef.current.destroy();
   if(import.meta.env.DEV)delete (window as Window&{__valePrologue?:unknown}).__valePrologue;
@@ -192,11 +204,15 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
       interact:()=>scene.storyInteract(),
       advanceDialog:()=>nextDialogRef.current(),
       health:()=>scene.hp,
-      dusk:()=>({alpha:scene.storyVeil?.alpha??0,fillAlpha:1}),
+      dusk:()=>({alpha:scene.storyDusk,fillAlpha:1}),
+      area:()=>scene.storyWorld?.area(scene.p.u),
+      world:()=>({tiles:scene.storyWorld?.tiles,progress:scene.p.u}),
       scene:()=>scene
      };
     }
    }}/>
+  <div className="prologue-night" style={{opacity:dusk}} aria-hidden="true"/>
+  {!dialog&&guide&&<div className="prologue-guide" role="status">{guide}</div>}
   {!dialog&&near&&<button type="button" className="prologue-interact"
    onClick={()=>sceneRef.current?.storyInteract()}>{near} · E</button>}
   {currentLine&&<div className="prologue-dialog-backdrop" role="dialog"
