@@ -8,6 +8,8 @@ import {ISO,constrain,isoDistance,screenVector,toScreen,type IsoPoint} from './i
 import {Sound} from './audio';
 import {installProloguePeople,luisTextureKey,luisAnimationFrame,
  type LuisFacing,type LuisPose} from './demo/prologue-art';
+import {LUIS_BEATS,makeLuisMotion,luisEntryPoint,luisPointOnPath,
+ luisMotionIsBlocking,type LuisMotion} from './demo/luis-choreography';
 import {buildRescueOverworld,constrainRescue,darknessAt,STORY_POSITIONS,storyArrivalPoint,
  mapForStage,exitReady,RESCUE_SCENES,
  type RescueMapId,type RescueOverworld,type RouteArea} from './demo/rescue-overworld';
@@ -58,6 +60,9 @@ export class IsoAdventure extends Phaser.Scene {
  storyStage:IsoStoryStage='intro';
  storyObjects:Phaser.GameObjects.GameObject[]=[];
  storyLouis?:StoryActor;storyLuis?:StoryActor;storyVillain?:StoryActor;
+ storyLuisShadow?:Phaser.GameObjects.Ellipse;
+ storyLuisMotion?:LuisMotion;storyLuisReady=false;storyLuisArriving=false;
+ storyLuisFarewell=false;
  storyWorld?:RescueOverworld;storyDusk=0;storyGuideStep=-1;
  storyArea:RouteArea='sendero';storyMap:RescueMapId='morning_garden';storyExitPending=false;
  storyActionPressed=false;storyNear='';storyWalkTriggered=false;storyVictoryEmitted=false;
@@ -139,6 +144,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   for(const light of this.collectibles)light.s.destroy();this.collectibles=[];
   this.dangers=[];this.bursts=[];this.charm=undefined;this.pendingOffer=false;
   this.storyLouis=undefined;this.storyLuis=undefined;this.storyVillain=undefined;
+  this.storyLuisShadow=undefined;this.storyLuisMotion=undefined;
+  this.storyLuisReady=false;this.storyLuisArriving=false;this.storyLuisFarewell=false;
   this.story.near('');
   if(force)this.p=storyArrivalPoint(stage);
   this.p=constrainRescue(this.p,this.storyMap);this.positionPlayer();
@@ -167,8 +174,16 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   }
   if(stage==='talk-louis')this.storyLouis=actor('louis',this.storyTarget);
   if(stage==='talk-luis'){
-   this.storyLuis=actor('luis',this.storyTarget);
+   // Luis waits at the side-path entrance; Kitty sees him WALK INTO the clearing
+   // before the interaction appears. Nobody materializes at the conversation spot.
+   const origin=constrainRescue(luisEntryPoint(this.storyTarget),this.storyMap);
+   this.storyLuis=actor('luis',origin);
+   const xy=toScreen(origin);
+   this.storyLuisShadow=this.add.ellipse(xy.x,xy.y+2,31,9,0x534859,.23)
+    .setDepth(xy.y-1);
+   this.storyObjects.push(this.storyLuisShadow);
    this.storyLouis=actor('louis',{u:35.3,v:6.3});
+   this.story.guide('Luis viene por el camino entre los cerezos. ¡Acércate a saludarlo! ♡');
   }
   if(stage==='walk-together'){
    this.storyLouis=actor('louis',{u:35.5,v:4.6});
@@ -195,7 +210,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.sync();
  }
  storyInteract(){
-  if(!this.story||this.story.locked()||!this.storyNear)return;
+  if(!this.story||this.story.locked()||luisMotionIsBlocking(this.storyLuisMotion)||!this.storyNear)return;
   this.audio.ui();this.story.interact(this.storyStage);
  }
  storyTeleportForTest(_unused:number){
@@ -212,17 +227,78 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.p=constrainRescue(exit,this.storyMap);this.positionPlayer();
   this.updateStoryActors(0);
  }
- // Phase 2: Luis has expressive idle/blink and talking cycles NOW.
- // Actual walking arrival, farewell and companion choreography are phase 3.
- // The artwork also exports ready-to-use directional walk/wave frames.
+ // A compact, deterministic 4-beat cinematic that lives inside the same
+ // Phaser game loop. No timer, new renderer, or blocking dialog overlay.
+ startLuisArrival(){
+  if(!this.storyLuis||this.storyLuisArriving||this.storyLuisReady||
+   this.storyStage!=='talk-luis')return;
+  this.storyLuisArriving=true;this.story.near('');this.storyNear='';
+  this.storyLuisMotion=makeLuisMotion('arriving',this.storyTarget);
+  this.clearInput();
+ }
+ playStoryLuisFarewell(done:()=>void){
+  if(this.storyStage!=='talk-luis'||!this.storyLuis?.active){done();return;}
+  if(this.storyLuisFarewell)return;
+  this.storyLuisFarewell=true;this.story.near('');this.storyNear='';
+  this.clearInput();
+  this.storyLuisMotion=makeLuisMotion('farewell-wave',this.storyTarget,done);
+  this.story.guide('Luis se despide con la mano y vuelve caminando al sendero ♡');
+  this.luisHeart(this.storyTarget);
+ }
+ luisHeart(p:IsoPoint){
+  const at=toScreen(p);
+  const sparkle=this.add.text(at.x,at.y-53,'♡',{fontFamily:'Georgia',
+   fontSize:'21px',color:'#ffdde8',stroke:'#a56e8e',strokeThickness:2})
+   .setOrigin(.5).setDepth(at.y+14);
+  this.storyObjects.push(sparkle);
+  this.tweens.add({targets:sparkle,y:at.y-80,alpha:0,
+   duration:this.reducedMotion?180:700,ease:'Sine.easeOut',
+   onComplete:()=>sparkle.destroy()});
+ }
+ updateLuisCinematic(dt:number){
+  const motion=this.storyLuisMotion,npc=this.storyLuis;
+  if(!motion||!npc?.active||!this.story)return;
+  motion.elapsed=Math.min(motion.duration,motion.elapsed+dt);
+  const p=luisPointOnPath(motion),xy=toScreen(p);
+  npc.setPosition(xy.x,xy.y).setDepth(xy.y);
+  this.storyLuisShadow?.setPosition(xy.x,xy.y+2).setDepth(xy.y-1);
+  if(motion.elapsed<motion.duration)return;
+  const completed=motion.kind,done=motion.done;
+  if(completed==='arriving'){
+   this.storyLuisMotion=makeLuisMotion('greeting',this.storyTarget);
+   this.luisHeart(this.storyTarget);
+  }else if(completed==='greeting'){
+   this.storyLuisMotion=undefined;this.storyLuisReady=true;
+   this.story.guide('¡Luis te encontró! Acércate y presiona E para hablar ♡');
+  }else if(completed==='farewell-wave'){
+   this.storyLuisMotion=makeLuisMotion('farewell-walk',this.storyTarget,done);
+  }else{
+   // Stage will change only after Luis has visibly walked away.
+   this.storyLuisMotion=undefined;
+   npc.setVisible(false);this.storyLuisShadow?.setVisible(false);
+   done?.();
+  }
+ }
  animateStoryLuis(){
   const npc=this.storyLuis;
   if(!npc?.active||!this.story)return;
-  const kitty=toScreen(this.p),dx=kitty.x-npc.x,dy=kitty.y-npc.y;
-  const facing:LuisFacing=dy< -46&&Math.abs(dx)<27?'up':Math.abs(dx)>32?'right':'down';
-  const speaking=this.storyStage==='talk-luis'&&this.story.locked();
-  const pose:LuisPose=speaking?'talk':'idle';
-  const frame=luisAnimationFrame(this.clock,pose,this.reducedMotion);
+  const motion=this.storyLuisMotion,kitty=toScreen(this.p);
+  let dx=kitty.x-npc.x,dy=kitty.y-npc.y;
+  let pose:LuisPose='idle',facing:LuisFacing='down';
+  if(motion){
+   pose=motion.kind==='arriving'||motion.kind==='farewell-walk'?'walk':'wave';
+   if(pose==='walk'){
+    const start=toScreen(motion.from),end=toScreen(motion.to);
+    dx=end.x-start.x;dy=end.y-start.y;
+    facing=dy< -38&&Math.abs(dx)<32?'up':Math.abs(dx)>28?'right':'down';
+   }
+  }else{
+   facing=dy< -46&&Math.abs(dx)<27?'up':Math.abs(dx)>32?'right':'down';
+   // During the RPG dialogue Luis keeps speaking (even while player input locks).
+   if(this.storyStage==='talk-luis'&&this.story.locked())pose='talk';
+  }
+  const clock=motion?motion.elapsed:this.clock;
+  const frame=luisAnimationFrame(clock,pose,this.reducedMotion);
   const texture=luisTextureKey(facing,pose,frame);
   if(npc.texture.key!==texture&&this.textures.exists(texture))npc.setTexture(texture);
   npc.setFlipX(facing==='right'&&dx<0);
@@ -277,12 +353,16 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
     this.storyWalkTriggered=true;this.story.clearing();
    }
   }
+  if(stage==='talk-luis'&&!this.storyLuisReady&&!this.storyLuisArriving&&
+   isoDistance(this.p,this.storyTarget)<LUIS_BEATS.approachRadius)this.startLuisArrival();
   const labels:Partial<Record<IsoStoryStage,string>>={
    'talk-louis':'Hablar con Louis','talk-luis':'Hablar con Luis',
    ribbon:'Examinar Pulsera',petals:'Examinar Pétalos',wheel:'Examinar Huellas',
    door:'Probar puerta',window:'Entrar por la ventana'
   };
-  const target=labels[stage]&&isoDistance(this.p,this.storyTarget)<1.15?labels[stage]!:'';
+  const canInteract=stage!=='talk-luis'||this.storyLuisReady;
+  const target=canInteract&&labels[stage]&&isoDistance(this.p,this.storyTarget)<1.15?
+   labels[stage]!:'';
   if(target!==this.storyNear){this.storyNear=target;this.story.near(target);}
   this.checkStoryExit();
  }
@@ -340,10 +420,13 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(this.paused||this.pendingOffer||this.ended)return;const dt=Math.min(delta,40),seconds=dt/1000;this.clock+=dt;
   if(this.story){
    this.storyWorld?.update(this.clock,this.storyDusk);
-   // NPC facial animation must continue even while RPG dialogue blocks input.
+   // Even while dialogue locks the player, real NPC motion/face frames continue.
+   this.updateLuisCinematic(dt);
    this.animateStoryLuis();
   }
-  if(this.story && this.story.locked()){this.clearInput();return;}
+  if(this.story && (this.story.locked()||luisMotionIsBlocking(this.storyLuisMotion))){
+   this.clearInput();return;
+  }
   if(this.story && this.storyStage!==this.story.stage())this.setStoryStage(this.story.stage());
   if(this.story && this.keys.E?.isDown&&!this.storyActionPressed)this.storyInteract();
   if(this.story)this.storyActionPressed=!!this.keys.E?.isDown;
