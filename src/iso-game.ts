@@ -6,6 +6,9 @@ import {installReferenceCharacter} from './reference-characters';
 import {facingOf,type Facing} from './animation';
 import {ISO,constrain,isoDistance,screenVector,toScreen,type IsoPoint} from './isometric';
 import {Sound} from './audio';
+import {ABDUCTION_TIMING,abductionFrame,captorFrame,captorTexture,
+ installRescueAbductionTextures,vanTexture,VAN_NIGHT_POSITION,VAN_PLATE,
+ type AbductionPhase} from './demo/abduction-van';
 import {NIGHT_INTERACTION_RADIUS,NIGHT_WINDOW_INTERACTION_RADIUS,nightAutoRoute,nightNavigationDistance} from './demo/night-house-layout';
 import {installProloguePeople,luisTextureKey,luisAnimationFrame,
  type LuisFacing,type LuisPose} from './demo/prologue-art';
@@ -61,6 +64,11 @@ export class IsoAdventure extends Phaser.Scene {
  storyStage:IsoStoryStage='intro';
  storyObjects:Phaser.GameObjects.GameObject[]=[];
  storyLouis?:StoryActor;storyLuis?:StoryActor;storyVillain?:StoryActor;
+ storyLouisWalk?:{from:{x:number;y:number};to:{x:number;y:number};elapsed:number;duration:number};
+ storyAbduction?:{elapsed:number;origin:IsoPoint;phase:AbductionPhase;done:()=>void;
+  van:Phaser.GameObjects.Image;fox:Phaser.GameObjects.Image;
+  rabbit:Phaser.GameObjects.Image;dust:Phaser.GameObjects.Graphics};
+ storyVanInspected=false;storyVanNear=false;
  storyLuisShadow?:Phaser.GameObjects.Ellipse;
  storyLuisMotion?:LuisMotion;storyLuisReady=false;storyLuisArriving=false;
  storyLuisFarewell=false;
@@ -78,6 +86,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  create(){
   buildArt(this);buildChibi(this);if(!CHARACTERS[this.character].chibiSpriteSheet)installReferenceCharacter(this,this.character);this.floor=this.add.graphics().setDepth(0);this.fx=this.add.graphics().setDepth(1000);
   if(this.story){
+   installRescueAbductionTextures(this);
    this.storyMap=mapForStage(this.story.stage());
    this.storyWorld=this.createStoryWorld(this.storyMap);
   }else this.drawFloor();
@@ -111,6 +120,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(!this.story||map===this.storyMap)return;
   this.storyWorld?.destroy();
   this.houseRoute=[];this.houseLastHint='';
+  this.storyVanInspected=false;this.storyVanNear=false;
   this.storyMap=map;
   this.storyWorld=this.createStoryWorld(map);
   this.storyExitPending=false;this.storyGuideStep=-1;
@@ -139,6 +149,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  // La historia conserva los sprites del Corazones original; no recreamos el motor.
  setStoryStage(stage:IsoStoryStage,force=false){
   if(!this.story||(!force&&this.storyStage===stage))return;
+  const previousLouis=this.storyLouis?.active?
+   {x:this.storyLouis.x,y:this.storyLouis.y}:undefined;
   this.storyStage=stage;this.storyWalkTriggered=false;this.storyVictoryEmitted=false;
   this.storyActionPressed=false;this.storyNear='';
   this.houseRoute=[];this.houseLastHint='';
@@ -148,6 +160,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   for(const light of this.collectibles)light.s.destroy();this.collectibles=[];
   this.dangers=[];this.bursts=[];this.charm=undefined;this.pendingOffer=false;
   this.storyLouis=undefined;this.storyLuis=undefined;this.storyVillain=undefined;
+  this.storyLouisWalk=undefined;this.storyAbduction=undefined;
   this.storyLuisShadow=undefined;this.storyLuisMotion=undefined;
   this.storyLuisReady=false;this.storyLuisArriving=false;this.storyLuisFarewell=false;
   this.story.near('');
@@ -185,7 +198,13 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    for(const p of [{u:24.6,v:3.4},{u:26.2,v:5.7},{u:28,v:4.2}])this.spawnEnemy(p,false);
    this.story.guide('Las sombras se acercan. ¡Apunta con las flechas, el mouse o el joystick derecho!');
   }
-  if(stage==='talk-louis')this.storyLouis=actor('louis',this.storyTarget);
+  if(stage==='talk-louis'){
+   // Louis walks out of the garden after combat, never popping into existence.
+   const origin={u:this.storyTarget.u+1.6,v:this.storyTarget.v+.4};
+   this.storyLouis=actor('louis',origin);
+   this.storyLouisWalk={from:toScreen(origin),to:toScreen(this.storyTarget),
+    elapsed:0,duration:1300};
+  }
   if(stage==='talk-luis'){
    // Luis waits at the side-path entrance; Kitty sees him WALK INTO the clearing
    // before the interaction appears. Nobody materializes at the conversation spot.
@@ -195,16 +214,27 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    this.storyLuisShadow=this.add.ellipse(xy.x,xy.y+2,31,9,0x534859,.23)
     .setDepth(xy.y-1);
    this.storyObjects.push(this.storyLuisShadow);
+   const next=toScreen({u:35.3,v:6.3});
    this.storyLouis=actor('louis',{u:35.3,v:6.3});
+   if(previousLouis){
+    this.storyLouis.setPosition(previousLouis.x,previousLouis.y);
+    this.storyLouisWalk={from:previousLouis,to:next,elapsed:0,
+     duration:Math.max(900,Math.min(2900,Math.hypot(next.x-previousLouis.x,next.y-previousLouis.y)*8))};
+   }
    this.story.guide('Luis viene por el camino entre los cerezos. ¡Acércate a saludarlo! ♡');
   }
   if(stage==='walk-together'){
    this.storyLouis=actor('louis',{u:35.5,v:4.6});
+   if(previousLouis)this.storyLouis.setPosition(previousLouis.x,previousLouis.y)
+    .setDepth(previousLouis.y);
    marker('✿',this.storyTarget);
   }
   if(stage==='disappearance'){
-   // The kidnapping must appear in Kitty's CURRENT clearing, not off-camera.
-   this.storyLouis=actor('louis',{u:this.p.u+.25,v:this.p.v+.20});
+   // Preserve the ACTUAL follower's last position, not a fake spawn.
+   this.storyLouis=actor('louis',{u:this.p.u+.32,v:this.p.v+.20});
+   if(previousLouis)this.storyLouis.setPosition(previousLouis.x,previousLouis.y)
+    .setDepth(previousLouis.y);
+   this.story?.guide('Un motor se acerca por el camino…');
   }
   if(['ribbon','petals','wheel'].includes(stage)){
    marker(stage==='ribbon'?'✧':stage==='petals'?'✿':'⌁',this.storyTarget);
