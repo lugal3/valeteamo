@@ -629,7 +629,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    const p=toScreen(cfg.exit),pulse=.45+Math.sin(visualT*2.1)*.16;
    portalGlow.fillStyle(0xfff6d8,.10+pulse*.15).fillEllipse(p.x,p.y-3,105,40);
    portalGlow.lineStyle(2,0xfff2c8,.33+pulse*.34).strokeEllipse(p.x,p.y-3,88,30);
-   portalGlow.fillStyle(0xffeed7,.65).fillCircle(p.x,p.y-26+Math.sin(t*1.8)*5,3.2);
+   portalGlow.fillStyle(0xffeed7,.65).fillCircle(p.x,p.y-26+Math.sin(visualT*1.8)*5,3.2);
   }
  };
  update(0,darknessAt(cfg.spawn.u,'intro',map));
