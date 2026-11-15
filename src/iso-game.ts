@@ -696,6 +696,9 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   }
   if(this.story && (this.story.locked()||luisMotionIsBlocking(this.storyLuisMotion)||
    !!this.storyAbduction)){
+   this.storyVelocity=feelMotion(this.storyVelocity,{u:0,v:0},0,dt);
+   this.updateStoryCameraFeel(dt);
+   this.renderStoryKitty(dt);
    this.clearInput();return;
   }
   if(this.story && this.storyStage!==this.story.stage())this.setStoryStage(this.story.stage());
@@ -704,46 +707,104 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.notes=this.notes.filter(note=>{const age=this.clock-note.at;if(age>=850){note.s.destroy();return false;}note.s.y=note.y-(this.reducedMotion?0:age/45);note.s.setAlpha(Math.min(1,(850-age)/200));return true;});
   if(this.dyingAt){const age=this.clock-this.dyingAt,key=`chibi-${this.character}-dead`;if(this.textures.exists(key))this.player.setTexture(key);this.player.setAlpha(Math.max(.25,1-age/800));if(!this.reducedMotion)this.player.setAngle(Math.min(65,age/10));if(age>650){this.ended=true;this.finish('dead');}return;}
   if(this.wonAt){if(!this.reducedMotion)this.player.setAngle(Math.sin(this.clock/90)*8);if(this.clock-this.wonAt>850){this.ended=true;this.finish('win');}return;}
-  let x=+this.keys.D.isDown-+this.keys.A.isDown,y=+this.keys.S.isDown-+this.keys.W.isDown;
-  if(this.left){x=this.left.dx;y=this.left.dy;if(Math.hypot(x,y)<7)x=y=0;}
-  const manualMove=Math.hypot(x,y)>.1;
-  if(manualMove&&this.houseRoute.length)this.houseRoute=[]; // Player always overrides guide.
-  let guidePoint=this.houseRoute[0];
-  if(guidePoint&&isoDistance(this.p,guidePoint)<.17){
-   this.houseRoute.shift();guidePoint=this.houseRoute[0];
-  }
-  if(guidePoint){
-   const src=toScreen(this.p),dst=toScreen(guidePoint);
-   x=dst.x-src.x;y=dst.y-src.y;
-  }
-  const wantsMove=Math.hypot(x,y)>.1,move=screenVector(x,y);
-  const strength=this.left&&!guidePoint?Math.min(1,Math.hypot(x,y)/45):1;
-  let moving=false;
-  if(wantsMove){
-   const distance=guidePoint?isoDistance(this.p,guidePoint):0;
-   const fraction=guidePoint?Math.min(1,2.1*seconds/Math.max(.001,distance)):0;
-   const candidate=guidePoint?{
-    u:this.p.u+(guidePoint.u-this.p.u)*fraction,
-    v:this.p.v+(guidePoint.v-this.p.v)*fraction
-   }:{
-    u:this.p.u+move.u*2.1*seconds*strength,
-    v:this.p.v+move.v*2.1*seconds*strength
-   };
-   const next=this.story?constrainRescue(candidate,this.storyMap,this.p):constrain(candidate);
-   moving=isoDistance(next,this.p)>.001;this.p=next;
-   if(guidePoint&&isoDistance(this.p,guidePoint)<.18)this.houseRoute.shift();
-   if(guidePoint&&!moving){
-    this.houseRoute=[];this.story?.guide('Hay una pared cerca. Sigue la vereda para rodear la casa.');
+  if(this.story){
+   // Kinetic movement applies exclusively to the rescue; the classic game
+   // stays byte-identical in the else branch.
+   let x=+this.keys.D.isDown-+this.keys.A.isDown,
+    y=+this.keys.S.isDown-+this.keys.W.isDown;
+   if(this.left){
+    x=this.left.dx;y=this.left.dy;
+    if(Math.hypot(x,y)<7)x=y=0;
    }
-   if(moving){
-    this.moveClock+=dt*(.45+.55*strength);
-    if(this.moveClock-this.lastStep>250){
-     this.lastStep=this.moveClock;this.burst(this.p,0xf8e8ca);
-     this.audio.tone(245,.04,.004,'triangle');
+   const manual=Math.hypot(x,y)>.1;
+   if(manual&&this.houseRoute.length)this.houseRoute=[];
+   let guidePoint=this.houseRoute[0];
+   if(guidePoint&&isoDistance(this.p,guidePoint)<.17){
+    this.houseRoute.shift();guidePoint=this.houseRoute[0];
+   }
+   if(guidePoint){
+    const from=toScreen(this.p),to=toScreen(guidePoint);
+    x=to.x-from.x;y=to.y-from.y;
+   }
+   const intent=screenVector(x,y),strength=this.left&&!guidePoint?
+    Math.min(1,Math.hypot(x,y)/45):Math.hypot(x,y)>.1?1:0;
+   const previous={...this.p};
+   const velocity=guidePoint?{...this.storyVelocity}:
+    feelMotion(this.storyVelocity,intent,strength,dt);
+   const step=guidePoint?
+    Math.min(1,2.1*seconds/Math.max(.001,isoDistance(previous,guidePoint))):0;
+   const destination=guidePoint?{
+    u:previous.u+(guidePoint.u-previous.u)*step,
+    v:previous.v+(guidePoint.v-previous.v)*step
+   }:{u:previous.u+velocity.u*seconds,v:previous.v+velocity.v*seconds};
+   const next=constrainRescue(destination,this.storyMap,previous);
+   const traveled=isoDistance(previous,next);
+   this.p=next;
+   this.storyVelocity=seconds>0?{
+    u:(next.u-previous.u)/seconds,v:(next.v-previous.v)/seconds
+   }:{u:0,v:0};
+   if(guidePoint&&isoDistance(this.p,guidePoint)<.18)this.houseRoute.shift();
+   if(guidePoint&&traveled<.0001){
+    this.houseRoute=[];
+    this.story?.guide('Hay un muro cerca. Sigue las baldosas para rodear la casa.');
+   }
+   if(traveled>.0001){
+    const speedRatio=Math.min(1,Math.hypot(this.storyVelocity.u,this.storyVelocity.v)/RESCUE_FEEL.speed);
+    this.moveClock+=dt*(.4+.6*speedRatio);
+    this.storyFootfall(traveled);
+    if(Math.hypot(x,y)>.1)this.facing=facingOf(x,y,this.facing);
+    const from=toScreen(previous),to=toScreen(next),direction={
+     x:to.x-from.x,y:to.y-from.y};
+    const magnitude=Math.hypot(direction.x,direction.y);
+    if(magnitude>.1)this.storyFollowHeading={
+     x:direction.x/magnitude,y:direction.y/magnitude
+    };
+   }else{
+    this.storyStepTravel=0;
+   }
+   this.updateStoryCameraFeel(dt);
+  }else{
+   let x=+this.keys.D.isDown-+this.keys.A.isDown,y=+this.keys.S.isDown-+this.keys.W.isDown;
+   if(this.left){x=this.left.dx;y=this.left.dy;if(Math.hypot(x,y)<7)x=y=0;}
+   const manualMove=Math.hypot(x,y)>.1;
+   if(manualMove&&this.houseRoute.length)this.houseRoute=[]; // Player always overrides guide.
+   let guidePoint=this.houseRoute[0];
+   if(guidePoint&&isoDistance(this.p,guidePoint)<.17){
+    this.houseRoute.shift();guidePoint=this.houseRoute[0];
+   }
+   if(guidePoint){
+    const src=toScreen(this.p),dst=toScreen(guidePoint);
+    x=dst.x-src.x;y=dst.y-src.y;
+   }
+   const wantsMove=Math.hypot(x,y)>.1,move=screenVector(x,y);
+   const strength=this.left&&!guidePoint?Math.min(1,Math.hypot(x,y)/45):1;
+   let moving=false;
+   if(wantsMove){
+    const distance=guidePoint?isoDistance(this.p,guidePoint):0;
+    const fraction=guidePoint?Math.min(1,2.1*seconds/Math.max(.001,distance)):0;
+    const candidate=guidePoint?{
+     u:this.p.u+(guidePoint.u-this.p.u)*fraction,
+     v:this.p.v+(guidePoint.v-this.p.v)*fraction
+    }:{
+     u:this.p.u+move.u*2.1*seconds*strength,
+     v:this.p.v+move.v*2.1*seconds*strength
+    };
+    const next=this.story?constrainRescue(candidate,this.storyMap,this.p):constrain(candidate);
+    moving=isoDistance(next,this.p)>.001;this.p=next;
+    if(guidePoint&&isoDistance(this.p,guidePoint)<.18)this.houseRoute.shift();
+    if(guidePoint&&!moving){
+     this.houseRoute=[];this.story?.guide('Hay una pared cerca. Sigue la vereda para rodear la casa.');
     }
+    if(moving){
+     this.moveClock+=dt*(.45+.55*strength);
+     if(this.moveClock-this.lastStep>250){
+      this.lastStep=this.moveClock;this.burst(this.p,0xf8e8ca);
+      this.audio.tone(245,.04,.004,'triangle');
+     }
+    }else{this.moveClock=0;this.lastStep=0;}
+    this.facing=facingOf(x,y,this.facing);
    }else{this.moveClock=0;this.lastStep=0;}
-   this.facing=facingOf(x,y,this.facing);
-  }else{this.moveClock=0;this.lastStep=0;}
+  }
   let ax=+this.keys.RIGHT.isDown-+this.keys.LEFT.isDown,ay=+this.keys.DOWN.isDown-+this.keys.UP.isDown;
   if(this.right){ax=this.right.dx;ay=this.right.dy;if(Math.hypot(ax,ay)<8)ax=ay=0;}else if(this.mouse){const point=toScreen(this.p),aim=this.cameras.main.getWorldPoint(this.input.activePointer.x,this.input.activePointer.y);ax=aim.x-point.x;ay=aim.y-point.y;}
   const firing=Math.hypot(ax,ay)>.1&&this.level!==1;if(firing){this.facing=facingOf(ax,ay,this.facing);if(this.clock-this.last>300){this.last=this.clock;const aim=screenVector(ax,ay),length=Math.hypot(ax,ay);this.shotDir={x:ax/length,y:ay/length};this.shoot(this.p,aim.u*4,aim.v*4);this.audio.tone(700,.04,.015);}}
