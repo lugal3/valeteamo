@@ -47,11 +47,11 @@ async function play(){
   // maps, while preserving the scene's regular gameplay and transition flow.
   async function verifyLivingMap(map){
    await page.waitForFunction(id=>{
-    const world=window.__valePrologue?.world?.();
+    const world=window.__valePrologue?.scene?.()?.storyWorld;
     return world?.map===id&&world?.ecology?.counts?.().updates>1;
    },map,{timeout:5000});
    const state=await page.evaluate(()=>{
-    const world=window.__valePrologue.world(),stats=world.ecology.counts();
+    const world=window.__valePrologue.scene().storyWorld,stats=world.ecology.counts();
     return {map:world.map,stats};
    });
    assert.equal(state.map,map);
