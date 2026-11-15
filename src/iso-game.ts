@@ -6,7 +6,7 @@ import {installReferenceCharacter} from './reference-characters';
 import {facingOf,type Facing} from './animation';
 import {ISO,constrain,isoDistance,screenVector,toScreen,type IsoPoint} from './isometric';
 import {Sound} from './audio';
-import {NIGHT_INTERACTION_RADIUS,nightAutoRoute,nightNavigationDistance} from './demo/night-house-layout';
+import {NIGHT_INTERACTION_RADIUS,NIGHT_WINDOW_INTERACTION_RADIUS,nightAutoRoute,nightNavigationDistance} from './demo/night-house-layout';
 import {installProloguePeople,luisTextureKey,luisAnimationFrame,
  type LuisFacing,type LuisPose} from './demo/prologue-art';
 import {LUIS_BEATS,makeLuisMotion,luisEntryPoint,luisPointOnPath,
@@ -235,7 +235,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(!this.story||this.storyMap!=='night_neighborhood'||
    !['door','window'].includes(this.storyStage)||this.story.locked())return false;
   if(this.houseRoute.length){this.houseRoute=[];this.story.guide('Guía pausada. Puedes seguir caminando con el joystick.');return false;}
-  if(nightNavigationDistance(this.p,this.storyTarget)<NIGHT_INTERACTION_RADIUS){
+  if(nightNavigationDistance(this.p,this.storyTarget)<(this.storyStage==='window'?NIGHT_WINDOW_INTERACTION_RADIUS:NIGHT_INTERACTION_RADIUS)){
    this.updateStoryActors(0);return false;
   }
   const path=nightAutoRoute(this.p,this.storyTarget);
@@ -399,7 +399,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   };
   const canInteract=stage!=='talk-luis'||this.storyLuisReady;
   const radius=this.storyMap==='night_neighborhood'?
-   NIGHT_INTERACTION_RADIUS:1.15;
+   (stage==='window'?NIGHT_WINDOW_INTERACTION_RADIUS:NIGHT_INTERACTION_RADIUS):1.15;
   const target=canInteract&&labels[stage]&&isoDistance(this.p,this.storyTarget)<radius?
    labels[stage]!:'';
   if(target!==this.storyNear){
