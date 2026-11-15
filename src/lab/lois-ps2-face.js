@@ -66,7 +66,9 @@ export function loisFaceSurface(box,color,style){
  for(let row=0;row<rings;row++){
   for(let col=0;col<segments;col++){
    const a=index(row,col),b=a+1,c=index(row+1,col+1),d=c-1;
-   indices.push(a,b,c,a,c,d);
+   // Match the existing WebGL renderer's front-face convention (same as smoothSurface).
+   // The earlier winding culled the entire face, leaving the dark hair shell visible.
+   indices.push(a,c,b,a,d,c);
   }
  }
  return {vertices,indices};
