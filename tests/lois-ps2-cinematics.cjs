@@ -80,7 +80,8 @@ const fs=require('node:fs');
  const short=advanceLoisShot(reduced,'climb',camB,.1,false);
  assert(Math.abs(short.yaw-camA.yaw)<.3,'yaw interpolation chooses shortest path across +/-pi');
  const noMotion=advanceLoisShot(reduced,'hide',camB,.03,true);
- assert(nearly(noMotion.yaw,camB.yaw),'reduced-motion skips camera easings');
+ assert(Math.abs(Math.atan2(Math.sin(noMotion.yaw-camB.yaw),Math.cos(noMotion.yaw-camB.yaw)))<EPS,
+  'reduced-motion skips camera easings, allowing equivalent angles differing by 2π');
  for(const phase of ['untying','climb','hide','hidden','follow'])
   assert(typeof loisShotLabel(phase)==='string'&&LOIS_SCENE_TIMING[phase]>0);
  // Check real house placement and hooks, not simply isolated mathematical helpers.
