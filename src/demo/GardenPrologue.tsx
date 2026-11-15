@@ -301,7 +301,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
      <small>{houseNav.near?'¡Ya puedes interactuar!':
       `A ${houseNav.distance.toFixed(1)} pasos · patio frontal`}</small></span>
    </div>
-   {!houseNav.near&&<button className="prologue-house-route-button" type="button"
+   {(!houseNav.near||houseNav.guided)&&<button className="prologue-house-route-button" type="button"
     onClick={()=>{
      const scene=sceneRef.current;if(!scene)return;
      const started=scene.startHouseGuide();
