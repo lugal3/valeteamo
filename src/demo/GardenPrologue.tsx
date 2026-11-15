@@ -50,6 +50,7 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
  const [letters,setLetters]=useState(0);
  const [near,setNear]=useState('');
  const [enemyCount,setEnemyCount]=useState(3);
+ const [muted,setMuted]=useState(false);
  const [error,setError]=useState('');
  const [portraits,setPortraits]=useState<Record<string,string>>({});
  const [restartKey,setRestartKey]=useState(0);
@@ -464,7 +465,11 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
      {Array.from({length:6},(_,i)=><span key={i} aria-hidden="true" className={i<run.hp?'full':''}>♥</span>)}
     </div>
     {['ribbon','petals','wheel','door','window'].includes(run.stage)&&<span className="prologue-clue-count">{run.clues}/3 pistas</span>}
-    <button type="button" onClick={onExit} className="prologue-exit" aria-label="Salir del prólogo">⚙ Salir</button>
+    <button type="button" className="prologue-audio" aria-label={muted?'Activar sonido':'Silenciar sonido'}
+      onClick={()=>{const next=!muted;audio.current.muted=next;setMuted(next);if(!next)void audio.current.start();}}>
+      {muted?'♪̸':'♪'}
+     </button>
+     <button type="button" onClick={onExit} className="prologue-exit" aria-label="Salir del prólogo">⚙ Salir</button>
    </div>
   </div>
   {run.stage==='defend'&&<div className="prologue-fight-score" role="status">Sombras restantes: {enemyCount} · Dispara corazones ♡</div>}
