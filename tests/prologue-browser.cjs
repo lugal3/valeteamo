@@ -94,6 +94,10 @@ async function play(){
     }
     const btn=page.getByRole('button',{name:action});
     await btn.waitFor({state:'visible',timeout:6000});
+    if(['ribbon','petals','wheel'].includes(stage)){
+     assert(await page.evaluate(()=>window.__valePrologue.scene().storyTargetCuePlayed),
+      'physical clue discovery must have a one-time nonblocking reaction');
+    }
     if(stage==='talk-luis'){
      const idleTexture=await page.evaluate(()=>window.__valePrologue.scene()?.storyLuis?.texture?.key);
      assert(/^story-person-luis-(down|up|right)-idle-\d$/.test(idleTexture??''),
@@ -190,6 +194,16 @@ async function play(){
   // Measure actual traversal after part of the continuous walk-to-door beat.
   await page.waitForTimeout(480);
   const loading=await page.evaluate(()=>window.__valePrologue.abduction());
+  const performance=await page.evaluate(()=>{
+   const s=window.__valePrologue.scene();
+   return {focus:{...s.storyDramaOffset},emotes:s.storyBubbles.length};
+  });
+  assert(Math.hypot(performance.focus.x,performance.focus.y)>1,
+   'camera gently tracks the physical kidnapping without a sudden cut');
+  assert(performance.emotes<=3,'nonblocking emotion glyphs stay finite on mobile');
+  assert(Math.abs(performance.focus.x)<=84&&Math.abs(performance.focus.y)<=46,
+   'camera focus is strictly bounded near Kitty');
+  await page.screenshot({path:'artifacts/story-kidnapping-soft-camera-and-reactions.png'});
   assert(loading.louis?.visible,'Louis cannot vanish before entering the van');
   assert(Math.hypot(loading.louis.x-victimStart.x,
    loading.louis.y-victimStart.y)>8,'captors MUST physically move hostage to van');
@@ -204,6 +218,10 @@ async function play(){
   await page.screenshot({path:'artifacts/story-abduction-nightfall.png'});
   await finishDialogue(); // single rapid clue, no extra blocking exposition
   await game.locator('xpath=self::*[@data-prologue-stage="ribbon"]').waitFor();
+  await page.waitForFunction(()=>{
+   const s=window.__valePrologue.scene();
+   return Math.hypot(s.storyDramaOffset.x,s.storyDramaOffset.y)<.4;
+  },null,{timeout:4800});
   assert.equal(await page.evaluate(()=>window.__valePrologue.map()),'afternoon_meeting',
    'abduction stays in afternoon until Kitty finds the EXIT');
   await page.evaluate(()=>window.__valePrologue.exit());
