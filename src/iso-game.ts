@@ -405,7 +405,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(target!==this.storyNear){
    this.storyNear=target;this.story.near(target);
    if(target&&this.storyMap==='night_neighborhood'){
-    this.houseRoute=[];
+    // Keep assisted walking until Kitty reaches the actual doorstep.
+    // Proximity merely ENABLES interaction, not a premature route stop.
     this.burst(this.storyTarget,0xffdfb5);
     this.audio.tone(645,.13,.015);
    }
