@@ -207,9 +207,9 @@ async function play(){
   await houseCard.getByText('Ventana abierta').waitFor({timeout:6000});
   // A second leg of navigation goes WEST toward the actual open 3D window.
   const windowDistance=await page.evaluate(()=>window.__valePrologue.houseRoute().distance);
-  if(windowDistance>=1.5){
+  if(windowDistance>=1.35){
    await houseCard.getByRole('button',{name:/Guiarme caminando/}).click();
-   await page.waitForFunction(()=>window.__valePrologue.houseRoute().distance<1.4,null,{timeout:13000});
+   await page.waitForFunction(()=>window.__valePrologue.houseRoute().distance<.9,null,{timeout:13000});
   }
   await page.screenshot({path:'artifacts/story-night-open-west-window.png'});
   await page.getByRole('button',{name:/Entrar por la ventana/}).click();
