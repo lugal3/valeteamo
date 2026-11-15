@@ -338,8 +338,7 @@ export class HouseRenderer {
     writeLoisRigPart(this.dynamicVertices,this.dynamicTemplate,start,end,box,
      this.dynamicRigBinds[i],source,rig);
     if(rigStart<0){rigStart=start;rigEnd=end;}
-    else if(start===rigEnd)rigEnd=end;
-    else {flushRig();rigStart=start;rigEnd=end;}
+    else rigEnd=end; // Include unchanged adjacent joints: one bounded upload per actor.
     metrics.parts++;
     // One shadow invalidation per actor instead of per hair strand / joint.
     if(this.dynamicCasters[i]&&!shadowedRigs.has(source)){
