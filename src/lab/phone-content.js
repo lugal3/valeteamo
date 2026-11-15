@@ -20,8 +20,8 @@ export function phoneHome(unread){
 }
 export function earlierMessages(date=deviceTime()){
  return [
-  {from:'Mi Luis ❤️',text:'Ten cuidado cuando llegues. Si ves algo raro, avísame.',time:formatPhoneTime(new Date(date.getTime()-4*3600000))},
-  {from:'Tú',text:'Sí. Te escribo cuando esté adentro.',time:formatPhoneTime(new Date(date.getTime()-4*3600000+120000))}
+  {from:'Mi Luis ❤️',text:'Vi las marcas de ruedas cerca de la casa. La puerta principal está cerrada; te estaré avisando si vuelve ese hombre.',time:formatPhoneTime(new Date(date.getTime()-4*3600000))},
+  {from:'Tú',text:'Encontré la ventana entreabierta. Voy a buscar a Louis, quédate pendiente ❤️.',time:formatPhoneTime(new Date(date.getTime()-4*3600000+120000))}
  ];
 }
 

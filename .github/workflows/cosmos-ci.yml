@@ -10,6 +10,11 @@ on:
       - 'src/LandscapeGate.tsx'
       - 'src/landscape-gate.css'
       - 'src/StoryApp.tsx'
+      - 'src/demo/**'
+      - 'src/lab/phone-content.js'
+      - 'tests/prologue.cjs'
+      - 'tests/prologue-browser.cjs'
+      - 'package.json'
       - 'src/PlaytestMenu.tsx'
       - 'src/birthday-countdown.css'
       - 'tests/cosmos.cjs'
@@ -44,6 +49,7 @@ jobs:
       - run: node tests/landscape-gate.cjs
       - run: node tests/cosmos-browser.cjs
       - run: node tests/cosmos-public-flow.cjs
+      - run: node tests/prologue-browser.cjs
       - name: Guardar capturas de la experiencia
         if: always()
         uses: actions/upload-artifact@v4

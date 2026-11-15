@@ -154,12 +154,13 @@ async function main(){
   await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="explore"]').waitFor({timeout:20000});
   await page.setViewportSize({width:932,height:430});
   await page.screenshot({path:'artifacts/cosmos-galaxia-horizontal.png'});
-  // Verify that the new heart menu really opens the ORIGINAL Phaser 2D entry.
+  // The heart now opens the NEW unified story 2D; classic remains accessible from tests.
   await page.getByRole('button',{name:'Ajustes de la galaxia'}).click();
   await page.getByRole('button',{name:/Abrir corazón/}).click();
   await page.getByRole('dialog',{name:/Comenzamos nuestra aventura/}).waitFor();
   await page.getByRole('button',{name:/Comenzar juego 2D/}).click();
-  await page.getByRole('heading',{name:/El jardín/}).waitFor({timeout:12000});
+  await page.locator('.story-prologue .prologue-stage canvas').waitFor({timeout:25000});
+  await page.getByRole('dialog',{name:'Conversación'}).waitFor({timeout:12000});
   assert.deepEqual(errors,[],'Sin errores JavaScript');
   const video=page.video();
   await context.close();
