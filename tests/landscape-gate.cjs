@@ -31,7 +31,7 @@ async function main(){
   await page.getByLabel('Código de acceso').fill('LP');
   await page.getByRole('dialog',{name:'Administración'}).getByRole('button',{name:'Entrar'}).click();
   assert.equal(await page.locator('.valeteamo-splash').count(),0,'picnic cover is absent before the test menu');
-  await page.getByRole('button',{name:'Pruebas',exact:true}).click();
+  assert.equal(await page.locator('.playtest-menu[data-admin-panel="lp"]').count(),1,'LP goes directly to the dark testing panel');
   await page.getByRole('button',{name:/Galaxia rosa del video/}).click();
   const canvas=page.locator('canvas.cosmos-video-canvas');
   await canvas.waitFor({timeout:9000});

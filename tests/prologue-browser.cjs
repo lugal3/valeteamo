@@ -18,7 +18,6 @@ async function play(){
   await page.getByRole('button',{name:'Administración'}).click();
   await page.getByLabel('Código de acceso').fill('LP');
   await page.getByRole('dialog',{name:'Administración'}).getByRole('button',{name:'Entrar'}).click();
-  await page.getByRole('button',{name:'Pruebas',exact:true}).click();
   assert.equal(await page.getByRole('button',{name:/Aventura clásica/}).count(),1,
    'Original 2D must stay selectable as a separate classic mode');
   // Confirm the actual original arcade still launches unchanged first.
