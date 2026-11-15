@@ -2,6 +2,7 @@
 // Built as ordinary scene primitives for the existing WebGL1 pipeline;
 // no glTF loader, no network downloads, no extra scene or animation loop.
 import {LOIS_PS2_PROFILE} from './lois-ps2-profile.js';
+import {loisBoneForPart} from './lois-ps2-rig.js';
 
 export const LOIS_PS2_VARIANT='ps2-b';
 
@@ -11,7 +12,7 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
  const desktop=quality==='desktop';
  const p=LOIS_PS2_PROFILE.palette,parts=[];
  const add=(id,x,y,z,w,h,d,mat,color,extra={})=>
-  parts.push(piece(id,x,y,z,w,h,d,mat,{color,...extra}));
+  parts.push(piece(id,x,y,z,w,h,d,mat,{color,...extra,rigBone:loisBoneForPart(id),rigPart:id}));
  const box={shape:'rounded-box',roundness:.35,segments:desktop?8:6,rings:desktop?5:4};
  const limb={shape:'rounded-box',roundness:.38,segments:desktop?8:6,rings:desktop?5:4};
  const oval={shape:'round',segments:desktop?12:8,rings:desktop?7:4};

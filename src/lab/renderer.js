@@ -2,6 +2,7 @@ import {createPose,createRigBinding,evaluateRig,JOINT_INDEX} from './character-r
 import {sampleBlink} from './animations/face.js';
 import {smoothSurface,torusSurface,roundedBoxSurface} from './chibi-geometry.js';
 import {loisFaceSurface} from './lois-ps2-face.js';
+import {sampleLoisRig,writeLoisRigPart} from './lois-ps2-rig.js';
 import {createLoisFaceTexture} from './lois-ps2-texture.js';
 import {BATH_MIRROR,mirrorVisible,kittyMirrorPieces,reflectedBathroom,reflectMesh,poseReflectedKitty} from './mirror.js';
 import {ART_SIZE,ART_COLUMNS,ART_ROWS,POSTER_IMAGES,artTile,createArtworkCanvas} from './artwork.js';
@@ -237,6 +238,8 @@ export class HouseRenderer {
   const dynamic=geometry(this.dynamicBoxes);this.dynamicCount=dynamic.indices.length;
   this.dynamicTemplate=dynamic.vertices;this.dynamicVertices=new Float32Array(dynamic.vertices);this.dynamicRanges=dynamic.ranges;
   this.dynamicOrigins=this.dynamicBoxes.map(b=>[b.x,b.y,b.z,b.yaw||0,b.roll||0,b.pitch||0]);this.dynamicPositions=new Float32Array(this.dynamicBoxes.length*6);this.dynamicPositions.fill(Infinity);
+  this.dynamicRigBinds=this.dynamicBoxes.map(b=>b.rigBone&&b.source?[b.source.x,b.source.y,b.source.z]:null);
+  this.dynamicRigKeys=new Array(this.dynamicBoxes.length);
   this.dynamicEyeScale=new Float32Array(this.dynamicBoxes.length);this.dynamicEyeScale.fill(-1);
   gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamicVbo);gl.bufferData(gl.ARRAY_BUFFER,this.dynamicVertices,gl.DYNAMIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.dynamicIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,dynamic.indices,gl.STATIC_DRAW);
@@ -303,9 +306,36 @@ export class HouseRenderer {
   const gl=this.gl;
   gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamicVbo);
   const reduced=motion.reduced||false;
+  const rigCache=new Map(); // once per character each frame, never once per limb
   const bobAmp=reduced?0:0.012,swayAmp=reduced?0:0.14;
   for(let i=0;i<this.dynamicBoxes.length;i++){
    const box=this.dynamicBoxes[i],source=box.source;
+   // The PS2 option-B Lois uses a parented rigid rig. The legacy fallback
+   // retains the original louisPartPose path below, unchanged.
+   if(source?.kind==='louis-companion'&&box.rigBone){
+    let rig=rigCache.get(source);
+    if(!rig){rig=sampleLoisRig(source,reduced);rigCache.set(source,rig);}
+    const bone=rig.bones[box.rigBone],face=rig.face,name=box.rigPart||'';
+    const {start,end}=this.dynamicRanges[i];
+    const eyes=/^(eye|iris|pupil|glint)-/.test(name),look=/^(iris|pupil|glint)-/.test(name);
+    const animatedMouth=box.shape==='lois-face'||/^(upper-lip|lower-lip|under-lip)$/.test(name);
+    const signature=[source.x,source.y,source.z,source.yaw,...bone.rotation,...bone.translation,
+     eyes?face.blink:0,look?face.gazeYaw:0,look?face.gazePitch:0,
+     name.startsWith('brow-')?face.browLift:0,animatedMouth?face.jawOpen:0].join(',');
+    if(signature===this.dynamicRigKeys[i])continue;
+    this.dynamicRigKeys[i]=signature;
+    writeLoisRigPart(this.dynamicVertices,this.dynamicTemplate,start,end,box,
+     this.dynamicRigBinds[i],source,rig);
+    gl.bufferSubData(gl.ARRAY_BUFFER,start*4,this.dynamicVertices.subarray(start,end));
+    // Only shadow-casting character geometry requires lamp shadow invalidation.
+    if(this.dynamicCasters[i]){
+     this.lightPose='';
+     for(const lamp of this.fixtures)
+      if(Math.hypot(lamp.x-source.x,lamp.y-source.y,lamp.z-source.z)<LAMP_REACH+2)
+       this.dirtyLampShadows.add(lamp);
+    }
+    continue;
+   }
    let eyeScale=1;
    if(source){
     const offset=box.sourceOffset||[0,0,0];
