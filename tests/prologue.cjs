@@ -53,22 +53,27 @@ const assert=require('node:assert/strict');
  assert(bridge.includes('<GardenPrologue'),'real Phaser 2D intro integrated into 3D rescue route');
  assert(bridge.includes("setMode('house')"),'the same route enters the old 3D house');
  const rescue2d=fs.readFileSync('src/demo/GardenPrologue.tsx','utf8');
- const isoWorld=fs.readFileSync('src/demo/rescue-iso-world.ts','utf8');
  const arcade2d=fs.readFileSync('src/iso-game.ts','utf8');
- assert(arcade2d.includes("installReferenceCharacter(this,this.character)")&&
-  rescue2d.includes("installReferenceCharacter(this,'kitty')"),
-  'the two Phaser modes must use the same hand-preserved Kitty sprite sheet');
- assert(rescue2d.includes('kitty-walk-source')&&rescue2d.includes('facingOf('),
-  'the rescue must share the four-direction animation system');
- assert(rescue2d.includes('buildArt(this);buildChibi(this)')&&
-  rescue2d.includes("this.add.sprite(x,y,'kuromi-0')"),
-  'rescue combat must reuse the existing arcade textures');
- assert(isoWorld.includes('TILE_W=82,TILE_H=40')&&isoWorld.includes('fillPoints(diamond('),
-  'the new garden must be projected as the 2D isometric diamond tiles');
+ const host=fs.readFileSync('src/StoryGame.tsx','utf8');
+ const control=fs.readFileSync('src/isometric.ts','utf8');
+ assert(rescue2d.includes('<StoryGame')&&rescue2d.includes('story={story}'),
+  'rescue story must be played by the same StoryGame that runs the original 2D Corazones');
+ assert(!rescue2d.includes('new Engine.Game')&&!rescue2d.includes('class StoryGarden'),
+  'rescue must NOT instantiate an independent Phaser engine');
+ assert(host.includes("import('./iso-game')")&&host.includes('setProgress,story'),
+  'the original 2D app must create one IsoAdventure with an optional story bridge');
+ assert(arcade2d.includes('export class IsoAdventure extends Phaser.Scene')&&
+  arcade2d.includes('if(this.story)')&&arcade2d.includes('this.drawFloor()'),
+  'rescue must extend the original game class and use its actual floor');
+ assert(arcade2d.includes('this.fitCamera(this.scale.width,this.scale.height)')&&
+  arcade2d.includes('this.flower(u,v)')&&arcade2d.includes('this.spawnEnemy(p,false)'),
+  'original camera, tile textures and combat sprites must be reused without duplication');
+ assert(control.includes('screenVector')&&arcade2d.includes('screenVector(x,y)'),
+  'story movement must use the unchanged Corazones projection');
  assert(bridge.includes('checkpointFor(entry)')&&!bridge.includes('class GardenScene'),
-  'no old sideways scene should remain on any 2D rescue checkpoint');
+  'all 2D rescue checkpoints must use the original 2D Corazones engine');
  assert(bridge.includes('onRescue:')&&bridge.includes("setMode('house')"),
-  'all checkpoints must still connect to the actual 3D house');
+  'the 2D scenes must still connect to the original 3D house');
  const phone=fs.readFileSync('src/lab/phone-content.js','utf8');
  assert(phone.includes('Mi Luis ❤️'),'the boyfriend is the person sending messages later');
  console.log('PASS: coherent Acts I–II, three clues, protected classic mode, phone bridge and 3D transition.');
