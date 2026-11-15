@@ -45,7 +45,7 @@ export function ecologySeeds(
 ):{flora:FloraSeed[];wildlife:WildlifeSeed[]}{
  const width=maxU-minU,salt=sceneSalt[map];
  const flora:FloraSeed[]=Array.from({length:ECOLOGY_CAPS.flora},(_,i)=>{
-  const u=minU+.85+width*(i+.25+ecologyHash(i,salt,3)*.5)/ECOLOGY_CAPS.flora;
+  const u=minU+.85+(width-1.7)*(i+.25+ecologyHash(i,salt,3)*.5)/ECOLOGY_CAPS.flora;
   const side=i%2?-1:1;
   const v=center(u)+side*(1.8+ecologyHash(i,salt,7)*1.55);
   return {id:i,p:{u,v},kind:floraChoice[map][i%floraChoice[map].length],
