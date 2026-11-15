@@ -84,7 +84,7 @@ export function ecologyWildlifeStep(
  const distance=Math.hypot(seed.p.u-player.u,seed.p.v-player.v);
  const active=clamp((2.65-distance)/1.55,0,1);
  const dt=clamp(deltaMs,0,70)/1000;
- const smooth=1-Math.exp(-dt/(active>.02?.18:1.35));
+ const smooth=1-Math.exp(-dt/(active>.02?.18:1.05));
  const alarm=clamp(state.alarm+(active-state.alarm)*smooth,0,1);
  // Once startled, a small animal flees to one side and returns naturally.
  // No on/off visibility or instant teleport when Kitty approaches.
