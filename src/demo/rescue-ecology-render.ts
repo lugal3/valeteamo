@@ -211,12 +211,12 @@ export function createLivingEcology(
    // Flickering, drawn INSIDE existing windows. Curtains sway; one window
    // grows dim from time to time, without jump-scaring the player.
    const w=225,h=161,d=105;
-   const windows:[number,number][]=[
+   const panePositions:[number,number][]=[
     [-.44,-.27],[-.17,-.30],[.22,-.28],[.39,-.19],
     [-.44,-.72],[-.20,-.69]
    ];
-   for(let i=0;i<Math.min(ECOLOGY_CAPS.glowWindows,windows.length);i++){
-    const [xx,yy]=windows[i],wx=x+xx*w,wy=y+yy*h+d*(xx<0?.16:.11);
+   for(let i=0;i<Math.min(ECOLOGY_CAPS.glowWindows,panePositions.length);i++){
+    const [xx,yy]=panePositions[i],wx=x+xx*w,wy=y+yy*h+d*(xx<0?.16:.11);
     const flicker=Math.pow(Math.sin(t*.41+i*1.7),2);
     const dark=i===3&&Math.floor(t/19)%3===1;
     const alpha=(dark?.035:.11+.06*flicker)*(.6+night*.4);
