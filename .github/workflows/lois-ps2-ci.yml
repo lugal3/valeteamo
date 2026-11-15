@@ -37,10 +37,17 @@ jobs:
         run: npx playwright install chromium --with-deps
       - name: Capturar vistas frontal, lateral, 3/4 y modelo anterior
         run: node tests/lois-ps2-browser.cjs
+      - name: Estrés GPU simulado móvil, cambio de calidad y reingreso a la casa
+        run: node tests/lois-ps2-stress-browser.cjs
+      - name: Recorrido real del rescate completo (casa, sótano, escondite, RC)
+        run: node tests/rc-browser.cjs
       - name: Guardar capturas comparativas de Lois
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: lois-ps2-b-stage5-cinematics-visuals
-          path: artifacts/lois-*.png
+          name: lois-ps2-b-stage6-final-qa
+          path: |
+            artifacts/lois-*.png
+            artifacts/lois-phase6-stress.json
+            docs/capturas/rc-finale/*.png
           if-no-files-found: ignore
