@@ -181,7 +181,7 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
       // fixed-screen blue-violet dusk + deepening darkness, always a single scene
       this.veil=this.add.rectangle(0,0,W,H,0x1a2248,0).setOrigin(0).setScrollFactor(0).setDepth(80);
       this.veil.setBlendMode(Engine.BlendModes.MULTIPLY);
-      if(phaseRef.current.stage==='intro')showDialog(PROLOGUE_DIALOGUES.intro,()=>changed('begin'));
+      if(phaseRef.current.stage==='intro')showDialog(PROLOGUE_DIALOGUES.intro,()=>{changed('begin');this.spawnEnemies();});
       if(phaseRef.current.stage==='defend')this.spawnEnemies();
       if(['ribbon','petals','wheel','door','window'].includes(phaseRef.current.stage))this.louis.setVisible(false);
       this.syncWorld(phaseRef.current.stage);
