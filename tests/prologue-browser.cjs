@@ -167,7 +167,34 @@ async function play(){
   await page.waitForFunction(()=>window.__valePrologue.map()==='night_neighborhood',null,{timeout:12000});
   await page.locator('.story-prologue[data-transition="none"]').waitFor({timeout:12000});
   await page.screenshot({path:'artifacts/story-night-neighborhood-map.png'});
-  await page.waitForTimeout(1100);
+  // Real iPhone-style usability: do not cheat by teleporting to the house.
+  // Touch the actual guide button and walk from the street, past the gate,
+  // around the solid front facade until the door becomes interactable.
+  const houseCard=page.getByRole('complementary',{name:'Guía para llegar a la casa'});
+  await houseCard.waitFor({state:'visible',timeout:6000});
+  assert(await houseCard.getByText('Puerta principal').isVisible(),
+   'player can identify the locked front door from the neighborhood');
+  const beforeGuide=await page.evaluate(()=>window.__valePrologue.houseRoute().distance);
+  assert(beforeGuide>6,'test starts from road, NOT directly on the porch');
+  await houseCard.getByRole('button',{name:/Guiarme caminando/}).click();
+  await page.waitForFunction(()=>window.__valePrologue.houseRoute().active,null,{timeout:5000});
+  const starting=await page.evaluate(()=>window.__valePrologue.scene().p);
+  await page.waitForTimeout(650);
+  const moving=await page.evaluate(()=>window.__valePrologue.scene().p);
+  assert(Math.hypot(moving.u-starting.u,moving.v-starting.v)>.25,
+   'tapping the guide must physically walk Kitty, not teleport');
+  await page.waitForFunction(()=>window.__valePrologue.houseRoute().distance<1.20,
+   null,{timeout:28000}).catch(async(error)=>{
+    const debug=await page.evaluate(()=>({
+     player:window.__valePrologue.scene().p,
+     route:window.__valePrologue.houseRoute(),
+     target:window.__valePrologue.scene().storyTarget,
+     near:window.__valePrologue.scene().storyNear
+    }));
+    throw Error('Assisted front path did not reach the actual door: '+JSON.stringify(debug),{cause:error});
+   });
+  await page.screenshot({path:'artifacts/story-night-guided-front-porch.png'});
+  await page.waitForTimeout(360);
   const dusk=await page.evaluate(()=>window.__valePrologue.dusk());
   const night=await page.locator('.prologue-night').evaluate(element=>{
    const bounds=element.getBoundingClientRect();
@@ -180,9 +207,19 @@ async function play(){
   assert.equal(night.pointer,'none','night does not eat desktop clicks');
   assert(dusk.alpha>.5&&dusk.fillAlpha===1,'night must visibly darken the garden; fillAlpha cannot be zero');
   await page.screenshot({path:'artifacts/story-three-clues-night.png'});
-  await step('door',2490,/Probar puerta/);
+  const doorButton=page.getByRole('button',{name:/Probar puerta/});
+  await doorButton.waitFor({state:'visible',timeout:7000});
+  await doorButton.click();
+  await finishDialogue();
   await game.locator('xpath=self::*[@data-prologue-stage="window"]').waitFor();
-  await page.evaluate(()=>window.__valePrologue.teleport(2680,328));
+  await houseCard.getByText('Ventana abierta').waitFor({timeout:6000});
+  // A second leg of navigation goes WEST toward the actual open 3D window.
+  const windowDistance=await page.evaluate(()=>window.__valePrologue.houseRoute().distance);
+  if(windowDistance>=1.35){
+   await houseCard.getByRole('button',{name:/Guiarme caminando/}).click();
+   await page.waitForFunction(()=>window.__valePrologue.houseRoute().distance<.9,null,{timeout:13000});
+  }
+  await page.screenshot({path:'artifacts/story-night-open-west-window.png'});
   await page.getByRole('button',{name:/Entrar por la ventana/}).click();
   await finishDialogue();
   await page.locator('#lab-canvas').waitFor({state:'visible',timeout:26000});
