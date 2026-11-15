@@ -147,10 +147,37 @@ async function play(){
   await page.screenshot({path:'artifacts/story-luis-and-louis.png'});
   await page.evaluate(()=>window.__valePrologue.teleport(1543,336));
   await game.locator('xpath=self::*[@data-prologue-stage="disappearance"]').waitFor({timeout:6000});
-  await finishDialogue(); // sinister warning while still in sunshine
-  await convo.waitFor({state:'visible',timeout:11000}); // kidnapping cinematic completes
+  await finishDialogue(); // one very short warning before the cinematic
+  await page.waitForFunction(()=>window.__valePrologue.abduction().phase==='arrival',
+   null,{timeout:3000});
+  const vanStart=await page.evaluate(()=>window.__valePrologue.abduction());
+  await page.screenshot({path:'artifacts/story-van-arrives.png'});
+  assert(vanStart.van?.visible,'van must drive into the clearing on screen');
+  await page.waitForFunction(()=>window.__valePrologue.abduction().phase==='disembark',
+   null,{timeout:4500});
+  const exit=await page.evaluate(()=>window.__valePrologue.abduction());
+  assert(exit.captors?.fox&&exit.captors?.rabbit,
+   'BOTH fox- and rabbit-masked kidnappers must visibly step out');
+  await page.screenshot({path:'artifacts/story-two-animal-masks-leave-van.png'});
+  await page.waitForFunction(()=>['struggle','load'].includes(
+   window.__valePrologue.abduction().phase),null,{timeout:5500});
+  const victimStart=vanStart.louis;
+  await page.waitForFunction(()=>window.__valePrologue.abduction().phase==='load',
+   null,{timeout:2000});
+  const loading=await page.evaluate(()=>window.__valePrologue.abduction());
+  assert(loading.louis?.visible,'Louis cannot vanish before entering the van');
+  assert(Math.hypot(loading.louis.x-victimStart.x,
+   loading.louis.y-victimStart.y)>8,'captors MUST physically move hostage to van');
+  await page.screenshot({path:'artifacts/story-hostage-led-into-van.png'});
+  await page.waitForFunction(()=>window.__valePrologue.abduction().phase==='escape',
+   null,{timeout:5000});
+  const vanEscape=await page.evaluate(()=>window.__valePrologue.abduction());
+  assert(Math.hypot(vanStart.van.x-vanEscape.van.x,
+   vanStart.van.y-vanEscape.van.y)>20,'vehicle must drive away, not disappear');
+  await page.screenshot({path:'artifacts/story-van-escapes.png'});
+  await convo.waitFor({state:'visible',timeout:9000});
   await page.screenshot({path:'artifacts/story-abduction-nightfall.png'});
-  await finishDialogue(); // Kitty and Luis text conversation
+  await finishDialogue(); // single rapid clue, no extra blocking exposition
   await game.locator('xpath=self::*[@data-prologue-stage="ribbon"]').waitFor();
   assert.equal(await page.evaluate(()=>window.__valePrologue.map()),'afternoon_meeting',
    'abduction stays in afternoon until Kitty finds the EXIT');
@@ -174,8 +201,21 @@ async function play(){
   await houseCard.waitFor({state:'visible',timeout:6000});
   assert(await houseCard.getByText('Puerta principal').isVisible(),
    'player can identify the locked front door from the neighborhood');
+  assert(await page.evaluate(()=>window.__valePrologue.van().parked),
+   'the very SAME van must remain visibly parked near the final house');
+  // Optional investigation is accessible without teleporting Kitty:
+  // walk from the street, approach the vehicle and inspect its crescent plate.
+  await houseCard.getByRole('button',{name:/Investigar furgoneta/}).click();
+  await page.waitForFunction(()=>window.__valePrologue.van().near,
+   null,{timeout:16000});
+  await page.screenshot({path:'artifacts/story-van-parked-near-house.png'});
+  await page.getByRole('button',{name:/Inspeccionar furgoneta/}).click();
+  assert(await page.evaluate(()=>window.__valePrologue.van().inspected),
+   'inspecting the van must record the clue without changing story stage');
+  assert.equal(await page.evaluate(()=>window.__valePrologue.stage()),'door');
+  await houseCard.getByText(/Pista encontrada: LUNA-07/).waitFor({timeout:4500});
   const beforeGuide=await page.evaluate(()=>window.__valePrologue.houseRoute().distance);
-  assert(beforeGuide>6,'test starts from road, NOT directly on the porch');
+  assert(beforeGuide>3.0,'front door is not directly beside the street van');
   await houseCard.getByRole('button',{name:/Guiarme caminando/}).click();
   await page.waitForFunction(()=>window.__valePrologue.houseRoute().active,null,{timeout:5000});
   const starting=await page.evaluate(()=>window.__valePrologue.scene().p);
@@ -227,7 +267,7 @@ async function play(){
   await page.screenshot({path:'artifacts/story-to-house-3d.png'});
   assert.deepEqual(errors,[],'no runtime JS errors across FOUR separate 2D maps and the real 3D house');
   await context.close();
-  console.log('PASS: playable prologue introduction, shooting, Louis/Luis RPG dialogue, kidnapping, 3 clues, locked door and real 3D window.');
+  console.log('PASS: 2D Corazones; animated van arrival/fox/rabbit/hostage/escape; LUNA-07 clue at house; walk-to door/window; real 3D.');
  }finally{await browser?.close();await server.close();}
 }
 play().catch(e=>{console.error(e);process.exitCode=1;});
