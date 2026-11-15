@@ -1,6 +1,7 @@
 import {groundHeight} from './world.js';
 import {navigate} from './navigation.js';
 import {sampleBlink} from './animations/face.js';
+import {LOIS_VISUAL_ID} from './lois-ps2-profile.js';
 
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 export const LOUIS_UNTIE_SECONDS=3.25;
@@ -13,7 +14,7 @@ const ROUTE=Object.freeze([
 export const LOUIS_HIDING_SPOT=Object.freeze({x:11.82,y:0,z:4.08});
 export function createLouisEscape(world){
  const point=ROUTE[0],y=groundHeight(point.x,point.z,-3.55,true);
- return {kind:'louis-companion',id:'louis-escape',label:'Louis rescatado',x:point.x,y,z:point.z,yaw:Math.PI,phase:'untying',waypoint:1,age:0,step:0,crouch:.33,concealed:false,interactable:false,walk:0,speed:0,blink:0,world};
+ return {kind:'louis-companion',id:'louis-escape',label:'Louis rescatado',visualPreset:LOIS_VISUAL_ID,x:point.x,y,z:point.z,yaw:Math.PI,phase:'untying',waypoint:1,age:0,step:0,crouch:.33,concealed:false,interactable:false,walk:0,speed:0,blink:0,world};
 }
 export function updateLouisEscape(louis,dt,kitty=null){
  if(!louis||dt<=0)return null;

@@ -1,0 +1,27 @@
+name: Lois PS2 B - rama de desarrollo
+on:
+  push:
+    branches:
+      - feature/lois-ps2-option-b-rig
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  phase-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Probar contrato de apariencia y estados
+        run: node tests/lois-ps2-profile.cjs
+      - name: Probar rescate y animaciones existentes
+        run: node tests/rc-car.cjs
+      - name: Verificar todas las pruebas
+        run: npm test
+      - name: Compilar y verificar tipos
+        run: npm run build
