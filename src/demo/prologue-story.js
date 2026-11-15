@@ -85,12 +85,12 @@ export const PROLOGUE_DIALOGUES={
   {speaker:'Kitty',text:'Ven conmigo. Mi novio Luis está cerca; seguro sabrá qué hacer.'}
  ],
  luis:[
-  {speaker:'Luis',text:'¡Kitty! ♡ ¿Quién es nuestro nuevo amigo?'},
-  {speaker:'Kitty',text:'Es Louis. Lo estaban atacando unas sombras y me contó que alguien lo sigue.'},
+  {speaker:'Luis',text:'¡Kitty! ♡ ¡Por fin los encuentro! Los vi acercarse desde el sendero. ¿Quién es nuestro nuevo amigo?'},
+  {speaker:'Kitty',text:'¡Viniste a buscarnos! Él es Louis. Lo estaban atacando unas sombras y me contó que alguien lo sigue.'},
   {speaker:'Luis',text:'Soy Luis, con una sola «o». Yo soy el novio de Kitty; Louis es nuestro invitado. ¡Que no nos confundan!'},
   {speaker:'Louis',text:'Ja, gracias, Luis. El hombre tenía el pelo claro y llevaba un traje oscuro. Me dio mala espina.'},
-  {speaker:'Luis',text:'Voy a revisar el sendero y estar pendiente del móvil. Kitty, te escribiré si encuentro algo.'},
-  {speaker:'Kitty',text:'Vale. Louis, acompáñame hasta el claro y luego volvemos todos juntos.'}
+  {speaker:'Luis',text:'Voy a volver por el sendero para investigar. No estarás sola: te escribiré al teléfono si encuentro algo. ♡'},
+  {speaker:'Kitty',text:'Cuídate, amor. ♡ Louis, acompáñame hasta el claro mientras Luis revisa el sendero.'}
  ],
  warning:[
   {speaker:'Louis',text:'¿Escuchaste eso? Los pájaros dejaron de cantar de golpe.'},
