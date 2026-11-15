@@ -26,7 +26,7 @@ const boot=async(page,url)=>{
  assert(found.length===1,'must be able to simulate a missing hashed cosmos chunk: '+found.join(','));
  fs.mkdirSync('artifacts',{recursive:true});
  try{
-  for(const [engine,typ] of [['Chromium',chromium],['Safari WebKit',webkit]]){
+  if(process.env.ONLY_FAILED_CHUNK!=='1')for(const [engine,typ] of [['Chromium',chromium],['Safari WebKit',webkit]]){
    const browser=await typ.launch({headless:true,args:engine==='Chromium'?
     ['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']:[]});
    try{
@@ -74,6 +74,10 @@ const boot=async(page,url)=>{
    try{
     const context=await browser.newContext({viewport:{width:844,height:390},deviceScaleFactor:2,isMobile:true,hasTouch:true});
     const page=await context.newPage();
+    const events=[];
+    page.on('pageerror',e=>events.push('pageerror: '+e.message));
+    page.on('console',m=>{if(m.type()==='error'||m.type()==='warning')events.push('console: '+m.text());});
+    page.on('requestfailed',r=>events.push('requestfailed: '+r.url()+': '+r.failure()?.errorText));
     const chunk=found[0];
     let blocked=0;
     await page.route('**/assets/'+chunk,route=>{
@@ -83,7 +87,16 @@ const boot=async(page,url)=>{
     try{
      await boot(page,origin);
      await page.getByRole('button',{name:'Contador y colores',exact:true}).click();
-     await page.waitForURL(u=>new URL(u).searchParams.has('_sceneRetry'),{timeout:16000});
+     try{await page.waitForURL(u=>new URL(u).searchParams.has('_sceneRetry'),{timeout:8000});}
+     catch(e){
+      const diagnostic=await page.evaluate(()=>({
+       url:location.href,body:document.body?.innerText?.slice(0,900),
+       root:document.getElementById('root')?.innerHTML.slice(0,900),
+       recovery:!!document.querySelector('[data-scene-recovery],#vale-crash-recovery')
+      })).catch(()=>null);
+      console.log('DIAG MISSING CHUNK',JSON.stringify({engine,chunk,blocked,events,diagnostic}));
+      throw e;
+     }
      assert.equal(new URL(page.url()).searchParams.get('_sceneRetry'),'1','one automatic cache-refresh retry');
      await boot(page,page.url());
      await page.getByRole('button',{name:'Contador y colores',exact:true}).click();
