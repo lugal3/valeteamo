@@ -27,10 +27,8 @@ const times=[0,T.arrival,T.doors,T.disembark,T.approach,
 assert.deepEqual(times.slice(1).every((x,i)=>x>times[i]),true,
  'each cinematic beat has a real duration');
 assert(T.escape>=7000&&T.escape<10500,'scene feels cinematic yet remains quick');
-assert.deepEqual(times.map(time=>van.abductionPhaseAt(time)),
- ['arrival','disembark','approach','struggle','load','board','close','escape','done','done']
- .map((x,i)=>i===0?'arrival':x).slice(0,10),
- 'all phase timestamps should be stable');
+assert.deepEqual(Array.from(times.map(time=>van.abductionPhaseAt(time))),expected,
+ 'all phase boundary timestamps should match their named cinematic beats');
 // Probe the INTERIOR of every beat; boundary tests above deliberately check exact transitions.
 const starts=[0,T.arrival,T.doors,T.disembark,T.approach,
  T.struggle,T.load,T.board,T.close,T.escape];
