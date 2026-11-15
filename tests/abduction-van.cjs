@@ -50,8 +50,11 @@ assert.equal(van.abductionFrame(T.doors+20,origin).captorsVisible,true,
 assert(reach.captorsVisible&&reach.doorOpen,'masked people leave the van on foot');
 assert(dist(reach.fox,reach.rabbit)>.05,'fox and rabbit walk as two distinct characters');
 assert(struggle.victimVisible,'victim remains on screen while captors grab him');
-assert(loading.victimBehindVan&&dist(loading.victim,start.victim)>.2,
- 'hostage is led toward door rather than scaled or faded out');
+assert(!loading.victimBehindVan&&dist(loading.victim,start.victim)>.2,
+ 'hostage must move toward the van still visible IN FRONT of the vehicle');
+const lateLoading=van.abductionFrame(T.struggle+(T.load-T.struggle)*.82,origin);
+assert(lateLoading.victimBehindVan&&lateLoading.victimVisible,
+ 'hostage only moves BEHIND the van once physically inside the open side door');
 assert(escape.van.u>stop.van.u+1,'vehicle accelerates and physically escapes');
 assert(!end.victimVisible&&!end.captorsVisible,'everyone leaves WITH the van');
 assert.equal(end.phase,'done');
