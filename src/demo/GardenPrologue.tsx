@@ -259,19 +259,21 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
      shoot(){
       const now=this.time.now;
       if(lockedRef.current||phaseRef.current.stage!=='defend'||now-this.lastShot<330)return;
-      this.lastShot=now;
+      this.lastShot=now;this.shootingUntil=now+210;
+      audio.current.tone(760,.09,.03,'triangle');
       const targets=this.enemies.filter(v=>v.hp>0);
       if(!targets.length)return;
       targets.sort((a,b)=>Engine.Math.Distance.Between(this.kitty.x,this.kitty.y,a.body.x,a.body.y)-
         Engine.Math.Distance.Between(this.kitty.x,this.kitty.y,b.body.x,b.body.y));
       const target=targets[0];
       const a=Math.atan2(target.body.y-this.kitty.y,target.body.x-this.kitty.x),speed=440;
-      const shape=this.add.text(this.kitty.x,this.kitty.y-22,'♥',{fontFamily:'Georgia',fontSize:'30px',color:'#f276ad',stroke:'#fff5e7',strokeThickness:3}).setOrigin(.5).setDepth(25);
+      const shape=this.add.text(this.kitty.x,this.kitty.y-17,'♥',{fontFamily:'Georgia',fontSize:'17px',color:'#df6d91',stroke:'#fff5e4',strokeThickness:2}).setOrigin(.5).setDepth(900);
       this.shots.push({shape,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,ttl:1.5});
      }
      beginAbduction(){
       if(this.abductionRan||lockedRef.current)return;
       this.abductionRan=true;
+      audio.current.tone(165,.45,.047,'sawtooth');
       changed('clearing');this.syncWorld('disappearance');
       showDialog(PROLOGUE_DIALOGUES.warning,()=>{
        this.shadow.setVisible(true).setAlpha(0).setScale(.1).setPosition(this.louis.x+110,this.louis.y+2);
@@ -302,6 +304,7 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
       const index=CLUES.findIndex(item=>item.stage===stage&&distance(item.x,item.y)<110);
       if(index>=0){
        const clue=CLUES[index];
+       audio.current.ui();
        showDialog(PROLOGUE_DIALOGUES[clue.stage],()=>{
         changed(clue.stage==='ribbon'?'ribbon':clue.stage==='petals'?'petals':'wheel');
         this.syncWorld(phaseRef.current.stage);
@@ -325,29 +328,42 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
        this.velocity.x*=.65;this.velocity.y*=.65;
        return;
       }
-      const left=Number(keys.A.isDown||keys.LEFT.isDown);
-      const right=Number(keys.D.isDown||keys.RIGHT.isDown);
-      const up=Number(keys.W.isDown||keys.UP.isDown);
-      const down=Number(keys.S.isDown||keys.DOWN.isDown);
+      // En Corazones: WASD mueve, flechas disparan en combate.
+      // Fuera del combate las flechas también pueden mover a Kitty.
+      const movementArrows=stage!=='defend';
+      const left=Number(keys.A.isDown||(movementArrows&&keys.LEFT.isDown));
+      const right=Number(keys.D.isDown||(movementArrows&&keys.RIGHT.isDown));
+      const up=Number(keys.W.isDown||(movementArrows&&keys.UP.isDown));
+      const down=Number(keys.S.isDown||(movementArrows&&keys.DOWN.isDown));
       let vx=right-left+stickRef.current.x,vy=down-up+stickRef.current.y;
       const length=Math.hypot(vx,vy);
       if(length>1){vx/=length;vy/=length;}
       const inertia=1-Math.exp(-12*dt);
       this.velocity.x+=(vx-this.velocity.x)*inertia;
       this.velocity.y+=(vy-this.velocity.y)*inertia;
-      this.kitty.x=min(this.kitty.x+this.velocity.x*248*dt,42,boundaries[stage]??2780);
-      this.kitty.y=min(this.kitty.y+this.velocity.y*205*dt,225,431);
-      if(Math.abs(vx)+Math.abs(vy)>.1)this.kitty.setTexture('chibi-kitty-down-'+(Math.floor(this.time.now/150)%5));
-      else this.kitty.setTexture('chibi-kitty-down-0');
+      this.kitty.x=min(this.kitty.x+this.velocity.x*220*dt,42,boundaries[stage]??2780);
+      this.kitty.y=min(this.kitty.y+this.velocity.y*195*dt,250,419);
+      const moving=Math.hypot(this.velocity.x,this.velocity.y)>.12;
+      this.facing=facingOf(this.velocity.x,this.velocity.y,this.facing);
+      const frame=moving?1+Math.floor(this.time.now/115)%4:this.time.now%3600>3440?5:0;
+      const shoot=this.time.now<this.shootingUntil;
+      const texture='chibi-kitty-'+(this.facing==='left'?'right':this.facing)+'-'+frame+(shoot?'-shoot':'');
+      if(this.textures.exists(texture))this.kitty.setTexture(texture);
+      this.kitty.setFlipX(this.facing==='left').setDepth(this.kitty.y);
+      this.louis.setDepth(this.louis.y);this.luis.setDepth(this.luis.y);
       if(stage==='walk-together'){
        const goalX=Math.max(723,Math.min(this.kitty.x+53,1585));
        this.louis.x+=(goalX-this.louis.x)*Math.min(1,dt*3.7);
        this.louis.y+=(this.kitty.y-this.louis.y)*Math.min(1,dt*3.5);
       }
       if(stage==='defend'){
-       if(keys.SPACE.isDown||keys.F.isDown||heldFire.current)this.shoot();
+       if(keys.SPACE.isDown||keys.F.isDown||keys.UP.isDown||keys.DOWN.isDown||
+         keys.LEFT.isDown||keys.RIGHT.isDown||heldFire.current)this.shoot();
        for(const e of this.enemies){
         if(e.hp<=0)continue;
+        const enemyFrame='kuromi-'+Math.floor((this.time.now+e.seed*100)/180)%4;
+        if(this.textures.exists(enemyFrame))e.body.setTexture(enemyFrame);
+        e.body.setDepth(e.body.y);
         const d=Math.hypot(this.kitty.x-e.body.x,this.kitty.y-e.body.y);
         if(d>51){
          e.body.x+=(this.kitty.x-e.body.x)/d*e.speed*dt;
@@ -357,6 +373,7 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
          this.cameras.main.shake(95,.002);
          this.kitty.setTint(0xffa3ba);
          this.time.delayedCall(180,()=>this.kitty?.clearTint());
+         audio.current.tone(170,.13,.04,'triangle');
          if(hurt()<=0){
           // Defeat is forgiving: restart ONLY the current tutorial encounter,
           // never erase the NPC introductions, rest of the save or classic game.
@@ -374,9 +391,10 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
         for(const enemy of this.enemies){
          if(enemy.hp<=0)continue;
          if(Math.hypot(shot.shape.x-enemy.body.x,shot.shape.y-enemy.body.y)<31){
-          enemy.hp--;// Container hit feedback uses alpha tween; no sprite tint required.
+          enemy.hp--;audio.current.hit();
           this.tweens.add({targets:enemy.body,alpha:.45,duration:85,yoyo:true});
           if(enemy.hp<=0){
+           audio.current.tone(880,.2,.035);
            this.tweens.add({targets:enemy.body,alpha:0,scale:.12,duration:290,onComplete:()=>enemy.body.destroy()});
           }
           shot.ttl=0;break;
@@ -406,10 +424,11 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
      }
     }
     game=new Engine.Game({
-     type:Engine.AUTO,parent:stageRef.current!,width:W,height:H,transparent:false,
+     type:Engine.AUTO,parent:stageRef.current!,width:Math.max(1,stageRef.current!.clientWidth),
+     height:Math.max(1,stageRef.current!.clientHeight),transparent:false,
      pixelArt:true,render:{antialias:false,roundPixels:true},audio:{noAudio:true},
-     scale:{mode:Engine.Scale.FIT,autoCenter:Engine.Scale.CENTER_BOTH},
-     scene:StoryGarden
+     scale:{mode:Engine.Scale.RESIZE,autoCenter:Engine.Scale.NO_CENTER,expandParent:false},
+     input:{activePointers:4},scene:StoryGarden
     });
    }catch(e){if(!cancelled)setError(String(e));}
   };
@@ -432,7 +451,8 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
  const currentLine=dialog?storyLine(dialog.lines,dialog.index):null;
  const portrait=currentLine?.speaker==='Kitty'?portraits.kitty:
   currentLine?.speaker==='Luis'?portraits.luis:portraits.louis;
- return <main className="story-prologue" aria-label="Actos uno y dos: el jardín y la desaparición" data-prologue-stage={run.stage}>
+ return <main className="story-prologue" aria-label="Actos uno y dos: el jardín y la desaparición" data-prologue-stage={run.stage}
+  onPointerDownCapture={()=>{void audio.current.start();}}>
   <div className="prologue-stage" ref={stageRef} aria-label="Jardín 2D interactivo"/>
   <div className="prologue-topbar">
    <div className="prologue-title">
@@ -477,7 +497,7 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
     </button>
    </div>
   </div>}
-  {!dialog&&<p className="prologue-help">Joystick / WASD para moverse · E para hablar · Espacio / ♥ para disparar</p>}
+  {!dialog&&<p className="prologue-help">Mover: joystick / WASD · Atacar: ♥ / flechas / Espacio · E: hablar</p>}
   {error&&<div className="prologue-error" role="alert">No se pudo abrir el prólogo: {error}
    <button onClick={restart}>Reintentar</button><button onClick={onExit}>Salir</button></div>}
   {test&&<button className="prologue-restart" onClick={restart}>↻ Reiniciar prólogo</button>}
