@@ -702,7 +702,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  update(_time:number,delta:number){
   if(this.paused||this.pendingOffer||this.ended)return;const dt=Math.min(delta,40),seconds=dt/1000;this.clock+=dt;
   if(this.story){
-   this.storyWorld?.update(this.clock,this.storyDusk);
+   const ecologyCue=this.storyWorld?.update(this.clock,this.storyDusk,this.p);
+   if(ecologyCue)this.audio.playRescueAmbience?.(ecologyCue.kind,ecologyCue.pan);
    // Physical NPC and kidnapping motion keeps running during narrative locks.
    this.updateLuisCinematic(dt);
    this.animateStoryLuis();
