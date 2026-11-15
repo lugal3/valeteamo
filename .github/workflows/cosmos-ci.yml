@@ -14,8 +14,11 @@ on:
       - 'src/lab/phone-content.js'
       - 'tests/prologue.cjs'
       - 'tests/prologue-browser.cjs'
+      - 'tests/prologue-desktop.cjs'
       - 'tests/emotes-browser.cjs'
       - 'tests/rescue-world.cjs'
+      - 'tests/luis-animation.cjs'
+      - 'tests/luis-choreography.cjs'
       - 'src/iso-game.ts'
       - 'src/lab/house.js'
       - 'src/lab/house.css'
@@ -45,8 +48,11 @@ on:
       - 'src/lab/phone-content.js'
       - 'tests/prologue.cjs'
       - 'tests/prologue-browser.cjs'
+      - 'tests/prologue-desktop.cjs'
       - 'tests/emotes-browser.cjs'
       - 'tests/rescue-world.cjs'
+      - 'tests/luis-animation.cjs'
+      - 'tests/luis-choreography.cjs'
       - 'src/iso-game.ts'
       - 'src/lab/house.js'
       - 'src/lab/house.css'
@@ -86,6 +92,7 @@ jobs:
       - run: node tests/cosmos-browser.cjs
       - run: node tests/cosmos-public-flow.cjs
       - run: node tests/prologue-browser.cjs
+      - run: node tests/prologue-desktop.cjs
       - run: node tests/emotes-browser.cjs
       - name: Guardar capturas de la experiencia
         if: always()

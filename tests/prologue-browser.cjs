@@ -56,10 +56,56 @@ async function play(){
    await game.locator('xpath=self::*[@data-prologue-stage="'+stage+'"]').waitFor({timeout:12000});
    await page.evaluate(([x,y])=>window.__valePrologue.teleport(x,y),[x,340]);
    if(action){
+    if(stage==='talk-luis'){
+     // A real approach from the side path: inspect position while walking,
+     // not just presence of a static NPC suddenly spawned at the target.
+     await page.waitForFunction(()=>window.__valePrologue?.luisBeat?.()==='arriving',
+      null,{timeout:4500});
+     const start=await page.evaluate(()=>window.__valePrologue.luisPosition());
+     await page.screenshot({path:'artifacts/story-luis-entrance.png'});
+     await page.waitForTimeout(440);
+     const progress=await page.evaluate(()=>window.__valePrologue.luisPosition());
+     assert(Math.hypot(progress.x-start.x,progress.y-start.y)>3,
+      'Luis must PHYSICALLY move into the clearing, not just change walk frames');
+     assert.equal(await page.getByRole('button',{name:/Hablar con Luis/}).count(),0,
+      'conversation is unavailable until Luis reaches Kitty and finishes waving');
+     await page.waitForFunction(()=>window.__valePrologue?.luisReady?.(),
+      null,{timeout:6000});
+    }
     const btn=page.getByRole('button',{name:action});
     await btn.waitFor({state:'visible',timeout:6000});
+    if(stage==='talk-luis'){
+     const idleTexture=await page.evaluate(()=>window.__valePrologue.scene()?.storyLuis?.texture?.key);
+     assert(/^story-person-luis-(down|up|right)-idle-\d$/.test(idleTexture??''),
+      'Luis must use the redesigned chibi idle sprite in the original scene');
+     await page.screenshot({path:'artifacts/story-luis-chibi-idle.png'});
+    }
     await btn.click();
+    if(stage==='talk-luis'){
+     await page.waitForFunction(()=>{
+      const key=window.__valePrologue?.scene()?.storyLuis?.texture?.key??'';
+      return /story-person-luis-(down|up|right)-talk-\d$/.test(key);
+     },null,{timeout:6000});
+     await page.screenshot({path:'artifacts/story-luis-chibi-talking.png'});
+    }
     await finishDialogue();
+    if(stage==='talk-luis'){
+     // Farewell is a distinct 2-beat animation: hand wave and exit walking,
+     // with the next story stage blocked until Luis has left the screen.
+     await page.waitForFunction(()=>window.__valePrologue?.luisBeat?.()==='farewell-wave',
+      null,{timeout:5000});
+     await page.screenshot({path:'artifacts/story-luis-wave-goodbye.png'});
+     assert.equal(await page.evaluate(()=>window.__valePrologue.stage()),'talk-luis',
+      'RPG must not skip directly to next chapter before farewell');
+     await page.waitForFunction(()=>window.__valePrologue?.luisBeat?.()==='farewell-walk',
+      null,{timeout:5000});
+     const walking=await page.evaluate(()=>window.__valePrologue.luisPosition());
+     await page.waitForTimeout(460);
+     const leaving=await page.evaluate(()=>window.__valePrologue.luisPosition());
+     assert(Math.hypot(leaving.x-walking.x,leaving.y-walking.y)>3,
+      'farewell must move Luis back toward the path');
+     await page.screenshot({path:'artifacts/story-luis-walking-away.png'});
+    }
    }
   }
   const intro=await page.evaluate(()=>{

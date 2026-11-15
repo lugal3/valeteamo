@@ -147,7 +147,13 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   interact:(stage)=>{
    if(dialogRef.current||lockedRef.current||enteringRef.current)return;
    if(stage==='talk-louis')showDialog(PROLOGUE_DIALOGUES.victory,()=>changed('louis'));
-   if(stage==='talk-luis')showDialog(PROLOGUE_DIALOGUES.luis,()=>changed('luis'));
+   if(stage==='talk-luis')showDialog(PROLOGUE_DIALOGUES.luis,()=>{
+    // Dialogue closes, but the next chapter only begins once Luis has waved
+    // goodbye and walked back down the side path. No instantaneous despawn.
+    const scene=sceneRef.current;
+    if(scene)scene.playStoryLuisFarewell(()=>changed('luis'));
+    else changed('luis');
+   });
    if(stage==='ribbon')showDialog(PROLOGUE_DIALOGUES.ribbon,()=>changed('ribbon'));
    if(stage==='petals')showDialog(PROLOGUE_DIALOGUES.petals,()=>changed('petals'));
    if(stage==='wheel')showDialog(PROLOGUE_DIALOGUES.wheel,()=>changed('wheel'));
@@ -241,6 +247,10 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
       exit:()=>scene.storyExitForTest(),
       changing:()=>travelingRef.current,
       world:()=>({map:scene.storyMap,tiles:scene.storyWorld?.tiles,progress:scene.p.u}),
+      luisBeat:()=>scene.storyLuisMotion?.kind??(scene.storyLuisReady?'ready':'waiting'),
+      luisReady:()=>scene.storyLuisReady,
+      luisPosition:()=>scene.storyLuis?{x:scene.storyLuis.x,y:scene.storyLuis.y,
+       texture:scene.storyLuis.texture.key,visible:scene.storyLuis.visible}:null,
       scene:()=>scene
      };
     }
