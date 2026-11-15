@@ -111,6 +111,6 @@ assert(world.includes('ecology=createLivingEcology(scene,map')&&
  'existing RescueOverworld must drive all graphics without a second renderer');
 assert(arcade.includes('this.audio.playRescueAmbience?.('),
  'sounds are triggered by the actual story scene, not a perpetual timer');
-assert(arcade.includes('if(this.story){\n   const ecologyCue='),
+assert(arcade.includes('if(this.story){\\n   this.updateStoryPerformance(dt);\\n   const ecologyCue='),
  'original classic Corazones must not instantiate or tick living ecology');
 console.log('PASS phase 2: four deterministic living biomes, wildlife reactions/return at 30/60/120Hz, passive microevents, spatial audio cues, 8/18 creature/flora limits, reduced motion and classic protection.');
