@@ -148,7 +148,7 @@ export function RescueDemo({onExit,entry='garden',test=false}:{onExit:()=>void,e
    try{
     const {launchHouse}=await import('../lab/house.js');if(cancelled)return;
     const checkpoint: string=entry==='mirror'?'mirror':entry==='drawer'?'interactions':entry==='lock'||entry==='rescue'?'upstairs':entry==='house'?'ground':'ground';
-    teardown=launchHouse(()=>onExit(),checkpoint,{demo:true,onRescue:()=>{emit('rescue');setMode('end');},trial:test,entry});
+    teardown=launchHouse(()=>onExit(),checkpoint,{demo:true,onRescue:()=>{emit('rescue');setMode('end');},trial:test&&entry!=='garden',entry});
    }catch(e){if(!cancelled)setError(String(e));}
   };
   void boot();return()=>{cancelled=true;teardown?.();};
