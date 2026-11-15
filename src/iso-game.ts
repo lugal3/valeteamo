@@ -6,6 +6,7 @@ import {installReferenceCharacter} from './reference-characters';
 import {facingOf,type Facing} from './animation';
 import {ISO,constrain,isoDistance,screenVector,toScreen,type IsoPoint} from './isometric';
 import {Sound} from './audio';
+import {NIGHT_INTERACTION_RADIUS,nightAutoRoute,nightNavigationDistance} from './demo/night-house-layout';
 import {installProloguePeople,luisTextureKey,luisAnimationFrame,
  type LuisFacing,type LuisPose} from './demo/prologue-art';
 import {LUIS_BEATS,makeLuisMotion,luisEntryPoint,luisPointOnPath,
@@ -67,6 +68,7 @@ export class IsoAdventure extends Phaser.Scene {
  storyArea:RouteArea='sendero';storyMap:RescueMapId='morning_garden';storyExitPending=false;
  storyActionPressed=false;storyNear='';storyWalkTriggered=false;storyVictoryEmitted=false;
  storyTarget:IsoPoint={u:22,v:4.5};
+ houseRoute:IsoPoint[]=[];houseLastHint='';
  constructor(public level:1|2|3,public character:CharacterId,public report:(h:AdventureHud)=>void,public finish:(outcome:'win'|'dead')=>void,public onPause:(v:boolean)=>void,public audio:Sound,public ready:()=>void,public progress:(n:number)=>void=()=>{},public story?:IsoStoryBridge){super('iso-adventure');}
  preload(){const path=CHARACTERS[this.character].chibiSpriteSheet;if(path)this.load.spritesheet(`chibi-${this.character}-sheet`,path,{frameWidth:32,frameHeight:40});else{this.load.image(`${this.character}-reference-source`,new URL(`./sprites/${this.character}-reference-sheet.png`,document.baseURI).href);this.load.image(`${this.character}-walk-source`,new URL(`./sprites/${this.character}-walk-sheet.png`,document.baseURI).href);}if(this.story){
  this.load.image('louis-reference-source',new URL('./sprites/louis-reference-sheet.png',document.baseURI).href);
@@ -108,6 +110,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  changeStoryMap(map:RescueMapId){
   if(!this.story||map===this.storyMap)return;
   this.storyWorld?.destroy();
+  this.houseRoute=[];this.houseLastHint='';
   this.storyMap=map;
   this.storyWorld=this.createStoryWorld(map);
   this.storyExitPending=false;this.storyGuideStep=-1;
@@ -138,6 +141,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(!this.story||(!force&&this.storyStage===stage))return;
   this.storyStage=stage;this.storyWalkTriggered=false;this.storyVictoryEmitted=false;
   this.storyActionPressed=false;this.storyNear='';
+  this.houseRoute=[];this.houseLastHint='';
   for(const o of this.storyObjects)o.destroy();this.storyObjects=[];
   for(const e of this.enemies){e.s.destroy();e.shadow.destroy();}this.enemies=[];
   for(const shot of this.shots)shot.s.destroy();this.shots=[];
@@ -161,10 +165,19 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    this.storyObjects.push(image);return image;
   };
   const marker=(symbol:string,p:IsoPoint)=>{
-   const xy=toScreen(p),label=this.add.text(xy.x,xy.y-16,symbol,{
-    fontFamily:'Georgia',fontSize:'26px',color:'#ffe4a2',
-    stroke:'#a66f7b',strokeThickness:2
-   }).setOrigin(.5,1).setDepth(xy.y+1);
+   const xy=toScreen(p),isHouse=this.storyMap==='night_neighborhood';
+   if(isHouse){
+    const ring=this.add.ellipse(xy.x,xy.y,77,31,0xffe2ba,.26)
+     .setDepth(xy.y+3);
+    ring.setStrokeStyle(3,0xffe0b9,.96);
+    this.storyObjects.push(ring);
+    if(!this.reducedMotion)this.tweens.add({targets:ring,alpha:.42,
+     scaleX:1.15,scaleY:1.15,duration:1050,yoyo:true,repeat:-1});
+   }
+   const label=this.add.text(xy.x,xy.y-(isHouse?25:16),symbol,{
+    fontFamily:'Georgia',fontSize:isHouse?'34px':'26px',color:'#fff4cf',
+    stroke:'#764f78',strokeThickness:4
+   }).setOrigin(.5,1).setDepth(xy.y+12);
    this.storyObjects.push(label);
   };
   this.storyTarget={...STORY_POSITIONS[stage]};
@@ -211,7 +224,31 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  }
  storyInteract(){
   if(!this.story||this.story.locked()||luisMotionIsBlocking(this.storyLuisMotion)||!this.storyNear)return;
-  this.audio.ui();this.story.interact(this.storyStage);
+  this.houseRoute=[];this.audio.ui();
+  if(this.storyMap==='night_neighborhood'){
+   this.burst(this.storyTarget,0xffd9b5);
+   this.audio.tone(710,.16,.028,'triangle');
+  }
+  this.story.interact(this.storyStage);
+ }
+ startHouseGuide(){
+  if(!this.story||this.storyMap!=='night_neighborhood'||
+   !['door','window'].includes(this.storyStage)||this.story.locked())return false;
+  if(this.houseRoute.length){this.houseRoute=[];this.story.guide('Guía pausada. Puedes seguir caminando con el joystick.');return false;}
+  if(nightNavigationDistance(this.p,this.storyTarget)<NIGHT_INTERACTION_RADIUS){
+   this.updateStoryActors(0);return false;
+  }
+  const path=nightAutoRoute(this.p,this.storyTarget);
+  if(!path.length){
+   this.story.guide('Acércate por la vereda; la casa tiene un pequeño sendero iluminado.');
+   return false;
+  }
+  this.houseRoute=path;
+  this.story.guide(this.storyStage==='door'?
+   'Sigue las baldosas iluminadas hasta la puerta principal ♡':
+   'Da la vuelta por el patio frontal hasta la ventana entreabierta ♡');
+  this.audio.tone(770,.13,.016);
+  return true;
  }
  storyTeleportForTest(_unused:number){
   if(!this.story)return;
@@ -361,9 +398,18 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    door:'Probar puerta',window:'Entrar por la ventana'
   };
   const canInteract=stage!=='talk-luis'||this.storyLuisReady;
-  const target=canInteract&&labels[stage]&&isoDistance(this.p,this.storyTarget)<1.15?
+  const radius=this.storyMap==='night_neighborhood'?
+   NIGHT_INTERACTION_RADIUS:1.15;
+  const target=canInteract&&labels[stage]&&isoDistance(this.p,this.storyTarget)<radius?
    labels[stage]!:'';
-  if(target!==this.storyNear){this.storyNear=target;this.story.near(target);}
+  if(target!==this.storyNear){
+   this.storyNear=target;this.story.near(target);
+   if(target&&this.storyMap==='night_neighborhood'){
+    this.houseRoute=[];
+    this.burst(this.storyTarget,0xffdfb5);
+    this.audio.tone(645,.13,.015);
+   }
+  }
   this.checkStoryExit();
  }
  fitCamera(width:number,height:number){if(width<=0||height<=0)return;
@@ -435,8 +481,44 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(this.wonAt){if(!this.reducedMotion)this.player.setAngle(Math.sin(this.clock/90)*8);if(this.clock-this.wonAt>850){this.ended=true;this.finish('win');}return;}
   let x=+this.keys.D.isDown-+this.keys.A.isDown,y=+this.keys.S.isDown-+this.keys.W.isDown;
   if(this.left){x=this.left.dx;y=this.left.dy;if(Math.hypot(x,y)<7)x=y=0;}
-  const wantsMove=Math.hypot(x,y)>.1,move=screenVector(x,y),strength=this.left?Math.min(1,Math.hypot(x,y)/45):1;let moving=false;if(wantsMove){const candidate={u:this.p.u+move.u*2.1*seconds*strength,v:this.p.v+move.v*2.1*seconds*strength};
-   const next=this.story?constrainRescue(candidate,this.storyMap):constrain(candidate);moving=isoDistance(next,this.p)>.001;this.p=next;if(moving){this.moveClock+=dt*(.45+.55*strength);if(this.moveClock-this.lastStep>250){this.lastStep=this.moveClock;this.burst(this.p,0xf8e8ca);this.audio.tone(245,.04,.004,'triangle');}}else{this.moveClock=0;this.lastStep=0;}this.facing=facingOf(x,y,this.facing);}else{this.moveClock=0;this.lastStep=0;}
+  const manualMove=Math.hypot(x,y)>.1;
+  if(manualMove&&this.houseRoute.length)this.houseRoute=[]; // Player always overrides guide.
+  let guidePoint=this.houseRoute[0];
+  if(guidePoint&&isoDistance(this.p,guidePoint)<.17){
+   this.houseRoute.shift();guidePoint=this.houseRoute[0];
+  }
+  if(guidePoint){
+   const src=toScreen(this.p),dst=toScreen(guidePoint);
+   x=dst.x-src.x;y=dst.y-src.y;
+  }
+  const wantsMove=Math.hypot(x,y)>.1,move=screenVector(x,y);
+  const strength=this.left&&!guidePoint?Math.min(1,Math.hypot(x,y)/45):1;
+  let moving=false;
+  if(wantsMove){
+   const distance=guidePoint?isoDistance(this.p,guidePoint):0;
+   const fraction=guidePoint?Math.min(1,2.1*seconds/Math.max(.001,distance)):0;
+   const candidate=guidePoint?{
+    u:this.p.u+(guidePoint.u-this.p.u)*fraction,
+    v:this.p.v+(guidePoint.v-this.p.v)*fraction
+   }:{
+    u:this.p.u+move.u*2.1*seconds*strength,
+    v:this.p.v+move.v*2.1*seconds*strength
+   };
+   const next=this.story?constrainRescue(candidate,this.storyMap,this.p):constrain(candidate);
+   moving=isoDistance(next,this.p)>.001;this.p=next;
+   if(guidePoint&&isoDistance(this.p,guidePoint)<.18)this.houseRoute.shift();
+   if(guidePoint&&!moving){
+    this.houseRoute=[];this.story?.guide('Hay una pared cerca. Sigue la vereda para rodear la casa.');
+   }
+   if(moving){
+    this.moveClock+=dt*(.45+.55*strength);
+    if(this.moveClock-this.lastStep>250){
+     this.lastStep=this.moveClock;this.burst(this.p,0xf8e8ca);
+     this.audio.tone(245,.04,.004,'triangle');
+    }
+   }else{this.moveClock=0;this.lastStep=0;}
+   this.facing=facingOf(x,y,this.facing);
+  }else{this.moveClock=0;this.lastStep=0;}
   let ax=+this.keys.RIGHT.isDown-+this.keys.LEFT.isDown,ay=+this.keys.DOWN.isDown-+this.keys.UP.isDown;
   if(this.right){ax=this.right.dx;ay=this.right.dy;if(Math.hypot(ax,ay)<8)ax=ay=0;}else if(this.mouse){const point=toScreen(this.p),aim=this.cameras.main.getWorldPoint(this.input.activePointer.x,this.input.activePointer.y);ax=aim.x-point.x;ay=aim.y-point.y;}
   const firing=Math.hypot(ax,ay)>.1&&this.level!==1;if(firing){this.facing=facingOf(ax,ay,this.facing);if(this.clock-this.last>300){this.last=this.clock;const aim=screenVector(ax,ay),length=Math.hypot(ax,ay);this.shotDir={x:ax/length,y:ay/length};this.shoot(this.p,aim.u*4,aim.v*4);this.audio.tone(700,.04,.015);}}
