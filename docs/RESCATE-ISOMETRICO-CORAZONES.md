@@ -44,7 +44,7 @@ Las medidas y distribución verificadas en `src/lab/house-layout.js` son **14 ×
 El modelo isométrico actual refleja:
 - Dos plantas claras y techo a dos aguas.
 - Ala oeste, hall de entrada, ala de cocina/baño y ventanas en ambas plantas.
-- **Puerta principal al sur, aproximadamente en x=5,9**, distinta de la **ventana sur occidental en x=2,2**, la cual aparece tapiada como en el escenario 3D.
+- **Puerta principal al sur, aproximadamente en x=5,9**, distinta de la **ventana abierta de entrada en x=2,2**. En el 3D esta ventana de la introducción no tiene tablones; la casa isométrica la representa entreabierta, mientras una ventana del piso superior sí tiene tablones. Kitty regresa hacia el ala occidental tras comprobar la puerta, en vez de seguir avanzando en línea recta.
 - Volumen lateral, balconcito, acera, faroles, casas vecinas y ambiente nocturno.
 
 Es una correspondencia esquemática, no un calco 1:1 de cada pared. El modelo 3D completo no se alteró.
