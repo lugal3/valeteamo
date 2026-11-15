@@ -170,8 +170,7 @@ export function createLivingEcology(
    const base=toScreen(item.seed.p);
    item.graphics.setPosition(base.x+next.frame.x,base.y+next.frame.y)
     .setDepth(base.y+next.frame.y+1)
-    .setScale(item.seed.size)
-    .setFlipX?.(next.frame.flip); // Graphics has no frame allocation.
+    .setScale(item.seed.size); // Same reusable Graphics, no per-frame allocations.
    animal(item.graphics,item.seed.kind,next.frame,item.seed.id);
   }
   light.clear();micro.clear();
