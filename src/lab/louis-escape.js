@@ -1,9 +1,6 @@
 import {groundHeight} from './world.js';
 import {navigate} from './navigation.js';
 import {sampleBlink} from './animations/face.js';
-import {LOIS_VISUAL_ID} from './lois-ps2-profile.js';
-import {buildLoisPs2Model} from './lois-ps2-model.js';
-import {startLoisReaction,advanceLoisReaction} from './lois-ps2-reactions.js';
 
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 export const LOUIS_UNTIE_SECONDS=3.25;
@@ -16,23 +13,22 @@ const ROUTE=Object.freeze([
 export const LOUIS_HIDING_SPOT=Object.freeze({x:11.82,y:0,z:4.08});
 export function createLouisEscape(world){
  const point=ROUTE[0],y=groundHeight(point.x,point.z,-3.55,true);
- return {kind:'louis-companion',id:'louis-escape',label:'Louis rescatado',visualPreset:LOIS_VISUAL_ID,x:point.x,y,z:point.z,yaw:Math.PI,phase:'untying',waypoint:1,age:0,step:0,crouch:.33,concealed:false,interactable:false,walk:0,speed:0,blink:0,visualReaction:null,world};
+ return {kind:'louis-companion',id:'louis-escape',label:'Louis rescatado',x:point.x,y,z:point.z,yaw:Math.PI,phase:'untying',waypoint:1,age:0,step:0,crouch:.33,concealed:false,interactable:false,walk:0,speed:0,blink:0,world};
 }
 export function updateLouisEscape(louis,dt,kitty=null){
  if(!louis||dt<=0)return null;
  louis.age+=dt;
- advanceLoisReaction(louis,dt);
  louis.blink=sampleBlink(louis.age+.61,{reduced:false,firstAt:1.43});
  louis.speed=Math.max(0,louis.speed-dt*5);
  if(louis.phase==='follow')louis.crouch=Math.max(0,louis.crouch-dt*1.6);
  if(louis.phase==='untying'){
   louis.crouch=.33;
-  if(louis.age>=LOUIS_UNTIE_SECONDS){louis.phase='climb';louis.age=0;louis.crouch=0;startLoisReaction(louis,'look-kitty');return 'untied';}
+  if(louis.age>=LOUIS_UNTIE_SECONDS){louis.phase='climb';louis.age=0;louis.crouch=0;return 'untied';}
   return null;
  }
  if(louis.phase==='climb'){
   const target=ROUTE[louis.waypoint];
-  if(!target){louis.phase='hide';louis.age=0;louis.yaw=Math.PI;startLoisReaction(louis,'startle');return 'arrived';}
+  if(!target){louis.phase='hide';louis.age=0;louis.yaw=Math.PI;return 'arrived';}
   const dx=target.x-louis.x,dz=target.z-louis.z,d=Math.hypot(dx,dz);
   if(d<.055){louis.waypoint++;return null;}
   const step=Math.min(d,dt*2.10);
@@ -42,7 +38,7 @@ export function updateLouisEscape(louis,dt,kitty=null){
   louis.walk+=step;louis.speed=step/Math.max(dt,.0001);
  }else if(louis.phase==='hide'){
   louis.crouch=Math.min(1,louis.age/1.1);
-  if(louis.age>=1.5){louis.phase='hidden';louis.age=0;louis.concealed=true;startLoisReaction(louis,'listen');return 'hidden';}
+  if(louis.age>=1.5){louis.phase='hidden';louis.age=0;louis.concealed=true;return 'hidden';}
  }else if(louis.phase==='follow'&&kitty){
   const behind={x:kitty.x-Math.sin(kitty.yaw)*.90,z:kitty.z-Math.cos(kitty.yaw)*.90};
   const dx=behind.x-louis.x,dz=behind.z-louis.z,d=Math.hypot(dx,dz);
@@ -57,7 +53,6 @@ export function updateLouisEscape(louis,dt,kitty=null){
 export function freeLouis(louis){
  if(louis?.phase!=='hidden')return false;
  louis.phase='follow';louis.concealed=false;louis.speed=0;louis.age=0;
- startLoisReaction(louis,'relief');
  return true;
 }
 export function louisCamera(louis){
@@ -86,8 +81,7 @@ export function louisCamera(louis){
 // Stylized 2025-era Louis Tomlinson reference: narrow oval face, asymmetrical
 // eyebrow-length chestnut fringe, cool blue-grey irises, straight nose and
 // light beard shadow. Geometry is hand-built, not derived from a photo asset.
-export function louisModel(piece,{variant='legacy',quality='mobile'}={}){
- if(variant==='ps2-b')return buildLoisPs2Model(piece,{quality});
+export function louisModel(piece){
  const parts=[],add=(id,x,y,z,w,h,d,mat,color,extra={})=>parts.push(piece(id,x,y,z,w,h,d,mat,{color,...extra}));
  const skin=[.85,.665,.565],warm=[.828,.647,.555],shadow=[.72,.55,.495],beard=[.76,.605,.535];
  const hair=[.225,.142,.116],hairLight=[.305,.196,.151],highlight=[.37,.257,.206];
@@ -161,22 +155,18 @@ export function louisPartPose(source,box,offset,reduced=false){
  const weight=clamp((source.speed||0)/1.75,0,1)*(phase==='climb'||phase==='follow'?1:0);
  const crouch=clamp(source.crouch||0,0,1);
  const untying=phase==='untying',hiding=phase==='hide'||phase==='hidden';
- const group=box.rigGroup;
- const head=group==='head'||/^(face|forehead|cheek|jaw|stubble|sideburn|chin|beard|nose|nostril|philtrum|upper-lip|lower-lip|smile|hair|fringe|crown|temple|ear|brow|eye|iris|pupil|glint|lid|under-eye)/.test(id);
- const body=group==='body'||['torso','shirt','collar','neck'].includes(id);
- const arm=group==='arm'||/^(upper-arm|forearm|hand)-/.test(id);
- const leg=group==='leg'||/^(thigh|leg|shoe)-/.test(id);
+ const head=/^(face|forehead|cheek|jaw|stubble|sideburn|chin|beard|nose|nostril|philtrum|upper-lip|lower-lip|smile|hair|fringe|crown|temple|ear|brow|eye|iris|pupil|glint|lid|under-eye)/.test(id);
  let [x,y,z]=offset,roll=box.baseRoll||0,pitch=box.basePitch||0,yaw=box.baseYaw||0;
  const breathing=(reduced?0:.009*Math.sin(clock*2.1));
  if(head){
   y-=crouch*.35;y+=breathing;
   roll+=(reduced?0:.022*Math.sin(clock*.95))+(hiding?.07*Math.sin(clock*2):0);
   yaw+=(phase==='hidden'||phase==='hide'?Math.sin(clock*.83)*.20:0);
- }else if(body){
+ }else if(id==='torso'||id==='shirt'||id==='collar'||id==='neck'){
   y-=crouch*.31;y+=breathing+Math.abs(other)*weight*.012;
   roll+=step*weight*.025;
- }else if(arm){
-  const side=box.rigSide??(id.endsWith('--1')?-1:1);
+ }else if(/^(upper-arm|forearm|hand)-/.test(id)){
+  const side=id.endsWith('--1')?-1:1;
   const swing=step*weight*side;
   if(untying){
    x-=side*.11;y+=id.startsWith('hand')?.11:0;z+=.20;pitch=-.45+Math.sin(clock*3)*.045;
@@ -187,18 +177,17 @@ export function louisPartPose(source,box,offset,reduced=false){
    z+=swing*(id.startsWith('hand')?.13:.075);
    pitch+=swing*.35;
   }
- }else if(leg){
-  const side=box.rigSide??(id.endsWith('--1')?-1:1);
-  const isFoot=id.startsWith('shoe')||id.startsWith('sole');
+ }else if(/^(thigh|leg|shoe)-/.test(id)){
+  const side=id.endsWith('--1')?-1:1;
   if(untying){
-   z+=.14;y+=isFoot?.07:0;pitch=-.35;
+   z+=.14;y+=id.startsWith('shoe')?.07:0;pitch=-.35;
   }else if(hiding){
-   z+=isFoot?.12:.16;
-   y+=isFoot?0:-crouch*.11;
+   z+=id.startsWith('shoe')?.12:.16;
+   y+=id.startsWith('shoe')?0:-crouch*.11;
    pitch+=id.startsWith('thigh')?-.53:.35;
   }else{
-   z+=step*side*weight*(isFoot?.12:.075);
-   y+=Math.max(0,step*side)*weight*(isFoot?.045:.017);
+   z+=step*side*weight*(id.startsWith('shoe')?.12:.075);
+   y+=Math.max(0,step*side)*weight*(id.startsWith('shoe')?.045:.017);
    pitch+=step*side*weight*.34;
   }
  }

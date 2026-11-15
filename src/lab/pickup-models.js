@@ -2,7 +2,6 @@ import {BEVEL_PROFILE} from './chibi-geometry.js';
 import {notePieces} from './equipment.js';
 import {rcCarModel} from './rc-car.js';
 import {louisModel} from './louis-escape.js';
-import {LOIS_VISUAL_ID} from './lois-ps2-profile.js';
 
 function noteModel(piece,note){
  const yaw=note.mirrored?.25:-.12,c=Math.cos(yaw),s=Math.sin(yaw);
@@ -58,10 +57,7 @@ export function pickupGeometry(objects){
   const piece=(id,dx,dy,dz,w,h,d,mat,extra)=>({id:'pickup-'+o.id+'-'+id,x:o.x+dx,y:o.y+dy,z:o.z+dz,w,h,d,mat,
    solid:false,dynamic:true,source:o,sourceOffset:[dx,dy,dz],...extra});
   if(o.kind==='rc-car')return rcCarModel(piece,o.mode==='packed');
-  if(o.kind==='louis-companion'){
-   const variant=o.visualVariant==='legacy'?'legacy':o.visualPreset===LOIS_VISUAL_ID?'ps2-b':'legacy';
-   return louisModel(piece,{variant,quality:'mobile'}).map(box=>({...box,baseRoll:box.roll||0,basePitch:box.pitch||0,baseYaw:box.yaw||0}));
-  }
+  if(o.kind==='louis-companion')return louisModel(piece).map(box=>({...box,baseRoll:box.roll||0,basePitch:box.pitch||0,baseYaw:box.yaw||0}));
   if(o.kind==='note'&&o.mirrored)return notePieces()
    .filter(part=>part.id==='paper'||part.id.startsWith('ink-back'))
    .map(part=>piece(part.id,part.x,.044-part.z,part.y-.12,part.w,part.d,part.h,'paper',{color:part.color}));

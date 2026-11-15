@@ -28,7 +28,6 @@ import {animateFurniture,updateFurniture,sweepClear} from './furniture-motion.js
 import {BATTERY_SWAP_SECONDS} from './viewmodel.js';
 import {createRC,syncRCObject,deployRC,driveRC,beepRC,updateRC,stopRC,crashRC,recoverRC,rcCamera,canTrapPursuer} from './rc-car.js';
 import {createLouisEscape,updateLouisEscape,freeLouis,louisCamera} from './louis-escape.js';
-import {createLoisShotDirector,advanceLoisShot,finishLoisShot} from './lois-ps2-cinematics.js';
 import {createHousePuzzle,puzzleEvent,canOpenDrawer,canRescue,PUZZLE_HINTS} from '../demo/house-puzzles.js';
 import './house.css';
 const FLASH_DRAIN=.24,FLASH_LOW=15,SPARE_CHARGE=55;
@@ -112,7 +111,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const events=new HouseEvents({pursuit:config.entry!=='rescue',twoActs:true,arrivalLead:CAR_ARRIVAL_SECONDS}),floorSounds=new FloorSounds();let pursuer=null,equipment='flashlight',equipmentAge=1,encounterCheckpoint=null,thirdView=null;
  const mirrorSafe=new MirrorSafePuzzle(),television=new HouseTelevision();
  let safeInput='',activeSafe=null,noteLift=0,noteHold=0,notePresentation=false,capturePhoto=false,piano=null;
- let rc=null,louis=null,loisShotDirector=null,rcTrap={armed:false,closed:false},finalCutscene=null;
+ let rc=null,louis=null,rcTrap={armed:false,closed:false},finalCutscene=null;
  let equipmentBeforeNote='empty',batterySwap=null;
  const canUseHotbar=()=>ready&&!isSuspended()&&!cinematic&&events.phase!=='arrival'&&events.phase!=='failed'&&events.phase!=='safe'&&rc?.mode!=='driving'&&rc?.mode!=='deploying';
  const phone=new PhoneUI(root,(kind,toggle=true)=>equip(kind,toggle),()=>resetInput(),{canEquip:canUseHotbar,canUse:()=>canUseHotbar()&&!notePresentation,onEdit:()=>{releaseMouse();resetInput();if(isSuspended())sound.pause();else sound.resume();},onPhoto:()=>{capturePhoto=true;}});phone.equip(equipment);
@@ -191,7 +190,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  function reset(){
   television.sync(false,false);notePresentation=false;
-  louis=null;loisShotDirector=null;rcTrap={armed:false,closed:false};finalCutscene=null;
+  louis=null;rcTrap={armed:false,closed:false};finalCutscene=null;
   releaseMouse();events.reset();mirrorSafe.reset();hudMessages.reset();phone.close();encounterCheckpoint=null;danger.hidden=true;
    root.querySelector('[data-act=emotes]').setAttribute('aria-expanded','false');
   batterySwap=null;equipmentBeforeNote='empty';
@@ -413,7 +412,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(demo){
     // Leave the ropes on Louis until Kitty visibly unties them; the chair stays.
     for(const box of world.boxes)if(box.id.startsWith('captive-')&&!box.id.startsWith('captive-chair-')&&!box.id.startsWith('captive-rope-'))box.hiddenGeometry=true;
-    louis=createLouisEscape(world);loisShotDirector=createLoisShotDirector();world.objects.push(louis);
+    louis=createLouisEscape(world);world.objects.push(louis);
     events.phase='rc-rescue';pursuer.reset();sound.setThreat(false);
     phone.close();resetInput();rebuild();play('cloth',o);play('pickup',o);
     say('Kitty se arrodilla junto a Louis para soltar las cuerdas. Mantén silencio…',4);
@@ -891,10 +890,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   let thirdPerson=null,actorTime,actorWalk,shotLight=0;
   if(louis&&(['untying','climb','hide'].includes(louis.phase)||(louis.phase==='hidden'&&louis.age<1.6))){
-   if(!loisShotDirector)loisShotDirector=createLoisShotDirector();
-   view=advanceLoisShot(loisShotDirector,louis.phase,louisCamera(louis),
-    isSuspended()?0:shotDelta,reducedMotion.matches);
-   hand=false;
+   view=louisCamera(louis);hand=false;
    // Kitty's flashlight illuminates the otherwise unlit tunnel and Louis'
    // face throughout this framed scene; no global house lighting is altered.
    torch=true;
@@ -906,12 +902,6 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      z:louis.z-.34+.16*reach
     }));
    }
-  }else if(loisShotDirector){
-   // Blend back into Kitty's normal camera after the kitchen hiding sequence.
-   const exiting=finishLoisShot(loisShotDirector,view,isSuspended()?0:shotDelta,reducedMotion.matches);
-   view=exiting.view;
-   if(exiting.complete)loisShotDirector=null;
-   else {hand=false;torch=true;}
   }
   if(rc?.mode==='deploying'){
    const t=Math.min(1,rc.elapsed);
@@ -1161,7 +1151,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     rug:world.hatchRug.amount,hatch:world.hatch.amount,stamina:s.stamina,sprinting:s.sprinting,notePresentation}),
    story:()=>({pursuer:pursuer.snapshot(),samples:{loaded:sound.recordings?.buffers.size||0,played:sound.recordings?.played||0,last:sound.recordings?.lastPlayed,errors:sound.recordings?.errors||[]},phase:events.phase,time:events.time,remaining:events.remaining,messages:events.messages.map(m=>({...m})),equipment,phoneOpen:phone.open,hud:{...phone.layout,rect:phone.rect,editing:phone.editing},floorSounds:{steps:floorSounds.steps,triggers:floorSounds.triggers},audio:{lastEffect:sound.lastEffect,effects:sound.effectCount||0,voices:sound.foleyVoices?.size||0}}),
    rc:()=>({mode:rc.mode,position:{x:rc.x,y:rc.y,z:rc.z,yaw:rc.yaw},noise:rc.noise,crashes:rc.crashes,inventory:!!s.inventory.rc,trap:{...rcTrap},pursuer:{x:pursuer.x,y:pursuer.y,z:pursuer.z,mode:pursuer.mode}}),
-   louis:()=>louis?{x:louis.x,y:louis.y,z:louis.z,phase:louis.phase,waypoint:louis.waypoint,age:louis.age,walk:louis.walk,speed:louis.speed,crouch:louis.crouch,reaction:louis.visualReaction?.type??null,cameraPhase:loisShotDirector?.phase??null}:null,
+   louis:()=>louis?{x:louis.x,y:louis.y,z:louis.z,phase:louis.phase,waypoint:louis.waypoint,age:louis.age,walk:louis.walk,speed:louis.speed,crouch:louis.crouch}:null,
    // DEV-only route harness for deterministic test setup; not in the production build.
    placeRC:(pose)=>{if(rc.mode!=='driving')throw Error('RC must be deployed first');const y=groundHeight(pose.x,pose.z,pose.y??rc.y,world.hatch?.amount>.92);if(!Number.isFinite(y)||blocked(world.boxes,pose.x,y,pose.z,.155,.38))throw Error('Blocked RC test position');rc.x=pose.x;rc.y=y;rc.z=pose.z;rc.yaw=pose.yaw??rc.yaw;rc.noise=0;syncRCObject(rc);return {x:rc.x,y:rc.y,z:rc.z};},
    intro:()=>cinematic?{elapsed:cinematic.elapsed,...windowIntroState(cinematic.elapsed/WINDOW_SHOT_SECONDS),camera:windowIntroCamera(cinematic.elapsed/WINDOW_SHOT_SECONDS)}:null,
