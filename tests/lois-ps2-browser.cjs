@@ -29,12 +29,17 @@ const {chromium}=require('playwright');
     const actor={id:'louis-escape',kind:'louis-companion',visualPreset:LOIS_VISUAL_ID,visualVariant:variant,
      x:0,y:0,z:0,yaw:0,phase:'follow',walk:0,speed:0,crouch:0,blink:0,age:.5};
     const geo=pickupGeometry([actor]);
+    if(variant==='ps2-b-flat')for(const part of geo)if(part.shape==='lois-face')part.faceTexture=false;
     const stage=[
      {id:'stage-floor',x:0,y:-.12,z:0,w:5,h:.18,d:5,mat:'floor',color:[.44,.43,.42],solid:false},
      {id:'stage-wall',x:0,y:1.60,z:-1.3,w:6,h:4,d:.1,mat:'plaster',color:[.50,.51,.56],solid:false}
     ];
     const renderer=new HouseRenderer(canvas,quality);
     renderer.rebuild([...stage,...geo]);
+    if(variant==='ps2-b'){
+     const loaded=await renderer.loisFaceTexture.readyPromise;
+     if(!loaded)throw Error('Facial atlas could not load: check original SVG and Vite URL');
+    }
     const camera=shot==='portrait'?{x:0,y:1.64,z:.86,yaw:Math.PI,pitch:0}:
      shot==='side'?{x:2.10,y:1.10,z:0,yaw:-Math.PI/2,pitch:0}:
      shot==='threequarter'?{x:1.40,y:1.20,z:2.10,yaw:Math.PI+Math.atan(1.40/2.10),pitch:0}:
@@ -43,12 +48,19 @@ const {chromium}=require('playwright');
     const gl=renderer.gl;gl.finish();
     const error=gl.getError();
     const output={dataURL:canvas.toDataURL('image/png'),triangles:renderer.triangleCount,
-      vertices:renderer.vertexCount,error,drawn:renderer.dynamicCount};
+      vertices:renderer.vertexCount,error,drawn:renderer.dynamicCount,
+      textureReady:renderer.loisFaceTexture.ready,textureUploads:renderer.loisFaceTexture.uploads,
+      textureSize:renderer.loisFaceTexture.size};
     renderer.destroy();
     return output;
    },{variant,shot,quality});
    assert.equal(data.error,0,'WebGL must render without errors: '+variant+' '+shot);
    assert(data.drawn>200,'all dynamic geometry is present');
+   if(variant==='ps2-b'){
+    assert.equal(data.textureReady,true,'Lois facial atlas loaded');
+    assert.equal(data.textureUploads,1,'facial atlas uploaded once, not per frame');
+    assert.equal(data.textureSize,quality==='low'?512:1024,'face texture LOD matches device');
+   } else assert.equal(data.textureUploads,0,'legacy and untextured fallback do not load portrait art');
    const png=Buffer.from(data.dataURL.split(',')[1]||'','base64');
    assert(png.length>10000,'preview is a real canvas image, not an empty frame');
    const name='lois-'+variant+'-'+shot+'-'+quality+'.png';
@@ -57,13 +69,16 @@ const {chromium}=require('playwright');
    return png;
   };
   const modern=await capture('ps2-b','front');
+  const flat=await capture('ps2-b-flat','front');
+  assert.equal(modern.equals(flat),false,'painted face must change pixels compared with untextured skin');
   await capture('ps2-b','side');
   await capture('ps2-b','threequarter');
   await capture('ps2-b','portrait');
   await capture('ps2-b','front','low');
+  await capture('ps2-b','portrait','low');
   const old=await capture('legacy','front');
   assert.equal(modern.equals(old),false,'switching the visual preset must materially change the rendered scene');
   assert.deepEqual(errors,[],'no runtime page exceptions');
-  console.log('PASS: PS2-B front/profile/three-quarter/portrait/low and legacy WebGL captures, reversible and error-free.');
+  console.log('PASS: textured PS2-B front/profile/three-quarter/portrait/low plus flat and legacy; one-time texture upload and error-free WebGL.');
  }finally{await browser?.close();await server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -2,7 +2,7 @@
 
 **Rama de trabajo:** `feature/lois-ps2-option-b-rig`  
 **Base:** `e06061c55490b49709d697fe21becb24cc5ba0aa` (main, 15 nov 2026).  
-**Estado:** fase 2 — geometría alternativa PS2 B implementada y con pruebas de regresión. Sin publicación a Firebase ni merge. Cada “.” del usuario autoriza avanzar UNA fase y crear el siguiente commit en esta misma rama.
+**Estado:** fase 3 — atlas UV original ilustrado y renderizado WebGL1 en desarrollo, sin publicación a Firebase ni merge. Cada “.” del usuario autoriza avanzar UNA fase y crear el siguiente commit en esta misma rama.
 
 ## Alcance y separación de identidad
 
@@ -50,7 +50,7 @@
 - `tests/lois-ps2-browser.cjs` usa Vite/Playwright/SwiftShader y genera capturas del propio renderizador WebGL1, con vista frontal, perfil, 3/4, primer plano y modo fluido, además de un control con el modelo antiguo. La iluminación de las capturas es diagnóstica, no representa todas las condiciones de la casa.
 - El objetivo **todavía no** es parecido fotográfico definitivo: sin el atlas UV de fase 3, la cara es geométrica con colores planos, y la pose sigue usando la animación procedimental anterior (rig completo en fase 4). No presentar esta fase como textura final o modelo perfectamente igual a la referencia.
 
-### Fase 3 — UV y texturas faciales
+### Fase 3 — UV y texturas faciales (en revisión)
 - Desplegado UV estable para rostro/orejas/cuello, mapas sRGB; 512 px móvil y 1024 px escritorio si el dispositivo lo soporta.
 - Usar referencias de rostro autorizadas para crear una textura cohesionada (ojos, cejas, labios, stubble); no pegar pantallazos completos.
 - Integrar textura en el renderizador WebGL1 sin asignar texturas nuevas por cuadro; fallback a color si el asset falla.

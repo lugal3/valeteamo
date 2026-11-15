@@ -232,6 +232,8 @@ export class HouseRenderer {
   const gl=this.gl,staticBoxes=boxes.filter(b=>!b.dynamic).sort((a,b)=>order(a)-order(b)),mesh=geometry(staticBoxes);
   const {vertices,indices}=mesh;this.count=indices.length;
   this.dynamicBoxes=boxes.filter(b=>b.dynamic);
+  // Avoid fetching the face atlas in unrelated 3D scenes and editor previews.
+  if(this.dynamicBoxes.some(box=>box.shape==='lois-face'&&box.faceTexture!==false))this.loisFaceTexture.enable();
   const dynamic=geometry(this.dynamicBoxes);this.dynamicCount=dynamic.indices.length;
   this.dynamicTemplate=dynamic.vertices;this.dynamicVertices=new Float32Array(dynamic.vertices);this.dynamicRanges=dynamic.ranges;
   this.dynamicOrigins=this.dynamicBoxes.map(b=>[b.x,b.y,b.z,b.yaw||0,b.roll||0,b.pitch||0]);this.dynamicPositions=new Float32Array(this.dynamicBoxes.length*6);this.dynamicPositions.fill(Infinity);

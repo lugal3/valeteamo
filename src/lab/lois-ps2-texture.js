@@ -10,6 +10,7 @@ export function createLoisFaceTexture(gl,quality='medium'){
  const tex=gl.createTexture();
  const state={texture:tex,ready:false,failed:false,uploads:0,size:0,quality,disposed:false,source:LOIS_FACE_SOURCE};
  const image=new Image();
+ let started=false;
  let resolveReady;
  state.readyPromise=new Promise(resolve=>{resolveReady=resolve;});
  const upload=(size)=>{
@@ -40,7 +41,12 @@ export function createLoisFaceTexture(gl,quality='medium'){
  gl.activeTexture(gl.TEXTURE0);
  image.onload=()=>{try{upload(faceTextureSize(state.quality));}catch(e){state.failed=true;state.error=String(e);}resolveReady(state.ready);};
  image.onerror=()=>{state.failed=true;resolveReady(false);};
- image.src=LOIS_FACE_SOURCE;
+ state.enable=()=>{
+  if(started||state.disposed)return;
+  started=true;
+  image.src=LOIS_FACE_SOURCE;
+ };
+ // The atlas loads only when the Lois NPC is visible in a rebuilt scene.
  state.setQuality=next=>{
   if(next!=='low'&&next!=='medium')next='medium';
   const size=faceTextureSize(next);
