@@ -2,12 +2,15 @@
 import {useEffect,useRef,useState} from 'react';
 import type Phaser from 'phaser';
 import {installReferenceCharacter} from '../reference-characters';
+import {GardenPrologue} from './GardenPrologue';
+import {resetPrologue} from './prologue-story.js';
 import {START,advanceRescue,loadRescue,saveRescue,resetRescue,type RescueState} from './progression.js';
 import '../lab/lab.css';
 import './rescue.css';
 
 type Entry='garden'|'abduction'|'trail'|'house'|'drawer'|'lock'|'rescue'|'mirror';
 const initial=(entry:Entry,test:boolean):RescueState=>{
+ if(entry==='garden')return {...START};
  if(!test)return loadRescue();
  let s={...START};
  if(entry!=='garden')s=advanceRescue(s,'heart');
@@ -45,7 +48,7 @@ export function RescueDemo({onExit,entry='garden',test=false}:{onExit:()=>void,e
  };
  const openHouse=()=>{emit('house');setMode('house');};
  useEffect(()=>{
-  if(mode!=='garden'||!stage.current)return;
+  if(mode!=='garden'||entry==='garden'||!stage.current)return;
   let disposed=false;let game:Phaser.Game|undefined;
   const boot=async()=>{
    try{
@@ -150,9 +153,10 @@ export function RescueDemo({onExit,entry='garden',test=false}:{onExit:()=>void,e
   };
   void boot();return()=>{cancelled=true;teardown?.();};
  },[mode]);
- const reset=()=>{if(!test)resetRescue();const fresh={...START};phaseRef.current=fresh;setState(fresh);setNear('');setMode('garden');};
+ const reset=()=>{if(!test){resetRescue();resetPrologue();}const fresh={...START};phaseRef.current=fresh;setState(fresh);setNear('');setMode('garden');};
  return <div className="rescue-demo" aria-label="Demo jugable de rescate">
-  {mode==='garden'&&<><header className="rescue-head"><b>VALETEAMO · LA BÚSQUEDA DE LOUIS</b><button onClick={onExit}>{test?'Volver a pruebas':'Salir a cumpleaños'}</button></header>
+  {mode==='garden'&&entry==='garden'&&<GardenPrologue test={test} onExit={onExit} onEnterHouse={()=>{emit('heart');emit('abduction');emit('trail');emit('house');setMode('house');}}/>}
+  {mode==='garden'&&entry!=='garden'&&<><header className="rescue-head"><b>VALETEAMO · LA BÚSQUEDA DE LOUIS</b><button onClick={onExit}>{test?'Volver a pruebas':'Salir a cumpleaños'}</button></header>
    <div className="rescue-stage" ref={stage}/>
    <div className="rescue-story" role="status">{descriptions[state.phase]}</div>
    <div className="rescue-stick" aria-label="Joystick analógico para moverse"

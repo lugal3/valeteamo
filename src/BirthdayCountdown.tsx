@@ -44,7 +44,7 @@ export function BirthdayCountdown({children}:{children:ReactNode}){
   }else setInvalid(true);
  }
 
- if(entered)return launchClassic&&isValidElement(children)?cloneElement(children as ReactElement<{initialRoute?:'classic'}>,{initialRoute:'classic'}):children;
+ if(entered)return launchClassic&&isValidElement(children)?cloneElement(children as ReactElement<{initialRoute?:'classic'|'rescue'}>,{initialRoute:'rescue'}):children;
  if(giftLaunched)return <Suspense fallback={<main className="birthday-countdown" role="status">Abriendo el universo…</main>}><CosmosExperience startAt="gift" onExit={()=>setEntered(true)} onEnterGame={()=>{setLaunchClassic(true);setEntered(true);}}/></Suspense>;
  const parts=[
   ['Días',Math.floor(seconds/86400)],

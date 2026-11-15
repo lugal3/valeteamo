@@ -251,8 +251,8 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
      }
      spawnEnemies(){
       if(this.enemies.length)return;
-      for(const [i,p] of [[0,535,292],[1,650,376],[2,800,324]] as const){
-       const body=this.add.container(p[1],p[2],[
+      for(const [i,x,y] of [[0,535,292],[1,650,376],[2,800,324]] as const){
+       const body=this.add.container(x,y,[
         this.add.ellipse(0,4,47,39,0x3d2e57,.9),
         this.add.ellipse(0,-10,30,28,0x57446e,.92),
         this.add.circle(-8,-11,3.2,0xffcfec),this.add.circle(8,-11,3.2,0xffcfec),
@@ -388,7 +388,7 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
         for(const enemy of this.enemies){
          if(enemy.hp<=0)continue;
          if(Math.hypot(shot.shape.x-enemy.body.x,shot.shape.y-enemy.body.y)<31){
-          enemy.hp--;enemy.body.setTint?.(0xffaacc);
+          enemy.hp--;// Container hit feedback uses alpha tween; no sprite tint required.
           this.tweens.add({targets:enemy.body,alpha:.45,duration:85,yoyo:true});
           if(enemy.hp<=0){
            this.tweens.add({targets:enemy.body,alpha:0,scale:.12,duration:290,onComplete:()=>enemy.body.destroy()});
@@ -399,7 +399,7 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
         if(shot.ttl<=0||shot.shape.x<0||shot.shape.x>WORLD_W){shot.shape.destroy();this.shots.splice(this.shots.indexOf(shot),1);}
        }
        const living=this.enemies.filter(v=>v.hp>0).length;
-       if(living!==enemyCount)setEnemyCount(living);
+       setEnemyCount(n=>n===living?n:living);
        if(living===0&&!this.fightOver){
         this.fightOver=true;
         this.time.delayedCall(360,()=>{changed('victory');this.syncWorld('talk-louis');});
