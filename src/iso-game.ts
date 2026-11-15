@@ -6,6 +6,7 @@ import {installReferenceCharacter} from './reference-characters';
 import {facingOf,type Facing} from './animation';
 import {ISO,constrain,isoDistance,screenVector,toScreen,type IsoPoint} from './isometric';
 import {Sound} from './audio';
+import {installProloguePeople} from './demo/prologue-art';
 
 export type AdventureOffer={name:string,description:string};
 export type AdventureHud={hp:number,objective:string,complete:number,total:number,bombs:number,shield:boolean,offer?:AdventureOffer,bossHp?:number,bossMax?:number};
@@ -68,6 +69,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.events.once('shutdown',()=>this.game.canvas.removeEventListener('pointercancel',this.cancel));
   if(this.story){
    if(!CHARACTERS.louis.chibiSpriteSheet)installReferenceCharacter(this,'louis');
+   installProloguePeople(this);
    this.setStoryStage(this.story.stage(),true);
   }
   else if(this.level===1){for(const p of [{u:6,v:1},{u:2,v:6},{u:6,v:6}]){const xy=toScreen(p),s=this.add.text(xy.x,xy.y-12,'✦',{fontFamily:'Georgia',fontSize:'26px',color:'#ffe4a2',stroke:'#a66f7b',strokeThickness:2}).setOrigin(.5,1).setDepth(xy.y);this.collectibles.push({p,s});}this.total=3;}
@@ -95,7 +97,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    const pos=toScreen(p);
    let image:Phaser.GameObjects.Image;
    if(id==='louis')image=this.add.image(pos.x,pos.y,'chibi-louis-down-0').setOrigin(.5,.9).setScale(1.3);
-   else image=this.add.image(pos.x,pos.y,'chibi-luis-story').setOrigin(.5,.9).setScale(1.3);
+   else image=this.add.image(pos.x,pos.y,'story-person-luis').setOrigin(.5,.9).setScale(.8);
    image.setDepth(pos.y);this.storyObjects.push(image);return image;
   };
   const marker=(symbol:string,p:IsoPoint)=>{
