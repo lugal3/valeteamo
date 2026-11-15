@@ -6,7 +6,7 @@ const assert=require('node:assert/strict');
 (async()=>{
  const server=await preview({configFile:false,preview:{host:'127.0.0.1',port:0,strictPort:true}});
  const port=server.httpServer.address().port;
- const url='http://127.0.0.1:'+port+'/';
+ const url=process.env.SMOKE_URL||'http://127.0.0.1:'+port+'/';
  const scenes=[
   {button:'Contador y colores',ready:'.cosmos-experience'},
   {button:'Animación de partículas',ready:'.cosmos-experience'},
