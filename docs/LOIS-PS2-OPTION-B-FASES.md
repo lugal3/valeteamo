@@ -2,7 +2,7 @@
 
 **Rama de trabajo:** `feature/lois-ps2-option-b-rig`  
 **Base:** `e06061c55490b49709d697fe21becb24cc5ba0aa` (main, 15 nov 2026).  
-**Estado:** fase 5 — transiciones de cámara y reacciones no verbales de Lois implementadas, con QA de la rama. `main` y Firebase intactos. La fase 6 será optimización y preparación de integración.
+**Estado:** fases 1–6 implementadas y verificadas en rama. PR de revisión [#23](https://github.com/lugal3/valeteamo/pull/23) en borrador, sin merge a `main` ni publicación Firebase. Ver [`LOIS-PS2-RELEASE-REVIEW.md`](./LOIS-PS2-RELEASE-REVIEW.md).
 
 ## Alcance y separación de identidad
 
@@ -95,10 +95,18 @@
 - **QA**: `tests/lois-ps2-cinematics.cjs` valida secuencias de estados y eventos idénticas, cámaras finitas, retorno seguro a Kitty, cortes al cambiar de piso, reacciones, respuesta a movimiento reducido y ausencia de movimiento físico durante gestos. `tests/lois-ps2-browser.cjs` captura distintas reacciones en el renderizador WebGL existente.
 - **Limitación**: el sistema mejora encuadres y gestos, pero todavía no incluye captura de movimiento real, voz sincronizada, cinemáticas fotorrealistas ni evaluación en un iPhone físico. Las posibles separaciones de articulaciones y los fondos complejos siguen sujetos a revisión en la fase 6.
 
-### Fase 6 — Optimización, QA y preparación de integración
+### Fase 6 — Optimización, QA y preparación de integración (completada técnicamente; pendiente aprobación y prueba en iPhone físico)
 - Revisar FPS, memoria GPU, atlas, draw calls, colisiones y pérdidas de contexto WebGL en móvil.
 - Pruebas funcionales y visuales, capturas reales o emuladas, análisis del diff contra main y plan de reversión.
 - Dejar un PR revisable; **integración a main solo cuando el usuario apruebe**.
+
+#### Cierre de fase 6
+
+- Coalescencia de los segmentos contiguos del rig en **una subida VBO WebGL por fotograma animado**, evitando 60 transferencias diminutas; los segmentos sin cambios no se vuelven a subir si toda la pose es idéntica.
+- Una evaluación de rig por NPC y fotograma. Invalidación de sombras limitada a una vez por NPC, sin modificar cámara física, colisiones ni juego 2D.
+- Auditoría automatizada móvil de 150 fotogramas en **SwiftShader**, reingreso a la casa, calidad baja/media, destrucción/recreación de atlas, fallback legacy. Confirmada en CI [#43767296452](https://github.com/lugal3/valeteamo/actions/runs/43767296452).
+- Flujo de rescate con auto RC real aprobado en `tests/rc-browser.cjs`, desde el sótano y escondite de Lois hasta la trampa y el desenlace.
+- [Informe de entrega](./LOIS-PS2-RELEASE-REVIEW.md) con métricas, límites, pruebas en iPhone pendientes, instrucciones de rollback e integración controlada. PR en borrador hasta autorización expresa.
 
 ## Criterios innegociables
 
