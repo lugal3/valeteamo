@@ -7,7 +7,7 @@ export const RESCUE_FEEL={
  speed:2.1,                   // existing max speed in ISO tiles / second
  accelerationSeconds:.09,    // responsive acceleration on keyboard / touch
  decelerationSeconds:.115,   // enough weight but no slippery sliding
- cameraFollowSeconds:.25,
+ cameraFollowSeconds:.18,
  cameraMaxX:22, cameraMaxY:11,
  footstepDistance:.56,
  interactMs:360,
