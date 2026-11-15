@@ -36,7 +36,8 @@ export function StoryApp({ClassicApp,initialRoute}:{ClassicApp:ComponentType;ini
  const container=useRef<HTMLDivElement>(null);
  const audio=useRef<Sound>(new Sound());
  const [progress,setProgress]=useState<StoryProgress>(()=>readProgress(STORY.length));
- const [screen,setScreen]=useState<'splash'|'cover'|'story'|'game'|'classic'|'rescue'|'tests'|'arcade'|'cosmos'>(initialRoute==='rescue'?'rescue':initialRoute==='classic'?'classic':'splash');
+ const [screen,setScreen]=useState<'splash'|'cover'|'story'|'game'|'classic'|'rescue'|'tests'|'arcade'|'cosmos'>(initialRoute==='rescue'?'splash':initialRoute==='classic'?'classic':'cover');
+ const [splashTarget,setSplashTarget]=useState<'rescue'|null>(initialRoute==='rescue'?'rescue':null);
  const [demoEntry,setDemoEntry]=useState<'garden'|'abduction'|'trail'|'house'|'drawer'|'lock'|'rescue'|'mirror'>('garden');
  const [demoTrial,setDemoTrial]=useState(false);const [saved,setSaved]=useState(progress.started);const [storageOK,setStorageOK]=useState(true);
  const [houseTrial,setHouseTrial]=useState<HouseTrialId|null>(null);
@@ -58,9 +59,10 @@ export function StoryApp({ClassicApp,initialRoute}:{ClassicApp:ComponentType;ini
  const tryAudio=(welcome=false)=>{audio.current.muted=false;void audio.current.start().then(ok=>{if(ok&&welcome)audio.current.ui();if(!audio.current.muted)setAudioNotice(ok?'':'El navegador bloqueó el audio. Toca Activar sonido y comprueba el volumen.');});};
  const toggleAudio=()=>{const muted=!progress.muted;audio.current.muted=muted;save({...progress,muted});setAudioNotice('');if(muted)audio.current.suspend();else tryAudio();};
  const unlockAudio=()=>{if(!progress.muted)tryAudio();};
- const openDemo=(entry:typeof demoEntry,trial:boolean)=>{setDemoEntry(entry);setDemoTrial(trial);audio.current.destroy();stopWelcomeMelody();setScreen('rescue');};
- if(screen==='splash')return <Splash muted={progress.muted} onStart={()=>{if(!progress.muted)tryAudio(true);setScreen('cover');}}/>;
- if(screen==='cosmos')return <Suspense fallback={<main role="status" style={{display:'grid',placeItems:'center',background:'#0a0719',color:'#ffddf1'}}>Preparando las estrellas…</main>}><CosmosExperience preview startAt={cosmosEntry} onExit={()=>setScreen('tests')} onEnterGame={()=>{audio.current.destroy();stopWelcomeMelody();setDemoEntry('garden');setDemoTrial(false);setScreen('rescue');}}/></Suspense>;
+ // El picnic sólo acompaña al comienzo del rescate 2D, no al menú ni a las pruebas 3D.
+ const openDemo=(entry:typeof demoEntry,trial:boolean)=>{setDemoEntry(entry);setDemoTrial(trial);audio.current.destroy();stopWelcomeMelody();setSplashTarget(entry==='garden'?'rescue':null);setScreen(entry==='garden'?'splash':'rescue');};
+ if(screen==='splash')return <Splash muted={progress.muted} onStart={()=>{if(splashTarget==='rescue'){setSplashTarget(null);setScreen('rescue');}else{if(!progress.muted)tryAudio(true);setScreen('cover');}}}/>;
+ if(screen==='cosmos')return <Suspense fallback={<main role="status" style={{display:'grid',placeItems:'center',background:'#0a0719',color:'#ffddf1'}}>Preparando las estrellas…</main>}><CosmosExperience preview startAt={cosmosEntry} onExit={()=>setScreen('tests')} onEnterGame={()=>openDemo('garden',false)}/></Suspense>;
  if(screen==='rescue')return <RescueDemo key={demoEntry+(demoTrial?'-trial':'-story')} entry={demoEntry} test={demoTrial} onExit={()=>{setScreen(demoTrial?'tests':'cover');if(!demoTrial)unlockAudio();}}/>;
  if(screen==='tests')return houseTrial?<PlaytestHouse id={houseTrial} onExit={closeHouseTrial}/>:<PlaytestMenu
   onExit={()=>{unlockAudio();setScreen('cover');}}

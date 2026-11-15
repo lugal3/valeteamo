@@ -33,3 +33,74 @@
 @media(max-width:560px){.birthday-countdown-content h1{font-size:clamp(42px,11vw,66px)}.birthday-cosmic-label{font-size:8px;letter-spacing:.12em}.birthday-countdown-content>p{margin:18px 0 28px}.birthday-time>div{min-height:93px;gap:8px;border-radius:11px}.birthday-time dt{font-size:7px;letter-spacing:.07em}.birthday-time dd{font-size:clamp(29px,8vw,47px)}.story-brand .birthday-brand-icon{width:24px;height:24px;margin-right:5px}}
 @media(max-height:380px) and (orientation:landscape){.birthday-countdown{padding-top:40px}.birthday-cosmic-label{margin-bottom:5px}.birthday-countdown-content h1{font-size:40px}.birthday-countdown-content>p{margin:7px 0 13px}.birthday-time{max-width:480px;margin:0 auto 7px}.birthday-time>div{min-height:65px;gap:2px;padding:6px}.birthday-time dd{font-size:30px}.birthday-iphone-help{margin-top:4px}}
 @media(prefers-reduced-motion:reduce){.birthday-time>div{animation:none}}
+
+/* Portada del contador: la misma estética rosa del aviso de orientación. */
+.birthday-countdown{
+ min-height:100dvh;overflow-y:auto;
+ padding:max(16px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right))
+ max(16px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));
+ background:linear-gradient(145deg,#ffeaf2 0%,#fbd1e2 40%,#f6c2dc 77%,#efd3e8 100%);
+ color:#673d60;font-family:Georgia,'Times New Roman',serif;
+}
+.birthday-countdown:before{
+ content:'';position:absolute;inset:12px;pointer-events:none;border:1px solid #fffaf4ab;
+ border-radius:30px;box-shadow:inset 0 0 48px #fff9f48c;
+}
+.birthday-countdown-content{
+ box-sizing:border-box;width:min(690px,100%);
+ padding:clamp(18px,3vw,31px) clamp(18px,4vw,35px);
+ border:1px solid #fffaf6e0;border-radius:28px;
+ background:linear-gradient(154deg,#fffaf8ec,#fff1f4e8 69%,#ffe4efe8);
+ box-shadow:0 18px 65px #a45d8852,inset 0 1px #fff;
+ backdrop-filter:blur(12px);
+}
+.birthday-countdown-emblem{color:#d477a3;font:normal clamp(22px,4vw,35px)/1 Georgia,serif;margin:0 0 8px;text-shadow:1px 2px #fff}
+.birthday-countdown-emblem span{color:#ba7599;font-size:1.15em;margin:0 11px}
+.birthday-cosmic-label{font:700 clamp(9px,1.8vw,11px)/1.5 system-ui;letter-spacing:2px;color:#b37b9b;margin-bottom:10px}
+.birthday-countdown-content h1{font:normal clamp(32px,5.6vw,56px)/1.12 Georgia,serif;color:#764466;letter-spacing:-.04em;text-shadow:none}
+.birthday-countdown-content h1 em{color:#ad5f92;text-shadow:none}
+.birthday-countdown-content>p{font:400 clamp(12px,2vw,15px)/1.6 system-ui;margin:10px 0 21px;color:#855b78;letter-spacing:.015em}
+.birthday-time{gap:clamp(6px,1.4vw,12px);margin:0}
+.birthday-time>div{
+ gap:10px;min-height:105px;padding:12px 4px;border:1px solid #fffaf6e0;border-radius:17px;
+ background:linear-gradient(154deg,#fffdf9,#ffe5f0);
+ box-shadow:0 7px 21px #ac6c8d35,inset 0 1px #fff;
+ animation:none;
+}
+.birthday-time>div:before{background:linear-gradient(90deg,transparent,#fff,transparent)}
+.birthday-time dt{color:#9c7890;font:700 clamp(7px,1vw,10px)/1.3 system-ui;letter-spacing:.1em}
+.birthday-time dd{color:#9e4c80;font:normal clamp(28px,5vw,56px)/1 Georgia,serif;text-shadow:none}
+.birthday-time>div:nth-child(2) dd{color:#a65f94}
+.birthday-time>div:nth-child(3) dd{color:#a267a4}
+.birthday-time>div:nth-child(4) dd{color:#b65e90}
+.birthday-countdown-divider{display:flex;align-items:center;gap:12px;width:min(65%,330px);margin:16px auto 0;color:#cf87aa}
+.birthday-countdown-divider i{height:1px;flex:1;background:linear-gradient(90deg,transparent,#d7a1bb,transparent)}
+.birthday-admin-toggle,.birthday-admin-close{
+ border:1px solid #fffaf6e0;background:#fff9f6ed;color:#a35c8f;
+ box-shadow:0 7px 21px #ac6c8d50;
+}
+.birthday-admin{
+ border:1px solid #fffaf6e0;background:linear-gradient(154deg,#fffaf8,#fff1f4 69%,#ffe4ef);
+ color:#673d60;box-shadow:0 18px 70px #a45d8870;
+}
+.birthday-admin::backdrop{background:#4b24489a}
+.birthday-admin h2{color:#764466}
+.birthday-admin input{border-color:#d7a1bb;background:#fffaf8;color:#673d60}
+.birthday-admin [role="alert"]{color:#a52c64}
+.birthday-submit{border-color:#fffaf6;background:linear-gradient(135deg,#f6b9d5,#ed9dc4);color:#673d60;box-shadow:0 5px 20px #ac6c8d3d}
+.birthday-iphone-help{color:#855b78;margin-top:7px;padding:8px 14px}
+.birthday-iphone-panel{border-color:#fffaf6;background:#fff9f6ec;box-shadow:0 10px 30px #ac6c8d40}
+.birthday-iphone-panel p{color:#855b78}
+.birthday-countdown :focus-visible{outline-color:#9e4c80}
+@media(max-height:460px) and (orientation:landscape){
+ .birthday-countdown{padding-top:10px;padding-bottom:10px}
+ .birthday-countdown-content{padding:10px 24px;border-radius:22px}
+ .birthday-countdown-emblem{font-size:20px;margin-bottom:2px}
+ .birthday-cosmic-label{margin-bottom:4px;font-size:8px}
+ .birthday-countdown-content h1{font-size:clamp(30px,4.8vw,40px)}
+ .birthday-countdown-content>p{margin:5px 0 9px;font-size:11px}
+ .birthday-time>div{min-height:60px;gap:3px;padding:7px 3px}
+ .birthday-time dd{font-size:clamp(27px,4.5vw,38px)}
+ .birthday-countdown-divider{margin-top:7px}
+ .birthday-iphone-help{margin-top:2px;padding:5px}
+}
