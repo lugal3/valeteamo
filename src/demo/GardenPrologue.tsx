@@ -231,7 +231,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
    const distance=Math.hypot(scene.p.u-scene.storyTarget.u,scene.p.v-scene.storyTarget.v);
    const next:HouseNavigation={distance:Math.ceil(distance*2)/2,
     heading:Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI,
-    guided:scene.houseRoute.length>0,near:distance<1.75};
+    guided:scene.houseRoute.length>0,near:distance<(stage==='window'?1.35:1.75)};
    setHouseNav(previous=>previous&&previous.distance===next.distance&&
     previous.guided===next.guided&&previous.near===next.near&&
     Math.abs(previous.heading-next.heading)<4?previous:next);
