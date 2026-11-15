@@ -72,7 +72,11 @@ export class SceneRecoveryBoundary extends Component<{children:ReactNode},State>
  static getDerivedStateFromError(error:Error):State{return {error};}
  componentDidCatch(error:Error,_info:ErrorInfo){
   console.error('[ValeTeAmo] Error al abrir una escena:',error);
-  if(isSceneModuleError(error))retrySceneBundleOnce();
+  // WebKit may surface a missing lazy module as a React-internal
+  // "undefined is not an object (evaluating 'd._result.default')" rather
+  // than "Load failed". An uncaught render error would otherwise unmount
+  // the entire game. Retry the document once, regardless of wording.
+  retrySceneBundleOnce();
  }
  render(){
   if(!this.state.error)return this.props.children;
