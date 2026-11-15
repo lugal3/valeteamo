@@ -33,7 +33,8 @@ const assert=require('node:assert/strict');
       await page.locator('.playtest-menu[data-admin-panel="lp"]').waitFor();
       await page.getByRole('button',{name:scene.button,exact:true}).click();
       await page.locator(scene.ready).first().waitFor({timeout:20000});
-      if(scene.button==='Espejo')await page.waitForFunction(()=>!!window.__rescueHouse,{timeout:18000});
+      // Production intentionally removes window.__rescueHouse diagnostics; #lab3d is the real mounted scene.
+      if(scene.button==='Espejo')assert.equal(await page.locator('#lab3d').count(),1);
       if(scene.button==='Casa 3D'){
        // Story entry uses the existing puzzle rescue and might mount 3D after splash.
        await page.waitForTimeout(1400);
