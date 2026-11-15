@@ -72,3 +72,13 @@
 @media(prefers-reduced-motion:reduce){
  .story-prologue .prologue-night{transition:none}
 }
+
+.story-prologue .prologue-area{
+ position:absolute;top:calc(max(8px,env(safe-area-inset-top)) + 48px);
+ left:max(10px,env(safe-area-inset-left));z-index:6;pointer-events:none;
+ padding:6px 9px;color:#f7e5d9;background:#4b3853d6;border-radius:11px;
+ font:700 10px/1.15 system-ui;letter-spacing:.025em;
+ box-shadow:0 2px 6px #261a2d22
+}
+@media(max-height:420px){.story-prologue .prologue-area{top:calc(max(4px,env(safe-area-inset-top)) + 38px);
+ font-size:9px;padding:5px 7px;max-width:28vw}}
