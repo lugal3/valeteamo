@@ -308,7 +308,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
      setHouseNav(previous=>previous?{...previous,guided:started}:previous);
     }}>{houseNav.guided?'✕ Detener guía':'♡ Guiarme caminando'}</button>}
   </aside>}
-  {!dialog&&!houseNav&&guide&&<div className="prologue-guide" role="status">{guide}</div>
+  {!dialog&&!houseNav&&guide&&<div className="prologue-guide" role="status">{guide}</div>}
   {!dialog&&near&&<button type="button" className="prologue-interact"
    onClick={()=>sceneRef.current?.storyInteract()}>{near} · E</button>}
   {currentLine&&<div className="prologue-dialog-backdrop" role="dialog"
