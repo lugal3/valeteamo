@@ -22,11 +22,25 @@ async function play(){
   await page.getByRole('button',{name:'Pruebas',exact:true}).click();
   assert.equal(await page.getByRole('button',{name:/Aventura clásica/}).count(),1,
    'Original 2D must stay selectable as a separate classic mode');
+  // Confirm the actual original arcade still launches unchanged first.
+  await page.getByRole('button',{name:/2D · Corazones/}).click();
+  await page.locator('.adventure-canvas canvas').waitFor({timeout:16000});
+  await page.getByRole('button',{name:'Salir',exact:true}).click();
   await page.getByRole('button',{name:/Rescate · 2D/}).click();
 
   const game=page.locator('.story-prologue');
   await game.waitFor({timeout:20000});
   await page.waitForFunction(()=>Boolean(window.__valePrologue),null,{timeout:15000});
+  const realScene=await page.evaluate(()=>{
+   const scene=window.__valePrologue.scene();
+   return {key:scene.scene.key,zoom:scene.cameras.main.zoom,width:scene.scale.width,height:scene.scale.height,
+    usingOriginalFloor:!!scene.floor,usingOriginalCharacter:scene.player.texture.key.startsWith('chibi-kitty-')};
+  });
+  assert.equal(realScene.key,'iso-adventure','rescue must be the ACTUAL Corazones Phaser class');
+  assert.equal(realScene.zoom,Math.min(realScene.width/800,realScene.height/450)*1.08,
+   'rescue must keep the IDENTICAL Corazones camera zoom formula');
+  assert(realScene.usingOriginalFloor&&realScene.usingOriginalCharacter,
+   'rescue must use the original diamond floor and Kitty sprite system');
   assert.equal(await game.getAttribute('data-prologue-stage'),'intro');
   const convo=page.getByRole('dialog',{name:'Conversación'});
   async function finishDialogue(){
