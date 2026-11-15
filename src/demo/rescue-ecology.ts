@@ -93,7 +93,7 @@ export function ecologyWildlifeStep(
  const kind=seed.kind,fly=kind==='butterfly'||kind==='sparrow'||
   kind==='moth'||kind==='owl'||kind==='crow';
  const wandering=reduced?0:Math.sin(t*(fly?.9:.32)+seed.phase)*8;
- const escape=alarm*(fly?34:22)*sign;
+ const escape=reduced?0:alarm*(fly?34:22)*sign;
  const x=wandering+escape;
  const y=reduced?0:Math.cos(t*(fly?1.8:.48)+seed.phase)*(fly?5:1.4)-
   alarm*(fly?12:1.5);
