@@ -348,7 +348,7 @@ function house(scene:Phaser.Scene,u:number,v:number,main:boolean){
  }
  if(main){
   // Hall entrance at about x=5.9 / 14 along south façade.
-  const doorX=left+w*(5.9/14),doorY=y-30;
+  const doorX=left+w*(HOUSE_3D_REFERENCE.frontDoorX/HOUSE_3D_REFERENCE.width),doorY=y-30;
   g.fillStyle(0x986a79).fillRect(doorX-4,doorY-5,32,54);
   g.fillStyle(0x5b4459).fillRect(doorX,doorY,23,51);
   g.fillStyle(0xe8c486).fillCircle(doorX+18,doorY+27,3);
