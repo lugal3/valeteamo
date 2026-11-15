@@ -41,6 +41,11 @@ export function finishLoisShot(director,target,delta=0,reduced=false){
  const desired=safeView(target);
  if(!desired)return {view:null,complete:true};
  if(!director||!director.view||reduced)return {view:desired,complete:true};
+ // A return through two floors / a wall is worse than a cinematic cut.
+ // Keep the short blend only when the gameplay camera is already nearby.
+ const from=director.returnFrom??director.view;
+ const gap=Math.hypot(from.x-desired.x,from.y-desired.y,from.z-desired.z);
+ if(gap>2.6||Math.abs(from.y-desired.y)>.8)return {view:desired,complete:true};
  if(!director.returning){
   director.returning=true;director.returnElapsed=0;director.returnFrom={...director.view};
  }
