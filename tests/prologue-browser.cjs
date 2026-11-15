@@ -18,7 +18,6 @@ async function play(){
   await page.getByRole('button',{name:'Administración'}).click();
   await page.getByLabel('Código de acceso').fill('LP');
   await page.getByRole('dialog',{name:'Administración'}).getByRole('button',{name:'Entrar'}).click();
-  await page.getByRole('button',{name:'Presiona cualquier botón para iniciar'}).click();
   await page.getByRole('button',{name:'Pruebas',exact:true}).click();
   assert.equal(await page.getByRole('button',{name:/Aventura clásica/}).count(),1,
    'Original 2D must stay selectable as a separate classic mode');
@@ -27,6 +26,7 @@ async function play(){
   await page.locator('.adventure-canvas canvas').waitFor({timeout:16000});
   await page.getByRole('button',{name:'Salir',exact:true}).click();
   await page.getByRole('button',{name:/Rescate · 2D/}).click();
+  await page.getByRole('button',{name:'Presiona cualquier botón para iniciar'}).click();
 
   const game=page.locator('.story-prologue');
   await game.waitFor({timeout:20000});

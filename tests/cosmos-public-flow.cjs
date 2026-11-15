@@ -69,6 +69,11 @@ async function main(){
   await page.getByRole('dialog',{name:/Comenzamos nuestra aventura/}).waitFor();
   await page.screenshot({path:'artifacts/public-heart-2d-choice.png'});
   await page.getByRole('button',{name:/Comenzar juego 2D/}).click();
+  const rescueCover=page.locator('.valeteamo-splash');
+  await rescueCover.getByRole('button',{name:'Presiona cualquier botón para iniciar'}).waitFor();
+  assert.equal(await rescueCover.locator('img[src="./demo-assets/portada-v2.webp"]').count(),1,'picnic cover belongs to 2D rescue entry');
+  await page.screenshot({path:'artifacts/public-rescue-cover.png'});
+  await rescueCover.getByRole('button',{name:'Presiona cualquier botón para iniciar'}).click();
   await page.locator('.story-prologue .adventure-canvas canvas').waitFor({timeout:25000});
   await page.locator('.story-prologue .prologue-guide').waitFor({timeout:12000});
   assert.equal(await page.locator('.story-prologue').getAttribute('data-prologue-stage'),'intro');

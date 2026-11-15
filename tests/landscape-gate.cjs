@@ -30,7 +30,7 @@ async function main(){
   await page.getByRole('button',{name:'Administración'}).click();
   await page.getByLabel('Código de acceso').fill('LP');
   await page.getByRole('dialog',{name:'Administración'}).getByRole('button',{name:'Entrar'}).click();
-  await page.getByRole('button',{name:'Presiona cualquier botón para iniciar'}).click();
+  assert.equal(await page.locator('.valeteamo-splash').count(),0,'picnic cover is absent before the test menu');
   await page.getByRole('button',{name:'Pruebas',exact:true}).click();
   await page.getByRole('button',{name:/Galaxia rosa del video/}).click();
   const canvas=page.locator('canvas.cosmos-video-canvas');
@@ -54,6 +54,7 @@ async function main(){
   await page.getByRole('button',{name:/Abrir corazón/}).click();
   await page.getByRole('dialog',{name:/Comenzamos nuestra aventura/}).waitFor();
   await page.getByRole('button',{name:/Comenzar juego 2D/}).click();
+  await page.getByRole('button',{name:'Presiona cualquier botón para iniciar'}).click();
   const phaser=page.locator('.adventure-canvas canvas');
   await phaser.waitFor({timeout:25000});
   await page.locator('.story-prologue .prologue-guide').waitFor({timeout:12000});

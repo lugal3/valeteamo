@@ -17,9 +17,9 @@ async function verifyDesktop(){
   await page.getByRole('button',{name:'Administración'}).click();
   await page.getByLabel('Código de acceso').fill('LP');
   await page.getByRole('dialog',{name:'Administración'}).getByRole('button',{name:'Entrar'}).click();
-  await page.getByRole('button',{name:'Presiona cualquier botón para iniciar'}).click();
   await page.getByRole('button',{name:'Pruebas',exact:true}).click();
   await page.getByRole('button',{name:/Rescate · 2D/}).click();
+  await page.getByRole('button',{name:'Presiona cualquier botón para iniciar'}).click();
   await page.locator('.story-prologue .adventure-canvas canvas').waitFor({timeout:22000});
   await page.waitForFunction(()=>!!window.__valePrologue?.scene()?.player);
   const scene=await page.evaluate(()=>{

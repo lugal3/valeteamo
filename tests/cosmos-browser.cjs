@@ -17,7 +17,6 @@ async function main(){
   await page.getByRole('button',{name:'Administración'}).click();
   await page.getByLabel('Código de acceso').fill('LP');
   await page.getByRole('dialog',{name:'Administración'}).getByRole('button',{name:'Entrar'}).click();
-  await page.getByRole('button',{name:'Presiona cualquier botón para iniciar'}).click();
   await page.getByRole('button',{name:'Pruebas',exact:true}).click();
   await page.getByRole('button',{name:/Contador y colores/}).click();
   await page.getByRole('heading',{name:/Hay momentos que/}).waitFor();
