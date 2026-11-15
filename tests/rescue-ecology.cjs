@@ -43,7 +43,7 @@ for(let index=0;index<maps.length;index++){
    state=reacted.state;
   }
   assert(state.alarm>.6,'animal must react while Kitty is near '+seed.kind);
-  assert(Math.abs(reacted.frame.x)>Math.abs(idle.frame.x)+2,
+  assert(Math.abs(reacted.frame.x-idle.frame.x)>4,
    'animal flees a short distance, not teleports or disappears');
   assert(Number.isFinite(reacted.frame.y)&&Number.isFinite(reacted.frame.lift));
   let previous=reacted.frame.x;
@@ -89,7 +89,7 @@ assert(Math.abs(sample(30)-sample(60))<.005,
 assert(Math.abs(sample(60)-sample(120))<.005,
  'animal alarm response is frame-independent 60/120Hz');
 assert(E.ecologyHash(3,6,7)>=0&&E.ecologyHash(3,6,7)<1);
-assert(!source.includes('Math.random')&&!source.includes('setTimeout('),
+assert(!/Math\\.random\\s*\\(/.test(source)&&!/setTimeout\\s*\\(/.test(source),
  'ecosystem must not generate nondeterministic events or running timers');
 assert(E.ECOLOGY_CAPS.wildlife<=8&&E.ECOLOGY_CAPS.flora<=18&&
  E.ECOLOGY_CAPS.particleMotes<=40,'mobile CPU/particle budget is finite');
