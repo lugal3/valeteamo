@@ -43,11 +43,14 @@ export function parsePrologue(raw){
  try{
   const source=JSON.parse(raw);
   if(source?.version!==PROLOGUE_VERSION||!STAGES.includes(source.stage))return {...PROLOGUE_START};
+  // A reload during the short kidnapping cinematic must replay the approach,
+  // not strand Kitty in a non-interactive in-between state.
+  const stage=source.stage==='disappearance'?'walk-together':source.stage;
   const hp=Number(source.hp);
-  const maxClues=source.stage==='ribbon'?0:source.stage==='petals'?1:source.stage==='wheel'?2:
-   ['door','window','house'].includes(source.stage)?3:0;
+  const maxClues=stage==='ribbon'?0:stage==='petals'?1:stage==='wheel'?2:
+   ['door','window','house'].includes(stage)?3:0;
   return {
-   version:PROLOGUE_VERSION,stage:source.stage,
+   version:PROLOGUE_VERSION,stage,
    hp:Number.isFinite(hp)?Math.min(6,Math.max(1,Math.round(hp))):6,
    clues:maxClues,completed:source.stage==='house'
   };

@@ -25,6 +25,8 @@ const assert=require('node:assert/strict');
  assert.equal(current.clues,3);
  assert.equal(current.completed,true,'the window is the only route to the house');
  assert.equal(parsePrologue(JSON.stringify(current)).stage,'house');
+ assert.equal(parsePrologue(JSON.stringify({...PROLOGUE_START,stage:'disappearance'})).stage,
+  'walk-together','an interrupted kidnapping must safely replay from the approach');
  assert.equal(parsePrologue('{broken').stage,'intro');
  assert.equal(parsePrologue(JSON.stringify({...PROLOGUE_START,stage:'nonsense'})).stage,'intro');
  assert.equal(parsePrologue(JSON.stringify({...PROLOGUE_START,stage:'window',clues:999})).clues,3,

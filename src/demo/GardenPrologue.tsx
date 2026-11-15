@@ -120,6 +120,15 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
   const thumb=el.querySelector<HTMLElement>('.prologue-stick-thumb');
   if(thumb)thumb.style.transform='translate(0,0)';
  };
+ // If the visitor already reached the window on a previous session,
+ // resume inside the existing 3D house instead of getting stuck in an empty
+ // finished 2D world. The story window callback sets transitioning first,
+ // so this hook never launches the house twice.
+ useEffect(()=>{
+  if(run.stage==='house'&&!test&&!transitioning.current){
+   transitioning.current=true;onEnterHouse();
+  }
+ },[run.stage,test,onEnterHouse]);
  const restart=()=>{
   if(!test)resetPrologue();
   phaseRef.current={...PROLOGUE_START};setRun({...PROLOGUE_START});
