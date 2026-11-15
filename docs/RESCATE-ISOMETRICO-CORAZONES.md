@@ -1,56 +1,60 @@
-# Rescate 2D isométrico — misma estética de «2D Corazones»
+# Rescate 2D: continuar el verdadero «2D Corazones»
 
-## Decisión
-El 2D existente que el propietario quiere conservar es **Pruebas → 2D · Corazones**.
-Su motor es Phaser 3, su clase está en `src/iso-game.ts`, las hojas
-de animación de Kitty en `public/sprites/` y la lógica de direcciones
-en `src/animation.ts`.
+## Cambio de enfoque solicitado por el propietario
 
-La historia de rescate sigue siendo el prólogo canónico, pero ya **no**
-se dibuja como una aventura lateral de sprites gigantes y fondos planos.
+La primera versión de esta PR dibujaba un mundo isométrico parecido a Corazones, pero **era otro Phaser.Game**. Eso no cumplía la intención del proyecto y se retiró por completo.
 
-## Archivos modificados
-- `src/demo/GardenPrologue.tsx`: Phaser, sprites y hojas de caminata de Kitty
-  reutilizados sin alterarlos; frames de caminar en cuatro direcciones,
-  parpadeo, disparos con animación y efectos usando la clase Sound existente;
-  cámara de seguimiento con el mismo ajuste de zoom que `IsoAdventure`;
-  UI móvil, barra de salud, indicador de sombras, conversaciones y guardados.
-- `src/demo/rescue-iso-world.ts`: nuevo arte 2D isométrico; rombos 82×40,
-  vegetación pixelada, sendero y casa con puerta cerrada y ventana en perspectiva.
-- `src/demo/garden-prologue.css`: HUD y controles en tonos crema, rosa
-  y verde, con estilo de la aventura isométrica.
-- `src/demo/RescueDemo.tsx`: las entradas de prueba 2D comparten el
-  mismo `GardenPrologue`. Se retiró el antiguo escenario lateral, pero
-  **no** se altera el código de la casa 3D.
-- `tests/prologue.cjs`: aserciones de integración para evitar volver a
-  presentar escenas 2D con un motor visual diferente.
+Ahora el rescate se ejecuta en la **misma clase Phaser `IsoAdventure`** y el **mismo contenedor `StoryGame`** que usa `Pruebas → 2D · Corazones`. La historia añade objetivos por etapas al código existente mediante el parámetro opcional `IsoStoryBridge`.
 
-## Línea temporal conservada
-1. Kitty camina por el jardín y conoce el entorno.
-2. Defiende a Louis de las sombras disparando corazones.
-3. Conversa con Louis y se presenta; luego conoce a Luis.
-4. Acompaña a Louis y presencia su desaparición.
-5. Sigue la pulsera, los pétalos y las huellas hasta la casa.
-6. Descubre que la puerta está cerrada, busca la ventana y entra.
-7. Se desmonta Phaser; el mismo `launchHouse` existente abre la casa
-   WebGL y su cinemática de ventana.
+## Qué se reutiliza, exactamente
 
-Se conservan Luis y Louis como personajes distintos, la clave de guardado
-`valeteamo-story-acts-1-2-v1`, `valeteamo-rescue-v2` y los modos
-originales «2D Corazones», «Aventura clásica», historia y casa 3D.
+| Pieza | Código original compartido |
+| --- | --- |
+| Cámara, zoom y posición | `src/iso-game.ts → fitCamera()` sin cambios |
+| Suelo romboidal y decoración | `src/iso-game.ts → drawFloor(), flower(), shrub(), tree()` |
+| Hoja de sprites de Kitty | `installReferenceCharacter()` y PNG de `public/sprites/` |
+| Animaciones y parpadeo | `IsoAdventure.update()` original, sin un segundo controlador |
+| Movimiento, joystick, disparos | `IsoAdventure.update()` original (WASD, flechas, gestos táctiles) |
+| Efectos y música | `Sound`, `shoot()`, `burst()`, `hitEnemy()`, `damage()` |
+| HUD, salud, pantalla completa | `StoryGame.tsx` original, solo se habilita objetivo narrativo |
+| Casa 3D | `RescueDemo → launchHouse()` original |
 
-## Pruebas antes de integrar o publicar
+`src/demo/GardenPrologue.tsx` ya NO contiene `new Phaser.Game`, otro mapa, otro sistema de cámara ni movimiento propio. Solo gestiona el guion de etapas, los diálogos y su comunicación con `IsoAdventure`.
+
+## Secuencia dentro del juego
+
+Cada etapa usa una **sala del mismo 2D Corazones**, no un mundo plano distinto:
+
+1. Intro y encuentro en jardín de Corazones.
+2. Combate del propio Corazones contra tres enemigos.
+3. Hablar con Louis.
+4. Hablar con Luis (personajes distintos).
+5. Acompañar a Louis hasta el claro de la sala.
+6. Secuencia de secuestro con sprites y tweens de la misma escena.
+7. Salas consecutivas con pulsera, pétalos y huellas.
+8. Sala de la casa: puerta cerrada, luego ventana.
+9. El único Phaser `IsoAdventure` se desmonta; arranca la casa WebGL 3D existente.
+
+La casa exterior es un hito visual de tamaño de sala, dibujado con `Graphics` y la paleta del juego ya existente, no un escenario con tecnología diferente.
+
+## Aislamiento y regresiones
+
+El código original del arcade sigue siendo el **modo por defecto**. La extensión de historia solo se ejecuta si se pasa un objeto `story`; sin él, Corazones usa los mismos enemigos, cámara, nivel, HUD, movimiento y fin de ronda que antes.
+
+No se modifican `public/sprites/`, `src/isometric.ts`, `src/art.ts`, `src/chibi-art.ts`, `src/game.ts` ni `src/lab/`.
+
+Los guardados de historia (`valeteamo-story-acts-1-2-v1`) y rescate (`valeteamo-rescue-v2`) siguen separados del arcade.
+
+## Pruebas
+
 ```sh
 npm ci
 npm test
 npm run build
-npx playwright install chromium
 node tests/prologue-browser.cjs
+npm run test:browser
 ```
-Revisar sobre todo en iPhone horizontal la escala de las baldosas,
-la visibilidad de la casa, el joystick junto al botón de disparo y
-la escena de secuestro durante la transición a la noche.
 
-**Importante:** esto es una rama de revisión. No se fusiona automáticamente
-a `main` y no se despliega a Firebase. Los sprites de `public/sprites/`
-y el código original `src/iso-game.ts` permanecen intactos.
+La prueba en navegador debe comprobar la entrada desde Pruebas, la animación de corazones, la transición de diálogos y la llegada a la ventana 3D. También deben revisarse manualmente el arte y los gestos de disparo en un iPhone real.
+
+**Rama de revisión:** no fusionar a main ni desplegar a Firebase sin revisar el resultado artístico.
