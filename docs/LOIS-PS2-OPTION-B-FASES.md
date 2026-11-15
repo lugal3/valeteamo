@@ -2,7 +2,7 @@
 
 **Rama de trabajo:** `feature/lois-ps2-option-b-rig`  
 **Base:** `e06061c55490b49709d697fe21becb24cc5ba0aa` (main, 15 nov 2026).  
-**Estado:** fase 4 en implementación — rig jerárquico y retarget de los estados de rescate; sin cambios en `main` ni publicación de Firebase. Cada «.» avanza una fase en esta misma rama.
+**Estado:** fase 4 implementada y verificada en la rama — 21 articulaciones jerárquicas, retarget facial y corporal; `main` y Firebase intactos. El siguiente «.» inicia la fase 5 de cinemáticas.
 
 ## Alcance y separación de identidad
 
@@ -65,7 +65,7 @@
 - **Control visual**: al revisar capturas encontramos una regresión no detectada inicialmente: winding invertido en la superficie facial, que ocultaba la cara frontal. Se corrigió para igualar el orden de triángulos del motor. `tests/lois-ps2-uv.cjs` y `tests/lois-ps2-browser.cjs` verifican esta orientación además de capturas real WebGL, atlas cargado, LOD 512/1024, fallback y una sola subida GPU por modelo.
 - **Lo que NO significa**: no es todavía un escaneo fotográfico ni un parecido facial exacto. El acabado es PS2 ilustrado basado en las fotos suministradas, no un collage fotográfico. La malla sigue animándose mediante piezas, no con skinning por huesos (fase 4). Para un acabado aún más fiel haría falta un atlas fotográfico autorizado y calibrado frontal/perfil que se podría integrar en este sampler sin tocar la lógica del rescate.
 
-### Fase 4 — Rig, animación corporal y facial (en validación)
+### Fase 4 — Rig, animación corporal y facial (completada técnicamente)
 - Un rig anatómico con jerarquía de huesos, mirada, apertura de mandíbula, parpadeo real y expresiones (miedo, alivio).
 - Retarget de los eventos existentes (`untying/climb/hide/hidden/follow`), caminar sin deslizamiento, girar, agacharse, respirar.
 - Pruebas 30/60/120 Hz y `prefers-reduced-motion`; ninguna animación altera colisiones ni mecánica.

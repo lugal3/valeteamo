@@ -11,6 +11,12 @@ const assert=require('node:assert/strict');
  const parts=pickupGeometry([actor]);
  assert(parts.length>40);
  assert(parts.every(p=>p.rigBone&&p.rigPart),'all PS2 pieces bind to a bone');
+ const torso=parts.find(p=>p.rigPart==='torso');
+ for(const side of [-1,1]){
+  const upper=parts.find(p=>p.rigPart==='upper-arm-'+side);
+  assert(torso.w/2-(Math.abs(upper.sourceOffset[0])-upper.w/2)>.02,
+   'blazer upper arms must overlap torso at their shoulder seams');
+ }
  const names=new Set(LOIS_RIG.map(b=>b.name));
  assert(parts.every(p=>names.has(p.rigBone)),'all piece joints exist');
  assert.equal(loisBoneForPart('face'),'head');

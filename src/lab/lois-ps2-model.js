@@ -23,7 +23,7 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
   iris=p.eyes,eyeWhite=[.91,.91,.90],ink=[.13,.16,.20];
 
  // Tailored dark blazer with a light grey crewneck, not a bulky hoodie.
- add('torso',0,1.11,-.015,.445,.56,.305,'dark',jacket,{...box,rigGroup:'body'});
+ add('torso',0,1.11,-.015,.468,.56,.305,'dark',jacket,{...box,rigGroup:'body'});
  add('shirt',0,1.12,.140,.248,.445,.025,'cream',shirt,{...box,rigGroup:'body'});
  add('collar',0,1.379,.116,.228,.070,.082,'cream',[.91,.89,.87],{...box,rigGroup:'body'});
  for(const side of [-1,1]){
@@ -94,9 +94,9 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
  // Simple articulated silhouette: arm and leg identifiers deliberately remain
  // compatible with louisPartPose until full bone retargeting in phase 4.
  for(const side of [-1,1]){
-  add('upper-arm-'+side,side*.305,1.172,-.019,.150,.330,.175,'dark',jacket,
+  add('upper-arm-'+side,side*.285,1.172,-.019,.168,.340,.182,'dark',jacket,
    {...limb,roll:-side*.045,rigGroup:'arm',rigSide:side});
-  add('forearm-'+side,side*.317,.940,.021,.134,.247,.147,'dark',jacket,
+  add('forearm-'+side,side*.308,.940,.021,.145,.258,.154,'dark',jacket,
    {...limb,rigGroup:'arm',rigSide:side});
   add('hand-'+side,side*.315,.764,.078,.095,.132,.107,'paper',skin,
    {...oval,rigGroup:'arm',rigSide:side});
