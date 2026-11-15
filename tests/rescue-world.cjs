@@ -86,7 +86,7 @@ assert(world.darknessAt(78,'door','night_neighborhood')>.68);
 assert(world.darknessAt(78,'window','night_neighborhood')>
  world.darknessAt(56,'ribbon','dusk_search'),'night must be darker than dusk');
 const arcade=fs.readFileSync('src/iso-game.ts','utf8'),pro=fs.readFileSync('src/demo/GardenPrologue.tsx','utf8');
-assert(arcade.includes('buildRescueOverworld(this,this.floor')&&arcade.includes('constrainRescue(candidate,this.storyMap)'),
+assert(arcade.includes('buildRescueOverworld(this,this.floor')&&arcade.includes('constrainRescue(candidate,this.storyMap,this.p)'),
  'four maps belong to the original IsoAdventure and use its motion');
 assert(arcade.includes('camera.startFollow(this.player')&&arcade.includes('Math.min(width/800,height/450)*1.08'),
  'zoom matches the original Corazones camera');
