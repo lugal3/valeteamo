@@ -176,6 +176,8 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
      preload(){
       this.load.image('kitty-reference-source',new URL('./sprites/kitty-reference-sheet.png',document.baseURI).href);
       this.load.image('kitty-walk-source',new URL('./sprites/kitty-walk-sheet.png',document.baseURI).href);
+      this.load.image('louis-reference-source',new URL('./sprites/louis-reference-sheet.png',document.baseURI).href);
+      this.load.image('louis-walk-source',new URL('./sprites/louis-walk-sheet.png',document.baseURI).href);
      }
      create(){
       sceneRef.current=this;
@@ -185,6 +187,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
       buildArt(this);buildChibi(this);
       this.worldMoon=drawRescueIsoWorld(this,WORLD_W);
       installReferenceCharacter(this,'kitty');
+      installReferenceCharacter(this,'louis');
       const faces=installProloguePeople(this);
       const kittyFrame=this.textures.get('chibi-kitty-down-0').getSourceImage() as HTMLCanvasElement;
       const kittyAvatar=document.createElement('canvas');
@@ -192,9 +195,13 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
       const kittyContext=kittyAvatar.getContext('2d')!;
       kittyContext.imageSmoothingEnabled=false;
       kittyContext.drawImage(kittyFrame,0,0,48,60);
-      setPortraits({...faces,kitty:kittyAvatar.toDataURL('image/png')});
+      const louisFrame=this.textures.get('chibi-louis-down-0').getSourceImage() as HTMLCanvasElement;
+      const louisAvatar=document.createElement('canvas');louisAvatar.width=48;louisAvatar.height=60;
+      const louisContext=louisAvatar.getContext('2d')!;louisContext.imageSmoothingEnabled=false;
+      louisContext.drawImage(louisFrame,0,0,48,60);
+      setPortraits({...faces,kitty:kittyAvatar.toDataURL('image/png'),louis:louisAvatar.toDataURL('image/png')});
       this.kitty=this.add.sprite(posForStage(phaseRef.current.stage),337,'chibi-kitty-down-0').setOrigin(.5,.9).setScale(1.3).setDepth(337);
-      this.louis=this.add.image(722,326,'story-person-louis').setOrigin(.5,1).setScale(.87).setDepth(326);
+      this.louis=this.add.image(722,326,'chibi-louis-down-0').setOrigin(.5,.9).setScale(1.3).setDepth(326);
       this.luis=this.add.image(1220,326,'story-person-luis').setOrigin(.5,1).setScale(.87).setDepth(326);
       if(phaseRef.current.stage==='walk-together')this.louis.setPosition(this.kitty.x+52,this.kitty.y);
       this.add.text(722,247,'LOUIS',{fontFamily:'monospace',fontStyle:'bold',fontSize:'12px',color:'#71375c',stroke:'#ffeff5',strokeThickness:3}).setOrigin(.5).setDepth(326);
@@ -360,7 +367,10 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
        const goalX=Math.max(723,Math.min(this.kitty.x+53,1585));
        this.louis.x+=(goalX-this.louis.x)*Math.min(1,dt*3.7);
        this.louis.y+=(this.kitty.y-this.louis.y)*Math.min(1,dt*3.5);
+       const louisWalk='chibi-louis-down-'+(1+Math.floor(this.time.now/115)%4);
+       if(this.textures.exists(louisWalk))this.louis.setTexture(louisWalk);
       }
+      if(stage!=='walk-together'&&this.louis.texture.key!=='chibi-louis-down-0')this.louis.setTexture('chibi-louis-down-0');
       if(stage==='defend'){
        if(keys.SPACE.isDown||keys.F.isDown||keys.UP.isDown||keys.DOWN.isDown||
          keys.LEFT.isDown||keys.RIGHT.isDown||heldFire.current)this.shoot();
