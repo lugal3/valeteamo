@@ -1,0 +1,44 @@
+name: Verificar corrección iPhone y recuperar Lois
+on:
+  push:
+    branches: [fix/restore-lois-ios-loading]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ios-y-rescate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Verificar proyecto completo
+        run: npm test
+      - name: Validar el rig y cinemáticas de Lois
+        run: |
+          node tests/lois-ps2-mesh.cjs
+          node tests/lois-ps2-uv.cjs
+          node tests/lois-ps2-rig.cjs
+          node tests/lois-ps2-cinematics.cjs
+      - name: Compilar versión real de Firebase
+        run: npm run build
+      - name: Instalar navegadores Chrome y WebKit
+        run: npx playwright install --with-deps chromium webkit
+      - name: Reproducir cargas, rotación y error de archivos antiguos
+        run: node tests/ios-navigation-recovery.cjs
+      - name: Revisar el rescate completo con autito RC
+        run: node tests/rc-browser.cjs
+      - name: Guardar capturas de fallo y recuperación
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-lois-scene-recovery
+          path: |
+            artifacts/ios-*.png
+            docs/capturas/rc-finale/*.png
+          if-no-files-found: ignore
