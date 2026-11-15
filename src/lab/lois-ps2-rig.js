@@ -2,6 +2,7 @@
 // Rendered by the existing WebGL1 dynamic VBO; no second renderer, GPU skinning
 // dependency or new gameplay state. The same mesh/UV atlas follows each bone.
 import {LOIS_RIG,sampleLoisVisual} from './lois-ps2-profile.js';
+import {sampleLoisReaction} from './lois-ps2-reactions.js';
 
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,Number.isFinite(v)?v:a));
 const identity=[1,0,0,0,1,0,0,0,1];
@@ -48,6 +49,7 @@ export function loisBoneForPart(id){
 
 export function sampleLoisRig(source={},reduced=false){
  const visual=sampleLoisVisual(source,reduced);
+ const reaction=sampleLoisReaction(source,reduced);
  const phase=visual.phase;
  const t=visual.elapsed,crouch=clamp(source.crouch,0,1);
  const speed=clamp(source.speed,0,4);
@@ -59,13 +61,13 @@ export function sampleLoisRig(source={},reduced=false){
  const fear=visual.face.fear;
  const blink=clamp(visual.face.blink,0,1);
  const breath=visual.chest.breath;
- const gazeYaw=reduced?0:hiding?Math.sin(t*.78)*.38:phase==='climb'?Math.sin(t*.52)*.10:Math.sin(t*.32)*.07;
- const gazePitch=untying?-.22:hiding?-.10:0;
- const jawOpen=untying?.12+Math.sin(t*2.5)*.025:
+ const gazeYaw=(reduced?0:hiding?Math.sin(t*.78)*.38:phase==='climb'?Math.sin(t*.52)*.10:Math.sin(t*.32)*.07)+reaction.gazeYaw;
+ const gazePitch=(untying?-.22:hiding?-.10:0)+reaction.gazePitch;
+ const jawOpen=clamp((untying?.12+Math.sin(t*2.5)*.025:
   phase==='climb'?.075:
-  hiding?.06:.018+Math.max(0,Math.sin(t*1.7))*.016;
- const browLift=clamp(fear*.22,0,.22);
- const f={blink,gazeYaw,gazePitch,jawOpen,browLift,fear,relief:visual.face.relief};
+  hiding?.06:.018+Math.max(0,Math.sin(t*1.7))*.016)+reaction.jawOpen,0,.45);
+ const browLift=clamp(fear*.22+reaction.browLift,0,.40);
+ const f={blink,gazeYaw,gazePitch,jawOpen,browLift,fear,relief:visual.face.relief,reaction:reaction.type};
  const angles=Object.create(null),shifts=Object.create(null);
  const angle=(name,roll=0,pitch=0,yaw=0)=>{angles[name]={yaw,pitch,roll};};
  const shift=(name,x=0,y=0,z=0)=>{shifts[name]=[x,y,z];};
@@ -76,7 +78,7 @@ export function sampleLoisRig(source={},reduced=false){
  angle('chest',reduced?0:Math.sin(t*1.04)*.012,0,reduced?0:Math.sin(t*.45)*.017);
  shift('chest',0,breath,0);
  angle('neck',0,0,0);
- angle('head',reduced?0:Math.sin(t*.73)*.008,untying?-.09:gazePitch*.28,gazeYaw*.42);
+ angle('head',reduced?0:Math.sin(t*.73)*.008,(untying?-.09:gazePitch*.28)+reaction.headPitch,gazeYaw*.42+reaction.headYaw);
  shift('jaw',0,-jawOpen*.015,jawOpen*.006);
  angle('jaw',0,-jawOpen*.15,0);
  shift('leftEyelid',0,-blink*.034,0);
@@ -84,7 +86,7 @@ export function sampleLoisRig(source={},reduced=false){
  for(const [name,side,lift,legPhase] of [
   ['left',-1,liftedLeft,step],['right',1,liftedRight,-step]
  ]){
-  const reach=untying?-.49:hiding?-.64:-(legPhase*.36);
+  const reach=(untying?-.49:hiding?-.64:-(legPhase*.36))-reaction.reach*.24;
   angle(name+'Shoulder',side*.025,reach,side*(hiding?.19:untying?.13:.02));
   angle(name+'Elbow',0,untying?-.41:hiding?-.31:.12+lift*.09,0);
   angle(name+'Wrist',0,untying?-.13:hiding?.14:0,side*.055);

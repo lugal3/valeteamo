@@ -3,6 +3,7 @@ import {navigate} from './navigation.js';
 import {sampleBlink} from './animations/face.js';
 import {LOIS_VISUAL_ID} from './lois-ps2-profile.js';
 import {buildLoisPs2Model} from './lois-ps2-model.js';
+import {startLoisReaction,advanceLoisReaction} from './lois-ps2-reactions.js';
 
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 export const LOUIS_UNTIE_SECONDS=3.25;
@@ -15,22 +16,23 @@ const ROUTE=Object.freeze([
 export const LOUIS_HIDING_SPOT=Object.freeze({x:11.82,y:0,z:4.08});
 export function createLouisEscape(world){
  const point=ROUTE[0],y=groundHeight(point.x,point.z,-3.55,true);
- return {kind:'louis-companion',id:'louis-escape',label:'Louis rescatado',visualPreset:LOIS_VISUAL_ID,x:point.x,y,z:point.z,yaw:Math.PI,phase:'untying',waypoint:1,age:0,step:0,crouch:.33,concealed:false,interactable:false,walk:0,speed:0,blink:0,world};
+ return {kind:'louis-companion',id:'louis-escape',label:'Louis rescatado',visualPreset:LOIS_VISUAL_ID,x:point.x,y,z:point.z,yaw:Math.PI,phase:'untying',waypoint:1,age:0,step:0,crouch:.33,concealed:false,interactable:false,walk:0,speed:0,blink:0,visualReaction:null,world};
 }
 export function updateLouisEscape(louis,dt,kitty=null){
  if(!louis||dt<=0)return null;
  louis.age+=dt;
+ advanceLoisReaction(louis,dt);
  louis.blink=sampleBlink(louis.age+.61,{reduced:false,firstAt:1.43});
  louis.speed=Math.max(0,louis.speed-dt*5);
  if(louis.phase==='follow')louis.crouch=Math.max(0,louis.crouch-dt*1.6);
  if(louis.phase==='untying'){
   louis.crouch=.33;
-  if(louis.age>=LOUIS_UNTIE_SECONDS){louis.phase='climb';louis.age=0;louis.crouch=0;return 'untied';}
+  if(louis.age>=LOUIS_UNTIE_SECONDS){louis.phase='climb';louis.age=0;louis.crouch=0;startLoisReaction(louis,'look-kitty');return 'untied';}
   return null;
  }
  if(louis.phase==='climb'){
   const target=ROUTE[louis.waypoint];
-  if(!target){louis.phase='hide';louis.age=0;louis.yaw=Math.PI;return 'arrived';}
+  if(!target){louis.phase='hide';louis.age=0;louis.yaw=Math.PI;startLoisReaction(louis,'startle');return 'arrived';}
   const dx=target.x-louis.x,dz=target.z-louis.z,d=Math.hypot(dx,dz);
   if(d<.055){louis.waypoint++;return null;}
   const step=Math.min(d,dt*2.10);
@@ -40,7 +42,7 @@ export function updateLouisEscape(louis,dt,kitty=null){
   louis.walk+=step;louis.speed=step/Math.max(dt,.0001);
  }else if(louis.phase==='hide'){
   louis.crouch=Math.min(1,louis.age/1.1);
-  if(louis.age>=1.5){louis.phase='hidden';louis.age=0;louis.concealed=true;return 'hidden';}
+  if(louis.age>=1.5){louis.phase='hidden';louis.age=0;louis.concealed=true;startLoisReaction(louis,'listen');return 'hidden';}
  }else if(louis.phase==='follow'&&kitty){
   const behind={x:kitty.x-Math.sin(kitty.yaw)*.90,z:kitty.z-Math.cos(kitty.yaw)*.90};
   const dx=behind.x-louis.x,dz=behind.z-louis.z,d=Math.hypot(dx,dz);
@@ -55,6 +57,7 @@ export function updateLouisEscape(louis,dt,kitty=null){
 export function freeLouis(louis){
  if(louis?.phase!=='hidden')return false;
  louis.phase='follow';louis.concealed=false;louis.speed=0;louis.age=0;
+ startLoisReaction(louis,'relief');
  return true;
 }
 export function louisCamera(louis){
