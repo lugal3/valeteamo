@@ -3,7 +3,7 @@
 **Rama de trabajo:** `codex/pulido-rescate-fases-20261115`.
 **Base:** `main` a 15/11/2026, commit `e8370cfcec1eda94f73c30876c243028655c1b0c`.
 
-La rama es independiente. **No hacer merge, no publicar Firebase ni iniciar la fase siguiente sin que el usuario escriba un punto (`.`).** Se mantiene `IsoAdventure` / `StoryGame` del **Corazones original**, sin reemplazar sprites, motor, cámara, input, joysticks, controles o transición a la casa 3D.
+La rama se mantuvo independiente durante las fases 1 y 2; el usuario ya autorizó por puntos consecutivos las fases 2 y 3. **La publicación se realizará solo tras superar los controles finales.** Se mantiene `IsoAdventure` / `StoryGame` del **Corazones original**, sin reemplazar sprites, motor, cámara, input, joysticks, controles o transición a la casa 3D.
 
 ## Estado
 
@@ -11,7 +11,7 @@ La rama es independiente. **No hacer merge, no publicar Firebase ni iniciar la f
 | --- | --- | --- |
 | **1** | Terreno, materiales, profundidad, ambientes y partículas de los cuatro mapas | **Implementada en esta rama** |
 | **2** | Rediseño chibi de Luis, sprites, proporciones, parpadeo, caminata y poses | **Implementada en esta rama, pendiente revisión visual de fase 3** |
-| **3** | Luis entra y sale caminando, despedida, acompañamiento, cinemáticas y pruebas completas (PC/móvil 2D→3D), merge a main y verificación de Firebase | **Pendiente: esperar el siguiente `.`** |
+| **3** | Entrada animada de Luis, saludo, despedida, regresión PC/móvil 2D→3D, integración a main y Firebase | **Cinemáticas implementadas; verificación final y publicación en curso** |
 
 ### Fase 1 — Implementación
 
@@ -39,15 +39,30 @@ Se preservaron el retrato antiguo y los sprites de **Louis**. El protagonista de
 
 **Límite de fase 2:** las poses `walk` y `wave` ya están listas, pero **Luis aún no se desplaza físicamente para llegar, acompañar ni salir**. La posición, timing del diálogo y escenas cinemáticas se modifican exclusivamente en fase 3 después del próximo punto del usuario.
 
+### Fase 3 — Llegada y despedida (implementada; QA final en curso)
+
+Se sustituyó la aparición brusca de Luis por un encuentro escenificado en la misma escena Phaser:
+
+- `src/demo/luis-choreography.ts`: pequeño controlador determinista de **cuatro movimientos**: llegada curva desde el sendero lateral, saludo, despedida con mano levantada y salida por un camino diferente hacia el sendero. Sin timers, motores adicionales ni movimiento robótico en línea recta.
+- `src/iso-game.ts`: Luis aparece físicamente al fondo del sendero cuando comienza la etapa; al acercarse Kitty entra caminando, con sombra pegada a sus pies y cambio de cuadro de animación y orientación según el desplazamiento. Kitty espera un instante mientras saluda, aparece un corazón, y solo entonces se habilita `Hablar con Luis`.
+- Durante el diálogo se bloquea el control del jugador sin congelar las expresiones de Luis; al despedirse, Luis **saluda primero y camina fuera de la escena**. El cambio a `walk-together` (donde **Louis**, no Luis, sigue a Kitty) sucede **solo cuando termina ese recorrido**.
+- `src/demo/GardenPrologue.tsx` mantiene el callback de finalización; si se reinicia o cambia de capítulo, se cancelan referencias al personaje y no se ejecutan callbacks antiguos.
+- Se ajustaron sus diálogos para reconocer la llegada y la despedida de forma natural.
+- `tests/luis-choreography.cjs` comprueba trayectoria curva, posición, temporización, puerta de diálogo y bloqueo de inputs; `tests/prologue-browser.cjs` captura llegada, idle, conversación, saludo, despedida y alejamiento, y recorre la historia hasta el 3D en un viewport móvil.
+- `tests/prologue-desktop.cjs` comprueba escritorio a 1280×720, cámara, WASD, disparo y la transición entre mapas. Continúan los checks de emotes/clics 3D y el modo Corazones clásico.
+- La preferencia de movimiento reducido conserva controles accesibles; los sprites se reutilizan sin crear texturas en cada fotograma.
+
+Las fases 1 y 2 permanecieron aisladas en una rama dedicada. Se revisará el resultado final de Actions antes del merge y de Firebase.
+
 ### Límites intencionados
 
-La fase 1 no incorporó Luis. La fase 2 añadió su arte y animaciones al motor original sin cambiar cámara, combate, IA enemiga, controles ni la escena del 3D. Luis (novio de Kitty) y **Louis** (personaje secuestrado) siguen siendo personajes independientes. La fase 3 implementará la coreografía de entrada y despedida, verificará las transiciones completas y solo entonces integrará y publicará.
+La fase 1 no incorporó Luis. La fase 2 añadió su arte y animaciones al motor original. La fase 3 conectó esos cuadros a sus desplazamientos sin cambiar el combate, IA enemiga, controles ni el interior 3D. **Luis** (novio de Kitty, se despide y regresa al sendero) y **Louis** (personaje secuestrado que acompaña a Kitty) siguen siendo personajes independientes.
 
 ### Verificación final prevista en fase 3
 
 - `npm ci && npm test && npm run build`.
-- `node tests/landscape-gate.cjs`, `node tests/cosmos-browser.cjs`, `node tests/cosmos-public-flow.cjs`, `node tests/prologue-browser.cjs` y `node tests/emotes-browser.cjs` en Chromium.
+- `node tests/landscape-gate.cjs`, `node tests/cosmos-browser.cjs`, `node tests/cosmos-public-flow.cjs`, `node tests/prologue-browser.cjs`, `node tests/prologue-desktop.cjs` y `node tests/emotes-browser.cjs` en Chromium.
 - Revisar especialmente la continuidad visual entre mañana/tarde/atardecer/noche, las entradas y salidas de Luis, el tiempo de diálogo, la velocidad de los fades, la cámara, los clics PC y la conexión final a la casa 3D.
-- Únicamente después de pruebas exitosas y del punto de avance de fase 3: fusionar a `main` y comprobar el resultado de la GitHub Action de Firebase Hosting.
+- Únicamente después de las pruebas exitosas y de la autorización del usuario mediante el segundo punto: fusionar la PR #19 a `main` y comprobar el resultado de la GitHub Action de Firebase Hosting.
 
-**Estado de publicación:** cambios de esta rama **no publicados** en Firebase.
+**Estado de publicación:** pruebas y merge pendientes. Este archivo se actualizará con los enlaces de CI/despliegue una vez verificados.
