@@ -13,8 +13,8 @@ const initial=(entry:Entry,test:boolean):RescueState=>{
  if(entry==='garden')return {...START};
  if(!test)return loadRescue();
  let s={...START};
- if(entry!=='garden')s=advanceRescue(s,'heart');
- if(entry!=='garden'&&entry!=='abduction')s=advanceRescue(s,'abduction');
+ s=advanceRescue(s,'heart');
+ if(entry!=='abduction')s=advanceRescue(s,'abduction');
  if(entry==='trail'||['house','drawer','lock','rescue','mirror'].includes(entry))s=advanceRescue(s,'trail');
  if(['house','drawer','lock','rescue','mirror'].includes(entry))s=advanceRescue(s,'house');
  return s;

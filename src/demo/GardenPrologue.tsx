@@ -355,8 +355,8 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
       else this.kitty.setTexture('chibi-kitty-down-0');
       if(stage==='walk-together'){
        const goalX=Math.max(723,Math.min(this.kitty.x+53,1585));
-       this.louis.x+=(goalX-this.louis.x)*min(1,dt*3.7);
-       this.louis.y+=(this.kitty.y-this.louis.y)*min(1,dt*3.5);
+       this.louis.x+=(goalX-this.louis.x)*Math.min(1,dt*3.7);
+       this.louis.y+=(this.kitty.y-this.louis.y)*Math.min(1,dt*3.5);
       }
       if(stage==='defend'){
        if(keys.SPACE.isDown||keys.F.isDown||heldFire.current)this.shoot();
