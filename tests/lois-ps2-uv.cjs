@@ -28,6 +28,17 @@ const path=require('node:path');
   const u=textured.vertices[i+9],v=textured.vertices[i+10];
   assert(u>=0&&u<=1&&v>=0&&v<=1,'valid UV');
  }
+ // Regression for the renderer's nonstandard camera winding convention:
+ // if the face triangles are reversed, its front disappears behind the dark
+ // rear hemisphere even though the UV and texture tests still pass.
+ const n=box.segments,mid=Math.floor(box.rings/2)*n+Math.floor(n/2);
+ const tri=textured.indices.slice(mid*6,mid*6+3),vtx=i=>[
+  textured.vertices[i*16],textured.vertices[i*16+1],textured.vertices[i*16+2]
+ ];
+ const [a,b,c]=Array.from(tri,vtx);
+ const ab=[b[0]-a[0],b[1]-a[1]],ac=[c[0]-a[0],c[1]-a[1]];
+ assert(ab[0]*ac[1]-ab[1]*ac[0]<-1e-9,
+  'Lois front polygons must have the same winding as existing WebGL character surfaces');
  for(let row=0;row<=box.rings;row++){
   const l=row*(box.segments+1)*16,r=(row*(box.segments+1)+box.segments)*16;
   assert(Math.abs(textured.vertices[l]-textured.vertices[r])<.00001,'cylindrical seam X continuous');

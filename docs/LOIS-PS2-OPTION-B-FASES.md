@@ -2,7 +2,7 @@
 
 **Rama de trabajo:** `feature/lois-ps2-option-b-rig`  
 **Base:** `e06061c55490b49709d697fe21becb24cc5ba0aa` (main, 15 nov 2026).  
-**Estado:** fase 3 — atlas UV original ilustrado y renderizado WebGL1 en desarrollo, sin publicación a Firebase ni merge. Cada “.” del usuario autoriza avanzar UNA fase y crear el siguiente commit en esta misma rama.
+**Estado:** fase 3 implementada y validada en CI (atlas UV ilustrado, textura GPU única, regresión de caras frontales). Sin publicación a Firebase ni merge. Cada «.» pasa a la fase 4 en esta misma rama. Cada “.” del usuario autoriza avanzar UNA fase y crear el siguiente commit en esta misma rama.
 
 ## Alcance y separación de identidad
 
@@ -50,11 +50,20 @@
 - `tests/lois-ps2-browser.cjs` usa Vite/Playwright/SwiftShader y genera capturas del propio renderizador WebGL1, con vista frontal, perfil, 3/4, primer plano y modo fluido, además de un control con el modelo antiguo. La iluminación de las capturas es diagnóstica, no representa todas las condiciones de la casa.
 - El objetivo **todavía no** es parecido fotográfico definitivo: sin el atlas UV de fase 3, la cara es geométrica con colores planos, y la pose sigue usando la animación procedimental anterior (rig completo en fase 4). No presentar esta fase como textura final o modelo perfectamente igual a la referencia.
 
-### Fase 3 — UV y texturas faciales (en revisión)
+### Fase 3 — UV y texturas faciales (completada técnicamente; semejanza definitiva por mejorar)
 - Desplegado UV estable para rostro/orejas/cuello, mapas sRGB; 512 px móvil y 1024 px escritorio si el dispositivo lo soporta.
 - Usar referencias de rostro autorizadas para crear una textura cohesionada (ojos, cejas, labios, stubble); no pegar pantallazos completos.
 - Integrar textura en el renderizador WebGL1 sin asignar texturas nuevas por cuadro; fallback a color si el asset falla.
 - Comparar con las cuatro fotos de referencia y la **opción B** para likeness sin artefactos, incluyendo perfil.
+
+#### Implementación, memoria y limitaciones de fase 3
+
+- **Atlas propio**: `src/lab/assets/lois-ps2-face.svg` — piel, pómulos, sombras de ojos, puente nasal, labios, pecas y barba tenue; ilustración retro creada para el juego, **no fotografías de Pinterest copiadas**.
+- **UV real**: `src/lab/lois-ps2-face.js` marca exclusivamente la malla facial como material de rostro `vArt=3` y conserva la costura longitudinal en la parte posterior. Ojos, pestañas, orejas y cuello mantienen primitivas de color; sus animaciones y la opción anterior no cambian.
+- **Integración**: `src/lab/lois-ps2-texture.js`, `material-shaders.js` y `renderer.js` incorporan un sampler WebGL1 dedicado en la unidad 4. La TV continúa usando la unidad 3; sin nuevo motor ni draw calls por la cara.
+- **Carga diferida**: SVG rasterizado una vez en un canvas temporal solo si se reconstruye la escena con la malla facial de Lois. En `low`: 512×512 RGBA ≈ 1 MiB de GPU; en `medium`: 1024×1024 RGBA ≈ 4 MiB. Sin mipmaps, `CLAMP_TO_EDGE`. La textura se destruye con el renderer y si falla se conserva color de piel.
+- **Control visual**: al revisar capturas encontramos una regresión no detectada inicialmente: winding invertido en la superficie facial, que ocultaba la cara frontal. Se corrigió para igualar el orden de triángulos del motor. `tests/lois-ps2-uv.cjs` y `tests/lois-ps2-browser.cjs` verifican esta orientación además de capturas real WebGL, atlas cargado, LOD 512/1024, fallback y una sola subida GPU por modelo.
+- **Lo que NO significa**: no es todavía un escaneo fotográfico ni un parecido facial exacto. El acabado es PS2 ilustrado basado en las fotos suministradas, no un collage fotográfico. La malla sigue animándose mediante piezas, no con skinning por huesos (fase 4). Para un acabado aún más fiel haría falta un atlas fotográfico autorizado y calibrado frontal/perfil que se podría integrar en este sampler sin tocar la lógica del rescate.
 
 ### Fase 4 — Rig, animación corporal y facial
 - Un rig anatómico con jerarquía de huesos, mirada, apertura de mandíbula, parpadeo real y expresiones (miedo, alivio).

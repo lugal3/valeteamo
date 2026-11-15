@@ -49,16 +49,25 @@ const {chromium}=require('playwright');
     renderer.render(camera,true,1,false,{reduced:true,shotLight:.8});
     renderer.render(camera,true,1.02,false,{reduced:true,shotLight:.8});
     const gl=renderer.gl;gl.finish();
+    // Numerical check of central facial readability, not just a successful draw call.
+    const w=canvas.width,h=canvas.height,rx=Math.floor(w*.44),ry=Math.floor(h*.35);
+    const rw=Math.max(2,Math.floor(w*.13)),rh=Math.max(2,Math.floor(h*.20));
+    const rgba=new Uint8Array(rw*rh*4);
+    gl.readPixels(rx,ry,rw,rh,gl.RGBA,gl.UNSIGNED_BYTE,rgba);
+    let sum=0;for(let i=0;i<rgba.length;i+=4)sum+=rgba[i]+rgba[i+1]+rgba[i+2];
+    const faceBrightness=sum/(rw*rh*3);
     const error=gl.getError();
     const output={dataURL:canvas.toDataURL('image/png'),triangles:renderer.triangleCount,
       vertices:renderer.vertexCount,error,drawn:renderer.dynamicCount,
       textureReady:renderer.loisFaceTexture.ready,textureUploads:renderer.loisFaceTexture.uploads,
-      textureSize:renderer.loisFaceTexture.size};
+      textureSize:renderer.loisFaceTexture.size,faceBrightness};
     renderer.destroy();
     return output;
    },{variant,shot,quality});
    assert.equal(data.error,0,'WebGL must render without errors: '+variant+' '+shot);
    assert(data.drawn>200,'all dynamic geometry is present');
+   if(variant==='ps2-b'&&shot==='portrait')assert(data.faceBrightness>145,
+    'face front must be visible, not the dark backface: brightness '+data.faceBrightness);
    if(variant==='ps2-b'||variant==='ps2-b-faceonly'||variant==='ps2-b-nohair'){
     assert.equal(data.textureReady,true,'Lois facial atlas loaded');
     assert.equal(data.textureUploads,1,'facial atlas uploaded once, not per frame');
@@ -68,7 +77,7 @@ const {chromium}=require('playwright');
    assert(png.length>10000,'preview is a real canvas image, not an empty frame');
    const name='lois-'+variant+'-'+shot+'-'+quality+'.png';
    fs.writeFileSync(path.join('artifacts',name),png);
-   console.log('RENDER',JSON.stringify({name,triangles:data.triangles,vertices:data.vertices,pngBytes:png.length}));
+   console.log('RENDER',JSON.stringify({name,triangles:data.triangles,vertices:data.vertices,pngBytes:png.length,faceBrightness:Math.round(data.faceBrightness)}));
    return png;
   };
   const modern=await capture('ps2-b','front');
