@@ -10,6 +10,7 @@ const remaining = () => Math.max(0,Math.ceil((opensAt-Date.now())/1000));
 export function BirthdayCountdown({children}:{children:ReactNode}){
  const [entered,setEntered]=useState(false);
  const [launchClassic,setLaunchClassic]=useState(false);
+ const [adminMode,setAdminMode]=useState(false);
  const [giftLaunched,setGiftLaunched]=useState(false);
  const [installOpen,setInstallOpen]=useState(false);
  const [seconds,setSeconds]=useState(remaining);
@@ -39,11 +40,17 @@ export function BirthdayCountdown({children}:{children:ReactNode}){
   event.preventDefault();
   if(code.trim().toUpperCase()==='LP'){
    dialog.current?.close();
+   setAdminMode(true);
    setEntered(true);
   }else setInvalid(true);
  }
 
- if(entered)return launchClassic&&isValidElement(children)?cloneElement(children as ReactElement<{initialRoute?:'classic'|'rescue'}>,{initialRoute:'rescue'}):children;
+ if(entered){
+  const initialRoute=adminMode?'tests':launchClassic?'rescue':null;
+  return initialRoute&&isValidElement(children)
+   ?cloneElement(children as ReactElement<{initialRoute?:'classic'|'rescue'|'tests'}>,{initialRoute})
+   :children;
+ }
  if(giftLaunched)return <Suspense fallback={<main className="birthday-countdown" role="status">Abriendo el universo…</main>}><CosmosExperience startAt="gift" onExit={()=>setEntered(true)} onEnterGame={()=>{setLaunchClassic(true);setEntered(true);}}/></Suspense>;
  const parts=[
   ['Días',Math.floor(seconds/86400)],

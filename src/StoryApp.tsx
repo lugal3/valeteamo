@@ -2,17 +2,17 @@ import {lazy,Suspense,useCallback,useEffect,useRef,useState,type ComponentType} 
 import {CHARACTERS,type CharacterId} from './characters';
 import {CONTENT_IS_SAMPLE,STORY,type MemoryPhoto} from './story-content';
 import {advance,goTo,initialProgress,readProgress,writeProgress,type StoryProgress} from './story-progress';
-import {StoryGame} from './StoryGame';
 import {Sound} from './audio';
 import {FullscreenControl} from './FullscreenControl';
 import {Splash} from './demo/Splash';
-import {RescueDemo} from './demo/RescueDemo';
 import {PlaytestHouse,PlaytestMenu} from './PlaytestMenu';
 import type {HouseTrialId} from './lab/house-trials';
 import './story.css';
 import {stopWelcomeMelody} from './demo/welcome-melody';
 
 const CosmosExperience=lazy(()=>import('./experience/CosmosExperience'));
+const StoryGame=lazy(()=>import('./StoryGame').then(m=>({default:m.StoryGame})));
+const RescueDemo=lazy(()=>import('./demo/RescueDemo').then(m=>({default:m.RescueDemo})));
 
 function Portrait({character}:{character:CharacterId}){
  return <span className="kitty-reference-portrait" aria-hidden="true" style={{backgroundImage:`url(${new URL(`./sprites/${character}-reference-sheet.png`,document.baseURI).href})`}}/>;
@@ -32,12 +32,13 @@ function ComicDialog({close}:{close:()=>void}){
  useEffect(()=>{const previous=document.activeElement as HTMLElement|null;dialog.current?.querySelector<HTMLButtonElement>('button')?.focus();const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();onClose.current();}else if(e.key==='Tab'){e.preventDefault();dialog.current?.querySelector<HTMLButtonElement>('button')?.focus();}};window.addEventListener('keydown',key,true);return()=>{window.removeEventListener('keydown',key,true);previous?.focus();};},[]);
  return <div className="comic-backdrop" onClick={e=>{if(e.target===e.currentTarget)close();}}><div className="comic-dialog" ref={dialog} role="dialog" aria-modal="true" aria-labelledby="comic-title"><div className="comic-heading"><div><span className="story-kicker">UNA SORPRESA PARA TI ✦</span><h2 id="comic-title">jaja uno XD</h2></div><button className="comic-close" onClick={close} aria-label="Cerrar cómic">×</button></div><img src={new URL('./comics/jaja-uno-xd.png',document.baseURI).href} alt="Cuatro viñetas: Kitty encuentra una invitación, prepara una torta con Louis y ambos siguen unas luces para celebrar un cumpleaños con regalos."/><p>Una pequeña sorpresa, preparada con mucho cariño. ♡</p></div></div>;
 }
-export function StoryApp({ClassicApp,initialRoute}:{ClassicApp:ComponentType;initialRoute?:'classic'|'rescue'}){
+export function StoryApp({ClassicApp,initialRoute}:{ClassicApp:ComponentType;initialRoute?:'classic'|'rescue'|'tests'}){
  const container=useRef<HTMLDivElement>(null);
  const audio=useRef<Sound>(new Sound());
  const [progress,setProgress]=useState<StoryProgress>(()=>readProgress(STORY.length));
- const [screen,setScreen]=useState<'splash'|'cover'|'story'|'game'|'classic'|'rescue'|'tests'|'arcade'|'cosmos'>(initialRoute==='rescue'?'splash':initialRoute==='classic'?'classic':'cover');
+ const [screen,setScreen]=useState<'splash'|'cover'|'story'|'game'|'classic'|'rescue'|'tests'|'arcade'|'cosmos'>(initialRoute==='rescue'?'splash':initialRoute==='classic'?'classic':initialRoute==='tests'?'tests':'cover');
  const [splashTarget,setSplashTarget]=useState<'rescue'|null>(initialRoute==='rescue'?'rescue':null);
+ const [adminGranted]=useState(initialRoute==='tests');
  const [demoEntry,setDemoEntry]=useState<'garden'|'abduction'|'trail'|'house'|'drawer'|'lock'|'rescue'|'mirror'>('garden');
  const [demoTrial,setDemoTrial]=useState(false);const [saved,setSaved]=useState(progress.started);const [storageOK,setStorageOK]=useState(true);
  const [houseTrial,setHouseTrial]=useState<HouseTrialId|null>(null);
@@ -63,7 +64,7 @@ export function StoryApp({ClassicApp,initialRoute}:{ClassicApp:ComponentType;ini
  const openDemo=(entry:typeof demoEntry,trial:boolean)=>{setDemoEntry(entry);setDemoTrial(trial);audio.current.destroy();stopWelcomeMelody();setSplashTarget(entry==='garden'?'rescue':null);setScreen(entry==='garden'?'splash':'rescue');};
  if(screen==='splash')return <Splash muted={progress.muted} onStart={()=>{if(splashTarget==='rescue'){setSplashTarget(null);setScreen('rescue');}else{if(!progress.muted)tryAudio(true);setScreen('cover');}}}/>;
  if(screen==='cosmos')return <Suspense fallback={<main role="status" style={{display:'grid',placeItems:'center',background:'#0a0719',color:'#ffddf1'}}>Preparando las estrellas…</main>}><CosmosExperience preview startAt={cosmosEntry} onExit={()=>setScreen('tests')} onEnterGame={()=>openDemo('garden',false)}/></Suspense>;
- if(screen==='rescue')return <RescueDemo key={demoEntry+(demoTrial?'-trial':'-story')} entry={demoEntry} test={demoTrial} onExit={()=>{setScreen(demoTrial?'tests':'cover');if(!demoTrial)unlockAudio();}}/>;
+ if(screen==='rescue')return <Suspense fallback={<main className="playtest-loading" role="status">Preparando el rescate 2D…</main>}><RescueDemo key={demoEntry+(demoTrial?'-trial':'-story')} entry={demoEntry} test={demoTrial} onExit={()=>{setScreen(demoTrial?'tests':'cover');if(!demoTrial)unlockAudio();}}/></Suspense>;
  if(screen==='tests')return houseTrial?<PlaytestHouse id={houseTrial} onExit={closeHouseTrial}/>:<PlaytestMenu
   onExit={()=>{unlockAudio();setScreen('cover');}}
   onSelect={id=>{
@@ -78,12 +79,12 @@ export function StoryApp({ClassicApp,initialRoute}:{ClassicApp:ComponentType;ini
     default:setHouseTrial(id);
    }
   }}/>;
- if(screen==='arcade')return <StoryGame level={2} character="kitty" muted={progress.muted} audio={audio.current} audioNotice={audioNotice} onUnlockAudio={unlockAudio} onToggleAudio={toggleAudio} onComplete={()=>setScreen('tests')} onExit={()=>setScreen('tests')}/>;
+ if(screen==='arcade')return <Suspense fallback={<main className="playtest-loading" role="status">Preparando el juego 2D…</main>}><StoryGame level={2} character="kitty" muted={progress.muted} audio={audio.current} audioNotice={audioNotice} onUnlockAudio={unlockAudio} onToggleAudio={toggleAudio} onComplete={()=>setScreen('tests')} onExit={()=>setScreen('tests')}/></Suspense>;
  if(screen==='classic')return <><ClassicApp/><button className="classic-return" onClick={()=>{unlockAudio();setScreen('cover');}}>← Volver a la historia</button></>;
- if(screen==='game'&&chapter.kind==='game')return <StoryGame level={chapter.level} character={progress.character} muted={progress.muted} audio={audio.current} audioNotice={audioNotice} onUnlockAudio={unlockAudio} onToggleAudio={toggleAudio} onComplete={next} onExit={()=>{unlockAudio();setScreen('story');}}/>;
+ if(screen==='game'&&chapter.kind==='game')return <Suspense fallback={<main className="playtest-loading" role="status">Preparando el capítulo…</main>}><StoryGame level={chapter.level} character={progress.character} muted={progress.muted} audio={audio.current} audioNotice={audioNotice} onUnlockAudio={unlockAudio} onToggleAudio={toggleAudio} onComplete={next} onExit={()=>{unlockAudio();setScreen('story');}}/></Suspense>;
  return <div className="story-app" ref={container} onPointerDownCapture={unlockAudio} onKeyDownCapture={e=>{if((e.key==='Enter'||e.key===' ')&&(e.target as HTMLElement).closest('button'))unlockAudio();}} onClickCapture={e=>{const button=(e.target as HTMLElement).closest('button');if(button&&!button.disabled&&!button.classList.contains('sound-toggle'))audio.current.ui();}}>
   <div className="story-atmosphere" aria-hidden="true"><span>✿</span><span>✧</span><span>♡</span><span>✦</span><span>✿</span><span>✧</span><span>♡</span><span>✦</span></div>
-  <header className="story-nav"><button className="story-brand" onClick={()=>setScreen('cover')} aria-label="Ir a la portada"><img className="birthday-brand-icon" src={new URL('./birthday-kitty.jpg',document.baseURI).href} alt=""/> Feliz cumpleaños Vale</button><div><span className="nav-note">UN REGALO PARA VALE</span>{screen==='cover'&&<button className="rescue-test-link" onClick={()=>setScreen('tests')}>Pruebas</button>}<button className="sound-toggle" aria-label={progress.muted?'Activar sonido':'Silenciar sonido'} onClick={toggleAudio}>{progress.muted?'♪ Activar sonido':'♪ Sonido activado'}</button><FullscreenControl compact/></div></header>
+  <header className="story-nav"><button className="story-brand" onClick={()=>setScreen('cover')} aria-label="Ir a la portada"><img className="birthday-brand-icon" src={new URL('./birthday-kitty.jpg',document.baseURI).href} alt=""/> Feliz cumpleaños Vale</button><div><span className="nav-note">UN REGALO PARA VALE</span>{screen==='cover'&&adminGranted&&<button className="rescue-test-link" onClick={()=>setScreen('tests')}>Pruebas</button>}<button className="sound-toggle" aria-label={progress.muted?'Activar sonido':'Silenciar sonido'} onClick={toggleAudio}>{progress.muted?'♪ Activar sonido':'♪ Sonido activado'}</button><FullscreenControl compact/></div></header>
   {!storageOK&&<div className="storage-warning" role="status">El navegador no permite guardar el avance. Puedes jugar, pero al cerrar la página se perderá.</div>}
   {audioNotice&&<div className="audio-warning" role="status">{audioNotice}</div>}
   {screen==='cover'?<main className="story-cover">
