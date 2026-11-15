@@ -10,7 +10,7 @@
  border-radius:9px;font:700 12px system-ui;cursor:pointer;
  box-shadow:0 2px 6px #493b4b25;touch-action:manipulation}
 .story-prologue .prologue-interact{bottom:max(22px,env(safe-area-inset-bottom));padding:13px 16px;max-width:220px}
-.story-prologue .prologue-restart{right:12px;bottom:9px;padding:7px 10px;font-size:10px;opacity:.75}
+.story-prologue .prologue-restart{top:max(58px,env(safe-area-inset-top));right:12px;bottom:auto;padding:7px 10px;font-size:10px;opacity:.75}
 .story-prologue .prologue-dialog-backdrop{
  position:absolute;z-index:40;inset:0;display:flex;align-items:flex-end;justify-content:center;
  padding:max(10px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-right))
