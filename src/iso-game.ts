@@ -16,6 +16,25 @@ type Danger={p:IsoPoint,at:number};
 type Stick={id:number,x:number,y:number,dx:number,dy:number};
 type FloatingNote={s:Phaser.GameObjects.Text,y:number,at:number};
 
+// La historia es una extensión optativa de ESTA MISMA escena Phaser.
+// Sin bridge, 2D Corazones conserva exactamente su juego, controles y cámara.
+export type IsoStoryStage='intro'|'defend'|'talk-louis'|'talk-luis'|'walk-together'|
+ 'disappearance'|'ribbon'|'petals'|'wheel'|'door'|'window'|'house';
+export type IsoStoryBridge={
+ stage:()=>IsoStoryStage;
+ objective:(stage:IsoStoryStage)=>string;
+ locked:()=>boolean;
+ near:(label:string)=>void;
+ ready:()=>void;
+ interact:(stage:IsoStoryStage)=>void;
+ victory:()=>void;
+ clearing:()=>void;
+ health:(hp:number)=>void;
+ retry:()=>void;
+};
+type StoryActor=Phaser.GameObjects.Image;
+
+
 export class IsoAdventure extends Phaser.Scene {
  player!:Phaser.GameObjects.Sprite;shadow!:Phaser.GameObjects.Ellipse;floor!:Phaser.GameObjects.Graphics;fx!:Phaser.GameObjects.Graphics;
  p:IsoPoint={u:0,v:0};keys!:Record<string,Phaser.Input.Keyboard.Key>;left?:Stick;right?:Stick;mouse=false;facing:Facing='down';
@@ -25,22 +44,162 @@ export class IsoAdventure extends Phaser.Scene {
  notes:FloatingNote[]=[];
  reducedMotion=typeof window!=='undefined'&&!!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
  private cancel=()=>this.clearInput();
- constructor(public level:1|2|3,public character:CharacterId,public report:(h:AdventureHud)=>void,public finish:(outcome:'win'|'dead')=>void,public onPause:(v:boolean)=>void,public audio:Sound,public ready:()=>void,public progress:(n:number)=>void=()=>{}){super('iso-adventure');}
- preload(){const path=CHARACTERS[this.character].chibiSpriteSheet;if(path)this.load.spritesheet(`chibi-${this.character}-sheet`,path,{frameWidth:32,frameHeight:40});else{this.load.image(`${this.character}-reference-source`,new URL(`./sprites/${this.character}-reference-sheet.png`,document.baseURI).href);this.load.image(`${this.character}-walk-source`,new URL(`./sprites/${this.character}-walk-sheet.png`,document.baseURI).href);}this.load.on('progress',(n:number)=>this.progress(60+n*30));}
+ storyStage:IsoStoryStage='intro';
+ storyObjects:Phaser.GameObjects.GameObject[]=[];
+ storyLouis?:StoryActor;storyLuis?:StoryActor;storyVillain?:StoryActor;
+ storyVeil?:Phaser.GameObjects.Rectangle;
+ storyActionPressed=false;storyNear='';storyWalkTriggered=false;storyVictoryEmitted=false;
+ storyTarget:IsoPoint={u:5.2,v:3.8};
+ constructor(public level:1|2|3,public character:CharacterId,public report:(h:AdventureHud)=>void,public finish:(outcome:'win'|'dead')=>void,public onPause:(v:boolean)=>void,public audio:Sound,public ready:()=>void,public progress:(n:number)=>void=()=>{},public story?:IsoStoryBridge){super('iso-adventure');}
+ preload(){const path=CHARACTERS[this.character].chibiSpriteSheet;if(path)this.load.spritesheet(`chibi-${this.character}-sheet`,path,{frameWidth:32,frameHeight:40});else{this.load.image(`${this.character}-reference-source`,new URL(`./sprites/${this.character}-reference-sheet.png`,document.baseURI).href);this.load.image(`${this.character}-walk-source`,new URL(`./sprites/${this.character}-walk-sheet.png`,document.baseURI).href);}if(this.story){
+ this.load.image('louis-reference-source',new URL('./sprites/louis-reference-sheet.png',document.baseURI).href);
+ this.load.image('louis-walk-source',new URL('./sprites/louis-walk-sheet.png',document.baseURI).href);
+}
+this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  create(){
   buildArt(this);buildChibi(this);if(!CHARACTERS[this.character].chibiSpriteSheet)installReferenceCharacter(this,this.character);this.floor=this.add.graphics().setDepth(0);this.fx=this.add.graphics().setDepth(1000);this.drawFloor();
   this.shadow=this.add.ellipse(0,0,30,10,0x425c4c,.25);this.player=this.add.sprite(0,0,`chibi-${this.character}-down-0`).setOrigin(.5,.9).setScale(1.3);
-  this.p={u:.7,v:.7};this.positionPlayer();this.fitCamera(this.scale.width,this.scale.height);this.scale.on('resize',(size:{width:number,height:number})=>this.fitCamera(size.width,size.height));this.keys=this.input.keyboard!.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,B,SPACE,ESC') as Record<string,Phaser.Input.Keyboard.Key>;
+  this.p={u:.7,v:.7};this.positionPlayer();this.fitCamera(this.scale.width,this.scale.height);this.scale.on('resize',(size:{width:number,height:number})=>this.fitCamera(size.width,size.height));this.keys=this.input.keyboard!.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,B,SPACE,ESC,E') as Record<string,Phaser.Input.Keyboard.Key>;
   this.input.on('pointerdown',(p:Phaser.Input.Pointer)=>{if(this.paused||this.pendingOffer||this.ended||this.wonAt)return;if(p.wasTouch){const stick={id:p.id,x:p.x,y:p.y,dx:0,dy:0};if(p.x<this.scale.width/2&&!this.left)this.left=stick;else if(p.x>=this.scale.width/2&&!this.right)this.right=stick;}else this.mouse=true;});
   this.input.on('pointermove',(p:Phaser.Input.Pointer)=>{for(const stick of [this.left,this.right])if(stick?.id===p.id){stick.dx=p.x-stick.x;stick.dy=p.y-stick.y;}});
   this.input.on('pointerup',(p:Phaser.Input.Pointer)=>{if(this.left?.id===p.id)this.left=undefined;if(this.right?.id===p.id)this.right=undefined;if(!p.wasTouch)this.mouse=false;});
   this.input.on('gameout',()=>{if(!this.input.activePointer.isDown)this.clearInput();});this.game.canvas.addEventListener('pointercancel',this.cancel);
   this.input.keyboard!.on('keydown-B',()=>this.bomb());this.input.keyboard!.on('keydown-SPACE',()=>this.bomb());this.input.keyboard!.on('keydown-ESC',()=>this.setPaused(!this.paused));
   this.events.once('shutdown',()=>this.game.canvas.removeEventListener('pointercancel',this.cancel));
-  if(this.level===1){for(const p of [{u:6,v:1},{u:2,v:6},{u:6,v:6}]){const xy=toScreen(p),s=this.add.text(xy.x,xy.y-12,'✦',{fontFamily:'Georgia',fontSize:'26px',color:'#ffe4a2',stroke:'#a66f7b',strokeThickness:2}).setOrigin(.5,1).setDepth(xy.y);this.collectibles.push({p,s});}this.total=3;}
-  else{const list=this.level===2?[{u:5,v:2},{u:2,v:5},{u:6,v:6}]:[{u:5,v:5}];for(const [i,p] of list.entries())this.spawnEnemy(p,this.level===3,i===1?'cinna':'kuromi');this.total=list.length;}
-  if(this.level>1){const p={u:3.4,v:3.4},xy=toScreen(p),s=this.add.text(xy.x,xy.y-12,'✧',{fontFamily:'Georgia',fontSize:'25px',color:'#ffe1a0',stroke:'#9a6c78',strokeThickness:2}).setOrigin(.5,1).setDepth(xy.y);this.charm={p,s};}
-  this.sync();this.progress(100);this.ready();
+  if(this.story){
+   if(!CHARACTERS.louis.chibiSpriteSheet)installReferenceCharacter(this,'louis');
+   this.setStoryStage(this.story.stage(),true);
+  }
+  else if(this.level===1){for(const p of [{u:6,v:1},{u:2,v:6},{u:6,v:6}]){const xy=toScreen(p),s=this.add.text(xy.x,xy.y-12,'✦',{fontFamily:'Georgia',fontSize:'26px',color:'#ffe4a2',stroke:'#a66f7b',strokeThickness:2}).setOrigin(.5,1).setDepth(xy.y);this.collectibles.push({p,s});}this.total=3;}
+  else if(!this.story){const list=this.level===2?[{u:5,v:2},{u:2,v:5},{u:6,v:6}]:[{u:5,v:5}];for(const [i,p] of list.entries())this.spawnEnemy(p,this.level===3,i===1?'cinna':'kuromi');this.total=list.length;}
+  if(this.level>1&&!this.story){const p={u:3.4,v:3.4},xy=toScreen(p),s=this.add.text(xy.x,xy.y-12,'✧',{fontFamily:'Georgia',fontSize:'25px',color:'#ffe1a0',stroke:'#9a6c78',strokeThickness:2}).setOrigin(.5,1).setDepth(xy.y);this.charm={p,s};}
+  this.sync();this.progress(100);this.ready();this.story?.ready();
+ }
+
+ // El arte, el suelo, los sonidos, el input, la animación y fitCamera
+ // SIEMPRE son los originales de IsoAdventure. Solo cambian actores/objetivos
+ // dentro de la MISMA arena (como salas del arcade).
+ setStoryStage(stage:IsoStoryStage,force=false){
+  if(!this.story||(!force&&this.storyStage===stage))return;
+  this.storyStage=stage;this.storyWalkTriggered=false;this.storyVictoryEmitted=false;
+  this.storyActionPressed=false;this.storyNear='';
+  this.storyObjects.forEach(o=>o.destroy());this.storyObjects=[];
+  this.enemies.forEach(e=>{e.s.destroy();e.shadow.destroy();});this.enemies=[];
+  this.shots.forEach(shot=>shot.s.destroy());this.shots=[];
+  this.dangers=[];this.bursts=[];this.collectibles=[];this.charm=undefined;this.pendingOffer=false;
+  this.storyLouis=undefined;this.storyLuis=undefined;this.storyVillain=undefined;
+  this.story.near('');
+  this.p={u:.7,v:.7};this.positionPlayer();this.facing='down';
+  this.total=stage==='defend'?3:0;this.collected=0;
+  const actor=(id:'louis'|'luis',p:IsoPoint)=>{
+   const pos=toScreen(p);
+   let image:Phaser.GameObjects.Image;
+   if(id==='louis')image=this.add.image(pos.x,pos.y,'chibi-louis-down-0').setOrigin(.5,.9).setScale(1.3);
+   else image=this.add.image(pos.x,pos.y,'chibi-luis-story').setOrigin(.5,.9).setScale(1.3);
+   image.setDepth(pos.y);this.storyObjects.push(image);return image;
+  };
+  const marker=(symbol:string,p:IsoPoint)=>{
+   const pos=toScreen(p),t=this.add.text(pos.x,pos.y-22,symbol,{
+    fontFamily:'Georgia',fontSize:'25px',color:'#ffe4a2',stroke:'#a66f7b',strokeThickness:2
+   }).setOrigin(.5,1).setDepth(pos.y+1);
+   this.storyObjects.push(t);
+  };
+  this.storyTarget={u:5.2,v:3.8};
+  if(stage==='intro')this.storyLouis=actor('louis',{u:5.8,v:5.8});
+  if(stage==='defend')for(const p of [{u:5,v:2},{u:2,v:5},{u:6,v:6}])this.spawnEnemy(p,false);
+  if(stage==='talk-louis')this.storyLouis=actor('louis',this.storyTarget);
+  if(stage==='talk-luis'){
+   this.storyLuis=actor('luis',this.storyTarget);
+   this.storyLouis=actor('louis',{u:3.7,v:5.5});
+  }
+  if(stage==='walk-together'){
+   this.storyLouis=actor('louis',{u:1.5,v:1.5});
+   this.storyTarget={u:6.2,v:6.2};marker('✿',this.storyTarget);
+  }
+  if(stage==='disappearance'){
+   this.storyLouis=actor('louis',{u:4.7,v:4.8});
+   this.p={u:3.6,v:3.7};this.positionPlayer();
+  }
+  if(['ribbon','petals','wheel'].includes(stage)){
+   this.storyTarget={u:5.4,v:4.1};
+   marker(stage==='ribbon'?'✧':stage==='petals'?'✿':'⌁',this.storyTarget);
+  }
+  if(stage==='door'||stage==='window'){
+   this.storyTarget=stage==='door'?{u:4.1,v:4.4}:{u:5.9,v:2.6};
+   this.drawStoryHouse();
+   marker(stage==='door'?'⚿':'✧',this.storyTarget);
+  }
+  if(!this.storyVeil){
+   this.storyVeil=this.add.rectangle(0,0,800,450,0x222645,1)
+    .setScrollFactor(0).setOrigin(0).setDepth(5000).setAlpha(0);
+   const refresh=()=>{
+    const z=this.cameras.main.zoom;
+    this.storyVeil?.setSize(Math.ceil(this.scale.width/z)+2,Math.ceil(this.scale.height/z)+2);
+   };
+   refresh();this.scale.on('resize',refresh);
+  }
+  const dark=['disappearance','ribbon','petals','wheel','door','window','house'].includes(stage);
+  this.tweens.add({targets:this.storyVeil,alpha:dark?.60:0,duration:1000});
+  this.audio.setTheme(stage==='defend'?'battle':dark?'final':'garden');
+  this.sync();
+ }
+ drawStoryHouse(){
+  // Emplea la misma paleta y Graphics pixelados que this.drawFloor:
+  // pequeño hito de una sala isométrica, NO un mundo/renderizador aparte.
+  const p=toScreen({u:5.2,v:4.0}),g=this.add.graphics().setDepth(p.y);
+  const poly=(c:number,pts:{x:number,y:number}[])=>{g.fillStyle(c);g.fillPoints(pts,true);};
+  poly(0x8d7897,[{x:p.x-55,y:p.y-55},{x:p.x+2,y:p.y-80},{x:p.x+62,y:p.y-50},{x:p.x+4,y:p.y-26}]);
+  poly(0xd5c0bf,[{x:p.x-49,y:p.y-49},{x:p.x+4,y:p.y-26},{x:p.x+4,y:p.y+17},{x:p.x-49,y:p.y-6}]);
+  poly(0xb29bb2,[{x:p.x+4,y:p.y-26},{x:p.x+55,y:p.y-49},{x:p.x+55,y:p.y-5},{x:p.x+4,y:p.y+17}]);
+  g.fillStyle(0x5a4869).fillRect(p.x-34,p.y-19,15,24);
+  g.fillStyle(0x8fb8c9).fillRect(p.x+22,p.y-32,15,15);
+  g.fillStyle(0xf2bbcd).fillRect(p.x+21,p.y-34,18,3);
+  this.storyObjects.push(g);
+ }
+ storyInteract(){
+  if(!this.story||this.story.locked()||!this.storyNear)return;
+  this.audio.ui();this.story.interact(this.storyStage);
+ }
+ storyTeleportForTest(x:number){
+  const target=this.storyStage==='walk-together'?{u:6.2,v:6.2}:this.storyTarget;
+  this.p={...target};this.positionPlayer();this.updateStoryActors(0);
+ }
+ playStoryAbduction(done:()=>void){
+  if(!this.storyLouis){done();return;}
+  const target=this.storyLouis;
+  const x=target.x,y=target.y;
+  const villain=this.add.image(x+52,y,'kuromi-0').setScale(2.6).setTint(0x3d2e57)
+   .setAlpha(0).setDepth(y+3);
+  this.storyVillain=villain;this.storyObjects.push(villain);
+  this.audio.tone(165,.45,.047,'sawtooth');
+  if(!this.reducedMotion)this.cameras.main.shake(250,.002);
+  this.tweens.add({targets:villain,x,y,alpha:.95,duration:900,onComplete:()=>{
+   this.tweens.add({targets:[target,villain],alpha:0,scale:.1,duration:690,onComplete:()=>{
+    target.setVisible(false);villain.setVisible(false);done();
+   }});
+  }});
+ }
+ updateStoryActors(dt:number){
+  if(!this.story)return;
+  const stage=this.storyStage;
+  if(stage==='walk-together'&&this.storyLouis){
+   const foot=toScreen(this.p);
+   this.storyLouis.x+=(foot.x-32-this.storyLouis.x)*Math.min(1,dt/260);
+   this.storyLouis.y+=(foot.y+11-this.storyLouis.y)*Math.min(1,dt/260);
+   const frame='chibi-louis-down-'+(1+Math.floor(this.clock/115)%4);
+   if(this.textures.exists(frame))this.storyLouis.setTexture(frame);
+   this.storyLouis.setDepth(this.storyLouis.y);
+   if(!this.storyWalkTriggered&&isoDistance(this.p,this.storyTarget)<.85){
+    this.storyWalkTriggered=true;this.story.clearing();
+   }
+  }
+  const label:Record<string,string>={
+   'talk-louis':'Hablar con Louis','talk-luis':'Hablar con Luis',
+   ribbon:'Examinar Pulsera',petals:'Examinar Pétalos',wheel:'Examinar Huellas',
+   door:'Probar puerta',window:'Entrar por la ventana'
+  };
+  const prompt=label[stage]&&isoDistance(this.p,this.storyTarget)<1.12?label[stage]:'';
+  if(prompt!==this.storyNear){this.storyNear=prompt;this.story.near(prompt);}
  }
  fitCamera(width:number,height:number){if(width<=0||height<=0)return;this.cameras.main.setZoom(Math.min(width/800,height/450)*1.08).centerOn(400,225);}
  drawFloor(){
@@ -75,19 +234,23 @@ export class IsoAdventure extends Phaser.Scene {
  tree(u:number,v:number){const p=toScreen({u,v}),g=this.add.graphics().setDepth(p.y);g.fillStyle(0x5b6750,.2);g.fillEllipse(p.x,p.y,48,14);g.fillStyle(0x8d6b5b);g.fillRect(p.x-4,p.y-30,8,30);g.fillStyle(this.level===3?0x8d7897:0x6b936f);g.fillRect(p.x-23,p.y-51,46,25);g.fillRect(p.x-16,p.y-62,32,12);g.fillStyle(this.level===3?0xb29bb2:0x94b381);g.fillRect(p.x-19,p.y-52,35,16);g.fillStyle(0xe7a9bc);g.fillRect(p.x-14,p.y-46,4,4);g.fillRect(p.x+8,p.y-53,4,4);}
  crystal(u:number,v:number){const p=toScreen({u,v}),g=this.add.graphics().setDepth(p.y);g.fillStyle(0x5b6750,.18);g.fillEllipse(p.x,p.y,28,8);g.fillStyle(0x98719e);g.fillPoints([new Phaser.Geom.Point(p.x,p.y-34),new Phaser.Geom.Point(p.x+10,p.y-19),new Phaser.Geom.Point(p.x+7,p.y-3),new Phaser.Geom.Point(p.x-7,p.y-3),new Phaser.Geom.Point(p.x-10,p.y-19)],true);g.fillStyle(0xd8b6d5);g.fillRect(p.x-3,p.y-26,4,17);}
  spawnEnemy(p:IsoPoint,boss:boolean,kind:'kuromi'|'cinna'='kuromi'){const xy=toScreen(p),shadow=this.add.ellipse(xy.x,xy.y,30,9,0x425c4c,.22).setDepth(xy.y-1),s=this.add.sprite(xy.x,xy.y,`${kind}-0`).setOrigin(.5,.85).setScale(boss?2.6:1.7).setDepth(xy.y);this.enemies.push({p:{...p},s,shadow,hp:boss?12:3,boss,kind,next:1500+this.enemies.length*500,flash:0,phase:0});}
- sync(){const boss=this.enemies.find(e=>e.boss);this.report({hp:this.hp,objective:this.level===1?'Luces encontradas':this.level===2?'Travesuras resueltas':'Desafío final',complete:this.collected,total:this.total,bombs:this.bombs,shield:this.shield,offer:this.pendingOffer?{name:'Manto de pétalos',description:'Una burbuja bloquea el próximo golpe de este tramo. Puedes recogerla o dejarla aquí.'}:undefined,bossHp:boss?.hp,bossMax:boss?12:undefined});}
+ sync(){const boss=this.enemies.find(e=>e.boss);this.report({hp:this.hp,objective:this.story?this.story.objective(this.storyStage):this.level===1?'Luces encontradas':this.level===2?'Travesuras resueltas':'Desafío final',complete:this.collected,total:this.total,bombs:this.bombs,shield:this.shield,offer:this.pendingOffer?{name:'Manto de pétalos',description:'Una burbuja bloquea el próximo golpe de este tramo. Puedes recogerla o dejarla aquí.'}:undefined,bossHp:boss?.hp,bossMax:boss?12:undefined});}
  clearInput(){this.left=this.right=undefined;this.mouse=false;if(this.keys)Object.values(this.keys).forEach(k=>k.reset());}
  setPaused(v:boolean){if(this.ended||this.wonAt)return;this.paused=v;this.clearInput();if(v)this.audio.suspend();else this.audio.resume();this.onPause(v);}
  positionPlayer(){const s=toScreen(this.p);this.player.setPosition(s.x,s.y).setDepth(s.y);this.shadow.setPosition(s.x,s.y+1).setDepth(s.y-1);}
  shoot(from:IsoPoint,du:number,dv:number,enemy=false){const xy=toScreen(from),s=this.add.text(xy.x,xy.y-9,enemy?'✦':'♥',{fontFamily:'Georgia',fontSize:enemy?'16px':'17px',color:enemy?'#a05c95':'#df6d91',stroke:'#fff5e4',strokeThickness:2}).setOrigin(.5);this.shots.push({p:{...from},du,dv,life:enemy?2500:1300,enemy,s});}
  burst(p:IsoPoint,color:number){const xy=toScreen(p);this.bursts.push({x:xy.x,y:xy.y,at:this.clock,color});if(this.bursts.length>28)this.bursts.shift();}
  floatNote(p:IsoPoint,label:string,color='#a46178'){const xy=toScreen(p),y=xy.y-55,s=this.add.text(xy.x,y,label,{fontFamily:'Georgia',fontSize:'14px',color,stroke:'#fff9ed',strokeThickness:3}).setOrigin(.5).setDepth(1100);this.notes.push({s,y,at:this.clock});if(this.notes.length>8)this.notes.shift()?.s.destroy();}
- damage(){if(this.clock<this.inv||this.ended||this.wonAt||this.dyingAt||this.pendingOffer)return;if(this.shield){this.shield=false;this.inv=this.clock+900;this.burst(this.p,0xffdf8a);this.floatNote(this.p,'¡Protegida!','#a67c3b');this.audio.tone(950,.22,.04);this.sync();return;}this.hp--;this.inv=this.clock+1300;this.burst(this.p,0xe485a3);this.floatNote(this.p,'− ♥');this.audio.tone(160,.15,.045,'triangle');if(!this.reducedMotion)this.cameras.main.shake(80,.002);this.sync();if(this.hp<=0){this.dyingAt=this.clock||1;this.clearInput();}}
+ damage(){if(this.clock<this.inv||this.ended||this.wonAt||this.dyingAt||this.pendingOffer)return;if(this.shield){this.shield=false;this.inv=this.clock+900;this.burst(this.p,0xffdf8a);this.floatNote(this.p,'¡Protegida!','#a67c3b');this.audio.tone(950,.22,.04);this.sync();return;}this.hp--;this.inv=this.clock+1300;this.burst(this.p,0xe485a3);this.floatNote(this.p,'− ♥');this.audio.tone(160,.15,.045,'triangle');if(!this.reducedMotion)this.cameras.main.shake(80,.002);this.sync();if(this.hp<=0){if(this.story){this.hp=6;this.inv=this.clock+900;this.story.health(this.hp);this.story.retry();this.setStoryStage('defend',true);}else{this.dyingAt=this.clock||1;this.clearInput();}}else this.story?.health(this.hp);}
  hitEnemy(e:Enemy,amount:number){if(!this.enemies.includes(e))return;e.hp-=amount;e.flash=this.clock+150;this.burst(e.p,e.kind==='cinna'?0x91c7d2:0xd68bad);this.audio.hit();if(e.hp<=0){this.floatNote(e.p,'✦');e.s.destroy();e.shadow.destroy();this.enemies=this.enemies.filter(x=>x!==e);this.collected++;this.audio.tone(780,.16,.03);}this.sync();}
  bomb(){if(this.paused||this.pendingOffer||this.ended||this.wonAt||this.dyingAt||!this.bombs||this.level===1)return;this.bombs--;this.burst(this.p,0xffd584);for(const e of [...this.enemies])if(isoDistance(e.p,this.p)<2)this.hitEnemy(e,3);this.audio.tone(130,.25,.06,'triangle');if(!this.reducedMotion)this.cameras.main.shake(100,.003);this.sync();}
  chooseItem(accept:boolean){if(!this.pendingOffer||this.paused||!this.charm)return;this.pendingOffer=false;this.clearInput();if(accept){this.shield=true;this.burst(this.charm.p,0xffd584);this.floatNote(this.charm.p,'¡Manto listo!','#a67c3b');this.charm.s.destroy();this.charm=undefined;this.audio.tone(880,.22,.035);}else this.declinedCharm=true;this.sync();}
  update(_time:number,delta:number){
   if(this.paused||this.pendingOffer||this.ended)return;const dt=Math.min(delta,40),seconds=dt/1000;this.clock+=dt;
+  if(this.story && this.story.locked()){this.clearInput();return;}
+  if(this.story && this.storyStage!==this.story.stage())this.setStoryStage(this.story.stage());
+  if(this.story && this.keys.E.isDown&&!this.storyActionPressed)this.storyInteract();
+  this.storyActionPressed=!!this.keys.E.isDown;
   this.notes=this.notes.filter(note=>{const age=this.clock-note.at;if(age>=850){note.s.destroy();return false;}note.s.y=note.y-(this.reducedMotion?0:age/45);note.s.setAlpha(Math.min(1,(850-age)/200));return true;});
   if(this.dyingAt){const age=this.clock-this.dyingAt,key=`chibi-${this.character}-dead`;if(this.textures.exists(key))this.player.setTexture(key);this.player.setAlpha(Math.max(.25,1-age/800));if(!this.reducedMotion)this.player.setAngle(Math.min(65,age/10));if(age>650){this.ended=true;this.finish('dead');}return;}
   if(this.wonAt){if(!this.reducedMotion)this.player.setAngle(Math.sin(this.clock/90)*8);if(this.clock-this.wonAt>850){this.ended=true;this.finish('win');}return;}
@@ -125,6 +288,11 @@ export class IsoAdventure extends Phaser.Scene {
   const g=this.fx;g.clear();if(!this.reducedMotion){for(let i=0;i<12;i++){const t=this.clock*.012+i*53,x=100+(i*83)%600+Math.sin(t/30)*9,y=70+((i*41+t*.5)%290);g.fillStyle(i%2?0xfff2d5:0xf5c5d4,.3+Math.sin(t/18)*.12);g.fillRect(x,y,3,3);}for(let i=0;i<3;i++){const t=this.clock/1000+i*2.4,x=165+i*205+Math.sin(t*.38)*35,y=115+i*24+Math.cos(t*.8)*10,wing=Math.sin(t*9)>0?5:2;g.fillStyle(i===1?0xf4e4a8:0xeab3c5,.72);g.fillRect(x-wing-1,y-3,wing,5);g.fillRect(x+2,y-3,wing,5);g.fillStyle(0x8e7571,.65);g.fillRect(x,y-2,2,4);}}if(this.last&&this.clock-this.last<110){const p=toScreen(this.p);g.fillStyle(0xffdfb4,.9);g.fillCircle(p.x+this.shotDir.x*20,p.y-16+this.shotDir.y*14,3);}if(this.shield){const p=toScreen(this.p);g.lineStyle(2,0xffedb8,.85);g.strokeCircle(p.x,p.y-18,27);}for(const zone of this.dangers){const p=toScreen(zone.p),fraction=1-(zone.at-this.clock)/1150;g.fillStyle(0xc579a5,.15+fraction*.12);g.fillCircle(p.x,p.y,24);g.lineStyle(2,0xb66391,.8);g.strokeCircle(p.x,p.y,24);}
   this.bursts=this.bursts.filter(b=>this.clock-b.at<380);for(const b of this.bursts){const t=(this.clock-b.at)/380;g.lineStyle(2,b.color,1-t);g.strokeCircle(b.x,b.y,this.reducedMotion?12:4+t*18);if(!this.reducedMotion){g.fillStyle(b.color,1-t);for(let i=0;i<4;i++){const a=i*Math.PI/2;g.fillRect(b.x+Math.cos(a)*t*18,b.y+Math.sin(a)*t*12,3,3);}}}
   for(const e of this.enemies)if(this.clock>e.next-450){const p=toScreen(e.p);g.lineStyle(2,0xbd6994,.8);g.strokeCircle(p.x,p.y-12,e.boss?27:18);}for(const stick of [this.left,this.right])if(stick){const camera=this.cameras.main,p=camera.getWorldPoint(stick.x,stick.y),z=camera.zoom,n=Math.max(1,Math.hypot(stick.dx,stick.dy)/24);g.lineStyle(2/z,0x715a73,.28);g.strokeCircle(p.x,p.y,32/z);g.fillStyle(0x866779,.25);g.fillCircle(p.x+stick.dx/n/z,p.y+stick.dy/n/z,11/z);}
-  if(this.collected>=this.total){this.wonAt=this.clock||1;this.clearInput();this.audio.tone(1046,.25,.035);}
+  if(this.story){
+   this.updateStoryActors(dt);
+   if(this.storyStage==='defend' && !this.storyVictoryEmitted && this.enemies.length===0){
+    this.storyVictoryEmitted=true;this.story.victory();
+   }
+  }else if(this.collected>=this.total){this.wonAt=this.clock||1;this.clearInput();this.audio.tone(1046,.25,.035);}
  }
 }
