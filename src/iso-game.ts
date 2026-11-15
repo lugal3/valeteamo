@@ -289,6 +289,26 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.audio.tone(770,.13,.016);
   return true;
  }
+ startVanGuide(){
+  if(!this.story||this.storyMap!=='night_neighborhood'||
+   !['door','window'].includes(this.storyStage)||this.story.locked())return false;
+  if(this.houseRoute.length){
+   this.houseRoute=[];this.story.guide('Guía pausada. Puedes caminar libremente.');
+   return false;
+  }
+  if(isoDistance(this.p,VAN_NIGHT_POSITION)<1.8){
+   this.updateStoryActors(0);return false;
+  }
+  const route=nightAutoRoute(this.p,VAN_NIGHT_POSITION);
+  if(!route.length){
+   this.story.guide('Sigue la vereda: la furgoneta está junto a la calle.');
+   return false;
+  }
+  this.houseRoute=route;
+  this.audio.tone(650,.13,.014);
+  this.story.guide('La misma furgoneta… Acércate para examinar la matrícula.');
+  return true;
+ }
  storyTeleportForTest(_unused:number){
   if(!this.story)return;
   const target=this.storyStage==='intro'?
