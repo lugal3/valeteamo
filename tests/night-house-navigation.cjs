@@ -57,7 +57,7 @@ for(const [i,start] of starts.entries()){
   assert(house.nightNavigationDistance(route.at(-1),dest)<.001,'route reaches exact interaction target');
  }
 }
-assert.deepEqual(house.nightAutoRoute({u:79,v:8},layout.door),[],
+assert.equal(house.nightAutoRoute({u:79,v:8},layout.door).length,0,
  'guidance refuses to navigate from inside forbidden house walls');
 assert.equal(house.NIGHT_INTERACTION_RADIUS>=1.5,true,
  'mobile NPC actions must have forgiving pickup distance');
