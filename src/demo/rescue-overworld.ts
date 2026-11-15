@@ -413,8 +413,22 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   }
  }
  const water=scene.add.graphics().setDepth(.5);
+ const atmosphere=scene.add.graphics().setDepth(.7);
  const motes=scene.add.graphics().setDepth(1700);
  const portalGlow=scene.add.graphics().setDepth(1500);
+ const reducedMotion=typeof window!=='undefined'&&
+  !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+ // Capped deterministic emitter per map: no Phaser particles, no timers and
+ // only three reusable Graphics buffers. Preserves mobile/iPhone performance.
+ const particleCount=map==='morning_garden'?30:map==='afternoon_meeting'?40:
+  map==='dusk_search'?31:25;
+ const particles=Array.from({length:particleCount},(_,i)=>{
+  const u=cfg.minU+.8+hashCell(i,7,2)*(cfg.maxU-cfg.minU-1.6);
+  const limit=routeLimits(u);
+  return {u,v:limit.min-1.4+hashCell(i,9,4)*(limit.max-limit.min+2.8),
+   phase:hashCell(i,12,1),speed:.17+hashCell(i,8,3)*.19,
+   wobble:hashCell(i,5,6)*Math.PI*2};
+ });
  if(map==='morning_garden')drawBridge(scene);
  // Original Corazones flower/tree/mushroom functions are reused for each map.
  for(let u=low+2;u<high-1;u+=3){
@@ -503,27 +517,75 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    color:'#fff4d9',stroke:'#a3778b',strokeThickness:3}).setOrigin(.5).setDepth(p.y+4);
  }
  const created=scene.children.list.filter(x=>!before.has(x));
+ let lastVisualPaint=-Infinity;
  const update=(elapsed:number,night:number)=>{
-  const t=elapsed/1000;water.clear();motes.clear();portalGlow.clear();
+  // About 30 FPS for purely decorative redraw; game input and camera stay 60 FPS.
+  if(elapsed-lastVisualPaint<30)return;
+  lastVisualPaint=elapsed;
+  const t=elapsed/1000,visualT=reducedMotion?0:t;
+  water.clear();atmosphere.clear();motes.clear();portalGlow.clear();
   if(map==='morning_garden'){
    for(let u=10;u<16;u++)for(let v=-2;v<=12;v++){
     if(v>=3&&v<=6)continue;
     const p=toScreen({u,v}),x=p.x+Math.sin(t*1.5+u*.66+v*.9)*8;
-    water.lineStyle(1,0xecfff7,.31+Math.sin(t*1.7+v)*.13).lineBetween(x-9,p.y+3,x+7,p.y+3);
+    water.lineStyle(1,0xecfff7,.31+Math.sin(visualT*1.7+v)*.13).lineBetween(x-9,p.y+3,x+7,p.y+3);
     if((u+v)%4===0)water.fillStyle(0xfcffff,.3).fillRect(x+3,p.y-3,3,2);
+    if((u+v)%5===0){
+     water.lineStyle(1,0xe5ffff,.16).strokeEllipse(x-3,p.y+5,20+(Math.sin(visualT+u)+1)*8,6);
+    }
+   }
+   // Shimmering shallow reflections sit on the WATER, not over Kitty.
+   for(let i=0;i<11;i++){
+    const u=10+hashCell(i,7,2)*6,v=i%2?1.2:9.2,p=toScreen({u,v});
+    const x=p.x+Math.sin(visualT*.9+i)*17;
+    atmosphere.fillStyle(0xf3f7cf,.10+Math.pow(Math.sin(visualT*1.4+i),2)*.13);
+    atmosphere.fillEllipse(x,p.y,20,5);
    }
   }
-  if(map==='dusk_search'||map==='night_neighborhood'){
-   for(let i=0;i<24;i++){
-    const u=cfg.minU+1+(i*.77)%(cfg.maxU-cfg.minU-2),
-     v=routeLimits(u).max+(i%3)*.55,p=toScreen({u,v}),
-     pulse=Math.pow(Math.sin(t*1.6+i*1.1),2);
-    motes.fillStyle(i%4?0xf8e1ad:0xf4aebc,night*(.26+.42*pulse));
-    motes.fillCircle(p.x+Math.sin(t*.5+i)*8,p.y-20+Math.cos(t*.76+i)*8,1.5);
+  if(map==='dusk_search'){
+   // Ground fog drifts along the creek; it never blocks click targets.
+   for(let i=0;i<8;i++){
+    const u=48+i*1.85,p=toScreen({u,v:routeLimits(u).max+.4});
+    atmosphere.fillStyle(0xd3d3da,.045+Math.pow(Math.sin(visualT*.38+i),2)*.04);
+    atmosphere.fillEllipse(p.x+Math.sin(visualT*.22+i)*17,p.y-9,120,15);
+   }
+  }
+  if(map==='night_neighborhood'){
+   // Warm halos on the sidewalk complement the 3D house's lit windows.
+   for(const u of [67,72,77,81]){
+    const p=toScreen({u,v:1.8});
+    atmosphere.fillStyle(0xffdcac,.10+Math.sin(visualT*.9+u)*.025);
+    atmosphere.fillEllipse(p.x,p.y,95,26);
+   }
+  }
+  // Same particle budget on every phone: morning butterflies/petals,
+  // afternoon blossom drift, dusk leaves, night fireflies.
+  for(let i=0;i<particles.length;i++){
+   const particle=particles[i],base=toScreen(particle);
+   const life=(particle.phase+visualT*particle.speed)%1;
+   const swing=Math.sin(visualT*1.45+particle.wobble)*13;
+   const x=base.x+swing+(life-.5)*12;
+   const y=base.y-30+life*49+Math.sin(visualT*.5+particle.wobble)*5;
+   const alpha=.22+.53*Math.sin(life*Math.PI);
+   if(map==='night_neighborhood'){
+    const pulse=Math.pow(Math.sin(visualT*2+i*1.4),2);
+    motes.fillStyle(i%3?0xffe0ac:0xf3c1da,(alpha+.15*pulse)*(.55+night*.36));
+    motes.fillCircle(x,y,1.3+(i%5===0?1.5:0));
+   }else if(map==='dusk_search'){
+    motes.fillStyle(i%3?0xc9a0ad:0xe5c5d7,alpha*.6);
+    motes.fillEllipse(x,y,3.5,2);
+    if(i%7===0){motes.fillStyle(0xf5dea9,alpha*.55);motes.fillCircle(x+4,y-2,1.5);}
+   }else{
+    const petal=map==='morning_garden'?0xf6bdce:0xe8a1bb;
+    motes.fillStyle(i%4===0?0xffe7cc:petal,alpha);
+    motes.fillEllipse(x,y,4+(i%3),2.4+(i%2));
+    if(map==='morning_garden'&&i%11===0){
+     motes.fillStyle(0xf6e8b2,alpha*.9).fillCircle(x+2,y-1,2);
+    }
    }
   }
   if(cfg.exit){
-   const p=toScreen(cfg.exit),pulse=.45+Math.sin(t*2.1)*.16;
+   const p=toScreen(cfg.exit),pulse=.45+Math.sin(visualT*2.1)*.16;
    portalGlow.fillStyle(0xfff6d8,.10+pulse*.15).fillEllipse(p.x,p.y-3,105,40);
    portalGlow.lineStyle(2,0xfff2c8,.33+pulse*.34).strokeEllipse(p.x,p.y-3,88,30);
    portalGlow.fillStyle(0xffeed7,.65).fillCircle(p.x,p.y-26+Math.sin(t*1.8)*5,3.2);
