@@ -413,9 +413,14 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(motion){
    pose=motion.kind==='arriving'||motion.kind==='farewell-walk'?'walk':'wave';
    if(pose==='walk'){
-    const start=toScreen(motion.from),end=toScreen(motion.to);
-    dx=end.x-start.x;dy=end.y-start.y;
-    facing=dy< -38&&Math.abs(dx)<32?'up':Math.abs(dx)>28?'right':'down';
+    // Face the current tangent of the curved path, not the overall chord.
+    const previous=toScreen(luisPointOnPath({...motion,
+     elapsed:Math.max(0,motion.elapsed-60)}));
+    const next=toScreen(luisPointOnPath({...motion,
+     elapsed:Math.min(motion.duration,motion.elapsed+60)}));
+    dx=next.x-previous.x;dy=next.y-previous.y;
+    facing=dy< -Math.abs(dx)*.9?'up':
+     Math.abs(dx)>Math.abs(dy)*.55?'right':'down';
    }
   }else{
    facing=dy< -46&&Math.abs(dx)<27?'up':Math.abs(dx)>32?'right':'down';
@@ -481,6 +486,11 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const frame=abductionFrame(shot.elapsed,shot.origin),prior=shot.phase;
   shot.phase=frame.phase;
   if(prior!==frame.phase){
+   if(['doors','struggle'].includes(frame.phase)){
+    const kitty=toScreen(this.p),what=toScreen(frame.phase==='struggle'?
+     frame.victim:frame.van);
+    this.facing=feelFacingToTarget(what.x-kitty.x,what.y-kitty.y,this.facing);
+   }
    const reaction=kidnappingReaction(frame.phase,prior);
    if(reaction)this.showStoryBubble('kitty',reaction);
    if(frame.phase==='struggle')this.showStoryBubble('louis','fear');
