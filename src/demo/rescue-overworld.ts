@@ -110,6 +110,121 @@ function diamond(g:Phaser.GameObjects.Graphics,u:number,v:number,c:number,a=1){
  const p=toScreen({u,v}),w=ISO.tileW/2,h=ISO.tileH/2;
  poly(g,c,[[p.x,p.y-h],[p.x+w,p.y],[p.x,p.y+h],[p.x-w,p.y]],a);
 }
+// Deterministic hand-drawn terrain details: no random jitter between reloads,
+// no image fetches or new textures, and no per-frame allocations.
+function hashCell(u:number,v:number,salt=0):number{
+ let n=Math.imul(u+173,374761393)^Math.imul(v+911,668265263)^Math.imul(salt+47,1274126177);
+ n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967296;
+}
+function paintGroundTexture(g:Phaser.GameObjects.Graphics,u:number,v:number,
+ p:{x:number;y:number},map:RescueMapId,onPath:boolean){
+ const seed=hashCell(u,v,7),shade=hashCell(u,v,19);
+ if(onPath){
+  // Sand grain / cobbles are details ON the original isometric diamonds.
+  if(seed>.18){
+   g.fillStyle(map==='night_neighborhood'?0xe7d1c0:0xfff6df,.25+shade*.20);
+   g.fillRect(p.x-13+seed*9,p.y-3,6+(u%3)*2,2);
+  }
+  if(seed>.65){
+   g.fillStyle(map==='dusk_search'?0x665d79:0xb7a09d,.24);
+   g.fillRect(p.x+7,p.y+5,4,2);
+  }
+  if(map==='night_neighborhood'&&seed>.32){
+   // Uneven masonry seams hint at old, polished paving stones.
+   g.lineStyle(1,0x736b81,.20);
+   g.lineBetween(p.x-9,p.y-1,p.x+7,p.y+2);
+  }
+  return;
+ }
+ if(seed>.17){
+  const grass=map==='night_neighborhood'?0xaeb6a4:
+   map==='dusk_search'?0xc4baa0:map==='afternoon_meeting'?0x718d69:0x64956d;
+  g.lineStyle(1,grass,map==='night_neighborhood'?.28:.40);
+  g.lineBetween(p.x-10,p.y+3,p.x-11,p.y-3);
+  g.lineBetween(p.x-10,p.y+3,p.x-6,p.y-1);
+ }
+ if(seed>.53){
+  const fleck=map==='dusk_search'?0xc6a4c1:
+   map==='night_neighborhood'?0xcbb1be:0xeeb1c6;
+  g.fillStyle(fleck,.58);
+  g.fillRect(p.x+10,p.y-1,3,2);
+  g.fillRect(p.x+12,p.y-4,2,2);
+ }
+ if(shade>.80){
+  g.fillStyle(map==='night_neighborhood'?0xbbb6ac:0xeee2bb,.42);
+  g.fillEllipse(p.x-2,p.y+6,12,4);
+ }
+}
+// Scenery deliberately sits on the shoulders, rather than blocking Kitty.
+// All objects belong to the map's disposable scene collection.
+function picketFence(scene:Phaser.Scene,u:number,v:number,planks=6){
+ const p=toScreen({u,v}),g=scene.add.graphics().setDepth(p.y);
+ g.fillStyle(0x5d5361,.13).fillEllipse(p.x,p.y,planks*13+8,12);
+ for(let j=0;j<planks;j++){
+  const x=p.x+(j-(planks-1)/2)*12;
+  g.fillStyle(0xba9291).fillRect(x-2,p.y-21,5,20);
+  g.fillStyle(0xeedac8).fillRect(x-2,p.y-23,5,4);
+ }
+ g.fillStyle(0xd1aea4).fillRect(p.x-planks*6,p.y-15,planks*12,4);
+ g.fillStyle(0xb8908f).fillRect(p.x-planks*6,p.y-7,planks*12,3);
+}
+function cherryTree(scene:Phaser.Scene,u:number,v:number,dusk=false){
+ const p=toScreen({u,v}),g=scene.add.graphics().setDepth(p.y);
+ g.fillStyle(0x594e62,.22).fillEllipse(p.x,p.y,70,17);
+ g.fillStyle(0x745c5d).fillRect(p.x-6,p.y-50,13,50);
+ g.fillStyle(0x9b7374).fillRect(p.x-3,p.y-47,4,44);
+ g.fillStyle(0x805c6e).fillRect(p.x-25,p.y-56,24,6);
+ g.fillStyle(0x805c6e).fillRect(p.x+3,p.y-68,24,6);
+ const palette=dusk?[0x9d759a,0xab829e,0xcda4b7,0xebbecd]:
+  [0xdca1b9,0xe9b5c5,0xf0c6d4,0xffe0df];
+ for(let k=0;k<17;k++){
+  const angle=k*2.4,r=20+((k*7)%19);
+  const x=p.x+Math.cos(angle)*r,y=p.y-77+Math.sin(angle)*r*.47;
+  g.fillStyle(palette[k%palette.length],.95).fillEllipse(x,y,29+(k%3)*4,17+(k%4)*3);
+ }
+ for(let k=0;k<15;k++){
+  const x=p.x+((k*37)%80)-40,y=p.y-94+((k*19)%42);
+  g.fillStyle(k%2?0xffe5e2:0xe9a5bc,.83).fillRect(x,y,4,3);
+ }
+}
+function gardenFeature(scene:Phaser.Scene,u:number,v:number,kind:'planter'|'rock'|'lantern'|'picnic'){
+ const p=toScreen({u,v}),g=scene.add.graphics().setDepth(p.y);
+ g.fillStyle(0x3d4452,.20).fillEllipse(p.x,p.y,50,12);
+ if(kind==='rock'){
+  g.fillStyle(0x9ba59b).fillEllipse(p.x-9,p.y-5,25,15);
+  g.fillStyle(0xc9cfc0).fillEllipse(p.x-11,p.y-9,15,7);
+  g.fillStyle(0x83988c).fillEllipse(p.x+11,p.y-4,16,10);
+ }else if(kind==='planter'){
+  g.fillStyle(0x996c70).fillRect(p.x-16,p.y-14,31,12);
+  g.fillStyle(0xcd9892).fillRect(p.x-19,p.y-17,37,5);
+  for(const dx of [-10,-1,8]){
+   g.fillStyle(0x66986d).fillRect(p.x+dx,p.y-33,3,18);
+   g.fillStyle(dx<0?0xfac9c9:0xf2b3d3).fillEllipse(p.x+dx,p.y-34,14,9);
+   g.fillStyle(0xffe5a3).fillCircle(p.x+dx,p.y-34,2);
+  }
+ }else if(kind==='lantern'){
+  g.fillStyle(0x877279).fillRect(p.x-3,p.y-38,6,38);
+  g.fillStyle(0xf7d6ae).fillRect(p.x-10,p.y-53,20,17);
+  g.fillStyle(0xfff4c6,.95).fillRect(p.x-7,p.y-50,14,10);
+  g.fillStyle(0x736377).fillRect(p.x-13,p.y-56,26,4);
+ }else{
+  g.fillStyle(0x715563).fillRect(p.x-20,p.y-21,5,24);
+  g.fillStyle(0x715563).fillRect(p.x+15,p.y-21,5,24);
+  g.fillStyle(0xe7bbac).fillEllipse(p.x,p.y-23,58,23);
+  g.fillStyle(0xffd9c9).fillEllipse(p.x,p.y-26,44,14);
+  g.fillStyle(0xb57c91).fillRect(p.x-2,p.y-33,6,5);
+  g.fillStyle(0xf8e7ca).fillCircle(p.x+13,p.y-27,4);
+ }
+}
+function reeds(scene:Phaser.Scene,u:number,v:number){
+ const p=toScreen({u,v}),g=scene.add.graphics().setDepth(p.y);
+ for(let j=0;j<7;j++){
+  const x=p.x+(j-3)*5,h=9+(j*7)%14;
+  g.lineStyle(2,j%2?0x6f9b79:0x8db78f,.8);
+  g.lineBetween(x,p.y,x-2+(j%3)*2,p.y-h);
+  if(j%3===0)g.fillStyle(0xd2b7ae,.85).fillRect(x-4,p.y-h-4,4,7);
+ }
+}
 function lamp(scene:Phaser.Scene,u:number,v:number){
  const p=toScreen({u,v}),g=scene.add.graphics().setDepth(p.y);
  g.fillStyle(0x716578).fillRect(p.x-3,p.y-89,6,89);
