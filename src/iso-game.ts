@@ -183,7 +183,14 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(stage==='door'||stage==='window')marker(stage==='door'?'⚿':'✧',this.storyTarget);
   const dark=darknessAt(this.p.u,stage,this.storyMap);
   if(Math.abs(dark-this.storyDusk)>.01){this.storyDusk=dark;this.story.dusk(dark);}
-  this.audio.setTheme(stage==='defend'?'battle':dark>.48?'final':'garden');
+  // Music follows narrative tension and map, not an arbitrary coordinate.
+  const eerie=this.storyMap==='dusk_search'||this.storyMap==='night_neighborhood'||
+   stage==='disappearance'||dark>.30;
+  this.audio.setTheme(stage==='defend'?'battle':eerie?'final':'garden');
+  if(stage==='ribbon'&&this.storyMap==='afternoon_meeting')
+   this.story.guide('Busca el sendero brillante: las pistas continúan en el bosque ✧');
+  if(stage==='door'&&this.storyMap==='dusk_search')
+   this.story.guide('Sigue las luces: la casa está al otro lado de la salida ✧');
   this.sync();
  }
  storyInteract(){
