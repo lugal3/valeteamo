@@ -86,3 +86,39 @@
  .prologue-kitty-portrait{font-size:35px}.prologue-kitty-portrait small{font-size:9px}
 }
 @media(prefers-reduced-motion:reduce){.story-prologue *{animation:none!important;transition:none!important}}
+
+
+/* Corazones → Rescate: interfaz pastel y proporciones de la aventura isométrica.
+   Selectores encapsulados: Corazones original y el laboratorio 3D no cambian. */
+.story-prologue{background:#f1e5d2;color:#6c466c}
+.story-prologue .prologue-stage{display:block}
+.story-prologue .prologue-stage canvas{width:100%;height:100%;max-width:none;max-height:none;image-rendering:pixelated}
+.story-prologue .prologue-title{border:2px solid #eab5be;border-radius:12px;background:#fff9edf0;
+ color:#795572;box-shadow:0 4px 0 #a98092a6;padding:9px 12px}
+.story-prologue .prologue-title span{color:#b66e97;font-family:monospace;font-size:10px;letter-spacing:.06em}
+.story-prologue .prologue-title strong{color:#6c4966}
+.story-prologue .prologue-health,.story-prologue .prologue-clue-count{
+ background:#fff8ebed;border:2px solid #e7b6c6;border-radius:12px;color:#9e688c;
+ box-shadow:0 3px 0 #bba5a2a6}
+.story-prologue .prologue-health span{color:#dcc6c8;text-shadow:none;filter:none}
+.story-prologue .prologue-health span.full{color:#dc7898;text-shadow:0 1px 0 #fff6f3}
+.story-prologue .prologue-exit,.story-prologue .prologue-audio,.story-prologue .prologue-restart{
+ background:#fff8ed;border:2px solid #dda8b9;color:#805174;box-shadow:0 3px 0 #bb9aad;
+ border-radius:10px;min-height:38px;font-weight:800}
+.story-prologue .prologue-audio{padding:7px 12px;font-size:16px;cursor:pointer}
+.story-prologue .prologue-fight-score{background:#fff8e9ee;color:#9b5a86;border:2px solid #eeb9ca;box-shadow:0 4px 0 #b697a8}
+.story-prologue .prologue-stick{background:#fff8eedb;border:3px solid #dca9c1;box-shadow:0 4px 0 #a87c9c}
+.story-prologue .prologue-stick-thumb{background:#f7d4e1;border:2px solid #fff9ed;color:#a85d8b;box-shadow:0 3px 0 #b1839e}
+.story-prologue .prologue-stick small{color:#7f4f70;text-shadow:0 1px 0 #fff5f3}
+.story-prologue .prologue-shoot,.story-prologue .prologue-interact{
+ background:#e99bbb;border:3px solid #fff9ec;color:#783e6d;box-shadow:0 4px 0 #9e7097}
+.story-prologue .prologue-help{color:#7c4d69;text-shadow:0 1px 0 #fff8eb;font-family:monospace}
+.story-prologue .prologue-dialog{border-radius:12px;border:3px solid #b984a8;box-shadow:0 5px 0 #9a6b92,0 12px 24px #50334c78}
+.story-prologue .prologue-portrait{border-radius:9px}
+.story-prologue .prologue-next{background:#dc8cad;border:2px solid #b56c99}
+@media(max-height:440px){
+ .story-prologue .prologue-title{padding:5px 8px}
+ .story-prologue .prologue-health{padding:4px 6px}
+ .story-prologue .prologue-audio{padding:4px 9px;min-height:29px}
+ .story-prologue .prologue-exit{min-height:29px}
+}
