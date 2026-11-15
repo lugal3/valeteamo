@@ -1,6 +1,7 @@
 import {createPose,createRigBinding,evaluateRig,JOINT_INDEX} from './character-rig.js';
 import {sampleBlink} from './animations/face.js';
 import {smoothSurface,torusSurface,roundedBoxSurface} from './chibi-geometry.js';
+import {loisFaceSurface} from './lois-ps2-face.js';
 import {BATH_MIRROR,mirrorVisible,kittyMirrorPieces,reflectedBathroom,reflectMesh,poseReflectedKitty} from './mirror.js';
 import {ART_SIZE,ART_COLUMNS,ART_ROWS,POSTER_IMAGES,artTile,createArtworkCanvas} from './artwork.js';
 import {climbingHandPieces} from './first-person.js';
@@ -78,6 +79,13 @@ export function geometry(boxes){
    if(!box.yaw&&!box.pitch&&!box.roll)return;const c=Math.cos(box.yaw||0),s=Math.sin(box.yaw||0),cp=Math.cos(box.pitch||0),sp=Math.sin(box.pitch||0),cr=Math.cos(box.roll||0),sr=Math.sin(box.roll||0);
    for(let i=first;i<vertices.length;i+=16){const dx=vertices[i]-box.x,dy=vertices[i+1]-box.y,x=dx*cr-dy*sr,y=dx*sr+dy*cr,z=vertices[i+2]-box.z,pz=y*sp+z*cp;vertices[i]=box.x+x*c-pz*s;vertices[i+1]=box.y+y*cp-z*sp;vertices[i+2]=box.z+x*s+pz*c;for(const offset of [6,13]){const ax=vertices[i+offset],ay=vertices[i+offset+1],nx=ax*cr-ay*sr,ny=ax*sr+ay*cr,nz=vertices[i+offset+2],rz=ny*sp+nz*cp;vertices[i+offset]=nx*c-rz*s;vertices[i+offset+1]=ny*cp-nz*sp;vertices[i+offset+2]=nx*s+rz*c;}}
   };
+  if(box.shape==='lois-face'){
+    const mesh=loisFaceSurface(box,color,style);
+    vertices.push(...mesh.vertices);
+    for(const i of mesh.indices)indices.push(offset+i);
+    groups.push({start:offset,end:offset+mesh.vertices.length/16,joint:box.joint||'root'});
+    offset+=mesh.vertices.length/16;rotateMesh();continue;
+   }
   if(box.shape==='lathe'||box.smooth){
    const mesh=smoothSurface(box,color,style);
    for(const n of mesh.vertices)vertices.push(n);

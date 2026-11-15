@@ -2,6 +2,7 @@ import {groundHeight} from './world.js';
 import {navigate} from './navigation.js';
 import {sampleBlink} from './animations/face.js';
 import {LOIS_VISUAL_ID} from './lois-ps2-profile.js';
+import {buildLoisPs2Model} from './lois-ps2-model.js';
 
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 export const LOUIS_UNTIE_SECONDS=3.25;
@@ -82,7 +83,8 @@ export function louisCamera(louis){
 // Stylized 2025-era Louis Tomlinson reference: narrow oval face, asymmetrical
 // eyebrow-length chestnut fringe, cool blue-grey irises, straight nose and
 // light beard shadow. Geometry is hand-built, not derived from a photo asset.
-export function louisModel(piece){
+export function louisModel(piece,{variant='legacy',quality='mobile'}={}){
+ if(variant==='ps2-b')return buildLoisPs2Model(piece,{quality});
  const parts=[],add=(id,x,y,z,w,h,d,mat,color,extra={})=>parts.push(piece(id,x,y,z,w,h,d,mat,{color,...extra}));
  const skin=[.85,.665,.565],warm=[.828,.647,.555],shadow=[.72,.55,.495],beard=[.76,.605,.535];
  const hair=[.225,.142,.116],hairLight=[.305,.196,.151],highlight=[.37,.257,.206];
@@ -156,18 +158,22 @@ export function louisPartPose(source,box,offset,reduced=false){
  const weight=clamp((source.speed||0)/1.75,0,1)*(phase==='climb'||phase==='follow'?1:0);
  const crouch=clamp(source.crouch||0,0,1);
  const untying=phase==='untying',hiding=phase==='hide'||phase==='hidden';
- const head=/^(face|forehead|cheek|jaw|stubble|sideburn|chin|beard|nose|nostril|philtrum|upper-lip|lower-lip|smile|hair|fringe|crown|temple|ear|brow|eye|iris|pupil|glint|lid|under-eye)/.test(id);
+ const group=box.rigGroup;
+ const head=group==='head'||/^(face|forehead|cheek|jaw|stubble|sideburn|chin|beard|nose|nostril|philtrum|upper-lip|lower-lip|smile|hair|fringe|crown|temple|ear|brow|eye|iris|pupil|glint|lid|under-eye)/.test(id);
+ const body=group==='body'||['torso','shirt','collar','neck'].includes(id);
+ const arm=group==='arm'||/^(upper-arm|forearm|hand)-/.test(id);
+ const leg=group==='leg'||/^(thigh|leg|shoe)-/.test(id);
  let [x,y,z]=offset,roll=box.baseRoll||0,pitch=box.basePitch||0,yaw=box.baseYaw||0;
  const breathing=(reduced?0:.009*Math.sin(clock*2.1));
  if(head){
   y-=crouch*.35;y+=breathing;
   roll+=(reduced?0:.022*Math.sin(clock*.95))+(hiding?.07*Math.sin(clock*2):0);
   yaw+=(phase==='hidden'||phase==='hide'?Math.sin(clock*.83)*.20:0);
- }else if(id==='torso'||id==='shirt'||id==='collar'||id==='neck'){
+ }else if(body){
   y-=crouch*.31;y+=breathing+Math.abs(other)*weight*.012;
   roll+=step*weight*.025;
- }else if(/^(upper-arm|forearm|hand)-/.test(id)){
-  const side=id.endsWith('--1')?-1:1;
+ }else if(arm){
+  const side=box.rigSide??(id.endsWith('--1')?-1:1);
   const swing=step*weight*side;
   if(untying){
    x-=side*.11;y+=id.startsWith('hand')?.11:0;z+=.20;pitch=-.45+Math.sin(clock*3)*.045;
@@ -178,17 +184,18 @@ export function louisPartPose(source,box,offset,reduced=false){
    z+=swing*(id.startsWith('hand')?.13:.075);
    pitch+=swing*.35;
   }
- }else if(/^(thigh|leg|shoe)-/.test(id)){
-  const side=id.endsWith('--1')?-1:1;
+ }else if(leg){
+  const side=box.rigSide??(id.endsWith('--1')?-1:1);
+  const isFoot=id.startsWith('shoe')||id.startsWith('sole');
   if(untying){
-   z+=.14;y+=id.startsWith('shoe')?.07:0;pitch=-.35;
+   z+=.14;y+=isFoot?.07:0;pitch=-.35;
   }else if(hiding){
-   z+=id.startsWith('shoe')?.12:.16;
-   y+=id.startsWith('shoe')?0:-crouch*.11;
+   z+=isFoot?.12:.16;
+   y+=isFoot?0:-crouch*.11;
    pitch+=id.startsWith('thigh')?-.53:.35;
   }else{
-   z+=step*side*weight*(id.startsWith('shoe')?.12:.075);
-   y+=Math.max(0,step*side)*weight*(id.startsWith('shoe')?.045:.017);
+   z+=step*side*weight*(isFoot?.12:.075);
+   y+=Math.max(0,step*side)*weight*(isFoot?.045:.017);
    pitch+=step*side*weight*.34;
   }
  }
