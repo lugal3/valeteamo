@@ -254,6 +254,15 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  }
  storyInteract(){
   if(!this.story||this.story.locked()||luisMotionIsBlocking(this.storyLuisMotion)||!this.storyNear)return;
+  if(this.storyVanNear){
+   this.storyVanInspected=true;this.houseRoute=[];
+   this.audio.ui();this.audio.tone(460,.19,.033,'triangle');
+   this.burst(VAN_NIGHT_POSITION,0xffd5a2);
+   this.floatNote(VAN_NIGHT_POSITION,VAN_PLATE,'#ffe7cb');
+   this.story.guide('¡La misma furgoneta! Media luna y matrícula LUNA-07. Está junto a la casa…');
+   this.storyWorld?.parkedVan?.setTint(0xffdfb2);
+   return;
+  }
   this.houseRoute=[];this.audio.ui();
   if(this.storyMap==='night_neighborhood'){
    this.burst(this.storyTarget,0xffd9b5);
@@ -506,10 +515,15 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    door:'Probar puerta',window:'Entrar por la ventana'
   };
   const canInteract=stage!=='talk-luis'||this.storyLuisReady;
+  const vanIsClose=this.storyMap==='night_neighborhood'&&
+   ['door','window'].includes(stage)&&
+   isoDistance(this.p,VAN_NIGHT_POSITION)<2.0;
   const radius=this.storyMap==='night_neighborhood'?
    (stage==='window'?NIGHT_WINDOW_INTERACTION_RADIUS:NIGHT_INTERACTION_RADIUS):1.15;
-  const target=canInteract&&labels[stage]&&isoDistance(this.p,this.storyTarget)<radius?
+  const mainTarget=canInteract&&labels[stage]&&isoDistance(this.p,this.storyTarget)<radius?
    labels[stage]!:'';
+  this.storyVanNear=!mainTarget&&vanIsClose;
+  const target=mainTarget||(this.storyVanNear?'Inspeccionar furgoneta':'');
   if(target!==this.storyNear){
    this.storyNear=target;this.story.near(target);
    if(target&&this.storyMap==='night_neighborhood'){
@@ -575,11 +589,14 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(this.paused||this.pendingOffer||this.ended)return;const dt=Math.min(delta,40),seconds=dt/1000;this.clock+=dt;
   if(this.story){
    this.storyWorld?.update(this.clock,this.storyDusk);
-   // Even while dialogue locks the player, real NPC motion/face frames continue.
+   // Physical NPC and kidnapping motion keeps running during narrative locks.
    this.updateLuisCinematic(dt);
    this.animateStoryLuis();
+   this.updateStoryLouisArrival(dt);
+   this.updateStoryAbduction(dt);
   }
-  if(this.story && (this.story.locked()||luisMotionIsBlocking(this.storyLuisMotion))){
+  if(this.story && (this.story.locked()||luisMotionIsBlocking(this.storyLuisMotion)||
+   !!this.storyAbduction)){
    this.clearInput();return;
   }
   if(this.story && this.storyStage!==this.story.stage())this.setStoryStage(this.story.stage());
