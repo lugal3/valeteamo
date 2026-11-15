@@ -130,6 +130,10 @@ void main(){
  vec3 ambient=mix(vec3(.071,.076,.107),vec3(.20,.22,.32),smoothstep(.06,.48,boundary));
  ambient=mix(ambient,vec3(.056,.048,.047),smoothstep(.18,1.1,-world.y));
  vec3 lighting=(ambient+uShot*vec3(.75,.83,1.0))*facing+vec3(.94,.97,1.0)*(beam+motes*.50)+vec3(1.0,.82,.60)*warmth;
+ // Retro character artwork carries a subtle baked fill light. Without it the
+ // skin nearly disappears in shadow while the separate eyes remain bright.
+ // Lighting is still dynamic above this floor; no lighting changes to the room.
+ if(vArt>2.5&&vArt<3.5)lighting=max(lighting,vec3(.56,.52,.48));
  vec3 color=vColor*material.rrr*1.075;
  if(vArt>.5&&vArt<1.5){vec4 painted=texture2D(uAtlas,vUV);color=mix(color,painted.rgb,painted.a*.96);}
  if(vArt>2.5&&vArt<3.5){

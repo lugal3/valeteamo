@@ -45,6 +45,7 @@ const {chromium}=require('playwright');
      shot==='threequarter'?{x:1.40,y:1.20,z:2.10,yaw:Math.PI+Math.atan(1.40/2.10),pitch:0}:
      {x:0,y:1.10,z:2.2,yaw:Math.PI,pitch:0};
     renderer.render(camera,true,1,false,{reduced:true,shotLight:.8});
+    renderer.render(camera,true,1.02,false,{reduced:true,shotLight:.8});
     const gl=renderer.gl;gl.finish();
     const error=gl.getError();
     const output={dataURL:canvas.toDataURL('image/png'),triangles:renderer.triangleCount,
@@ -70,6 +71,7 @@ const {chromium}=require('playwright');
   };
   const modern=await capture('ps2-b','front');
   const flat=await capture('ps2-b-flat','front');
+  await capture('ps2-b-flat','portrait');
   assert.equal(modern.equals(flat),false,'painted face must change pixels compared with untextured skin');
   await capture('ps2-b','side');
   await capture('ps2-b','threequarter');
