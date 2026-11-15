@@ -2,7 +2,7 @@
 
 **Rama de trabajo:** `feature/lois-ps2-option-b-rig`  
 **Base:** `e06061c55490b49709d697fe21becb24cc5ba0aa` (main, 15 nov 2026).  
-**Estado:** fase 4 implementada y verificada en la rama — 21 articulaciones jerárquicas, retarget facial y corporal; `main` y Firebase intactos. El siguiente «.» inicia la fase 5 de cinemáticas.
+**Estado:** fase 5 — transiciones de cámara y reacciones no verbales de Lois implementadas, con QA de la rama. `main` y Firebase intactos. La fase 6 será optimización y preparación de integración.
 
 ## Alcance y separación de identidad
 
@@ -81,10 +81,19 @@
 
 **Limitación expresa:** es un esqueleto jerárquico de **segmentos rígidos deformados por CPU**, no skinning suave con pesos por vértice. Sigue pudiendo mostrar separaciones menores en codos, hombros o rodillas; la fase 5 se dedicará a las transiciones y al encuadre de cinemáticas. No se afirma que esté probado en un iPhone físico, únicamente en navegadores automatizados.
 
-### Fase 5 — Cinemáticas y preparación para ampliaciones
+### Fase 5 — Cinemáticas y preparación para ampliaciones (implementada en rama)
 - Ajustar encuadres de desatar, subida del sótano, cocina americana y seguimiento para que el rostro sea visible.
 - Añadir *hooks*, sin activar contenido narrativo inventado, para hablar, mirar a Kitty, reaccionar, manos y labios.
 - Limpiar transiciones bruscas sin modificar rutas del puzzle ni comportamiento de Luis (teléfono).
+
+#### Trabajo realizado en fase 5
+
+- **Director de cámara aislado** (`src/lab/lois-ps2-cinematics.js`): conserva los puntos de vista seguros ya existentes del túnel y de la cocina americana, y suaviza los cambios entre desatar las cuerdas → subir las escaleras → buscar cobertura → quedar escondido. Aplica interpolación del ángulo por el recorrido más corto. El encuadre inicial corta directamente a un punto seguro para no atravesar paredes. El retorno a Kitty se suaviza solo cuando ambas cámaras están cerca; si separan plantas u obstáculos grandes, hace un corte limpio en lugar de volar por paredes.
+- **Integración** (`src/lab/house.js`): el director se instancia al iniciar el rescate y se libera al reiniciar o devolver el control. Reutiliza el bucle de renderizado actual y el mismo tiempo de pausa; se anula la transición adicional con `prefers-reduced-motion`. No se cambian cámaras de la ventana, auto RC, llegada del secuestrador ni cierre final.
+- **Reacciones reutilizables** (`src/lab/lois-ps2-reactions.js`): API de `look-kitty`, `listen`, `startle`, `relief`, `speak` y `reach`, con transiciones de entrada/salida y caducidad automática. Los cuatro primeros se activan en eventos originales: liberación, llegada a la cocina, escondite y retorno al seguimiento. `speak` y `reach` quedan como *hooks de animación* disponibles para añadir escenas futuras: **no se agregaron diálogos ni mecánicas inventadas**.
+- **Rig y continuidad**: `sampleLoisRig()` combina esas reacciones con el parpadeo, mirada, cejas, articulación mandibular y brazos ya existentes, sin cambiar físicas ni posición del NPC; el modelo antiguo sigue disponible.
+- **QA**: `tests/lois-ps2-cinematics.cjs` valida secuencias de estados y eventos idénticas, cámaras finitas, retorno seguro a Kitty, cortes al cambiar de piso, reacciones, respuesta a movimiento reducido y ausencia de movimiento físico durante gestos. `tests/lois-ps2-browser.cjs` captura distintas reacciones en el renderizador WebGL existente.
+- **Limitación**: el sistema mejora encuadres y gestos, pero todavía no incluye captura de movimiento real, voz sincronizada, cinemáticas fotorrealistas ni evaluación en un iPhone físico. Las posibles separaciones de articulaciones y los fondos complejos siguen sujetos a revisión en la fase 6.
 
 ### Fase 6 — Optimización, QA y preparación de integración
 - Revisar FPS, memoria GPU, atlas, draw calls, colisiones y pérdidas de contexto WebGL en móvil.

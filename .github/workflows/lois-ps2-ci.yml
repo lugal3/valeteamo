@@ -25,6 +25,8 @@ jobs:
         run: node tests/lois-ps2-uv.cjs
       - name: Probar rig de 21 huesos y retarget facial/corporal
         run: node tests/lois-ps2-rig.cjs
+      - name: Probar cámaras de rescate y reacciones de Lois
+        run: node tests/lois-ps2-cinematics.cjs
       - name: Probar rescate y animaciones existentes
         run: node tests/rc-car.cjs
       - name: Verificar todas las pruebas
@@ -39,6 +41,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: lois-ps2-b-stage4-animated-visuals
+          name: lois-ps2-b-stage5-cinematics-visuals
           path: artifacts/lois-*.png
           if-no-files-found: ignore

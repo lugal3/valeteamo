@@ -75,7 +75,7 @@ const {chromium}=require('playwright');
    } else assert.equal(data.textureUploads,0,'legacy and untextured fallback do not load portrait art');
    const png=Buffer.from(data.dataURL.split(',')[1]||'','base64');
    assert(png.length>10000,'preview is a real canvas image, not an empty frame');
-   const name='lois-'+variant+'-'+shot+'-'+quality+(pose?'-'+pose.phase+(pose.blink>=.9?'-blink':''):'')+'.png';
+   const name='lois-'+variant+'-'+shot+'-'+quality+(pose?'-'+pose.phase+(pose.visualReaction?.type?'-'+pose.visualReaction.type:'')+(pose.blink>=.9?'-blink':''):'')+'.png';
    fs.writeFileSync(path.join('artifacts',name),png);
    console.log('RENDER',JSON.stringify({name,triangles:data.triangles,vertices:data.vertices,pngBytes:png.length,faceBrightness:Math.round(data.faceBrightness)}));
    return png;
@@ -95,6 +95,15 @@ const {chromium}=require('playwright');
   await capture('ps2-b','front','medium',{phase:'climb',age:.9,walk:.8,speed:2,crouch:0,blink:0});
   await capture('ps2-b','front','medium',{phase:'hide',age:.85,walk:0,speed:0,crouch:.78,blink:0});
   await capture('ps2-b','portrait','medium',{phase:'follow',age:1.42,walk:0,speed:0,crouch:0,blink:1});
+  // Phase 5: character can react nonverbally without new story dialogue.
+  for(const type of ['look-kitty','startle','relief','listen','speak','reach']){
+   const duration={ 'look-kitty':1.05,startle:.75,relief:1.5,listen:1.35,speak:1.6,reach:1.15 }[type];
+   await capture('ps2-b','portrait','medium',{
+    phase:type==='startle'?'hide':type==='listen'?'hidden':'follow',
+    age:1.2,walk:0,speed:0,crouch:type==='listen'?1:0,blink:0,
+    visualReaction:{type,age:duration*.4,duration}
+   });
+  }
   const old=await capture('legacy','front');
   assert.equal(modern.equals(old),false,'switching the visual preset must materially change the rendered scene');
   assert.deepEqual(errors,[],'no runtime page exceptions');
