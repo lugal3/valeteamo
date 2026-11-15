@@ -158,6 +158,9 @@ async function main(){
   await page.getByRole('button',{name:/Abrir corazón/}).click();
   await page.getByRole('dialog',{name:/Comenzamos nuestra aventura/}).waitFor();
   await page.getByRole('button',{name:/Comenzar juego 2D/}).click();
+  await page.getByRole('button',{name:'Presiona cualquier botón para iniciar'}).waitFor();
+  await page.screenshot({path:'artifacts/cosmos-to-2d-picnic.png'});
+  await page.getByRole('button',{name:'Presiona cualquier botón para iniciar'}).click();
   await page.locator('.story-prologue .adventure-canvas canvas').waitFor({timeout:25000});
   await page.locator('.story-prologue .prologue-guide').waitFor({timeout:12000});
   assert.deepEqual(errors,[],'Sin errores JavaScript');
