@@ -371,18 +371,96 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   npc.setFlipX(facing==='right'&&dx<0);
  }
  playStoryAbduction(done:()=>void){
-  if(!this.storyLouis){done();return;}
-  const target=this.storyLouis,x=target.x,y=target.y;
-  const villain=this.add.image(x+52,y,'kuromi-0').setScale(2.6).setTint(0x3d2e57)
-   .setAlpha(0).setDepth(y+3);
-  this.storyVillain=villain;this.storyObjects.push(villain);
-  this.audio.tone(165,.45,.047,'sawtooth');
-  if(!this.reducedMotion)this.cameras.main.shake(250,.002);
-  this.tweens.add({targets:villain,x,y,alpha:.95,duration:900,onComplete:()=>{
-   this.tweens.add({targets:[target,villain],alpha:0,scale:.1,duration:690,onComplete:()=>{
-    target.setVisible(false);villain.setVisible(false);done();
-   }});
-  }});
+  // La furgoneta llega, los captores bajan con máscaras, sujetan a Louis,
+  // lo suben por la puerta lateral y vuelven a escapar físicamente.
+  if(this.storyAbduction)return;
+  if(!this.storyLouis?.active){done();return;}
+  this.clearInput();this.story?.near('');this.storyNear='';
+  const origin={...this.p},pose=abductionFrame(0,origin),vp=toScreen(pose.van);
+  const van=this.add.image(vp.x,vp.y,vanTexture(false))
+   .setOrigin(.5,.88).setScale(1.02).setDepth(vp.y+10);
+  const createCaptor=(mask:'fox'|'rabbit')=>{
+   const point=toScreen(mask==='fox'?pose.fox:pose.rabbit);
+   return this.add.image(point.x,point.y,captorTexture(mask,'idle',0))
+    .setOrigin(.5,.94).setScale(1.08).setDepth(point.y+4).setVisible(false);
+  };
+  const fox=createCaptor('fox'),rabbit=createCaptor('rabbit');
+  const dust=this.add.graphics().setDepth(vp.y+12);
+  this.storyObjects.push(van,fox,rabbit,dust);
+  this.storyAbduction={elapsed:0,origin,phase:'arrival',done,van,fox,rabbit,dust};
+  this.audio.tone(130,.24,.035,'sawtooth');
+  this.story?.guide('Una furgoneta se detiene. ¡Dos figuras con máscaras de animales!');
+ }
+ updateStoryLouisArrival(dt:number){
+  const motion=this.storyLouisWalk,npc=this.storyLouis;
+  if(!motion||!npc?.active)return;
+  motion.elapsed=Math.min(motion.duration,motion.elapsed+dt);
+  const t=motion.elapsed/motion.duration,e=t*t*(3-2*t);
+  const x=motion.from.x+(motion.to.x-motion.from.x)*e;
+  const y=motion.from.y+(motion.to.y-motion.from.y)*e;
+  npc.setPosition(x,y).setDepth(y);
+  const key='chibi-louis-down-'+(1+Math.floor(this.clock/160)%4);
+  if(this.textures.exists(key)&&npc.texture.key!==key)npc.setTexture(key);
+  if(motion.elapsed>=motion.duration){
+   this.storyLouisWalk=undefined;
+   if(this.textures.exists('chibi-louis-down-0'))npc.setTexture('chibi-louis-down-0');
+  }
+ }
+ updateStoryAbduction(dt:number){
+  const shot=this.storyAbduction;
+  if(!shot)return;
+  shot.elapsed=Math.min(ABDUCTION_TIMING.escape,shot.elapsed+dt);
+  const frame=abductionFrame(shot.elapsed,shot.origin),prior=shot.phase;
+  shot.phase=frame.phase;
+  if(prior!==frame.phase){
+   if(frame.phase==='doors')this.audio.tone(270,.17,.036,'sawtooth');
+   if(frame.phase==='struggle'){
+    if(!this.reducedMotion)this.cameras.main.shake(210,.0018);
+    this.audio.tone(145,.14,.040,'triangle');
+    this.story?.guide('¡Se llevan a Louis! Fíjate en la furgoneta.');
+   }
+   if(frame.phase==='close')this.audio.tone(170,.18,.052,'square');
+   if(frame.phase==='escape')this.audio.tone(320,.3,.045,'sawtooth');
+  }
+  const v=toScreen(frame.van),key=vanTexture(frame.doorOpen);
+  shot.van.setPosition(v.x,v.y).setDepth(v.y+10);
+  if(shot.van.texture.key!==key)shot.van.setTexture(key);
+  shot.van.setTint(frame.brake?0xffe2e2:0xffffff);
+  for(const [sprite,point,mask] of [
+   [shot.fox,frame.fox,'fox'],[shot.rabbit,frame.rabbit,'rabbit']
+  ] as const){
+   const p=toScreen(point);
+   sprite.setVisible(frame.captorsVisible).setPosition(p.x,p.y).setDepth(p.y+4);
+   const pose=frame.phase==='struggle'||frame.phase==='load'?'grab':
+    ['disembark','approach','board'].includes(frame.phase)?'walk':'idle';
+   const face=captorTexture(mask,pose,captorFrame(shot.elapsed,pose));
+   if(sprite.texture.key!==face)sprite.setTexture(face);
+   sprite.setFlipX(frame.phase==='board'||frame.phase==='load');
+  }
+  const hostage=this.storyLouis;
+  if(hostage?.active){
+   const p=toScreen(frame.victim);
+   hostage.setPosition(p.x,p.y).setDepth(frame.victimBehindVan?v.y+4:p.y+6)
+    .setVisible(frame.victimVisible);
+   const inMotion=frame.phase==='struggle'||frame.phase==='load';
+   const image='chibi-louis-down-'+(inMotion?1+Math.floor(this.clock/140)%4:0);
+   if(this.textures.exists(image)&&hostage.texture.key!==image)hostage.setTexture(image);
+   hostage.setAngle(inMotion&&!this.reducedMotion?Math.sin(shot.elapsed/72)*4:0);
+  }
+  shot.dust.clear();
+  if(frame.dust&&!this.reducedMotion){
+   // Seis pequeñas nubes limitadas, sin crear nuevos emisores por fotograma.
+   for(let i=0;i<6;i++){
+    const t=(shot.elapsed/190+i*.19)%1,x=v.x-65+(i%3)*9-t*24;
+    shot.dust.fillStyle(i%2?0xd9c9bf:0xf0dec7,(1-t)*.32*frame.dust)
+     .fillEllipse(x,v.y+7-t*10,13+t*13,6+t*5);
+   }
+  }
+  if(frame.phase==='done'){
+   shot.dust.clear();this.storyAbduction=undefined;
+   // Sólo al salir de cámara se permite continuar la misión.
+   shot.done();
+  }
  }
  updateStoryActors(dt:number){
   if(!this.story)return;
