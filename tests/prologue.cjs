@@ -35,7 +35,8 @@ const assert=require('node:assert/strict');
  assert.equal(hurtPrologue(PROLOGUE_START,50).hp,0);
  assert.equal(healPrologue(hurtPrologue(PROLOGUE_START,5),3).hp,4);
  for(const key of ['intro','victory','luis','warning','abducted','ribbon','petals','wheel','locked','window']){
-  assert(PROLOGUE_DIALOGUES[key].length>=2,key+' needs real lines of dialogue');
+  assert(PROLOGUE_DIALOGUES[key].length>=1&&PROLOGUE_DIALOGUES[key].length<=2,
+   key+' should have 1–2 editable, quick story placeholders');
  }
  const voices=Object.values(PROLOGUE_DIALOGUES).flat().map(v=>v.speaker);
  assert(voices.includes('Luis')&&voices.includes('Louis')&&voices.includes('Kitty'));

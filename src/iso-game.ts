@@ -6,6 +6,9 @@ import {installReferenceCharacter} from './reference-characters';
 import {facingOf,type Facing} from './animation';
 import {ISO,constrain,isoDistance,screenVector,toScreen,type IsoPoint} from './isometric';
 import {Sound} from './audio';
+import {ABDUCTION_TIMING,abductionFrame,captorFrame,captorTexture,
+ installRescueAbductionTextures,vanTexture,VAN_NIGHT_POSITION,VAN_PLATE,
+ type AbductionPhase} from './demo/abduction-van';
 import {NIGHT_INTERACTION_RADIUS,NIGHT_WINDOW_INTERACTION_RADIUS,nightAutoRoute,nightNavigationDistance} from './demo/night-house-layout';
 import {installProloguePeople,luisTextureKey,luisAnimationFrame,
  type LuisFacing,type LuisPose} from './demo/prologue-art';
@@ -61,6 +64,11 @@ export class IsoAdventure extends Phaser.Scene {
  storyStage:IsoStoryStage='intro';
  storyObjects:Phaser.GameObjects.GameObject[]=[];
  storyLouis?:StoryActor;storyLuis?:StoryActor;storyVillain?:StoryActor;
+ storyLouisWalk?:{from:{x:number;y:number};to:{x:number;y:number};elapsed:number;duration:number};
+ storyAbduction?:{elapsed:number;origin:IsoPoint;phase:AbductionPhase;done:()=>void;
+  van:Phaser.GameObjects.Image;fox:Phaser.GameObjects.Image;
+  rabbit:Phaser.GameObjects.Image;dust:Phaser.GameObjects.Graphics};
+ storyVanInspected=false;storyVanNear=false;
  storyLuisShadow?:Phaser.GameObjects.Ellipse;
  storyLuisMotion?:LuisMotion;storyLuisReady=false;storyLuisArriving=false;
  storyLuisFarewell=false;
@@ -78,6 +86,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  create(){
   buildArt(this);buildChibi(this);if(!CHARACTERS[this.character].chibiSpriteSheet)installReferenceCharacter(this,this.character);this.floor=this.add.graphics().setDepth(0);this.fx=this.add.graphics().setDepth(1000);
   if(this.story){
+   installRescueAbductionTextures(this);
    this.storyMap=mapForStage(this.story.stage());
    this.storyWorld=this.createStoryWorld(this.storyMap);
   }else this.drawFloor();
@@ -111,6 +120,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(!this.story||map===this.storyMap)return;
   this.storyWorld?.destroy();
   this.houseRoute=[];this.houseLastHint='';
+  this.storyVanInspected=false;this.storyVanNear=false;
   this.storyMap=map;
   this.storyWorld=this.createStoryWorld(map);
   this.storyExitPending=false;this.storyGuideStep=-1;
@@ -139,6 +149,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  // La historia conserva los sprites del Corazones original; no recreamos el motor.
  setStoryStage(stage:IsoStoryStage,force=false){
   if(!this.story||(!force&&this.storyStage===stage))return;
+  const previousLouis=this.storyLouis?.active?
+   {x:this.storyLouis.x,y:this.storyLouis.y}:undefined;
   this.storyStage=stage;this.storyWalkTriggered=false;this.storyVictoryEmitted=false;
   this.storyActionPressed=false;this.storyNear='';
   this.houseRoute=[];this.houseLastHint='';
@@ -148,6 +160,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   for(const light of this.collectibles)light.s.destroy();this.collectibles=[];
   this.dangers=[];this.bursts=[];this.charm=undefined;this.pendingOffer=false;
   this.storyLouis=undefined;this.storyLuis=undefined;this.storyVillain=undefined;
+  this.storyLouisWalk=undefined;this.storyAbduction=undefined;
   this.storyLuisShadow=undefined;this.storyLuisMotion=undefined;
   this.storyLuisReady=false;this.storyLuisArriving=false;this.storyLuisFarewell=false;
   this.story.near('');
@@ -185,7 +198,13 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    for(const p of [{u:24.6,v:3.4},{u:26.2,v:5.7},{u:28,v:4.2}])this.spawnEnemy(p,false);
    this.story.guide('Las sombras se acercan. ¡Apunta con las flechas, el mouse o el joystick derecho!');
   }
-  if(stage==='talk-louis')this.storyLouis=actor('louis',this.storyTarget);
+  if(stage==='talk-louis'){
+   // Louis walks out of the garden after combat, never popping into existence.
+   const origin={u:this.storyTarget.u+1.6,v:this.storyTarget.v+.4};
+   this.storyLouis=actor('louis',origin);
+   this.storyLouisWalk={from:toScreen(origin),to:toScreen(this.storyTarget),
+    elapsed:0,duration:1300};
+  }
   if(stage==='talk-luis'){
    // Luis waits at the side-path entrance; Kitty sees him WALK INTO the clearing
    // before the interaction appears. Nobody materializes at the conversation spot.
@@ -195,16 +214,27 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    this.storyLuisShadow=this.add.ellipse(xy.x,xy.y+2,31,9,0x534859,.23)
     .setDepth(xy.y-1);
    this.storyObjects.push(this.storyLuisShadow);
+   const next=toScreen({u:35.3,v:6.3});
    this.storyLouis=actor('louis',{u:35.3,v:6.3});
+   if(previousLouis){
+    this.storyLouis.setPosition(previousLouis.x,previousLouis.y);
+    this.storyLouisWalk={from:previousLouis,to:next,elapsed:0,
+     duration:Math.max(900,Math.min(2900,Math.hypot(next.x-previousLouis.x,next.y-previousLouis.y)*8))};
+   }
    this.story.guide('Luis viene por el camino entre los cerezos. ¡Acércate a saludarlo! ♡');
   }
   if(stage==='walk-together'){
    this.storyLouis=actor('louis',{u:35.5,v:4.6});
+   if(previousLouis)this.storyLouis.setPosition(previousLouis.x,previousLouis.y)
+    .setDepth(previousLouis.y);
    marker('✿',this.storyTarget);
   }
   if(stage==='disappearance'){
-   // The kidnapping must appear in Kitty's CURRENT clearing, not off-camera.
-   this.storyLouis=actor('louis',{u:this.p.u+.25,v:this.p.v+.20});
+   // Preserve the ACTUAL follower's last position, not a fake spawn.
+   this.storyLouis=actor('louis',{u:this.p.u+.32,v:this.p.v+.20});
+   if(previousLouis)this.storyLouis.setPosition(previousLouis.x,previousLouis.y)
+    .setDepth(previousLouis.y);
+   this.story?.guide('Un motor se acerca por el camino…');
   }
   if(['ribbon','petals','wheel'].includes(stage)){
    marker(stage==='ribbon'?'✧':stage==='petals'?'✿':'⌁',this.storyTarget);
@@ -224,6 +254,15 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  }
  storyInteract(){
   if(!this.story||this.story.locked()||luisMotionIsBlocking(this.storyLuisMotion)||!this.storyNear)return;
+  if(this.storyVanNear){
+   this.storyVanInspected=true;this.houseRoute=[];
+   this.audio.ui();this.audio.tone(460,.19,.033,'triangle');
+   this.burst(VAN_NIGHT_POSITION,0xffd5a2);
+   this.floatNote(VAN_NIGHT_POSITION,VAN_PLATE,'#ffe7cb');
+   this.story.guide('¡La misma furgoneta! Media luna y matrícula LUNA-07. Está junto a la casa…');
+   this.storyWorld?.parkedVan?.setTint(0xffdfb2);
+   return;
+  }
   this.houseRoute=[];this.audio.ui();
   if(this.storyMap==='night_neighborhood'){
    this.burst(this.storyTarget,0xffd9b5);
@@ -248,6 +287,26 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    'Sigue las baldosas iluminadas hasta la puerta principal ♡':
    'Da la vuelta por el patio frontal hasta la ventana entreabierta ♡');
   this.audio.tone(770,.13,.016);
+  return true;
+ }
+ startVanGuide(){
+  if(!this.story||this.storyMap!=='night_neighborhood'||
+   !['door','window'].includes(this.storyStage)||this.story.locked())return false;
+  if(this.houseRoute.length){
+   this.houseRoute=[];this.story.guide('Guía pausada. Puedes caminar libremente.');
+   return false;
+  }
+  if(isoDistance(this.p,VAN_NIGHT_POSITION)<1.8){
+   this.updateStoryActors(0);return false;
+  }
+  const route=nightAutoRoute(this.p,VAN_NIGHT_POSITION);
+  if(!route.length){
+   this.story.guide('Sigue la vereda: la furgoneta está junto a la calle.');
+   return false;
+  }
+  this.houseRoute=route;
+  this.audio.tone(650,.13,.014);
+  this.story.guide('La misma furgoneta… Acércate para examinar la matrícula.');
   return true;
  }
  storyTeleportForTest(_unused:number){
@@ -341,18 +400,101 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   npc.setFlipX(facing==='right'&&dx<0);
  }
  playStoryAbduction(done:()=>void){
-  if(!this.storyLouis){done();return;}
-  const target=this.storyLouis,x=target.x,y=target.y;
-  const villain=this.add.image(x+52,y,'kuromi-0').setScale(2.6).setTint(0x3d2e57)
-   .setAlpha(0).setDepth(y+3);
-  this.storyVillain=villain;this.storyObjects.push(villain);
-  this.audio.tone(165,.45,.047,'sawtooth');
-  if(!this.reducedMotion)this.cameras.main.shake(250,.002);
-  this.tweens.add({targets:villain,x,y,alpha:.95,duration:900,onComplete:()=>{
-   this.tweens.add({targets:[target,villain],alpha:0,scale:.1,duration:690,onComplete:()=>{
-    target.setVisible(false);villain.setVisible(false);done();
-   }});
-  }});
+  // La furgoneta llega, los captores bajan con máscaras, sujetan a Louis,
+  // lo suben por la puerta lateral y vuelven a escapar físicamente.
+  if(this.storyAbduction)return;
+  if(!this.storyLouis?.active){done();return;}
+  this.clearInput();this.story?.near('');this.storyNear='';
+  // Anchor the whole chase to Louis's REAL screen-space foot position, not
+  // an invented spot near Kitty. This avoids the last visible 20–40px snap.
+  const wx=(this.storyLouis.x-ISO.originX)/(ISO.tileW/2);
+  const wy=(this.storyLouis.y-ISO.originY)/(ISO.tileH/2);
+  const origin={u:(wx+wy)/2-.32,v:(wy-wx)/2-.20};
+  const pose=abductionFrame(0,origin),vp=toScreen(pose.van);
+  const van=this.add.image(vp.x,vp.y,vanTexture(false))
+   .setOrigin(.5,.88).setScale(1.02).setDepth(vp.y+10);
+  const createCaptor=(mask:'fox'|'rabbit')=>{
+   const point=toScreen(mask==='fox'?pose.fox:pose.rabbit);
+   return this.add.image(point.x,point.y,captorTexture(mask,'idle',0))
+    .setOrigin(.5,.94).setScale(1.08).setDepth(point.y+4).setVisible(false);
+  };
+  const fox=createCaptor('fox'),rabbit=createCaptor('rabbit');
+  const dust=this.add.graphics().setDepth(vp.y+12);
+  this.storyObjects.push(van,fox,rabbit,dust);
+  this.storyAbduction={elapsed:0,origin,phase:'arrival',done,van,fox,rabbit,dust};
+  this.audio.tone(130,.24,.035,'sawtooth');
+  this.story?.guide('Una furgoneta se detiene. ¡Dos figuras con máscaras de animales!');
+ }
+ updateStoryLouisArrival(dt:number){
+  const motion=this.storyLouisWalk,npc=this.storyLouis;
+  if(!motion||!npc?.active)return;
+  motion.elapsed=Math.min(motion.duration,motion.elapsed+dt);
+  const t=motion.elapsed/motion.duration,e=t*t*(3-2*t);
+  const x=motion.from.x+(motion.to.x-motion.from.x)*e;
+  const y=motion.from.y+(motion.to.y-motion.from.y)*e;
+  npc.setPosition(x,y).setDepth(y);
+  const key='chibi-louis-down-'+(1+Math.floor(this.clock/160)%4);
+  if(this.textures.exists(key)&&npc.texture.key!==key)npc.setTexture(key);
+  if(motion.elapsed>=motion.duration){
+   this.storyLouisWalk=undefined;
+   if(this.textures.exists('chibi-louis-down-0'))npc.setTexture('chibi-louis-down-0');
+  }
+ }
+ updateStoryAbduction(dt:number){
+  const shot=this.storyAbduction;
+  if(!shot)return;
+  shot.elapsed=Math.min(ABDUCTION_TIMING.escape,shot.elapsed+dt);
+  const frame=abductionFrame(shot.elapsed,shot.origin),prior=shot.phase;
+  shot.phase=frame.phase;
+  if(prior!==frame.phase){
+   if(frame.phase==='doors')this.audio.tone(270,.17,.036,'sawtooth');
+   if(frame.phase==='struggle'){
+    if(!this.reducedMotion)this.cameras.main.shake(210,.0018);
+    this.audio.tone(145,.14,.040,'triangle');
+    this.story?.guide('¡Se llevan a Louis! Fíjate en la furgoneta.');
+   }
+   if(frame.phase==='close')this.audio.tone(170,.18,.052,'square');
+   if(frame.phase==='escape')this.audio.tone(320,.3,.045,'sawtooth');
+  }
+  const v=toScreen(frame.van),key=vanTexture(frame.doorOpen);
+  shot.van.setPosition(v.x,v.y).setDepth(v.y+10);
+  if(shot.van.texture.key!==key)shot.van.setTexture(key);
+  shot.van.setTint(frame.brake?0xffe2e2:0xffffff);
+  for(const [sprite,point,mask] of [
+   [shot.fox,frame.fox,'fox'],[shot.rabbit,frame.rabbit,'rabbit']
+  ] as const){
+   const p=toScreen(point);
+   sprite.setVisible(frame.captorsVisible).setPosition(p.x,p.y).setDepth(p.y+4);
+   const pose=frame.phase==='struggle'||frame.phase==='load'?'grab':
+    ['disembark','approach','board'].includes(frame.phase)?'walk':'idle';
+   const face=captorTexture(mask,pose,captorFrame(shot.elapsed,pose));
+   if(sprite.texture.key!==face)sprite.setTexture(face);
+   sprite.setFlipX(frame.phase==='board'||frame.phase==='load');
+  }
+  const hostage=this.storyLouis;
+  if(hostage?.active){
+   const p=toScreen(frame.victim);
+   hostage.setPosition(p.x,p.y).setDepth(frame.victimBehindVan?v.y+4:p.y+6)
+    .setVisible(frame.victimVisible);
+   const inMotion=frame.phase==='struggle'||frame.phase==='load';
+   const image='chibi-louis-down-'+(inMotion?1+Math.floor(this.clock/140)%4:0);
+   if(this.textures.exists(image)&&hostage.texture.key!==image)hostage.setTexture(image);
+   hostage.setAngle(inMotion&&!this.reducedMotion?Math.sin(shot.elapsed/72)*4:0);
+  }
+  shot.dust.clear();
+  if(frame.dust&&!this.reducedMotion){
+   // Seis pequeñas nubes limitadas, sin crear nuevos emisores por fotograma.
+   for(let i=0;i<6;i++){
+    const t=(shot.elapsed/190+i*.19)%1,x=v.x-65+(i%3)*9-t*24;
+    shot.dust.fillStyle(i%2?0xd9c9bf:0xf0dec7,(1-t)*.32*frame.dust)
+     .fillEllipse(x,v.y+7-t*10,13+t*13,6+t*5);
+   }
+  }
+  if(frame.phase==='done'){
+   shot.dust.clear();this.storyAbduction=undefined;
+   // Sólo al salir de cámara se permite continuar la misión.
+   shot.done();
+  }
  }
  updateStoryActors(dt:number){
   if(!this.story)return;
@@ -398,10 +540,15 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    door:'Probar puerta',window:'Entrar por la ventana'
   };
   const canInteract=stage!=='talk-luis'||this.storyLuisReady;
+  const vanIsClose=this.storyMap==='night_neighborhood'&&
+   ['door','window'].includes(stage)&&
+   isoDistance(this.p,VAN_NIGHT_POSITION)<2.0;
   const radius=this.storyMap==='night_neighborhood'?
    (stage==='window'?NIGHT_WINDOW_INTERACTION_RADIUS:NIGHT_INTERACTION_RADIUS):1.15;
-  const target=canInteract&&labels[stage]&&isoDistance(this.p,this.storyTarget)<radius?
+  const mainTarget=canInteract&&labels[stage]&&isoDistance(this.p,this.storyTarget)<radius?
    labels[stage]!:'';
+  this.storyVanNear=!mainTarget&&vanIsClose;
+  const target=mainTarget||(this.storyVanNear?'Inspeccionar furgoneta':'');
   if(target!==this.storyNear){
    this.storyNear=target;this.story.near(target);
    if(target&&this.storyMap==='night_neighborhood'){
@@ -467,11 +614,14 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(this.paused||this.pendingOffer||this.ended)return;const dt=Math.min(delta,40),seconds=dt/1000;this.clock+=dt;
   if(this.story){
    this.storyWorld?.update(this.clock,this.storyDusk);
-   // Even while dialogue locks the player, real NPC motion/face frames continue.
+   // Physical NPC and kidnapping motion keeps running during narrative locks.
    this.updateLuisCinematic(dt);
    this.animateStoryLuis();
+   this.updateStoryLouisArrival(dt);
+   this.updateStoryAbduction(dt);
   }
-  if(this.story && (this.story.locked()||luisMotionIsBlocking(this.storyLuisMotion))){
+  if(this.story && (this.story.locked()||luisMotionIsBlocking(this.storyLuisMotion)||
+   !!this.storyAbduction)){
    this.clearInput();return;
   }
   if(this.story && this.storyStage!==this.story.stage())this.setStoryStage(this.story.stage());

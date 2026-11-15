@@ -5,8 +5,13 @@ const nightJs=ts.transpileModule(fs.readFileSync('src/demo/night-house-layout.ts
  compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}
 }).outputText;
 const nightExports={};vm.runInNewContext(nightJs,{exports:nightExports});
+const vanJs=ts.transpileModule(fs.readFileSync('src/demo/abduction-van.ts','utf8'),{
+ compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}
+}).outputText;
+const vanExports={};vm.runInNewContext(vanJs,{exports:vanExports});
 const context={exports:{},require(name){
  if(name==='./night-house-layout')return nightExports;
+ if(name==='./abduction-van')return vanExports;
  if(name==='phaser')return {default:{Geom:{Point:class {constructor(x,y){this.x=x;this.y=y;}}}}};
  if(name==='../isometric')return {ISO:{originX:400,originY:68,tileW:82,tileH:40},toScreen:p=>({x:400+(p.u-p.v)*41,y:68+(p.u+p.v)*20})};
  throw Error('Unexpected dependency: '+name);

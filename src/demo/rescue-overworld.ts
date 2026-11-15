@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {VAN_NIGHT_POSITION,VAN_PLATE,vanTexture} from './abduction-van';
 import {ISO,toScreen,type IsoPoint} from '../isometric';
 import {HOUSE_3D_REFERENCE,NIGHT_HOUSE,nightRouteCenter,nightRouteLimits,nightHouseBlocks,
  nightWalkable} from './night-house-layout';
@@ -113,7 +114,8 @@ export function darknessAt(u:number,stage:string,map:RescueMapId=sceneForPositio
 }
 export type RescueOverworld={map:RescueMapId;area:(u:number)=>RouteArea;
  update:(elapsed:number,night:number)=>void;destroy:()=>void;
- water:Phaser.GameObjects.Graphics;tiles:number};
+ water:Phaser.GameObjects.Graphics;tiles:number;
+ parkedVan?:Phaser.GameObjects.Image};
 
 function poly(g:Phaser.GameObjects.Graphics,c:number,pts:Array<[number,number]>,a=1){
  g.fillStyle(c,a);
@@ -396,6 +398,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   tree:(u:number,v:number)=>void;mushroom:(u:number,v:number)=>void},
  map:RescueMapId='morning_garden'):RescueOverworld{
  const before=new Set(scene.children.list),cfg=RESCUE_SCENES[map],g=ground;
+ let parkedVan:Phaser.GameObjects.Image|undefined;
  g.clear();
  const back:Record<RescueMapId,number>={
   morning_garden:0xf1e9d7,afternoon_meeting:0xf2ddc3,
@@ -557,6 +560,17 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   for(const [u,v] of [[68.2,2.9],[72.1,2.5],[81,3.7]])house(scene,u,v,false);
   // Main house façade mirrors the actual double-storey 3D floorplan.
   house(scene,NIGHT_HOUSE.center.u,NIGHT_HOUSE.center.v,true);
+  // Same marked vehicle as in the filmed capture. Its wheels rest by
+  // the curb, outside the 3D-faithful front entrance and navigable path.
+  const vanPlace=toScreen(VAN_NIGHT_POSITION);
+  scene.add.ellipse(vanPlace.x,vanPlace.y+3,154,25,0x202332,.28)
+   .setDepth(vanPlace.y-2);
+  parkedVan=scene.add.image(vanPlace.x,vanPlace.y,vanTexture(false))
+   .setOrigin(.5,.88).setScale(.88).setDepth(vanPlace.y+4);
+  scene.add.text(vanPlace.x,vanPlace.y-88,'☾  '+VAN_PLATE,{
+   fontFamily:'monospace',fontSize:'12px',fontStyle:'bold',
+   color:'#ffe2c2',stroke:'#392a4b',strokeThickness:4
+  }).setOrigin(.5).setDepth(vanPlace.y+17);
   const sidewalk=scene.add.graphics().setDepth(.65);
   // Stone pavement and the 3D x=5.9 front-path / porch. Each paving stone is
   // placed on traversable ground so it visually teaches the actual route.
@@ -681,6 +695,6 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   }
  };
  update(0,darknessAt(cfg.spawn.u,'intro',map));
- return {map,area:rescueArea,water,tiles,update,
+ return {map,area:rescueArea,water,tiles,parkedVan,update,
   destroy:()=>{for(const obj of created)if(obj.active)obj.destroy();g.clear();}};
 }

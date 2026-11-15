@@ -3,6 +3,7 @@ import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {StoryGame} from '../StoryGame';
 import {Sound} from '../audio';
 import {toScreen} from '../isometric';
+import {VAN_NIGHT_POSITION} from './abduction-van';
 import type {IsoAdventure,IsoStoryBridge,IsoStoryStage} from '../iso-game';
 import {RESCUE_SCENES,type RescueMapId,type RouteArea} from './rescue-overworld';
 import {
@@ -13,7 +14,7 @@ import {
 import './garden-prologue.css';
 
 type Dialog={lines:PrologueLine[];index:number};
-type HouseNavigation={distance:number;heading:number;guided:boolean;near:boolean};
+type HouseNavigation={distance:number;heading:number;guided:boolean;near:boolean;vanInspected:boolean;vanDistance:number};
 export type PrologueCheckpoint='intro'|'walk-together'|'ribbon';
 const initial=(test:boolean,checkpoint:PrologueCheckpoint):PrologueState=>
  test?{...PROLOGUE_START,stage:checkpoint}:loadPrologue();
@@ -231,9 +232,14 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
    const distance=Math.hypot(scene.p.u-scene.storyTarget.u,scene.p.v-scene.storyTarget.v);
    const next:HouseNavigation={distance:Math.ceil(distance*2)/2,
     heading:Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI,
-    guided:scene.houseRoute.length>0,near:distance<(stage==='window'?1.35:1.75)};
+    guided:scene.houseRoute.length>0,near:distance<(stage==='window'?1.35:1.75),
+    vanInspected:scene.storyVanInspected,
+    vanDistance:Math.ceil(Math.hypot(scene.p.u-VAN_NIGHT_POSITION.u,
+     scene.p.v-VAN_NIGHT_POSITION.v)*2)/2};
    setHouseNav(previous=>previous&&previous.distance===next.distance&&
     previous.guided===next.guided&&previous.near===next.near&&
+    previous.vanInspected===next.vanInspected&&
+    previous.vanDistance===next.vanDistance&&
     Math.abs(previous.heading-next.heading)<4?previous:next);
   };
   update();
@@ -275,6 +281,17 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
       houseGuide:()=>scene.startHouseGuide(),
       houseRoute:()=>({active:scene.houseRoute.length>0,remaining:scene.houseRoute.length,
        distance:Math.hypot(scene.p.u-scene.storyTarget.u,scene.p.v-scene.storyTarget.v)}),
+      vanGuide:()=>scene.startVanGuide(),
+      van:()=>({inspected:scene.storyVanInspected,near:scene.storyVanNear,
+       parked:!!scene.storyWorld?.parkedVan?.active}),
+      abduction:()=>({phase:scene.storyAbduction?.phase??'none',
+       elapsed:scene.storyAbduction?.elapsed??0,
+       van:scene.storyAbduction?{x:scene.storyAbduction.van.x,
+        y:scene.storyAbduction.van.y,visible:scene.storyAbduction.van.visible}:null,
+       captors:scene.storyAbduction?{
+        fox:scene.storyAbduction.fox.visible,rabbit:scene.storyAbduction.rabbit.visible}:null,
+       louis:scene.storyLouis?{x:scene.storyLouis.x,y:scene.storyLouis.y,
+        visible:scene.storyLouis.visible}:null}),
       scene:()=>scene
      };
     }
@@ -301,6 +318,16 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
      <small>{houseNav.near?'¡Ya puedes interactuar!':
       `A ${houseNav.distance.toFixed(1)} pasos · patio frontal`}</small></span>
    </div>
+   {houseNav.vanInspected&&<span className="prologue-van-clue" role="status">
+    ☾ Pista encontrada: LUNA-07 · misma furgoneta
+   </span>}
+   {!houseNav.vanInspected&&!houseNav.guided&&houseNav.vanDistance>2&&
+    <button className="prologue-house-route-button prologue-van-route-button"
+     type="button" onClick={()=>{
+      const scene=sceneRef.current;if(!scene)return;
+      const guided=scene.startVanGuide();
+      setHouseNav(previous=>previous?{...previous,guided}:previous);
+     }}>☾ Investigar furgoneta</button>}
    {(!houseNav.near||houseNav.guided)&&<button className="prologue-house-route-button" type="button"
     onClick={()=>{
      const scene=sceneRef.current;if(!scene)return;
