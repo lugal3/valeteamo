@@ -36,6 +36,7 @@ const assert=require('node:assert/strict');
   const event=updateLouisEscape(actor,1/30);
   if(event==='untied')released++;
  }
+ seen.add(actor.phase); // The hidden state is reached on the final update.
  assert.equal(released,1);
  assert(LOUIS_UNTIE_SECONDS>=2.5);
  for(const stage of ['untying','climb','hide','hidden'])assert(seen.has(stage),'missing state '+stage);
