@@ -48,6 +48,7 @@ const {chromium}=require('playwright');
      {x:0,y:1.10,z:2.2,yaw:Math.PI,pitch:0};
     renderer.render(camera,true,1,false,{reduced:true,shotLight:.8});
     renderer.render(camera,true,1.02,false,{reduced:true,shotLight:.8});
+    const perf={...renderer.loisRigMetrics}; // batch VBO updates in phase 6
     const gl=renderer.gl;gl.finish();
     // Numerical check of central facial readability, not just a successful draw call.
     const w=canvas.width,h=canvas.height,rx=Math.floor(w*.44),ry=Math.floor(h*.35);
@@ -60,12 +61,18 @@ const {chromium}=require('playwright');
     const output={dataURL:canvas.toDataURL('image/png'),triangles:renderer.triangleCount,
       vertices:renderer.vertexCount,error,drawn:renderer.dynamicCount,
       textureReady:renderer.loisFaceTexture.ready,textureUploads:renderer.loisFaceTexture.uploads,
-      textureSize:renderer.loisFaceTexture.size,faceBrightness};
+      textureSize:renderer.loisFaceTexture.size,faceBrightness,perf};
     renderer.destroy();
     return output;
    },{variant,shot,quality,pose});
    assert.equal(data.error,0,'WebGL must render without errors: '+variant+' '+shot);
    assert(data.drawn>200,'all dynamic geometry is present');
+   if(variant==='ps2-b'||variant==='ps2-b-faceonly'||variant==='ps2-b-nohair'){
+    assert.equal(data.perf.samples,1,'rig sampled only once for the NPC');
+    assert(data.perf.uploads<=1,'coalesced contiguous rig updates in one GPU bufferSubData call');
+    assert(data.perf.parts>=1,'rig actually updates vertex segments');
+    assert(data.perf.bytes<400000,'rig GPU transfer remains under 400 KB per frame');
+   }else assert.equal(data.perf.samples,0,'fallback does not run the extra rig');
    if(variant==='ps2-b'&&shot==='portrait'&&(!pose||!(pose.crouch>.30)))assert(data.faceBrightness>145,
     'face front must be visible, not the dark backface: brightness '+data.faceBrightness);
    if(variant==='ps2-b'||variant==='ps2-b-faceonly'||variant==='ps2-b-nohair'){
@@ -77,7 +84,7 @@ const {chromium}=require('playwright');
    assert(png.length>10000,'preview is a real canvas image, not an empty frame');
    const name='lois-'+variant+'-'+shot+'-'+quality+(pose?'-'+pose.phase+(pose.visualReaction?.type?'-'+pose.visualReaction.type:'')+(pose.blink>=.9?'-blink':''):'')+'.png';
    fs.writeFileSync(path.join('artifacts',name),png);
-   console.log('RENDER',JSON.stringify({name,triangles:data.triangles,vertices:data.vertices,pngBytes:png.length,faceBrightness:Math.round(data.faceBrightness)}));
+   console.log('RENDER',JSON.stringify({name,triangles:data.triangles,vertices:data.vertices,pngBytes:png.length,faceBrightness:Math.round(data.faceBrightness),rigUploads:data.perf.uploads,rigBytes:data.perf.bytes}));
    return png;
   };
   const modern=await capture('ps2-b','front');
