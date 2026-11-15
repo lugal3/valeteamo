@@ -20,14 +20,14 @@ const {chromium}=require('playwright');
   await page.route('**/__lois_ps2_qa__',route=>route.fulfill({status:200,contentType:'text/html',body:'<!doctype html><html lang="es"><meta charset="utf-8"><title>Lois render QA</title><body></body></html>'}));
   await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/__lois_ps2_qa__');
   fs.mkdirSync('artifacts',{recursive:true});
-  const capture=async(variant,shot,quality='medium')=>{
-   const data=await page.evaluate(async ({variant,shot,quality})=>{
+  const capture=async(variant,shot,quality='medium',pose=null)=>{
+   const data=await page.evaluate(async ({variant,shot,quality,pose})=>{
     const {HouseRenderer,pickupGeometry}=await import('/src/lab/renderer.js');
     const {LOIS_VISUAL_ID}=await import('/src/lab/lois-ps2-profile.js');
     document.body.innerHTML='<main style="display:grid;place-items:center;margin:0;height:100vh;background:#28303c"><canvas id="loisPreview" width="760" height="500" style="width:760px;height:500px;display:block"></canvas></main>';
     const canvas=document.getElementById('loisPreview');
     const actor={id:'louis-escape',kind:'louis-companion',visualPreset:LOIS_VISUAL_ID,visualVariant:variant,
-     x:0,y:0,z:0,yaw:0,phase:'follow',walk:0,speed:0,crouch:0,blink:0,age:.5};
+     x:0,y:0,z:0,yaw:0,phase:'follow',walk:0,speed:0,crouch:0,blink:0,age:.5,...(pose||{})};
     let geo=pickupGeometry([actor]);
     if(variant==='ps2-b-faceonly')geo=geo.filter(part=>part.shape==='lois-face'||part.id.endsWith('-neck'));
     if(variant==='ps2-b-nohair')geo=geo.filter(part=>!/(hair|fringe|crown|temple)/.test(part.id));
@@ -63,7 +63,7 @@ const {chromium}=require('playwright');
       textureSize:renderer.loisFaceTexture.size,faceBrightness};
     renderer.destroy();
     return output;
-   },{variant,shot,quality});
+   },{variant,shot,quality,pose});
    assert.equal(data.error,0,'WebGL must render without errors: '+variant+' '+shot);
    assert(data.drawn>200,'all dynamic geometry is present');
    if(variant==='ps2-b'&&shot==='portrait')assert(data.faceBrightness>145,
@@ -75,7 +75,7 @@ const {chromium}=require('playwright');
    } else assert.equal(data.textureUploads,0,'legacy and untextured fallback do not load portrait art');
    const png=Buffer.from(data.dataURL.split(',')[1]||'','base64');
    assert(png.length>10000,'preview is a real canvas image, not an empty frame');
-   const name='lois-'+variant+'-'+shot+'-'+quality+'.png';
+   const name='lois-'+variant+'-'+shot+'-'+quality+(pose?'-'+pose.phase+(pose.blink>=.9?'-blink':''):'')+'.png';
    fs.writeFileSync(path.join('artifacts',name),png);
    console.log('RENDER',JSON.stringify({name,triangles:data.triangles,vertices:data.vertices,pngBytes:png.length,faceBrightness:Math.round(data.faceBrightness)}));
    return png;
@@ -91,9 +91,13 @@ const {chromium}=require('playwright');
   await capture('ps2-b-nohair','portrait');
   await capture('ps2-b','front','low');
   await capture('ps2-b','portrait','low');
+  await capture('ps2-b','front','medium',{phase:'untying',age:1.3,walk:0,speed:0,crouch:.33,blink:0});
+  await capture('ps2-b','front','medium',{phase:'climb',age:.9,walk:.8,speed:2,crouch:0,blink:0});
+  await capture('ps2-b','front','medium',{phase:'hide',age:.85,walk:0,speed:0,crouch:.78,blink:0});
+  await capture('ps2-b','portrait','medium',{phase:'follow',age:1.42,walk:0,speed:0,crouch:0,blink:1});
   const old=await capture('legacy','front');
   assert.equal(modern.equals(old),false,'switching the visual preset must materially change the rendered scene');
   assert.deepEqual(errors,[],'no runtime page exceptions');
-  console.log('PASS: textured PS2-B front/profile/three-quarter/portrait/low plus flat and legacy; one-time texture upload and error-free WebGL.');
+  console.log('PASS: Lois PS2-B 21-bone animation in rescue poses, blink, WebGL textured/flat/legacy, one-time UV upload.');
  }finally{await browser?.close();await server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -23,6 +23,8 @@ jobs:
         run: node tests/lois-ps2-mesh.cjs
       - name: Verificar mapeado UV y aislamiento de texturas
         run: node tests/lois-ps2-uv.cjs
+      - name: Probar rig de 21 huesos y retarget facial/corporal
+        run: node tests/lois-ps2-rig.cjs
       - name: Probar rescate y animaciones existentes
         run: node tests/rc-car.cjs
       - name: Verificar todas las pruebas
@@ -37,6 +39,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: lois-ps2-b-stage3-textured-visuals
+          name: lois-ps2-b-stage4-animated-visuals
           path: artifacts/lois-*.png
           if-no-files-found: ignore
