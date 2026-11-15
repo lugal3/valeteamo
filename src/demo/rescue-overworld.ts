@@ -346,35 +346,62 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   const onLand=v>=Math.floor(lim.min-1.0+rag)&&v<=Math.ceil(lim.max+1.0+rag);
   const bridge=map==='morning_garden'&&u>=10&&u<16;
   if(bridge){
-   if(v>=-3&&v<=13)diamond(g,u,v,(u*3+v*5)%4?0x80c9d0:0x6ab7c9);
+   if(v>=-3&&v<=13){
+    const p=toScreen({u,v}),n=hashCell(u,v,2);
+    diamond(g,u,v,n>.62?0x8ed9d4:n>.30?0x73c5cd:0x65b5c7);
+    // Little lily pads and flowers live far from the wooden crossing.
+    if((v<2||v>7)&&n>.84){
+     g.fillStyle(0x6e9d84,.68).fillEllipse(p.x-8,p.y+3,16,7);
+     g.fillStyle(0xf7e0de,.94).fillRect(p.x-10,p.y+1,4,3);
+    }
+    if(n>.58){
+     g.lineStyle(1,0xddf5e9,.22).lineBetween(p.x-21,p.y+2,p.x-8,p.y+2);
+    }
+   }
    continue;
   }
   if(!onLand)continue;
   tiles++;
   const p=toScreen({u,v}),center=routeCenter(u),distance=Math.abs(v-center);
-  let c=0xaec4a2;
+  // Nonrepeating, seeded micro-palette avoids giant checkerboard squares.
+  const grain=hashCell(u,v,3),variation=hashCell(u,v,4);
+  const palette:Record<RescueMapId,number[]>={
+   morning_garden:[0xb9d2a8,0xc8dbb0,0xd5e1bb,0xb2d1ab,0xcbdcac],
+   afternoon_meeting:[0xb9bf91,0xcdc99b,0xddcca5,0xb2bb91,0xd8c49b],
+   dusk_search:[0x7f958a,0x8da296,0x738e86,0x8b9d92,0x71877f],
+   night_neighborhood:[0x73848b,0x687e87,0x7e878f,0x6c7684,0x7d8288]
+  };
+  const shades=palette[map];
+  let c=shades[Math.floor(grain*shades.length)];
+  const isPath=distance<1.38;
+  const edge=distance>=1.38&&distance<2.15;
   if(map==='morning_garden'){
-   c=(u+v)%2?0xb5d3a5:0xd4dfb5;
-   if(distance<1.25)c=(u+v)%2?0xf2e5c2:0xf8eacb;
+   if(isPath)c=variation>.65?0xffe8c2:variation>.28?0xf4e4c5:0xe9dbc0;
+   else if(edge)c=variation>.5?0xd5d7ad:0xd9d9b5;
   }else if(map==='afternoon_meeting'){
-   c=(u+v)%2?0xc8bd96:0xe2c99f;
-   if(distance<1.5)c=(u+v)%2?0xe7ceb3:0xf6ddbc;
-   if(u>=27&&u<38&&distance>2.8)c=(u+v)%2?0xb6bd91:0xcbcda2;
+   if(isPath)c=variation>.7?0xf1d4b6:variation>.26?0xe5caaa:0xddc2a4;
+   else if(edge)c=variation>.5?0xc6bc99:0xcac2a2;
+   if(u>=27&&u<=37&&distance>2.8&&variation>.34)c=0xb5bc94;
   }else if(map==='dusk_search'){
-   c=(u+v)%2?0x778e85:0x8da59c;
-   if(distance<1.25)c=(u+v)%2?0xa49da9:0xbab1b1;
+   if(isPath)c=variation>.55?0xbcb1b4:0xa69da9;
+   else if(edge)c=0x9b9d97;
   }else{
-   c=(u+v)%2?0x6e7d84:0x76868a;
-   if(distance<1.75)c=(u+v)%2?0x9d9faa:0xb3aeb3;
-   if(v>7.7)c=(u+v)%2?0x676d7b:0x777987;
-   if(u>=71&&u<=81&&v>=6&&v<9.5)c=(u+v)%2?0x998d90:0xb2a49f;
+   if(isPath)c=variation>.58?0xb0a8aa:0x989ba6;
+   else if(edge)c=0x92979e;
+   if(v>7.7)c=variation>.55?0x737583:0x686e7b;
+   if(u>=71&&u<=81&&v>=6&&v<9.5)c=variation>.5?0xb2a29e:0x9d9092;
   }
   diamond(g,u,v,c);
-  if((u*7+v*13)%15===0){
+  paintGroundTexture(g,u,v,p,map,isPath);
+  if((u*7+v*13)%17===0){
    g.fillStyle(map==='morning_garden'?0xf4c0ce:0xe2bcbd,.52).fillRect(p.x+6,p.y+1,3,3);
   }
   if(map==='night_neighborhood'&&v>7.7&&u%4===0){
    g.fillStyle(0xded5b8,.57).fillRect(p.x-13,p.y-2,20,3);
+  }
+  // Cobblestone seams on the residential street; walkway is kept visible.
+  if(map==='night_neighborhood'&&v>7.7&&variation>.72){
+   g.lineStyle(1,0xa5a0a4,.25).lineBetween(p.x-11,p.y+5,p.x+10,p.y+5);
   }
  }
  // Irregular shoulders: no single rectangular floor exposed to the player.
