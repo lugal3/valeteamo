@@ -252,7 +252,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(this.story && this.story.locked()){this.clearInput();return;}
   if(this.story && this.storyStage!==this.story.stage())this.setStoryStage(this.story.stage());
   if(this.story && this.keys.E.isDown&&!this.storyActionPressed)this.storyInteract();
-  this.storyActionPressed=!!this.keys.E.isDown;
+  if(this.story)this.storyActionPressed=!!this.keys.E?.isDown;
   this.notes=this.notes.filter(note=>{const age=this.clock-note.at;if(age>=850){note.s.destroy();return false;}note.s.y=note.y-(this.reducedMotion?0:age/45);note.s.setAlpha(Math.min(1,(850-age)/200));return true;});
   if(this.dyingAt){const age=this.clock-this.dyingAt,key=`chibi-${this.character}-dead`;if(this.textures.exists(key))this.player.setTexture(key);this.player.setAlpha(Math.max(.25,1-age/800));if(!this.reducedMotion)this.player.setAngle(Math.min(65,age/10));if(age>650){this.ended=true;this.finish('dead');}return;}
   if(this.wonAt){if(!this.reducedMotion)this.player.setAngle(Math.sin(this.clock/90)*8);if(this.clock-this.wonAt>850){this.ended=true;this.finish('win');}return;}
