@@ -93,11 +93,11 @@ assert(pro.includes('prologue-curtain')&&pro.includes("setTransition({target,pha
 assert(!arcade.includes('storyVeil')&&pro.includes('className="prologue-night"'),
  'old misaligned grey rectangle must stay deleted');
 assert(src.includes('drawBridge(scene)')&&src.includes('water.clear()')&&
- src.includes('house(scene,78.7,9.0,true)')&&src.includes('destroy:()=>'),
+ src.includes('house(scene,NIGHT_HOUSE.center.u,NIGHT_HOUSE.center.v,true)')&&src.includes('destroy:()=>'),
  'animated river, accurate two-storey home and controlled scene cleanup');
 const house=fs.readFileSync('src/lab/house-layout.js','utf8');
 assert(house.includes('width:14,depth:12')&&house.includes('HEIGHT=3.15')&&
- src.includes('14×12 metres, 3.15m per floor')&&src.includes('5.9/14')&&
+ src.includes('14×12 metres, 3.15m per floor')&&src.includes('HOUSE_3D_REFERENCE.frontDoorX/HOUSE_3D_REFERENCE.width')&&
  src.includes('the OPEN intro window in')&&src.includes('The other south windows have barricade boards.'),
  'isometric entrance, facade and floor proportions must match the 3D layout');
 assert(!src.includes('new Phaser.Game'),'no new Phaser game or secondary renderer');
