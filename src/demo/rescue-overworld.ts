@@ -438,6 +438,14 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
  if(map==='morning_garden'){
   sign(scene,8,1.3,'RÍO ♡');
   bench(scene,18,8.5);
+  // Welcoming flowered path, cherry arch and riparian details.
+  for(const [u,v] of [[3.1,1.1],[7.6,8.2],[18.4,9.4],[21.3,1.0]])
+   cherryTree(scene,u,v);
+  for(const [u,v] of [[9.6,2.2],[10.6,8.4],[12.3,1.6],[14.2,9.4],[15.5,1.6]])
+   reeds(scene,u,v);
+  picketFence(scene,4.2,9.2,5);picketFence(scene,6.8,9.6,4);
+  gardenFeature(scene,3.7,8.7,'planter');gardenFeature(scene,18.2,.25,'picnic');
+  gardenFeature(scene,7.4,1.5,'rock');gardenFeature(scene,19,1.2,'rock');
  }else if(map==='afternoon_meeting'){
   bench(scene,28,9.8);bench(scene,36,.2);
   sign(scene,25,1,'CEREZOS');
@@ -445,6 +453,13 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   const plaza=scene.add.graphics().setDepth(.8),p=toScreen({u:32,v:4.6});
   plaza.fillStyle(0xf7e0bb,.23).fillEllipse(p.x,p.y,230,115);
   plaza.lineStyle(4,0xd7b2a7,.34).strokeEllipse(p.x,p.y,215,102);
+  for(const [u,v] of [[26.1,-.1],[29,10.1],[35.2,-.4],[39.1,9.7],[42.3,0]])
+   cherryTree(scene,u,v);
+  for(const [u,v] of [[27.7,.8],[31.8,10.7],[35.8,9.8],[42.6,8.4]])
+   gardenFeature(scene,u,v,'planter');
+  gardenFeature(scene,32.5,11.1,'picnic');
+  picketFence(scene,25.1,8.9,5);picketFence(scene,41.3,8.9,5);
+  gardenFeature(scene,24.9,1.8,'rock');
  }else if(map==='dusk_search'){
   sign(scene,49,.2,'SILENCIO');
   bench(scene,56,8.7);
@@ -453,6 +468,13 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    const p=toScreen({u,v:routeLimits(u).max+.4});
    creek.fillStyle((u%2)?0x659ca5:0x7eacaf,.65).fillEllipse(p.x,p.y,85,17);
   }
+  for(const [u,v] of [[47,9.3],[51,-.5],[56,9.9],[61,.3]])
+   cherryTree(scene,u,v,true);
+  for(const [u,v] of [[49,9.9],[53,10],[57,9.9],[60,9.5]])
+   reeds(scene,u,v);
+  for(const [u,v] of [[50.1,-.1],[54,.5],[59,.6],[63,9.3]])
+   gardenFeature(scene,u,v,'rock');
+  gardenFeature(scene,60,9.2,'lantern');
  }else{
   sign(scene,68,.3,'VILLA');
   for(const u of [67,72,77,81])lamp(scene,u,1.8);
@@ -464,6 +486,14 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    const p=toScreen({u,v:7.5});
    sidewalk.lineStyle(2,0xe7ded0,.6).lineBetween(p.x-20,p.y,p.x+21,p.y);
   }
+  picketFence(scene,68.2,9.0,7);
+  picketFence(scene,72.4,11.7,6);
+  picketFence(scene,81.4,9.2,5);
+  for(const [u,v] of [[71.1,9.8],[75.2,11.3],[79.6,10.7]])
+   gardenFeature(scene,u,v,'planter');
+  gardenFeature(scene,66.8,8.4,'rock');
+  gardenFeature(scene,73.3,2.1,'lantern');
+  gardenFeature(scene,80.3,3.0,'lantern');
  }
  // A spatially legible exit: pearly luminous boundary leading to another map.
  if(cfg.exit){
