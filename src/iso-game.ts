@@ -9,6 +9,9 @@ import {Sound} from './audio';
 import {RESCUE_FEEL,feelMotion,feelGait,feelCameraOffset,
  feelSurfaceAt,FEEL_FOOTSTEP,feelCompanion,feelFacingToTarget,
  type FeelSurface} from './demo/rescue-game-feel';
+import {storyBubble,storyboardBeat,kidnappingReaction,
+ storyActorFacing,storyActorIdle,kidnappingFrameFocus,
+ smoothCinematicFocus,type RescueEmotion} from './demo/rescue-performance';
 import {ABDUCTION_TIMING,abductionFrame,captorFrame,captorTexture,
  installRescueAbductionTextures,vanTexture,VAN_NIGHT_POSITION,VAN_PLATE,
  type AbductionPhase} from './demo/abduction-van';
@@ -86,6 +89,9 @@ export class IsoAdventure extends Phaser.Scene {
  storyFootprints:{x:number;y:number;at:number;kind:FeelSurface;side:number}[]=[];
  storyCompanionClock=0;storyFollowHeading={x:1,y:0};
  storyCompanionFacing:'left'|'right'|'up'|'down'='down';
+ storyStageAt=0;storyBeatPlayed=false;storyTargetCuePlayed=false;
+ storyDramaOffset={x:0,y:0};storyLouisFacing:'up'|'down'|'left'|'right'='down';
+ storyBubbles:{sprite:Phaser.GameObjects.Text;at:number;anchor:'kitty'|'louis'|'luis'|'target'|'van'}[]=[];
  constructor(public level:1|2|3,public character:CharacterId,public report:(h:AdventureHud)=>void,public finish:(outcome:'win'|'dead')=>void,public onPause:(v:boolean)=>void,public audio:Sound,public ready:()=>void,public progress:(n:number)=>void=()=>{},public story?:IsoStoryBridge){super('iso-adventure');}
  preload(){const path=CHARACTERS[this.character].chibiSpriteSheet;if(path)this.load.spritesheet(`chibi-${this.character}-sheet`,path,{frameWidth:32,frameHeight:40});else{this.load.image(`${this.character}-reference-source`,new URL(`./sprites/${this.character}-reference-sheet.png`,document.baseURI).href);this.load.image(`${this.character}-walk-source`,new URL(`./sprites/${this.character}-walk-sheet.png`,document.baseURI).href);}if(this.story){
  this.load.image('louis-reference-source',new URL('./sprites/louis-reference-sheet.png',document.baseURI).href);
@@ -129,7 +135,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(!this.story||map===this.storyMap)return;
   this.storyWorld?.destroy();
   this.houseRoute=[];this.houseLastHint='';
-  this.resetStoryFeel();
+  this.resetStoryFeel();this.clearStoryBubbles();
+  this.storyDramaOffset={x:0,y:0};
   this.storyVanInspected=false;this.storyVanNear=false;
   this.storyMap=map;
   this.storyWorld=this.createStoryWorld(map);
@@ -161,10 +168,12 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(!this.story||(!force&&this.storyStage===stage))return;
   const previousLouis=this.storyLouis?.active?
    {x:this.storyLouis.x,y:this.storyLouis.y}:undefined;
-  this.storyStage=stage;this.storyWalkTriggered=false;this.storyVictoryEmitted=false;
+  this.storyStage=stage;this.storyStageAt=this.clock;
+  this.storyBeatPlayed=false;this.storyTargetCuePlayed=false;
+  this.storyWalkTriggered=false;this.storyVictoryEmitted=false;
   this.storyActionPressed=false;this.storyNear='';
   this.houseRoute=[];this.houseLastHint='';
-  this.resetStoryFeel();
+  this.resetStoryFeel();this.clearStoryBubbles();
   for(const o of this.storyObjects)o.destroy();this.storyObjects=[];
   for(const e of this.enemies){e.s.destroy();e.shadow.destroy();}this.enemies=[];
   for(const shot of this.shots)shot.s.destroy();this.shots=[];
@@ -270,6 +279,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.facing=feelFacingToTarget(target.x-foot.x,target.y-foot.y,this.facing);
   this.storyInteractUntil=this.clock+RESCUE_FEEL.interactMs;
   this.storyVelocity={u:0,v:0};this.storyStepTravel=0;
+  this.showStoryBubble('kitty','discover');
   this.audio.tone(810,.085,.010,'sine');
   if(this.storyVanNear){
    this.storyVanInspected=true;this.houseRoute=[];
@@ -355,6 +365,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.storyLuisFarewell=true;this.story?.near('');this.storyNear='';
   this.clearInput();
   this.storyLuisMotion=makeLuisMotion('farewell-wave',this.storyTarget,done);
+  this.showStoryBubble('luis','farewell');
   this.story?.guide('Luis se despide con la mano y vuelve caminando al sendero ♡');
   this.luisHeart(this.storyTarget);
  }
@@ -379,6 +390,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const completed=motion.kind,done=motion.done;
   if(completed==='arriving'){
    this.storyLuisMotion=makeLuisMotion('greeting',this.storyTarget);
+   this.showStoryBubble('luis','affection');
    this.luisHeart(this.storyTarget);
   }else if(completed==='greeting'){
    this.storyLuisMotion=undefined;this.storyLuisReady=true;
@@ -464,6 +476,9 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const frame=abductionFrame(shot.elapsed,shot.origin),prior=shot.phase;
   shot.phase=frame.phase;
   if(prior!==frame.phase){
+   const reaction=kidnappingReaction(frame.phase,prior);
+   if(reaction)this.showStoryBubble('kitty',reaction);
+   if(frame.phase==='struggle')this.showStoryBubble('louis','fear');
    if(frame.phase==='doors')this.audio.tone(270,.17,.036,'sawtooth');
    if(frame.phase==='struggle'){
     if(!this.reducedMotion)this.cameras.main.shake(210,.0018);
@@ -702,6 +717,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  update(_time:number,delta:number){
   if(this.paused||this.pendingOffer||this.ended)return;const dt=Math.min(delta,40),seconds=dt/1000;this.clock+=dt;
   if(this.story){
+   this.updateStoryPerformance(dt);
    const ecologyCue=this.storyWorld?.update(this.clock,this.storyDusk,this.p);
    if(ecologyCue)this.audio.playRescueAmbience?.(ecologyCue.kind,ecologyCue.pan);
    // Physical NPC and kidnapping motion keeps running during narrative locks.
