@@ -68,12 +68,23 @@ async function play(){
     river:!!scene.storyWorld?.water,stage:window.__valePrologue.stage()};
   });
   assert.equal(intro.area,'sendero','the story starts on the new path');
+  assert.equal(await page.evaluate(()=>window.__valePrologue.map()),'morning_garden',
+   'start in the independent bright morning map');
+  assert.equal(await page.evaluate(()=>window.__valePrologue.dusk().alpha),0,
+   'sunny starting world has no grey darkness overlay');
   assert.equal(intro.npc,false,'Kitty starts ALONE; NPCs appear after exploring');
   assert.equal(intro.river,true,'animated water must be built in the original Phaser scene');
   assert.equal(await convo.isVisible(),false,'no intrusive dialog until after the bridge');
   await page.screenshot({path:'artifacts/story-acts1-2-introduction.png'});
-  // Exercise the exploration threshold rather than auto-starting combat.
+  // Reaching the luminous exit must trigger a real full-screen black fade.
   await page.evaluate(()=>window.__valePrologue.teleport(999));
+  await game.locator('xpath=self::*[@data-transition="out"]').waitFor({timeout:5000});
+  assert.equal(await page.evaluate(()=>window.__valePrologue.changing()),true,
+   'Phaser input is gated while the screen fades');
+  await page.waitForFunction(()=>window.__valePrologue.map()==='afternoon_meeting',null,{timeout:12000});
+  await page.locator('.story-prologue[data-transition="none"]').waitFor({timeout:12000});
+  assert.equal(await page.evaluate(()=>window.__valePrologue.world().map),'afternoon_meeting');
+  await page.screenshot({path:'artifacts/story-afternoon-map.png'});
   await finishDialogue();
   await game.locator('xpath=self::*[@data-prologue-stage="defend"]').waitFor({timeout:10000});
   // Original Corazones controls: WASD for movement, arrows for hearts.
@@ -95,11 +106,22 @@ async function play(){
   await page.screenshot({path:'artifacts/story-abduction-nightfall.png'});
   await finishDialogue(); // Kitty and Luis text conversation
   await game.locator('xpath=self::*[@data-prologue-stage="ribbon"]').waitFor();
+  assert.equal(await page.evaluate(()=>window.__valePrologue.map()),'afternoon_meeting',
+   'abduction stays in afternoon until Kitty finds the EXIT');
+  await page.evaluate(()=>window.__valePrologue.exit());
+  await page.waitForFunction(()=>window.__valePrologue.map()==='dusk_search',null,{timeout:12000});
+  await page.locator('.story-prologue[data-transition="none"]').waitFor({timeout:12000});
+  await page.screenshot({path:'artifacts/story-dusk-puzzles-map.png'});
   await step('ribbon',1578,/Examinar Pulsera/);
   await step('petals',1910,/Examinar Pétalos/);
   await step('wheel',2224,/Examinar Huellas/);
   await game.locator('xpath=self::*[@data-prologue-stage="door"]').waitFor();
-  await page.waitForTimeout(2100);
+  assert.equal(await page.evaluate(()=>window.__valePrologue.map()),'dusk_search');
+  await page.evaluate(()=>window.__valePrologue.exit());
+  await page.waitForFunction(()=>window.__valePrologue.map()==='night_neighborhood',null,{timeout:12000});
+  await page.locator('.story-prologue[data-transition="none"]').waitFor({timeout:12000});
+  await page.screenshot({path:'artifacts/story-night-neighborhood-map.png'});
+  await page.waitForTimeout(1100);
   const dusk=await page.evaluate(()=>window.__valePrologue.dusk());
   const night=await page.locator('.prologue-night').evaluate(element=>{
    const bounds=element.getBoundingClientRect();
@@ -120,7 +142,7 @@ async function play(){
   await page.locator('#lab-canvas').waitFor({state:'visible',timeout:26000});
   await page.locator('.lab-window-intro:not(.lab-hidden)').waitFor({state:'visible',timeout:15000});
   await page.screenshot({path:'artifacts/story-to-house-3d.png'});
-  assert.deepEqual(errors,[],'no runtime JS errors across the entire 2D→3D sequence');
+  assert.deepEqual(errors,[],'no runtime JS errors across FOUR separate 2D maps and the real 3D house');
   await context.close();
   console.log('PASS: playable prologue introduction, shooting, Louis/Luis RPG dialogue, kidnapping, 3 clues, locked door and real 3D window.');
  }finally{await browser?.close();await server.close();}
