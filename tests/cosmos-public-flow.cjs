@@ -69,7 +69,7 @@ async function main(){
   await page.getByRole('dialog',{name:/Comenzamos nuestra aventura/}).waitFor();
   await page.screenshot({path:'artifacts/public-heart-2d-choice.png'});
   await page.getByRole('button',{name:/Comenzar juego 2D/}).click();
-  await page.locator('.story-prologue .prologue-stage canvas').waitFor({timeout:25000});
+  await page.locator('.story-prologue .adventure-canvas canvas').waitFor({timeout:25000});
   await page.getByRole('dialog',{name:'Conversación'}).waitFor({timeout:12000});
   assert.equal(await page.locator('.story-prologue').getAttribute('data-prologue-stage'),'intro');
   await page.screenshot({path:'artifacts/public-unified-story-prologue.png'});
