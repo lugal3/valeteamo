@@ -6,6 +6,9 @@ import {installReferenceCharacter} from './reference-characters';
 import {facingOf,type Facing} from './animation';
 import {ISO,constrain,isoDistance,screenVector,toScreen,type IsoPoint} from './isometric';
 import {Sound} from './audio';
+import {RESCUE_FEEL,feelMotion,feelGait,feelCameraOffset,
+ feelSurfaceAt,FEEL_FOOTSTEP,feelCompanion,feelFacingToTarget,
+ type FeelSurface} from './demo/rescue-game-feel';
 import {ABDUCTION_TIMING,abductionFrame,captorFrame,captorTexture,
  installRescueAbductionTextures,vanTexture,VAN_NIGHT_POSITION,VAN_PLATE,
  type AbductionPhase} from './demo/abduction-van';
@@ -77,6 +80,11 @@ export class IsoAdventure extends Phaser.Scene {
  storyActionPressed=false;storyNear='';storyWalkTriggered=false;storyVictoryEmitted=false;
  storyTarget:IsoPoint={u:22,v:4.5};
  houseRoute:IsoPoint[]=[];houseLastHint='';
+ storyVelocity:IsoPoint={u:0,v:0};
+ storyLookAhead={x:0,y:0};
+ storyStepTravel=0;storyInteractUntil=0;
+ storyFootprints:{x:number;y:number;at:number;kind:FeelSurface;side:number}[]=[];
+ storyCompanionClock=0;storyFollowHeading={x:1,y:0};
  constructor(public level:1|2|3,public character:CharacterId,public report:(h:AdventureHud)=>void,public finish:(outcome:'win'|'dead')=>void,public onPause:(v:boolean)=>void,public audio:Sound,public ready:()=>void,public progress:(n:number)=>void=()=>{},public story?:IsoStoryBridge){super('iso-adventure');}
  preload(){const path=CHARACTERS[this.character].chibiSpriteSheet;if(path)this.load.spritesheet(`chibi-${this.character}-sheet`,path,{frameWidth:32,frameHeight:40});else{this.load.image(`${this.character}-reference-source`,new URL(`./sprites/${this.character}-reference-sheet.png`,document.baseURI).href);this.load.image(`${this.character}-walk-source`,new URL(`./sprites/${this.character}-walk-sheet.png`,document.baseURI).href);}if(this.story){
  this.load.image('louis-reference-source',new URL('./sprites/louis-reference-sheet.png',document.baseURI).href);
@@ -120,6 +128,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(!this.story||map===this.storyMap)return;
   this.storyWorld?.destroy();
   this.houseRoute=[];this.houseLastHint='';
+  this.resetStoryFeel();
   this.storyVanInspected=false;this.storyVanNear=false;
   this.storyMap=map;
   this.storyWorld=this.createStoryWorld(map);
@@ -154,6 +163,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.storyStage=stage;this.storyWalkTriggered=false;this.storyVictoryEmitted=false;
   this.storyActionPressed=false;this.storyNear='';
   this.houseRoute=[];this.houseLastHint='';
+  this.resetStoryFeel();
   for(const o of this.storyObjects)o.destroy();this.storyObjects=[];
   for(const e of this.enemies){e.s.destroy();e.shadow.destroy();}this.enemies=[];
   for(const shot of this.shots)shot.s.destroy();this.shots=[];
@@ -254,6 +264,12 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  }
  storyInteract(){
   if(!this.story||this.story.locked()||luisMotionIsBlocking(this.storyLuisMotion)||!this.storyNear)return;
+  const interactionAt=this.storyVanNear?VAN_NIGHT_POSITION:this.storyTarget;
+  const foot=toScreen(this.p),target=toScreen(interactionAt);
+  this.facing=feelFacingToTarget(target.x-foot.x,target.y-foot.y,this.facing);
+  this.storyInteractUntil=this.clock+RESCUE_FEEL.interactMs;
+  this.storyVelocity={u:0,v:0};this.storyStepTravel=0;
+  this.audio.tone(810,.085,.010,'sine');
   if(this.storyVanNear){
    this.storyVanInspected=true;this.houseRoute=[];
    this.audio.ui();this.audio.tone(460,.19,.033,'triangle');
@@ -539,7 +555,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    ribbon:'Examinar Pulsera',petals:'Examinar Pétalos',wheel:'Examinar Huellas',
    door:'Probar puerta',window:'Entrar por la ventana'
   };
-  const canInteract=stage!=='talk-luis'||this.storyLuisReady;
+  const canInteract=(stage!=='talk-luis'||this.storyLuisReady)&&
+   (stage!=='talk-louis'||!this.storyLouisWalk);
   const vanIsClose=this.storyMap==='night_neighborhood'&&
    ['door','window'].includes(stage)&&
    isoDistance(this.p,VAN_NIGHT_POSITION)<2.0;
@@ -559,6 +576,63 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    }
   }
   this.checkStoryExit();
+ }
+ resetStoryFeel(){
+  this.storyVelocity={u:0,v:0};
+  this.storyLookAhead={x:0,y:0};
+  this.storyStepTravel=0;this.storyInteractUntil=0;
+  this.storyFootprints=[];
+  this.storyCompanionClock=0;this.storyFollowHeading={x:1,y:0};
+  this.cameras?.main?.setFollowOffset?.(0,0);
+ }
+ updateStoryCameraFeel(dt:number){
+  this.storyLookAhead=feelCameraOffset(this.storyLookAhead,this.storyVelocity,dt,this.reducedMotion);
+  // Preserve exactly the original zoom/follow formula; no camera shake or
+  // dramatic forced pans during ordinary exploration.
+  this.cameras.main.setFollowOffset?.(-this.storyLookAhead.x,-this.storyLookAhead.y);
+ }
+ storyFootfall(deltaDistance:number){
+  this.storyStepTravel+=deltaDistance;
+  if(this.storyStepTravel<RESCUE_FEEL.footstepDistance)return;
+  this.storyStepTravel%=RESCUE_FEEL.footstepDistance;
+  const ground=feelSurfaceAt(this.storyMap,this.p);
+  const settings=FEEL_FOOTSTEP[ground];
+  this.audio.tone(settings.pitch+(this.storyFootprints.length%3)*10,
+   ground==='wood'?.07:.047,settings.volume,
+   ground==='wood'?'triangle':'sine');
+  if(!this.reducedMotion){
+   const point=toScreen(this.p),side=this.storyFootprints.length%2?1:-1;
+   this.storyFootprints.push({
+    x:point.x-side*3,y:point.y+1,at:this.clock,kind:ground,side
+   });
+   if(this.storyFootprints.length>12)this.storyFootprints.shift();
+  }
+ }
+ renderStoryKitty(dt:number,firing=false,recoil=0,hurt=false){
+  const gait=feelGait(this.storyVelocity,this.moveClock,this.clock,this.reducedMotion);
+  const moving=gait.walking;
+  const dir=this.facing==='left'?'right':this.facing;
+  const touch=this.storyInteractUntil>this.clock;
+  const frame=touch?0:gait.frame;
+  const hurtKey=`chibi-${this.character}-hurt`;
+  const texture=hurt&&this.textures.exists(hurtKey)?hurtKey:
+   `chibi-${this.character}-${dir}-${hurt?5:frame}${firing&&!hurt?'-shoot':''}`;
+  this.positionPlayer();
+  const duration=RESCUE_FEEL.interactMs,progress=touch?
+   Math.min(1,(this.storyInteractUntil-this.clock)/duration):0;
+  if(!this.reducedMotion){
+   this.player.y-=gait.footLift+Math.sin((1-progress)*Math.PI)*2.3*(touch?1:0);
+  }
+  if(this.player.texture.key!==texture)this.player.setTexture(texture);
+  const reach=touch&&!this.reducedMotion?Math.sin((1-progress)*Math.PI):0;
+  this.player.setFlipX(this.facing==='left')
+   .setScale(1.3*(1+recoil*.06+gait.squash+reach*.033),
+    1.3*(1-recoil*.08-gait.squash-reach*.055))
+   .setAlpha(this.clock<this.inv?
+    (this.reducedMotion?.7:Math.floor(this.clock/90)%2?.45:1):1)
+   .setAngle(hurt&&!this.reducedMotion?Math.sin(this.clock/35)*10:
+    this.reducedMotion?0:gait.lean+reach*(this.facing==='left'?-4:4));
+  if(hurt)this.player.setTint(0xffa8bb);else this.player.clearTint();
  }
  fitCamera(width:number,height:number){if(width<=0||height<=0)return;
   const camera=this.cameras.main;
