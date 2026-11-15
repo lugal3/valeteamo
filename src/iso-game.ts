@@ -405,7 +405,12 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(this.storyAbduction)return;
   if(!this.storyLouis?.active){done();return;}
   this.clearInput();this.story?.near('');this.storyNear='';
-  const origin={...this.p},pose=abductionFrame(0,origin),vp=toScreen(pose.van);
+  // Anchor the whole chase to Louis's REAL screen-space foot position, not
+  // an invented spot near Kitty. This avoids the last visible 20–40px snap.
+  const wx=(this.storyLouis.x-ISO.originX)/(ISO.tileW/2);
+  const wy=(this.storyLouis.y-ISO.originY)/(ISO.tileH/2);
+  const origin={u:(wx+wy)/2-.32,v:(wy-wx)/2-.20};
+  const pose=abductionFrame(0,origin),vp=toScreen(pose.van);
   const van=this.add.image(vp.x,vp.y,vanTexture(false))
    .setOrigin(.5,.88).setScale(1.02).setDepth(vp.y+10);
   const createCaptor=(mask:'fox'|'rabbit')=>{
