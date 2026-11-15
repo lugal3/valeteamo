@@ -8,7 +8,8 @@ import {ISO,constrain,isoDistance,screenVector,toScreen,type IsoPoint} from './i
 import {Sound} from './audio';
 import {installProloguePeople} from './demo/prologue-art';
 import {buildRescueOverworld,constrainRescue,darknessAt,STORY_POSITIONS,storyArrivalPoint,
- type RescueOverworld,type RouteArea} from './demo/rescue-overworld';
+ mapForStage,exitReady,RESCUE_SCENES,
+ type RescueMapId,type RescueOverworld,type RouteArea} from './demo/rescue-overworld';
 
 export type AdventureOffer={name:string,description:string};
 export type AdventureHud={hp:number,objective:string,complete:number,total:number,bombs:number,shield:boolean,offer?:AdventureOffer,bossHp?:number,bossMax?:number};
@@ -38,6 +39,8 @@ export type IsoStoryBridge={
  guide:(message:string)=>void;
  dusk:(value:number)=>void;
  area:(area:RouteArea)=>void;
+ map:(map:RescueMapId)=>void;
+ travel:(map:RescueMapId,commit:()=>void)=>void;
 };
 type StoryActor=Phaser.GameObjects.Image;
 
@@ -55,7 +58,7 @@ export class IsoAdventure extends Phaser.Scene {
  storyObjects:Phaser.GameObjects.GameObject[]=[];
  storyLouis?:StoryActor;storyLuis?:StoryActor;storyVillain?:StoryActor;
  storyWorld?:RescueOverworld;storyDusk=0;storyGuideStep=-1;
- storyArea:RouteArea='sendero';
+ storyArea:RouteArea='sendero';storyMap:RescueMapId='morning_garden';storyExitPending=false;
  storyActionPressed=false;storyNear='';storyWalkTriggered=false;storyVictoryEmitted=false;
  storyTarget:IsoPoint={u:22,v:4.5};
  constructor(public level:1|2|3,public character:CharacterId,public report:(h:AdventureHud)=>void,public finish:(outcome:'win'|'dead')=>void,public onPause:(v:boolean)=>void,public audio:Sound,public ready:()=>void,public progress:(n:number)=>void=()=>{},public story?:IsoStoryBridge){super('iso-adventure');}
@@ -66,10 +69,10 @@ export class IsoAdventure extends Phaser.Scene {
 this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  create(){
   buildArt(this);buildChibi(this);if(!CHARACTERS[this.character].chibiSpriteSheet)installReferenceCharacter(this,this.character);this.floor=this.add.graphics().setDepth(0);this.fx=this.add.graphics().setDepth(1000);
-  if(this.story)this.storyWorld=buildRescueOverworld(this,this.floor,{
-   flower:(u,v)=>this.flower(u,v),shrub:(u,v)=>this.shrub(u,v),
-   tree:(u,v)=>this.tree(u,v),mushroom:(u,v)=>this.mushroom(u,v)
-  });else this.drawFloor();
+  if(this.story){
+   this.storyMap=mapForStage(this.story.stage());
+   this.storyWorld=this.createStoryWorld(this.storyMap);
+  }else this.drawFloor();
   this.shadow=this.add.ellipse(0,0,30,10,0x425c4c,.25);this.player=this.add.sprite(0,0,`chibi-${this.character}-down-0`).setOrigin(.5,.9).setScale(1.3);
   this.p={u:.7,v:.7};this.positionPlayer();this.fitCamera(this.scale.width,this.scale.height);this.scale.on('resize',(size:{width:number,height:number})=>this.fitCamera(size.width,size.height));this.keys=this.input.keyboard!.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,B,SPACE,ESC,E') as Record<string,Phaser.Input.Keyboard.Key>;
   this.input.on('pointerdown',(p:Phaser.Input.Pointer)=>{if(this.paused||this.pendingOffer||this.ended||this.wonAt)return;if(p.wasTouch){const stick={id:p.id,x:p.x,y:p.y,dx:0,dy:0};if(p.x<this.scale.width/2&&!this.left)this.left=stick;else if(p.x>=this.scale.width/2&&!this.right)this.right=stick;}else this.mouse=true;});
@@ -89,9 +92,42 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.sync();this.progress(100);this.ready();this.story?.ready();
  }
 
- // Misma escena, sprites, UI, zoom y controles de 2D Corazones.
- // La aventura narrativa recorre un mundo largo sin teletransportar a Kitty
- // cuando cambia el objetivo: únicamente aparecen los hitos del recorrido.
+ // Sólo sustituye el TERRENO. Sprite, Phaser.Scene, cámara y controles son los del arcade.
+ createStoryWorld(map:RescueMapId){
+  return buildRescueOverworld(this,this.floor,{
+   flower:(u,v)=>this.flower(u,v),shrub:(u,v)=>this.shrub(u,v),
+   tree:(u,v)=>this.tree(u,v),mushroom:(u,v)=>this.mushroom(u,v)
+  },map);
+ }
+ changeStoryMap(map:RescueMapId){
+  if(!this.story||map===this.storyMap)return;
+  this.storyWorld?.destroy();
+  this.storyMap=map;
+  this.storyWorld=this.createStoryWorld(map);
+  this.storyExitPending=false;this.storyGuideStep=-1;
+  this.clearInput();
+  this.p={...RESCUE_SCENES[map].spawn};this.positionPlayer();
+  // Instant camera reposition happens under the full-screen black fade.
+  const xy=toScreen(this.p);this.cameras.main.centerOn(xy.x,xy.y);
+  if(this.storyStage!=='intro')this.setStoryStage(this.storyStage,true);
+  this.story.map(map);this.story.area(this.storyWorld.area(this.p.u));
+  const dusk=darknessAt(this.p.u,this.storyStage,map);
+  this.storyDusk=dusk;this.story.dusk(dusk);
+ }
+ checkStoryExit(){
+  if(!this.story||this.storyExitPending)return false;
+  const def=RESCUE_SCENES[this.storyMap],exit=def.exit;
+  if(!exit||!exitReady(this.storyMap,this.storyStage))return false;
+  if(this.p.u<exit.u||Math.abs(this.p.v-exit.v)>2.0)return false;
+  this.storyExitPending=true;this.clearInput();
+  this.story.travel(exit.to,()=>{
+   this.changeStoryMap(exit.to);
+   if(exit.to==='afternoon_meeting'&&this.storyStage==='intro')this.story?.arrive();
+  });
+  return true;
+ }
+ // Cada capítulo tiene un terreno propio, una salida brillante y su iluminación.
+ // La historia conserva los sprites del Corazones original; no recreamos el motor.
  setStoryStage(stage:IsoStoryStage,force=false){
   if(!this.story||(!force&&this.storyStage===stage))return;
   this.storyStage=stage;this.storyWalkTriggered=false;this.storyVictoryEmitted=false;
@@ -104,7 +140,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.storyLouis=undefined;this.storyLuis=undefined;this.storyVillain=undefined;
   this.story.near('');
   if(force)this.p=storyArrivalPoint(stage);
-  this.p=constrainRescue(this.p);this.positionPlayer();
+  this.p=constrainRescue(this.p,this.storyMap);this.positionPlayer();
+  this.story.map(this.storyMap);
   const startArea=this.storyWorld?.area(this.p.u);
   if(startArea){this.storyArea=startArea;this.story.area(startArea);}
   this.total=stage==='defend'?3:0;this.collected=0;
@@ -136,12 +173,15 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    this.storyLouis=actor('louis',{u:35.5,v:4.6});
    marker('✿',this.storyTarget);
   }
-  if(stage==='disappearance')this.storyLouis=actor('louis',{u:43.9,v:4.6});
+  if(stage==='disappearance'){
+   // The kidnapping must appear in Kitty's CURRENT clearing, not off-camera.
+   this.storyLouis=actor('louis',{u:this.p.u+.25,v:this.p.v+.20});
+  }
   if(['ribbon','petals','wheel'].includes(stage)){
    marker(stage==='ribbon'?'✧':stage==='petals'?'✿':'⌁',this.storyTarget);
   }
   if(stage==='door'||stage==='window')marker(stage==='door'?'⚿':'✧',this.storyTarget);
-  const dark=darknessAt(this.p.u,stage);
+  const dark=darknessAt(this.p.u,stage,this.storyMap);
   if(Math.abs(dark-this.storyDusk)>.01){this.storyDusk=dark;this.story.dusk(dark);}
   this.audio.setTheme(stage==='defend'?'battle':dark>.48?'final':'garden');
   this.sync();
@@ -152,8 +192,17 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  }
  storyTeleportForTest(_unused:number){
   if(!this.story)return;
-  const target=this.storyStage==='intro'?{u:21.7,v:4.45}:this.storyTarget;
-  this.p=constrainRescue(target);this.positionPlayer();this.updateStoryActors(0);
+  const target=this.storyStage==='intro'?
+   {...RESCUE_SCENES.morning_garden.exit!}:this.storyTarget;
+  this.p=constrainRescue(target,this.storyMap);
+  this.positionPlayer();this.updateStoryActors(0);
+ }
+ storyExitForTest(){
+  if(!this.story)return;
+  const exit=RESCUE_SCENES[this.storyMap].exit;
+  if(!exit)return;
+  this.p=constrainRescue(exit,this.storyMap);this.positionPlayer();
+  this.updateStoryActors(0);
  }
  playStoryAbduction(done:()=>void){
   if(!this.storyLouis){done();return;}
@@ -174,12 +223,12 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const stage=this.storyStage;
   const area=this.storyWorld?.area(this.p.u);
   if(area&&area!==this.storyArea){this.storyArea=area;this.story.area(area);}
-  const dusk=darknessAt(this.p.u,stage);
+  const dusk=darknessAt(this.p.u,stage,this.storyMap);
   if(Math.abs(dusk-this.storyDusk)>.018){
    this.storyDusk=dusk;this.story.dusk(dusk);
   }
   if(stage==='intro'){
-   // Entrada sin NPC ni diálogo bloqueante; el aprendizaje sucede al caminar.
+   // No-dialogue tutorial is spatial and limited to the daylight garden.
    const step=this.p.u>=16?3:this.p.u>=9?2:this.p.u>=4?1:0;
    if(step!==this.storyGuideStep){
     this.storyGuideStep=step;
@@ -191,9 +240,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
     ];
     this.story.guide(hints[step]);
    }
-   if(!this.storyWalkTriggered&&this.p.u>=21.7){
-    this.storyWalkTriggered=true;this.story.arrive();
-   }
+   this.checkStoryExit();
    return;
   }
   if(stage==='walk-together'&&this.storyLouis){
@@ -214,6 +261,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   };
   const target=labels[stage]&&isoDistance(this.p,this.storyTarget)<1.15?labels[stage]!:'';
   if(target!==this.storyNear){this.storyNear=target;this.story.near(target);}
+  this.checkStoryExit();
  }
  fitCamera(width:number,height:number){if(width<=0||height<=0)return;
   const camera=this.cameras.main;
@@ -278,7 +326,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   let x=+this.keys.D.isDown-+this.keys.A.isDown,y=+this.keys.S.isDown-+this.keys.W.isDown;
   if(this.left){x=this.left.dx;y=this.left.dy;if(Math.hypot(x,y)<7)x=y=0;}
   const wantsMove=Math.hypot(x,y)>.1,move=screenVector(x,y),strength=this.left?Math.min(1,Math.hypot(x,y)/45):1;let moving=false;if(wantsMove){const candidate={u:this.p.u+move.u*2.1*seconds*strength,v:this.p.v+move.v*2.1*seconds*strength};
-   const next=this.story?constrainRescue(candidate):constrain(candidate);moving=isoDistance(next,this.p)>.001;this.p=next;if(moving){this.moveClock+=dt*(.45+.55*strength);if(this.moveClock-this.lastStep>250){this.lastStep=this.moveClock;this.burst(this.p,0xf8e8ca);this.audio.tone(245,.04,.004,'triangle');}}else{this.moveClock=0;this.lastStep=0;}this.facing=facingOf(x,y,this.facing);}else{this.moveClock=0;this.lastStep=0;}
+   const next=this.story?constrainRescue(candidate,this.storyMap):constrain(candidate);moving=isoDistance(next,this.p)>.001;this.p=next;if(moving){this.moveClock+=dt*(.45+.55*strength);if(this.moveClock-this.lastStep>250){this.lastStep=this.moveClock;this.burst(this.p,0xf8e8ca);this.audio.tone(245,.04,.004,'triangle');}}else{this.moveClock=0;this.lastStep=0;}this.facing=facingOf(x,y,this.facing);}else{this.moveClock=0;this.lastStep=0;}
   let ax=+this.keys.RIGHT.isDown-+this.keys.LEFT.isDown,ay=+this.keys.DOWN.isDown-+this.keys.UP.isDown;
   if(this.right){ax=this.right.dx;ay=this.right.dy;if(Math.hypot(ax,ay)<8)ax=ay=0;}else if(this.mouse){const point=toScreen(this.p),aim=this.cameras.main.getWorldPoint(this.input.activePointer.x,this.input.activePointer.y);ax=aim.x-point.x;ay=aim.y-point.y;}
   const firing=Math.hypot(ax,ay)>.1&&this.level!==1;if(firing){this.facing=facingOf(ax,ay,this.facing);if(this.clock-this.last>300){this.last=this.clock;const aim=screenVector(ax,ay),length=Math.hypot(ax,ay);this.shotDir={x:ax/length,y:ay/length};this.shoot(this.p,aim.u*4,aim.v*4);this.audio.tone(700,.04,.015);}}
@@ -293,7 +341,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    const du=this.p.u-e.p.u,dv=this.p.v-e.p.v,d=Math.hypot(du,dv)||1;
    if(d>1.2){
     const proposed={u:e.p.u+du/d*(e.boss?.45:.65)*seconds,v:e.p.v+dv/d*(e.boss?.45:.65)*seconds};
-    e.p=this.story?constrainRescue(proposed):constrain(proposed);
+    e.p=this.story?constrainRescue(proposed,this.storyMap):constrain(proposed);
    }
    const xy=toScreen(e.p),bounce=this.reducedMotion?0:Math.abs(Math.sin(this.clock/250+e.phase))*2;e.s.setPosition(xy.x,xy.y-bounce).setDepth(xy.y).setTexture(`${e.kind}-${Math.floor(this.clock/160)%4}`).setFlipX(du-dv<0);e.shadow.setPosition(xy.x,xy.y).setDepth(xy.y-1);
    if(this.clock<e.flash)e.s.setTint(0xffc5d9);else if(this.clock>e.next-450)e.s.setTint(0xf2c1dd);else e.s.clearTint();
@@ -304,8 +352,10 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    }
   }
   for(const shot of [...this.shots]){shot.life-=dt;shot.p.u+=shot.du*seconds;shot.p.v+=shot.dv*seconds;const xy=toScreen(shot.p);shot.s.setPosition(xy.x,xy.y-9).setDepth(xy.y+1);
-   const maxU=this.story?81:ISO.size,maxV=this.story?16:ISO.size,minV=this.story?-6:-.5;
-   let remove=shot.life<=0||shot.p.u<-.5||shot.p.v<minV||shot.p.u>maxU||shot.p.v>maxV;
+   const maxU=this.story?RESCUE_SCENES[this.storyMap].maxU:ISO.size;
+   const minU=this.story?RESCUE_SCENES[this.storyMap].minU:-.5;
+   const maxV=this.story?16:ISO.size,minV=this.story?-6:-.5;
+   let remove=shot.life<=0||shot.p.u<minU||shot.p.v<minV||shot.p.u>maxU||shot.p.v>maxV;
    if(shot.enemy&&isoDistance(shot.p,this.p)<.38){this.damage();remove=true;}
    if(!shot.enemy){const target=this.enemies.find(e=>isoDistance(e.p,shot.p)<(e.boss?.62:.43));if(target){this.hitEnemy(target,1);remove=true;}}
    if(remove){shot.s.destroy();this.shots=this.shots.filter(x=>x!==shot);}if(this.dyingAt)return;
