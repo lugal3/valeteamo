@@ -27,18 +27,19 @@ const {chromium}=require('playwright');
     document.body.innerHTML='<main style="display:grid;place-items:center;margin:0;height:100vh;background:#28303c"><canvas id="loisPreview" width="760" height="500" style="width:760px;height:500px;display:block"></canvas></main>';
     const canvas=document.getElementById('loisPreview');
     const actor={id:'louis-escape',kind:'louis-companion',visualPreset:LOIS_VISUAL_ID,visualVariant:variant,
-     x:0,y:0,z:0,yaw:shot==='side'?-Math.PI*.5:0,phase:'follow',walk:0,speed:0,crouch:0,blink:0,age:.5};
+     x:0,y:0,z:0,yaw:0,phase:'follow',walk:0,speed:0,crouch:0,blink:0,age:.5};
     const geo=pickupGeometry([actor]);
     const stage=[
-     {id:'stage-floor',x:0,y:-.12,z:0,w:6,h:.18,d:6,mat:'floor',color:[.38,.36,.37],solid:false},
-     {id:'stage-wall',x:0,y:1.60,z:-1.2,w:6,h:4,d:.1,mat:'plaster',color:[.42,.44,.48],solid:false}
+     {id:'stage-floor',x:0,y:-.12,z:0,w:5,h:.18,d:5,mat:'floor',color:[.44,.43,.42],solid:false},
+     {id:'stage-wall',x:0,y:1.60,z:-1.3,w:6,h:4,d:.1,mat:'plaster',color:[.50,.51,.56],solid:false}
     ];
     const renderer=new HouseRenderer(canvas,quality);
     renderer.rebuild([...stage,...geo]);
-    const camera=shot==='side'?{x:2.6,y:1.2,z:0,yaw:-Math.PI/2,pitch:0}:
-     shot==='threequarter'?{x:1.45,y:1.40,z:2.85,yaw:Math.PI+Math.atan(1.45/2.85),pitch:0}:
-     {x:0,y:1.40,z:3,yaw:Math.PI,pitch:0};
-    renderer.render(camera,true,1,false,{reduced:true});
+    const camera=shot==='portrait'?{x:0,y:1.64,z:.86,yaw:Math.PI,pitch:0}:
+     shot==='side'?{x:2.10,y:1.10,z:0,yaw:-Math.PI/2,pitch:0}:
+     shot==='threequarter'?{x:1.40,y:1.20,z:2.10,yaw:Math.PI+Math.atan(1.40/2.10),pitch:0}:
+     {x:0,y:1.10,z:2.2,yaw:Math.PI,pitch:0};
+    renderer.render(camera,true,1,false,{reduced:true,shotLight:.8});
     const gl=renderer.gl;gl.finish();
     const error=gl.getError();
     const output={dataURL:canvas.toDataURL('image/png'),triangles:renderer.triangleCount,
@@ -58,10 +59,11 @@ const {chromium}=require('playwright');
   const modern=await capture('ps2-b','front');
   await capture('ps2-b','side');
   await capture('ps2-b','threequarter');
+  await capture('ps2-b','portrait');
   await capture('ps2-b','front','low');
   const old=await capture('legacy','front');
   assert.equal(modern.equals(old),false,'switching the visual preset must materially change the rendered scene');
   assert.deepEqual(errors,[],'no runtime page exceptions');
-  console.log('PASS: PS2-B front/profile/three-quarter/low and legacy WebGL captures, reversible and error-free.');
+  console.log('PASS: PS2-B front/profile/three-quarter/portrait/low and legacy WebGL captures, reversible and error-free.');
  }finally{await browser?.close();await server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
