@@ -1,6 +1,9 @@
 import {createPose,createRigBinding,evaluateRig,JOINT_INDEX} from './character-rig.js';
 import {sampleBlink} from './animations/face.js';
 import {smoothSurface,torusSurface,roundedBoxSurface} from './chibi-geometry.js';
+import {loisFaceSurface} from './lois-ps2-face.js';
+import {sampleLoisRig,writeLoisRigPart} from './lois-ps2-rig.js';
+import {createLoisFaceTexture} from './lois-ps2-texture.js';
 import {BATH_MIRROR,mirrorVisible,kittyMirrorPieces,reflectedBathroom,reflectMesh,poseReflectedKitty} from './mirror.js';
 import {ART_SIZE,ART_COLUMNS,ART_ROWS,POSTER_IMAGES,artTile,createArtworkCanvas} from './artwork.js';
 import {climbingHandPieces} from './first-person.js';
@@ -78,6 +81,13 @@ export function geometry(boxes){
    if(!box.yaw&&!box.pitch&&!box.roll)return;const c=Math.cos(box.yaw||0),s=Math.sin(box.yaw||0),cp=Math.cos(box.pitch||0),sp=Math.sin(box.pitch||0),cr=Math.cos(box.roll||0),sr=Math.sin(box.roll||0);
    for(let i=first;i<vertices.length;i+=16){const dx=vertices[i]-box.x,dy=vertices[i+1]-box.y,x=dx*cr-dy*sr,y=dx*sr+dy*cr,z=vertices[i+2]-box.z,pz=y*sp+z*cp;vertices[i]=box.x+x*c-pz*s;vertices[i+1]=box.y+y*cp-z*sp;vertices[i+2]=box.z+x*s+pz*c;for(const offset of [6,13]){const ax=vertices[i+offset],ay=vertices[i+offset+1],nx=ax*cr-ay*sr,ny=ax*sr+ay*cr,nz=vertices[i+offset+2],rz=ny*sp+nz*cp;vertices[i+offset]=nx*c-rz*s;vertices[i+offset+1]=ny*cp-nz*sp;vertices[i+offset+2]=nx*s+rz*c;}}
   };
+  if(box.shape==='lois-face'){
+    const mesh=loisFaceSurface(box,color,style);
+    vertices.push(...mesh.vertices);
+    for(const i of mesh.indices)indices.push(offset+i);
+    groups.push({start:offset,end:offset+mesh.vertices.length/16,joint:box.joint||'root'});
+    offset+=mesh.vertices.length/16;rotateMesh();continue;
+   }
   if(box.shape==='lathe'||box.smooth){
    const mesh=smoothSurface(box,color,style);
    for(const n of mesh.vertices)vertices.push(n);
@@ -189,7 +199,7 @@ export class HouseRenderer {
   this.canvas=canvas;this.quality=quality;
   const gl=canvas.getContext('webgl',{alpha:false,stencil:true,antialias:false,powerPreference:'low-power',preserveDrawingBuffer:false});
   if(!gl)throw Error('El navegador no permite WebGL. Activa aceleración gráfica o prueba otro navegador.');
-  this.gl=gl;this.programs={medium:program(gl),low:program(gl,true)};this.program=this.programs[quality==='low'?'low':'medium'];this.texture=createAtlas(gl);this.disposeArtwork=loadPosterTiles(gl,this.texture);this.materialQuality=quality;this.materialTextures=createMaterials(gl,quality);
+  this.gl=gl;this.programs={medium:program(gl),low:program(gl,true)};this.program=this.programs[quality==='low'?'low':'medium'];this.texture=createAtlas(gl);this.disposeArtwork=loadPosterTiles(gl,this.texture);this.materialQuality=quality;this.materialTextures=createMaterials(gl,quality);this.loisFaceTexture=createLoisFaceTexture(gl,quality);
   this.mirrorSupported=gl.getContextAttributes().stencil;this.mirrorBuffers=Array.from({length:8},()=>gl.createBuffer());this.mirrorDrawn=false;
   this.vbo=gl.createBuffer();this.ibo=gl.createBuffer();this.count=0;
   this.dynamicVbo=gl.createBuffer();this.dynamicIbo=gl.createBuffer();this.dynamicCount=0;this.dynamicBoxes=[];
@@ -206,7 +216,7 @@ export class HouseRenderer {
   this.locations={};
   for(const [quality,p] of Object.entries(this.programs)){
    const atrib={},uniform={};for(const key of ['aPos','aCol','aNormal','aUV','aArt','aStyle','aTangent'])atrib[key]=gl.getAttribLocation(p,key);
-   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld','uTV','uTVSignal','uShot'])uniform[key]=gl.getUniformLocation(p,key);
+   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld','uTV','uTVSignal','uShot','uLoisFace'])uniform[key]=gl.getUniformLocation(p,key);
    uniform.uLamps=gl.getUniformLocation(p,'uLamps[0]');
    this.locations[quality]={atrib,uniform};
   }
@@ -223,9 +233,13 @@ export class HouseRenderer {
   const gl=this.gl,staticBoxes=boxes.filter(b=>!b.dynamic).sort((a,b)=>order(a)-order(b)),mesh=geometry(staticBoxes);
   const {vertices,indices}=mesh;this.count=indices.length;
   this.dynamicBoxes=boxes.filter(b=>b.dynamic);
+  // Avoid fetching the face atlas in unrelated 3D scenes and editor previews.
+  if(this.dynamicBoxes.some(box=>box.shape==='lois-face'&&box.faceTexture!==false))this.loisFaceTexture.enable();
   const dynamic=geometry(this.dynamicBoxes);this.dynamicCount=dynamic.indices.length;
   this.dynamicTemplate=dynamic.vertices;this.dynamicVertices=new Float32Array(dynamic.vertices);this.dynamicRanges=dynamic.ranges;
   this.dynamicOrigins=this.dynamicBoxes.map(b=>[b.x,b.y,b.z,b.yaw||0,b.roll||0,b.pitch||0]);this.dynamicPositions=new Float32Array(this.dynamicBoxes.length*6);this.dynamicPositions.fill(Infinity);
+  this.dynamicRigBinds=this.dynamicBoxes.map(b=>b.rigBone&&b.source?[b.source.x,b.source.y,b.source.z]:null);
+  this.dynamicRigKeys=new Array(this.dynamicBoxes.length);
   this.dynamicEyeScale=new Float32Array(this.dynamicBoxes.length);this.dynamicEyeScale.fill(-1);
   gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamicVbo);gl.bufferData(gl.ARRAY_BUFFER,this.dynamicVertices,gl.DYNAMIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.dynamicIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,dynamic.indices,gl.STATIC_DRAW);
@@ -292,9 +306,50 @@ export class HouseRenderer {
   const gl=this.gl;
   gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamicVbo);
   const reduced=motion.reduced||false;
+  const rigCache=new Map(); // once per character each frame, never once per limb
+  const shadowedRigs=new Set();
+  // Adjacent rigid parts share one GPU upload instead of ~60 tiny calls.
+  // Flush before unrelated geometry to preserve the original ordering.
+  let rigStart=-1,rigEnd=-1;
+  const metrics=this.loisRigMetrics={samples:0,uploads:0,bytes:0,parts:0};
+  const flushRig=()=>{
+   if(rigStart<0)return;
+   gl.bufferSubData(gl.ARRAY_BUFFER,rigStart*4,this.dynamicVertices.subarray(rigStart,rigEnd));
+   metrics.uploads++;metrics.bytes+=(rigEnd-rigStart)*4;
+   rigStart=-1;rigEnd=-1;
+  };
   const bobAmp=reduced?0:0.012,swayAmp=reduced?0:0.14;
   for(let i=0;i<this.dynamicBoxes.length;i++){
    const box=this.dynamicBoxes[i],source=box.source;
+   // The PS2 option-B Lois uses a parented rigid rig. The legacy fallback
+   // retains the original louisPartPose path below, unchanged.
+   if(source?.kind==='louis-companion'&&box.rigBone){
+    let rig=rigCache.get(source);
+    if(!rig){rig=sampleLoisRig(source,reduced);rigCache.set(source,rig);metrics.samples++;}
+    const bone=rig.bones[box.rigBone],face=rig.face,name=box.rigPart||'';
+    const {start,end}=this.dynamicRanges[i];
+    const eyes=/^(eye|iris|pupil|glint)-/.test(name),look=/^(iris|pupil|glint)-/.test(name);
+    const animatedMouth=box.shape==='lois-face'||/^(upper-lip|lower-lip|under-lip)$/.test(name);
+    const signature=[source.x,source.y,source.z,source.yaw,...bone.rotation,...bone.translation,
+     eyes?face.blink:0,look?face.gazeYaw:0,look?face.gazePitch:0,
+     name.startsWith('brow-')?face.browLift:0,animatedMouth?face.jawOpen:0].join(',');
+    if(signature===this.dynamicRigKeys[i])continue;
+    this.dynamicRigKeys[i]=signature;
+    writeLoisRigPart(this.dynamicVertices,this.dynamicTemplate,start,end,box,
+     this.dynamicRigBinds[i],source,rig);
+    if(rigStart<0){rigStart=start;rigEnd=end;}
+    else rigEnd=end; // Include unchanged adjacent joints: one bounded upload per actor.
+    metrics.parts++;
+    // One shadow invalidation per actor instead of per hair strand / joint.
+    if(this.dynamicCasters[i]&&!shadowedRigs.has(source)){
+     shadowedRigs.add(source);this.lightPose='';
+     for(const lamp of this.fixtures)
+      if(Math.hypot(lamp.x-source.x,lamp.y-source.y,lamp.z-source.z)<LAMP_REACH+2)
+       this.dirtyLampShadows.add(lamp);
+    }
+    continue;
+   }
+   flushRig();
    let eyeScale=1;
    if(source){
     const offset=box.sourceOffset||[0,0,0];
@@ -349,6 +404,7 @@ export class HouseRenderer {
     for(const lamp of this.fixtures)if(Math.hypot(lamp.x-bx,lamp.y-by,lamp.z-bz)<reach)this.dirtyLampShadows.add(lamp);
    }
   }
+  flushRig();
  }
  updateShadows(camera,flash,light,basis){
   const lamps=nearbyLights(this.fixtures,camera);
@@ -443,6 +499,7 @@ export class HouseRenderer {
    for(const t of this.materialTextures)gl.deleteTexture(t);
    this.materialTextures=createMaterials(gl,quality);
   }
+  this.loisFaceTexture.setQuality(quality);
   this.updateDynamic(time,motion);
   const cy=Math.cos(camera.yaw),sy=Math.sin(camera.yaw),cp=Math.cos(camera.pitch),sp=Math.sin(camera.pitch);
   const right=[cy,0,-sy],forward=[sy*cp,sp,cy*cp],up=[-sy*sp,cp,-cy*sp];
@@ -450,7 +507,7 @@ export class HouseRenderer {
   const light={x:camera.x+right[0]*.12+forward[0]*.06,y:camera.y+forward[1]*.06-.12,z:camera.z+right[2]*.12+forward[2]*.06};
   this.updateShadows(camera,flash,light,{right,up,forward});
   this.program=this.programs[quality];Object.assign(this,this.locations[quality]);gl.useProgram(this.program);
-  gl.uniform1i(this.uniform.uAtlas,0);gl.uniform1i(this.uniform.uLightDepth,1);gl.uniform1i(this.uniform.uMaterials,2);
+  gl.uniform1i(this.uniform.uAtlas,0);gl.uniform1i(this.uniform.uLightDepth,1);gl.uniform1i(this.uniform.uMaterials,2);gl.uniform1i(this.uniform.uLoisFace,4);
   this.updateTelevision(motion.television);
   const isLow=quality==='low';
   gl.uniform1f(this.uniform.uAtlasSize,isLow?ATLAS_SIZE:ATLAS_SIZE_MED);
@@ -480,5 +537,5 @@ export class HouseRenderer {
   if(motion.introHands)this.drawClimbingHands(motion.introHands);
   if(showHand)this.drawFirstPerson(camera,right,up,forward,time,flash,motion);
  }
- destroy(){const gl=this.gl;this.disposeArtwork();if(this.pursuerVbo)gl.deleteBuffer(this.pursuerVbo);if(this.pursuerIbo)gl.deleteBuffer(this.pursuerIbo);for(const b of this.mirrorBuffers)gl.deleteBuffer(b);gl.deleteTexture(this.texture);gl.deleteTexture(this.tvTexture);this.shadows.destroy();for(const mesh of this.shadowMeshes)gl.deleteBuffer(mesh.indices);for(const texture of this.materialTextures)gl.deleteTexture(texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.dynamicVbo);gl.deleteBuffer(this.dynamicIbo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);for(const p of Object.values(this.programs))gl.deleteProgram(p);this.canvas.width=1;this.canvas.height=1;}
+ destroy(){const gl=this.gl;this.loisFaceTexture.destroy();this.disposeArtwork();if(this.pursuerVbo)gl.deleteBuffer(this.pursuerVbo);if(this.pursuerIbo)gl.deleteBuffer(this.pursuerIbo);for(const b of this.mirrorBuffers)gl.deleteBuffer(b);gl.deleteTexture(this.texture);gl.deleteTexture(this.tvTexture);this.shadows.destroy();for(const mesh of this.shadowMeshes)gl.deleteBuffer(mesh.indices);for(const texture of this.materialTextures)gl.deleteTexture(texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.dynamicVbo);gl.deleteBuffer(this.dynamicIbo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);for(const p of Object.values(this.programs))gl.deleteProgram(p);this.canvas.width=1;this.canvas.height=1;}
 }
