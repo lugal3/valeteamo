@@ -96,7 +96,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  <div class="lab-look" id="lab-look" aria-label="Arrastrar para mirar"></div>
  <div class="lab-buttons">
   <button data-act="interact" id="lab-interact" hidden><small>Usar</small></button>
-  <button data-act="emotes" aria-label="Elegir emote" hidden>☺<small>Emotes</small></button>
+  <button data-act="emotes" aria-label="Elegir emote" aria-controls="house-emotes" aria-expanded="false" hidden>☺<small>Emotes</small></button>
   <button data-act="bag">▣<small>Mochila</small></button>
   <button data-act="flash" id="house-light">☼<small>Luz</small></button>
   <button data-act="phone" class="phone-expand" id="house-use-phone" aria-label="Usar teléfono" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></svg><small>Usar</small></button>
@@ -192,6 +192,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   television.sync(false,false);notePresentation=false;
   louis=null;rcTrap={armed:false,closed:false};finalCutscene=null;
   releaseMouse();events.reset();mirrorSafe.reset();hudMessages.reset();phone.close();encounterCheckpoint=null;danger.hidden=true;
+   root.querySelector('[data-act=emotes]').setAttribute('aria-expanded','false');
   batterySwap=null;equipmentBeforeNote='empty';
   animator.reset();sound.stopEmote();floorSounds.reset();if(phone.editing)void phone.layoutAction('done');$('house-emotes').hidden=true;cinematic=null;poseTransition=null;paused=false;lastInteraction=-Infinity;handAction=0;clickAction=0;noteLift=0;noteHold=0;capturePhoto=false;
   sound.setTension(.55);
@@ -603,9 +604,21 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(isPaused())return;
   if(rc?.mode==='driving'||rc?.mode==='deploying')return;
   if(events.phase==='arrival'||events.phase==='safe'||events.phase==='failed')return;
-  if(act==='emotes'&&inBathroom()&&!notePresentation&&!noteLift){$('house-emotes').hidden=!$('house-emotes').hidden;resetInput();return;}
+  if(act==='emotes'){
+   const enabled=inBathroom()&&!notePresentation&&!noteLift;
+   const opening=enabled&&$('house-emotes').hidden;
+   // En escritorio, pointer lock monopoliza el mouse. Soltarlo al abrir
+   // permite clicks reales sobre los botones HTML del selector de emotes.
+   if(opening)releaseMouse();
+   resetInput();
+   $('house-emotes').hidden=!opening;
+   root.querySelector('[data-act=emotes]').setAttribute('aria-expanded',String(opening));
+   if(opening)$('house-emotes').querySelector('button')?.focus({preventScroll:true});
+   return;
+  }
   if(act.startsWith('emote:')&&inBathroom()&&!notePresentation&&!noteLift){
    const id=act.slice(6);$('house-emotes').hidden=true;
+   root.querySelector('[data-act=emotes]').setAttribute('aria-expanded','false');
    if(id==='stop'){cancelEmote();equipmentAge=0;return;}
    if(s.hidden||s.lying||s.crouched){say('Ponte de pie para hacer un emote.');return;}
    const emote=EMOTES.find(e=>e.id===id);
@@ -627,7 +640,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   $('house-use-phone').querySelector('small').textContent=equipment==='paper'?'Observar':'Usar';
   const canEmote=inBathroom()&&!notePresentation&&!noteLift;
   root.querySelector('[data-act=emotes]').hidden=!canEmote;
-  if(!canEmote)$('house-emotes').hidden=true;
+  if(!canEmote){$('house-emotes').hidden=true;
+   root.querySelector('[data-act=emotes]').setAttribute('aria-expanded','false');}
   $('lab-objective').textContent=scenario?.objective??(config.entry==='mirror'?'◇ Prueba de espejo':demo?(puzzle.rescued?'♥ ¡Louis está a salvo!':!puzzle.note?'✉ Busca la nota del pasillo':!puzzle.key?'⚿ Abre el cajón del estudio y recoge la llave':!puzzle.door?'🚪 Sube y abre el dormitorio':'Busca la trampilla de la cocina'):'Explora libremente · E interactuar');
   if(events.phase==='hide')$('lab-objective').textContent='Busca un escondite · armario o bajo la cama';
   if(events.phase==='explore'&&demo&&!s.inventory.torch)$('lab-objective').textContent='Busca una linterna en el salón';
@@ -1083,7 +1097,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(phone.open){if(e.key==='Escape'){e.preventDefault();phone.close();resetInput();}else if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'].includes(e.key)){e.preventDefault();phone.key(e.key);}else if(e.key==='Tab'){const b=[...root.querySelectorAll('.phone-screen button')],first=b[0],last=b.at(-1);if((e.shiftKey&&document.activeElement===first)||(!e.shiftKey&&document.activeElement===last)){e.preventDefault();(e.shiftKey?last:first).focus();}}return;}
   if((e.key==='p'||e.key==='P')&&equipment==='phone'){runAction('phone');return;}
   if(!e.repeat&&EMOTES.some(em=>em.key===e.key)){runAction('emote:'+EMOTES.find(em=>em.key===e.key).id);return;}
-  if(!e.repeat&&(e.key==='m'||e.key==='M')){runAction('emotes');return;}
+  if(!e.repeat&&(e.key==='m'||e.key==='M')){e.preventDefault();runAction('emotes');return;}
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();
   if(e.key==='Tab'&&modal){
    const buttons=[...dialog.querySelectorAll('button,iframe,a[href]:not([hidden])')],first=buttons[0],lastButton=buttons.at(-1);
@@ -1092,7 +1106,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const key=movementKey(e);if(!isPaused()&&key&&(!e.repeat||keys.has(key)))keys.add(key);
   if(e.repeat)return;
   if(e.key==='Escape'){
-   if(!$('house-emotes').hidden){$('house-emotes').hidden=true;return;}
+   if(!$('house-emotes').hidden){$('house-emotes').hidden=true;root.querySelector('[data-act=emotes]').setAttribute('aria-expanded','false');resetInput();return;}
    if($('lab-camera-settings').open){$('lab-camera-settings').open=false;resetInput();return;}
    if(modal){if(intro||contextLost)return;paused=false;modalClose();}else togglePause();return;
   }
