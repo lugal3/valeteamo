@@ -51,7 +51,10 @@ async function play(){
   await page.screenshot({path:'artifacts/story-acts1-2-introduction.png'});
   await finishDialogue();
   await game.locator('xpath=self::*[@data-prologue-stage="defend"]').waitFor({timeout:10000});
-  await page.getByRole('button',{name:'Disparar corazones'}).click();
+  // Original Corazones controls: WASD for movement, arrows for hearts.
+  await page.keyboard.down('ArrowRight');
+  await page.waitForTimeout(360);
+  await page.keyboard.up('ArrowRight');
   // Same heart shooting mechanic style: enemy HP and heart projectiles
   await page.evaluate(()=>window.__valePrologue.defeatShadows());
   await game.locator('xpath=self::*[@data-prologue-stage="talk-louis"]').waitFor({timeout:11000});
