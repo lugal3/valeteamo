@@ -2,6 +2,7 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {StoryGame} from '../StoryGame';
 import {Sound} from '../audio';
+import {toScreen} from '../isometric';
 import type {IsoAdventure,IsoStoryBridge,IsoStoryStage} from '../iso-game';
 import {RESCUE_SCENES,type RescueMapId,type RouteArea} from './rescue-overworld';
 import {
@@ -12,6 +13,7 @@ import {
 import './garden-prologue.css';
 
 type Dialog={lines:PrologueLine[];index:number};
+type HouseNavigation={distance:number;heading:number;guided:boolean;near:boolean};
 export type PrologueCheckpoint='intro'|'walk-together'|'ribbon';
 const initial=(test:boolean,checkpoint:PrologueCheckpoint):PrologueState=>
  test?{...PROLOGUE_START,stage:checkpoint}:loadPrologue();
@@ -25,6 +27,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  const [run,setRun]=useState<PrologueState>(()=>initial(test,checkpoint));
  const [dialog,setDialog]=useState<Dialog|null>(null),[letters,setLetters]=useState(0);
  const [near,setNear]=useState(''),[muted,setMuted]=useState(false);
+ const [houseNav,setHouseNav]=useState<HouseNavigation|null>(null);
  const [guide,setGuide]=useState(''),[dusk,setDusk]=useState(0),[area,setArea]=useState<RouteArea>('sendero');
  const [map,setMap]=useState<RescueMapId>('morning_garden');
  const [transition,setTransition]=useState<null|{target:RescueMapId;phase:'out'|'in'}>(null);
@@ -207,7 +210,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   const next=initial(test,checkpoint);
   phaseRef.current=next;setRun(next);setDialog(null);setLetters(0);
   dialogRef.current=null;dialogDone.current=null;lockedRef.current=false;enteringRef.current=false;
-  setNear('');setGuide('');setDusk(0);setArea('sendero');setMap('morning_garden');
+  setNear('');setGuide('');setDusk(0);setArea('sendero');setMap('morning_garden');setHouseNav(null);
   setRestartKey(value=>value+1);
  };
  useEffect(()=>()=>{for(const timer of travelTimers.current)window.clearTimeout(timer);
@@ -219,6 +222,24 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
    enteringRef.current=true;onEnterHouse();
   }
  },[run.stage,test,onEnterHouse]);
+ useEffect(()=>{
+  const update=()=>{
+   const scene=sceneRef.current,stage=phaseRef.current.stage;
+   if(!scene||scene.storyMap!=='night_neighborhood'||
+    !['door','window'].includes(stage)){setHouseNav(previous=>previous?null:previous);return;}
+   const a=toScreen(scene.p),b=toScreen(scene.storyTarget);
+   const distance=Math.hypot(scene.p.u-scene.storyTarget.u,scene.p.v-scene.storyTarget.v);
+   const next:HouseNavigation={distance:Math.ceil(distance*2)/2,
+    heading:Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI,
+    guided:scene.houseRoute.length>0,near:distance<1.75};
+   setHouseNav(previous=>previous&&previous.distance===next.distance&&
+    previous.guided===next.guided&&previous.near===next.near&&
+    Math.abs(previous.heading-next.heading)<4?previous:next);
+  };
+  update();
+  const interval=window.setInterval(update,220);
+  return()=>window.clearInterval(interval);
+ },[restartKey]);
 
  const currentLine=dialog?.lines[dialog.index];
  const portrait=currentLine?portraits[currentLine.speaker==='Kitty'?'kitty':
@@ -251,6 +272,9 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
       luisReady:()=>scene.storyLuisReady,
       luisPosition:()=>scene.storyLuis?{x:scene.storyLuis.x,y:scene.storyLuis.y,
        texture:scene.storyLuis.texture.key,visible:scene.storyLuis.visible}:null,
+      houseGuide:()=>scene.startHouseGuide(),
+      houseRoute:()=>({active:scene.houseRoute.length>0,remaining:scene.houseRoute.length,
+       distance:Math.hypot(scene.p.u-scene.storyTarget.u,scene.p.v-scene.storyTarget.v)}),
       scene:()=>scene
      };
     }
@@ -269,7 +293,22 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
     vecindario:'Villa de los faroles',casa:'La casa de dos pisos'
    }[area]}
   </span>
-  {!dialog&&guide&&<div className="prologue-guide" role="status">{guide}</div>}
+  {!dialog&&houseNav&&<aside className="prologue-house-nav" aria-label="Guía para llegar a la casa">
+   <div className="prologue-house-heading">
+    <span className="prologue-house-arrow" aria-hidden="true"
+     style={{transform:`rotate(${houseNav.heading}deg)`}}>➜</span>
+    <span><strong>{run.stage==='door'?'Puerta principal':'Ventana abierta'}</strong>
+     <small>{houseNav.near?'¡Ya puedes interactuar!':
+      `A ${houseNav.distance.toFixed(1)} pasos · patio frontal`}</small></span>
+   </div>
+   {!houseNav.near&&<button className="prologue-house-route-button" type="button"
+    onClick={()=>{
+     const scene=sceneRef.current;if(!scene)return;
+     const started=scene.startHouseGuide();
+     setHouseNav(previous=>previous?{...previous,guided:started}:previous);
+    }}>{houseNav.guided?'✕ Detener guía':'♡ Guiarme caminando'}</button>}
+  </aside>}
+  {!dialog&&!houseNav&&guide&&<div className="prologue-guide" role="status">{guide}</div>
   {!dialog&&near&&<button type="button" className="prologue-interact"
    onClick={()=>sceneRef.current?.storyInteract()}>{near} · E</button>}
   {currentLine&&<div className="prologue-dialog-backdrop" role="dialog"
