@@ -10,7 +10,7 @@
 - Sin descargas externas de assets ni música protegida. Pixel art y audio originales.
 - No aumentar cantidad de diálogos: la redacción la agregará el usuario después.
 
-## Fase 1 — Game feel, movimiento y reacciones (EN IMPLEMENTACIÓN)
+## Fase 1 — Game feel, movimiento y reacciones (COMPLETADA Y VALIDADA)
 
 - Movimiento de Kitty con aceleración y frenado graduados, velocidad máxima estable en FPS variables, joystick de baja intensidad preciso y respuesta inmediata al dar vuelta. **La guía A* a puerta, ventana y furgoneta se mantiene funcional.**
 - Animaciones de caminar según velocidad, cambio de dirección natural, respiración y parpadeo en idle, ligera inclinación, rebote al detenerse y anticipación leve de cámara. Sin mareos, y se respeta `prefers-reduced-motion`.
@@ -18,6 +18,18 @@
 - Interacciones contextuales con orientación del personaje hacia el objeto y gesto corto de examinar/tocar, señales suaves de confirmación, botón suficientemente grande para tocarlo en iPhone.
 - Seguidor Louis natural y estable: no hace moonwalk constantemente cuando Kitty se detiene, guarda separación, acelera suavemente y usa poses correctas.
 - Tests: lógica pura a 30/60 FPS, cámara limitada, colisiones, guía manual, comportamiento de seguidor, idle y accesibilidad; regresión móvil/PC/3D en CI. **No iniciar fase 2 sin `.`.**
+
+### Cambios concretos realizados
+
+- `src/demo/rescue-game-feel.ts` implementa aceleración y deceleración suaves con fórmula independiente de FPS y velocidad máxima heredada de **2,1 unidades ISO/s**, joystick analógico sensible a la intensidad, respuesta rápida al cambio de dirección y mirada de cámara limitada a **22 px horizontal / 11 px vertical** con recenter veloz al soltar.
+- `src/iso-game.ts`: separación estricta entre `if(this.story)` (rescate cinético) y el `else` (modo Corazones clásico sin cambios en su control/combate). Kitty conserva sprites originales y añade respiración, parpadeo, balanceo mínimo según velocidad y gesto breve al examinar. Llega a los objetivos de la guía A* sin teletransportes; WASD/joystick cancelan la guía en cualquier momento.
+- Pasos originales suaves por **césped, tierra, madera del puente, piedra y asfalto**; huellas casi imperceptibles de vida breve, máximo **12** partículas. Sonido y gestos se reducen automáticamente al activar `prefers-reduced-motion`.
+- **Louis** sigue a Kitty con una distancia natural, velocidad acotada, poses de caminar solo cuando se desplaza, parpadeo/idle y memoria de la última dirección al detenerse. Kitty gira hacia la pista antes de tocarla y da una confirmación visual/sonora.
+- `src/demo/garden-prologue.css` mejora el botón táctil contextual con blanco de toque de al menos 46–48 px, retroalimentación activa y foco accesible.
+- `tests/rescue-game-feel.cjs` valida 30/60/120 FPS, controles, frenado, idle/parpadeo, superficies, cámara, acompañante y separación del arcade.
+- `tests/rescue-feel-browser.cjs` valida movimientos reales en ventana de **1280×720** y paisaje de **844×390**: teclado, parada, cámara, pisadas, joystick suave/fuerte y animaciones. El flujo completo existente de los cuatro escenarios y del 3D también pasó.
+
+**Gate:** fase 2 NO debe iniciarse hasta que el usuario escriba literalmente `.`. No merge a `main` ni despliegue en Firebase hasta finalizar la fase 3 y aprobar la QA de las tres fases.
 
 ## Fase 2 — Mundo vivo (PENDIENTE: primer punto)
 
@@ -35,6 +47,6 @@
 
 ## Seguimiento
 
-- Fase 1: iniciada; no publicar ni fusionar todavía.
+- **Fase 1: completada y validada.** CI final: https://github.com/lugal3/valeteamo/actions/runs/43743461803 (npm test, build, paisaje móvil, recorrido 2D completo, PC/teclado, nuevo test de sensibilidad en iPhone y PC, interior 3D y emotes). Capturas en https://github.com/lugal3/valeteamo/actions/runs/43743461803/artifacts/14173597640. **No publicada ni fusionada.**
 - Fase 2: pendiente de `.`.
 - Fase 3: pendiente de un segundo `.`.
