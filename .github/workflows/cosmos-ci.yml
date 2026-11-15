@@ -31,6 +31,8 @@ on:
       - 'src/lab/house.css'
       - 'package.json'
       - 'src/PlaytestMenu.tsx'
+      - 'src/playtest-menu.css'
+      - 'tests/admin-panel-browser.cjs'
       - 'src/birthday-countdown.css'
       - 'tests/cosmos.cjs'
       - 'tests/galaxy-arrival.cjs'
@@ -72,6 +74,8 @@ on:
       - 'src/lab/house.css'
       - 'package.json'
       - 'src/PlaytestMenu.tsx'
+      - 'src/playtest-menu.css'
+      - 'tests/admin-panel-browser.cjs'
       - 'src/birthday-countdown.css'
       - 'tests/cosmos.cjs'
       - 'tests/galaxy-arrival.cjs'
@@ -102,6 +106,7 @@ jobs:
       - run: node tests/birthday-icon-assets.cjs
       - run: npm run build
       - run: npx playwright install chromium --with-deps
+      - run: node tests/admin-panel-browser.cjs
       - run: node tests/landscape-gate.cjs
       - run: node tests/cosmos-browser.cjs
       - run: node tests/cosmos-public-flow.cjs
