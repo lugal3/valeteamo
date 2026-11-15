@@ -12,8 +12,8 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
  const p=LOIS_PS2_PROFILE.palette,parts=[];
  const add=(id,x,y,z,w,h,d,mat,color,extra={})=>
   parts.push(piece(id,x,y,z,w,h,d,mat,{color,...extra}));
- const box={shape:'rounded-box',roundness:.35,segments:desktop?10:6,rings:desktop?6:4};
- const limb={shape:'rounded-box',roundness:.38,segments:desktop?9:6,rings:desktop?5:4};
+ const box={shape:'rounded-box',roundness:.35,segments:desktop?8:6,rings:desktop?5:4};
+ const limb={shape:'rounded-box',roundness:.38,segments:desktop?8:6,rings:desktop?5:4};
  const oval={shape:'round',segments:desktop?12:8,rings:desktop?7:4};
  const tiny={shape:'round',segments:desktop?8:6,rings:desktop?4:3};
  const jacket=p.blazer,lapel=[.23,.24,.28],liner=[.24,.26,.31],
@@ -70,9 +70,9 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
 
  // Asymmetric, side-swept chestnut silhouette is the main likeness cue.
  add('hair-back',0,1.725,-.043,.357,.254,.306,'wood',hairShadow,
-  {shape:'round',segments:desktop?14:10,rings:desktop?8:4,rigGroup:'head'});
+  {shape:'round',segments:desktop?12:10,rings:desktop?6:4,rigGroup:'head'});
  add('hair-cap',-.015,1.802,-.004,.355,.153,.303,'wood',hair,
-  {shape:'round',segments:desktop?14:10,rings:desktop?7:4,rigGroup:'head'});
+  {shape:'round',segments:desktop?12:10,rings:desktop?6:4,rigGroup:'head'});
  for(const [i,x,y,z,w,h,roll] of [
   [0,-.148,1.754,.098,.116,.122,.40],
   [1,-.106,1.743,.134,.116,.132,.28],
@@ -81,7 +81,7 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
   [4,.112,1.775,.117,.114,.094,-.41]
  ]){
   add('fringe-'+i,x,y,z,w,h,.066,'wood',i%2?hairLight:hair,
-   {shape:'rounded-box',roundness:.43,segments:desktop?9:6,rings:desktop?5:4,roll,rigGroup:'head'});
+   {shape:'rounded-box',roundness:.43,segments:desktop?8:6,rings:desktop?4:4,roll,rigGroup:'head'});
  }
  for(const side of [-1,1]){
   add('temple-'+side,side*.155,1.716,.014,.088,.145,.118,'wood',hair,
