@@ -81,12 +81,13 @@ for(const facing of art.LUIS_FACINGS)
 assert.equal(textures.size,47,'45 animation frames + 2 existing portraits; no extra engine');
 const arcade=fs.readFileSync('src/iso-game.ts','utf8');
 assert(arcade.includes('this.animateStoryLuis();')&&
- arcade.includes("const pose:LuisPose=speaking?'talk':'idle'")&&
+ arcade.includes("if(this.storyStage==='talk-luis'&&this.story.locked())pose='talk'")&&
  arcade.includes("npc.setFlipX(facing==='right'&&dx<0)")&&
- arcade.includes('const frame=luisAnimationFrame(this.clock,pose,this.reducedMotion);'),
- 'runtime changes Luis expressions, orientation and frames inside the Corazones engine');
-assert(arcade.includes('if(this.story && this.story.locked()){this.clearInput();return;}'),
- 'RPG dialogue still locks player controls while Luis speaks');
+ arcade.includes('const frame=luisAnimationFrame(clock,pose,this.reducedMotion);'),
+ 'runtime changes Luis expressions, direction and frames inside original Corazones engine');
+assert(arcade.includes('this.story.locked()||luisMotionIsBlocking(this.storyLuisMotion)')&&
+ arcade.includes('this.updateLuisCinematic(dt);'),
+ 'dialogue and arrival/departure both lock input while NPC animations continue');
 assert(src.includes('return person===\'luis\'?paintLuisChibi')&&
  arcade.includes("'chibi-louis-down-0'"),
  'Luis/ Louis identities remain distinct and old Louis sprite stays in use');
