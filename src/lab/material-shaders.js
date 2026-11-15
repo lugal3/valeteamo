@@ -24,7 +24,7 @@ varying vec3 vColor,vNormal,vWorld,vTangent;
 varying vec2 vUV;
 varying float vArt,vStyle,vDistance;
 uniform vec3 uEye,uLightEye,uForward,uRight,uUp;
-uniform sampler2D uAtlas,uLightDepth,uMaterials,uTV;
+uniform sampler2D uAtlas,uLightDepth,uMaterials,uTV,uLoisFace;
 uniform float uFlash,uOcclude;
 uniform float uShot;
 uniform float uHasShadows;
@@ -70,7 +70,7 @@ float lampLight(vec4 lamp,vec3 world,vec3 normal,vec3 surfaceNormal){
 }
 void main(){
  if(uMirrorPass>.5&&vWorld.x<9.8375)discard;
- if(vArt>1.5&&uTVSignal>.5){
+ if(vArt>1.5&&vArt<2.5&&uTVSignal>.5){
   vec2 grid=floor(vUV*vec2(256.0,144.0));
   float grain=fract(sin(dot(grid,vec2(3.4,7.3)))*419.3);
   float scan=.88+.12*mod(grid.y,2.0);
@@ -132,6 +132,11 @@ void main(){
  vec3 lighting=(ambient+uShot*vec3(.75,.83,1.0))*facing+vec3(.94,.97,1.0)*(beam+motes*.50)+vec3(1.0,.82,.60)*warmth;
  vec3 color=vColor*material.rrr*1.075;
  if(vArt>.5&&vArt<1.5){vec4 painted=texture2D(uAtlas,vUV);color=mix(color,painted.rgb,painted.a*.96);}
+ if(vArt>2.5&&vArt<3.5){
+  // PS2 face: original sRGB albedo on dedicated UV, with skin-color fallback.
+  vec4 painted=texture2D(uLoisFace,vUV);
+  color=mix(color,painted.rgb*material.r,painted.a);
+ }
  float rough=material.a,shine=0.0;
  if(uOcclude>.5 && rough<.8){
   float h=max(0.0,dot(N,-direction)),s2=h*h,s4=s2*s2,s8=s4*s4;

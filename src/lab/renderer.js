@@ -2,6 +2,7 @@ import {createPose,createRigBinding,evaluateRig,JOINT_INDEX} from './character-r
 import {sampleBlink} from './animations/face.js';
 import {smoothSurface,torusSurface,roundedBoxSurface} from './chibi-geometry.js';
 import {loisFaceSurface} from './lois-ps2-face.js';
+import {createLoisFaceTexture} from './lois-ps2-texture.js';
 import {BATH_MIRROR,mirrorVisible,kittyMirrorPieces,reflectedBathroom,reflectMesh,poseReflectedKitty} from './mirror.js';
 import {ART_SIZE,ART_COLUMNS,ART_ROWS,POSTER_IMAGES,artTile,createArtworkCanvas} from './artwork.js';
 import {climbingHandPieces} from './first-person.js';
@@ -197,7 +198,7 @@ export class HouseRenderer {
   this.canvas=canvas;this.quality=quality;
   const gl=canvas.getContext('webgl',{alpha:false,stencil:true,antialias:false,powerPreference:'low-power',preserveDrawingBuffer:false});
   if(!gl)throw Error('El navegador no permite WebGL. Activa aceleración gráfica o prueba otro navegador.');
-  this.gl=gl;this.programs={medium:program(gl),low:program(gl,true)};this.program=this.programs[quality==='low'?'low':'medium'];this.texture=createAtlas(gl);this.disposeArtwork=loadPosterTiles(gl,this.texture);this.materialQuality=quality;this.materialTextures=createMaterials(gl,quality);
+  this.gl=gl;this.programs={medium:program(gl),low:program(gl,true)};this.program=this.programs[quality==='low'?'low':'medium'];this.texture=createAtlas(gl);this.disposeArtwork=loadPosterTiles(gl,this.texture);this.materialQuality=quality;this.materialTextures=createMaterials(gl,quality);this.loisFaceTexture=createLoisFaceTexture(gl,quality);
   this.mirrorSupported=gl.getContextAttributes().stencil;this.mirrorBuffers=Array.from({length:8},()=>gl.createBuffer());this.mirrorDrawn=false;
   this.vbo=gl.createBuffer();this.ibo=gl.createBuffer();this.count=0;
   this.dynamicVbo=gl.createBuffer();this.dynamicIbo=gl.createBuffer();this.dynamicCount=0;this.dynamicBoxes=[];
@@ -214,7 +215,7 @@ export class HouseRenderer {
   this.locations={};
   for(const [quality,p] of Object.entries(this.programs)){
    const atrib={},uniform={};for(const key of ['aPos','aCol','aNormal','aUV','aArt','aStyle','aTangent'])atrib[key]=gl.getAttribLocation(p,key);
-   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld','uTV','uTVSignal','uShot'])uniform[key]=gl.getUniformLocation(p,key);
+   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld','uTV','uTVSignal','uShot','uLoisFace'])uniform[key]=gl.getUniformLocation(p,key);
    uniform.uLamps=gl.getUniformLocation(p,'uLamps[0]');
    this.locations[quality]={atrib,uniform};
   }
@@ -451,6 +452,7 @@ export class HouseRenderer {
    for(const t of this.materialTextures)gl.deleteTexture(t);
    this.materialTextures=createMaterials(gl,quality);
   }
+  this.loisFaceTexture.setQuality(quality);
   this.updateDynamic(time,motion);
   const cy=Math.cos(camera.yaw),sy=Math.sin(camera.yaw),cp=Math.cos(camera.pitch),sp=Math.sin(camera.pitch);
   const right=[cy,0,-sy],forward=[sy*cp,sp,cy*cp],up=[-sy*sp,cp,-cy*sp];
@@ -458,7 +460,7 @@ export class HouseRenderer {
   const light={x:camera.x+right[0]*.12+forward[0]*.06,y:camera.y+forward[1]*.06-.12,z:camera.z+right[2]*.12+forward[2]*.06};
   this.updateShadows(camera,flash,light,{right,up,forward});
   this.program=this.programs[quality];Object.assign(this,this.locations[quality]);gl.useProgram(this.program);
-  gl.uniform1i(this.uniform.uAtlas,0);gl.uniform1i(this.uniform.uLightDepth,1);gl.uniform1i(this.uniform.uMaterials,2);
+  gl.uniform1i(this.uniform.uAtlas,0);gl.uniform1i(this.uniform.uLightDepth,1);gl.uniform1i(this.uniform.uMaterials,2);gl.uniform1i(this.uniform.uLoisFace,4);
   this.updateTelevision(motion.television);
   const isLow=quality==='low';
   gl.uniform1f(this.uniform.uAtlasSize,isLow?ATLAS_SIZE:ATLAS_SIZE_MED);
@@ -488,5 +490,5 @@ export class HouseRenderer {
   if(motion.introHands)this.drawClimbingHands(motion.introHands);
   if(showHand)this.drawFirstPerson(camera,right,up,forward,time,flash,motion);
  }
- destroy(){const gl=this.gl;this.disposeArtwork();if(this.pursuerVbo)gl.deleteBuffer(this.pursuerVbo);if(this.pursuerIbo)gl.deleteBuffer(this.pursuerIbo);for(const b of this.mirrorBuffers)gl.deleteBuffer(b);gl.deleteTexture(this.texture);gl.deleteTexture(this.tvTexture);this.shadows.destroy();for(const mesh of this.shadowMeshes)gl.deleteBuffer(mesh.indices);for(const texture of this.materialTextures)gl.deleteTexture(texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.dynamicVbo);gl.deleteBuffer(this.dynamicIbo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);for(const p of Object.values(this.programs))gl.deleteProgram(p);this.canvas.width=1;this.canvas.height=1;}
+ destroy(){const gl=this.gl;this.loisFaceTexture.destroy();this.disposeArtwork();if(this.pursuerVbo)gl.deleteBuffer(this.pursuerVbo);if(this.pursuerIbo)gl.deleteBuffer(this.pursuerIbo);for(const b of this.mirrorBuffers)gl.deleteBuffer(b);gl.deleteTexture(this.texture);gl.deleteTexture(this.tvTexture);this.shadows.destroy();for(const mesh of this.shadowMeshes)gl.deleteBuffer(mesh.indices);for(const texture of this.materialTextures)gl.deleteTexture(texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.dynamicVbo);gl.deleteBuffer(this.dynamicIbo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);for(const p of Object.values(this.programs))gl.deleteProgram(p);this.canvas.width=1;this.canvas.height=1;}
 }

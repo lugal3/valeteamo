@@ -1,6 +1,7 @@
 // PS2-B sculpted, closed facial surface. One contiguous elliptical mesh,
 // including cheekbones, bridge of nose, tip, lips and chin. Not photo-textured yet.
 // This module has zero DOM or WebGL dependency and builds once per model variant.
+// Phase 3 uses face UV (u=.5 is frontal; the seam at u=0/1 is hidden behind the hair).
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const gaussian=(x,y,cx,cy,sx,sy)=>{
  const dx=(x-cx)/sx,dy=(y-cy)/sy;
@@ -59,7 +60,7 @@ export function loisFaceSurface(box,color,style){
    const blush=.045*(gaussian(x,y,-.10,-.04,.058,.05)+gaussian(x,y,.10,-.04,.058,.05))*front;
    const jawShade=.045*clamp((-y-.10)/.16,0,1)*front;
    const tint=[color[0]*(1-blush-jawShade),color[1]*(1-blush*.6-jawShade),color[2]*(1-blush*.3-jawShade)];
-   vertices.push(...p,...tint,nx,ny,nz,u,v,0,style,...tangent);
+   vertices.push(...p,...tint,nx,ny,nz,u,v,box.faceTexture===false?0:3,style,...tangent);
   }
  }
  for(let row=0;row<rings;row++){
