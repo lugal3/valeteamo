@@ -68,61 +68,40 @@ export function resetPrologue(){
  try{localStorage.removeItem(PROLOGUE_SAVE_KEY);}catch{}
 }
 
-// Each line is a real, skippable RPG dialogue. The hero is Kitty; Luis is
-// her boyfriend with glasses and a tattooed left arm; Louis is a DIFFERENT
-// character (young, 1D-era hairstyle), who will be kidnapped.
+// Minimal placeholder dialogue: the animation communicates the story.
+// Luis (Kitty's boyfriend) is DISTINCT from Louis (the 3D rescue hostage).
+// These are intentionally concise so the player can reach/test scenes quickly.
 export const PROLOGUE_DIALOGUES={
  intro:[
-  {speaker:'Kitty',text:'¡Qué bonito el sendero, el puente y esas flores! Escuché gritos cerca del jardín…'},
-  {speaker:'Kitty',text:'Ya aprendí: a la izquierda camino, a la derecha apunto y disparo. En PC uso WASD y las flechas o el mouse.'},
-  {speaker:'Kitty',text:'¡Allí! Hay alguien entre los cerezos. ¡Tengo que ayudarlo!'}
+  {speaker:'Kitty',text:'¡Escuché gritos entre los cerezos! Voy a ver qué pasa.'}
  ],
  victory:[
-  {speaker:'Louis',text:'¡Uf! Gracias por salvarme. Esas cosas salieron de los árboles y no dejaban de seguirme.'},
-  {speaker:'Kitty',text:'¡Qué susto! ¿Estás bien? Yo soy Kitty.'},
-  {speaker:'Louis',text:'Sí. Soy Louis. Me dedico a la música... aunque hoy prefiero no dar un concierto a esas sombras.'},
-  {speaker:'Louis',text:'No quiero asustarte, pero he visto a un señor de traje observándome desde hace días. Siempre desaparece cuando lo miro.'},
-  {speaker:'Kitty',text:'Ven conmigo. Mi novio Luis está cerca; seguro sabrá qué hacer.'}
+  {speaker:'Louis',text:'Gracias por ayudarme. Creo que alguien nos sigue.'}
  ],
  luis:[
-  {speaker:'Luis',text:'¡Kitty! ♡ ¡Por fin los encuentro! Los vi acercarse desde el sendero. ¿Quién es nuestro nuevo amigo?'},
-  {speaker:'Kitty',text:'¡Viniste a buscarnos! Él es Louis. Lo estaban atacando unas sombras y me contó que alguien lo sigue.'},
-  {speaker:'Luis',text:'Soy Luis, con una sola «o». Yo soy el novio de Kitty; Louis es nuestro invitado. ¡Que no nos confundan!'},
-  {speaker:'Louis',text:'Ja, gracias, Luis. El hombre tenía el pelo claro y llevaba un traje oscuro. Me dio mala espina.'},
-  {speaker:'Luis',text:'Voy a volver por el sendero para investigar. No estarás sola: te escribiré al teléfono si encuentro algo. ♡'},
-  {speaker:'Kitty',text:'Cuídate, amor. ♡ Louis, acompáñame hasta el claro mientras Luis revisa el sendero.'}
+  {speaker:'Luis',text:'Soy Luis, el novio de Kitty. Voy a revisar el camino. ♡'},
+  {speaker:'Kitty',text:'Cuídate. Louis y yo seguimos hacia el claro.'}
  ],
  warning:[
-  {speaker:'Louis',text:'¿Escuchaste eso? Los pájaros dejaron de cantar de golpe.'},
-  {speaker:'Kitty',text:'Todo se ve tan tranquilo... Seguro fue el viento.'},
-  {speaker:'Louis',text:'No, Kitty. Hay alguien detrás de nosotros. Reconozco esos pasos...'}
+  {speaker:'Louis',text:'Kitty… ¿escuchas ese motor?'}
  ],
  abducted:[
-  {speaker:'Kitty',text:'¡LOUIS! ¡No, no, no! ¡Desapareció delante de mí!'},
-  {speaker:'Kitty',text:'Dejó algo brillante en el suelo. Tengo que seguir las pistas aunque el bosque se esté oscureciendo.'},
-  {speaker:'Luis',text:'[Mensaje] Kitty, ¿estás bien? Vi unas huellas que van hacia las casas viejas. Te voy a ayudar.'}
+  {speaker:'Kitty',text:'¡Se llevaron a Louis en esa furgoneta! Tenía una media luna y decía LUNA-07.'}
  ],
  ribbon:[
-  {speaker:'Kitty',text:'¡Es la pulsera de Louis! Estaba aquí cuando la sombra se lo llevó.'},
-  {speaker:'Luis',text:'[Mensaje] Su pulsera tiene una flor grabada. Busca otras flores iguales en el sendero.'}
+  {speaker:'Kitty',text:'La pulsera de Louis… Debió caer cuando lo subieron a la furgoneta.'}
  ],
  petals:[
-  {speaker:'Kitty',text:'Hay pétalos de cerezo incluso lejos de los árboles. Parece que alguien los fue dejando para marcar un camino.'},
-  {speaker:'Luis',text:'[Mensaje] Estoy siguiendo el mapa. El camino desemboca en una casa grande. Ya está oscureciendo... ten cuidado.'}
+  {speaker:'Kitty',text:'Los pétalos siguen por este sendero. Quizás dejaron un rastro.'}
  ],
  wheel:[
-  {speaker:'Kitty',text:'Marcas recientes de ruedas... y ese dibujo de una flor en el suelo. Alguien llegó aquí hace poco.'},
-  {speaker:'Luis',text:'[Mensaje] La señal de Louis se perdió cerca de esa casa. Yo vigilaré la entrada y te avisaré por el teléfono.'},
-  {speaker:'Kitty',text:'No voy a dejarlo solo. Voy a buscar una forma de entrar.'}
+  {speaker:'Kitty',text:'Estas ruedas son de la furgoneta. La carretera lleva a las casas.'}
  ],
  locked:[
-  {speaker:'Kitty',text:'La puerta principal tiene una cerradura enorme. Está completamente cerrada.'},
-  {speaker:'Luis',text:'[Mensaje] Da la vuelta a la casa. Vi una ventana entreabierta desde el camino.'}
+  {speaker:'Kitty',text:'La puerta está cerrada. ¿Habrá otra forma de entrar?'}
  ],
  window:[
-  {speaker:'Kitty',text:'Ahí está... ¡una ventana abierta! Si entro por aquí nadie me verá desde la puerta.'},
-  {speaker:'Luis',text:'[Mensaje] Quédate atenta a mi teléfono. Si veo que vuelve el dueño de la casa, te avisaré.'},
-  {speaker:'Kitty',text:'Voy a entrar por la ventana. Louis, aguanta un poquito más...'}
+  {speaker:'Kitty',text:'Una ventana abierta… entraré por aquí. Louis, voy a encontrarte.'}
  ]
 };
 export const PROLOGUE_OBJECTIVES={
@@ -131,10 +110,10 @@ export const PROLOGUE_OBJECTIVES={
  'talk-louis':'Habla con Louis entre los cerezos',
  'talk-luis':'Sigue el camino hasta Luis, tu novio',
  'walk-together':'Acompaña a Louis hasta el claro del bosque',
- disappearance:'¿Qué le ocurrió a Louis?',
+ disappearance:'¡Una furgoneta acaba de llevarse a Louis!',
  ribbon:'Busca la pulsera de Louis',
  petals:'Sigue los pétalos brillantes',
- wheel:'Investiga las huellas en la vereda del vecindario',
+ wheel:'Sigue las huellas de ruedas hasta la furgoneta',
  door:'Comprueba la puerta principal',
  window:'Encuentra la ventana abierta',
  house:'Explora la casa en 3D'
