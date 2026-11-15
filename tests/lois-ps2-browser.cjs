@@ -28,7 +28,9 @@ const {chromium}=require('playwright');
     const canvas=document.getElementById('loisPreview');
     const actor={id:'louis-escape',kind:'louis-companion',visualPreset:LOIS_VISUAL_ID,visualVariant:variant,
      x:0,y:0,z:0,yaw:0,phase:'follow',walk:0,speed:0,crouch:0,blink:0,age:.5};
-    const geo=pickupGeometry([actor]);
+    let geo=pickupGeometry([actor]);
+    if(variant==='ps2-b-faceonly')geo=geo.filter(part=>part.shape==='lois-face'||part.id.endsWith('-neck'));
+    if(variant==='ps2-b-nohair')geo=geo.filter(part=>!/(hair|fringe|crown|temple)/.test(part.id));
     if(variant==='ps2-b-flat')for(const part of geo)if(part.shape==='lois-face')part.faceTexture=false;
     const stage=[
      {id:'stage-floor',x:0,y:-.12,z:0,w:5,h:.18,d:5,mat:'floor',color:[.44,.43,.42],solid:false},
@@ -36,7 +38,7 @@ const {chromium}=require('playwright');
     ];
     const renderer=new HouseRenderer(canvas,quality);
     renderer.rebuild([...stage,...geo]);
-    if(variant==='ps2-b'){
+    if(variant==='ps2-b'||variant==='ps2-b-faceonly'||variant==='ps2-b-nohair'){
      const loaded=await renderer.loisFaceTexture.readyPromise;
      if(!loaded)throw Error('Facial atlas could not load: check original SVG and Vite URL');
     }
@@ -57,7 +59,7 @@ const {chromium}=require('playwright');
    },{variant,shot,quality});
    assert.equal(data.error,0,'WebGL must render without errors: '+variant+' '+shot);
    assert(data.drawn>200,'all dynamic geometry is present');
-   if(variant==='ps2-b'){
+   if(variant==='ps2-b'||variant==='ps2-b-faceonly'||variant==='ps2-b-nohair'){
     assert.equal(data.textureReady,true,'Lois facial atlas loaded');
     assert.equal(data.textureUploads,1,'facial atlas uploaded once, not per frame');
     assert.equal(data.textureSize,quality==='low'?512:1024,'face texture LOD matches device');
@@ -76,6 +78,8 @@ const {chromium}=require('playwright');
   await capture('ps2-b','side');
   await capture('ps2-b','threequarter');
   await capture('ps2-b','portrait');
+  await capture('ps2-b-faceonly','portrait');
+  await capture('ps2-b-nohair','portrait');
   await capture('ps2-b','front','low');
   await capture('ps2-b','portrait','low');
   const old=await capture('legacy','front');
