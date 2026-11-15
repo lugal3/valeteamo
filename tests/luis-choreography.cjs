@@ -47,7 +47,7 @@ for(const needle of [
  "this.storyLuisMotion=makeLuisMotion('farewell-wave'",
  "this.storyLuisMotion=makeLuisMotion('farewell-walk'",
  "this.storyLuisReady=true",
- "this.story.near('');this.storyNear=''",
+ "this.story?.near('');this.storyNear=''",
  "this.updateLuisCinematic(dt)",
  "luisMotionIsBlocking(this.storyLuisMotion)",
  "this.storyLuisShadow?.setPosition",
