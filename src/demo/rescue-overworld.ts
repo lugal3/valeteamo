@@ -29,7 +29,7 @@ export const STORY_POSITIONS={
  'talk-louis':{u:29.4,v:4.1},'talk-luis':{u:34.6,v:4.4},
  'walk-together':{u:38.4,v:4.5},disappearance:{u:40.8,v:4.5},
  ribbon:{u:48,v:4.9},petals:{u:53,v:3.8},wheel:{u:59.5,v:4.9},
- door:{u:75.3,v:7.8},window:{u:78.4,v:6.5},house:{u:78.4,v:6.5}
+ door:{u:77.7,v:8.9},window:{u:76.4,v:9.1},house:{u:76.4,v:9.1}
 } satisfies Record<string,IsoPoint>;
 export function mapForStage(stage:string):RescueMapId{
  if(['defend','talk-louis','talk-luis','walk-together','disappearance'].includes(stage))return 'afternoon_meeting';
@@ -168,9 +168,15 @@ function house(scene:Phaser.Scene,u:number,v:number,main:boolean){
   g.fillStyle(0xf6e8d5).fillRect(wx+ww/2-1,wy,2,hh);
   g.fillStyle(0xf6e8d5).fillRect(wx,wy+hh/2,ww,2);
   g.fillStyle(0xd6a1b8).fillRect(wx-3,wy+hh,ww+6,3);
-  // The boarded south-west ground floor window is the exact window Kitty
-  // climbs through in the 3D house. It is NOT the front door.
+  // SOUTH-WEST first-floor window x≈2.2 is the OPEN intro window in
+  // house-layout.js. The other south windows have barricade boards.
   if(main&&i===0){
+   g.fillStyle(0x4d455a).fillRect(wx+3,wy+3,ww-6,hh-6);
+   g.fillStyle(0xffe2af,.78).fillRect(wx+5,wy+5,ww-10,hh-11);
+   g.fillStyle(0x8d6a72).fillRect(wx-7,wy,6,hh);
+   g.fillStyle(0xa0787b).fillRect(wx+ww+1,wy,6,hh);
+  }else if(main&&i===4){
+   // Boarded upstairs bedroom as in the 3D façade.
    g.fillStyle(0x70545a).fillRect(wx-3,wy+5,ww+6,5);
    g.fillStyle(0x805e60).fillRect(wx-3,wy+15,ww+6,4);
    g.fillStyle(0xd8b69d).fillRect(wx+2,wy+7,3,2).fillRect(wx+ww-4,wy+17,3,2);
