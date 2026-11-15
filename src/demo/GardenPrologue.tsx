@@ -3,6 +3,7 @@ import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {StoryGame} from '../StoryGame';
 import {Sound} from '../audio';
 import type {IsoAdventure,IsoStoryBridge,IsoStoryStage} from '../iso-game';
+import type {RouteArea} from './rescue-overworld';
 import {
  PROLOGUE_START,PROLOGUE_DIALOGUES,PROLOGUE_OBJECTIVES,
  advancePrologue,loadPrologue,savePrologue,resetPrologue,
@@ -24,7 +25,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  const [run,setRun]=useState<PrologueState>(()=>initial(test,checkpoint));
  const [dialog,setDialog]=useState<Dialog|null>(null),[letters,setLetters]=useState(0);
  const [near,setNear]=useState(''),[muted,setMuted]=useState(false);
- const [guide,setGuide]=useState(''),[dusk,setDusk]=useState(0);
+ const [guide,setGuide]=useState(''),[dusk,setDusk]=useState(0),[area,setArea]=useState<RouteArea>('sendero');
  const [portraits,setPortraits]=useState<Record<string,string>>({});
  const [restartKey,setRestartKey]=useState(0);
 
@@ -82,7 +83,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  const actions=useRef({
   ready:()=>{},interact:(_stage:IsoStoryStage)=>{},clearing:()=>{},
   victory:()=>{},health:(_hp:number)=>{},retry:()=>{},
-  arrive:()=>{},guide:(_message:string)=>{},dusk:(_value:number)=>{}
+  arrive:()=>{},guide:(_message:string)=>{},dusk:(_value:number)=>{},area:(_zone:RouteArea)=>{}
  });
  actions.current={
   ready:()=>{
@@ -111,6 +112,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   },
   guide:(message)=>setGuide(message),
   dusk:(value)=>setDusk(value),
+  area:(zone)=>setArea(zone),
   victory:()=>{changed('victory');setGuide('¡Bien! Sigue el camino para encontrar a Louis.');audioRef.current.tone(880,.19,.03);},
   clearing:()=>{
    if(phaseRef.current.stage!=='walk-together')return;
@@ -161,7 +163,8 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   retry:()=>actions.current.retry(),
   arrive:()=>actions.current.arrive(),
   guide:(message)=>actions.current.guide(message),
-  dusk:(value)=>actions.current.dusk(value)
+  dusk:(value)=>actions.current.dusk(value),
+  area:(zone)=>actions.current.area(zone)
  }),[]);
 
  const toggleAudio=()=>{
@@ -173,7 +176,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   const next=initial(test,checkpoint);
   phaseRef.current=next;setRun(next);setDialog(null);setLetters(0);
   dialogRef.current=null;dialogDone.current=null;lockedRef.current=false;enteringRef.current=false;
-  setNear('');setGuide('');setDusk(0);setRestartKey(value=>value+1);
+  setNear('');setGuide('');setDusk(0);setArea('sendero');setRestartKey(value=>value+1);
  };
  useEffect(()=>()=>{audioRef.current.destroy();
   if(import.meta.env.DEV)delete (window as Window&{__valePrologue?:unknown}).__valePrologue;
@@ -213,6 +216,11 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
     }
    }}/>
   <div className="prologue-night" style={{opacity:dusk}} aria-hidden="true"/>
+  <span className="prologue-area" aria-live="polite">✿ {{
+   sendero:'Sendero de los recuerdos',puente:'Río de los pétalos',
+   jardin:'Jardín de cerezos',bosque:'Bosque del crepúsculo',
+   vecindario:'Villa de los faroles',casa:'La casa de dos pisos'
+  }[area]}</span>
   {!dialog&&guide&&<div className="prologue-guide" role="status">{guide}</div>}
   {!dialog&&near&&<button type="button" className="prologue-interact"
    onClick={()=>sceneRef.current?.storyInteract()}>{near} · E</button>}
