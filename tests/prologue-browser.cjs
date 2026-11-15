@@ -72,6 +72,8 @@ async function play(){
   await step('wheel',2224,/Examinar Huellas/);
   await game.locator('xpath=self::*[@data-prologue-stage="door"]').waitFor();
   await page.waitForTimeout(2100);
+  const dusk=await page.evaluate(()=>window.__valePrologue.dusk());
+  assert(dusk.alpha>.5&&dusk.fillAlpha===1,'night must visibly darken the garden; fillAlpha cannot be zero');
   await page.screenshot({path:'artifacts/story-three-clues-night.png'});
   await step('door',2490,/Probar puerta/);
   await game.locator('xpath=self::*[@data-prologue-stage="window"]').waitFor();

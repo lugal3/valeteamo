@@ -195,7 +195,7 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
        this.clueMarkers.push(sprite);
       }
       // fixed-screen blue-violet dusk + deepening darkness, always a single scene
-      this.veil=this.add.rectangle(0,0,W,H,0x1a2248,0).setOrigin(0).setScrollFactor(0).setDepth(80);
+      this.veil=this.add.rectangle(0,0,W,H,0x1a2248,1).setOrigin(0).setScrollFactor(0).setDepth(80).setAlpha(0);
       // Normal alpha compositing gives a perceptible blue-violet night in Canvas
       // and WebGL. Multiply was too subtle on some mobile renderers.
       this.veil.setBlendMode(Engine.BlendModes.NORMAL);
@@ -210,7 +210,8 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
         teleport:(x:number,y=340)=>{this.kitty.setPosition(min(x,30,WORLD_W-30),y);this.cameras.main.centerOn(x,y);},
         defeatShadows:()=>{for(const e of this.enemies){e.hp=0;e.body.destroy();}},
         interact:()=>actRef.current(),advanceDialog:()=>nextDialogRef.current(),
-        health:()=>phaseRef.current.hp
+        health:()=>phaseRef.current.hp,
+        dusk:()=>({alpha:this.veil.alpha,fillAlpha:this.veil.fillAlpha})
        };
       }
      }
