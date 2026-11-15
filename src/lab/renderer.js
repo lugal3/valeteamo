@@ -307,6 +307,17 @@ export class HouseRenderer {
   gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamicVbo);
   const reduced=motion.reduced||false;
   const rigCache=new Map(); // once per character each frame, never once per limb
+  const shadowedRigs=new Set();
+  // Adjacent rigid parts share one GPU upload instead of ~60 tiny calls.
+  // Flush before unrelated geometry to preserve the original ordering.
+  let rigStart=-1,rigEnd=-1;
+  const metrics=this.loisRigMetrics={samples:0,uploads:0,bytes:0,parts:0};
+  const flushRig=()=>{
+   if(rigStart<0)return;
+   gl.bufferSubData(gl.ARRAY_BUFFER,rigStart*4,this.dynamicVertices.subarray(rigStart,rigEnd));
+   metrics.uploads++;metrics.bytes+=(rigEnd-rigStart)*4;
+   rigStart=-1;rigEnd=-1;
+  };
   const bobAmp=reduced?0:0.012,swayAmp=reduced?0:0.14;
   for(let i=0;i<this.dynamicBoxes.length;i++){
    const box=this.dynamicBoxes[i],source=box.source;
@@ -314,7 +325,7 @@ export class HouseRenderer {
    // retains the original louisPartPose path below, unchanged.
    if(source?.kind==='louis-companion'&&box.rigBone){
     let rig=rigCache.get(source);
-    if(!rig){rig=sampleLoisRig(source,reduced);rigCache.set(source,rig);}
+    if(!rig){rig=sampleLoisRig(source,reduced);rigCache.set(source,rig);metrics.samples++;}
     const bone=rig.bones[box.rigBone],face=rig.face,name=box.rigPart||'';
     const {start,end}=this.dynamicRanges[i];
     const eyes=/^(eye|iris|pupil|glint)-/.test(name),look=/^(iris|pupil|glint)-/.test(name);
@@ -326,16 +337,20 @@ export class HouseRenderer {
     this.dynamicRigKeys[i]=signature;
     writeLoisRigPart(this.dynamicVertices,this.dynamicTemplate,start,end,box,
      this.dynamicRigBinds[i],source,rig);
-    gl.bufferSubData(gl.ARRAY_BUFFER,start*4,this.dynamicVertices.subarray(start,end));
-    // Only shadow-casting character geometry requires lamp shadow invalidation.
-    if(this.dynamicCasters[i]){
-     this.lightPose='';
+    if(rigStart<0){rigStart=start;rigEnd=end;}
+    else if(start===rigEnd)rigEnd=end;
+    else {flushRig();rigStart=start;rigEnd=end;}
+    metrics.parts++;
+    // One shadow invalidation per actor instead of per hair strand / joint.
+    if(this.dynamicCasters[i]&&!shadowedRigs.has(source)){
+     shadowedRigs.add(source);this.lightPose='';
      for(const lamp of this.fixtures)
       if(Math.hypot(lamp.x-source.x,lamp.y-source.y,lamp.z-source.z)<LAMP_REACH+2)
        this.dirtyLampShadows.add(lamp);
     }
     continue;
    }
+   flushRig();
    let eyeScale=1;
    if(source){
     const offset=box.sourceOffset||[0,0,0];
@@ -390,6 +405,7 @@ export class HouseRenderer {
     for(const lamp of this.fixtures)if(Math.hypot(lamp.x-bx,lamp.y-by,lamp.z-bz)<reach)this.dirtyLampShadows.add(lamp);
    }
   }
+  flushRig();
  }
  updateShadows(camera,flash,light,basis){
   const lamps=nearbyLights(this.fixtures,camera);
