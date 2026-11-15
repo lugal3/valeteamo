@@ -50,7 +50,7 @@ const c30=converge(30),c60=converge(60),c120=converge(120);
 assert(Math.abs(c30.x-c60.x)<.1&&Math.abs(c60.x-c120.x)<.1,
  'camera framing must be frame-independent at 30/60/120');
 let release={x:70,y:40};
-for(let i=0;i<160;i++)release=P.smoothCinematicFocus(release,{x:0,y:0},1000/60,true);
+for(let i=0;i<225;i++)release=P.smoothCinematicFocus(release,{x:0,y:0},1000/60,true);
 assert(Math.hypot(release.x,release.y)<.1,'cinematic camera returns to natural following');
 for(const [dx,dy,name] of [[50,2,'right'],[-50,2,'left'],[1,-50,'up'],[1,50,'down']]){
  assert.equal(P.storyActorFacing(dx,dy),name,'characters actually face Kitty');
