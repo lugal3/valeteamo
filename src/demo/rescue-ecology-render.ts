@@ -143,6 +143,10 @@ export function createLivingEcology(
  });
  // Two reusable, world-space buffers, never over player input/hotspots.
  const light=scene.add.graphics().setDepth(.78),micro=scene.add.graphics().setDepth(1702);
+ // Windows must render ABOVE the house facade (its depth is y-145) but
+ // BELOW Kitty and porch hotspots. Ground-level light would be invisible.
+ const houseFoot=toScreen(NIGHT_HOUSE.center).y;
+ const windows=scene.add.graphics().setDepth(houseFoot-139);
  let lastAudioPeriod=-1,lastMicroPeriod=-1;
  let event:MicroEvent|null=null,occurred=0,updates=0;
  let visibleWildlife=0,reactiveFlora=0,alarmedWildlife=0;
@@ -173,7 +177,7 @@ export function createLivingEcology(
     .setScale(item.seed.size); // Same reusable Graphics, no per-frame allocations.
    animal(item.graphics,item.seed.kind,next.frame,item.seed.id);
   }
-  light.clear();micro.clear();
+  light.clear();micro.clear();windows.clear();
   const t=reducedMotion?0:elapsed/1000;
   if(map==='morning_garden'){
    // Golden dappled sunlight plus tiny circles on the RIVER bank.
@@ -216,9 +220,9 @@ export function createLivingEcology(
     const flicker=Math.pow(Math.sin(t*.41+i*1.7),2);
     const dark=i===3&&Math.floor(t/19)%3===1;
     const alpha=(dark?.035:.11+.06*flicker)*(.6+night*.4);
-    light.fillStyle(i%2?0xffdfb6:0xfff4cd,alpha)
+    windows.fillStyle(i%2?0xffdfb6:0xfff4cd,alpha)
      .fillRect(wx+3,wy+3,13,17);
-    light.fillStyle(0xc8a9ba,.23).fillRect(wx+5+Math.sin(t*.6+i)*2,wy+3,3,17);
+    windows.fillStyle(0xc8a9ba,.23).fillRect(wx+5+Math.sin(t*.6+i)*2,wy+3,3,17);
    }
    for(let i=0;i<4;i++){
     const p=toScreen({u:67+i*4.5,v:1.8});
