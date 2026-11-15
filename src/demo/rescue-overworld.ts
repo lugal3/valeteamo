@@ -267,6 +267,33 @@ function house(scene:Phaser.Scene,u:number,v:number,main:boolean){
  poly(g,main?0x735b73:0x86758b,[[left-9,y-h],[x-9,y-h-roof],[front+10,y-h-11],[middle+2,y-h+d*.31+9]]);
  poly(g,main?0x5c4b69:0x74677d,[[left-9,y-h],[x-13,y-h-roof-5],[middle+2,y-h+d*.31+9]]);
  g.lineStyle(3,0xe2b4bd).lineBetween(left-9,y-h,middle+2,y-h+d*.31+9);
+ // Soft hand-painted brick joints. They stay on the solid walls, never
+ // in front of the window or doorway interaction points.
+ for(let row=0;row<(main?6:3);row++){
+  const seamY=y-17-row*(main?20:18);
+  for(let col=0;col<5;col++){
+   const sx=left+8+col*(w*.105)+(row%2)*9;
+   g.lineStyle(1,0xffe2d5,main?.20:.14);
+   g.lineBetween(sx,seamY,sx+13,seamY);
+  }
+ }
+ // Shingle texture follows the sloped roof instead of drawing a flat square.
+ for(let row=0;row<(main?7:4);row++){
+  const yy=y-h-roof*.82+row*(main?10:8);
+  for(let col=0;col<(main?9:5);col++){
+   const xx=left+18+col*(w/(main?9:5))+(row%2)*7;
+   g.lineStyle(2,row%2?0xe0b2b4:0x463f60,.24);
+   g.lineBetween(xx,yy,xx+(main?14:10),yy+3);
+  }
+ }
+ if(main){
+  // Rain gutter, chimney, and roof vent mirror the lived-in 3D silhouette.
+  g.fillStyle(0xb07f82).fillRect(x+39,y-h-roof*.78,22,26);
+  g.fillStyle(0x5d4d67).fillRect(x+35,y-h-roof*.82,30,6);
+  g.fillStyle(0xddb9b0).fillRect(x+43,y-h-roof*.70,5,16);
+  g.fillStyle(0x9b8792).fillRect(front-28,y-h+4,18,7);
+  g.fillStyle(0x594d60).fillRect(front-23,y-h+3,9,5);
+ }
  // Vertical room divisions correspond to west wing / hallway / kitchen wing.
  if(main)for(const ratio of [.29,.53]){
   const xx=left+w*ratio;
@@ -304,9 +331,23 @@ function house(scene:Phaser.Scene,u:number,v:number,main:boolean){
   g.fillStyle(0x5b4459).fillRect(doorX,doorY,23,51);
   g.fillStyle(0xe8c486).fillCircle(doorX+18,doorY+27,3);
   g.fillStyle(0xcbb9ad).fillRect(doorX-10,doorY+48,45,6);
+  g.fillStyle(0xe8d7bd).fillRect(doorX-16,doorY+54,56,6);
+  g.fillStyle(0xa39194).fillRect(doorX-20,doorY+61,64,5);
+  // Two wall lamps flank the locked front entrance.
+  for(const lampX of [doorX-17,doorX+35]){
+   g.fillStyle(0x756079).fillRect(lampX-2,doorY+2,4,10);
+   g.fillStyle(0xf5d1a3).fillRect(lampX-5,doorY-9,10,12);
+   g.fillStyle(0xffefca).fillRect(lampX-3,doorY-7,6,8);
+  }
   // Distinct second-floor windows (bedroom, reading room, music room).
   g.fillStyle(0xe1afbb).fillRect(front-45,y-h*.48,50,7);
   for(let j=0;j<5;j++)g.fillStyle(0x756174).fillRect(front-42+j*11,y-h*.48-19,3,18);
+  // Climbing ivy below the kitchen wing; foliage uses flat pixel-art shapes.
+  for(let i=0;i<11;i++){
+   const ivyX=front-7+Math.sin(i*.77)*7,ivyY=y-6-i*9;
+   g.fillStyle(i%2?0x738f81:0x91ab91,.83).fillRect(ivyX,ivyY,10,5);
+   g.fillStyle(0x5b7e73,.74).fillRect(ivyX+4,ivyY-4,4,6);
+  }
   sign(scene,u-1.2,v-.6,'14 ♡');
  }else{
   g.fillStyle(0x755b67).fillRect(x-21,y-23,17,26);
@@ -522,12 +563,12 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   // About 30 FPS for purely decorative redraw; game input and camera stay 60 FPS.
   if(elapsed-lastVisualPaint<30)return;
   lastVisualPaint=elapsed;
-  const t=elapsed/1000,visualT=reducedMotion?0:t;
+  const visualT=reducedMotion?0:elapsed/1000;
   water.clear();atmosphere.clear();motes.clear();portalGlow.clear();
   if(map==='morning_garden'){
    for(let u=10;u<16;u++)for(let v=-2;v<=12;v++){
     if(v>=3&&v<=6)continue;
-    const p=toScreen({u,v}),x=p.x+Math.sin(t*1.5+u*.66+v*.9)*8;
+    const p=toScreen({u,v}),x=p.x+Math.sin(visualT*1.5+u*.66+v*.9)*8;
     water.lineStyle(1,0xecfff7,.31+Math.sin(visualT*1.7+v)*.13).lineBetween(x-9,p.y+3,x+7,p.y+3);
     if((u+v)%4===0)water.fillStyle(0xfcffff,.3).fillRect(x+3,p.y-3,3,2);
     if((u+v)%5===0){
