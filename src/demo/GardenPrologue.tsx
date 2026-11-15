@@ -41,11 +41,14 @@ const CLUES=[
  {x:1910,y:346,stage:'petals',label:'Pétalos brillantes',symbol:'✿'},
  {x:2224,y:347,stage:'wheel',label:'Huellas de ruedas',symbol:'⌁'}
 ] as const;
+export type PrologueCheckpoint='intro'|'walk-together'|'ribbon';
+const checkpointState=(test:boolean,checkpoint:PrologueCheckpoint):PrologueState=>
+ test?{...PROLOGUE_START,stage:checkpoint}:loadPrologue();
 function getObjective(stage:PrologueState['stage']){return PROLOGUE_OBJECTIVES[stage];}
 function storyLine(lines:PrologueLine[],i:number){return lines[Math.min(i,lines.length-1)];}
 
-export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;onExit:()=>void;onEnterHouse:()=>void}){
- const [run,setRun]=useState<PrologueState>(()=>test?{...PROLOGUE_START}:loadPrologue());
+export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHouse}:{test?:boolean;checkpoint?:PrologueCheckpoint;onExit:()=>void;onEnterHouse:()=>void}){
+ const [run,setRun]=useState<PrologueState>(()=>checkpointState(test,checkpoint));
  const [dialog,setDialog]=useState<Dialog|null>(null);
  const [letters,setLetters]=useState(0);
  const [near,setNear]=useState('');
@@ -144,7 +147,7 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
  },[run.stage,test,onEnterHouse]);
  const restart=()=>{
   if(!test)resetPrologue();
-  phaseRef.current={...PROLOGUE_START};setRun({...PROLOGUE_START});
+  phaseRef.current=checkpointState(test,checkpoint);setRun({...phaseRef.current});
   lockedRef.current=false;dialogRef.current=null;dialogDone.current=null;transitioning.current=false;
   setDialog(null);setLetters(0);setNear('');setEnemyCount(3);setRestartKey(v=>v+1);
  };
@@ -193,6 +196,7 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
       this.kitty=this.add.sprite(posForStage(phaseRef.current.stage),337,'chibi-kitty-down-0').setOrigin(.5,.9).setScale(1.3).setDepth(337);
       this.louis=this.add.image(722,326,'story-person-louis').setOrigin(.5,1).setScale(.87).setDepth(326);
       this.luis=this.add.image(1220,326,'story-person-luis').setOrigin(.5,1).setScale(.87).setDepth(326);
+      if(phaseRef.current.stage==='walk-together')this.louis.setPosition(this.kitty.x+52,this.kitty.y);
       this.add.text(722,247,'LOUIS',{fontFamily:'monospace',fontStyle:'bold',fontSize:'12px',color:'#71375c',stroke:'#ffeff5',strokeThickness:3}).setOrigin(.5).setDepth(326);
       this.add.text(1220,247,'LUIS ♡',{fontFamily:'monospace',fontStyle:'bold',fontSize:'12px',color:'#71375c',stroke:'#ffeff5',strokeThickness:3}).setOrigin(.5).setDepth(326);
       this.tweens.add({targets:[this.louis,this.luis],y:'-=3',duration:930,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
