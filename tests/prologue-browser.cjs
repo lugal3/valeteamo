@@ -71,6 +71,7 @@ async function play(){
   await step('petals',1910,/Examinar Pétalos/);
   await step('wheel',2224,/Examinar Huellas/);
   await game.locator('xpath=self::*[@data-prologue-stage="door"]').waitFor();
+  await page.waitForTimeout(2100);
   await page.screenshot({path:'artifacts/story-three-clues-night.png'});
   await step('door',2490,/Probar puerta/);
   await game.locator('xpath=self::*[@data-prologue-stage="window"]').waitFor();
@@ -78,6 +79,7 @@ async function play(){
   await page.getByRole('button',{name:/Entrar por la ventana/}).click();
   await finishDialogue();
   await page.locator('#lab-canvas').waitFor({state:'visible',timeout:26000});
+  await page.locator('.lab-window-intro:not(.lab-hidden)').waitFor({state:'visible',timeout:15000});
   await page.screenshot({path:'artifacts/story-to-house-3d.png'});
   assert.deepEqual(errors,[],'no runtime JS errors across the entire 2D→3D sequence');
   await context.close();

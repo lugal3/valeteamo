@@ -157,7 +157,14 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
       this.cameras.main.setBounds(0,0,WORLD_W,H);
       this.drawWorld();
       installReferenceCharacter(this,'kitty');
-      const faces=installProloguePeople(this);setPortraits(faces);
+      const faces=installProloguePeople(this);
+      const kittyFrame=this.textures.get('chibi-kitty-down-0').getSourceImage() as HTMLCanvasElement;
+      const kittyAvatar=document.createElement('canvas');
+      kittyAvatar.width=48;kittyAvatar.height=60;
+      const kittyContext=kittyAvatar.getContext('2d')!;
+      kittyContext.imageSmoothingEnabled=false;
+      kittyContext.drawImage(kittyFrame,0,0,48,60);
+      setPortraits({...faces,kitty:kittyAvatar.toDataURL('image/png')});
       this.kitty=this.add.image(posForStage(phaseRef.current.stage),337,'chibi-kitty-down-0').setScale(2.5).setDepth(18);
       this.louis=this.add.image(722,326,'story-person-louis').setScale(1.83).setDepth(17);
       this.luis=this.add.image(1220,326,'story-person-luis').setScale(1.83).setDepth(17);
@@ -180,7 +187,10 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
       }
       // fixed-screen blue-violet dusk + deepening darkness, always a single scene
       this.veil=this.add.rectangle(0,0,W,H,0x1a2248,0).setOrigin(0).setScrollFactor(0).setDepth(80);
-      this.veil.setBlendMode(Engine.BlendModes.MULTIPLY);
+      // Normal alpha compositing gives a perceptible blue-violet night in Canvas
+      // and WebGL. Multiply was too subtle on some mobile renderers.
+      this.veil.setBlendMode(Engine.BlendModes.NORMAL);
+      this.worldMoon.setDepth(81);
       if(phaseRef.current.stage==='intro')showDialog(PROLOGUE_DIALOGUES.intro,()=>{changed('begin');this.spawnEnemies();});
       if(phaseRef.current.stage==='defend')this.spawnEnemies();
       if(['ribbon','petals','wheel','door','window'].includes(phaseRef.current.stage))this.louis.setVisible(false);
@@ -189,7 +199,7 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
        (window as Window & {__valePrologue?:unknown}).__valePrologue={
         stage:()=>phaseRef.current.stage,position:()=>this.kitty.x,
         teleport:(x:number,y=340)=>{this.kitty.setPosition(min(x,30,WORLD_W-30),y);this.cameras.main.centerOn(x,y);},
-        defeatShadows:()=>{for(const e of this.enemies)e.hp=0;},
+        defeatShadows:()=>{for(const e of this.enemies){e.hp=0;e.body.destroy();}},
         interact:()=>actRef.current(),advanceDialog:()=>nextDialogRef.current(),
         health:()=>phaseRef.current.hp
        };
@@ -265,7 +275,7 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
      }
      syncWorld(stage:string){
       const twilight=['disappearance','ribbon','petals','wheel','door','window','house'].includes(stage);
-      this.tweens.add({targets:this.veil,alpha:twilight?.50:0,duration:1700});
+      this.tweens.add({targets:this.veil,alpha:twilight?.60:0,duration:1800});
       this.tweens.add({targets:this.worldMoon,alpha:twilight?1:0,duration:2500});
       CLUES.forEach((item,i)=>this.clueMarkers[i].setVisible(item.stage===stage));
       if(twilight)this.louis.setVisible(false);
@@ -402,6 +412,7 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
        setEnemyCount(n=>n===living?n:living);
        if(living===0&&!this.fightOver){
         this.fightOver=true;
+        this.shots.forEach(shot=>shot.shape.destroy());this.shots=[];
         this.time.delayedCall(360,()=>{changed('victory');this.syncWorld('talk-louis');});
        }
       }
@@ -443,7 +454,7 @@ export function GardenPrologue({test=false,onExit,onEnterHouse}:{test?:boolean;o
   if(scene&&'shoot' in scene)(scene as Phaser.Scene&{shoot:()=>void}).shoot();
  };
  const currentLine=dialog?storyLine(dialog.lines,dialog.index):null;
- const portrait= currentLine?.speaker==='Kitty'?null:
+ const portrait=currentLine?.speaker==='Kitty'?portraits.kitty:
   currentLine?.speaker==='Luis'?portraits.luis:portraits.louis;
  return <main className="story-prologue" aria-label="Actos uno y dos: el jardín y la desaparición" data-prologue-stage={run.stage}>
   <div className="prologue-stage" ref={stageRef} aria-label="Jardín 2D interactivo"/>
