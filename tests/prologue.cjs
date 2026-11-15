@@ -52,6 +52,28 @@ const assert=require('node:assert/strict');
  assert(countdown.includes("initialRoute:'rescue'"),'public countdown should enter new 2D route');
  assert(bridge.includes('<GardenPrologue'),'real Phaser 2D intro integrated into 3D rescue route');
  assert(bridge.includes("setMode('house')"),'the same route enters the old 3D house');
+ const rescue2d=fs.readFileSync('src/demo/GardenPrologue.tsx','utf8');
+ const arcade2d=fs.readFileSync('src/iso-game.ts','utf8');
+ const host=fs.readFileSync('src/StoryGame.tsx','utf8');
+ const control=fs.readFileSync('src/isometric.ts','utf8');
+ assert(rescue2d.includes('<StoryGame')&&rescue2d.includes('story={story}'),
+  'rescue story must be played by the same StoryGame that runs the original 2D Corazones');
+ assert(!rescue2d.includes('new Engine.Game')&&!rescue2d.includes('class StoryGarden'),
+  'rescue must NOT instantiate an independent Phaser engine');
+ assert(host.includes("import('./iso-game')")&&host.includes('setProgress,story'),
+  'the original 2D app must create one IsoAdventure with an optional story bridge');
+ assert(arcade2d.includes('export class IsoAdventure extends Phaser.Scene')&&
+  arcade2d.includes('if(this.story)')&&arcade2d.includes('this.drawFloor()'),
+  'rescue must extend the original game class and use its actual floor');
+ assert(arcade2d.includes('this.fitCamera(this.scale.width,this.scale.height)')&&
+  arcade2d.includes('this.flower(u,v)')&&arcade2d.includes('this.spawnEnemy(p,false)'),
+  'original camera, tile textures and combat sprites must be reused without duplication');
+ assert(control.includes('screenVector')&&arcade2d.includes('screenVector(x,y)'),
+  'story movement must use the unchanged Corazones projection');
+ assert(bridge.includes('checkpointFor(entry)')&&!bridge.includes('class GardenScene'),
+  'all 2D rescue checkpoints must use the original 2D Corazones engine');
+ assert(bridge.includes('onRescue:')&&bridge.includes("setMode('house')"),
+  'the 2D scenes must still connect to the original 3D house');
  const phone=fs.readFileSync('src/lab/phone-content.js','utf8');
  assert(phone.includes('Mi Luis ❤️'),'the boyfriend is the person sending messages later');
  console.log('PASS: coherent Acts I–II, three clues, protected classic mode, phone bridge and 3D transition.');

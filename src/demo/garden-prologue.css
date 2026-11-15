@@ -1,88 +1,84 @@
-/* Acts I-II: one 16:9 kawaii Phaser scene. The original classic 2D is untouched. */
-.story-prologue{position:fixed;inset:0;z-index:8600;overflow:hidden;
- font-family:system-ui,-apple-system,sans-serif;color:#fff5f7;
- background:linear-gradient(135deg,#f8c7d8,#b6d6c1 44%,#684e7b)}
-.prologue-stage{position:absolute;inset:0;display:grid;place-items:center;touch-action:none}
-.prologue-stage canvas{display:block;max-width:100%;max-height:100%;image-rendering:pixelated;touch-action:none}
-.prologue-topbar{position:absolute;left:max(13px,env(safe-area-inset-left));right:max(13px,env(safe-area-inset-right));top:max(8px,env(safe-area-inset-top));
- display:flex;justify-content:space-between;gap:12px;align-items:flex-start;z-index:4;pointer-events:none}
-.prologue-title{display:flex;flex-direction:column;gap:5px;max-width:min(60vw,530px);
- padding:9px 15px;border:2px solid #fff4f0b6;border-radius:16px;
- background:linear-gradient(110deg,#8f5d85e8,#69456ee8);box-shadow:0 6px 18px #5c395a62}
-.prologue-title span{font-size:10px;letter-spacing:.16em;font-weight:900;color:#ffd8e6}
-.prologue-title strong{font-size:clamp(12px,1.65vw,16px);line-height:1.35;font-weight:800}
-.prologue-top-right{display:flex;gap:7px;align-items:flex-start;pointer-events:auto}
-.prologue-health{display:flex;align-items:center;gap:2px;background:#3b3047d6;border-radius:12px;border:1px solid #f7b8d1;padding:9px 11px}
-.prologue-health span{color:#5c4c65;font:900 clamp(13px,2vw,19px) Georgia;filter:drop-shadow(0 2px 1px #473348)}
-.prologue-health span.full{color:#ff759e;text-shadow:0 0 5px #ffd5e5}
-.prologue-clue-count{padding:8px 9px;background:#392d4fc9;border-radius:12px;white-space:nowrap;font-size:11px;font-weight:800}
-.prologue-exit,.prologue-restart{
- padding:10px 13px;background:#573a63d9;border:1px solid #f2c9e5;color:#fff6fb;
- border-radius:12px;font-weight:800;cursor:pointer}
-.prologue-fight-score{position:absolute;z-index:3;top:78px;left:50%;transform:translateX(-50%);
- white-space:nowrap;background:#613a5be6;border:1px solid #ffe1f0;border-radius:18px;
- padding:7px 14px;font-weight:800;font-size:12px;box-shadow:0 4px 10px #49354754}
-.prologue-stick{position:absolute;z-index:5;bottom:max(19px,env(safe-area-inset-bottom));left:max(26px,env(safe-area-inset-left));
- width:100px;height:100px;display:flex;flex-direction:column;justify-content:center;align-items:center;
- touch-action:none;user-select:none;border:3px solid #ffebf5;
- background:radial-gradient(circle,#ffe4f3cc,#9e6a9fa6);border-radius:50%;box-shadow:0 4px 20px #6c466c8b}
-.prologue-stick-thumb{width:42px;height:42px;display:grid;place-items:center;border:2px solid #fff4f4;
- background:linear-gradient(135deg,#fff3f7,#f0a5cc);border-radius:50%;font:28px Georgia;color:#a44d84;
- box-shadow:0 3px 6px #633a6f77;pointer-events:none}
-.prologue-stick small{position:absolute;top:100%;font-size:9px;letter-spacing:.08em;font-weight:900;text-shadow:0 2px 4px #4b3d5d}
-.prologue-interact,.prologue-shoot{position:absolute;z-index:5;
- right:max(24px,env(safe-area-inset-right));bottom:max(24px,env(safe-area-inset-bottom));
- border:3px solid #fff7f0;cursor:pointer;touch-action:none;color:#fffdfb;
- background:linear-gradient(140deg,#d968a3,#9456a1);box-shadow:0 7px 17px #55364b99;font-weight:900}
-.prologue-interact{border-radius:18px;padding:14px 21px;max-width:240px;font-size:12px;min-height:54px}
-.prologue-shoot{height:87px;width:87px;border-radius:50%;display:flex;flex-direction:column;align-items:center;
- justify-content:center;font:36px Georgia}
-.prologue-shoot small{font:900 10px system-ui}
-.prologue-shoot:active,.prologue-interact:active{filter:brightness(1.15)}
-.prologue-help{position:absolute;z-index:3;bottom:8px;left:50%;transform:translateX(-50%);
- pointer-events:none;color:#fff8f8;text-shadow:0 2px 4px #553a67;font-size:10px;text-align:center}
-.prologue-dialog-backdrop{position:absolute;z-index:40;inset:0;display:flex;align-items:flex-end;
- justify-content:center;padding:max(12px,env(safe-area-inset-bottom)) max(15px,env(safe-area-inset-right))
- max(12px,env(safe-area-inset-bottom)) max(15px,env(safe-area-inset-left));
- background:linear-gradient(transparent 32%,#271a36a8);overscroll-behavior:contain}
-.prologue-dialog{position:relative;display:grid;grid-template-columns:100px minmax(0,1fr) auto;
- align-items:center;gap:14px;width:min(875px,100%);min-height:133px;
- padding:10px 17px;background:linear-gradient(125deg,#fff8f5,#fce6f0);
- color:#633d60;border:4px solid #9e719b;border-radius:20px;
- box-shadow:0 10px 0 #664765,0 15px 28px #3a274699;touch-action:manipulation}
-.prologue-portrait{width:88px;height:100px;display:grid;place-items:center;border-radius:14px;
- background:linear-gradient(140deg,#ffdaed,#dab4df);border:2px solid #c995ba;overflow:hidden}
-.prologue-portrait img{width:82px;height:99px;object-fit:contain;image-rendering:pixelated}
-.prologue-kitty-portrait{display:flex;flex-direction:column;align-items:center;color:#b95898;font:56px Georgia}
-.prologue-kitty-portrait small{font:900 12px system-ui}
-.prologue-dialog-copy{align-self:stretch;min-width:0;display:flex;flex-direction:column}
-.prologue-speaker{font:900 15px system-ui;color:#9b4c87;margin:4px 0 8px}
-.prologue-dialog-copy p{font:600 clamp(12px,1.9vw,17px)/1.45 system-ui;margin:0;min-height:3.1em}
-.prologue-dialog-counter{font:700 10px system-ui;color:#a67c9f;margin-top:auto}
-.prologue-next{align-self:end;min-width:93px;border-radius:10px;padding:12px 9px;border:1px solid #ca82af;
- background:#9e5d9a;color:#fff7f3;font-weight:800;font-size:12px;cursor:pointer;touch-action:manipulation}
-.prologue-next span{display:inline-block;margin-left:5px}
-.prologue-next:focus-visible,.prologue-interact:focus-visible,.prologue-shoot:focus-visible{outline:3px solid #ffc2e8}
-.prologue-error{position:absolute;inset:0;z-index:100;background:#3a2c48;display:grid;gap:12px;
- place-content:center;text-align:center;padding:25px}
-.prologue-error button{border:1px solid #f9c4e1;background:#a25a84;border-radius:12px;padding:12px;color:white}
-.prologue-restart{position:absolute;right:12px;bottom:10px;z-index:4;font-size:10px;opacity:.65}
+/* El rescate NO tiene renderer, cámara, HUD o joystick propios.
+   Todos son los originales de StoryGame / IsoAdventure (2D Corazones).
+   Aquí solo se dibujan diálogos, un botón contextual y el reinicio de pruebas. */
+.story-prologue{position:fixed;inset:0;z-index:8600;overflow:hidden;background:#e8ddce;
+ font-family:system-ui,-apple-system,sans-serif}
+.story-prologue .adventure-wrap{width:100%;height:100%;min-height:0}
+.story-prologue .prologue-interact,.story-prologue .prologue-restart{
+ position:absolute;z-index:5;right:max(14px,env(safe-area-inset-right));
+ border:1px solid #a8778170;background:#fff8ebeb;color:#87536f;
+ border-radius:9px;font:700 12px system-ui;cursor:pointer;
+ box-shadow:0 2px 6px #493b4b25;touch-action:manipulation}
+.story-prologue .prologue-interact{bottom:max(22px,env(safe-area-inset-bottom));padding:13px 16px;max-width:220px}
+.story-prologue .prologue-restart{top:max(58px,env(safe-area-inset-top));right:12px;bottom:auto;padding:7px 10px;font-size:10px;opacity:.75}
+.story-prologue .prologue-dialog-backdrop{
+ position:absolute;z-index:40;inset:0;display:flex;align-items:flex-end;justify-content:center;
+ padding:max(10px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-right))
+ max(10px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));
+ background:linear-gradient(transparent 30%,#271a3690);overscroll-behavior:contain}
+.story-prologue .prologue-dialog{
+ display:grid;grid-template-columns:88px minmax(0,1fr) auto;align-items:center;gap:12px;
+ width:min(870px,100%);min-height:125px;padding:10px 14px;
+ background:#fff8eb;color:#725a62;border:2px solid #b48a9e;border-radius:10px;
+ box-shadow:0 7px 0 #7a5a6c,0 14px 25px #3a274680}
+.story-prologue .prologue-portrait{
+ width:85px;height:95px;display:grid;place-items:center;overflow:hidden;
+ background:#f6e2e5;border:1px solid #cfa0af;border-radius:8px}
+.story-prologue .prologue-portrait img{width:65px;height:75px;object-fit:contain;image-rendering:pixelated}
+.story-prologue .prologue-kitty-portrait{color:#b45477;font-size:42px}
+.story-prologue .prologue-dialog-copy{align-self:stretch;display:flex;flex-direction:column;min-width:0}
+.story-prologue .prologue-speaker{font:800 13px system-ui;color:#a7617e;margin-bottom:5px}
+.story-prologue .prologue-dialog-copy p{font:600 clamp(11px,1.7vw,16px)/1.5 system-ui;margin:0;min-height:3em}
+.story-prologue .prologue-dialog-counter{font:700 10px ui-monospace,monospace;color:#a48c89;margin-top:auto}
+.story-prologue .prologue-next{align-self:end;border:1px solid #a8778170;background:#fff3e9;
+ color:#87536f;border-radius:9px;padding:12px 9px;font:700 12px system-ui;
+ touch-action:manipulation;cursor:pointer}
+.story-prologue .prologue-next:focus-visible,.story-prologue .prologue-interact:focus-visible{
+ outline:2px solid #a9667d;outline-offset:3px}
 @media(max-height:440px){
- .prologue-title{padding:6px 11px}.prologue-title span{font-size:9px}
- .prologue-title strong{font-size:11px}.prologue-health{padding:6px 8px}
- .prologue-health span{font-size:12px}.prologue-exit{padding:8px}
- .prologue-fight-score{top:48px;padding:4px 10px}
- .prologue-stick{width:70px;height:70px;left:17px;bottom:12px}
- .prologue-stick-thumb{height:32px;width:32px;font-size:21px}
- .prologue-stick small{display:none}
- .prologue-shoot{height:72px;width:72px;right:18px;bottom:12px}
- .prologue-interact{max-width:160px;min-height:46px;padding:8px 12px;bottom:12px;right:18px}
- .prologue-help{display:none}
- .prologue-dialog{min-height:104px;padding:7px 11px;grid-template-columns:67px minmax(0,1fr) auto;gap:8px}
- .prologue-portrait{width:61px;height:76px}.prologue-portrait img{width:60px;height:76px}
- .prologue-dialog-copy p{font-size:12px;line-height:1.30;min-height:2.6em}
- .prologue-speaker{font-size:12px;margin:3px 0 3px}
- .prologue-next{min-width:72px;font-size:10px;padding:9px 5px}
- .prologue-kitty-portrait{font-size:35px}.prologue-kitty-portrait small{font-size:9px}
+ .story-prologue .prologue-dialog{min-height:102px;grid-template-columns:59px minmax(0,1fr) auto;gap:7px;padding:6px 9px}
+ .story-prologue .prologue-portrait{width:57px;height:72px}
+ .story-prologue .prologue-portrait img{width:49px;height:64px}
+ .story-prologue .prologue-dialog-copy p{font-size:11px;line-height:1.3;min-height:2.5em}
+ .story-prologue .prologue-speaker{font-size:11px;margin-bottom:3px}
+ .story-prologue .prologue-next{padding:9px 6px;font-size:10px}
+ .story-prologue .prologue-interact{bottom:12px;padding:9px 11px}
 }
-@media(prefers-reduced-motion:reduce){.story-prologue *{animation:none!important;transition:none!important}}
+@media(prefers-reduced-motion:reduce){
+ .story-prologue .prologue-dialog *{animation:none!important;transition:none!important}
+}
+
+/* Tarde → atardecer → noche: cubre el viewport real en CSS,
+   independiente del world scroll/zoom. Nunca deja un rectángulo gris. */
+.story-prologue .prologue-night{
+ position:absolute;inset:0;z-index:1;pointer-events:none;
+ background:linear-gradient(130deg,rgba(27,23,60,.82),rgba(29,33,71,.88) 45%,rgba(16,26,53,.94));
+ mix-blend-mode:multiply;transition:opacity 2300ms ease-in-out;
+ will-change:opacity
+}
+.story-prologue .prologue-guide{
+ position:absolute;left:50%;top:calc(max(8px,env(safe-area-inset-top)) + 48px);
+ transform:translateX(-50%);z-index:6;pointer-events:none;
+ max-width:min(82vw,560px);padding:7px 15px;text-align:center;
+ background:#fff9efed;color:#87677a;border:1px solid #e0bdd0;
+ border-radius:14px;font:700 clamp(10px,1.35vw,12px)/1.3 system-ui;
+ box-shadow:0 2px 8px #39283728
+}
+.story-prologue .prologue-dialog-backdrop{z-index:40}
+@media(max-height:410px){
+ .story-prologue .prologue-guide{top:calc(max(4px,env(safe-area-inset-top)) + 38px);
+  max-width:52vw;padding:5px 8px;font-size:9px}
+}
+@media(prefers-reduced-motion:reduce){
+ .story-prologue .prologue-night{transition:none}
+}
+
+.story-prologue .prologue-area{
+ position:absolute;top:calc(max(8px,env(safe-area-inset-top)) + 48px);
+ left:max(10px,env(safe-area-inset-left));z-index:6;pointer-events:none;
+ padding:6px 9px;color:#f7e5d9;background:#4b3853d6;border-radius:11px;
+ font:700 10px/1.15 system-ui;letter-spacing:.025em;
+ box-shadow:0 2px 6px #261a2d22
+}
+@media(max-height:420px){.story-prologue .prologue-area{top:calc(max(4px,env(safe-area-inset-top)) + 38px);
+ font-size:9px;padding:5px 7px;max-width:28vw}}

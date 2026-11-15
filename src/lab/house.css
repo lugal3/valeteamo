@@ -243,3 +243,12 @@
  #lab3d .house-rc-actions button{min-height:40px;padding:3px;font-size:10px}
  #lab3d .house-rc-actions{grid-template-columns:repeat(2,minmax(76px,102px));gap:4px}
 }
+
+/* CSS display:flex overrides the UA [hidden] rule. Without this, the
+   invisible emotes panel intercepts desktop clicks above the 3D canvas. */
+#lab3d .house-emotes[hidden]{display:none!important;pointer-events:none!important}
+#lab3d .house-emotes:not([hidden]){display:flex;pointer-events:auto}
+#lab3d .house-emotes:not([hidden]) button{pointer-events:auto;touch-action:manipulation;cursor:pointer}
+#lab3d .lab-buttons button[data-act=emotes][aria-expanded=true]{
+ background:#95657d;border-color:#ffddf1;outline:2px solid #ffe7bf
+}

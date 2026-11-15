@@ -14,6 +14,11 @@ on:
       - 'src/lab/phone-content.js'
       - 'tests/prologue.cjs'
       - 'tests/prologue-browser.cjs'
+      - 'tests/emotes-browser.cjs'
+      - 'tests/rescue-world.cjs'
+      - 'src/iso-game.ts'
+      - 'src/lab/house.js'
+      - 'src/lab/house.css'
       - 'package.json'
       - 'src/PlaytestMenu.tsx'
       - 'src/birthday-countdown.css'
@@ -50,6 +55,7 @@ jobs:
       - run: node tests/cosmos-browser.cjs
       - run: node tests/cosmos-public-flow.cjs
       - run: node tests/prologue-browser.cjs
+      - run: node tests/emotes-browser.cjs
       - name: Guardar capturas de la experiencia
         if: always()
         uses: actions/upload-artifact@v4

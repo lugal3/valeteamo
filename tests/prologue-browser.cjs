@@ -22,11 +22,25 @@ async function play(){
   await page.getByRole('button',{name:'Pruebas',exact:true}).click();
   assert.equal(await page.getByRole('button',{name:/Aventura clásica/}).count(),1,
    'Original 2D must stay selectable as a separate classic mode');
+  // Confirm the actual original arcade still launches unchanged first.
+  await page.getByRole('button',{name:/2D · Corazones/}).click();
+  await page.locator('.adventure-canvas canvas').waitFor({timeout:16000});
+  await page.getByRole('button',{name:'Salir',exact:true}).click();
   await page.getByRole('button',{name:/Rescate · 2D/}).click();
 
   const game=page.locator('.story-prologue');
   await game.waitFor({timeout:20000});
-  await page.waitForFunction(()=>Boolean(window.__valePrologue),null,{timeout:15000});
+  await page.waitForFunction(()=>Boolean(window.__valePrologue?.scene()?.player?.texture),null,{timeout:15000});
+  const realScene=await page.evaluate(()=>{
+   const scene=window.__valePrologue.scene();
+   return {key:scene.scene.key,zoom:scene.cameras.main.zoom,width:scene.scale.width,height:scene.scale.height,
+    usingOriginalFloor:!!scene.floor,usingOriginalCharacter:scene.player.texture.key.startsWith('chibi-kitty-')};
+  });
+  assert.equal(realScene.key,'iso-adventure','rescue must be the ACTUAL Corazones Phaser class');
+  assert.equal(realScene.zoom,Math.min(realScene.width/800,realScene.height/450)*1.08,
+   'rescue must keep the IDENTICAL Corazones camera zoom formula');
+  assert(realScene.usingOriginalFloor&&realScene.usingOriginalCharacter,
+   'rescue must use the original diamond floor and Kitty sprite system');
   assert.equal(await game.getAttribute('data-prologue-stage'),'intro');
   const convo=page.getByRole('dialog',{name:'Conversación'});
   async function finishDialogue(){
@@ -48,10 +62,24 @@ async function play(){
     await finishDialogue();
    }
   }
+  const intro=await page.evaluate(()=>{
+   const scene=window.__valePrologue.scene();
+   return {area:window.__valePrologue.area(),npc:!!scene.storyLouis,
+    river:!!scene.storyWorld?.water,stage:window.__valePrologue.stage()};
+  });
+  assert.equal(intro.area,'sendero','the story starts on the new path');
+  assert.equal(intro.npc,false,'Kitty starts ALONE; NPCs appear after exploring');
+  assert.equal(intro.river,true,'animated water must be built in the original Phaser scene');
+  assert.equal(await convo.isVisible(),false,'no intrusive dialog until after the bridge');
   await page.screenshot({path:'artifacts/story-acts1-2-introduction.png'});
+  // Exercise the exploration threshold rather than auto-starting combat.
+  await page.evaluate(()=>window.__valePrologue.teleport(999));
   await finishDialogue();
   await game.locator('xpath=self::*[@data-prologue-stage="defend"]').waitFor({timeout:10000});
-  await page.getByRole('button',{name:'Disparar corazones'}).click();
+  // Original Corazones controls: WASD for movement, arrows for hearts.
+  await page.keyboard.down('ArrowRight');
+  await page.waitForTimeout(360);
+  await page.keyboard.up('ArrowRight');
   // Same heart shooting mechanic style: enemy HP and heart projectiles
   await page.evaluate(()=>window.__valePrologue.defeatShadows());
   await game.locator('xpath=self::*[@data-prologue-stage="talk-louis"]').waitFor({timeout:11000});
@@ -73,6 +101,15 @@ async function play(){
   await game.locator('xpath=self::*[@data-prologue-stage="door"]').waitFor();
   await page.waitForTimeout(2100);
   const dusk=await page.evaluate(()=>window.__valePrologue.dusk());
+  const night=await page.locator('.prologue-night').evaluate(element=>{
+   const bounds=element.getBoundingClientRect();
+   return {x:bounds.x,y:bounds.y,width:bounds.width,height:bounds.height,
+    pointer:getComputedStyle(element).pointerEvents};
+  });
+  assert.equal(night.x,0);
+  assert.equal(night.y,0);
+  assert(night.width>=844&&night.height>=390,'night layer covers the ENTIRE viewport');
+  assert.equal(night.pointer,'none','night does not eat desktop clicks');
   assert(dusk.alpha>.5&&dusk.fillAlpha===1,'night must visibly darken the garden; fillAlpha cannot be zero');
   await page.screenshot({path:'artifacts/story-three-clues-night.png'});
   await step('door',2490,/Probar puerta/);

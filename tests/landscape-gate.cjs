@@ -54,9 +54,9 @@ async function main(){
   await page.getByRole('button',{name:/Abrir corazón/}).click();
   await page.getByRole('dialog',{name:/Comenzamos nuestra aventura/}).waitFor();
   await page.getByRole('button',{name:/Comenzar juego 2D/}).click();
-  const phaser=page.locator('.prologue-stage canvas');
+  const phaser=page.locator('.adventure-canvas canvas');
   await phaser.waitFor({timeout:25000});
-  await page.getByRole('dialog',{name:'Conversación'}).waitFor({timeout:12000});
+  await page.locator('.story-prologue .prologue-guide').waitFor({timeout:12000});
   await phaser.evaluate(el=>{el.dataset.orientationPersistence='game';});
   await page.setViewportSize({width:390,height:844});
   await gate.waitFor({state:'visible',timeout:7000});
@@ -65,7 +65,7 @@ async function main(){
   await gate.waitFor({state:'hidden',timeout:7000});
   assert.equal(await phaser.getAttribute('data-orientation-persistence'),'game',
    'the existing Phaser game is not destroyed and recreated on rotation');
-  await page.getByRole('button',{name:'Continuar diálogo'}).waitFor({timeout:8000});
+  await page.locator('.story-prologue .prologue-guide').waitFor({timeout:8000});
   assert.deepEqual(errors,[],'no runtime errors in orientation transitions');
   await context.close();
   console.log('PASS: blossom portrait -> landscape, countdown, persistent galaxy, heart, active Phaser without scene remount.');
