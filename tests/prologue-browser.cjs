@@ -164,6 +164,9 @@ async function play(){
   const victimStart=vanStart.louis;
   await page.waitForFunction(()=>window.__valePrologue.abduction().phase==='load',
    null,{timeout:2000});
+  // At the very FIRST loading frame the hostage is still beside the captor.
+  // Measure actual traversal after part of the continuous walk-to-door beat.
+  await page.waitForTimeout(480);
   const loading=await page.evaluate(()=>window.__valePrologue.abduction());
   assert(loading.louis?.visible,'Louis cannot vanish before entering the van');
   assert(Math.hypot(loading.louis.x-victimStart.x,
