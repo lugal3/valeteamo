@@ -85,6 +85,7 @@ export class IsoAdventure extends Phaser.Scene {
  storyStepTravel=0;storyInteractUntil=0;
  storyFootprints:{x:number;y:number;at:number;kind:FeelSurface;side:number}[]=[];
  storyCompanionClock=0;storyFollowHeading={x:1,y:0};
+ storyCompanionFacing:'left'|'right'|'up'|'down'='down';
  constructor(public level:1|2|3,public character:CharacterId,public report:(h:AdventureHud)=>void,public finish:(outcome:'win'|'dead')=>void,public onPause:(v:boolean)=>void,public audio:Sound,public ready:()=>void,public progress:(n:number)=>void=()=>{},public story?:IsoStoryBridge){super('iso-adventure');}
  preload(){const path=CHARACTERS[this.character].chibiSpriteSheet;if(path)this.load.spritesheet(`chibi-${this.character}-sheet`,path,{frameWidth:32,frameHeight:40});else{this.load.image(`${this.character}-reference-source`,new URL(`./sprites/${this.character}-reference-sheet.png`,document.baseURI).href);this.load.image(`${this.character}-walk-source`,new URL(`./sprites/${this.character}-walk-sheet.png`,document.baseURI).href);}if(this.story){
  this.load.image('louis-reference-source',new URL('./sprites/louis-reference-sheet.png',document.baseURI).href);
@@ -545,13 +546,15 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    };
    const state=feelCompanion({x:npc.x,y:npc.y},followTarget,dt,this.reducedMotion);
    npc.setPosition(state.position.x,state.position.y).setDepth(state.position.y);
-   if(state.walking)this.storyCompanionClock+=dt;
-   else this.storyCompanionClock=0;
-   const facing=state.direction==='left'?'right':state.direction;
+   if(state.walking){
+    this.storyCompanionClock+=dt;
+    this.storyCompanionFacing=state.direction;
+   }else this.storyCompanionClock=0;
+   const facing=this.storyCompanionFacing==='left'?'right':this.storyCompanionFacing;
    const frame=state.walking?1+Math.floor(this.storyCompanionClock/150)%4:0;
    const key=`chibi-louis-${facing}-${frame}`;
    if(this.textures.exists(key)&&npc.texture.key!==key)npc.setTexture(key);
-   npc.setFlipX(state.direction==='left');
+   npc.setFlipX(this.storyCompanionFacing==='left');
    // Louis also has a tiny idle posture; he doesn't moonwalk in place.
    npc.setAngle(this.reducedMotion?0:state.walking?
     Math.sin(this.storyCompanionClock/160*Math.PI)*1.4:Math.sin(this.clock/950)*.4);
@@ -594,6 +597,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.storyStepTravel=0;this.storyInteractUntil=0;
   this.storyFootprints=[];
   this.storyCompanionClock=0;this.storyFollowHeading={x:1,y:0};
+  this.storyCompanionFacing='down';
   this.cameras?.main?.setFollowOffset?.(0,0);
  }
  updateStoryCameraFeel(dt:number){
