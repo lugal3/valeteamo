@@ -183,8 +183,16 @@ async function play(){
   const moving=await page.evaluate(()=>window.__valePrologue.scene().p);
   assert(Math.hypot(moving.u-starting.u,moving.v-starting.v)>.25,
    'tapping the guide must physically walk Kitty, not teleport');
-  await page.waitForFunction(()=>window.__valePrologue.houseRoute().distance<1.50,
-   null,{timeout:32000});
+  await page.waitForFunction(()=>window.__valePrologue.houseRoute().distance<1.20,
+   null,{timeout:28000}).catch(async(error)=>{
+    const debug=await page.evaluate(()=>({
+     player:window.__valePrologue.scene().p,
+     route:window.__valePrologue.houseRoute(),
+     target:window.__valePrologue.scene().storyTarget,
+     near:window.__valePrologue.scene().storyNear
+    }));
+    throw Error('Assisted front path did not reach the actual door: '+JSON.stringify(debug),{cause:error});
+   });
   await page.screenshot({path:'artifacts/story-night-guided-front-porch.png'});
   await page.waitForTimeout(360);
   const dusk=await page.evaluate(()=>window.__valePrologue.dusk());
