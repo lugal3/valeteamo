@@ -54,7 +54,7 @@ async function main(){
   await page.getByRole('button',{name:/Abrir corazón/}).click();
   await page.getByRole('dialog',{name:/Comenzamos nuestra aventura/}).waitFor();
   await page.getByRole('button',{name:/Comenzar juego 2D/}).click();
-  const phaser=page.locator('.prologue-stage canvas');
+  const phaser=page.locator('.adventure-canvas canvas');
   await phaser.waitFor({timeout:25000});
   await page.getByRole('dialog',{name:'Conversación'}).waitFor({timeout:12000});
   await phaser.evaluate(el=>{el.dataset.orientationPersistence='game';});
