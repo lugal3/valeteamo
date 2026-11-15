@@ -3,7 +3,7 @@ import {Component,type ErrorInfo,type ReactNode} from 'react';
 // Every route shares this recovery path, including the cosmic previews, 2D
 // rescue and 3D house. Safari may retain an old entry bundle after a Firebase
 // release while the corresponding lazy scene chunk is no longer deployed.
-const staleModule=/dynamically imported module|importing a module script failed|failed to fetch|loading chunk|chunkloaderror|expected a javascript module script|mime type.*text\/html|unable to load.*module/i;
+const staleModule=/dynamically imported module|importing a module script failed|failed to fetch|load failed|loading chunk|chunkloaderror|expected a javascript module script|mime type.*text\/html|unable to load.*module/i;
 const getMessage=(cause:unknown):string=>{
  if(cause instanceof Error)return cause.message;
  if(typeof cause==='string')return cause;
@@ -53,8 +53,10 @@ export function installSceneRecovery(){
   if(!retrySceneBundleOnce())showGlobalRecovery();
  };
  window.addEventListener('vite:preloadError',event=>{
+  // Vite only emits this for a failed hashed JS/CSS dependency. WebKit uses
+  // a generic "Load failed" error that Chromium's patterns do not cover.
   event.preventDefault();
-  handle((event as Event&{payload?:unknown}).payload??'Importing a module script failed');
+  if(!retrySceneBundleOnce())showGlobalRecovery();
  });
  window.addEventListener('unhandledrejection',event=>{
   if(isSceneModuleError(event.reason)){event.preventDefault();handle(event.reason);}
