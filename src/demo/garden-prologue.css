@@ -172,3 +172,14 @@
 @media(prefers-reduced-motion:reduce){
  .story-prologue .prologue-house-arrow{transition:none}
 }
+
+/* The moon-plate clue stays legible in a tiny iPhone HUD, without an extra
+   RPG dialog or an obstructive full-screen popover. */
+.story-prologue .prologue-van-clue{
+ display:block;padding:7px 8px;color:#ffeacc;background:#2a2c40d9;
+ border:1px solid #dfbcaa80;border-radius:8px;
+ font:700 10px/1.3 system-ui;letter-spacing:.02em
+}
+@media(max-height:440px){
+ .story-prologue .prologue-van-clue{font-size:9px;padding:5px 6px}
+}
