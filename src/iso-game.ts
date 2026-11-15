@@ -6,6 +6,12 @@ import {installReferenceCharacter} from './reference-characters';
 import {facingOf,type Facing} from './animation';
 import {ISO,constrain,isoDistance,screenVector,toScreen,type IsoPoint} from './isometric';
 import {Sound} from './audio';
+import {RESCUE_FEEL,feelMotion,feelGait,feelCameraOffset,
+ feelSurfaceAt,FEEL_FOOTSTEP,feelCompanion,feelFacingToTarget,
+ type FeelSurface} from './demo/rescue-game-feel';
+import {storyBubble,storyboardBeat,kidnappingReaction,
+ storyActorFacing,storyActorIdle,kidnappingFrameFocus,
+ smoothCinematicFocus,type RescueEmotion} from './demo/rescue-performance';
 import {ABDUCTION_TIMING,abductionFrame,captorFrame,captorTexture,
  installRescueAbductionTextures,vanTexture,VAN_NIGHT_POSITION,VAN_PLATE,
  type AbductionPhase} from './demo/abduction-van';
@@ -77,6 +83,15 @@ export class IsoAdventure extends Phaser.Scene {
  storyActionPressed=false;storyNear='';storyWalkTriggered=false;storyVictoryEmitted=false;
  storyTarget:IsoPoint={u:22,v:4.5};
  houseRoute:IsoPoint[]=[];houseLastHint='';
+ storyVelocity:IsoPoint={u:0,v:0};
+ storyLookAhead={x:0,y:0};
+ storyStepTravel=0;storyInteractUntil=0;
+ storyFootprints:{x:number;y:number;at:number;kind:FeelSurface;side:number}[]=[];
+ storyCompanionClock=0;storyFollowHeading={x:1,y:0};
+ storyCompanionFacing:'left'|'right'|'up'|'down'='down';
+ storyStageAt=0;storyBeatPlayed=false;storyTargetCuePlayed=false;
+ storyDramaOffset={x:0,y:0};storyLouisFacing:'up'|'down'|'left'|'right'='down';
+ storyBubbles:{sprite:Phaser.GameObjects.Text;at:number;anchor:'kitty'|'louis'|'luis'|'target'|'van'}[]=[];
  constructor(public level:1|2|3,public character:CharacterId,public report:(h:AdventureHud)=>void,public finish:(outcome:'win'|'dead')=>void,public onPause:(v:boolean)=>void,public audio:Sound,public ready:()=>void,public progress:(n:number)=>void=()=>{},public story?:IsoStoryBridge){super('iso-adventure');}
  preload(){const path=CHARACTERS[this.character].chibiSpriteSheet;if(path)this.load.spritesheet(`chibi-${this.character}-sheet`,path,{frameWidth:32,frameHeight:40});else{this.load.image(`${this.character}-reference-source`,new URL(`./sprites/${this.character}-reference-sheet.png`,document.baseURI).href);this.load.image(`${this.character}-walk-source`,new URL(`./sprites/${this.character}-walk-sheet.png`,document.baseURI).href);}if(this.story){
  this.load.image('louis-reference-source',new URL('./sprites/louis-reference-sheet.png',document.baseURI).href);
@@ -120,6 +135,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(!this.story||map===this.storyMap)return;
   this.storyWorld?.destroy();
   this.houseRoute=[];this.houseLastHint='';
+  this.resetStoryFeel();this.clearStoryBubbles();
+  this.storyDramaOffset={x:0,y:0};
   this.storyVanInspected=false;this.storyVanNear=false;
   this.storyMap=map;
   this.storyWorld=this.createStoryWorld(map);
@@ -151,9 +168,12 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(!this.story||(!force&&this.storyStage===stage))return;
   const previousLouis=this.storyLouis?.active?
    {x:this.storyLouis.x,y:this.storyLouis.y}:undefined;
-  this.storyStage=stage;this.storyWalkTriggered=false;this.storyVictoryEmitted=false;
+  this.storyStage=stage;this.storyStageAt=this.clock;
+  this.storyBeatPlayed=false;this.storyTargetCuePlayed=false;
+  this.storyWalkTriggered=false;this.storyVictoryEmitted=false;
   this.storyActionPressed=false;this.storyNear='';
   this.houseRoute=[];this.houseLastHint='';
+  this.resetStoryFeel();this.clearStoryBubbles();
   for(const o of this.storyObjects)o.destroy();this.storyObjects=[];
   for(const e of this.enemies){e.s.destroy();e.shadow.destroy();}this.enemies=[];
   for(const shot of this.shots)shot.s.destroy();this.shots=[];
@@ -254,6 +274,13 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  }
  storyInteract(){
   if(!this.story||this.story.locked()||luisMotionIsBlocking(this.storyLuisMotion)||!this.storyNear)return;
+  const interactionAt=this.storyVanNear?VAN_NIGHT_POSITION:this.storyTarget;
+  const foot=toScreen(this.p),target=toScreen(interactionAt);
+  this.facing=feelFacingToTarget(target.x-foot.x,target.y-foot.y,this.facing);
+  this.storyInteractUntil=this.clock+RESCUE_FEEL.interactMs;
+  this.storyVelocity={u:0,v:0};this.storyStepTravel=0;
+  this.showStoryBubble('kitty','discover');
+  this.audio.tone(810,.085,.010,'sine');
   if(this.storyVanNear){
    this.storyVanInspected=true;this.houseRoute=[];
    this.audio.ui();this.audio.tone(460,.19,.033,'triangle');
@@ -338,6 +365,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.storyLuisFarewell=true;this.story?.near('');this.storyNear='';
   this.clearInput();
   this.storyLuisMotion=makeLuisMotion('farewell-wave',this.storyTarget,done);
+  this.showStoryBubble('luis','farewell');
   this.story?.guide('Luis se despide con la mano y vuelve caminando al sendero ♡');
   this.luisHeart(this.storyTarget);
  }
@@ -362,6 +390,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const completed=motion.kind,done=motion.done;
   if(completed==='arriving'){
    this.storyLuisMotion=makeLuisMotion('greeting',this.storyTarget);
+   this.showStoryBubble('luis','affection');
    this.luisHeart(this.storyTarget);
   }else if(completed==='greeting'){
    this.storyLuisMotion=undefined;this.storyLuisReady=true;
@@ -384,9 +413,14 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(motion){
    pose=motion.kind==='arriving'||motion.kind==='farewell-walk'?'walk':'wave';
    if(pose==='walk'){
-    const start=toScreen(motion.from),end=toScreen(motion.to);
-    dx=end.x-start.x;dy=end.y-start.y;
-    facing=dy< -38&&Math.abs(dx)<32?'up':Math.abs(dx)>28?'right':'down';
+    // Face the current tangent of the curved path, not the overall chord.
+    const previous=toScreen(luisPointOnPath({...motion,
+     elapsed:Math.max(0,motion.elapsed-60)}));
+    const next=toScreen(luisPointOnPath({...motion,
+     elapsed:Math.min(motion.duration,motion.elapsed+60)}));
+    dx=next.x-previous.x;dy=next.y-previous.y;
+    facing=dy< -Math.abs(dx)*.9?'up':
+     Math.abs(dx)>Math.abs(dy)*.55?'right':'down';
    }
   }else{
    facing=dy< -46&&Math.abs(dx)<27?'up':Math.abs(dx)>32?'right':'down';
@@ -433,11 +467,16 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const x=motion.from.x+(motion.to.x-motion.from.x)*e;
   const y=motion.from.y+(motion.to.y-motion.from.y)*e;
   npc.setPosition(x,y).setDepth(y);
-  const key='chibi-louis-down-'+(1+Math.floor(this.clock/160)%4);
+  const facing=storyActorFacing(motion.to.x-x,motion.to.y-y,this.storyLouisFacing);
+  this.storyLouisFacing=facing;
+  const key=`chibi-louis-${facing==='left'?'right':facing}-${1+Math.floor(this.clock/160)%4}`;
   if(this.textures.exists(key)&&npc.texture.key!==key)npc.setTexture(key);
+  npc.setFlipX(facing==='left');
   if(motion.elapsed>=motion.duration){
    this.storyLouisWalk=undefined;
-   if(this.textures.exists('chibi-louis-down-0'))npc.setTexture('chibi-louis-down-0');
+   const facing=this.storyLouisFacing==='left'?'right':this.storyLouisFacing;
+   const idle=`chibi-louis-${facing}-0`;
+   if(this.textures.exists(idle))npc.setTexture(idle);
   }
  }
  updateStoryAbduction(dt:number){
@@ -447,6 +486,14 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const frame=abductionFrame(shot.elapsed,shot.origin),prior=shot.phase;
   shot.phase=frame.phase;
   if(prior!==frame.phase){
+   if(['doors','struggle'].includes(frame.phase)){
+    const kitty=toScreen(this.p),what=toScreen(frame.phase==='struggle'?
+     frame.victim:frame.van);
+    this.facing=feelFacingToTarget(what.x-kitty.x,what.y-kitty.y,this.facing);
+   }
+   const reaction=kidnappingReaction(frame.phase,prior);
+   if(reaction)this.showStoryBubble('kitty',reaction);
+   if(frame.phase==='struggle')this.showStoryBubble('louis','fear');
    if(frame.phase==='doors')this.audio.tone(270,.17,.036,'sawtooth');
    if(frame.phase==='struggle'){
     if(!this.reducedMotion)this.cameras.main.shake(210,.0018);
@@ -523,11 +570,24 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   }
   if(stage==='walk-together'&&this.storyLouis){
    const foot=toScreen(this.p),npc=this.storyLouis;
-   npc.x+=(foot.x-35-npc.x)*Math.min(1,dt/300);
-   npc.y+=(foot.y+7-npc.y)*Math.min(1,dt/300);
-   const name='chibi-louis-down-'+(1+Math.floor(this.clock/115)%4);
-   if(this.textures.exists(name))npc.setTexture(name);
-   npc.setDepth(npc.y);
+   const followTarget={
+    x:foot.x-this.storyFollowHeading.x*36,
+    y:foot.y-this.storyFollowHeading.y*23+8
+   };
+   const state=feelCompanion({x:npc.x,y:npc.y},followTarget,dt,this.reducedMotion);
+   npc.setPosition(state.position.x,state.position.y).setDepth(state.position.y);
+   if(state.walking){
+    this.storyCompanionClock+=dt;
+    this.storyCompanionFacing=state.direction;
+   }else this.storyCompanionClock=0;
+   const facing=this.storyCompanionFacing==='left'?'right':this.storyCompanionFacing;
+   const frame=state.walking?1+Math.floor(this.storyCompanionClock/150)%4:0;
+   const key=`chibi-louis-${facing}-${frame}`;
+   if(this.textures.exists(key)&&npc.texture.key!==key)npc.setTexture(key);
+   npc.setFlipX(this.storyCompanionFacing==='left');
+   // Louis also has a tiny idle posture; he doesn't moonwalk in place.
+   npc.setAngle(this.reducedMotion?0:state.walking?
+    Math.sin(this.storyCompanionClock/160*Math.PI)*1.4:Math.sin(this.clock/950)*.4);
    if(!this.storyWalkTriggered&&isoDistance(this.p,this.storyTarget)<.98){
     this.storyWalkTriggered=true;this.story.clearing();
    }
@@ -539,7 +599,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    ribbon:'Examinar Pulsera',petals:'Examinar Pétalos',wheel:'Examinar Huellas',
    door:'Probar puerta',window:'Entrar por la ventana'
   };
-  const canInteract=stage!=='talk-luis'||this.storyLuisReady;
+  const canInteract=(stage!=='talk-luis'||this.storyLuisReady)&&
+   (stage!=='talk-louis'||!this.storyLouisWalk);
   const vanIsClose=this.storyMap==='night_neighborhood'&&
    ['door','window'].includes(stage)&&
    isoDistance(this.p,VAN_NIGHT_POSITION)<2.0;
@@ -548,6 +609,12 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const mainTarget=canInteract&&labels[stage]&&isoDistance(this.p,this.storyTarget)<radius?
    labels[stage]!:'';
   this.storyVanNear=!mainTarget&&vanIsClose;
+  // First discovery is a physical, nonblocking expression beside the object.
+  if(mainTarget&&!this.storyTargetCuePlayed&&
+   ['ribbon','petals','wheel','door','window'].includes(stage)){
+   this.storyTargetCuePlayed=true;
+   this.showStoryBubble('target',stage==='door'?'uneasy':'discover');
+  }
   const target=mainTarget||(this.storyVanNear?'Inspeccionar furgoneta':'');
   if(target!==this.storyNear){
    this.storyNear=target;this.story.near(target);
@@ -559,6 +626,140 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    }
   }
   this.checkStoryExit();
+ }
+ // Small expressive glyphs are NOT RPG dialogue and cannot block input.
+ showStoryBubble(anchor:'kitty'|'louis'|'luis'|'target'|'van',emotion:RescueEmotion){
+  if(!this.story)return false;
+  const position=this.storyBubbleAnchor(anchor);
+  if(!position)return false;
+  const cue=storyBubble(emotion);
+  while(this.storyBubbles.length>=3)this.storyBubbles.shift()?.sprite.destroy();
+  const node=this.add.text(position.x,position.y-53,cue.text,{
+   fontFamily:'Georgia',fontSize:emotion==='fear'?'19px':'17px',
+   fontStyle:'bold',color:cue.color,
+   backgroundColor:'#51445a',padding:{x:7,y:3},
+   stroke:'#3a3049',strokeThickness:2
+  }).setOrigin(.5,1).setDepth(position.y+23).setAlpha(.95);
+  this.storyBubbles.push({sprite:node,at:this.clock,anchor});
+  return true;
+ }
+ storyBubbleAnchor(anchor:'kitty'|'louis'|'luis'|'target'|'van'){
+  if(anchor==='kitty')return toScreen(this.p);
+  if(anchor==='target')return toScreen(this.storyTarget);
+  if(anchor==='van')return toScreen(VAN_NIGHT_POSITION);
+  const sprite=anchor==='luis'?this.storyLuis:this.storyLouis;
+  return sprite?.active&&sprite.visible?{x:sprite.x,y:sprite.y}:null;
+ }
+ clearStoryBubbles(){
+  for(const bubble of this.storyBubbles)bubble.sprite.destroy();
+  this.storyBubbles=[];
+ }
+ updateStoryPerformance(dt:number){
+  if(!this.story)return;
+  const beat=storyboardBeat(this.storyStage,this.clock-this.storyStageAt);
+  if(beat&&!this.storyBeatPlayed){
+   const target=this.storyStage==='talk-luis'?'luis':
+    this.storyStage==='talk-louis'?'louis':
+    ['ribbon','petals','wheel'].includes(this.storyStage)?'target':'kitty';
+   this.showStoryBubble(target,beat);
+   this.storyBeatPlayed=true;
+  }
+  // Maintain expressive idle while Kitty moves, while dialogue locks and
+  // during story hints, without taking over scripted walks or the kidnapping.
+  if(!this.storyLouisWalk&&!this.storyAbduction&&this.storyLouis?.active&&
+   this.storyStage!=='walk-together'){
+   const npc=this.storyLouis,kitty=toScreen(this.p);
+   const face=storyActorFacing(kitty.x-npc.x,kitty.y-npc.y,this.storyLouisFacing);
+   this.storyLouisFacing=face;
+   const idle=storyActorIdle(this.clock,this.reducedMotion);
+   const texture=`chibi-louis-${face==='left'?'right':face}-${idle.frame}`;
+   if(this.textures.exists(texture)&&npc.texture.key!==texture)npc.setTexture(texture);
+   npc.setFlipX(face==='left');
+   npc.setAngle(idle.lean);
+   npc.setScale(1.3*(1+idle.breath),1.3*(1-idle.breath));
+  }
+  const remaining:typeof this.storyBubbles=[];
+  for(const bubble of this.storyBubbles){
+   const age=this.clock-bubble.at;
+   if(age>=1200||!bubble.sprite.active){bubble.sprite.destroy();continue;}
+   const p=this.storyBubbleAnchor(bubble.anchor);
+   if(!p){bubble.sprite.destroy();continue;}
+   bubble.sprite.setPosition(p.x,p.y-52-(this.reducedMotion?0:Math.sin(age/1200*Math.PI)*9))
+    .setDepth(p.y+23)
+    .setAlpha(Math.min(1,age/115)*(age>850?(1200-age)/350:1));
+   remaining.push(bubble);
+  }
+  this.storyBubbles=remaining;
+ }
+ resetStoryFeel(){
+  this.storyVelocity={u:0,v:0};
+  this.storyLookAhead={x:0,y:0};
+  this.storyStepTravel=0;this.storyInteractUntil=0;
+  this.storyFootprints=[];
+  this.storyCompanionClock=0;this.storyFollowHeading={x:1,y:0};
+  this.storyCompanionFacing='down';
+  // Keep the current dramatic offset across a story beat; interpolate it
+  // back to zero instead of abruptly recentering at the end of the kidnapping.
+  this.cameras?.main?.setFollowOffset?.(
+   -this.storyDramaOffset.x,-this.storyDramaOffset.y);
+ }
+ updateStoryCameraFeel(dt:number){
+  this.storyLookAhead=feelCameraOffset(this.storyLookAhead,this.storyVelocity,dt,this.reducedMotion);
+  // Preserve exactly the original zoom/follow formula; no camera shake or
+  // dramatic forced pans during ordinary exploration.
+  const abduction=this.storyAbduction,kitty=toScreen(this.p);
+  const shot=abduction?abductionFrame(abduction.elapsed,abduction.origin):undefined;
+  const target=shot?toScreen(['struggle','load'].includes(shot.phase)?
+   shot.victim:shot.van):kitty;
+  const focus=kidnappingFrameFocus(this.storyStage,shot?.phase,
+   abduction?.elapsed??0,kitty,target,this.reducedMotion);
+  this.storyDramaOffset=smoothCinematicFocus(this.storyDramaOffset,focus,dt,!abduction);
+  this.cameras.main.setFollowOffset?.(
+   -this.storyLookAhead.x-this.storyDramaOffset.x,
+   -this.storyLookAhead.y-this.storyDramaOffset.y);
+ }
+ storyFootfall(deltaDistance:number){
+  this.storyStepTravel+=deltaDistance;
+  if(this.storyStepTravel<RESCUE_FEEL.footstepDistance)return;
+  this.storyStepTravel%=RESCUE_FEEL.footstepDistance;
+  const ground=feelSurfaceAt(this.storyMap,this.p);
+  const settings=FEEL_FOOTSTEP[ground];
+  this.audio.tone(settings.pitch+(this.storyFootprints.length%3)*10,
+   ground==='wood'?.07:.047,settings.volume,
+   ground==='wood'?'triangle':'sine');
+  if(!this.reducedMotion){
+   const point=toScreen(this.p),side=this.storyFootprints.length%2?1:-1;
+   this.storyFootprints.push({
+    x:point.x-side*3,y:point.y+1,at:this.clock,kind:ground,side
+   });
+   if(this.storyFootprints.length>12)this.storyFootprints.shift();
+  }
+ }
+ renderStoryKitty(dt:number,firing=false,recoil=0,hurt=false){
+  const gait=feelGait(this.storyVelocity,this.moveClock,this.clock,this.reducedMotion);
+  const moving=gait.walking;
+  const dir=this.facing==='left'?'right':this.facing;
+  const touch=this.storyInteractUntil>this.clock;
+  const frame=touch?0:gait.frame;
+  const hurtKey=`chibi-${this.character}-hurt`;
+  const texture=hurt&&this.textures.exists(hurtKey)?hurtKey:
+   `chibi-${this.character}-${dir}-${hurt?5:frame}${firing&&!hurt?'-shoot':''}`;
+  this.positionPlayer();
+  const duration=RESCUE_FEEL.interactMs,progress=touch?
+   Math.min(1,(this.storyInteractUntil-this.clock)/duration):0;
+  if(!this.reducedMotion){
+   this.player.y-=gait.footLift+Math.sin((1-progress)*Math.PI)*2.3*(touch?1:0);
+  }
+  if(this.player.texture.key!==texture)this.player.setTexture(texture);
+  const reach=touch&&!this.reducedMotion?Math.sin((1-progress)*Math.PI):0;
+  this.player.setFlipX(this.facing==='left')
+   .setScale(1.3*(1+recoil*.06+gait.squash+reach*.033),
+    1.3*(1-recoil*.08-gait.squash-reach*.055))
+   .setAlpha(this.clock<this.inv?
+    (this.reducedMotion?.7:Math.floor(this.clock/90)%2?.45:1):1)
+   .setAngle(hurt&&!this.reducedMotion?Math.sin(this.clock/35)*10:
+    this.reducedMotion?0:gait.lean+reach*(this.facing==='left'?-4:4));
+  if(hurt)this.player.setTint(0xffa8bb);else this.player.clearTint();
  }
  fitCamera(width:number,height:number){if(width<=0||height<=0)return;
   const camera=this.cameras.main;
@@ -613,7 +814,9 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  update(_time:number,delta:number){
   if(this.paused||this.pendingOffer||this.ended)return;const dt=Math.min(delta,40),seconds=dt/1000;this.clock+=dt;
   if(this.story){
-   this.storyWorld?.update(this.clock,this.storyDusk);
+   this.updateStoryPerformance(dt);
+   const ecologyCue=this.storyWorld?.update(this.clock,this.storyDusk,this.p);
+   if(ecologyCue)this.audio.playRescueAmbience?.(ecologyCue.kind,ecologyCue.pan);
    // Physical NPC and kidnapping motion keeps running during narrative locks.
    this.updateLuisCinematic(dt);
    this.animateStoryLuis();
@@ -622,6 +825,9 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   }
   if(this.story && (this.story.locked()||luisMotionIsBlocking(this.storyLuisMotion)||
    !!this.storyAbduction)){
+   this.storyVelocity=feelMotion(this.storyVelocity,{u:0,v:0},0,dt);
+   this.updateStoryCameraFeel(dt);
+   this.renderStoryKitty(dt);
    this.clearInput();return;
   }
   if(this.story && this.storyStage!==this.story.stage())this.setStoryStage(this.story.stage());
@@ -630,54 +836,117 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.notes=this.notes.filter(note=>{const age=this.clock-note.at;if(age>=850){note.s.destroy();return false;}note.s.y=note.y-(this.reducedMotion?0:age/45);note.s.setAlpha(Math.min(1,(850-age)/200));return true;});
   if(this.dyingAt){const age=this.clock-this.dyingAt,key=`chibi-${this.character}-dead`;if(this.textures.exists(key))this.player.setTexture(key);this.player.setAlpha(Math.max(.25,1-age/800));if(!this.reducedMotion)this.player.setAngle(Math.min(65,age/10));if(age>650){this.ended=true;this.finish('dead');}return;}
   if(this.wonAt){if(!this.reducedMotion)this.player.setAngle(Math.sin(this.clock/90)*8);if(this.clock-this.wonAt>850){this.ended=true;this.finish('win');}return;}
-  let x=+this.keys.D.isDown-+this.keys.A.isDown,y=+this.keys.S.isDown-+this.keys.W.isDown;
-  if(this.left){x=this.left.dx;y=this.left.dy;if(Math.hypot(x,y)<7)x=y=0;}
-  const manualMove=Math.hypot(x,y)>.1;
-  if(manualMove&&this.houseRoute.length)this.houseRoute=[]; // Player always overrides guide.
-  let guidePoint=this.houseRoute[0];
-  if(guidePoint&&isoDistance(this.p,guidePoint)<.17){
-   this.houseRoute.shift();guidePoint=this.houseRoute[0];
-  }
-  if(guidePoint){
-   const src=toScreen(this.p),dst=toScreen(guidePoint);
-   x=dst.x-src.x;y=dst.y-src.y;
-  }
-  const wantsMove=Math.hypot(x,y)>.1,move=screenVector(x,y);
-  const strength=this.left&&!guidePoint?Math.min(1,Math.hypot(x,y)/45):1;
   let moving=false;
-  if(wantsMove){
-   const distance=guidePoint?isoDistance(this.p,guidePoint):0;
-   const fraction=guidePoint?Math.min(1,2.1*seconds/Math.max(.001,distance)):0;
-   const candidate=guidePoint?{
-    u:this.p.u+(guidePoint.u-this.p.u)*fraction,
-    v:this.p.v+(guidePoint.v-this.p.v)*fraction
-   }:{
-    u:this.p.u+move.u*2.1*seconds*strength,
-    v:this.p.v+move.v*2.1*seconds*strength
-   };
-   const next=this.story?constrainRescue(candidate,this.storyMap,this.p):constrain(candidate);
-   moving=isoDistance(next,this.p)>.001;this.p=next;
-   if(guidePoint&&isoDistance(this.p,guidePoint)<.18)this.houseRoute.shift();
-   if(guidePoint&&!moving){
-    this.houseRoute=[];this.story?.guide('Hay una pared cerca. Sigue la vereda para rodear la casa.');
+  if(this.story){
+   // Kinetic movement applies exclusively to the rescue; the classic game
+   // stays byte-identical in the else branch.
+   let x=+this.keys.D.isDown-+this.keys.A.isDown,
+    y=+this.keys.S.isDown-+this.keys.W.isDown;
+   if(this.left){
+    x=this.left.dx;y=this.left.dy;
+    if(Math.hypot(x,y)<7)x=y=0;
    }
-   if(moving){
-    this.moveClock+=dt*(.45+.55*strength);
-    if(this.moveClock-this.lastStep>250){
-     this.lastStep=this.moveClock;this.burst(this.p,0xf8e8ca);
-     this.audio.tone(245,.04,.004,'triangle');
+   const manual=Math.hypot(x,y)>.1;
+   if(manual&&this.houseRoute.length)this.houseRoute=[];
+   let guidePoint=this.houseRoute[0];
+   if(guidePoint&&isoDistance(this.p,guidePoint)<.17){
+    this.houseRoute.shift();guidePoint=this.houseRoute[0];
+   }
+   if(guidePoint){
+    const from=toScreen(this.p),to=toScreen(guidePoint);
+    x=to.x-from.x;y=to.y-from.y;
+   }
+   const intent=screenVector(x,y),strength=this.left&&!guidePoint?
+    Math.min(1,Math.hypot(x,y)/45):Math.hypot(x,y)>.1?1:0;
+   const previous={...this.p};
+   const velocity=guidePoint?{...this.storyVelocity}:
+    feelMotion(this.storyVelocity,intent,strength,dt);
+   const step=guidePoint?
+    Math.min(1,2.1*seconds/Math.max(.001,isoDistance(previous,guidePoint))):0;
+   const destination=guidePoint?{
+    u:previous.u+(guidePoint.u-previous.u)*step,
+    v:previous.v+(guidePoint.v-previous.v)*step
+   }:{u:previous.u+velocity.u*seconds,v:previous.v+velocity.v*seconds};
+   const next=constrainRescue(destination,this.storyMap,previous);
+   const traveled=isoDistance(previous,next);
+   this.p=next;
+   this.storyVelocity=seconds>0?{
+    u:(next.u-previous.u)/seconds,v:(next.v-previous.v)/seconds
+   }:{u:0,v:0};
+   if(guidePoint&&isoDistance(this.p,guidePoint)<.18)this.houseRoute.shift();
+   if(guidePoint&&traveled<.0001){
+    this.houseRoute=[];
+    this.story?.guide('Hay un muro cerca. Sigue las baldosas para rodear la casa.');
+   }
+   if(traveled>.0001){
+    const speedRatio=Math.min(1,Math.hypot(this.storyVelocity.u,this.storyVelocity.v)/RESCUE_FEEL.speed);
+    this.moveClock+=dt*(.4+.6*speedRatio);
+    this.storyFootfall(traveled);
+    if(Math.hypot(x,y)>.1)this.facing=facingOf(x,y,this.facing);
+    const from=toScreen(previous),to=toScreen(next),direction={
+     x:to.x-from.x,y:to.y-from.y};
+    const magnitude=Math.hypot(direction.x,direction.y);
+    if(magnitude>.1)this.storyFollowHeading={
+     x:direction.x/magnitude,y:direction.y/magnitude
+    };
+   }else{
+    this.storyStepTravel=0;
+   }
+   this.updateStoryCameraFeel(dt);
+  }else{
+   let x=+this.keys.D.isDown-+this.keys.A.isDown,y=+this.keys.S.isDown-+this.keys.W.isDown;
+   if(this.left){x=this.left.dx;y=this.left.dy;if(Math.hypot(x,y)<7)x=y=0;}
+   const manualMove=Math.hypot(x,y)>.1;
+   if(manualMove&&this.houseRoute.length)this.houseRoute=[]; // Player always overrides guide.
+   let guidePoint=this.houseRoute[0];
+   if(guidePoint&&isoDistance(this.p,guidePoint)<.17){
+    this.houseRoute.shift();guidePoint=this.houseRoute[0];
+   }
+   if(guidePoint){
+    const src=toScreen(this.p),dst=toScreen(guidePoint);
+    x=dst.x-src.x;y=dst.y-src.y;
+   }
+   const wantsMove=Math.hypot(x,y)>.1,move=screenVector(x,y);
+   const strength=this.left&&!guidePoint?Math.min(1,Math.hypot(x,y)/45):1;
+   moving=false;
+   if(wantsMove){
+    const distance=guidePoint?isoDistance(this.p,guidePoint):0;
+    const fraction=guidePoint?Math.min(1,2.1*seconds/Math.max(.001,distance)):0;
+    const candidate=guidePoint?{
+     u:this.p.u+(guidePoint.u-this.p.u)*fraction,
+     v:this.p.v+(guidePoint.v-this.p.v)*fraction
+    }:{
+     u:this.p.u+move.u*2.1*seconds*strength,
+     v:this.p.v+move.v*2.1*seconds*strength
+    };
+    const next=this.story?constrainRescue(candidate,this.storyMap,this.p):constrain(candidate);
+    moving=isoDistance(next,this.p)>.001;this.p=next;
+    if(guidePoint&&isoDistance(this.p,guidePoint)<.18)this.houseRoute.shift();
+    if(guidePoint&&!moving){
+     this.houseRoute=[]; // No story bridge in classic Corazones.
     }
+    if(moving){
+     this.moveClock+=dt*(.45+.55*strength);
+     if(this.moveClock-this.lastStep>250){
+      this.lastStep=this.moveClock;this.burst(this.p,0xf8e8ca);
+      this.audio.tone(245,.04,.004,'triangle');
+     }
+    }else{this.moveClock=0;this.lastStep=0;}
+    this.facing=facingOf(x,y,this.facing);
    }else{this.moveClock=0;this.lastStep=0;}
-   this.facing=facingOf(x,y,this.facing);
-  }else{this.moveClock=0;this.lastStep=0;}
+  }
   let ax=+this.keys.RIGHT.isDown-+this.keys.LEFT.isDown,ay=+this.keys.DOWN.isDown-+this.keys.UP.isDown;
   if(this.right){ax=this.right.dx;ay=this.right.dy;if(Math.hypot(ax,ay)<8)ax=ay=0;}else if(this.mouse){const point=toScreen(this.p),aim=this.cameras.main.getWorldPoint(this.input.activePointer.x,this.input.activePointer.y);ax=aim.x-point.x;ay=aim.y-point.y;}
   const firing=Math.hypot(ax,ay)>.1&&this.level!==1;if(firing){this.facing=facingOf(ax,ay,this.facing);if(this.clock-this.last>300){this.last=this.clock;const aim=screenVector(ax,ay),length=Math.hypot(ax,ay);this.shotDir={x:ax/length,y:ay/length};this.shoot(this.p,aim.u*4,aim.v*4);this.audio.tone(700,.04,.015);}}
-  const frame=moving?1+Math.floor(this.moveClock/115)%4:this.clock%3600>3440?5:0,dir=this.facing==='left'?'right':this.facing;
-  const hurt=this.clock<this.inv&&this.clock>this.inv-300,hurtKey=`chibi-${this.character}-hurt`,texture=hurt&&this.textures.exists(hurtKey)?hurtKey:`chibi-${this.character}-${dir}-${hurt?5:frame}${firing&&!hurt?'-shoot':''}`;
+  const hurt=this.clock<this.inv&&this.clock>this.inv-300;
   const recoil=!this.reducedMotion&&this.last?Math.max(0,1-(this.clock-this.last)/100):0;
-  this.positionPlayer();if(!this.reducedMotion)this.player.y-=moving?Math.abs(Math.sin(this.moveClock/115*Math.PI))*2:Math.sin(this.clock/550)*.8;this.player.setTexture(texture).setFlipX(this.facing==='left').setScale(1.3*(1+recoil*.06),1.3*(1-recoil*.08)).setAlpha(this.clock<this.inv?(this.reducedMotion?.7:Math.floor(this.clock/90)%2?.45:1):1).setAngle(hurt&&!this.reducedMotion?Math.sin(this.clock/35)*10:moving&&!this.reducedMotion?Math.sin(this.moveClock/115*Math.PI)*3:0);
-  if(this.clock<this.inv&&this.clock>this.inv-300)this.player.setTint(0xffa8bb);else this.player.clearTint();
+  if(this.story)this.renderStoryKitty(dt,firing,recoil,hurt);
+  else {
+   const frame=moving?1+Math.floor(this.moveClock/115)%4:this.clock%3600>3440?5:0,dir=this.facing==='left'?'right':this.facing;
+   const hurtKey=`chibi-${this.character}-hurt`,texture=hurt&&this.textures.exists(hurtKey)?hurtKey:`chibi-${this.character}-${dir}-${hurt?5:frame}${firing&&!hurt?'-shoot':''}`;
+   this.positionPlayer();if(!this.reducedMotion)this.player.y-=moving?Math.abs(Math.sin(this.moveClock/115*Math.PI))*2:Math.sin(this.clock/550)*.8;this.player.setTexture(texture).setFlipX(this.facing==='left').setScale(1.3*(1+recoil*.06),1.3*(1-recoil*.08)).setAlpha(this.clock<this.inv?(this.reducedMotion?.7:Math.floor(this.clock/90)%2?.45:1):1).setAngle(hurt&&!this.reducedMotion?Math.sin(this.clock/35)*10:moving&&!this.reducedMotion?Math.sin(this.moveClock/115*Math.PI)*3:0);
+   if(this.clock<this.inv&&this.clock>this.inv-300)this.player.setTint(0xffa8bb);else this.player.clearTint();
+  }
   for(const light of [...this.collectibles]){light.s.y=toScreen(light.p).y-12+(this.reducedMotion?0:Math.sin(this.clock/230)*3);if(isoDistance(light.p,this.p)<.48){this.burst(light.p,0xffd584);this.floatNote(light.p,'¡Una luz!','#a67c3b');light.s.destroy();this.collectibles=this.collectibles.filter(x=>x!==light);this.collected++;this.audio.tone(880,.18,.035);this.sync();}}
   if(this.charm){const d=isoDistance(this.charm.p,this.p);this.charm.s.y=toScreen(this.charm.p).y-12+(this.reducedMotion?0:Math.sin(this.clock/260)*3);if(d>.9)this.declinedCharm=false;if(d<.48&&!this.declinedCharm){this.pendingOffer=true;this.clearInput();this.audio.tone(660,.1,.025);this.sync();return;}}
   for(const e of [...this.enemies]){
@@ -705,6 +974,21 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   }
   for(const zone of [...this.dangers])if(this.clock>=zone.at){if(isoDistance(zone.p,this.p)<.55)this.damage();this.burst(zone.p,0xc385b4);this.dangers=this.dangers.filter(z=>z!==zone);}if(this.dyingAt)return;
   const g=this.fx;g.clear();if(!this.reducedMotion&&!this.story){for(let i=0;i<12;i++){const t=this.clock*.012+i*53,x=100+(i*83)%600+Math.sin(t/30)*9,y=70+((i*41+t*.5)%290);g.fillStyle(i%2?0xfff2d5:0xf5c5d4,.3+Math.sin(t/18)*.12);g.fillRect(x,y,3,3);}for(let i=0;i<3;i++){const t=this.clock/1000+i*2.4,x=165+i*205+Math.sin(t*.38)*35,y=115+i*24+Math.cos(t*.8)*10,wing=Math.sin(t*9)>0?5:2;g.fillStyle(i===1?0xf4e4a8:0xeab3c5,.72);g.fillRect(x-wing-1,y-3,wing,5);g.fillRect(x+2,y-3,wing,5);g.fillStyle(0x8e7571,.65);g.fillRect(x,y-2,2,4);}}if(this.last&&this.clock-this.last<110){const p=toScreen(this.p);g.fillStyle(0xffdfb4,.9);g.fillCircle(p.x+this.shotDir.x*20,p.y-16+this.shotDir.y*14,3);}if(this.shield){const p=toScreen(this.p);g.lineStyle(2,0xffedb8,.85);g.strokeCircle(p.x,p.y-18,27);}for(const zone of this.dangers){const p=toScreen(zone.p),fraction=1-(zone.at-this.clock)/1150;g.fillStyle(0xc579a5,.15+fraction*.12);g.fillCircle(p.x,p.y,24);g.lineStyle(2,0xb66391,.8);g.strokeCircle(p.x,p.y,24);}
+  if(this.story&&this.storyFootprints.length){
+   this.storyFootprints=this.storyFootprints.filter(trace=>this.clock-trace.at<720);
+   for(const trace of this.storyFootprints){
+    const age=this.clock-trace.at,opacity=Math.max(0,1-age/720);
+    const c=FEEL_FOOTSTEP[trace.kind].color;
+    g.fillStyle(c,opacity*.38).fillEllipse(trace.x,trace.y,6,2.8);
+    g.fillStyle(c,opacity*.22).fillEllipse(trace.x+trace.side*3,trace.y+2.1,3,2);
+   }
+  }
+  if(this.story&&this.storyInteractUntil>this.clock){
+   const progress=1-(this.storyInteractUntil-this.clock)/RESCUE_FEEL.interactMs;
+   const target=toScreen(this.storyVanNear?VAN_NIGHT_POSITION:this.storyTarget);
+   const alpha=this.reducedMotion?.2:Math.sin(progress*Math.PI)*.45;
+   g.lineStyle(2,0xffd6b5,alpha).strokeEllipse(target.x,target.y,22+progress*18,10+progress*6);
+  }
   this.bursts=this.bursts.filter(b=>this.clock-b.at<380);for(const b of this.bursts){const t=(this.clock-b.at)/380;g.lineStyle(2,b.color,1-t);g.strokeCircle(b.x,b.y,this.reducedMotion?12:4+t*18);if(!this.reducedMotion){g.fillStyle(b.color,1-t);for(let i=0;i<4;i++){const a=i*Math.PI/2;g.fillRect(b.x+Math.cos(a)*t*18,b.y+Math.sin(a)*t*12,3,3);}}}
   for(const e of this.enemies)if(this.clock>e.next-450){const p=toScreen(e.p);g.lineStyle(2,0xbd6994,.8);g.strokeCircle(p.x,p.y-12,e.boss?27:18);}for(const stick of [this.left,this.right])if(stick){const camera=this.cameras.main,p=camera.getWorldPoint(stick.x,stick.y),z=camera.zoom,n=Math.max(1,Math.hypot(stick.dx,stick.dy)/24);g.lineStyle(2/z,0x715a73,.28);g.strokeCircle(p.x,p.y,32/z);g.fillStyle(0x866779,.25);g.fillCircle(p.x+stick.dx/n/z,p.y+stick.dy/n/z,11/z);}
   if(this.story){

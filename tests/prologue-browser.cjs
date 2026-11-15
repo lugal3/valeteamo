@@ -43,6 +43,26 @@ async function play(){
    'rescue must use the original diamond floor and Kitty sprite system');
   assert.equal(await game.getAttribute('data-prologue-stage'),'intro');
   const convo=page.getByRole('dialog',{name:'Conversación'});
+  // Phase 2: actual browser rendering and bounded live content in ALL FOUR
+  // maps, while preserving the scene's regular gameplay and transition flow.
+  async function verifyLivingMap(map){
+   await page.waitForFunction(id=>{
+    const world=window.__valePrologue?.scene?.()?.storyWorld;
+    return world?.map===id&&world?.ecology?.counts?.().updates>1;
+   },map,{timeout:5000});
+   const state=await page.evaluate(()=>{
+    const world=window.__valePrologue.scene().storyWorld,stats=world.ecology.counts();
+    return {map:world.map,stats};
+   });
+   assert.equal(state.map,map);
+   assert.equal(state.stats.flora,18,
+    'flora budget remains fixed in '+map);
+   assert(state.stats.wildlife>=6&&state.stats.wildlife<=8,
+    'animated wildlife remains finite in '+map);
+   assert(state.stats.visibleWildlife>0,
+    'at least one animated wildlife species must be near Kitty in '+map);
+   assert(state.stats.updates>1,'living scenery is actually updating in '+map);
+  }
   async function finishDialogue(){
    await convo.waitFor({state:'visible',timeout:13000});
    for(let n=0;n<48;n++){
@@ -74,6 +94,10 @@ async function play(){
     }
     const btn=page.getByRole('button',{name:action});
     await btn.waitFor({state:'visible',timeout:6000});
+    if(['ribbon','petals','wheel'].includes(stage)){
+     assert(await page.evaluate(()=>window.__valePrologue.scene().storyTargetCuePlayed),
+      'physical clue discovery must have a one-time nonblocking reaction');
+    }
     if(stage==='talk-luis'){
      const idleTexture=await page.evaluate(()=>window.__valePrologue.scene()?.storyLuis?.texture?.key);
      assert(/^story-person-luis-(down|up|right)-idle-\d$/.test(idleTexture??''),
@@ -121,6 +145,7 @@ async function play(){
   assert.equal(intro.npc,false,'Kitty starts ALONE; NPCs appear after exploring');
   assert.equal(intro.river,true,'animated water must be built in the original Phaser scene');
   assert.equal(await convo.isVisible(),false,'no intrusive dialog until after the bridge');
+  await verifyLivingMap('morning_garden');
   await page.screenshot({path:'artifacts/story-acts1-2-introduction.png'});
   // Reaching the luminous exit must trigger a real full-screen black fade.
   await page.evaluate(()=>window.__valePrologue.teleport(999));
@@ -130,6 +155,7 @@ async function play(){
   await page.waitForFunction(()=>window.__valePrologue.map()==='afternoon_meeting',null,{timeout:12000});
   await page.locator('.story-prologue[data-transition="none"]').waitFor({timeout:12000});
   assert.equal(await page.evaluate(()=>window.__valePrologue.world().map),'afternoon_meeting');
+  await verifyLivingMap('afternoon_meeting');
   await page.screenshot({path:'artifacts/story-afternoon-map.png'});
   await finishDialogue();
   await game.locator('xpath=self::*[@data-prologue-stage="defend"]').waitFor({timeout:10000});
@@ -168,6 +194,16 @@ async function play(){
   // Measure actual traversal after part of the continuous walk-to-door beat.
   await page.waitForTimeout(480);
   const loading=await page.evaluate(()=>window.__valePrologue.abduction());
+  const performance=await page.evaluate(()=>{
+   const s=window.__valePrologue.scene();
+   return {focus:{...s.storyDramaOffset},emotes:s.storyBubbles.length};
+  });
+  assert(Math.hypot(performance.focus.x,performance.focus.y)>1,
+   'camera gently tracks the physical kidnapping without a sudden cut');
+  assert(performance.emotes<=3,'nonblocking emotion glyphs stay finite on mobile');
+  assert(Math.abs(performance.focus.x)<=84&&Math.abs(performance.focus.y)<=46,
+   'camera focus is strictly bounded near Kitty');
+  await page.screenshot({path:'artifacts/story-kidnapping-soft-camera-and-reactions.png'});
   assert(loading.louis?.visible,'Louis cannot vanish before entering the van');
   assert(Math.hypot(loading.louis.x-victimStart.x,
    loading.louis.y-victimStart.y)>8,'captors MUST physically move hostage to van');
@@ -182,11 +218,16 @@ async function play(){
   await page.screenshot({path:'artifacts/story-abduction-nightfall.png'});
   await finishDialogue(); // single rapid clue, no extra blocking exposition
   await game.locator('xpath=self::*[@data-prologue-stage="ribbon"]').waitFor();
+  await page.waitForFunction(()=>{
+   const s=window.__valePrologue.scene();
+   return Math.hypot(s.storyDramaOffset.x,s.storyDramaOffset.y)<.4;
+  },null,{timeout:4800});
   assert.equal(await page.evaluate(()=>window.__valePrologue.map()),'afternoon_meeting',
    'abduction stays in afternoon until Kitty finds the EXIT');
   await page.evaluate(()=>window.__valePrologue.exit());
   await page.waitForFunction(()=>window.__valePrologue.map()==='dusk_search',null,{timeout:12000});
   await page.locator('.story-prologue[data-transition="none"]').waitFor({timeout:12000});
+  await verifyLivingMap('dusk_search');
   await page.screenshot({path:'artifacts/story-dusk-puzzles-map.png'});
   await step('ribbon',1578,/Examinar Pulsera/);
   await step('petals',1910,/Examinar Pétalos/);
@@ -196,6 +237,7 @@ async function play(){
   await page.evaluate(()=>window.__valePrologue.exit());
   await page.waitForFunction(()=>window.__valePrologue.map()==='night_neighborhood',null,{timeout:12000});
   await page.locator('.story-prologue[data-transition="none"]').waitFor({timeout:12000});
+  await verifyLivingMap('night_neighborhood');
   await page.screenshot({path:'artifacts/story-night-neighborhood-map.png'});
   // Real iPhone-style usability: do not cheat by teleporting to the house.
   // Touch the actual guide button and walk from the street, past the gate,

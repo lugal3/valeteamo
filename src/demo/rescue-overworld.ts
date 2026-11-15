@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import {VAN_NIGHT_POSITION,VAN_PLATE,vanTexture} from './abduction-van';
+import {createLivingEcology,type LivingWorld} from './rescue-ecology-render';
+import type {AmbientCue} from './rescue-ecology';
 import {ISO,toScreen,type IsoPoint} from '../isometric';
 import {HOUSE_3D_REFERENCE,NIGHT_HOUSE,nightRouteCenter,nightRouteLimits,nightHouseBlocks,
  nightWalkable} from './night-house-layout';
@@ -113,7 +115,8 @@ export function darknessAt(u:number,stage:string,map:RescueMapId=sceneForPositio
  return .68+clamp((u-65)/17,0,1)*.05;
 }
 export type RescueOverworld={map:RescueMapId;area:(u:number)=>RouteArea;
- update:(elapsed:number,night:number)=>void;destroy:()=>void;
+ update:(elapsed:number,night:number,player?:IsoPoint)=>AmbientCue|null;
+ destroy:()=>void;ecology:LivingWorld;
  water:Phaser.GameObjects.Graphics;tiles:number;
  parkedVan?:Phaser.GameObjects.Image};
 
@@ -619,11 +622,14 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   scene.add.text(p.x,p.y-49,'✧  SIGUE  ✧',{fontFamily:'Georgia',fontSize:'15px',
    color:'#fff4d9',stroke:'#a3778b',strokeThickness:3}).setOrigin(.5).setDepth(p.y+4);
  }
+ // Living flowers, small animals and lighting share the existing Phaser scene.
+ const ecology=createLivingEcology(scene,map,cfg.minU,cfg.maxU,
+  routeCenter,reducedMotion);
  const created=scene.children.list.filter(x=>!before.has(x));
  let lastVisualPaint=-Infinity;
- const update=(elapsed:number,night:number)=>{
+ const update=(elapsed:number,night:number,player:IsoPoint=cfg.spawn):AmbientCue|null=>{
   // About 30 FPS for purely decorative redraw; game input and camera stay 60 FPS.
-  if(elapsed-lastVisualPaint<30)return;
+  if(elapsed-lastVisualPaint<30)return null;
   lastVisualPaint=elapsed;
   const visualT=reducedMotion?0:elapsed/1000;
   water.clear();atmosphere.clear();motes.clear();portalGlow.clear();
@@ -693,8 +699,9 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    portalGlow.lineStyle(2,0xfff2c8,.33+pulse*.34).strokeEllipse(p.x,p.y-3,88,30);
    portalGlow.fillStyle(0xffeed7,.65).fillCircle(p.x,p.y-26+Math.sin(visualT*1.8)*5,3.2);
   }
+  return ecology.update(elapsed,player,night);
  };
- update(0,darknessAt(cfg.spawn.u,'intro',map));
- return {map,area:rescueArea,water,tiles,parkedVan,update,
+ update(0,darknessAt(cfg.spawn.u,'intro',map),cfg.spawn);
+ return {map,area:rescueArea,water,tiles,parkedVan,update,ecology,
   destroy:()=>{for(const obj of created)if(obj.active)obj.destroy();g.clear();}};
 }

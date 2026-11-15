@@ -17,11 +17,16 @@ on:
       - 'tests/prologue-desktop.cjs'
       - 'tests/emotes-browser.cjs'
       - 'tests/rescue-world.cjs'
+      - 'tests/rescue-game-feel.cjs'
+      - 'tests/rescue-ecology.cjs'
+      - 'tests/rescue-performance.cjs'
+      - 'tests/rescue-feel-browser.cjs'
       - 'tests/abduction-van.cjs'
       - 'tests/night-house-navigation.cjs'
       - 'tests/luis-animation.cjs'
       - 'tests/luis-choreography.cjs'
       - 'src/iso-game.ts'
+      - 'src/audio.ts'
       - 'src/lab/house.js'
       - 'src/lab/house.css'
       - 'package.json'
@@ -53,11 +58,16 @@ on:
       - 'tests/prologue-desktop.cjs'
       - 'tests/emotes-browser.cjs'
       - 'tests/rescue-world.cjs'
+      - 'tests/rescue-game-feel.cjs'
+      - 'tests/rescue-ecology.cjs'
+      - 'tests/rescue-performance.cjs'
+      - 'tests/rescue-feel-browser.cjs'
       - 'tests/abduction-van.cjs'
       - 'tests/night-house-navigation.cjs'
       - 'tests/luis-animation.cjs'
       - 'tests/luis-choreography.cjs'
       - 'src/iso-game.ts'
+      - 'src/audio.ts'
       - 'src/lab/house.js'
       - 'src/lab/house.css'
       - 'package.json'
@@ -96,6 +106,7 @@ jobs:
       - run: node tests/cosmos-browser.cjs
       - run: node tests/cosmos-public-flow.cjs
       - run: node tests/prologue-browser.cjs
+      - run: node tests/rescue-feel-browser.cjs
       - run: node tests/prologue-desktop.cjs
       - run: node tests/emotes-browser.cjs
       - name: Guardar capturas de la experiencia

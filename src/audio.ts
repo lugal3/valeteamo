@@ -1,4 +1,5 @@
 // Original music and effects, synthesized locally. start() belongs in a user gesture.
+import type {AmbientKind} from './demo/rescue-ecology';
 export type MusicTheme='story'|'garden'|'battle'|'final';
 const MELODIES:Record<MusicTheme,number[]>={
  story:[261.63,329.63,392,523.25,493.88,392,329.63,293.66,349.23,440,523.25,440,392,349.23,329.63,293.66],
@@ -7,7 +8,7 @@ const MELODIES:Record<MusicTheme,number[]>={
  final:[261.63,329.63,392,493.88,523.25,659.25,587.33,493.88,440,523.25,587.33,659.25,783.99,659.25,523.25,392]
 };
 export class Sound {
- ctx?:AudioContext;muted=false;timer?:number;step=0;lastHit=0;theme:MusicTheme='story';
+ ctx?:AudioContext;muted=false;timer?:number;step=0;lastHit=0;lastAmbient=-100;theme:MusicTheme='story';
  setTheme(theme:MusicTheme){if(this.theme!==theme){this.theme=theme;this.step=0;}}
  start():Promise<boolean>{
   try{
@@ -28,6 +29,40 @@ export class Sound {
  resume(){try{if(this.ctx?.state==='suspended')void this.ctx.resume().catch(()=>{});}catch{}}
  suspend(){try{if(this.ctx?.state==='running')void this.ctx.suspend().catch(()=>{});}catch{}}
  tone(f=440,d=.1,v=.05,type:OscillatorType='sine'){try{if(!this.ctx||this.muted||this.ctx.state!=='running')return;const o=this.ctx.createOscillator(),g=this.ctx.createGain(),start=this.ctx.currentTime;o.type=type;o.frequency.value=f;g.gain.setValueAtTime(.001,start);g.gain.linearRampToValueAtTime(v,start+Math.min(.012,d/4));g.gain.exponentialRampToValueAtTime(.001,start+d);o.connect(g);g.connect(this.ctx.destination);o.start();o.stop(start+d);}catch{}}
+ // Organic, quiet location-specific ambience. Original oscillators only; no
+ // sound files, external fetches, timers or audio-playback in render frames.
+ // Calls come ONLY from the rescue world, never the classic Corazones mode.
+ playRescueAmbience(kind:AmbientKind,pan=0):boolean{
+  const ctx=this.ctx;
+  if(!ctx||this.muted||ctx.state!=='running'||
+   ctx.currentTime-this.lastAmbient<2.4)return false;
+  this.lastAmbient=ctx.currentTime;
+  const presets:Record<AmbientKind,readonly [number,number,number,OscillatorType][]>={
+   river:[[155,.58,.0024,'sine'],[218,.38,.0014,'sine']],
+   birdsong:[[975,.13,.0045,'sine'],[1210,.18,.0036,'sine']],
+   breeze:[[173,.63,.0025,'sine'],[258,.47,.0012,'triangle']],
+   insects:[[1630,.15,.0026,'sine'],[1970,.21,.0018,'sine']],
+   'night-breeze':[[114,.72,.0028,'sine'],[183,.50,.0016,'triangle']],
+   'distant-engine':[[92,.76,.0034,'triangle'],[136,.59,.0018,'sine']]
+  };
+  for(const [hz,duration,volume,wave] of presets[kind]){
+   const oscillator=ctx.createOscillator(),gain=ctx.createGain(),start=ctx.currentTime;
+   const stereo=typeof ctx.createStereoPanner==='function'?ctx.createStereoPanner():undefined;
+   oscillator.type=wave;oscillator.frequency.setValueAtTime(hz,start);
+   oscillator.frequency.linearRampToValueAtTime(hz*(kind==='birdsong'?1.16:1.015),
+    start+duration);
+   gain.gain.setValueAtTime(.001,start);
+   gain.gain.linearRampToValueAtTime(volume,start+Math.min(.08,duration/3));
+   gain.gain.exponentialRampToValueAtTime(.001,start+duration);
+   oscillator.connect(gain);
+   if(stereo){
+    stereo.pan.setValueAtTime(Math.max(-.85,Math.min(.85,pan)),start);
+    gain.connect(stereo);stereo.connect(ctx.destination);
+   }else gain.connect(ctx.destination);
+   oscillator.start(start);oscillator.stop(start+duration);
+  }
+  return true;
+ }
  hit(){const now=this.ctx?.currentTime??0;if(now-this.lastHit<.06)return;this.lastHit=now;this.tone(520,.08,.026,'triangle');this.tone(780,.06,.015);}
  ui(){this.tone(660,.09,.018,'triangle');this.tone(990,.13,.009,'sine');}
  destroy(){if(this.timer!==undefined)clearInterval(this.timer);this.timer=undefined;const context=this.ctx;this.ctx=undefined;if(context&&context.state!=='closed')void context.close().catch(()=>{});}
