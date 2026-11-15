@@ -7,6 +7,8 @@ import {facingOf,type Facing} from './animation';
 import {ISO,constrain,isoDistance,screenVector,toScreen,type IsoPoint} from './isometric';
 import {Sound} from './audio';
 import {installProloguePeople} from './demo/prologue-art';
+import {buildRescueOverworld,constrainRescue,darknessAt,STORY_POSITIONS,storyArrivalPoint,
+ type RescueOverworld} from './demo/rescue-overworld';
 
 export type AdventureOffer={name:string,description:string};
 export type AdventureHud={hp:number,objective:string,complete:number,total:number,bombs:number,shield:boolean,offer?:AdventureOffer,bossHp?:number,bossMax?:number};
@@ -32,6 +34,9 @@ export type IsoStoryBridge={
  clearing:()=>void;
  health:(hp:number)=>void;
  retry:()=>void;
+ arrive:()=>void;
+ guide:(message:string)=>void;
+ dusk:(value:number)=>void;
 };
 type StoryActor=Phaser.GameObjects.Image;
 
@@ -48,9 +53,9 @@ export class IsoAdventure extends Phaser.Scene {
  storyStage:IsoStoryStage='intro';
  storyObjects:Phaser.GameObjects.GameObject[]=[];
  storyLouis?:StoryActor;storyLuis?:StoryActor;storyVillain?:StoryActor;
- storyVeil?:Phaser.GameObjects.Rectangle;
+ storyWorld?:RescueOverworld;storyDusk=0;storyGuideStep=-1;
  storyActionPressed=false;storyNear='';storyWalkTriggered=false;storyVictoryEmitted=false;
- storyTarget:IsoPoint={u:5.2,v:3.8};
+ storyTarget:IsoPoint={u:22,v:4.5};
  constructor(public level:1|2|3,public character:CharacterId,public report:(h:AdventureHud)=>void,public finish:(outcome:'win'|'dead')=>void,public onPause:(v:boolean)=>void,public audio:Sound,public ready:()=>void,public progress:(n:number)=>void=()=>{},public story?:IsoStoryBridge){super('iso-adventure');}
  preload(){const path=CHARACTERS[this.character].chibiSpriteSheet;if(path)this.load.spritesheet(`chibi-${this.character}-sheet`,path,{frameWidth:32,frameHeight:40});else{this.load.image(`${this.character}-reference-source`,new URL(`./sprites/${this.character}-reference-sheet.png`,document.baseURI).href);this.load.image(`${this.character}-walk-source`,new URL(`./sprites/${this.character}-walk-sheet.png`,document.baseURI).href);}if(this.story){
  this.load.image('louis-reference-source',new URL('./sprites/louis-reference-sheet.png',document.baseURI).href);
@@ -58,7 +63,11 @@ export class IsoAdventure extends Phaser.Scene {
 }
 this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  create(){
-  buildArt(this);buildChibi(this);if(!CHARACTERS[this.character].chibiSpriteSheet)installReferenceCharacter(this,this.character);this.floor=this.add.graphics().setDepth(0);this.fx=this.add.graphics().setDepth(1000);this.drawFloor();
+  buildArt(this);buildChibi(this);if(!CHARACTERS[this.character].chibiSpriteSheet)installReferenceCharacter(this,this.character);this.floor=this.add.graphics().setDepth(0);this.fx=this.add.graphics().setDepth(1000);
+  if(this.story)this.storyWorld=buildRescueOverworld(this,this.floor,{
+   flower:(u,v)=>this.flower(u,v),shrub:(u,v)=>this.shrub(u,v),
+   tree:(u,v)=>this.tree(u,v),mushroom:(u,v)=>this.mushroom(u,v)
+  });else this.drawFloor();
   this.shadow=this.add.ellipse(0,0,30,10,0x425c4c,.25);this.player=this.add.sprite(0,0,`chibi-${this.character}-down-0`).setOrigin(.5,.9).setScale(1.3);
   this.p={u:.7,v:.7};this.positionPlayer();this.fitCamera(this.scale.width,this.scale.height);this.scale.on('resize',(size:{width:number,height:number})=>this.fitCamera(size.width,size.height));this.keys=this.input.keyboard!.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,B,SPACE,ESC,E') as Record<string,Phaser.Input.Keyboard.Key>;
   this.input.on('pointerdown',(p:Phaser.Input.Pointer)=>{if(this.paused||this.pendingOffer||this.ended||this.wonAt)return;if(p.wasTouch){const stick={id:p.id,x:p.x,y:p.y,dx:0,dy:0};if(p.x<this.scale.width/2&&!this.left)this.left=stick;else if(p.x>=this.scale.width/2&&!this.right)this.right=stick;}else this.mouse=true;});
@@ -78,98 +87,73 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.sync();this.progress(100);this.ready();this.story?.ready();
  }
 
- // El arte, el suelo, los sonidos, el input, la animación y fitCamera
- // SIEMPRE son los originales de IsoAdventure. Solo cambian actores/objetivos
- // dentro de la MISMA arena (como salas del arcade).
+ // Misma escena, sprites, UI, zoom y controles de 2D Corazones.
+ // La aventura narrativa recorre un mundo largo sin teletransportar a Kitty
+ // cuando cambia el objetivo: únicamente aparecen los hitos del recorrido.
  setStoryStage(stage:IsoStoryStage,force=false){
   if(!this.story||(!force&&this.storyStage===stage))return;
   this.storyStage=stage;this.storyWalkTriggered=false;this.storyVictoryEmitted=false;
   this.storyActionPressed=false;this.storyNear='';
-  this.storyObjects.forEach(o=>o.destroy());this.storyObjects=[];
-  this.enemies.forEach(e=>{e.s.destroy();e.shadow.destroy();});this.enemies=[];
-  this.shots.forEach(shot=>shot.s.destroy());this.shots=[];
-  this.dangers=[];this.bursts=[];this.collectibles=[];this.charm=undefined;this.pendingOffer=false;
+  for(const o of this.storyObjects)o.destroy();this.storyObjects=[];
+  for(const e of this.enemies){e.s.destroy();e.shadow.destroy();}this.enemies=[];
+  for(const shot of this.shots)shot.s.destroy();this.shots=[];
+  for(const light of this.collectibles)light.s.destroy();this.collectibles=[];
+  this.dangers=[];this.bursts=[];this.charm=undefined;this.pendingOffer=false;
   this.storyLouis=undefined;this.storyLuis=undefined;this.storyVillain=undefined;
   this.story.near('');
-  this.p={u:.7,v:.7};this.positionPlayer();this.facing='down';
+  if(force)this.p=storyArrivalPoint(stage);
+  this.p=constrainRescue(this.p);this.positionPlayer();
   this.total=stage==='defend'?3:0;this.collected=0;
   const actor=(id:'louis'|'luis',p:IsoPoint)=>{
-   const pos=toScreen(p);
-   let image:Phaser.GameObjects.Image;
-   if(id==='louis')image=this.add.image(pos.x,pos.y,'chibi-louis-down-0').setOrigin(.5,.9).setScale(1.3);
-   else image=this.add.image(pos.x,pos.y,'story-person-luis').setOrigin(.5,.9).setScale(.8);
-   image.setDepth(pos.y);this.storyObjects.push(image);return image;
+   const xy=toScreen(p);
+   const name=id==='louis'?'chibi-louis-down-0':'story-person-luis';
+   const image=this.add.image(xy.x,xy.y,name).setOrigin(.5,.9)
+    .setScale(id==='louis'?1.3:.8).setDepth(xy.y);
+   this.storyObjects.push(image);return image;
   };
   const marker=(symbol:string,p:IsoPoint)=>{
-   const pos=toScreen(p),t=this.add.text(pos.x,pos.y-22,symbol,{
-    fontFamily:'Georgia',fontSize:'25px',color:'#ffe4a2',stroke:'#a66f7b',strokeThickness:2
-   }).setOrigin(.5,1).setDepth(pos.y+1);
-   this.storyObjects.push(t);
+   const xy=toScreen(p),label=this.add.text(xy.x,xy.y-16,symbol,{
+    fontFamily:'Georgia',fontSize:'26px',color:'#ffe4a2',
+    stroke:'#a66f7b',strokeThickness:2
+   }).setOrigin(.5,1).setDepth(xy.y+1);
+   this.storyObjects.push(label);
   };
-  this.storyTarget={u:5.2,v:3.8};
-  if(stage==='intro')this.storyLouis=actor('louis',{u:5.8,v:5.8});
-  if(stage==='defend')for(const p of [{u:5,v:2},{u:2,v:5},{u:6,v:6}])this.spawnEnemy(p,false);
+  this.storyTarget={...STORY_POSITIONS[stage]};
+  if(stage==='defend'){
+   for(const p of [{u:24.6,v:3.4},{u:26.2,v:5.7},{u:28,v:4.2}])this.spawnEnemy(p,false);
+   this.story.guide('Las sombras se acercan. ¡Apunta con las flechas, el mouse o el joystick derecho!');
+  }
   if(stage==='talk-louis')this.storyLouis=actor('louis',this.storyTarget);
   if(stage==='talk-luis'){
    this.storyLuis=actor('luis',this.storyTarget);
-   this.storyLouis=actor('louis',{u:3.7,v:5.5});
+   this.storyLouis=actor('louis',{u:35.3,v:6.3});
   }
   if(stage==='walk-together'){
-   this.storyLouis=actor('louis',{u:1.5,v:1.5});
-   this.storyTarget={u:6.2,v:6.2};marker('✿',this.storyTarget);
+   this.storyLouis=actor('louis',{u:35.5,v:4.6});
+   marker('✿',this.storyTarget);
   }
-  if(stage==='disappearance'){
-   this.storyLouis=actor('louis',{u:4.7,v:4.8});
-   this.p={u:3.6,v:3.7};this.positionPlayer();
-  }
+  if(stage==='disappearance')this.storyLouis=actor('louis',{u:43.9,v:4.6});
   if(['ribbon','petals','wheel'].includes(stage)){
-   this.storyTarget={u:5.4,v:4.1};
    marker(stage==='ribbon'?'✧':stage==='petals'?'✿':'⌁',this.storyTarget);
   }
-  if(stage==='door'||stage==='window'){
-   this.storyTarget=stage==='door'?{u:4.1,v:4.4}:{u:5.9,v:2.6};
-   this.drawStoryHouse();
-   marker(stage==='door'?'⚿':'✧',this.storyTarget);
-  }
-  if(!this.storyVeil){
-   this.storyVeil=this.add.rectangle(0,0,800,450,0x222645,1)
-    .setScrollFactor(0).setOrigin(0).setDepth(5000).setAlpha(0);
-   const refresh=()=>{
-    const z=this.cameras.main.zoom;
-    this.storyVeil?.setSize(Math.ceil(this.scale.width/z)+2,Math.ceil(this.scale.height/z)+2);
-   };
-   refresh();this.scale.on('resize',refresh);
-  }
-  const dark=['disappearance','ribbon','petals','wheel','door','window','house'].includes(stage);
-  this.tweens.add({targets:this.storyVeil,alpha:dark?.60:0,duration:1000});
-  this.audio.setTheme(stage==='defend'?'battle':dark?'final':'garden');
+  if(stage==='door'||stage==='window')marker(stage==='door'?'⚿':'✧',this.storyTarget);
+  const dark=darknessAt(this.p.u,stage);
+  if(Math.abs(dark-this.storyDusk)>.01){this.storyDusk=dark;this.story.dusk(dark);}
+  this.audio.setTheme(stage==='defend'?'battle':dark>.48?'final':'garden');
   this.sync();
- }
- drawStoryHouse(){
-  // Emplea la misma paleta y Graphics pixelados que this.drawFloor:
-  // pequeño hito de una sala isométrica, NO un mundo/renderizador aparte.
-  const p=toScreen({u:5.2,v:4.0}),g=this.add.graphics().setDepth(p.y);
-  const poly=(c:number,pts:{x:number,y:number}[])=>{g.fillStyle(c);g.fillPoints(pts,true);};
-  poly(0x8d7897,[{x:p.x-55,y:p.y-55},{x:p.x+2,y:p.y-80},{x:p.x+62,y:p.y-50},{x:p.x+4,y:p.y-26}]);
-  poly(0xd5c0bf,[{x:p.x-49,y:p.y-49},{x:p.x+4,y:p.y-26},{x:p.x+4,y:p.y+17},{x:p.x-49,y:p.y-6}]);
-  poly(0xb29bb2,[{x:p.x+4,y:p.y-26},{x:p.x+55,y:p.y-49},{x:p.x+55,y:p.y-5},{x:p.x+4,y:p.y+17}]);
-  g.fillStyle(0x5a4869).fillRect(p.x-34,p.y-19,15,24);
-  g.fillStyle(0x8fb8c9).fillRect(p.x+22,p.y-32,15,15);
-  g.fillStyle(0xf2bbcd).fillRect(p.x+21,p.y-34,18,3);
-  this.storyObjects.push(g);
  }
  storyInteract(){
   if(!this.story||this.story.locked()||!this.storyNear)return;
   this.audio.ui();this.story.interact(this.storyStage);
  }
- storyTeleportForTest(x:number){
-  const target=this.storyStage==='walk-together'?{u:6.2,v:6.2}:this.storyTarget;
-  this.p={...target};this.positionPlayer();this.updateStoryActors(0);
+ storyTeleportForTest(_unused:number){
+  if(!this.story)return;
+  const target=this.storyStage==='intro'?{u:21.7,v:4.45}:this.storyTarget;
+  this.p=constrainRescue(target);this.positionPlayer();this.updateStoryActors(0);
  }
  playStoryAbduction(done:()=>void){
   if(!this.storyLouis){done();return;}
-  const target=this.storyLouis;
-  const x=target.x,y=target.y;
+  const target=this.storyLouis,x=target.x,y=target.y;
   const villain=this.add.image(x+52,y,'kuromi-0').setScale(2.6).setTint(0x3d2e57)
    .setAlpha(0).setDepth(y+3);
   this.storyVillain=villain;this.storyObjects.push(villain);
@@ -184,26 +168,54 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  updateStoryActors(dt:number){
   if(!this.story)return;
   const stage=this.storyStage;
+  const dusk=darknessAt(this.p.u,stage);
+  if(Math.abs(dusk-this.storyDusk)>.018){
+   this.storyDusk=dusk;this.story.dusk(dusk);
+  }
+  if(stage==='intro'){
+   // Entrada sin NPC ni diálogo bloqueante; el aprendizaje sucede al caminar.
+   const step=this.p.u>=16?3:this.p.u>=9?2:this.p.u>=4?1:0;
+   if(step!==this.storyGuideStep){
+    this.storyGuideStep=step;
+    const hints=[
+     'Camina por el sendero · WASD o joystick izquierdo',
+     'Mira las flores · con las flechas o el mouse disparas corazones',
+     'Escucha el río: sigue el camino y cruza el puente de madera',
+     'Cuando aparezca ♡, usa E o el botón de interacción'
+    ];
+    this.story.guide(hints[step]);
+   }
+   if(!this.storyWalkTriggered&&this.p.u>=21.7){
+    this.storyWalkTriggered=true;this.story.arrive();
+   }
+   return;
+  }
   if(stage==='walk-together'&&this.storyLouis){
-   const foot=toScreen(this.p);
-   this.storyLouis.x+=(foot.x-32-this.storyLouis.x)*Math.min(1,dt/260);
-   this.storyLouis.y+=(foot.y+11-this.storyLouis.y)*Math.min(1,dt/260);
-   const frame='chibi-louis-down-'+(1+Math.floor(this.clock/115)%4);
-   if(this.textures.exists(frame))this.storyLouis.setTexture(frame);
-   this.storyLouis.setDepth(this.storyLouis.y);
-   if(!this.storyWalkTriggered&&isoDistance(this.p,this.storyTarget)<.85){
+   const foot=toScreen(this.p),npc=this.storyLouis;
+   npc.x+=(foot.x-35-npc.x)*Math.min(1,dt/300);
+   npc.y+=(foot.y+7-npc.y)*Math.min(1,dt/300);
+   const name='chibi-louis-down-'+(1+Math.floor(this.clock/115)%4);
+   if(this.textures.exists(name))npc.setTexture(name);
+   npc.setDepth(npc.y);
+   if(!this.storyWalkTriggered&&isoDistance(this.p,this.storyTarget)<.98){
     this.storyWalkTriggered=true;this.story.clearing();
    }
   }
-  const label:Record<string,string>={
+  const labels:Partial<Record<IsoStoryStage,string>>={
    'talk-louis':'Hablar con Louis','talk-luis':'Hablar con Luis',
    ribbon:'Examinar Pulsera',petals:'Examinar Pétalos',wheel:'Examinar Huellas',
    door:'Probar puerta',window:'Entrar por la ventana'
   };
-  const prompt=label[stage]&&isoDistance(this.p,this.storyTarget)<1.12?label[stage]:'';
-  if(prompt!==this.storyNear){this.storyNear=prompt;this.story.near(prompt);}
+  const target=labels[stage]&&isoDistance(this.p,this.storyTarget)<1.15?labels[stage]!:'';
+  if(target!==this.storyNear){this.storyNear=target;this.story.near(target);}
  }
- fitCamera(width:number,height:number){if(width<=0||height<=0)return;this.cameras.main.setZoom(Math.min(width/800,height/450)*1.08).centerOn(400,225);}
+ fitCamera(width:number,height:number){if(width<=0||height<=0)return;
+  const camera=this.cameras.main;
+  // Zoom IDENTICO al original; únicamente la historia sigue a Kitty al explorar.
+  camera.setZoom(Math.min(width/800,height/450)*1.08);
+  if(this.story&&this.player)camera.startFollow(this.player,false,.12,.12);
+  else camera.centerOn(400,225);
+ }
  drawFloor(){
   const g=this.floor;g.clear();const background=this.level===3?0xe2d4e0:this.level===2?0xe8e1d8:0xf1e5d2;
   g.fillStyle(background);g.fillRect(-900,-500,2600,1500);
@@ -249,16 +261,18 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  chooseItem(accept:boolean){if(!this.pendingOffer||this.paused||!this.charm)return;this.pendingOffer=false;this.clearInput();if(accept){this.shield=true;this.burst(this.charm.p,0xffd584);this.floatNote(this.charm.p,'¡Manto listo!','#a67c3b');this.charm.s.destroy();this.charm=undefined;this.audio.tone(880,.22,.035);}else this.declinedCharm=true;this.sync();}
  update(_time:number,delta:number){
   if(this.paused||this.pendingOffer||this.ended)return;const dt=Math.min(delta,40),seconds=dt/1000;this.clock+=dt;
+  if(this.story)this.storyWorld?.update(this.clock,this.storyDusk);
   if(this.story && this.story.locked()){this.clearInput();return;}
   if(this.story && this.storyStage!==this.story.stage())this.setStoryStage(this.story.stage());
-  if(this.story && this.keys.E.isDown&&!this.storyActionPressed)this.storyInteract();
+  if(this.story && this.keys.E?.isDown&&!this.storyActionPressed)this.storyInteract();
   if(this.story)this.storyActionPressed=!!this.keys.E?.isDown;
   this.notes=this.notes.filter(note=>{const age=this.clock-note.at;if(age>=850){note.s.destroy();return false;}note.s.y=note.y-(this.reducedMotion?0:age/45);note.s.setAlpha(Math.min(1,(850-age)/200));return true;});
   if(this.dyingAt){const age=this.clock-this.dyingAt,key=`chibi-${this.character}-dead`;if(this.textures.exists(key))this.player.setTexture(key);this.player.setAlpha(Math.max(.25,1-age/800));if(!this.reducedMotion)this.player.setAngle(Math.min(65,age/10));if(age>650){this.ended=true;this.finish('dead');}return;}
   if(this.wonAt){if(!this.reducedMotion)this.player.setAngle(Math.sin(this.clock/90)*8);if(this.clock-this.wonAt>850){this.ended=true;this.finish('win');}return;}
   let x=+this.keys.D.isDown-+this.keys.A.isDown,y=+this.keys.S.isDown-+this.keys.W.isDown;
   if(this.left){x=this.left.dx;y=this.left.dy;if(Math.hypot(x,y)<7)x=y=0;}
-  const wantsMove=Math.hypot(x,y)>.1,move=screenVector(x,y),strength=this.left?Math.min(1,Math.hypot(x,y)/45):1;let moving=false;if(wantsMove){const next=constrain({u:this.p.u+move.u*2.1*seconds*strength,v:this.p.v+move.v*2.1*seconds*strength});moving=isoDistance(next,this.p)>.001;this.p=next;if(moving){this.moveClock+=dt*(.45+.55*strength);if(this.moveClock-this.lastStep>250){this.lastStep=this.moveClock;this.burst(this.p,0xf8e8ca);this.audio.tone(245,.04,.004,'triangle');}}else{this.moveClock=0;this.lastStep=0;}this.facing=facingOf(x,y,this.facing);}else{this.moveClock=0;this.lastStep=0;}
+  const wantsMove=Math.hypot(x,y)>.1,move=screenVector(x,y),strength=this.left?Math.min(1,Math.hypot(x,y)/45):1;let moving=false;if(wantsMove){const candidate={u:this.p.u+move.u*2.1*seconds*strength,v:this.p.v+move.v*2.1*seconds*strength};
+   const next=this.story?constrainRescue(candidate):constrain(candidate);moving=isoDistance(next,this.p)>.001;this.p=next;if(moving){this.moveClock+=dt*(.45+.55*strength);if(this.moveClock-this.lastStep>250){this.lastStep=this.moveClock;this.burst(this.p,0xf8e8ca);this.audio.tone(245,.04,.004,'triangle');}}else{this.moveClock=0;this.lastStep=0;}this.facing=facingOf(x,y,this.facing);}else{this.moveClock=0;this.lastStep=0;}
   let ax=+this.keys.RIGHT.isDown-+this.keys.LEFT.isDown,ay=+this.keys.DOWN.isDown-+this.keys.UP.isDown;
   if(this.right){ax=this.right.dx;ay=this.right.dy;if(Math.hypot(ax,ay)<8)ax=ay=0;}else if(this.mouse){const point=toScreen(this.p),aim=this.cameras.main.getWorldPoint(this.input.activePointer.x,this.input.activePointer.y);ax=aim.x-point.x;ay=aim.y-point.y;}
   const firing=Math.hypot(ax,ay)>.1&&this.level!==1;if(firing){this.facing=facingOf(ax,ay,this.facing);if(this.clock-this.last>300){this.last=this.clock;const aim=screenVector(ax,ay),length=Math.hypot(ax,ay);this.shotDir={x:ax/length,y:ay/length};this.shoot(this.p,aim.u*4,aim.v*4);this.audio.tone(700,.04,.015);}}
@@ -271,7 +285,10 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(this.charm){const d=isoDistance(this.charm.p,this.p);this.charm.s.y=toScreen(this.charm.p).y-12+(this.reducedMotion?0:Math.sin(this.clock/260)*3);if(d>.9)this.declinedCharm=false;if(d<.48&&!this.declinedCharm){this.pendingOffer=true;this.clearInput();this.audio.tone(660,.1,.025);this.sync();return;}}
   for(const e of [...this.enemies]){
    const du=this.p.u-e.p.u,dv=this.p.v-e.p.v,d=Math.hypot(du,dv)||1;
-   if(d>1.2)e.p=constrain({u:e.p.u+du/d*(e.boss?.45:.65)*seconds,v:e.p.v+dv/d*(e.boss?.45:.65)*seconds});
+   if(d>1.2){
+    const proposed={u:e.p.u+du/d*(e.boss?.45:.65)*seconds,v:e.p.v+dv/d*(e.boss?.45:.65)*seconds};
+    e.p=this.story?constrainRescue(proposed):constrain(proposed);
+   }
    const xy=toScreen(e.p),bounce=this.reducedMotion?0:Math.abs(Math.sin(this.clock/250+e.phase))*2;e.s.setPosition(xy.x,xy.y-bounce).setDepth(xy.y).setTexture(`${e.kind}-${Math.floor(this.clock/160)%4}`).setFlipX(du-dv<0);e.shadow.setPosition(xy.x,xy.y).setDepth(xy.y-1);
    if(this.clock<e.flash)e.s.setTint(0xffc5d9);else if(this.clock>e.next-450)e.s.setTint(0xf2c1dd);else e.s.clearTint();
    if(d<.48)this.damage();if(this.dyingAt)return;
@@ -281,13 +298,14 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    }
   }
   for(const shot of [...this.shots]){shot.life-=dt;shot.p.u+=shot.du*seconds;shot.p.v+=shot.dv*seconds;const xy=toScreen(shot.p);shot.s.setPosition(xy.x,xy.y-9).setDepth(xy.y+1);
-   let remove=shot.life<=0||shot.p.u<-.5||shot.p.v<-.5||shot.p.u>ISO.size||shot.p.v>ISO.size;
+   const maxU=this.story?81:ISO.size,maxV=this.story?16:ISO.size,minV=this.story?-6:-.5;
+   let remove=shot.life<=0||shot.p.u<-.5||shot.p.v<minV||shot.p.u>maxU||shot.p.v>maxV;
    if(shot.enemy&&isoDistance(shot.p,this.p)<.38){this.damage();remove=true;}
    if(!shot.enemy){const target=this.enemies.find(e=>isoDistance(e.p,shot.p)<(e.boss?.62:.43));if(target){this.hitEnemy(target,1);remove=true;}}
    if(remove){shot.s.destroy();this.shots=this.shots.filter(x=>x!==shot);}if(this.dyingAt)return;
   }
   for(const zone of [...this.dangers])if(this.clock>=zone.at){if(isoDistance(zone.p,this.p)<.55)this.damage();this.burst(zone.p,0xc385b4);this.dangers=this.dangers.filter(z=>z!==zone);}if(this.dyingAt)return;
-  const g=this.fx;g.clear();if(!this.reducedMotion){for(let i=0;i<12;i++){const t=this.clock*.012+i*53,x=100+(i*83)%600+Math.sin(t/30)*9,y=70+((i*41+t*.5)%290);g.fillStyle(i%2?0xfff2d5:0xf5c5d4,.3+Math.sin(t/18)*.12);g.fillRect(x,y,3,3);}for(let i=0;i<3;i++){const t=this.clock/1000+i*2.4,x=165+i*205+Math.sin(t*.38)*35,y=115+i*24+Math.cos(t*.8)*10,wing=Math.sin(t*9)>0?5:2;g.fillStyle(i===1?0xf4e4a8:0xeab3c5,.72);g.fillRect(x-wing-1,y-3,wing,5);g.fillRect(x+2,y-3,wing,5);g.fillStyle(0x8e7571,.65);g.fillRect(x,y-2,2,4);}}if(this.last&&this.clock-this.last<110){const p=toScreen(this.p);g.fillStyle(0xffdfb4,.9);g.fillCircle(p.x+this.shotDir.x*20,p.y-16+this.shotDir.y*14,3);}if(this.shield){const p=toScreen(this.p);g.lineStyle(2,0xffedb8,.85);g.strokeCircle(p.x,p.y-18,27);}for(const zone of this.dangers){const p=toScreen(zone.p),fraction=1-(zone.at-this.clock)/1150;g.fillStyle(0xc579a5,.15+fraction*.12);g.fillCircle(p.x,p.y,24);g.lineStyle(2,0xb66391,.8);g.strokeCircle(p.x,p.y,24);}
+  const g=this.fx;g.clear();if(!this.reducedMotion&&!this.story){for(let i=0;i<12;i++){const t=this.clock*.012+i*53,x=100+(i*83)%600+Math.sin(t/30)*9,y=70+((i*41+t*.5)%290);g.fillStyle(i%2?0xfff2d5:0xf5c5d4,.3+Math.sin(t/18)*.12);g.fillRect(x,y,3,3);}for(let i=0;i<3;i++){const t=this.clock/1000+i*2.4,x=165+i*205+Math.sin(t*.38)*35,y=115+i*24+Math.cos(t*.8)*10,wing=Math.sin(t*9)>0?5:2;g.fillStyle(i===1?0xf4e4a8:0xeab3c5,.72);g.fillRect(x-wing-1,y-3,wing,5);g.fillRect(x+2,y-3,wing,5);g.fillStyle(0x8e7571,.65);g.fillRect(x,y-2,2,4);}}if(this.last&&this.clock-this.last<110){const p=toScreen(this.p);g.fillStyle(0xffdfb4,.9);g.fillCircle(p.x+this.shotDir.x*20,p.y-16+this.shotDir.y*14,3);}if(this.shield){const p=toScreen(this.p);g.lineStyle(2,0xffedb8,.85);g.strokeCircle(p.x,p.y-18,27);}for(const zone of this.dangers){const p=toScreen(zone.p),fraction=1-(zone.at-this.clock)/1150;g.fillStyle(0xc579a5,.15+fraction*.12);g.fillCircle(p.x,p.y,24);g.lineStyle(2,0xb66391,.8);g.strokeCircle(p.x,p.y,24);}
   this.bursts=this.bursts.filter(b=>this.clock-b.at<380);for(const b of this.bursts){const t=(this.clock-b.at)/380;g.lineStyle(2,b.color,1-t);g.strokeCircle(b.x,b.y,this.reducedMotion?12:4+t*18);if(!this.reducedMotion){g.fillStyle(b.color,1-t);for(let i=0;i<4;i++){const a=i*Math.PI/2;g.fillRect(b.x+Math.cos(a)*t*18,b.y+Math.sin(a)*t*12,3,3);}}}
   for(const e of this.enemies)if(this.clock>e.next-450){const p=toScreen(e.p);g.lineStyle(2,0xbd6994,.8);g.strokeCircle(p.x,p.y-12,e.boss?27:18);}for(const stick of [this.left,this.right])if(stick){const camera=this.cameras.main,p=camera.getWorldPoint(stick.x,stick.y),z=camera.zoom,n=Math.max(1,Math.hypot(stick.dx,stick.dy)/24);g.lineStyle(2/z,0x715a73,.28);g.strokeCircle(p.x,p.y,32/z);g.fillStyle(0x866779,.25);g.fillCircle(p.x+stick.dx/n/z,p.y+stick.dy/n/z,11/z);}
   if(this.story){
