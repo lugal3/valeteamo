@@ -42,12 +42,12 @@
 
 #### Implementación y verificación de la fase 2
 
-- Modelo alternativo: \`src/lab/lois-ps2-model.js\`, silueta de adulto esbelto, blazer oscuro con solapas y bolsillos, camiseta clara, pantalón oscuro, zapatos y flequillo castaño lateral.
-- Cabeza nueva: \`src/lab/lois-ps2-face.js\` aporta **una sola superficie paramétrica** con mandíbula, nariz, pómulos, labios y mentón modelados; \`u=0.5\` corresponde al frente, y la costura UV está atrás. Hay ojos y pelo como capas de geometría, no múltiples esferas para la cara.
-- Integración: \`geometry()\` reconoce \`shape:'lois-face'\`; \`pickupGeometry()\` selecciona PS2-B cuando \`visualPreset=lois-ps2-b-v1\`; \`louisPartPose()\` conserva el movimiento de todas las piezas usando \`rigGroup\` y \`rigSide\`.
-- Reversión: **establecer \`visualVariant:'legacy'\` en el NPC y reconstruir la geometría** para volver al modelo anterior, sin modificar guardados ni lógica. La función \`louisModel(piece)\` sin opciones sigue creando el modelo heredado.
-- Presupuestos medidos por \`tests/lois-ps2-mesh.cjs\`: **3.472 triángulos / 4.267 vértices** móvil y **6.376 triángulos / 8.245 vértices** escritorio. La integración actual escoge el preset móvil para todos los dispositivos, como opción conservadora. El modelo antiguo suma más triángulos y se mantiene como respaldo.
-- \`tests/lois-ps2-browser.cjs\` usa Vite/Playwright/SwiftShader y genera capturas del propio renderizador WebGL1, con vista frontal, perfil, 3/4, primer plano y modo fluido, además de un control con el modelo antiguo. La iluminación de las capturas es diagnóstica, no representa todas las condiciones de la casa.
+- Modelo alternativo: `src/lab/lois-ps2-model.js`, silueta de adulto esbelto, blazer oscuro con solapas y bolsillos, camiseta clara, pantalón oscuro, zapatos y flequillo castaño lateral.
+- Cabeza nueva: `src/lab/lois-ps2-face.js` aporta **una sola superficie paramétrica** con mandíbula, nariz, pómulos, labios y mentón modelados; `u=0.5` corresponde al frente, y la costura UV está atrás. Hay ojos y pelo como capas de geometría, no múltiples esferas para la cara.
+- Integración: `geometry()` reconoce `shape:'lois-face'`; `pickupGeometry()` selecciona PS2-B cuando `visualPreset=lois-ps2-b-v1`; `louisPartPose()` conserva el movimiento de todas las piezas usando `rigGroup` y `rigSide`.
+- Reversión: **establecer `visualVariant:'legacy'` en el NPC y reconstruir la geometría** para volver al modelo anterior, sin modificar guardados ni lógica. La función `louisModel(piece)` sin opciones sigue creando el modelo heredado.
+- Presupuestos medidos por `tests/lois-ps2-mesh.cjs`: **3.472 triángulos / 4.267 vértices** móvil y **6.376 triángulos / 8.245 vértices** escritorio. La integración actual escoge el preset móvil para todos los dispositivos, como opción conservadora. El modelo antiguo suma más triángulos y se mantiene como respaldo.
+- `tests/lois-ps2-browser.cjs` usa Vite/Playwright/SwiftShader y genera capturas del propio renderizador WebGL1, con vista frontal, perfil, 3/4, primer plano y modo fluido, además de un control con el modelo antiguo. La iluminación de las capturas es diagnóstica, no representa todas las condiciones de la casa.
 - El objetivo **todavía no** es parecido fotográfico definitivo: sin el atlas UV de fase 3, la cara es geométrica con colores planos, y la pose sigue usando la animación procedimental anterior (rig completo en fase 4). No presentar esta fase como textura final o modelo perfectamente igual a la referencia.
 
 ### Fase 3 — UV y texturas faciales
