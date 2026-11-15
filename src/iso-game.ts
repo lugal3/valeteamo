@@ -539,11 +539,22 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   }
   if(stage==='walk-together'&&this.storyLouis){
    const foot=toScreen(this.p),npc=this.storyLouis;
-   npc.x+=(foot.x-35-npc.x)*Math.min(1,dt/300);
-   npc.y+=(foot.y+7-npc.y)*Math.min(1,dt/300);
-   const name='chibi-louis-down-'+(1+Math.floor(this.clock/115)%4);
-   if(this.textures.exists(name))npc.setTexture(name);
-   npc.setDepth(npc.y);
+   const followTarget={
+    x:foot.x-this.storyFollowHeading.x*36,
+    y:foot.y-this.storyFollowHeading.y*23+8
+   };
+   const state=feelCompanion({x:npc.x,y:npc.y},followTarget,dt,this.reducedMotion);
+   npc.setPosition(state.position.x,state.position.y).setDepth(state.position.y);
+   if(state.walking)this.storyCompanionClock+=dt;
+   else this.storyCompanionClock=0;
+   const facing=state.direction==='left'?'right':state.direction;
+   const frame=state.walking?1+Math.floor(this.storyCompanionClock/150)%4:0;
+   const key=`chibi-louis-${facing}-${frame}`;
+   if(this.textures.exists(key)&&npc.texture.key!==key)npc.setTexture(key);
+   npc.setFlipX(state.direction==='left');
+   // Louis also has a tiny idle posture; he doesn't moonwalk in place.
+   npc.setAngle(this.reducedMotion?0:state.walking?
+    Math.sin(this.storyCompanionClock/160*Math.PI)*1.4:Math.sin(this.clock/950)*.4);
    if(!this.storyWalkTriggered&&isoDistance(this.p,this.storyTarget)<.98){
     this.storyWalkTriggered=true;this.story.clearing();
    }
@@ -808,11 +819,15 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   let ax=+this.keys.RIGHT.isDown-+this.keys.LEFT.isDown,ay=+this.keys.DOWN.isDown-+this.keys.UP.isDown;
   if(this.right){ax=this.right.dx;ay=this.right.dy;if(Math.hypot(ax,ay)<8)ax=ay=0;}else if(this.mouse){const point=toScreen(this.p),aim=this.cameras.main.getWorldPoint(this.input.activePointer.x,this.input.activePointer.y);ax=aim.x-point.x;ay=aim.y-point.y;}
   const firing=Math.hypot(ax,ay)>.1&&this.level!==1;if(firing){this.facing=facingOf(ax,ay,this.facing);if(this.clock-this.last>300){this.last=this.clock;const aim=screenVector(ax,ay),length=Math.hypot(ax,ay);this.shotDir={x:ax/length,y:ay/length};this.shoot(this.p,aim.u*4,aim.v*4);this.audio.tone(700,.04,.015);}}
-  const frame=moving?1+Math.floor(this.moveClock/115)%4:this.clock%3600>3440?5:0,dir=this.facing==='left'?'right':this.facing;
-  const hurt=this.clock<this.inv&&this.clock>this.inv-300,hurtKey=`chibi-${this.character}-hurt`,texture=hurt&&this.textures.exists(hurtKey)?hurtKey:`chibi-${this.character}-${dir}-${hurt?5:frame}${firing&&!hurt?'-shoot':''}`;
+  const hurt=this.clock<this.inv&&this.clock>this.inv-300;
   const recoil=!this.reducedMotion&&this.last?Math.max(0,1-(this.clock-this.last)/100):0;
-  this.positionPlayer();if(!this.reducedMotion)this.player.y-=moving?Math.abs(Math.sin(this.moveClock/115*Math.PI))*2:Math.sin(this.clock/550)*.8;this.player.setTexture(texture).setFlipX(this.facing==='left').setScale(1.3*(1+recoil*.06),1.3*(1-recoil*.08)).setAlpha(this.clock<this.inv?(this.reducedMotion?.7:Math.floor(this.clock/90)%2?.45:1):1).setAngle(hurt&&!this.reducedMotion?Math.sin(this.clock/35)*10:moving&&!this.reducedMotion?Math.sin(this.moveClock/115*Math.PI)*3:0);
-  if(this.clock<this.inv&&this.clock>this.inv-300)this.player.setTint(0xffa8bb);else this.player.clearTint();
+  if(this.story)this.renderStoryKitty(dt,firing,recoil,hurt);
+  else {
+   const frame=moving?1+Math.floor(this.moveClock/115)%4:this.clock%3600>3440?5:0,dir=this.facing==='left'?'right':this.facing;
+   const hurtKey=`chibi-${this.character}-hurt`,texture=hurt&&this.textures.exists(hurtKey)?hurtKey:`chibi-${this.character}-${dir}-${hurt?5:frame}${firing&&!hurt?'-shoot':''}`;
+   this.positionPlayer();if(!this.reducedMotion)this.player.y-=moving?Math.abs(Math.sin(this.moveClock/115*Math.PI))*2:Math.sin(this.clock/550)*.8;this.player.setTexture(texture).setFlipX(this.facing==='left').setScale(1.3*(1+recoil*.06),1.3*(1-recoil*.08)).setAlpha(this.clock<this.inv?(this.reducedMotion?.7:Math.floor(this.clock/90)%2?.45:1):1).setAngle(hurt&&!this.reducedMotion?Math.sin(this.clock/35)*10:moving&&!this.reducedMotion?Math.sin(this.moveClock/115*Math.PI)*3:0);
+   if(this.clock<this.inv&&this.clock>this.inv-300)this.player.setTint(0xffa8bb);else this.player.clearTint();
+  }
   for(const light of [...this.collectibles]){light.s.y=toScreen(light.p).y-12+(this.reducedMotion?0:Math.sin(this.clock/230)*3);if(isoDistance(light.p,this.p)<.48){this.burst(light.p,0xffd584);this.floatNote(light.p,'¡Una luz!','#a67c3b');light.s.destroy();this.collectibles=this.collectibles.filter(x=>x!==light);this.collected++;this.audio.tone(880,.18,.035);this.sync();}}
   if(this.charm){const d=isoDistance(this.charm.p,this.p);this.charm.s.y=toScreen(this.charm.p).y-12+(this.reducedMotion?0:Math.sin(this.clock/260)*3);if(d>.9)this.declinedCharm=false;if(d<.48&&!this.declinedCharm){this.pendingOffer=true;this.clearInput();this.audio.tone(660,.1,.025);this.sync();return;}}
   for(const e of [...this.enemies]){
@@ -840,6 +855,21 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   }
   for(const zone of [...this.dangers])if(this.clock>=zone.at){if(isoDistance(zone.p,this.p)<.55)this.damage();this.burst(zone.p,0xc385b4);this.dangers=this.dangers.filter(z=>z!==zone);}if(this.dyingAt)return;
   const g=this.fx;g.clear();if(!this.reducedMotion&&!this.story){for(let i=0;i<12;i++){const t=this.clock*.012+i*53,x=100+(i*83)%600+Math.sin(t/30)*9,y=70+((i*41+t*.5)%290);g.fillStyle(i%2?0xfff2d5:0xf5c5d4,.3+Math.sin(t/18)*.12);g.fillRect(x,y,3,3);}for(let i=0;i<3;i++){const t=this.clock/1000+i*2.4,x=165+i*205+Math.sin(t*.38)*35,y=115+i*24+Math.cos(t*.8)*10,wing=Math.sin(t*9)>0?5:2;g.fillStyle(i===1?0xf4e4a8:0xeab3c5,.72);g.fillRect(x-wing-1,y-3,wing,5);g.fillRect(x+2,y-3,wing,5);g.fillStyle(0x8e7571,.65);g.fillRect(x,y-2,2,4);}}if(this.last&&this.clock-this.last<110){const p=toScreen(this.p);g.fillStyle(0xffdfb4,.9);g.fillCircle(p.x+this.shotDir.x*20,p.y-16+this.shotDir.y*14,3);}if(this.shield){const p=toScreen(this.p);g.lineStyle(2,0xffedb8,.85);g.strokeCircle(p.x,p.y-18,27);}for(const zone of this.dangers){const p=toScreen(zone.p),fraction=1-(zone.at-this.clock)/1150;g.fillStyle(0xc579a5,.15+fraction*.12);g.fillCircle(p.x,p.y,24);g.lineStyle(2,0xb66391,.8);g.strokeCircle(p.x,p.y,24);}
+  if(this.story&&this.storyFootprints.length){
+   this.storyFootprints=this.storyFootprints.filter(trace=>this.clock-trace.at<720);
+   for(const trace of this.storyFootprints){
+    const age=this.clock-trace.at,opacity=Math.max(0,1-age/720);
+    const c=FEEL_FOOTSTEP[trace.kind].color;
+    g.fillStyle(c,opacity*.38).fillEllipse(trace.x,trace.y,6,2.8);
+    g.fillStyle(c,opacity*.22).fillEllipse(trace.x+trace.side*3,trace.y+2.1,3,2);
+   }
+  }
+  if(this.story&&this.storyInteractUntil>this.clock){
+   const progress=1-(this.storyInteractUntil-this.clock)/RESCUE_FEEL.interactMs;
+   const target=toScreen(this.storyVanNear?VAN_NIGHT_POSITION:this.storyTarget);
+   const alpha=this.reducedMotion?.2:Math.sin(progress*Math.PI)*.45;
+   g.lineStyle(2,0xffd6b5,alpha).strokeEllipse(target.x,target.y,22+progress*18,10+progress*6);
+  }
   this.bursts=this.bursts.filter(b=>this.clock-b.at<380);for(const b of this.bursts){const t=(this.clock-b.at)/380;g.lineStyle(2,b.color,1-t);g.strokeCircle(b.x,b.y,this.reducedMotion?12:4+t*18);if(!this.reducedMotion){g.fillStyle(b.color,1-t);for(let i=0;i<4;i++){const a=i*Math.PI/2;g.fillRect(b.x+Math.cos(a)*t*18,b.y+Math.sin(a)*t*12,3,3);}}}
   for(const e of this.enemies)if(this.clock>e.next-450){const p=toScreen(e.p);g.lineStyle(2,0xbd6994,.8);g.strokeCircle(p.x,p.y-12,e.boss?27:18);}for(const stick of [this.left,this.right])if(stick){const camera=this.cameras.main,p=camera.getWorldPoint(stick.x,stick.y),z=camera.zoom,n=Math.max(1,Math.hypot(stick.dx,stick.dy)/24);g.lineStyle(2/z,0x715a73,.28);g.strokeCircle(p.x,p.y,32/z);g.fillStyle(0x866779,.25);g.fillCircle(p.x+stick.dx/n/z,p.y+stick.dy/n/z,11/z);}
   if(this.story){
