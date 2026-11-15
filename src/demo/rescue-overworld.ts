@@ -116,6 +116,12 @@ function hashCell(u:number,v:number,salt=0):number{
  let n=Math.imul(u+173,374761393)^Math.imul(v+911,668265263)^Math.imul(salt+47,1274126177);
  n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967296;
 }
+const TERRAIN_PALETTES:Record<RescueMapId,readonly number[]>={
+ morning_garden:[0xb9d2a8,0xc8dbb0,0xd5e1bb,0xb2d1ab,0xcbdcac],
+ afternoon_meeting:[0xb9bf91,0xcdc99b,0xddcca5,0xb2bb91,0xd8c49b],
+ dusk_search:[0x7f958a,0x8da296,0x738e86,0x8b9d92,0x71877f],
+ night_neighborhood:[0x73848b,0x687e87,0x7e878f,0x6c7684,0x7d8288]
+};
 function paintGroundTexture(g:Phaser.GameObjects.Graphics,u:number,v:number,
  p:{x:number;y:number},map:RescueMapId,onPath:boolean){
  const seed=hashCell(u,v,7),shade=hashCell(u,v,19);
@@ -406,13 +412,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   const p=toScreen({u,v}),center=routeCenter(u),distance=Math.abs(v-center);
   // Nonrepeating, seeded micro-palette avoids giant checkerboard squares.
   const grain=hashCell(u,v,3),variation=hashCell(u,v,4);
-  const palette:Record<RescueMapId,number[]>={
-   morning_garden:[0xb9d2a8,0xc8dbb0,0xd5e1bb,0xb2d1ab,0xcbdcac],
-   afternoon_meeting:[0xb9bf91,0xcdc99b,0xddcca5,0xb2bb91,0xd8c49b],
-   dusk_search:[0x7f958a,0x8da296,0x738e86,0x8b9d92,0x71877f],
-   night_neighborhood:[0x73848b,0x687e87,0x7e878f,0x6c7684,0x7d8288]
-  };
-  const shades=palette[map];
+  const shades=TERRAIN_PALETTES[map];
   let c=shades[Math.floor(grain*shades.length)];
   const isPath=distance<1.38;
   const edge=distance>=1.38&&distance<2.15;
