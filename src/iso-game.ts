@@ -232,17 +232,17 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  startLuisArrival(){
   if(!this.storyLuis||this.storyLuisArriving||this.storyLuisReady||
    this.storyStage!=='talk-luis')return;
-  this.storyLuisArriving=true;this.story.near('');this.storyNear='';
+  this.storyLuisArriving=true;this.story?.near('');this.storyNear='';
   this.storyLuisMotion=makeLuisMotion('arriving',this.storyTarget);
   this.clearInput();
  }
  playStoryLuisFarewell(done:()=>void){
   if(this.storyStage!=='talk-luis'||!this.storyLuis?.active){done();return;}
   if(this.storyLuisFarewell)return;
-  this.storyLuisFarewell=true;this.story.near('');this.storyNear='';
+  this.storyLuisFarewell=true;this.story?.near('');this.storyNear='';
   this.clearInput();
   this.storyLuisMotion=makeLuisMotion('farewell-wave',this.storyTarget,done);
-  this.story.guide('Luis se despide con la mano y vuelve caminando al sendero ♡');
+  this.story?.guide('Luis se despide con la mano y vuelve caminando al sendero ♡');
   this.luisHeart(this.storyTarget);
  }
  luisHeart(p:IsoPoint){
