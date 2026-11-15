@@ -718,6 +718,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.notes=this.notes.filter(note=>{const age=this.clock-note.at;if(age>=850){note.s.destroy();return false;}note.s.y=note.y-(this.reducedMotion?0:age/45);note.s.setAlpha(Math.min(1,(850-age)/200));return true;});
   if(this.dyingAt){const age=this.clock-this.dyingAt,key=`chibi-${this.character}-dead`;if(this.textures.exists(key))this.player.setTexture(key);this.player.setAlpha(Math.max(.25,1-age/800));if(!this.reducedMotion)this.player.setAngle(Math.min(65,age/10));if(age>650){this.ended=true;this.finish('dead');}return;}
   if(this.wonAt){if(!this.reducedMotion)this.player.setAngle(Math.sin(this.clock/90)*8);if(this.clock-this.wonAt>850){this.ended=true;this.finish('win');}return;}
+  let moving=false;
   if(this.story){
    // Kinetic movement applies exclusively to the rescue; the classic game
    // stays byte-identical in the else branch.
@@ -789,7 +790,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    }
    const wantsMove=Math.hypot(x,y)>.1,move=screenVector(x,y);
    const strength=this.left&&!guidePoint?Math.min(1,Math.hypot(x,y)/45):1;
-   let moving=false;
+   moving=false;
    if(wantsMove){
     const distance=guidePoint?isoDistance(this.p,guidePoint):0;
     const fraction=guidePoint?Math.min(1,2.1*seconds/Math.max(.001,distance)):0;
