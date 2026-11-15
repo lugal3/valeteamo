@@ -29,9 +29,7 @@ jobs:
         run: npm run build
       - name: Instalar navegadores Chrome y WebKit
         run: npx playwright install --with-deps chromium webkit
-      - name: 'Diagnóstico Safari: carga de archivos antiguos'
-        env:
-          ONLY_FAILED_CHUNK: '1'
+      - name: Verificar todas las escenas y recuperación Safari en producción
         run: node tests/ios-navigation-recovery.cjs
       - name: Revisar el rescate completo con autito RC
         run: node tests/rc-browser.cjs
