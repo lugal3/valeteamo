@@ -1,60 +1,67 @@
-# Rescate 2D: continuar el verdadero «2D Corazones»
+# Rescate: exploración continua en el Corazones 2D original
 
-## Cambio de enfoque solicitado por el propietario
+## Regla innegociable
 
-La primera versión de esta PR dibujaba un mundo isométrico parecido a Corazones, pero **era otro Phaser.Game**. Eso no cumplía la intención del proyecto y se retiró por completo.
+Este recorrido **no es otro juego ni otro renderer**. Sigue usando:
+`StoryGame` → `IsoAdventure` (Phaser 3) → `buildArt`/`buildChibi`/`installReferenceCharacter` → `screenVector` y `toScreen`.
 
-Ahora el rescate se ejecuta en la **misma clase Phaser `IsoAdventure`** y el **mismo contenedor `StoryGame`** que usa `Pruebas → 2D · Corazones`. La historia añade objetivos por etapas al código existente mediante el parámetro opcional `IsoStoryBridge`.
+La cámara usa el zoom exacto original `Math.min(width/800,height/450)*1.08`, pero sigue suavemente a Kitty para mostrar territorio nuevo en vez de la antigua arena fija. La velocidad de movimiento, animaciones, disparos, impactos, teclas y joysticks originales no se cambian.
 
-## Qué se reutiliza, exactamente
+El arcade **2D · Corazones** funciona igual cuando no se pasa `story`. El rescate pasa `IsoStoryBridge` como parámetro opcional. El juego clásico y la casa 3D no se reemplazan.
 
-| Pieza | Código original compartido |
-| --- | --- |
-| Cámara, zoom y posición | `src/iso-game.ts → fitCamera()` sin cambios |
-| Suelo romboidal y decoración | `src/iso-game.ts → drawFloor(), flower(), shrub(), tree()` |
-| Hoja de sprites de Kitty | `installReferenceCharacter()` y PNG de `public/sprites/` |
-| Animaciones y parpadeo | `IsoAdventure.update()` original, sin un segundo controlador |
-| Movimiento, joystick, disparos | `IsoAdventure.update()` original (WASD, flechas, gestos táctiles) |
-| Efectos y música | `Sound`, `shoot()`, `burst()`, `hitEnemy()`, `damage()` |
-| HUD, salud, pantalla completa | `StoryGame.tsx` original, solo se habilita objetivo narrativo |
-| Casa 3D | `RescueDemo → launchHouse()` original |
+## Nuevo recorrido: seis ambientes físicamente conectados
 
-`src/demo/GardenPrologue.tsx` ya NO contiene `new Phaser.Game`, otro mapa, otro sistema de cámara ni movimiento propio. Solo gestiona el guion de etapas, los diálogos y su comunicación con `IsoAdventure`.
+`src/demo/rescue-overworld.ts` contiene **funciones de terreno para la escena original**, sin `new Phaser.Game`, cámaras nuevas ni controlador de movimiento nuevo. Las coordenadas isométricas `(u,v)` recorren un territorio largo y angosto con límites que se ensanchan y encogen naturalmente.
 
-## Secuencia dentro del juego
+| Región | Extensión en ruta | Características |
+| --- | --- | --- |
+| Sendero de los recuerdos | u 0–12 | Kitty sola, inicio diurno, flores y tutorial gradual |
+| Río de los pétalos | u 12–20 | Agua azul animada, reflejos y puente de madera transitable con postes |
+| Jardín de cerezos | u 20–40 | Prado ancho, arbustos, árboles, bancos y combate original |
+| Bosque del crepúsculo | u 40–55 | Vegetación, senda más angosta, secuestro y primeras pistas |
+| Villa de los faroles | u 55–66 | Vereda, calle, faroles, casas vecinas, huellas y caída de la luz |
+| La casa de dos pisos | u 66–81 | Entrada, patio, calle, casas laterales y gran casa de dos plantas |
 
-Cada etapa usa una **sala del mismo 2D Corazones**, no un mundo plano distinto:
+El suelo usa el tamaño romboidal **82×40** y los colores exactos de `drawFloor()` de Corazones, mezclados con piedra, sendero, asfalto y bosque. `flower()`, `tree()`, `mushroom()` y `shrub()` siguen siendo las funciones de dibujo originales.
 
-1. Intro y encuentro en jardín de Corazones.
-2. Combate del propio Corazones contra tres enemigos.
-3. Hablar con Louis.
-4. Hablar con Luis (personajes distintos).
-5. Acompañar a Louis hasta el claro de la sala.
-6. Secuencia de secuestro con sprites y tweens de la misma escena.
-7. Salas consecutivas con pulsera, pétalos y huellas.
-8. Sala de la casa: puerta cerrada, luego ventana.
-9. El único Phaser `IsoAdventure` se desmonta; arranca la casa WebGL 3D existente.
+El agua tiene **tiles y destellos móviles** por `Phaser.GameObjects.Graphics`. Se actualiza en el mismo `IsoAdventure.update()`, también mientras hay diálogos. El puente mantiene una franja caminable y las orillas imponen límites de colisión; no se puede cruzar nadando por el río.
 
-La casa exterior es un hito visual de tamaño de sala, dibujado con `Graphics` y la paleta del juego ya existente, no un escenario con tecnología diferente.
+Los actores y las pistas aparecen en posiciones **cada vez más adelantadas** dentro del mundo y ya no reinician la posición de Kitty en cada etapa. Se conservan los eventos del guion y los checkpoints guardados.
 
-## Aislamiento y regresiones
+## Tutorial y progresión narrativa
 
-El código original del arcade sigue siendo el **modo por defecto**. La extensión de historia solo se ejecuta si se pasa un objeto `story`; sin él, Corazones usa los mismos enemigos, cámara, nivel, HUD, movimiento y fin de ronda que antes.
+Kitty comienza **totalmente sola**, sin enemigo ni NPC ni caja de diálogo forzada. Primero se descubre el movimiento; al avanzar se enseña cómo disparar, luego el puente y la interacción. El primer diálogo ocurre **después** de llegar al jardín y prepara el combate. Siguen Louis, Luis, el paseo, el secuestro, pulsera, pétalos, ruedas, puerta y ventana. Tras esa ventana se arranca el juego 3D real, sin sustituirlo.
 
-No se modifican `public/sprites/`, `src/isometric.ts`, `src/art.ts`, `src/chibi-art.ts`, `src/game.ts` ni `src/lab/`.
+## Atardecer: bug de rectángulo eliminado
 
-Los guardados de historia (`valeteamo-story-acts-1-2-v1`) y rescate (`valeteamo-rescue-v2`) siguen separados del arcade.
+La antigua capa `Phaser.Rectangle` de 800×450, unida al zoom y al scroll, producía un rectángulo gris mal alineado. **Se eliminó**. La nueva `.prologue-night` es una capa CSS `position:absolute;inset:0` anclada al viewport `story-prologue`, `pointer-events:none`, con gradiente azul-violeta y transición de 2300 ms.
 
-## Pruebas
+`darknessAt()` aumenta la opacidad gradualmente según la distancia; el secuestro fija un mínimo nocturno y la noche se profundiza entre pistas y calle. Al cambiar el tamaño de pantalla, la capa conserva exactamente el área visible sin depender de las coordenadas de la cámara.
+
+## Casa 2D y vecindario
+
+`drawHouse()` dibuja una casa isométrica principal de dos pisos con techo a dos aguas, dos bandas de habitaciones, ventanas de ambas plantas, puerta principal, ventana lateral, balcón y patio. Sus proporciones se basan en el volumen **14 m × 12 m con dos plantas de 3,15 m** documentado en `src/lab/house-layout.js`. No pretende ser un calco exterior fotogramétrico; representa sus dos alas, habitaciones y accesos desde la perspectiva isométrica. Hay casas vecinas, luces y aceras.
+
+La escena 3D **no fue remodelada**; solo se corrigió el funcionamiento del menú de emotes y los clics PC.
+
+## Emotes 3D y ratón
+
+En `src/lab/house.css` el selector oculto ahora se fuerza a `display:none!important` cuando tiene `hidden`, porque la regla anterior `display:flex` podía dejarlo interceptando clics sin verse.
+
+En `src/lab/house.js` abrir el selector libera `pointer lock` antes de presentar los botones, restaura el input y actualiza `aria-expanded`. Elegir emote, salir del baño, Escape o reiniciar también cierra el panel. Se puede abrir con botón del mouse o la tecla **M**.
+
+## Pruebas de regresión
 
 ```sh
 npm ci
 npm test
 npm run build
+node tests/landscape-gate.cjs
+node tests/cosmos-public-flow.cjs
 node tests/prologue-browser.cjs
-npm run test:browser
+node tests/emotes-browser.cjs
 ```
 
-La prueba en navegador debe comprobar la entrada desde Pruebas, la animación de corazones, la transición de diálogos y la llegada a la ventana 3D. También deben revisarse manualmente el arte y los gestos de disparo en un iPhone real.
+`tests/rescue-world.cjs` comprueba los seis ambientes, el puente angosto, el orden espacial, el oscurecimiento gradual, la reutilización del motor y el arreglo de emotes. Las pruebas de navegador verifican entrada sin personajes, cámara, escena, transiciones, 3D y clicks en escritorio; sus capturas quedan en los artifacts de GitHub Actions.
 
-**Rama de revisión:** no fusionar a main ni desplegar a Firebase sin revisar el resultado artístico.
+**Pendiente artístico:** revisar personalmente en un iPhone y en navegador de escritorio la velocidad del recorrido, proporciones de la casa y aspecto del agua antes de fusionar esta PR a main o publicar Firebase.
