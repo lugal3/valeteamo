@@ -13,7 +13,7 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  const p=LOIS_PS2_PROFILE.palette,parts=[];
  const add=(id,x,y,z,w,h,d,mat,color,extra={})=>
   parts.push(piece(id,x,y,z,w,h,d,mat,{color,...extra,
-   photoMapped:photoMode&&(id==='face'||id.startsWith('hair-')||id.startsWith('fringe-')||id.startsWith('temple-')||id==='crown'||id.startsWith('ear-')),
+   photoMapped:photoMode&&(id==='neck'||id==='face'||id.startsWith('hair-')||id.startsWith('fringe-')||id.startsWith('temple-')||id==='crown'||id.startsWith('ear-')),
    rigBone:loisBoneForPart(id),rigPart:id}));
  const box={shape:'rounded-box',roundness:.35,segments:desktop?8:6,rings:desktop?5:4};
  const limb={shape:'rounded-box',roundness:.38,segments:desktop?8:6,rings:desktop?5:4};
@@ -44,7 +44,7 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
 
  // Sculpted head is a single 3D face surface. Cheeks/nose/chin/lips are
  // parametrically deformed in lois-ps2-face.js, *not* stacked colored balls.
- add('face',0,1.610,.006,.326,.425,.318,'paper',skin,
+ add('face',0,1.610,.006,photoMode?.345:.326,photoMode?.439:.425,photoMode?.262:.318,'paper',skin,
   {shape:'lois-face',segments:desktop?32:24,rings:desktop?18:14,rigGroup:'head'});
  for(const side of [-1,1]){
   add('ear-'+side,side*.171,1.610,-.004,.054,.095,.061,'paper',skin,
