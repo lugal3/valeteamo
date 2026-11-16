@@ -16,7 +16,7 @@ const ROUTE=Object.freeze([
 export const LOUIS_HIDING_SPOT=Object.freeze({x:11.82,y:0,z:4.08});
 export function createLouisEscape(world){
  const point=ROUTE[0],y=groundHeight(point.x,point.z,-3.55,true);
- return {kind:'louis-companion',id:'louis-escape',label:'Louis rescatado',visualPreset:LOIS_VISUAL_ID,x:point.x,y,z:point.z,yaw:Math.PI,phase:'untying',waypoint:1,age:0,step:0,crouch:.33,concealed:false,interactable:false,walk:0,speed:0,blink:0,visualReaction:null,world};
+ return {kind:'louis-companion',id:'louis-escape',label:'Louis rescatado',visualPreset:LOIS_VISUAL_ID,visualVariant:'photo-a',x:point.x,y,z:point.z,yaw:Math.PI,phase:'untying',waypoint:1,age:0,step:0,crouch:.33,concealed:false,interactable:false,walk:0,speed:0,blink:0,visualReaction:null,world};
 }
 export function updateLouisEscape(louis,dt,kitty=null){
  if(!louis||dt<=0)return null;
@@ -87,7 +87,7 @@ export function louisCamera(louis){
 // eyebrow-length chestnut fringe, cool blue-grey irises, straight nose and
 // light beard shadow. Geometry is hand-built, not derived from a photo asset.
 export function louisModel(piece,{variant='legacy',quality='mobile'}={}){
- if(variant==='ps2-b')return buildLoisPs2Model(piece,{quality});
+ if(variant==='ps2-b'||variant==='photo-a')return buildLoisPs2Model(piece,{quality,photoMode:variant==='photo-a'});
  const parts=[],add=(id,x,y,z,w,h,d,mat,color,extra={})=>parts.push(piece(id,x,y,z,w,h,d,mat,{color,...extra}));
  const skin=[.85,.665,.565],warm=[.828,.647,.555],shadow=[.72,.55,.495],beard=[.76,.605,.535];
  const hair=[.225,.142,.116],hairLight=[.305,.196,.151],highlight=[.37,.257,.206];
