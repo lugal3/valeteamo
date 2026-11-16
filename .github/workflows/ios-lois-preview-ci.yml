@@ -1,0 +1,38 @@
+name: Validar visor directo y pantalla vacía de iPhone
+on:
+  push:
+    branches: [fix/ios-blank-screen-and-lois-direct-preview]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prueba-de-carga:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Pruebas de regresión
+        run: npm test
+      - name: Compilar ambas entradas HTML
+        run: npm run build
+      - name: Verificar visor incluido en dist
+        run: test -f dist/lois-preview.html
+      - name: Instalar Chromium y WebKit
+        run: npx playwright install --with-deps chromium webkit
+      - name: Probar visor Lois y recuperación de ruta vacía
+        run: node tests/ios-blank-lois-direct.cjs
+      - name: Probar panel LP y navegación de 3D
+        run: node tests/admin-panel-browser.cjs
+      - name: Guardar capturas de la vista directa
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lois-direct-mobile-previews
+          path: artifacts/lois-direct-*.png
+          if-no-files-found: ignore
