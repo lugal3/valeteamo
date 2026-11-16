@@ -100,21 +100,33 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
   // Points are [source-image x, source-image y], in the original 1408x1056
   // approved "OBJETIVO FINAL" canvas. Only the frontal crop is used; this
   // intentionally does not claim to reconstruct the unseen back of the hair.
+  // Preserve the approved image crop while tracing a broken, swept outline
+  // instead of the old near-ellipse. Every vertex samples the same photo UV;
+  // the small staggered peaks break the helmet silhouette without adding a
+  // second cartoon fringe or increasing the number of independent cards.
   const hairLayers=[
    {id:'hair-photo-mass',depth:.139,points:[
-    [150,304],[144,250],[179,151],[237,99],[316,64],
-    [393,43],[471,32],[542,47],[604,77],[667,130],
-    [711,210],[712,274],[677,308],[615,311],
-    [568,294],[489,322],[411,339],[317,374],[238,393],[158,371]]},
+    [150,304],[145,257],[153,213],[177,167],[175,145],
+    [212,115],[240,93],[267,91],[307,66],[333,60],
+    [367,47],[395,43],[425,47],[472,32],[493,39],
+    [540,47],[573,60],[597,76],[619,91],
+    [654,120],[671,139],[692,177],[710,209],
+    [707,238],[713,273],[687,300],[675,310],
+    [647,305],[615,311],[578,292],[565,299],
+    [489,322],[412,339],[363,355],[315,377],
+    [263,389],[238,393],[197,380],[158,371]]},
    {id:'hair-photo-fringe-left',depth:.155,points:[
-    [153,307],[170,226],[244,202],[310,242],[347,288],
-    [314,350],[233,404],[143,394]]},
+    [153,307],[160,274],[170,226],[198,215],[242,203],
+    [279,221],[310,242],[345,288],[326,324],
+    [312,356],[273,383],[233,403],[188,401],[143,394]]},
    {id:'hair-photo-fringe-middle',depth:.168,points:[
-    [280,238],[365,152],[477,143],[574,199],
-    [548,279],[444,340],[331,368],[287,339]]},
+    [280,238],[315,218],[365,152],[417,148],[477,143],
+    [522,162],[574,199],[562,237],[548,279],
+    [496,304],[444,340],[382,350],[331,368],[287,339]]},
    {id:'hair-photo-fringe-right',depth:.152,points:[
-    [516,165],[617,174],[688,235],[701,288],
-    [659,334],[582,303],[550,255]]}
+    [516,165],[570,168],[617,174],[653,204],
+    [688,235],[696,263],[701,288],[677,313],
+    [659,334],[612,319],[582,303],[550,255]]}
   ];
   for(const layer of hairLayers)
    add(layer.id,0,0,0,.01,.01,.01,'wood',hair,
