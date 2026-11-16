@@ -11,6 +11,9 @@ const assert=require('node:assert/strict');
  assert(hairs.every(b=>b.rigBone==='head'&&b.photoMapped),'all layers follow existing head rig');
  assert(hairs.every(b=>b.photoPolygon.length>=7),'no degenerate flat hair sprites');
  assert(photo.some(b=>b.id==='face'&&b.photoMapped),'photographic face is untouched');
+ const neck=photo.find(b=>b.id==='neck');
+ assert(neck?.shape==='lois-neck-lowpoly'&&!neck.photoMapped,
+  'the PS2 neck is faceted skin geometry, not a stretched photo map');
  assert(!classic.some(b=>b.shape==='lois-photo-hair'),'legacy PS2-B has no added layer');
  const mesh=geometry(photo);
  assert(mesh.vertices.every(Number.isFinite));
