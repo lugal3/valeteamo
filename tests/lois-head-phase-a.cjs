@@ -11,6 +11,14 @@ const assert=require('node:assert/strict');
  assert(face&&face.photoMapped&&face.segments>=28&&face.rings>=18,
   'mobile mesh has enough rings for smooth mandible/cheek curvature');
  assert(neck?.shape==='lois-neck-lowpoly','same tapered neck and rig');
+ assert(neck.w<=.195&&neck.h<=.23,
+  'upper neck must not revert to a broad and tall trapezoidal pedestal');
+ const neckMesh=geometry([neck]);
+ for(let i=0;i<neckMesh.vertices.length;i+=16){
+  const v=neckMesh.vertices,n=[v[i+6],v[i+7],v[i+8]];
+  assert(Math.abs(Math.hypot(...n)-1)<.005,
+   'neck vertex normals remain smooth and unit length');
+ }
  const baseline={...face,photoMapped:false};
  const xJaw=Math.abs(loisFacePoint(face,.75,.32)[0]-face.x);
  const xOld=Math.abs(loisFacePoint(baseline,.75,.32)[0]-face.x);
