@@ -1,3 +1,4 @@
+import {KITCHEN_BAR,KITCHEN_HIDE_SPOT} from './kitchen-hide-layout.js';
 export const PIANO_NOTES=['Do','Re','Mi','Fa','Sol','La','Si','Do agudo'];
 export const PIANO_KEYS=['a','s','d','f','g','h','j','k'];
 export const PIANO_SCORE=[0,2,4,5,4,2,1,0];
@@ -30,27 +31,58 @@ export function decorateKitchen(add){
   add('pantry-lid-'+i,x,1.72+height,.26,.17,.034,.17,'brass',false,{shape:'cylinder',segments:10});
   add('pantry-label-'+i,x,1.71+height*.44,.34,.093,.067,.009,'paper',false);
  }
- add('island-fruit-dish',12.70,1.113,3.63,.39,.047,.31,'ceramica',false,{shape:'round',segments:12,rings:6,color:[.84,.76,.59]});
- for(const [i,x,z,color] of [[0,12.61,3.60,[.69,.24,.23]],[1,12.76,3.67,[.71,.48,.18]],[2,12.83,3.57,[.55,.60,.25]]])
-  add('island-fruit-'+i,x,1.20,z,.14,.14,.14,'paper',false,{shape:'round',segments:10,rings:6,color});
- for(let i=0;i<3;i++)add('island-towel-'+i,13.27,1.10+i*.020,3.66,.29-i*.02,.022,.25-i*.02,'velvet',false,{color:i%2?[.74,.62,.49]:[.42,.51,.45],yaw:.12});
+ // Props live on the newly rotated top; no floating fruit/towels left
+ // at the obsolete side-on island location.
+ add('island-fruit-dish',KITCHEN_BAR.x,1.173,3.17,.31,.040,.31,'ceramica',false,
+  {shape:'round',segments:12,rings:6,color:[.84,.76,.59]});
+ for(const [i,x,z,color] of [[0,10.93,3.13,[.69,.24,.23]],[1,11.06,3.23,[.71,.48,.18]],[2,11.12,3.09,[.55,.60,.25]]])
+  add('island-fruit-'+i,x,1.25,z,.13,.13,.13,'paper',false,
+   {shape:'round',segments:10,rings:6,color});
+ for(let i=0;i<2;i++)add('island-towel-'+i,11.12,1.155+i*.018,2.99,
+  .22-i*.016,.018,.25-i*.018,'velvet',false,
+  {color:i%2?[.74,.62,.49]:[.42,.51,.45]});
  add('prep-recipe-book',13.48,1.01,2.70,.26,.040,.21,'wood',false,{color:[.43,.26,.28],yaw:.11});
  add('prep-recipe-pages',13.48,1.031,2.70,.237,.008,.188,'paper',false,{yaw:.11});
 }
 
 export function installKitchenBar(add,obj){
- const x=12.20,z=3.65;
- add('kitchen-bar-top',x,1.04,z,3.20,.10,.66,'stone',true,{surface:'counter-stone',color:[.51,.47,.42]});
- add('kitchen-bar-screen',x,.49,3.39,3.12,.98,.12,'wood',true,{color:[.44,.29,.24]});
- for(const px of [10.72,12.15,13.69])add('kitchen-bar-stile-'+px,px,.50,3.313,.085,.91,.062,'trim',false,{color:[.51,.35,.27]});
- add('kitchen-bar-edge',x,1.00,3.29,3.22,.075,.045,'brass',false,{color:[.56,.42,.26]});
- add('kitchen-prep-top',13.58,.94,2.26,.62,.082,1.26,'stone',true,{surface:'counter-stone'});
- for(const pz of [1.72,2.80])add('kitchen-prep-leg-'+pz,13.37,.45,pz,.080,.90,.085,'wood',true);
+ const {x,z,depth,length}=KITCHEN_BAR;
+ // Facing the kitchen doorway: long dimension is now Z, not X.
+ // A solid, opaque front panel conceals Louis on the rear/EAST side,
+ // including while he crouches, and leaves a walkable corridor around
+ // the NORTH end. No invisible clipping walls or teleport shortcuts.
+ add('kitchen-bar-top',x,1.045,z,depth,.105,length,'stone',true,
+  {surface:'counter-stone',color:[.56,.51,.47]});
+ add('kitchen-bar-screen',x-depth/2+.07,.50,z,.14,.99,length-.16,'wood',true,
+  {color:[.42,.29,.23]});
+ // Plinth hides the floor gap but does not add collision cost.
+ add('kitchen-bar-plinth',x-depth/2+.095,.10,z,.17,.19,length-.19,'wood',false,
+  {color:[.31,.22,.18]});
+ for(const pz of [z-length/2+.09,z,z+length/2-.09])
+  add('kitchen-bar-stile-'+pz,x-depth/2-.016,.50,pz,.060,.91,.075,'trim',false,
+   {color:[.56,.37,.26]});
+ add('kitchen-bar-edge',x-depth/2-.017,1.008,z,.055,.068,length+.025,'brass',false,
+  {color:[.60,.45,.28]});
+ // Two slim back supports instead of the earlier full-length side slab:
+ // players and Louis can physically walk behind the counter.
+ for(const pz of [z-length/2+.16,z+length/2-.16])
+  add('kitchen-bar-back-leg-'+pz,x+depth/2-.09,.48,pz,.085,.95,.085,'wood',true,
+   {color:[.44,.30,.25]});
+ // Existing preparation bench is reused against the east kitchen wall.
+ add('kitchen-prep-top',13.58,.94,2.26,.62,.082,1.26,'stone',true,
+  {surface:'counter-stone'});
+ for(const pz of [1.72,2.80])
+  add('kitchen-prep-leg-'+pz,13.37,.45,pz,.080,.90,.085,'wood',true);
  add('kitchen-prep-board',13.53,.993,2.28,.32,.034,.51,'wood',false);
- obj('red-key','key','Llave roja',11.53,1.112,3.66,{red:true});
- obj('hide-kitchen','hide','Agacharse tras la barra',11.82,.88,4.12,{requiresCrouch:true,hideType:'kitchen',returnX:10.20,returnZ:4.09,hideCamera:{x:11.39,y:.77,z:3.90,yaw:-Math.PI/2,pitch:0}});
+ // Keep the puzzle key on the new front-facing worktop.
+ obj('red-key','key','Llave roja',x-.02,1.112,z+.05,{red:true});
+ obj('hide-kitchen','hide','Agacharse detrás del mesón',
+  KITCHEN_HIDE_SPOT.x,.83,KITCHEN_HIDE_SPOT.z,{
+   requiresCrouch:true,hideType:'kitchen',
+   returnX:12.10,returnZ:.89,
+   hideCamera:{x:12.22,y:.67,z:2.54,yaw:-Math.PI/2,pitch:0}
+  });
 }
-
 export function installExtraHides(add,obj){
  add('shower-tray',7.96,.035,6.91,.68,.07,.68,'ceramica',false);
  add('shower-pipe',7.71,1.56,7.16,.028,1.39,.028,'torchmetal',false);
