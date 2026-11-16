@@ -53,6 +53,14 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   assert.equal((await rc()).mode,'parked');
   await shot('03-rc-stopped');
 
+  // User screenshot regression: before using the rope interaction, Louis
+  // must ALREADY show the approved face, not the old static captive.
+  await page.evaluate(()=>window.__rescueHouse.setPose({
+   x:8.55,y:-3.55,z:12.35,yaw:0,pitch:0
+  }));
+  await page.waitForTimeout(160);
+  await shot('03b-louis-captive-photo-before-untie');
+
   console.log('RC browser: free Louis, climb basement steps, hide behind American-style kitchen bar');
   await use('rescue-louis');
   await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='untying');
