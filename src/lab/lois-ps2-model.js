@@ -31,8 +31,8 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  add('shirt',0,1.12,.140,photoMode?.35:.248,.445,.025,'cream',shirt,{...box,rigGroup:'body'});
  if(photoMode){
   // Minimal dark collar silhouette and no suit lapel covering the neck.
-  add('crewneck',0,1.374,.119,.216,.013,.022,'dark',[.10,.11,.18],
-   {...box,rigGroup:'body'});
+  // Keep the collar behind the photo neck. The earlier black raised
+  // strip drew a visible gap between the chin and the navy shirt.
  }else{
  add('collar',0,1.379,.116,.228,.070,.082,'cream',[.91,.89,.87],{...box,rigGroup:'body'});
  for(const side of [-1,1]){
@@ -49,12 +49,12 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  }
  add('hips',0,.843,-.006,.356,.185,.237,'dark',p.trousers,{...box,rigGroup:'body'});
  add('neck',0,photoMode?1.474:1.449,.011,
-  photoMode?.188:.132,photoMode?.246:.158,photoMode?.158:.133,'paper',skin,
+  photoMode?.215:.132,photoMode?.251:.158,photoMode?.158:.133,'paper',skin,
   {...oval,rigGroup:'body'});
 
  // Sculpted head is a single 3D face surface. Cheeks/nose/chin/lips are
  // parametrically deformed in lois-ps2-face.js, *not* stacked colored balls.
- add('face',0,1.610,.006,photoMode?.345:.326,photoMode?.439:.425,photoMode?.262:.318,'paper',skin,
+ add('face',0,1.610,.006,photoMode?.398:.326,photoMode?.456:.425,photoMode?.276:.318,'paper',skin,
   {shape:'lois-face',segments:desktop?32:24,rings:desktop?18:14,rigGroup:'head'});
  for(const side of [-1,1]){
   add('ear-'+side,side*.171,1.610,-.004,.054,.095,.061,'paper',skin,
@@ -83,10 +83,10 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
 
  // Asymmetric, side-swept chestnut silhouette is the main likeness cue.
  add('hair-back',0,photoMode?1.751:1.725,-.043,
-  photoMode?.447:.357,photoMode?.286:.254,photoMode?.346:.306,'wood',hairShadow,
+  photoMode?.45:.357,photoMode?.258:.254,photoMode?.346:.306,'wood',hairShadow,
   {shape:'round',segments:desktop?12:10,rings:desktop?6:4,rigGroup:'head'});
  add('hair-cap',-.015,photoMode?1.830:1.802,-.004,
-  photoMode?.432:.355,photoMode?.194:.153,photoMode?.323:.303,'wood',hair,
+  photoMode?.432:.355,photoMode?.178:.153,photoMode?.323:.303,'wood',hair,
   {shape:'round',segments:desktop?12:10,rings:desktop?6:4,rigGroup:'head'});
  if(photoMode){
   // The previous photo variant lost nearly all the tousled hair silhouette:
@@ -98,21 +98,21 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
   // intentionally does not claim to reconstruct the unseen back of the hair.
   const hairLayers=[
    {id:'hair-photo-mass',depth:.169,points:[
-    [132,304],[125,245],[159,143],[226,91],[307,50],
-    [393,24],[475,15],[546,27],[617,61],[682,115],
-    [725,201],[747,271],[704,314],[637,315],
+    [150,304],[144,250],[179,151],[237,99],[316,64],
+    [393,43],[471,32],[542,47],[604,77],[667,130],
+    [711,210],[712,274],[677,308],[615,311],
     [568,294],[489,322],[411,339],[317,374],[238,393],[158,371]]},
    {id:'hair-photo-fringe-left',depth:.187,points:[
-    [131,308],[154,218],[231,187],[306,234],[354,289],
+    [153,307],[170,226],[244,202],[310,242],[347,288],
     [314,350],[233,404],[143,394]]},
    {id:'hair-photo-fringe-middle',depth:.196,points:[
     [280,238],[365,152],[477,143],[574,199],
     [548,279],[444,340],[331,368],[287,339]]},
    {id:'hair-photo-fringe-right',depth:.182,points:[
-    [519,156],[627,149],[712,228],[732,291],
+    [516,165],[617,174],[688,235],[701,288],
     [659,334],[582,303],[550,255]]},
    {id:'hair-photo-crown',depth:.170,points:[
-    [266,120],[300,57],[428,17],[522,23],[641,85],
+    [274,134],[315,78],[427,47],[523,48],[620,97],
     [598,136],[492,147],[362,159]]}
   ];
   for(const layer of hairLayers)
