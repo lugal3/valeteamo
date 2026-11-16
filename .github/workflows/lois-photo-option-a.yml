@@ -1,0 +1,35 @@
+name: Lois Opción A — fototextura y cuerpo 3D
+on:
+  push:
+    branches: [feature/lois-photographic-face-option-a]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  photo-uv-and-webgl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Pruebas del modelo de referencia fotográfica
+        run: node tests/lois-photo-option-a.cjs
+      - name: Regresión del proyecto
+        run: npm test
+      - name: Compilación de las dos entradas web
+        run: npm run build
+      - name: Instalar navegador WebGL
+        run: npx playwright install --with-deps chromium
+      - name: Capturas reales frontales, tres cuartos y primer plano
+        run: node tests/lois-ps2-browser.cjs
+      - name: Guardar los resultados gráficos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lois-photo-option-a-real-webgl
+          path: artifacts/lois-photo-a-*.png
+          if-no-files-found: ignore
