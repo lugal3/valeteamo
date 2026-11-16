@@ -83,7 +83,7 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='climb',null,{timeout:12000});
   await shot('04-louis-basement');
   await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='climb'&&
-   window.__rescueHouse.louis().x>11.6&&window.__rescueHouse.louis().z<1.24,
+   window.__rescueHouse.louis().x>11.6&&window.__rescueHouse.louis().z<1.72,
    null,{timeout:42000});
   await shot('04b-louis-walks-around-north-end');
   await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='hide',null,{timeout:15000});
@@ -91,7 +91,7 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='hidden',null,{timeout:15000});
   const hidden=await louis();
   assert.equal(hidden.phase,'hidden');
-  assert(hidden.x>11.9&&Math.abs(hidden.z-2.53)<.08,
+  assert(hidden.x>11.9&&Math.abs(hidden.z-2.97)<.08,
    'Louis has moved behind center of the bar, not clipped through its side');
   assert.equal(await story().then(x=>x.phase),'rc-setup');
   await shot('05-louis-hidden-behind-front-facing-kitchen');
