@@ -1,7 +1,7 @@
 import {createPose,createRigBinding,evaluateRig,JOINT_INDEX} from './character-rig.js';
 import {sampleBlink} from './animations/face.js';
 import {smoothSurface,torusSurface,roundedBoxSurface} from './chibi-geometry.js';
-import {loisFaceSurface} from './lois-ps2-face.js';
+import {loisFaceSurface,loisPhotoFaceUV} from './lois-ps2-face.js';
 import {sampleLoisRig,writeLoisRigPart} from './lois-ps2-rig.js';
 import {createLoisFaceTexture} from './lois-ps2-texture.js';
 import {BATH_MIRROR,mirrorVisible,kittyMirrorPieces,reflectedBathroom,reflectMesh,poseReflectedKitty} from './mirror.js';
@@ -96,27 +96,30 @@ export function geometry(boxes){
    const ax=box.source?.x||0,ay=box.source?.y||0;
    for(let j=first;j<vertices.length;j+=16){
     const x=vertices[j]-ax,y=vertices[j+1]-ay-(box.rigBone==='head'?.065:0);
-    // Maintain the approved photograph on the front. On the hidden back of
-    // the closed head, sample only an unobtrusive cheek-skin patch from that
-    // SAME image, fading its UVs around the side so no duplicate eyes/mouth
-    // or abrupt matte/photo seam can appear in true profile.
-    let srcX=box.rigPart==='neck'?450+x*1500:450+x*1300;
-    let srcY=box.rigPart==='neck'?790-(y-1.45)*440:470-(y-1.656)*1327;
+    // The face has its own landmark-aware UV projection. The approved
+    // frontal photo remains untouched while sides and under-chin sample
+    // feature-free skin from the same atlas, never duplicated eyes/nose.
     if(box.rigPart==='face'){
-     const t=Math.max(0,Math.min(1,(vertices[j+8]+.52)/.87));
-     const blend=t*t*(3-2*t);
-     const skinX=540,skinY=620-(y-1.656)*90;
-     srcX=skinX+(srcX-skinX)*blend;
-     srcY=skinY+(srcY-skinY)*blend;
+     const uv=loisPhotoFaceUV(x,y,vertices[j+8]);
+     vertices[j+9]=uv[0];vertices[j+10]=uv[1];
+    }else if(box.rigPart==='neck'){
+     // Match the photographic cheek skin on the new throat using a small
+     // feature-free patch. Previous implementations either drew a flat gray
+     // trapezoid or stretched the bottom of the beard over the entire neck.
+     const sx=590+Math.max(-9,Math.min(9,x*55));
+     const sy=554+Math.max(-14,Math.min(14,(y-1.45)*60));
+     vertices[j+9]=Math.max(.003,Math.min(.997,(sx-110)/650));
+     vertices[j+10]=Math.max(.003,Math.min(.997,1-sy/850));
+    }else{
+     let srcX=450+x*1300;
+     let srcY=470-(y-1.656)*1327;
+     // Rounded scalp and temples must never sample the photo's eyes.
+     if(box.rigPart==='hair-back'||box.rigPart==='hair-cap'||
+       box.rigPart==='crown'||box.rigPart?.startsWith('temple-'))
+      srcY=Math.min(srcY,310);
+     vertices[j+9]=Math.max(.003,Math.min(.997,(srcX-110)/650));
+     vertices[j+10]=Math.max(.003,Math.min(.997,1-srcY/850));
     }
-    // Photo hair backing is rounded 3D scalp, not a second face!
-    // Limit its UVs to the photographed crown; otherwise low temple
-    // vertices sampled the original eyes, reproducing them in profile.
-    if(box.rigPart==='hair-back'||box.rigPart==='hair-cap'||
-      box.rigPart==='crown'||box.rigPart?.startsWith('temple-'))
-     srcY=Math.min(srcY,310);
-    vertices[j+9]=Math.max(.003,Math.min(.997,(srcX-110)/650));
-    vertices[j+10]=Math.max(.003,Math.min(.997,1-srcY/850));
     vertices[j+11]=4;
     vertices[j+3]=1;vertices[j+4]=1;vertices[j+5]=1;
    }
@@ -155,14 +158,20 @@ export function geometry(boxes){
    rotateMesh();continue;
   }
   if(box.shape==='lois-neck-lowpoly'){
-   // Tapered faceted neck. The earlier photographic neck stretched a narrow
-   // chin column, while rounded-box read as a pink cube in the portrait view.
-   // Keep the neck opaque and skin-coloured; source photo remains on the face.
+   // A low-poly but smoothly shaded, skin-textured throat supporting
+   // the jaw from below. Six variable-radius rings tuck into the head and
+   // the shirt; all reuse the one Photo-A atlas and existing rig.
    const sides=Math.max(8,Math.round(box.segments||12));
    // From the collar upwards: a gentle taper, then a smaller upper neck
    // hidden inside the jaw. Offsetting the upper rings back avoids a dark
    // face/neck intersection directly beneath the chin.
-   const rings=[[-.5,1.14,.015],[-.18,1.04,.008],[.20,.89,-.012],[.5,.73,-.026]];
+   // Seat the throat gently under the new chin shelf. The top two rings
+   // lean forward inside the mandibular volume, avoiding a visible dark
+   // gap where the photographic face ends in low camera angles.
+   const rings=[
+    [-.50,1.10,-.024],[-.23,1.01,-.011],[.07,.93,.002],
+    [.34,.83,.010],[.60,.71,.017],[.76,.60,.025]
+   ];
    const point=(angle,row)=>{
     const [yy,scale,depth]=rings[row];
     return [
@@ -174,12 +183,15 @@ export function geometry(boxes){
    for(let row=0;row<rings.length-1;row++){
     for(let k=0;k<sides;k++){
      const a=k*Math.PI*2/sides,b=(k+1)*Math.PI*2/sides;
-     const mid=(a+b)*.5;
-     const n=[Math.cos(mid),.07,Math.sin(mid)];
      const quad=[point(a,row),point(b,row),point(b,row+1),point(a,row+1)];
      for(let v=0;v<4;v++){
       const u=k/sides+(v===1||v===2?1/sides:0),vv=(row+(v>=2?1:0))/(rings.length-1);
-      vertices.push(...quad[v],...color,...n,u,vv,0,style,-Math.sin(mid),0,Math.cos(mid));
+      // Continuous vertex normals soften the segmented neck without adding
+      // polygons; shaded facial skin no longer looks vertically striped.
+      const angle=(v===0||v===3)?a:b;
+      const length=Math.hypot(Math.cos(angle),.07,Math.sin(angle));
+      const n=[Math.cos(angle)/length,.07/length,Math.sin(angle)/length];
+      vertices.push(...quad[v],...color,...n,u,vv,0,style,-Math.sin(angle),0,Math.cos(angle));
      }
      indices.push(offset,offset+2,offset+1,offset,offset+3,offset+2);
      offset+=4;
