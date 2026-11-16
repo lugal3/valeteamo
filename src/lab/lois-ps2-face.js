@@ -27,14 +27,13 @@ export function loisPhotoFaceUV(x,y,normalZ){
  // continuous across its original seam (x≈0); no second face is introduced.
  const leftWeight=1-smoothstep(-.13,-.02,x);
  const skinX=590-280*leftWeight+clamp(x*20,-4,4);
- const skinY=560-clamp((y-1.656)*65,-18,18);
- // Wider transition prevents UV discontinuities even on low-density
- // side polygons and preserves the original frontal eyes/mouth exactly.
- const frontWeight=smoothstep(.08,.90,normalZ);
- // Below the chin plane, avoid stretching the lower beard down the throat.
- // Mouth and lips around y≈1.52 retain the untouched frontal projection.
- const chinWeight=smoothstep(-.221,-.175,y-1.656);
- const blend=frontWeight*chinWeight;
+ const skinY=555-clamp((y-1.656)*105,-28,28);
+ // Keep the FULL approved front portrait through the lower lip and chin.
+ // The earlier vertical chin fade blended cheek pixels into the front of
+ // the jaw, creating a false brown mouth line. Only SIDE/FACING-DOWN
+ // polygons switch gradually to the cheek atlas, using the actual normal.
+ const frontWeight=smoothstep(.03,.70,normalZ);
+ const blend=frontWeight;
  const srcX=skinX+(projectedX-skinX)*blend;
  const srcY=skinY+(projectedY-skinY)*blend;
  return [
