@@ -58,8 +58,10 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   await page.evaluate(()=>window.__rescueHouse.setPose({
    x:8.35,y:0,z:2.50,yaw:Math.PI/2,pitch:-.04
   }));
-  await page.waitForTimeout(160);
+  await page.locator('[data-equip="flashlight"]').click();
+  await page.waitForTimeout(180);
   await shot('03a-kitchen-facing-door-before-rescue');
+  await page.locator('[data-equip="rc"]').click();
 
   // User screenshot regression: before using the rope interaction, Louis
   // must ALREADY show the approved face, not the old static captive.
