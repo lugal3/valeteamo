@@ -19,20 +19,29 @@ const assert=require('node:assert/strict');
  assert(!boxes.some(x=>/pickup-louis-escape-(iris|eye|pupil|lid|upper-lip|lower-lip|brow|nostril)/.test(x.id)),
   'photo supplies original eyes, eyebrows and lips: no double emoji-style features');
  const mesh=geometry(boxes);
- // A real profile must not show another pair of eyes on the rear head.
- // Rear UVs are redirected to a constant cheek-skin patch in the SAME image;
- // the side blends toward the original face UVs without a hard material seam.
+ // Phase C: a real profile and underside must not project the front
+ // eyes, mouth or beard onto the side/back of the closed head. They sample
+ // the SAME atlas but only its feature-free cheek patch, continuously.
  const faceRange=mesh.ranges[boxes.findIndex(x=>x.shape==='lois-face')];
- let rearHead=0;
+ let rearHead=0,underside=0;
  for(let i=faceRange.start;i<faceRange.end;i+=16){
-  if(mesh.vertices[i+8]<-.65){
+  const v=mesh.vertices,uvx=v[i+9],uvy=v[i+10];
+  if(v[i+8]<-.65){
    rearHead++;
-   assert.equal(mesh.vertices[i+11],4,'rear skin samples the same approved atlas');
-   assert(Math.abs(mesh.vertices[i+9]-(540-110)/650)<.025,
-    'rear skin UV must avoid the eyes and mouth of the front portrait');
+   assert.equal(v[i+11],4,'rear head still uses one approved photo atlas');
+   assert(Math.abs(uvx-(590-110)/650)<.025,
+    'rear skull maps only cheek skin, never duplicated eyes or nose');
+   assert(Math.abs(uvy-(1-560/850))<.035,
+    'rear skull photo UV remains inside feature-free cheek');
+  }
+  if(v[i+1]<face.y-.207&&v[i+8]>.45){
+   underside++;
+   assert(Math.abs(uvx-(590-110)/650)<.04,
+    'underchin photo no longer drags mouth/beard down to the neck');
   }
  }
  assert(rearHead>20,'closed photo head includes skin-only rear vertices');
+ assert(underside>1,'underchin region is sampled and regression checked');
  // A rounded photo hair backing can NEVER sample the image's eyebrows or
  // eyes. Front hair cutouts have separate exact UVs, so constrain shell only.
  const scalp=boxes.filter(part=>part.rigPart==='hair-back'||
