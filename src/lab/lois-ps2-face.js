@@ -9,6 +9,35 @@ const gaussian=(x,y,cx,cy,sx,sy)=>{
 };
 const normal3=(x,y,z)=>{const r=Math.hypot(x,y,z)||1;return [x/r,y/r,z/r];};
 const band=(x,center,radius)=>Math.exp(-.5*((x-center)/radius)**2);
+const smoothstep=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);};
+
+// Phase C: photographic UVs on the single closed head. Use the approved image
+// unmodified on the forward-facing planes, then continuously transition the
+// side, rear and UNDERSIDE of the jaw to a feature-free cheek area of that
+// same atlas. The older mapping projected eyes/mouth too far around the
+// cranium; another attempt sampled the nostril from x=540,y=620.
+// x,y are the unrotated world-space head coordinates used by renderer.js.
+// normalZ is the already computed local head-normal depth component.
+export function loisPhotoFaceUV(x,y,normalZ){
+ const projectedX=450+x*1300;
+ const projectedY=470-(y-1.656)*1327;
+ // Pixel (590,560) belongs to an unobstructed cheek, not an eye or mouth.
+ // Vary the patch minimally with position to retain skin texture and prevent
+ // an entirely constant-color strip on the low-poly profile.
+ const skinX=590+clamp(x*28,-6,6);
+ const skinY=560-clamp((y-1.656)*65,-18,18);
+ const frontWeight=smoothstep(.20,.83,normalZ);
+ // Below the chin plane, avoid stretching the lower beard down the throat.
+ // Mouth and lips around y≈1.52 retain the untouched frontal projection.
+ const chinWeight=smoothstep(-.221,-.175,y-1.656);
+ const blend=frontWeight*chinWeight;
+ const srcX=skinX+(projectedX-skinX)*blend;
+ const srcY=skinY+(projectedY-skinY)*blend;
+ return [
+  clamp((srcX-110)/650,.003,.997),
+  clamp(1-srcY/850,.003,.997)
+ ];
+}
 
 // Phase B: concentrate transverse edge loops around the photographed chin,
 // mouth, nose and eye socket. Sampling is non-uniform, but remains continuous,
