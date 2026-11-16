@@ -77,7 +77,7 @@ const assert=require('node:assert/strict');
  const highestRawY=outerHair.y+1.656+(470-outerHair.photoPolygon[topIndex][1])/1327;
  assert(mesh.vertices[topOffset+1]<highestRawY-.05,
   'floating top of hair is drawn down into supporting hair shell');
- for(const {start,end} of mesh.ranges.slice(photo.findIndex(b=>b.shape==='lois-photo-hair'),photo.findIndex(b=>b.shape==='lois-photo-hair')+5)){
+ for(const {start,end} of mesh.ranges.slice(photo.findIndex(b=>b.shape==='lois-photo-hair'),photo.findIndex(b=>b.shape==='lois-photo-hair')+hairs.length)){
   assert(end>start,'hair card generated actual geometry');
   for(let j=start;j<end;j+=16)assert.equal(mesh.vertices[j+11],4,'hair uses photo sampler, not painted material');
  }
