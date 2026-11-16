@@ -33,6 +33,19 @@ const assert=require('node:assert/strict');
   }
  }
  assert(rearHead>20,'closed photo head includes skin-only rear vertices');
+ // A rounded photo hair backing can NEVER sample the image's eyebrows or
+ // eyes. Front hair cutouts have separate exact UVs, so constrain shell only.
+ const scalp=boxes.filter(part=>part.rigPart==='hair-back'||
+  part.rigPart==='hair-cap'||part.rigPart==='crown'||
+  part.rigPart?.startsWith('temple-'));
+ assert(scalp.length>=4,'textured backing covers scalp and temples');
+ for(const part of scalp){
+  const range=mesh.ranges[boxes.indexOf(part)];
+  for(let i=range.start;i<range.end;i+=16){
+   const sourceY=(1-mesh.vertices[i+10])*850;
+   assert(sourceY<=311,'scalp UV may sample hair, never a second eye');
+  }
+ }
  let count=0;for(let i=0;i<mesh.vertices.length;i+=16){
   if(mesh.vertices[i+11]===4){count++;
    assert(mesh.vertices[i+9]>=0&&mesh.vertices[i+9]<=1);
