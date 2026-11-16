@@ -1,7 +1,7 @@
 name: Lois Opción A - silueta y textura del cabello
 on:
   push:
-    branches: [feature/lois-option-a-hair-silhouette-v2, fix/lois-single-photo-model-captive-performance]
+    branches: [feature/lois-option-a-hair-silhouette-v2, fix/lois-single-photo-model-captive-performance, feature/lois-head-anatomy-phase-a]
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,6 +22,7 @@ jobs:
         run: |
           node tests/lois-photo-hair.cjs
           node tests/lois-photo-option-a.cjs
+          node tests/lois-head-phase-a.cjs
           node tests/lois-captive-single-photo.cjs
           node tests/lois-ps2-mesh.cjs
           node tests/lois-ps2-rig.cjs
