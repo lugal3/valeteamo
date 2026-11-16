@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#151723">
+<title>Lois 3D · Vista directa · ValeTeAmo</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font:15px/1.4 system-ui,-apple-system,sans-serif;background:#151723;color:#f9edf4}
+body{display:flex;flex-direction:column;min-height:100dvh;padding:env(safe-area-inset-top) max(10px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(10px,env(safe-area-inset-left))}
+header{display:flex;gap:12px;align-items:center;justify-content:space-between;max-width:1000px;width:100%;margin:0 auto;padding:12px 6px}
+a{color:#ffc9e2;text-decoration:none}
+h1{font-size:clamp(17px,3vw,24px);line-height:1.2;margin:0}
+small{display:block;color:#c2b0c7;font-size:11px;margin-top:3px}
+button{cursor:pointer;color:#fbe5f2;background:#323145;border:1px solid #715a7a;border-radius:12px;padding:11px 14px;font:600 13px system-ui;-webkit-tap-highlight-color:transparent;min-height:44px}
+button[aria-pressed="true"]{background:#895379;border-color:#fbc1dd}
+button:focus-visible,a:focus-visible{outline:2px solid #ffc8df;outline-offset:2px}
+.preview{position:relative;flex:1;min-height:220px;max-width:1000px;width:100%;margin:0 auto;overflow:hidden;border-radius:17px;background:linear-gradient(140deg,#343949,#1d2638);border:1px solid #625574}
+#lois-canvas{display:block;width:100%;height:100%;touch-action:none}
+#lois-status{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:20px;background:#222536ee;font-size:15px}
+#lois-status[hidden]{display:none}
+#lois-status.error{color:#ffd6dc;background:#301f2e}
+.controls{display:flex;flex-wrap:wrap;gap:7px;align-items:center;justify-content:center;max-width:1000px;width:100%;margin:0 auto;padding:12px 3px 4px}
+.controls>span{font-size:11px;color:#b8a8bb;margin:0 3px}
+footer{color:#baa9c1;font-size:11px;text-align:center;padding:6px 12px 12px}
+@media(max-height:450px){header{padding:4px 6px}h1{font-size:16px}.controls{padding:5px 3px}.controls button{min-height:36px;padding:7px 9px}.preview{min-height:145px}footer{display:none}}
+@media(prefers-reduced-motion:reduce){button{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header><div><h1>Lois 3D · Modelo PS2</h1><small>Vista independiente del juego · texturas y articulaciones reales</small></div><a href="/" aria-label="Volver a ValeTeAmo">← Volver al juego</a></header>
+<main class="preview" id="lois-stage">
+ <canvas id="lois-canvas" width="720" height="400" aria-label="Modelo 3D de Lois"></canvas>
+ <div id="lois-status" role="status">Preparando el modelo de Lois…</div>
+</main>
+<nav class="controls" aria-label="Controles de la vista 3D">
+ <span>Cámara</span>
+ <button type="button" data-view="front" aria-pressed="true">Frente</button>
+ <button type="button" data-view="threequarter" aria-pressed="false">3/4</button>
+ <button type="button" data-view="side" aria-pressed="false">Perfil</button>
+ <button type="button" data-view="portrait" aria-pressed="false">Rostro</button>
+ <span>Animación</span>
+ <button type="button" data-motion="idle" aria-pressed="true">Quieto</button>
+ <button type="button" data-motion="walk" aria-pressed="false">Caminar</button>
+ <button type="button" data-motion="untying" aria-pressed="false">Desatar</button>
+ <button type="button" data-motion="hide" aria-pressed="false">Esconderse</button>
+ <button type="button" id="blink">Parpadear</button>
+</nav>
+<footer>Vista de prueba; no modifica los guardados ni el progreso del juego. Diseñada también para Safari en iPhone.</footer>
+<script>
+(function(){
+ var status=document.getElementById('lois-status');
+ function fail(err){if(window.__loisReady)return;status.hidden=false;status.className='error';status.textContent='No se pudo abrir el visor 3D: '+String(err).slice(0,200);}
+ window.addEventListener('error',function(e){fail(e.message||'Error de carga');});
+ window.addEventListener('unhandledrejection',function(e){fail(e.reason&&e.reason.message||e.reason||'Error de carga');});
+ setTimeout(function(){if(!window.__loisReady&&!status.classList.contains('error'))fail('Safari no terminó la carga. Prueba abrir este enlace en el PC.');},12000);
+})();
+</script>
+<script type="module" src="/src/lois-preview-entry.js"></script>
+</body>
+</html>
