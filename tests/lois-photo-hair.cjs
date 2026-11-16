@@ -6,7 +6,7 @@ const assert=require('node:assert/strict');
  const {loisFacePoint}=await import('../src/lab/lois-ps2-face.js');
  const piece=(id,x,y,z,w,h,d,mat,props={})=>({id,x,y,z,w,h,d,mat,...props,dynamic:true,solid:false});
  const photo=buildLoisPs2Model(piece,{photoMode:true});
- const classic=buildLoisPs2Model(piece);
+ const defaultPhoto=buildLoisPs2Model(piece);
  const hairs=photo.filter(b=>b.shape==='lois-photo-hair');
  assert.equal(hairs.length,4,'four depth-separated photo-sampled hair layers');
  assert(hairs.every(b=>b.rigBone==='head'&&b.photoMapped),'all layers follow existing head rig');
@@ -54,7 +54,8 @@ const assert=require('node:assert/strict');
   'upper neck overlaps the jaw, preventing a visible floating-head gap');
  assert(neck.y-neck.h*.5<torso.y+torso.h*.5-.015,
   'lower neck enters the sculpted torso instead of ending above its neckline');
- assert(!classic.some(b=>b.shape==='lois-photo-hair'),'legacy PS2-B has no added layer');
+ assert(defaultPhoto.some(b=>b.shape==='lois-photo-hair')&&defaultPhoto.some(b=>b.shape==='lois-face'&&b.photoMapped),
+  'even the default constructor must use only Photo-A');
  const mesh=geometry(photo);
  assert(mesh.vertices.every(Number.isFinite));
  assert(mesh.indices.every(Number.isFinite));
@@ -87,5 +88,5 @@ const assert=require('node:assert/strict');
   const m=geometry(pickupGeometry([{...actor,phase}]));
   assert(m.vertices.every(Number.isFinite),'rig mesh stable in '+phase);
  }
- console.log('PASS LOIS HAIR: '+JSON.stringify({layers:hairs.length,photoTriangles:mesh.indices.length/3,vertices:mesh.vertices.length/16,classicParts:classic.length,photoParts:photo.length}));
+ console.log('PASS LOIS HAIR: '+JSON.stringify({layers:hairs.length,photoTriangles:mesh.indices.length/3,vertices:mesh.vertices.length/16,defaultParts:defaultPhoto.length,photoParts:photo.length}));
 })().catch(e=>{console.error(e);process.exitCode=1;});
