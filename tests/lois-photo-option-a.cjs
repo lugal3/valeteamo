@@ -53,13 +53,15 @@ const assert=require('node:assert/strict');
   }
  }
  assert(count>350,'photographic samples must be projected into actual renderer UVs');
- const old=pickupGeometry([{...actor,visualVariant:'ps2-b'}]);
- assert(old.some(x=>x.id.endsWith('-iris--1')),'illustrated variant remains reversible');
- assert(old.some(x=>x.shape==='lois-face'&&!x.photoMapped));
- const legacy=pickupGeometry([{...actor,visualVariant:'legacy'}]);
- assert(!legacy.some(x=>x.shape==='lois-face'),'original low-poly fallback preserved');
+ for(const variant of ['legacy','ps2-b','photo-a']){
+  const selected=pickupGeometry([{...actor,visualVariant:variant}]);
+  assert(selected.some(x=>x.shape==='lois-face'&&x.photoMapped),
+   'every old or new save loads the approved photographic model');
+  assert(!selected.some(x=>x.id.endsWith('-iris--1')||x.id.endsWith('-nose-tip')),
+   'old illustrated face never appears');
+ }
  const rescued=createLouisEscape(createHouse());
  assert.equal(rescued.visualVariant,'photo-a','real game launches photo variant');
  assert.equal(rescued.phase,'untying');
- console.log('PASS PHOTO OPTION A',JSON.stringify({parts:boxes.length,texturedVertices:count,triangles:mesh.indices.length/3,legacyFallback:true,illustratedFallback:true}));
+ console.log('PASS PHOTO OPTION A',JSON.stringify({parts:boxes.length,texturedVertices:count,triangles:mesh.indices.length/3,singleModel:true,legacyMigrates:true}));
 })().catch(e=>{console.error(e);process.exitCode=1});
