@@ -53,6 +53,14 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   assert.equal((await rc()).mode,'parked');
   await shot('03-rc-stopped');
 
+  // View the rotated bar FROM the doorway: its broad wooden front must
+  // face the player, leaving a walking lane around the north end.
+  await page.evaluate(()=>window.__rescueHouse.setPose({
+   x:8.35,y:0,z:2.50,yaw:Math.PI/2,pitch:-.04
+  }));
+  await page.waitForTimeout(160);
+  await shot('03a-kitchen-facing-door-before-rescue');
+
   // User screenshot regression: before using the rope interaction, Louis
   // must ALREADY show the approved face, not the old static captive.
   await page.evaluate(()=>window.__rescueHouse.setPose({
@@ -74,10 +82,19 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   await shot('04a-louis-untying');
   await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='climb',null,{timeout:12000});
   await shot('04-louis-basement');
-  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='hidden',null,{timeout:50000});
-  assert.equal((await louis()).phase,'hidden');
-  assert.equal((await story()).phase,'rc-setup');
-  await shot('05-louis-kitchen');
+  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='climb'&&
+   window.__rescueHouse.louis().x>11.6&&window.__rescueHouse.louis().z<1.24,
+   null,{timeout:42000});
+  await shot('04b-louis-walks-around-north-end');
+  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='hide',null,{timeout:15000});
+  await shot('04c-louis-squatting-behind-counter');
+  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='hidden',null,{timeout:15000});
+  const hidden=await louis();
+  assert.equal(hidden.phase,'hidden');
+  assert(hidden.x>11.9&&Math.abs(hidden.z-2.53)<.08,
+   'Louis has moved behind center of the bar, not clipped through its side');
+  assert.equal(await story().then(x=>x.phase),'rc-setup');
+  await shot('05-louis-hidden-behind-front-facing-kitchen');
 
   console.log('RC browser: unlock hatch and arm trap');
   await use('red-key');
