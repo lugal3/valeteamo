@@ -96,18 +96,20 @@ export function geometry(boxes){
    // Source crop: x 110..760, y 0..850. Both hair and face use source pixels.
    const ax=box.source?.x||0,ay=box.source?.y||0;
    for(let j=first;j<vertices.length;j+=16){
-    // The sculpted head is a closed mesh: photograph ONLY its front-facing
-    // surface. UV mapping the rear half made a duplicated human face visible
-    // from the side/back, despite successful WebGL smoke tests.
-    if(box.rigPart==='face'&&vertices[j+8]<.13){
-     vertices[j+11]=0; // matte skin, never sample the face atlas here
-     continue;
-    }
     const x=vertices[j]-ax,y=vertices[j+1]-ay-(box.rigBone==='head'?.065:0);
-    // Let the photo cover the full cheek/jaw width; give the neck a much
-    // broader, continuous source region instead of a 30px skin stripe.
-    const srcX=box.rigPart==='neck'?450+x*1500:450+x*1300;
-    const srcY=box.rigPart==='neck'?790-(y-1.45)*440:470-(y-1.656)*1327;
+    // Maintain the approved photograph on the front. On the hidden back of
+    // the closed head, sample only an unobtrusive cheek-skin patch from that
+    // SAME image, fading its UVs around the side so no duplicate eyes/mouth
+    // or abrupt matte/photo seam can appear in true profile.
+    let srcX=box.rigPart==='neck'?450+x*1500:450+x*1300;
+    let srcY=box.rigPart==='neck'?790-(y-1.45)*440:470-(y-1.656)*1327;
+    if(box.rigPart==='face'){
+     const t=Math.max(0,Math.min(1,(vertices[j+8]+.52)/.87));
+     const blend=t*t*(3-2*t);
+     const skinX=540,skinY=620-(y-1.656)*90;
+     srcX=skinX+(srcX-skinX)*blend;
+     srcY=skinY+(srcY-skinY)*blend;
+    }
     vertices[j+9]=Math.max(.003,Math.min(.997,(srcX-110)/650));
     vertices[j+10]=Math.max(.003,Math.min(.997,1-srcY/850));
     vertices[j+11]=4;
