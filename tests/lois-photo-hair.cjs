@@ -38,9 +38,10 @@ const assert=require('node:assert/strict');
  assert(photoCheekPoint.every(Number.isFinite)&&photoJawPoint.every(Number.isFinite),
   'photo-only cheek/jaw adjustment must remain finite');
  const neck=photo.find(b=>b.id==='neck');
- assert(neck?.shape==='lois-neck-lowpoly'&&!neck.photoMapped,
-  'the PS2 neck is faceted skin geometry, not a stretched photo map');
- assert(neck.rings===4&&neck.segments>=12,'neck has enough tapered rings for a smooth low-poly transition');
+ assert(neck?.shape==='lois-neck-lowpoly'&&neck.photoMapped,
+  'the neck now shares only the clean cheek-skin portion of Photo-A, never stretched beard');
+ assert(neck.rings===6&&neck.segments>=16,
+  'neck has six curved, low-poly rings supporting the reconstructed jaw');
  const face=photo.find(b=>b.id==='face');
  const shirt=photo.find(b=>b.id==='shirt');
  const torso=photo.find(b=>b.id==='torso');
