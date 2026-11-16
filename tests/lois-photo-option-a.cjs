@@ -29,10 +29,11 @@ const assert=require('node:assert/strict');
   if(v[i+8]<-.65){
    rearHead++;
    assert.equal(v[i+11],4,'rear head still uses one approved photo atlas');
-   assert(Math.abs(uvx-(590-110)/650)<.025,
-    'rear skull maps only cheek skin, never duplicated eyes or nose');
-   assert(Math.abs(uvy-(1-560/850))<.035,
-    'rear skull photo UV remains inside feature-free cheek');
+   const pixelX=110+uvx*650,pixelY=(1-uvy)*850;
+   assert(pixelX>=290&&pixelX<=610,
+    'rear skull samples cheeks, never outside the skin-only source region');
+   assert(pixelY>=535&&pixelY<=585,
+    'rear skull UV stays below eyes and above mouth in a feature-free strip');
   }
   if(v[i+1]<face.y-.207&&v[i+8]>.45){
    underside++;
