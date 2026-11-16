@@ -13,7 +13,10 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  const p=LOIS_PS2_PROFILE.palette,parts=[];
  const add=(id,x,y,z,w,h,d,mat,color,extra={})=>
   parts.push(piece(id,x,y+(photoMode&&loisBoneForPart(id)==='head'?.065:0),z,w,h,d,mat,{color,...extra,
-   photoMapped:photoMode&&(id==='face'||id.startsWith('hair-')||id.startsWith('fringe-')||id.startsWith('temple-')||id==='crown'||id.startsWith('ear-')),
+   // The approved portrait belongs on the front face and explicit hair
+   // cards only. Projecting it over the ears/scalp shell produced a second
+   // face and striped discs in profile; keep those surfaces matte low-poly.
+   photoMapped:photoMode&&(id==='face'||id.startsWith('hair-photo')),
    rigBone:loisBoneForPart(id),rigPart:id}));
  const box={shape:'rounded-box',roundness:.35,segments:desktop?8:6,rings:desktop?5:4};
  const limb={shape:'rounded-box',roundness:.38,segments:desktop?8:6,rings:desktop?5:4};
