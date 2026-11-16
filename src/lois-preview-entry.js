@@ -13,11 +13,15 @@ const stage=[
  {id:'preview-floor',x:0,y:-.12,z:0,w:14,h:.18,d:14,mat:'floor',color:[.44,.43,.42],solid:false},
  {id:'preview-wall',x:0,y:2,z:-3,w:20,h:8,d:.1,mat:'plaster',color:[.50,.51,.56],solid:false}
 ];
+// Fixed reproducible angles for comparing the actual game mesh with the
+// approved portrait (no enlarged face impostors or different asset variants).
+// The bust framing includes the collar and both shoulders after the torso pass.
 const cameras={
  front:()=>({x:0,y:1.11,z:2.2,yaw:Math.PI,pitch:0}),
- side:()=>({x:.80,y:1.63,z:0,yaw:-Math.PI/2,pitch:0}),
- threequarter:()=>({x:.42,y:1.73,z:.77,yaw:Math.PI+Math.atan(.42/.77),pitch:0}),
- portrait:()=>({x:0,y:1.74,z:.78,yaw:Math.PI,pitch:0})
+ side:()=>({x:1.03,y:1.66,z:0,yaw:-Math.PI/2,pitch:0}),
+ threequarter:()=>({x:.54,y:1.70,z:1.03,yaw:Math.PI+Math.atan(.54/1.03),pitch:0}),
+ portrait:()=>({x:0,y:1.72,z:.91,yaw:Math.PI,pitch:0}),
+ bust:()=>({x:.22,y:1.48,z:1.40,yaw:Math.PI+Math.atan(.22/1.40),pitch:0})
 };
 let renderer=null,frame=0,last=0,lastDraw=0,view='portrait',motion='idle',blinkUntil=0,stopped=false;
 function error(message){
