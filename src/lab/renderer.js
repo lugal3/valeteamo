@@ -82,7 +82,7 @@ export function geometry(boxes){
    // Source crop: x 110..760, y 0..850. Both hair and face use source pixels.
    const ax=box.source?.x||0,ay=box.source?.y||0;
    for(let j=first;j<vertices.length;j+=16){
-    const x=vertices[j]-ax,y=vertices[j+1]-ay;
+    const x=vertices[j]-ax,y=vertices[j+1]-ay-(box.rigBone==='head'?.065:0);
     const srcX=box.rigPart==='neck'?450+x*500:450+x*1300;
     const srcY=box.rigPart==='neck'?805+(1.45-y)*80:470-(y-1.656)*1327;
     vertices[j+9]=Math.max(.003,Math.min(.997,(srcX-110)/650));
