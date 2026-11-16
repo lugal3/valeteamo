@@ -31,7 +31,8 @@ export function loisFacePoint(box,u,v){
  const browR=gaussian(x,y,.091,.078,.069,.026)*.010;
  // A photo must supply the facial anatomy: do not emboss a second nose/lips
  // on top of eyes and mouth that already exist in the image.
- const z=cos*lat*box.d*.5+(box.photoMapped?0:front*(nose+tip+philtrum+upperLip+lowerLip+chin+cheekL+cheekR+browL+browR));
+ const photoRelief=nose*.28+tip*.16+chin*.08+cheekL*.08+cheekR*.08;
+ const z=cos*lat*box.d*.5+front*(box.photoMapped?photoRelief:(nose+tip+philtrum+upperLip+lowerLip+chin+cheekL+cheekR+browL+browR));
  return [box.x+x,box.y+y,box.z+z];
 }
 export function loisFaceSurface(box,color,style){
