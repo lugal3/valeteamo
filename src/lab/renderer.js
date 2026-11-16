@@ -110,6 +110,12 @@ export function geometry(boxes){
      srcX=skinX+(srcX-skinX)*blend;
      srcY=skinY+(srcY-skinY)*blend;
     }
+    // Photo hair backing is rounded 3D scalp, not a second face!
+    // Limit its UVs to the photographed crown; otherwise low temple
+    // vertices sampled the original eyes, reproducing them in profile.
+    if(box.rigPart==='hair-back'||box.rigPart==='hair-cap'||
+      box.rigPart==='crown'||box.rigPart?.startsWith('temple-'))
+     srcY=Math.min(srcY,310);
     vertices[j+9]=Math.max(.003,Math.min(.997,(srcX-110)/650));
     vertices[j+10]=Math.max(.003,Math.min(.997,1-srcY/850));
     vertices[j+11]=4;
