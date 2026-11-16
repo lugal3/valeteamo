@@ -102,9 +102,17 @@ export function geometry(boxes){
     if(box.rigPart==='face'){
      const uv=loisPhotoFaceUV(x,y,vertices[j+8]);
      vertices[j+9]=uv[0];vertices[j+10]=uv[1];
+    }else if(box.rigPart==='neck'){
+     // Match the photographic cheek skin on the new throat using a small
+     // feature-free patch. Previous implementations either drew a flat gray
+     // trapezoid or stretched the bottom of the beard over the entire neck.
+     const sx=590+Math.max(-9,Math.min(9,x*55));
+     const sy=554+Math.max(-14,Math.min(14,(y-1.45)*60));
+     vertices[j+9]=Math.max(.003,Math.min(.997,(sx-110)/650));
+     vertices[j+10]=Math.max(.003,Math.min(.997,1-sy/850));
     }else{
-     let srcX=box.rigPart==='neck'?450+x*1500:450+x*1300;
-     let srcY=box.rigPart==='neck'?790-(y-1.45)*440:470-(y-1.656)*1327;
+     let srcX=450+x*1300;
+     let srcY=470-(y-1.656)*1327;
      // Rounded scalp and temples must never sample the photo's eyes.
      if(box.rigPart==='hair-back'||box.rigPart==='hair-cap'||
        box.rigPart==='crown'||box.rigPart?.startsWith('temple-'))
@@ -150,9 +158,9 @@ export function geometry(boxes){
    rotateMesh();continue;
   }
   if(box.shape==='lois-neck-lowpoly'){
-   // Tapered faceted neck. The earlier photographic neck stretched a narrow
-   // chin column, while rounded-box read as a pink cube in the portrait view.
-   // Keep the neck opaque and skin-coloured; source photo remains on the face.
+   // A low-poly but smoothly shaded, skin-textured throat supporting
+   // the jaw from below. Six variable-radius rings tuck into the head and
+   // the shirt; all reuse the one Photo-A atlas and existing rig.
    const sides=Math.max(8,Math.round(box.segments||12));
    // From the collar upwards: a gentle taper, then a smaller upper neck
    // hidden inside the jaw. Offsetting the upper rings back avoids a dark
@@ -160,7 +168,10 @@ export function geometry(boxes){
    // Seat the throat gently under the new chin shelf. The top two rings
    // lean forward inside the mandibular volume, avoiding a visible dark
    // gap where the photographic face ends in low camera angles.
-   const rings=[[-.5,1.14,.015],[-.18,1.04,.008],[.20,.89,.004],[.5,.73,.010]];
+   const rings=[
+    [-.50,1.10,-.024],[-.23,1.01,-.011],[.07,.93,.002],
+    [.34,.83,.010],[.60,.71,.017],[.76,.60,.025]
+   ];
    const point=(angle,row)=>{
     const [yy,scale,depth]=rings[row];
     return [
