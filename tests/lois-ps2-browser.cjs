@@ -47,6 +47,9 @@ const {chromium}=require('playwright');
      variant==='photo-a'&&shot==='threequarter'?{x:.54,y:1.70,z:1.03,yaw:Math.PI+Math.atan(.54/1.03),pitch:0}:
      variant==='photo-a'&&shot==='side'?{x:1.03,y:1.66,z:0,yaw:-Math.PI/2,pitch:0}:
      variant==='photo-a'&&shot==='bust'?{x:.22,y:1.48,z:1.40,yaw:Math.PI+Math.atan(.22/1.40),pitch:0}:
+     // Intentionally low camera aimed upward: catches the chin/neck seam
+     // hidden by ordinary frontal previews.
+     variant==='photo-a'&&shot==='underchin'?{x:.18,y:1.31,z:.92,yaw:Math.PI+Math.atan(.18/.92),pitch:.27}:
      shot==='portrait'?{x:0,y:1.64,z:.86,yaw:Math.PI,pitch:0}:
      shot==='side'?{x:2.10,y:1.10,z:0,yaw:-Math.PI/2,pitch:0}:
      shot==='threequarter'?{x:1.40,y:1.20,z:2.10,yaw:Math.PI+Math.atan(1.40/2.10),pitch:0}:
@@ -103,6 +106,7 @@ const {chromium}=require('playwright');
   await capture('photo-a','threequarter');
   await capture('photo-a','side');
   await capture('photo-a','bust');
+  await capture('photo-a','underchin');
   await capture('photo-a','portrait');
   await capture('photo-a','portrait','low');
   for(const pose of [
