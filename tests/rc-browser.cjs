@@ -64,6 +64,9 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   await page.locator('[data-equip="flashlight"]').click();
   await page.waitForTimeout(220);
   await shot('03b-louis-captive-photo-before-untie');
+  // Restore RC selection: the remainder of this test deploys the tablet
+  // through its contextual button and must not stay in flashlight mode.
+  await page.locator('[data-equip="rc"]').click();
 
   console.log('RC browser: free Louis, climb basement steps, hide behind American-style kitchen bar');
   await use('rescue-louis');
