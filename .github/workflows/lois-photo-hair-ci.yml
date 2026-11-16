@@ -1,0 +1,45 @@
+name: Lois Opción A - silueta y textura del cabello
+on:
+  push:
+    branches: [feature/lois-option-a-hair-silhouette-v2]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  render-y-rescate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Regressions existentes
+        run: npm test
+      - name: Verificar cabello nuevo, UV y rig
+        run: |
+          node tests/lois-photo-hair.cjs
+          node tests/lois-photo-option-a.cjs
+          node tests/lois-ps2-mesh.cjs
+          node tests/lois-ps2-rig.cjs
+          node tests/lois-ps2-cinematics.cjs
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Renderizar cara frontal, tres cuartos, perfil y animaciones
+        run: node tests/lois-ps2-browser.cjs
+      - name: Confirmar visor directo en Safari y Chromium
+        run: node tests/ios-blank-lois-direct.cjs
+      - name: Confirmar rescate completo y autito RC
+        run: node tests/rc-browser.cjs
+      - name: Guardar capturas fotográficas reales y resultados
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lois-photo-hair-option-a-v2
+          path: |
+            artifacts/lois-photo-a-*.png
+            artifacts/lois-direct-*.png
+            docs/capturas/rc-finale/*.png
+          if-no-files-found: ignore

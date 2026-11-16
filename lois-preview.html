@@ -37,9 +37,10 @@ footer{color:#baa9c1;font-size:11px;text-align:center;padding:6px 12px 12px}
 <nav class="controls" aria-label="Controles de la vista 3D">
  <span>Cámara</span>
  <button type="button" data-view="front" aria-pressed="false">Frente</button>
- <button type="button" data-view="threequarter" aria-pressed="true">3/4</button>
+ <button type="button" data-view="threequarter" aria-pressed="false">3/4</button>
  <button type="button" data-view="side" aria-pressed="false">Perfil</button>
- <button type="button" data-view="portrait" aria-pressed="false">Rostro</button>
+ <button type="button" data-view="portrait" aria-pressed="true">Rostro</button>
+ <button type="button" data-view="bust" aria-pressed="false">Busto + hombros</button>
  <span>Animación</span>
  <button type="button" data-motion="idle" aria-pressed="true">Quieto</button>
  <button type="button" data-motion="walk" aria-pressed="false">Caminar</button>
@@ -47,7 +48,7 @@ footer{color:#baa9c1;font-size:11px;text-align:center;padding:6px 12px 12px}
  <button type="button" data-motion="hide" aria-pressed="false">Esconderse</button>
  <button type="button" id="blink">Parpadear</button>
 </nav>
-<footer>Vista de prueba; no modifica los guardados ni el progreso del juego. Diseñada también para Safari en iPhone.</footer>
+<footer>Capturas comparables del modelo real: frente, 3/4, perfil, rostro y busto. No modifica los guardados ni el progreso. Compatible con Safari en iPhone.</footer>
 <script>
 (function(){
  var status=document.getElementById('lois-status');

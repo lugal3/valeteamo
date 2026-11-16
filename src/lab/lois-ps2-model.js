@@ -13,7 +13,12 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  const p=LOIS_PS2_PROFILE.palette,parts=[];
  const add=(id,x,y,z,w,h,d,mat,color,extra={})=>
   parts.push(piece(id,x,y+(photoMode&&loisBoneForPart(id)==='head'?.065:0),z,w,h,d,mat,{color,...extra,
-   photoMapped:photoMode&&(id==='neck'||id==='face'||id.startsWith('hair-')||id.startsWith('fringe-')||id.startsWith('temple-')||id==='crown'||id.startsWith('ear-')),
+   // Photo A lives on the face and on the hair shell/photographic
+   // cutouts. Ears must remain matte: photo mapping them sampled strips of
+   // eyes and skin, producing floating circular discs in profile. The face
+   // rear uses a dedicated skin-only UV patch in renderer.js.
+   photoMapped:photoMode&&(id==='face'||id.startsWith('hair-')||
+    id.startsWith('temple-')||id==='crown'),
    rigBone:loisBoneForPart(id),rigPart:id}));
  const box={shape:'rounded-box',roundness:.35,segments:desktop?8:6,rings:desktop?5:4};
  const limb={shape:'rounded-box',roundness:.38,segments:desktop?8:6,rings:desktop?5:4};
@@ -27,12 +32,17 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
   iris=p.eyes,eyeWhite=[.91,.91,.90],ink=[.13,.16,.20];
 
  // Tailored dark blazer with a light grey crewneck, not a bulky hoodie.
- add('torso',0,1.11,-.015,.468,.56,.305,'dark',jacket,{...box,rigGroup:'body'});
- add('shirt',0,1.12,.140,photoMode?.35:.248,.445,.025,'cream',shirt,{...box,rigGroup:'body'});
+ // Photo-A wears a single continuous navy T-shirt shell; the previous
+ // separately rendered shirt panel was still drawn over the chest in WebGL,
+ // making a conspicuous floating rectangle. Keep that panel ONLY for PS2-B.
+ add('torso',0,1.11,-.015,photoMode?.490:.468,.56,.305,'dark',jacket,
+  photoMode?{shape:'lois-tee-torso',segments:12,rings:4,rigGroup:'body'}:{...box,rigGroup:'body'});
+ if(!photoMode)
+  add('shirt',0,1.12,.140,.248,.445,.025,'cream',shirt,{...box,rigGroup:'body'});
  if(photoMode){
   // Minimal dark collar silhouette and no suit lapel covering the neck.
-  add('crewneck',0,1.374,.119,.216,.013,.022,'dark',[.10,.11,.18],
-   {...box,rigGroup:'body'});
+  // Keep the collar behind the photo neck. The earlier black raised
+  // strip drew a visible gap between the chin and the navy shirt.
  }else{
  add('collar',0,1.379,.116,.228,.070,.082,'cream',[.91,.89,.87],{...box,rigGroup:'body'});
  for(const side of [-1,1]){
@@ -48,11 +58,18 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  add('jacket-button',.065,.973,.188,.010,.012,.008,'dark',[.43,.44,.48],{...tiny,rigGroup:'body'});
  }
  add('hips',0,.843,-.006,.356,.185,.237,'dark',p.trousers,{...box,rigGroup:'body'});
- add('neck',0,1.449,.011,.132,.158,.133,'paper',skin,{...oval,rigGroup:'body'});
+ // Photo-A neck extends behind the jaw and slightly into the shirt.
+ // The four tapered rings prevent a detached rectangular column in front
+ // and 3/4 views while keeping this actor's body rig and original face UVs.
+ add('neck',0,photoMode?1.452:1.449,photoMode?-.002:.011,
+  photoMode?.225:.132,photoMode?.264:.158,photoMode?.174:.133,'paper',
+  photoMode?[.78,.61,.53]:skin,
+  photoMode?{shape:'lois-neck-lowpoly',segments:12,rings:4,rigGroup:'body'}:
+   {...oval,rigGroup:'body'});
 
  // Sculpted head is a single 3D face surface. Cheeks/nose/chin/lips are
  // parametrically deformed in lois-ps2-face.js, *not* stacked colored balls.
- add('face',0,1.610,.006,photoMode?.345:.326,photoMode?.439:.425,photoMode?.262:.318,'paper',skin,
+ add('face',0,1.610,.006,photoMode?.398:.326,photoMode?.456:.425,photoMode?.276:.318,'paper',skin,
   {shape:'lois-face',segments:desktop?32:24,rings:desktop?18:14,rigGroup:'head'});
  for(const side of [-1,1]){
   add('ear-'+side,side*.171,1.610,-.004,.054,.095,.061,'paper',skin,
@@ -80,10 +97,54 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  add('under-lip',0,1.478,.146,.048,.004,.004,'paper',[.74,.57,.51],{...tiny,rigGroup:'head'});}
 
  // Asymmetric, side-swept chestnut silhouette is the main likeness cue.
- add('hair-back',0,1.725,-.043,.357,.254,.306,'wood',hairShadow,
+ add('hair-back',0,photoMode?1.738:1.725,-.043,
+  photoMode?.407:.357,photoMode?.242:.254,photoMode?.310:.306,'wood',hairShadow,
   {shape:'round',segments:desktop?12:10,rings:desktop?6:4,rigGroup:'head'});
- add('hair-cap',-.015,1.802,-.004,.355,.153,.303,'wood',hair,
+ // The actual photo cutouts make the visible tousled crown.
+ // Keep this backing volume inset to avoid the bulky spherical helmet.
+ add('hair-cap',-.015,photoMode?1.815:1.802,-.027,
+  photoMode?.335:.355,photoMode?.132:.153,photoMode?.259:.303,'wood',hair,
   {shape:'round',segments:desktop?12:10,rings:desktop?6:4,rigGroup:'head'});
+ if(photoMode){
+  // The previous photo variant lost nearly all the tousled hair silhouette:
+  // it projected the picture onto small spherical clumps, resembling a helmet.
+  // These *real, depth-offset polygon layers* sample the SAME approved source
+  // photograph through projectReference() and follow the existing head bone.
+  // Points are [source-image x, source-image y], in the original 1408x1056
+  // approved "OBJETIVO FINAL" canvas. Only the frontal crop is used; this
+  // intentionally does not claim to reconstruct the unseen back of the hair.
+  // Preserve the approved image crop while tracing a broken, swept outline
+  // instead of the old near-ellipse. Every vertex samples the same photo UV;
+  // the small staggered peaks break the helmet silhouette without adding a
+  // second cartoon fringe or increasing the number of independent cards.
+  const hairLayers=[
+   {id:'hair-photo-mass',depth:.154,points:[
+    [150,304],[145,257],[153,213],[177,167],[175,145],
+    [212,115],[240,93],[267,91],[307,66],[333,60],
+    [367,47],[395,43],[425,47],[472,32],[493,39],
+    [540,47],[573,60],[597,76],[619,91],
+    [654,120],[671,139],[692,177],[710,209],
+    [707,238],[713,273],[687,300],[675,310],
+    [647,305],[615,311],[578,292],[565,299],
+    [489,322],[412,339],[363,355],[315,377],
+    [263,389],[238,393],[197,380],[158,371]]},
+   {id:'hair-photo-fringe-left',depth:.160,points:[
+    [153,307],[160,274],[170,226],[198,215],[242,203],
+    [279,221],[310,242],[345,288],[326,324],
+    [312,356],[273,383],[233,403],[188,401],[143,394]]},
+   {id:'hair-photo-fringe-middle',depth:.164,points:[
+    [280,238],[315,218],[365,152],[417,148],[477,143],
+    [522,162],[574,199],[562,237],[548,279],
+    [496,304],[444,340],[382,350],[331,368],[287,339]]},
+   {id:'hair-photo-fringe-right',depth:.158,points:[
+    [516,165],[570,168],[617,174],[653,204],
+    [688,235],[696,263],[701,288],[677,313],
+    [659,334],[612,319],[582,303],[550,255]]}
+  ];
+  for(const layer of hairLayers)
+   add(layer.id,0,0,0,.01,.01,.01,'wood',hair,
+    {shape:'lois-photo-hair',photoPolygon:layer.points,photoDepth:layer.depth,rigGroup:'head'});
+ }
  // The approved photograph already paints the swept fringe across the
  // forehead. Keep only the two outer hair cards for volume: the old five
  // overlapping rectangles duplicated the hair and created skin-colored seams.
@@ -99,7 +160,8 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
    {shape:'rounded-box',roundness:.43,segments:desktop?8:6,rings:desktop?4:4,roll,rigGroup:'head'});
  }
  for(const side of [-1,1]){
-  add('temple-'+side,side*.155,1.716,.014,.088,.145,.118,'wood',hair,
+  add('temple-'+side,side*(photoMode?.173:.155),1.716,.014,
+   photoMode?.104:.088,photoMode?.156:.145,photoMode?.132:.118,'wood',hair,
    {...oval,rigGroup:'head'});
  }
  add('crown',.046,1.871,-.066,.185,.054,.130,'wood',hairShadow,
@@ -108,9 +170,13 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  // Simple articulated silhouette: arm and leg identifiers deliberately remain
  // compatible with louisPartPose until full bone retargeting in phase 4.
  for(const side of [-1,1]){
-  add('upper-arm-'+side,side*.285,1.172,-.019,.168,.340,.182,'dark',jacket,
+  // Keep rounded rectangular sleeves, not detached egg-shaped balloons.
+  // The Photo-A dimensions tuck them into the tapered shoulders.
+  add('upper-arm-'+side,side*(photoMode?.269:.285),1.175,-.019,
+   photoMode?.160:.168,photoMode?.326:.340,photoMode?.176:.182,'dark',jacket,
    {...limb,roll:-side*.045,rigGroup:'arm',rigSide:side});
-  add('forearm-'+side,side*.308,.940,.021,.145,.258,.154,'dark',jacket,
+  add('forearm-'+side,side*(photoMode?.298:.308),.940,.021,
+   photoMode?.138:.145,photoMode?.248:.258,photoMode?.146:.154,'dark',jacket,
    {...limb,rigGroup:'arm',rigSide:side});
   add('hand-'+side,side*.315,.764,.078,.095,.132,.107,'paper',skin,
    {...oval,rigGroup:'arm',rigSide:side});
