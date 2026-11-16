@@ -21,6 +21,7 @@ jobs:
       - name: Verificar cabello nuevo, UV y rig
         run: |
           node tests/lois-photo-hair.cjs
+          node tests/lois-photo-option-a.cjs
           node tests/lois-ps2-mesh.cjs
           node tests/lois-ps2-rig.cjs
           node tests/lois-ps2-cinematics.cjs
