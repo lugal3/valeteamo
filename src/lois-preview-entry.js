@@ -10,8 +10,8 @@ const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
 const actor={id:'louis-escape',kind:'louis-companion',visualPreset:LOIS_VISUAL_ID,
  x:0,y:0,z:0,yaw:0,phase:'follow',age:.5,walk:0,speed:0,crouch:0,blink:0};
 const stage=[
- {id:'preview-floor',x:0,y:-.12,z:0,w:5,h:.18,d:5,mat:'floor',color:[.44,.43,.42],solid:false},
- {id:'preview-wall',x:0,y:1.6,z:-1.35,w:6,h:4,d:.1,mat:'plaster',color:[.50,.51,.56],solid:false}
+ {id:'preview-floor',x:0,y:-.12,z:0,w:14,h:.18,d:14,mat:'floor',color:[.44,.43,.42],solid:false},
+ {id:'preview-wall',x:0,y:2,z:-3,w:20,h:8,d:.1,mat:'plaster',color:[.50,.51,.56],solid:false}
 ];
 const cameras={
  front:()=>({x:0,y:1.11,z:2.2,yaw:Math.PI,pitch:0}),
