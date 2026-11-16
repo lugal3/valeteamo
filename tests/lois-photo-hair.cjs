@@ -7,7 +7,7 @@ const assert=require('node:assert/strict');
  const photo=buildLoisPs2Model(piece,{photoMode:true});
  const classic=buildLoisPs2Model(piece);
  const hairs=photo.filter(b=>b.shape==='lois-photo-hair');
- assert.equal(hairs.length,5,'five depth-separated photo-sampled hair layers');
+ assert.equal(hairs.length,4,'four depth-separated photo-sampled hair layers');
  assert(hairs.every(b=>b.rigBone==='head'&&b.photoMapped),'all layers follow existing head rig');
  assert(hairs.every(b=>b.photoPolygon.length>=7),'no degenerate flat hair sprites');
  assert(photo.some(b=>b.id==='face'&&b.photoMapped),'photographic face is untouched');
