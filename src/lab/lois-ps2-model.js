@@ -31,7 +31,7 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  add('shirt',0,1.12,.140,photoMode?.35:.248,.445,.025,'cream',shirt,{...box,rigGroup:'body'});
  if(photoMode){
   // Minimal dark collar silhouette and no suit lapel covering the neck.
-  add('crewneck',0,1.403,.119,.216,.034,.032,'dark',[.10,.11,.18],
+  add('crewneck',0,1.374,.119,.216,.013,.022,'dark',[.10,.11,.18],
    {...box,rigGroup:'body'});
  }else{
  add('collar',0,1.379,.116,.228,.070,.082,'cream',[.91,.89,.87],{...box,rigGroup:'body'});
