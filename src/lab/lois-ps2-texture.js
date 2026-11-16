@@ -3,6 +3,7 @@
 // 512 mobile / 1024 desktop; WebGL1-safe POT dimensions without mipmaps.
 import {LOIS_PS2_PROFILE} from './lois-ps2-profile.js';
 export const LOIS_FACE_SOURCE=new URL('./assets/lois-ps2-face.svg',import.meta.url).href;
+export const LOIS_PHOTO_SOURCE=new URL('./assets/lois-option-a-reference.jpg',import.meta.url).href;
 export const faceTextureSize=quality=>quality==='low'?
  LOIS_PS2_PROFILE.atlas.face.mobile:LOIS_PS2_PROFILE.atlas.face.desktop;
 
@@ -41,10 +42,16 @@ export function createLoisFaceTexture(gl,quality='medium'){
  gl.activeTexture(gl.TEXTURE0);
  image.onload=()=>{try{upload(faceTextureSize(state.quality));}catch(e){state.failed=true;state.error=String(e);}resolveReady(state.ready);};
  image.onerror=()=>{state.failed=true;resolveReady(false);};
+ state.setSource=variant=>{
+  const source=variant==='photo-a'?LOIS_PHOTO_SOURCE:LOIS_FACE_SOURCE;
+  if(source===state.source)return;
+  state.source=source;state.ready=false;state.failed=false;started=false;
+  image.src='';
+ };
  state.enable=()=>{
   if(started||state.disposed)return;
   started=true;
-  image.src=LOIS_FACE_SOURCE;
+  image.src=state.source;
  };
  // The atlas loads only when the Lois NPC is visible in a rebuilt scene.
  state.setQuality=next=>{

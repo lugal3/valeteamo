@@ -38,7 +38,7 @@ const {chromium}=require('playwright');
     ];
     const renderer=new HouseRenderer(canvas,quality);
     renderer.rebuild([...stage,...geo]);
-    if(variant==='ps2-b'||variant==='ps2-b-faceonly'||variant==='ps2-b-nohair'){
+    if(variant==='ps2-b'||variant==='ps2-b-faceonly'||variant==='ps2-b-nohair'||variant==='photo-a'){
      const loaded=await renderer.loisFaceTexture.readyPromise;
      if(!loaded)throw Error('Facial atlas could not load: check original SVG and Vite URL');
     }
@@ -79,7 +79,7 @@ const {chromium}=require('playwright');
    }else assert.equal(data.perf.samples,0,'legacy fallback does not run the extra rig');
    if(variant==='ps2-b'&&shot==='portrait'&&(!pose||!(pose.crouch>.30)))assert(data.faceBrightness>145,
     'face front must be visible, not the dark backface: brightness '+data.faceBrightness);
-   if(variant==='ps2-b'||variant==='ps2-b-faceonly'||variant==='ps2-b-nohair'){
+   if(variant==='ps2-b'||variant==='ps2-b-faceonly'||variant==='ps2-b-nohair'||variant==='photo-a'){
     assert.equal(data.textureReady,true,'Lois facial atlas loaded');
     assert.equal(data.textureUploads,1,'facial atlas uploaded once, not per frame');
     assert.equal(data.textureSize,quality==='low'?512:1024,'face texture LOD matches device');
@@ -91,7 +91,12 @@ const {chromium}=require('playwright');
    console.log('RENDER',JSON.stringify({name,triangles:data.triangles,vertices:data.vertices,pngBytes:png.length,faceBrightness:Math.round(data.faceBrightness),rigUploads:data.perf.uploads,rigBytes:data.perf.bytes}));
    return png;
   };
+  const photofront=await capture('photo-a','front');
+  await capture('photo-a','threequarter');
+  await capture('photo-a','portrait');
+  await capture('photo-a','portrait','low');
   const modern=await capture('ps2-b','front');
+  assert.equal(photofront.equals(modern),false,'photo projection must not look like illustrated fallback');
   const flat=await capture('ps2-b-flat','front');
   await capture('ps2-b-flat','portrait');
   assert.equal(modern.equals(flat),false,'painted face must change pixels compared with untextured skin');

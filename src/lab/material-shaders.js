@@ -134,12 +134,18 @@ void main(){
  // skin nearly disappears in shadow while the separate eyes remain bright.
  // Lighting is still dynamic above this floor; no lighting changes to the room.
  if(vArt>2.5&&vArt<3.5)lighting=max(lighting,vec3(.56,.52,.48));
+ if(vArt>3.5&&vArt<4.5)lighting=max(lighting,vec3(.88,.84,.82));
  vec3 color=vColor*material.rrr*1.075;
  if(vArt>.5&&vArt<1.5){vec4 painted=texture2D(uAtlas,vUV);color=mix(color,painted.rgb,painted.a*.96);}
  if(vArt>2.5&&vArt<3.5){
-  // PS2 face: original sRGB albedo on dedicated UV, with skin-color fallback.
+  // Reversible illustrated PS2 texture, unchanged.
   vec4 painted=texture2D(uLoisFace,vUV);
   color=mix(color,painted.rgb*material.r,painted.a);
+ }
+ if(vArt>3.5&&vArt<4.5){
+  // Option A: actual source pixels projected over the head and hair, with
+  // eyes/nose/lips part of the texture (no extra procedural facial pieces).
+  color=texture2D(uLoisFace,clamp(vUV,vec2(.003),vec2(.997))).rgb;
  }
  float rough=material.a,shine=0.0;
  if(uOcclude>.5 && rough<.8){

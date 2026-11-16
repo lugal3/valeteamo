@@ -8,23 +8,32 @@ export const LOIS_PS2_VARIANT='ps2-b';
 
 // All lengths are metres. Each piece keeps an identifier understood by the
 // existing legacy animation adapter; rigGroup marks attachments for phase 4.
-export function buildLoisPs2Model(piece,{quality='mobile'}={}){
+export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  const desktop=quality==='desktop';
  const p=LOIS_PS2_PROFILE.palette,parts=[];
  const add=(id,x,y,z,w,h,d,mat,color,extra={})=>
-  parts.push(piece(id,x,y,z,w,h,d,mat,{color,...extra,rigBone:loisBoneForPart(id),rigPart:id}));
+  parts.push(piece(id,x,y+(photoMode&&loisBoneForPart(id)==='head'?.065:0),z,w,h,d,mat,{color,...extra,
+   photoMapped:photoMode&&(id==='neck'||id==='face'||id.startsWith('hair-')||id.startsWith('fringe-')||id.startsWith('temple-')||id==='crown'||id.startsWith('ear-')),
+   rigBone:loisBoneForPart(id),rigPart:id}));
  const box={shape:'rounded-box',roundness:.35,segments:desktop?8:6,rings:desktop?5:4};
  const limb={shape:'rounded-box',roundness:.38,segments:desktop?8:6,rings:desktop?5:4};
  const oval={shape:'round',segments:desktop?12:8,rings:desktop?7:4};
  const tiny={shape:'round',segments:desktop?8:6,rings:desktop?4:3};
- const jacket=p.blazer,lapel=[.23,.24,.28],liner=[.24,.26,.31],
-  stitch=[.38,.39,.44],shirt=p.tshirt,skin=p.skin,lip=[.66,.46,.44],
+ // The approved Option A bust wears a navy crewneck instead of the old
+ // illustrated PS2 model's blazer. This is visual-only: same actor and rig.
+ const jacket=photoMode?[.13,.15,.25]:p.blazer,lapel=[.23,.24,.28],liner=[.24,.26,.31],
+  stitch=[.38,.39,.44],shirt=photoMode?[.17,.19,.31]:p.tshirt,skin=p.skin,lip=[.66,.46,.44],
   hair=p.hair,hairLight=[.30,.205,.155],hairShadow=[.145,.095,.076],
   iris=p.eyes,eyeWhite=[.91,.91,.90],ink=[.13,.16,.20];
 
  // Tailored dark blazer with a light grey crewneck, not a bulky hoodie.
  add('torso',0,1.11,-.015,.468,.56,.305,'dark',jacket,{...box,rigGroup:'body'});
- add('shirt',0,1.12,.140,.248,.445,.025,'cream',shirt,{...box,rigGroup:'body'});
+ add('shirt',0,1.12,.140,photoMode?.35:.248,.445,.025,'cream',shirt,{...box,rigGroup:'body'});
+ if(photoMode){
+  // Minimal dark collar silhouette and no suit lapel covering the neck.
+  add('crewneck',0,1.374,.119,.216,.013,.022,'dark',[.10,.11,.18],
+   {...box,rigGroup:'body'});
+ }else{
  add('collar',0,1.379,.116,.228,.070,.082,'cream',[.91,.89,.87],{...box,rigGroup:'body'});
  for(const side of [-1,1]){
   const x=side*.154;
@@ -37,17 +46,18 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
    {...box,rigGroup:'body'});
  }
  add('jacket-button',.065,.973,.188,.010,.012,.008,'dark',[.43,.44,.48],{...tiny,rigGroup:'body'});
+ }
  add('hips',0,.843,-.006,.356,.185,.237,'dark',p.trousers,{...box,rigGroup:'body'});
  add('neck',0,1.449,.011,.132,.158,.133,'paper',skin,{...oval,rigGroup:'body'});
 
  // Sculpted head is a single 3D face surface. Cheeks/nose/chin/lips are
  // parametrically deformed in lois-ps2-face.js, *not* stacked colored balls.
- add('face',0,1.610,.006,.326,.425,.318,'paper',skin,
+ add('face',0,1.610,.006,photoMode?.345:.326,photoMode?.439:.425,photoMode?.262:.318,'paper',skin,
   {shape:'lois-face',segments:desktop?32:24,rings:desktop?18:14,rigGroup:'head'});
  for(const side of [-1,1]){
   add('ear-'+side,side*.171,1.610,-.004,.054,.095,.061,'paper',skin,
    {...oval,rigGroup:'head'});
-  add('ear-shadow-'+side,side*.197,1.603,.023,.011,.042,.013,'paper',[.69,.46,.40],
+  if(!photoMode){add('ear-shadow-'+side,side*.197,1.603,.023,.011,.042,.013,'paper',[.69,.46,.40],
    {...tiny,rigGroup:'head'});
   // Facial features are shallow surface overlays only; the head itself is continuous.
   add('brow-'+side,side*.080,1.701,.166,.091,.016,.016,'wood',hairShadow,
@@ -63,24 +73,28 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
   add('lid-'+side,side*.078,1.673,.158,.073,.012,.013,'paper',skin,
    {...tiny,rigGroup:'head'});
   add('nostril-'+side,side*.026,1.536,.222,.010,.006,.004,'paper',[.52,.33,.31],
-   {...tiny,rigGroup:'head'});
+   {...tiny,rigGroup:'head'});}
  }
- add('upper-lip',0,1.506,.158,.086,.009,.008,'paper',lip,{...tiny,rigGroup:'head'});
+ if(!photoMode){add('upper-lip',0,1.506,.158,.086,.009,.008,'paper',lip,{...tiny,rigGroup:'head'});
  add('lower-lip',0,1.491,.156,.081,.008,.006,'paper',[.74,.54,.49],{...tiny,rigGroup:'head'});
- add('under-lip',0,1.478,.146,.048,.004,.004,'paper',[.74,.57,.51],{...tiny,rigGroup:'head'});
+ add('under-lip',0,1.478,.146,.048,.004,.004,'paper',[.74,.57,.51],{...tiny,rigGroup:'head'});}
 
  // Asymmetric, side-swept chestnut silhouette is the main likeness cue.
  add('hair-back',0,1.725,-.043,.357,.254,.306,'wood',hairShadow,
   {shape:'round',segments:desktop?12:10,rings:desktop?6:4,rigGroup:'head'});
  add('hair-cap',-.015,1.802,-.004,.355,.153,.303,'wood',hair,
   {shape:'round',segments:desktop?12:10,rings:desktop?6:4,rigGroup:'head'});
- for(const [i,x,y,z,w,h,roll] of [
+ // The approved photograph already paints the swept fringe across the
+ // forehead. Keep only the two outer hair cards for volume: the old five
+ // overlapping rectangles duplicated the hair and created skin-colored seams.
+ const fringe=photoMode?[]:[
   [0,-.148,1.754,.098,.116,.122,.40],
   [1,-.106,1.743,.134,.116,.132,.28],
   [2,-.052,1.734,.166,.111,.133,.22],
   [3,.026,1.750,.171,.100,.106,-.12],
   [4,.112,1.775,.117,.114,.094,-.41]
- ]){
+ ];
+ for(const [i,x,y,z,w,h,roll] of fringe){
   add('fringe-'+i,x,y,z,w,h,.066,'wood',i%2?hairLight:hair,
    {shape:'rounded-box',roundness:.43,segments:desktop?8:6,rings:desktop?4:4,roll,rigGroup:'head'});
  }

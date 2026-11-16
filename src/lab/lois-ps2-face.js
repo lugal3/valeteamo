@@ -29,7 +29,10 @@ export function loisFacePoint(box,u,v){
  const cheekR=gaussian(x,y,.101,-.019,.047,.064)*.015;
  const browL=gaussian(x,y,-.091,.078,.069,.026)*.010;
  const browR=gaussian(x,y,.091,.078,.069,.026)*.010;
- const z=cos*lat*box.d*.5+front*(nose+tip+philtrum+upperLip+lowerLip+chin+cheekL+cheekR+browL+browR);
+ // A photo must supply the facial anatomy: do not emboss a second nose/lips
+ // on top of eyes and mouth that already exist in the image.
+ const photoRelief=nose*.28+tip*.16+chin*.08+cheekL*.08+cheekR*.08;
+ const z=cos*lat*box.d*.5+front*(box.photoMapped?photoRelief:(nose+tip+philtrum+upperLip+lowerLip+chin+cheekL+cheekR+browL+browR));
  return [box.x+x,box.y+y,box.z+z];
 }
 export function loisFaceSurface(box,color,style){
