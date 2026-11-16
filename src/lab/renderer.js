@@ -162,7 +162,10 @@ export function geometry(boxes){
    // From the collar upwards: a gentle taper, then a smaller upper neck
    // hidden inside the jaw. Offsetting the upper rings back avoids a dark
    // face/neck intersection directly beneath the chin.
-   const rings=[[-.5,1.14,.015],[-.18,1.04,.008],[.20,.89,-.012],[.5,.73,-.026]];
+   // Seat the throat gently under the new chin shelf. The top two rings
+   // lean forward inside the mandibular volume, avoiding a visible dark
+   // gap where the photographic face ends in low camera angles.
+   const rings=[[-.5,1.14,.015],[-.18,1.04,.008],[.20,.89,.004],[.5,.73,.010]];
    const point=(angle,row)=>{
     const [yy,scale,depth]=rings[row];
     return [
