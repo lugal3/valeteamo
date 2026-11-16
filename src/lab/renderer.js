@@ -96,6 +96,13 @@ export function geometry(boxes){
    // Source crop: x 110..760, y 0..850. Both hair and face use source pixels.
    const ax=box.source?.x||0,ay=box.source?.y||0;
    for(let j=first;j<vertices.length;j+=16){
+    // The sculpted head is a closed mesh: photograph ONLY its front-facing
+    // surface. UV mapping the rear half made a duplicated human face visible
+    // from the side/back, despite successful WebGL smoke tests.
+    if(box.rigPart==='face'&&vertices[j+8]<.13){
+     vertices[j+11]=0; // matte skin, never sample the face atlas here
+     continue;
+    }
     const x=vertices[j]-ax,y=vertices[j+1]-ay-(box.rigBone==='head'?.065:0);
     // Let the photo cover the full cheek/jaw width; give the neck a much
     // broader, continuous source region instead of a 30px skin stripe.
