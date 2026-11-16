@@ -48,7 +48,9 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  add('jacket-button',.065,.973,.188,.010,.012,.008,'dark',[.43,.44,.48],{...tiny,rigGroup:'body'});
  }
  add('hips',0,.843,-.006,.356,.185,.237,'dark',p.trousers,{...box,rigGroup:'body'});
- add('neck',0,1.449,.011,.132,.158,.133,'paper',skin,{...oval,rigGroup:'body'});
+ add('neck',0,photoMode?1.474:1.449,.011,
+  photoMode?.188:.132,photoMode?.246:.158,photoMode?.158:.133,'paper',skin,
+  {...oval,rigGroup:'body'});
 
  // Sculpted head is a single 3D face surface. Cheeks/nose/chin/lips are
  // parametrically deformed in lois-ps2-face.js, *not* stacked colored balls.
