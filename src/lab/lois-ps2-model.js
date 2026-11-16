@@ -80,9 +80,12 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
  // The mobile total remains below the 3,500 triangle budget.
  add('face',0,1.610,.006,photoMode?.398:.326,photoMode?.456:.425,photoMode?.276:.318,'paper',skin,
   {shape:'lois-face',segments:desktop?40:32,rings:desktop?28:24,rigGroup:'head'});
+ // The new cranial contours have a pronounced temple and cheek plane.
+ // Ears are set at the jaw hinge, partially embedded in the skin, rather
+ // than hovering as large circular discs in side/profile views.
  for(const side of [-1,1]){
-  add('ear-'+side,side*.171,1.610,-.004,.054,.095,.061,'paper',skin,
-   {...oval,rigGroup:'head'});
+  add('ear-'+side,side*.184,1.610,-.018,.046,.084,.064,'paper',skin,
+   {shape:'round',segments:desktop?14:10,rings:desktop?8:6,rigGroup:'head'});
   if(!photoMode){add('ear-shadow-'+side,side*.197,1.603,.023,.011,.042,.013,'paper',[.69,.46,.40],
    {...tiny,rigGroup:'head'});
   // Facial features are shallow surface overlays only; the head itself is continuous.
