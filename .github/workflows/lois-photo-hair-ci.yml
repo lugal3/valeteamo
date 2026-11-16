@@ -24,6 +24,7 @@ jobs:
           node tests/lois-photo-option-a.cjs
           node tests/lois-head-phase-a.cjs
           node tests/lois-head-phase-b.cjs
+          node tests/lois-face-uv-phase-c.cjs
           node tests/lois-captive-single-photo.cjs
           node tests/lois-ps2-mesh.cjs
           node tests/lois-ps2-rig.cjs
