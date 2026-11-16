@@ -103,14 +103,17 @@ export function geometry(boxes){
    // Tapered faceted neck. The earlier photographic neck stretched a narrow
    // chin column, while rounded-box read as a pink cube in the portrait view.
    // Keep the neck opaque and skin-coloured; source photo remains on the face.
-   const sides=Math.max(6,Math.round(box.segments||10));
-   const rings=[[-.5,1.12],[-.08,.96],[.5,.77]];
+   const sides=Math.max(8,Math.round(box.segments||12));
+   // From the collar upwards: a gentle taper, then a smaller upper neck
+   // hidden inside the jaw. Offsetting the upper rings back avoids a dark
+   // face/neck intersection directly beneath the chin.
+   const rings=[[-.5,1.14,.015],[-.18,1.04,.008],[.20,.89,-.012],[.5,.73,-.026]];
    const point=(angle,row)=>{
-    const [yy,scale]=rings[row];
+    const [yy,scale,depth]=rings[row];
     return [
      box.x+Math.cos(angle)*box.w*.5*scale,
      box.y+yy*box.h,
-     box.z+Math.sin(angle)*box.d*.5*scale
+     box.z+depth+Math.sin(angle)*box.d*.5*scale
     ];
    };
    for(let row=0;row<rings.length-1;row++){
