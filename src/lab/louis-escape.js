@@ -18,6 +18,11 @@ const TUNNEL_ROUTE=Object.freeze([
 ]);
 const ROUTE=Object.freeze([...TUNNEL_ROUTE,...KITCHEN_HIDE_APPROACH]);
 const FIRST_KITCHEN_WAYPOINT=TUNNEL_ROUTE.length;
+// After the trap, walk back through the same real gap instead of trying to
+// cut directly through the stone counter to follow Kitty.
+export const LOUIS_EXIT_ROUTE=Object.freeze(
+ KITCHEN_HIDE_APPROACH.slice(0,-1).reverse()
+);
 export const LOUIS_HIDING_SPOT=KITCHEN_HIDE_SPOT;
 export const LOUIS_RESCUE_ROUTE=ROUTE;
 export function createLouisEscape(world){
@@ -65,7 +70,22 @@ export function updateLouisEscape(louis,dt,kitty=null){
  }else if(louis.phase==='hide'){
   louis.crouch=Math.min(1,louis.age/1.1);
   if(louis.age>=1.5){louis.phase='hidden';louis.age=0;louis.concealed=true;startLoisReaction(louis,'listen');return 'hidden';}
- }else if(louis.phase==='follow'&&kitty){
+ }else if(louis.phase==='follow'&&louis.exitRouteActive){
+  const target=LOUIS_EXIT_ROUTE[louis.exitWaypoint||0];
+  if(!target)louis.exitRouteActive=false;
+  else{
+   const dx=target.x-louis.x,dz=target.z-louis.z,d=Math.hypot(dx,dz);
+   if(d<.065){louis.exitWaypoint++;return null;}
+   const move=Math.min(d,dt*2.05),body={x:louis.x,y:louis.y,z:louis.z};
+   const moved=navigate(body,louis.world,dx/d*move,dz/d*move,1.64);
+   louis.x=body.x;louis.y=body.y;louis.z=body.z;
+   const facing=Math.atan2(dx,dz),delta=Math.atan2(Math.sin(facing-louis.yaw),Math.cos(facing-louis.yaw));
+   louis.yaw+=delta*Math.min(1,dt*8);
+   louis.walk+=moved;louis.speed=moved/Math.max(dt,.0001);
+   return null;
+  }
+ }
+ if(louis.phase==='follow'&&kitty){
   const behind={x:kitty.x-Math.sin(kitty.yaw)*.90,z:kitty.z-Math.cos(kitty.yaw)*.90};
   const dx=behind.x-louis.x,dz=behind.z-louis.z,d=Math.hypot(dx,dz);
   if(d>.55&&Math.abs(kitty.y-louis.y)<.7){
@@ -79,6 +99,7 @@ export function updateLouisEscape(louis,dt,kitty=null){
 export function freeLouis(louis){
  if(louis?.phase!=='hidden')return false;
  louis.phase='follow';louis.concealed=false;louis.speed=0;louis.age=0;
+ louis.exitRouteActive=true;louis.exitWaypoint=0;
  startLoisReaction(louis,'relief');
  return true;
 }
