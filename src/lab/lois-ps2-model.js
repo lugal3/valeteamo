@@ -8,11 +8,13 @@ export const LOIS_PS2_VARIANT='ps2-b';
 
 // All lengths are metres. Each piece keeps an identifier understood by the
 // existing legacy animation adapter; rigGroup marks attachments for phase 4.
-export function buildLoisPs2Model(piece,{quality='mobile'}={}){
+export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  const desktop=quality==='desktop';
  const p=LOIS_PS2_PROFILE.palette,parts=[];
  const add=(id,x,y,z,w,h,d,mat,color,extra={})=>
-  parts.push(piece(id,x,y,z,w,h,d,mat,{color,...extra,rigBone:loisBoneForPart(id),rigPart:id}));
+  parts.push(piece(id,x,y,z,w,h,d,mat,{color,...extra,
+   photoMapped:photoMode&&(id==='face'||id.startsWith('hair-')||id.startsWith('fringe-')||id.startsWith('temple-')||id==='crown'||id.startsWith('ear-')),
+   rigBone:loisBoneForPart(id),rigPart:id}));
  const box={shape:'rounded-box',roundness:.35,segments:desktop?8:6,rings:desktop?5:4};
  const limb={shape:'rounded-box',roundness:.38,segments:desktop?8:6,rings:desktop?5:4};
  const oval={shape:'round',segments:desktop?12:8,rings:desktop?7:4};
@@ -47,7 +49,7 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
  for(const side of [-1,1]){
   add('ear-'+side,side*.171,1.610,-.004,.054,.095,.061,'paper',skin,
    {...oval,rigGroup:'head'});
-  add('ear-shadow-'+side,side*.197,1.603,.023,.011,.042,.013,'paper',[.69,.46,.40],
+  if(!photoMode){add('ear-shadow-'+side,side*.197,1.603,.023,.011,.042,.013,'paper',[.69,.46,.40],
    {...tiny,rigGroup:'head'});
   // Facial features are shallow surface overlays only; the head itself is continuous.
   add('brow-'+side,side*.080,1.701,.166,.091,.016,.016,'wood',hairShadow,
@@ -63,11 +65,11 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
   add('lid-'+side,side*.078,1.673,.158,.073,.012,.013,'paper',skin,
    {...tiny,rigGroup:'head'});
   add('nostril-'+side,side*.026,1.536,.222,.010,.006,.004,'paper',[.52,.33,.31],
-   {...tiny,rigGroup:'head'});
+   {...tiny,rigGroup:'head'});}
  }
- add('upper-lip',0,1.506,.158,.086,.009,.008,'paper',lip,{...tiny,rigGroup:'head'});
+ if(!photoMode){add('upper-lip',0,1.506,.158,.086,.009,.008,'paper',lip,{...tiny,rigGroup:'head'});
  add('lower-lip',0,1.491,.156,.081,.008,.006,'paper',[.74,.54,.49],{...tiny,rigGroup:'head'});
- add('under-lip',0,1.478,.146,.048,.004,.004,'paper',[.74,.57,.51],{...tiny,rigGroup:'head'});
+ add('under-lip',0,1.478,.146,.048,.004,.004,'paper',[.74,.57,.51],{...tiny,rigGroup:'head'});}
 
  // Asymmetric, side-swept chestnut silhouette is the main likeness cue.
  add('hair-back',0,1.725,-.043,.357,.254,.306,'wood',hairShadow,
