@@ -13,7 +13,10 @@ const assert=require('node:assert/strict');
   'frontal photograph stays at exactly the approved source pixels');
  const side=src(...loisPhotoFaceUV(.15,1.656,0));
  assert(side[0]>=580&&side[0]<=600&&side[1]>=535&&side[1]<=585,
-  'profile uses the clean cheek patch, never an eye or nostril');
+  'right profile uses clean cheek skin, never an eye or nostril');
+ const left=src(...loisPhotoFaceUV(-.15,1.656,0));
+ assert(left[0]>=300&&left[0]<=320&&left[1]>=535&&left[1]<=585,
+  'left profile samples its own real cheek, rather than the opposite cheek');
  const back=src(...loisPhotoFaceUV(0,1.656,-1));
  assert(Math.abs(back[0]-590)<1e-6&&Math.abs(back[1]-560)<1e-6,
   'rear skull remains feature-free and seamless at x=0');
@@ -43,6 +46,7 @@ const assert=require('node:assert/strict');
  console.log('PASS FACE UV PHASE C',JSON.stringify({
   front:front.map(v=>Number(v.toFixed(1))),
   side:side.map(v=>Number(v.toFixed(1))),
+  left:left.map(v=>Number(v.toFixed(1))),
   rear:back.map(v=>Number(v.toFixed(1))),
   chin:chin.map(v=>Number(v.toFixed(1))),
   tris:full.indices.length/3
