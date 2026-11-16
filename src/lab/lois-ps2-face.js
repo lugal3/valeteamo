@@ -10,6 +10,24 @@ const gaussian=(x,y,cx,cy,sx,sy)=>{
 const normal3=(x,y,z)=>{const r=Math.hypot(x,y,z)||1;return [x/r,y/r,z/r];};
 const band=(x,center,radius)=>Math.exp(-.5*((x-center)/radius)**2);
 
+// Phase B: concentrate transverse edge loops around the photographed chin,
+// mouth, nose and eye socket. Sampling is non-uniform, but remains continuous,
+// symmetric and covers exactly the same [0,1] UV domain as the approved photo.
+// Importantly this does NOT introduce extra facial parts or a second texture.
+export const LOIS_FACE_HEIGHT_BANDS=Object.freeze([
+ 0,.070,.135,.185,.215,.245,.270,.295,.320,.345,.370,.395,
+ .420,.445,.472,.500,.530,.560,.585,.615,.655,.705,.775,.875,1
+]);
+export function loisFaceRingV(row,rings){
+ const n=Math.max(1,Math.round(rings)),t=clamp(row/n,0,1)*(LOIS_FACE_HEIGHT_BANDS.length-1);
+ const low=Math.floor(t),high=Math.min(low+1,LOIS_FACE_HEIGHT_BANDS.length-1);
+ return LOIS_FACE_HEIGHT_BANDS[low]+(LOIS_FACE_HEIGHT_BANDS[high]-LOIS_FACE_HEIGHT_BANDS[low])*(t-low);
+}
+export function loisFaceColumnU(col,segments){
+ const t=clamp(col/Math.max(1,segments),0,1)*2-1;
+ return .5+.5*Math.sign(t)*Math.abs(t)**1.13;
+}
+
 // Local x/y/z from UV. The seam is at the back of the head so the *front*
 // occupies a continuous centered region of the eventual photographic UV atlas.
 export function loisFacePoint(box,u,v){
@@ -44,13 +62,29 @@ export function loisFacePoint(box,u,v){
  // structural cheekbone and lower-jaw volume beneath it (no duplicated
  // photographic nose/lips); keep the UV projection and rigid face intact.
  const photoCheekbones=(gaussian(x,y,-.113,-.030,.066,.080)+gaussian(x,y,.113,-.030,.066,.080))*.011;
+ // Anatomical support for photo-only landmarks. Eye sockets are a little
+ // recessed, brow/bridge/alar wings get subtle depth, and a shallow fold
+ // separates lower lip from chin. All displacements are in metres and are
+ // blended through the original ONE continuous photographic face surface.
+ const eyeSocket=photo?-.006*(
+  gaussian(x,y,-.080,.060,.046,.034)+gaussian(x,y,.080,.060,.046,.034)):0;
+ const browPlane=photo?.0035*(
+  gaussian(x,y,-.082,.098,.049,.023)+gaussian(x,y,.082,.098,.049,.023)):0;
+ const nasalBridge=photo?.007*gaussian(x,y,0,-.002,.028,.080):0;
+ const alarPlane=photo?.003*(
+  gaussian(x,y,-.033,-.080,.024,.029)+gaussian(x,y,.033,-.080,.024,.029)):0;
+ const upperLipPlane=photo?.0035*gaussian(x,y,0,-.137,.060,.020):0;
+ const mentolabialFold=photo?-.0045*gaussian(x,y,0,-.173,.063,.016):0;
+ const mandibularPlane=photo?.0045*(
+  gaussian(x,y,-.124,-.136,.045,.054)+gaussian(x,y,.124,-.136,.045,.054)):0;
  // The lower lip/chin must transition to a real under-jaw volume rather than
  // creating a sharp hanging tip at the photo's bottom. The chin shelf blends
  // smoothly into the jaw corners and is most pronounced on the frontal third.
  const chinShelf=photo?.014*band(vertical,-.65,.18)*band(x,0,.106):0;
  const jawPlane=photo?.008*band(vertical,-.48,.22)*band(Math.abs(x),.119,.067):0;
  const photoRelief=nose*.28+tip*.16+chin*.08+cheekL*.08+cheekR*.08+
-  photoCheekbones+chinShelf+jawPlane;
+  photoCheekbones+chinShelf+jawPlane+eyeSocket+browPlane+nasalBridge+
+  alarPlane+upperLipPlane+mentolabialFold+mandibularPlane;
  // Grow the rear skull in profile without changing the face photograph.
  // It keeps hair, ears and the forehead supported by a genuine cranial mass.
  const craniumBack=photo?Math.max(0,-cos)*lat*.019*band(vertical,.16,.57):0;
@@ -64,9 +98,9 @@ export function loisFaceSurface(box,color,style){
  const vertices=[],indices=[];
  const index=(row,col)=>row*(segments+1)+col;
  for(let row=0;row<=rings;row++){
-  const v=row/rings;
+  const v=loisFaceRingV(row,rings);
   for(let col=0;col<=segments;col++){
-   const u=col/segments;
+   const u=loisFaceColumnU(col,segments);
    const p=loisFacePoint(box,u,v);
    const tiny=.0001;
    const pa=loisFacePoint(box,u-tiny,v),pb=loisFacePoint(box,u+tiny,v);
