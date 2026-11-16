@@ -80,10 +80,43 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  add('under-lip',0,1.478,.146,.048,.004,.004,'paper',[.74,.57,.51],{...tiny,rigGroup:'head'});}
 
  // Asymmetric, side-swept chestnut silhouette is the main likeness cue.
- add('hair-back',0,1.725,-.043,.357,.254,.306,'wood',hairShadow,
+ add('hair-back',0,photoMode?1.751:1.725,-.043,
+  photoMode?.447:.357,photoMode?.286:.254,photoMode?.346:.306,'wood',hairShadow,
   {shape:'round',segments:desktop?12:10,rings:desktop?6:4,rigGroup:'head'});
- add('hair-cap',-.015,1.802,-.004,.355,.153,.303,'wood',hair,
+ add('hair-cap',-.015,photoMode?1.830:1.802,-.004,
+  photoMode?.432:.355,photoMode?.194:.153,photoMode?.323:.303,'wood',hair,
   {shape:'round',segments:desktop?12:10,rings:desktop?6:4,rigGroup:'head'});
+ if(photoMode){
+  // The previous photo variant lost nearly all the tousled hair silhouette:
+  // it projected the picture onto small spherical clumps, resembling a helmet.
+  // These *real, depth-offset polygon layers* sample the SAME approved source
+  // photograph through projectReference() and follow the existing head bone.
+  // Points are [source-image x, source-image y], in the original 1408x1056
+  // approved "OBJETIVO FINAL" canvas. Only the frontal crop is used; this
+  // intentionally does not claim to reconstruct the unseen back of the hair.
+  const hairLayers=[
+   {id:'hair-photo-mass',depth:.169,points:[
+    [132,304],[125,245],[159,143],[226,91],[307,50],
+    [393,24],[475,15],[546,27],[617,61],[682,115],
+    [725,201],[747,271],[704,314],[637,315],
+    [568,294],[489,322],[411,339],[317,374],[238,393],[158,371]]},
+   {id:'hair-photo-fringe-left',depth:.187,points:[
+    [131,308],[154,218],[231,187],[306,234],[354,289],
+    [314,350],[233,404],[143,394]]},
+   {id:'hair-photo-fringe-middle',depth:.196,points:[
+    [280,238],[365,152],[477,143],[574,199],
+    [548,279],[444,340],[331,368],[287,339]]},
+   {id:'hair-photo-fringe-right',depth:.182,points:[
+    [519,156],[627,149],[712,228],[732,291],
+    [659,334],[582,303],[550,255]]},
+   {id:'hair-photo-crown',depth:.170,points:[
+    [266,120],[300,57],[428,17],[522,23],[641,85],
+    [598,136],[492,147],[362,159]]}
+  ];
+  for(const layer of hairLayers)
+   add(layer.id,0,0,0,.01,.01,.01,'wood',hair,
+    {shape:'lois-photo-hair',photoPolygon:layer.points,photoDepth:layer.depth,rigGroup:'head'});
+ }
  // The approved photograph already paints the swept fringe across the
  // forehead. Keep only the two outer hair cards for volume: the old five
  // overlapping rectangles duplicated the hair and created skin-colored seams.
@@ -99,7 +132,8 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
    {shape:'rounded-box',roundness:.43,segments:desktop?8:6,rings:desktop?4:4,roll,rigGroup:'head'});
  }
  for(const side of [-1,1]){
-  add('temple-'+side,side*.155,1.716,.014,.088,.145,.118,'wood',hair,
+  add('temple-'+side,side*(photoMode?.173:.155),1.716,.014,
+   photoMode?.104:.088,photoMode?.156:.145,photoMode?.132:.118,'wood',hair,
    {...oval,rigGroup:'head'});
  }
  add('crown',.046,1.871,-.066,.185,.054,.130,'wood',hairShadow,
