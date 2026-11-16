@@ -33,7 +33,11 @@ const {chromium,webkit}=require('playwright');
     assert.equal(info.gl,0);
     console.log('LOIS VIEWER INFO',JSON.stringify({name,info,errors}));
     await page.screenshot({path:'artifacts/lois-direct-'+name+'.png'});
-    assert(info.bytes>5000,'canvas seems empty: '+JSON.stringify(info));
+    // Safari/WebKit clears non-preserved WebGL drawing buffers between frames.
+    // canvas.toDataURL can therefore be tiny even when the composited canvas
+    // displays the model correctly. Validate the real page screenshot instead.
+    const screenshotBytes=fs.statSync('artifacts/lois-direct-'+name+'.png').size;
+    assert(screenshotBytes>30000,'page screenshot unexpectedly empty: '+JSON.stringify({info,screenshotBytes}));
     await page.locator('[data-view="portrait"]').click();
     await page.locator('[data-motion="walk"]').click();
     await page.waitForTimeout(800);
