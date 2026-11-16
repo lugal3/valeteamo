@@ -16,16 +16,20 @@ const assert=require('node:assert/strict');
  assert(!boxes.some(x=>/pickup-louis-escape-(iris|eye|pupil|lid|upper-lip|lower-lip|brow|nostril)/.test(x.id)),
   'photo supplies original eyes, eyebrows and lips: no double emoji-style features');
  const mesh=geometry(boxes);
- // A real profile must not show a second projected face behind the ears.
+ // A real profile must not show another pair of eyes on the rear head.
+ // Rear UVs are redirected to a constant cheek-skin patch in the SAME image;
+ // the side blends toward the original face UVs without a hard material seam.
  const faceRange=mesh.ranges[boxes.findIndex(x=>x.shape==='lois-face')];
  let rearHead=0;
  for(let i=faceRange.start;i<faceRange.end;i+=16){
-  if(mesh.vertices[i+8]<-.35){
+  if(mesh.vertices[i+8]<-.65){
    rearHead++;
-   assert.equal(mesh.vertices[i+11],0,'rear head must use matte skin, not photo sampler');
+   assert.equal(mesh.vertices[i+11],4,'rear skin samples the same approved atlas');
+   assert(Math.abs(mesh.vertices[i+9]-(540-110)/650)<.025,
+    'rear skin UV must avoid the eyes and mouth of the front portrait');
   }
  }
- assert(rearHead>20,'closed photo head has an unmapped rear hemisphere');
+ assert(rearHead>20,'closed photo head includes skin-only rear vertices');
  let count=0;for(let i=0;i<mesh.vertices.length;i+=16){
   if(mesh.vertices[i+11]===4){count++;
    assert(mesh.vertices[i+9]>=0&&mesh.vertices[i+9]<=1);
