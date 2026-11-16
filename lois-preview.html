@@ -8,7 +8,7 @@
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;font:15px/1.4 system-ui,-apple-system,sans-serif;background:#151723;color:#f9edf4}
-body{display:flex;flex-direction:column;min-height:100dvh;padding:env(safe-area-inset-top) max(10px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(10px,env(safe-area-inset-left))}
+body{display:flex;flex-direction:column;height:100dvh;min-height:0;overflow:hidden;padding:env(safe-area-inset-top) max(10px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(10px,env(safe-area-inset-left))}
 header{display:flex;gap:12px;align-items:center;justify-content:space-between;max-width:1000px;width:100%;margin:0 auto;padding:12px 6px}
 a{color:#ffc9e2;text-decoration:none}
 h1{font-size:clamp(17px,3vw,24px);line-height:1.2;margin:0}
@@ -16,15 +16,15 @@ small{display:block;color:#c2b0c7;font-size:11px;margin-top:3px}
 button{cursor:pointer;color:#fbe5f2;background:#323145;border:1px solid #715a7a;border-radius:12px;padding:11px 14px;font:600 13px system-ui;-webkit-tap-highlight-color:transparent;min-height:44px}
 button[aria-pressed="true"]{background:#895379;border-color:#fbc1dd}
 button:focus-visible,a:focus-visible{outline:2px solid #ffc8df;outline-offset:2px}
-.preview{position:relative;flex:1;min-height:220px;max-width:1000px;width:100%;margin:0 auto;overflow:hidden;border-radius:17px;background:linear-gradient(140deg,#343949,#1d2638);border:1px solid #625574}
+.preview{position:relative;flex:1;min-height:0;max-width:1000px;width:100%;margin:0 auto;overflow:hidden;border-radius:17px;background:linear-gradient(140deg,#343949,#1d2638);border:1px solid #625574}
 #lois-canvas{display:block;width:100%;height:100%;touch-action:none}
 #lois-status{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:20px;background:#222536ee;font-size:15px}
 #lois-status[hidden]{display:none}
 #lois-status.error{color:#ffd6dc;background:#301f2e}
-.controls{display:flex;flex-wrap:wrap;gap:7px;align-items:center;justify-content:center;max-width:1000px;width:100%;margin:0 auto;padding:12px 3px 4px}
+.controls{flex:none;display:flex;flex-wrap:wrap;gap:7px;align-items:center;justify-content:center;max-width:1000px;width:100%;margin:0 auto;padding:12px 3px 4px}
 .controls>span{font-size:11px;color:#b8a8bb;margin:0 3px}
 footer{color:#baa9c1;font-size:11px;text-align:center;padding:6px 12px 12px}
-@media(max-height:450px){header{padding:4px 6px}h1{font-size:16px}.controls{padding:5px 3px}.controls button{min-height:36px;padding:7px 9px}.preview{min-height:145px}footer{display:none}}
+@media(max-height:450px){header{padding:4px 6px}h1{font-size:16px}.controls{padding:5px 3px;gap:4px}.controls button{min-height:31px;padding:4px 8px;font-size:11px}.controls>span{font-size:9px}.preview{min-height:100px}footer{display:none}}
 @media(prefers-reduced-motion:reduce){button{scroll-behavior:auto}}
 </style>
 </head>
@@ -36,8 +36,8 @@ footer{color:#baa9c1;font-size:11px;text-align:center;padding:6px 12px 12px}
 </main>
 <nav class="controls" aria-label="Controles de la vista 3D">
  <span>Cámara</span>
- <button type="button" data-view="front" aria-pressed="true">Frente</button>
- <button type="button" data-view="threequarter" aria-pressed="false">3/4</button>
+ <button type="button" data-view="front" aria-pressed="false">Frente</button>
+ <button type="button" data-view="threequarter" aria-pressed="true">3/4</button>
  <button type="button" data-view="side" aria-pressed="false">Perfil</button>
  <button type="button" data-view="portrait" aria-pressed="false">Rostro</button>
  <span>Animación</span>
