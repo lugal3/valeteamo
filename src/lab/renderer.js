@@ -99,6 +99,36 @@ export function geometry(boxes){
    for(let i=first;i<vertices.length;i+=16){const dx=vertices[i]-box.x,dy=vertices[i+1]-box.y,x=dx*cr-dy*sr,y=dx*sr+dy*cr,z=vertices[i+2]-box.z,pz=y*sp+z*cp;vertices[i]=box.x+x*c-pz*s;vertices[i+1]=box.y+y*cp-z*sp;vertices[i+2]=box.z+x*s+pz*c;for(const offset of [6,13]){const ax=vertices[i+offset],ay=vertices[i+offset+1],nx=ax*cr-ay*sr,ny=ax*sr+ay*cr,nz=vertices[i+offset+2],rz=ny*sp+nz*cp;vertices[i+offset]=nx*c-rz*s;vertices[i+offset+1]=ny*cp-nz*sp;vertices[i+offset+2]=nx*s+rz*c;}}
    projectReference();
   };
+  if(box.shape==='lois-neck-lowpoly'){
+   // Tapered faceted neck. The earlier photographic neck stretched a narrow
+   // chin column, while rounded-box read as a pink cube in the portrait view.
+   // Keep the neck opaque and skin-coloured; source photo remains on the face.
+   const sides=Math.max(6,Math.round(box.segments||10));
+   const rings=[[-.5,1.12],[-.08,.96],[.5,.77]];
+   const point=(angle,row)=>{
+    const [yy,scale]=rings[row];
+    return [
+     box.x+Math.cos(angle)*box.w*.5*scale,
+     box.y+yy*box.h,
+     box.z+Math.sin(angle)*box.d*.5*scale
+    ];
+   };
+   for(let row=0;row<rings.length-1;row++){
+    for(let k=0;k<sides;k++){
+     const a=k*Math.PI*2/sides,b=(k+1)*Math.PI*2/sides;
+     const mid=(a+b)*.5;
+     const n=[Math.cos(mid),.07,Math.sin(mid)];
+     const quad=[point(a,row),point(b,row),point(b,row+1),point(a,row+1)];
+     for(let v=0;v<4;v++){
+      const u=k/sides+(v===1||v===2?1/sides:0),vv=(row+(v>=2?1:0))/(rings.length-1);
+      vertices.push(...quad[v],...color,...n,u,vv,0,style,-Math.sin(mid),0,Math.cos(mid));
+     }
+     indices.push(offset,offset+2,offset+1,offset,offset+3,offset+2);
+     offset+=4;
+    }
+   }
+   rotateMesh();continue;
+  }
   if(box.shape==='lois-photo-hair'){
    // Polygon cards carry the user's approved source pixels, never a new
    // illustrated face. Source coordinates are baked into world positions and
