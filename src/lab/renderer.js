@@ -83,7 +83,8 @@ export function geometry(boxes){
    const ax=box.source?.x||0,ay=box.source?.y||0;
    for(let j=first;j<vertices.length;j+=16){
     const x=vertices[j]-ax,y=vertices[j+1]-ay;
-    const srcX=450+x*1300,srcY=470-(y-1.656)*1327;
+    const srcX=box.rigPart==='neck'?450+x*500:450+x*1300;
+    const srcY=box.rigPart==='neck'?805+(1.45-y)*80:470-(y-1.656)*1327;
     vertices[j+9]=Math.max(.003,Math.min(.997,(srcX-110)/650));
     vertices[j+10]=Math.max(.003,Math.min(.997,1-srcY/850));
     vertices[j+11]=4;
