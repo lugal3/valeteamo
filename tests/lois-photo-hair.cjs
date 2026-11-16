@@ -10,6 +10,16 @@ const assert=require('node:assert/strict');
  assert.equal(hairs.length,4,'four depth-separated photo-sampled hair layers');
  assert(hairs.every(b=>b.rigBone==='head'&&b.photoMapped),'all layers follow existing head rig');
  assert(hairs.every(b=>b.photoPolygon.length>=7),'no degenerate flat hair sprites');
+ // Keep every hair card inside the original crop, and ensure the silhouette
+ // contains the short uneven crown/temple steps rather than a round helmet.
+ assert(hairs.every(b=>b.photoPolygon.every(([x,y])=>x>=110&&x<=760&&y>=0&&y<=850)),
+  'hair outline must stay inside the approved reference crop');
+ const outer=hairs.find(b=>b.id==='hair-photo-mass');
+ assert(outer.photoPolygon.length>=30,'crown outline is explicitly broken into smaller tufts');
+ const crown=outer.photoPolygon.filter(([,y])=>y<110);
+ assert(crown.length>=10,'crown contour contains several independent peaks');
+ assert(hairs.some(b=>b.id==='hair-photo-fringe-right'&&b.photoPolygon.length>=12),
+  'right fringe uses a tapered, less abrupt silhouette');
  assert(photo.some(b=>b.id==='face'&&b.photoMapped),'photographic face is untouched');
  const neck=photo.find(b=>b.id==='neck');
  assert(neck?.shape==='lois-neck-lowpoly'&&!neck.photoMapped,
