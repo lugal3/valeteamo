@@ -24,6 +24,13 @@ const assert=require('node:assert/strict');
  const neck=photo.find(b=>b.id==='neck');
  assert(neck?.shape==='lois-neck-lowpoly'&&!neck.photoMapped,
   'the PS2 neck is faceted skin geometry, not a stretched photo map');
+ assert(neck.rings===4&&neck.segments>=12,'neck has enough tapered rings for a smooth low-poly transition');
+ const face=photo.find(b=>b.id==='face');
+ const shirt=photo.find(b=>b.id==='shirt');
+ assert(neck.y+neck.h*.5>face.y-face.h*.5+.10,
+  'upper neck overlaps the jaw, preventing a visible floating-head gap');
+ assert(neck.y-neck.h*.5<shirt.y+shirt.h*.5,
+  'lower neck enters the shirt instead of ending above its neckline');
  assert(!classic.some(b=>b.shape==='lois-photo-hair'),'legacy PS2-B has no added layer');
  const mesh=geometry(photo);
  assert(mesh.vertices.every(Number.isFinite));
