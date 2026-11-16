@@ -27,8 +27,12 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
   iris=p.eyes,eyeWhite=[.91,.91,.90],ink=[.13,.16,.20];
 
  // Tailored dark blazer with a light grey crewneck, not a bulky hoodie.
- add('torso',0,1.11,-.015,.468,.56,.305,'dark',jacket,{...box,rigGroup:'body'});
- add('shirt',0,1.12,.140,photoMode?.35:.248,.445,.025,'cream',shirt,{...box,rigGroup:'body'});
+ // The navy Photo-A torso is one softly tapered mesh; the retained shirt
+ // primitive is sunk inside the shell so its rectangular face cannot show.
+ add('torso',0,1.11,-.015,photoMode?.490:.468,.56,.305,'dark',jacket,
+  photoMode?{shape:'lois-tee-torso',segments:12,rings:4,rigGroup:'body'}:{...box,rigGroup:'body'});
+ add('shirt',0,1.12,photoMode?.025:.140,photoMode?.30:.248,photoMode?.36:.445,
+  photoMode?.017:.025,'cream',shirt,{...box,rigGroup:'body'});
  if(photoMode){
   // Minimal dark collar silhouette and no suit lapel covering the neck.
   // Keep the collar behind the photo neck. The earlier black raised
@@ -108,7 +112,7 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
   // the small staggered peaks break the helmet silhouette without adding a
   // second cartoon fringe or increasing the number of independent cards.
   const hairLayers=[
-   {id:'hair-photo-mass',depth:.139,points:[
+   {id:'hair-photo-mass',depth:.154,points:[
     [150,304],[145,257],[153,213],[177,167],[175,145],
     [212,115],[240,93],[267,91],[307,66],[333,60],
     [367,47],[395,43],[425,47],[472,32],[493,39],
@@ -118,15 +122,15 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
     [647,305],[615,311],[578,292],[565,299],
     [489,322],[412,339],[363,355],[315,377],
     [263,389],[238,393],[197,380],[158,371]]},
-   {id:'hair-photo-fringe-left',depth:.155,points:[
+   {id:'hair-photo-fringe-left',depth:.160,points:[
     [153,307],[160,274],[170,226],[198,215],[242,203],
     [279,221],[310,242],[345,288],[326,324],
     [312,356],[273,383],[233,403],[188,401],[143,394]]},
-   {id:'hair-photo-fringe-middle',depth:.168,points:[
+   {id:'hair-photo-fringe-middle',depth:.164,points:[
     [280,238],[315,218],[365,152],[417,148],[477,143],
     [522,162],[574,199],[562,237],[548,279],
     [496,304],[444,340],[382,350],[331,368],[287,339]]},
-   {id:'hair-photo-fringe-right',depth:.152,points:[
+   {id:'hair-photo-fringe-right',depth:.158,points:[
     [516,165],[570,168],[617,174],[653,204],
     [688,235],[696,263],[701,288],[677,313],
     [659,334],[612,319],[582,303],[550,255]]}
@@ -160,10 +164,10 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  // Simple articulated silhouette: arm and leg identifiers deliberately remain
  // compatible with louisPartPose until full bone retargeting in phase 4.
  for(const side of [-1,1]){
-  add('upper-arm-'+side,side*.285,1.172,-.019,.168,.340,.182,'dark',jacket,
-   {...limb,roll:-side*.045,rigGroup:'arm',rigSide:side});
+  add('upper-arm-'+side,side*(photoMode?.273:.285),1.172,-.019,.168,.340,.182,'dark',jacket,
+   {...(photoMode?oval:limb),roll:-side*.045,rigGroup:'arm',rigSide:side});
   add('forearm-'+side,side*.308,.940,.021,.145,.258,.154,'dark',jacket,
-   {...limb,rigGroup:'arm',rigSide:side});
+   {...(photoMode?oval:limb),rigGroup:'arm',rigSide:side});
   add('hand-'+side,side*.315,.764,.078,.095,.132,.107,'paper',skin,
    {...oval,rigGroup:'arm',rigSide:side});
   add('thigh-'+side,side*.123,.647,-.001,.173,.463,.216,'dark',p.trousers,
