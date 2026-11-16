@@ -43,6 +43,13 @@ const assert=require('node:assert/strict');
  assert(neck.rings===4&&neck.segments>=12,'neck has enough tapered rings for a smooth low-poly transition');
  const face=photo.find(b=>b.id==='face');
  const shirt=photo.find(b=>b.id==='shirt');
+ const torso=photo.find(b=>b.id==='torso');
+ assert(torso?.shape==='lois-tee-torso'&&torso.segments>=12,
+  'photo torso must be a tapered T-shirt shell, not a rectangle');
+ assert(shirt.z+shirt.d*.5<torso.z+torso.d*.30,
+  'the old rectangular shirt panel must remain hidden inside the torso');
+ assert(classic.find(b=>b.id==='torso')?.shape==='rounded-box',
+  'the PS2 fallback body retains its previous geometry');
  assert(neck.y+neck.h*.5>face.y-face.h*.5+.10,
   'upper neck overlaps the jaw, preventing a visible floating-head gap');
  assert(neck.y-neck.h*.5<shirt.y+shirt.h*.5,
@@ -53,6 +60,23 @@ const assert=require('node:assert/strict');
  assert(mesh.indices.every(Number.isFinite));
  assert(mesh.indices.length/3<=3500,'mobile triangle budget unchanged');
  for(let i=0;i<mesh.vertices.length;i+=16)assert(mesh.vertices[i+9]>=0&&mesh.vertices[i+9]<=1&&mesh.vertices[i+10]>=0&&mesh.vertices[i+10]<=1,'UV range');
+ // Hair cards are curved spatially but must sample the same exact source
+ // pixels, not inadvertently stretch the approved photo with the new curve.
+ const hairIdx=photo.findIndex(b=>b.id==='hair-photo-mass');
+ const firstRange=mesh.ranges[hairIdx];
+ const outerHair=photo[hairIdx],source=outerHair.photoPolygon[0];
+ const vOffset=firstRange.start+16; // second point in the first triangle
+ const expectedU=(source[0]-110)/650,expectedV=1-source[1]/850;
+ assert(Math.abs(mesh.vertices[vOffset+9]-expectedU)<1e-6&&
+  Math.abs(mesh.vertices[vOffset+10]-expectedV)<1e-6,
+  'curved outer hair must retain exact photographic UVs');
+ const centerZ=mesh.vertices[firstRange.start+2],sideZ=mesh.vertices[vOffset+2];
+ assert(sideZ<centerZ-.012,'side fringe is tucked back into the scalp, not a flat cutout');
+ const topIndex=outerHair.photoPolygon.reduce((best,point,i,arr)=>point[1]<arr[best][1]?i:best,0);
+ const topOffset=firstRange.start+(topIndex*3+1)*16;
+ const highestRawY=outerHair.y+1.656+(470-outerHair.photoPolygon[topIndex][1])/1327;
+ assert(mesh.vertices[topOffset+1]<highestRawY-.05,
+  'floating top of hair is drawn down into supporting hair shell');
  for(const {start,end} of mesh.ranges.slice(photo.findIndex(b=>b.shape==='lois-photo-hair'),photo.findIndex(b=>b.shape==='lois-photo-hair')+5)){
   assert(end>start,'hair card generated actual geometry');
   for(let j=start;j<end;j+=16)assert.equal(mesh.vertices[j+11],4,'hair uses photo sampler, not painted material');
