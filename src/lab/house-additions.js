@@ -79,8 +79,8 @@ export function installKitchenBar(add,obj){
  obj('hide-kitchen','hide','Agacharse detrás del mesón',
   KITCHEN_HIDE_SPOT.x,.83,KITCHEN_HIDE_SPOT.z,{
    requiresCrouch:true,hideType:'kitchen',
-   returnX:12.10,returnZ:.89,
-   hideCamera:{x:12.22,y:.67,z:2.54,yaw:-Math.PI/2,pitch:0}
+   returnX:12.10,returnZ:1.47,
+   hideCamera:{x:12.22,y:.67,z:KITCHEN_HIDE_SPOT.z,yaw:-Math.PI/2,pitch:0}
   });
 }
 export function installExtraHides(add,obj){
