@@ -22,6 +22,7 @@ jobs:
         run: |
           node tests/lois-photo-hair.cjs
           node tests/lois-photo-option-a.cjs
+          node tests/lois-captive-single-photo.cjs
           node tests/lois-ps2-mesh.cjs
           node tests/lois-ps2-rig.cjs
           node tests/lois-ps2-cinematics.cjs
