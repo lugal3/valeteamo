@@ -76,10 +76,25 @@ export function geometry(boxes){
   const color=box.ao?[baseColor[0]*box.ao,baseColor[1]*box.ao,baseColor[2]*box.ao]:baseColor;
   const style=materialStyle(box)+(box.chibi?(box.emissive?96:64):(box.glow?32:0)),first=vertices.length;
   const range={start:first,end:first,indexStart:indices.length,indexEnd:indices.length};ranges.push(range);
+  const projectReference=()=>{
+   if(!box.photoMapped)return;
+   // UV projection from the user's approved OPTION A reference.
+   // Source crop: x 110..760, y 0..850. Both hair and face use source pixels.
+   const ax=box.source?.x||0,ay=box.source?.y||0;
+   for(let j=first;j<vertices.length;j+=16){
+    const x=vertices[j]-ax,y=vertices[j+1]-ay;
+    const srcX=450+x*1300,srcY=470-(y-1.656)*1327;
+    vertices[j+9]=Math.max(.003,Math.min(.997,(srcX-110)/650));
+    vertices[j+10]=Math.max(.003,Math.min(.997,1-srcY/850));
+    vertices[j+11]=4;
+    vertices[j+3]=1;vertices[j+4]=1;vertices[j+5]=1;
+   }
+  };
   const rotateMesh=()=>{
    range.end=vertices.length;range.indexEnd=indices.length;
-   if(!box.yaw&&!box.pitch&&!box.roll)return;const c=Math.cos(box.yaw||0),s=Math.sin(box.yaw||0),cp=Math.cos(box.pitch||0),sp=Math.sin(box.pitch||0),cr=Math.cos(box.roll||0),sr=Math.sin(box.roll||0);
+   if(!box.yaw&&!box.pitch&&!box.roll){projectReference();return;}const c=Math.cos(box.yaw||0),s=Math.sin(box.yaw||0),cp=Math.cos(box.pitch||0),sp=Math.sin(box.pitch||0),cr=Math.cos(box.roll||0),sr=Math.sin(box.roll||0);
    for(let i=first;i<vertices.length;i+=16){const dx=vertices[i]-box.x,dy=vertices[i+1]-box.y,x=dx*cr-dy*sr,y=dx*sr+dy*cr,z=vertices[i+2]-box.z,pz=y*sp+z*cp;vertices[i]=box.x+x*c-pz*s;vertices[i+1]=box.y+y*cp-z*sp;vertices[i+2]=box.z+x*s+pz*c;for(const offset of [6,13]){const ax=vertices[i+offset],ay=vertices[i+offset+1],nx=ax*cr-ay*sr,ny=ax*sr+ay*cr,nz=vertices[i+offset+2],rz=ny*sp+nz*cp;vertices[i+offset]=nx*c-rz*s;vertices[i+offset+1]=ny*cp-nz*sp;vertices[i+offset+2]=nx*s+rz*c;}}
+   projectReference();
   };
   if(box.shape==='lois-face'){
     const mesh=loisFaceSurface(box,color,style);
@@ -234,6 +249,7 @@ export class HouseRenderer {
   const {vertices,indices}=mesh;this.count=indices.length;
   this.dynamicBoxes=boxes.filter(b=>b.dynamic);
   // Avoid fetching the face atlas in unrelated 3D scenes and editor previews.
+  this.loisFaceTexture.setSource(this.dynamicBoxes.some(b=>b.photoMapped&&b.shape==='lois-face')?'photo-a':'illustrated');
   if(this.dynamicBoxes.some(box=>box.shape==='lois-face'&&box.faceTexture!==false))this.loisFaceTexture.enable();
   const dynamic=geometry(this.dynamicBoxes);this.dynamicCount=dynamic.indices.length;
   this.dynamicTemplate=dynamic.vertices;this.dynamicVertices=new Float32Array(dynamic.vertices);this.dynamicRanges=dynamic.ranges;
