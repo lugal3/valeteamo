@@ -47,9 +47,9 @@ const assert=require('node:assert/strict');
  assert(torso?.shape==='lois-tee-torso'&&torso.segments>=12,
   'photo torso must be a tapered T-shirt shell, not a rectangle');
  assert(!shirt,'Photo-A must NOT render the floating shirt rectangle');
- assert(classic.find(b=>b.id==='torso')?.shape==='rounded-box'&&
-  classic.some(b=>b.id==='shirt'),
-  'the PS2 fallback retains its original box and shirt');
+ assert(defaultPhoto.find(b=>b.id==='torso')?.shape==='lois-tee-torso'&&
+  !defaultPhoto.some(b=>b.id==='shirt'),
+  'only the fitted Photo-A torso is constructed; illustrated shirt is retired');
  assert(neck.y+neck.h*.5>face.y-face.h*.5+.10,
   'upper neck overlaps the jaw, preventing a visible floating-head gap');
  assert(neck.y-neck.h*.5<torso.y+torso.h*.5-.015,
