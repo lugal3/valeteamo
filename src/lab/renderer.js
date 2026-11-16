@@ -97,6 +97,31 @@ export function geometry(boxes){
    for(let i=first;i<vertices.length;i+=16){const dx=vertices[i]-box.x,dy=vertices[i+1]-box.y,x=dx*cr-dy*sr,y=dx*sr+dy*cr,z=vertices[i+2]-box.z,pz=y*sp+z*cp;vertices[i]=box.x+x*c-pz*s;vertices[i+1]=box.y+y*cp-z*sp;vertices[i+2]=box.z+x*s+pz*c;for(const offset of [6,13]){const ax=vertices[i+offset],ay=vertices[i+offset+1],nx=ax*cr-ay*sr,ny=ax*sr+ay*cr,nz=vertices[i+offset+2],rz=ny*sp+nz*cp;vertices[i+offset]=nx*c-rz*s;vertices[i+offset+1]=ny*cp-nz*sp;vertices[i+offset+2]=nx*s+rz*c;}}
    projectReference();
   };
+  if(box.shape==='lois-photo-hair'){
+   // Polygon cards carry the user's approved source pixels, never a new
+   // illustrated face. Source coordinates are baked into world positions and
+   // projectReference() derives their UV. Existing rig handles their motion.
+   const poly=box.photoPolygon||[];
+   if(poly.length>=3){
+    const center=poly.reduce((a,p)=>[a[0]+p[0]/poly.length,a[1]+p[1]/poly.length],[0,0]);
+    const map=([sx,sy])=>[
+     box.x+(sx-450)/1300,
+     box.y+1.656+(470-sy)/1327,
+     box.z+(box.photoDepth||.17)
+    ];
+    for(let k=0;k<poly.length;k++){
+     for(const point of [center,poly[k],poly[(k+1)%poly.length]]){
+      const xyz=map(point);
+      vertices.push(...xyz,...color,0,0,1,0,0,0,style,1,0,0);
+     }
+     // Two-sided polygons remain visible on 3/4 head turns. The source
+     // image has no alpha channel and polygons stay within the hair area.
+     indices.push(offset,offset+1,offset+2,offset,offset+2,offset+1);
+     offset+=3;
+    }
+   }
+   rotateMesh();continue;
+  }
   if(box.shape==='lois-face'){
     const mesh=loisFaceSurface(box,color,style);
     vertices.push(...mesh.vertices);
