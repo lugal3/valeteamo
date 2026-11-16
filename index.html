@@ -24,6 +24,94 @@
  </head>
  <body style="margin:0;background:#240e1c">
   <div id="root"><p style="padding:24px;text-align:center;font-family:system-ui;color:#fff2ee" role="status">Cargando…</p></div>
+  <style>
+   #vale-blank-recovery[hidden],#vale-diag-open[hidden]{display:none!important}
+   #vale-blank-recovery{position:fixed;inset:0;z-index:2147483646;display:grid;place-items:center;overflow:auto;padding:20px;background:#240e1c;color:#f9e9f1;font:14px/1.5 system-ui,-apple-system,sans-serif}
+   #vale-blank-recovery .panel{max-width:540px;width:100%;padding:22px;border:1px solid #725a76;border-radius:18px;background:#342337}
+   #vale-blank-recovery h2{margin:0 0 10px;font:650 24px system-ui;color:#fff4f8}
+   #vale-blank-recovery p{margin:8px 0 15px}
+   #vale-blank-recovery a,#vale-blank-recovery button{display:inline-block;padding:11px 14px;margin:4px 5px 4px 0;border-radius:11px;border:1px solid #ba87a9;background:#704667;color:#fff5fa;font:600 13px system-ui;text-decoration:none}
+   #vale-blank-report{max-height:20vh;overflow:auto;padding:8px;font:11px/1.4 monospace;white-space:pre-wrap;word-break:break-word;background:#221923;border-radius:9px;color:#ffe6ec}
+   #vale-diag-open{position:fixed;z-index:2147483645;bottom:max(5px,env(safe-area-inset-bottom));left:max(5px,env(safe-area-inset-left));background:#342337;color:#ffe5f3;border:1px solid #ba87a9;border-radius:12px;padding:7px;font:10px system-ui}
+  </style>
+  <aside id="vale-blank-recovery" role="alert" hidden>
+   <div class="panel">
+    <h2>No se está mostrando la escena</h2>
+    <p>La aplicación detectó que la pantalla quedó vacía. No es necesario borrar la partida.</p>
+    <a href="/lois-preview.html">Ver modelo 3D de Lois directamente</a>
+    <button id="vale-blank-retry" type="button">Recargar sin borrar progreso</button>
+    <p>Si continúa ocurriendo, copia este diagnóstico o envía una captura:</p>
+    <pre id="vale-blank-report" tabindex="0"></pre>
+    <button id="vale-blank-copy" type="button">Copiar diagnóstico</button>
+   </div>
+  </aside>
+  <button type="button" id="vale-diag-open" hidden>Diagnóstico</button>
+  <script>
+  (function(){
+   var list=[],blank=0,modal=document.getElementById('vale-blank-recovery');
+   var report=document.getElementById('vale-blank-report');
+   var diagnostic=new URLSearchParams(location.search).has('diag');
+   var debugButton=document.getElementById('vale-diag-open');
+   if(diagnostic)debugButton.hidden=false;
+   function record(type,value){
+    list.push({type:type,message:String(value||'').slice(0,220)});
+    if(list.length>8)list.shift();
+   }
+   window.addEventListener('error',function(event){
+    record('error',event.message||(event.target&&event.target.tagName)||'resource error');
+   },true);
+   window.addEventListener('unhandledrejection',function(event){
+    record('promise',event.reason&&event.reason.message||event.reason);
+   });
+   function visible(selector){
+    var nodes=document.querySelectorAll(selector);
+    for(var i=0;i<nodes.length;i++){
+     var el=nodes[i],css=getComputedStyle(el),box=el.getBoundingClientRect();
+     if(css.display!=='none'&&css.visibility!=='hidden'&&css.opacity!=='0'&&box.width>4&&box.height>4)return true;
+    }
+    return false;
+   }
+   function getReport(){
+    var root=document.getElementById('root');
+    var view={width:innerWidth,height:innerHeight,pixelRatio:devicePixelRatio};
+    return JSON.stringify({
+     diagnostic:'vale-ios-blank-v2',path:location.pathname,readyState:document.readyState,
+     orientation:matchMedia('(orientation: portrait)').matches?'vertical':'horizontal',
+     viewport:view,rootChildren:root?root.children.length:-1,
+     rootVisible:root?getComputedStyle(root).visibility:'missing',
+     housePresent:!!document.getElementById('lab3d'),
+     sceneElements:Array.from(document.querySelectorAll('#root main,#root .rescue-demo,#lab3d'))
+      .slice(0,10).map(function(el){return el.tagName.toLowerCase()+'.'+(el.className||'').toString().slice(0,60)}),
+     errors:list
+    },null,2);
+   }
+   function openReport(){report.textContent=getReport();modal.hidden=false;}
+   function check(){
+    if(document.hidden||!document.getElementById('root'))return;
+    var scene=visible('#root main,#root .rescue-demo,#root .valeteamo-splash,#root .cosmos-experience,#lab3d,#lab-menu,#root [data-orientation-gate="portrait"]');
+    // The initial loading paragraph counts as progress while scripts load.
+    var loading=visible('#root [role="status"]');
+    blank=scene||loading?0:blank+1;
+    if(blank>=3)openReport();
+    if(!modal.hidden)report.textContent=getReport();
+   }
+   document.getElementById('vale-blank-retry').addEventListener('click',function(){
+    var url=new URL(location.href);
+    url.searchParams.set('_sceneFresh',Date.now().toString(36));
+    location.replace(url.href);
+   });
+   document.getElementById('vale-blank-copy').addEventListener('click',function(){
+    var data=getReport();
+    if(navigator.clipboard&&navigator.clipboard.writeText)
+     navigator.clipboard.writeText(data).then(function(){
+      document.getElementById('vale-blank-copy').textContent='Copiado';
+     }).catch(function(){report.focus();});
+    else report.focus();
+   });
+   debugButton.addEventListener('click',openReport);
+   setInterval(check,1300);
+  })();
+  </script>
   <script type="module" src="/src/main.tsx"></script>
  </body>
 </html>
