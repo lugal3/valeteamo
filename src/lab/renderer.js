@@ -371,7 +371,7 @@ export class HouseRenderer {
   const {vertices,indices}=mesh;this.count=indices.length;
   this.dynamicBoxes=boxes.filter(b=>b.dynamic);
   // Avoid fetching the face atlas in unrelated 3D scenes and editor previews.
-  this.loisFaceTexture.setSource(this.dynamicBoxes.some(b=>b.photoMapped&&b.shape==='lois-face')?'photo-a':'illustrated');
+  // The only retained atlas is Photo-A; no source swapping or duplicate GPU texture.
   if(this.dynamicBoxes.some(box=>box.shape==='lois-face'&&box.faceTexture!==false))this.loisFaceTexture.enable();
   const dynamic=geometry(this.dynamicBoxes);this.dynamicCount=dynamic.indices.length;
   this.dynamicTemplate=dynamic.vertices;this.dynamicVertices=new Float32Array(dynamic.vertices);this.dynamicRanges=dynamic.ranges;
