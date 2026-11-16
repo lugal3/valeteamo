@@ -10,7 +10,6 @@ import {climbingHandPieces} from './first-person.js';
 import {drawViewModel} from './viewmodel.js';
 import {pursuerPieces,posePursuer} from './pursuer-model.js';
 import {sampleWardrobeWalk} from './animations/wardrobe-entry.js';
-import {louisPartPose} from './louis-escape.js';
 import {VERTEX_SHADER as VS,FRAGMENT_SHADER as FS} from './material-shaders.js';
 // Minimal WebGL1 3D renderer: real perspective, depth buffer, world geometry and spotlight.
 // No additional packages, CDNs, runtime downloads or concurrent Phaser loops.
@@ -494,15 +493,12 @@ export class HouseRenderer {
     const offset=box.sourceOffset||[0,0,0];
     const bob=source.kind==='key'?Math.sin(time*3.2+(source.x+source.z)*2.5)*bobAmp:0;
     const sway=(box.id.includes('bow-left')||box.id.includes('bow-right'))?Math.sin(time*4.2)*swayAmp:0;
-    if(source.kind==='rc-car'||source.kind==='louis-companion'){
+    if(source.kind==='rc-car'){
      const angle=-(source.yaw||0),c=Math.cos(angle),s=Math.sin(angle);
-     const pose=source.kind==='louis-companion'?louisPartPose(source,box,offset,reduced):null;
-     const ox=pose?.x??offset[0],oy=pose?.y??offset[1],oz=pose?.z??offset[2];
-     box.x=source.x+ox*c-oz*s;
-     box.y=source.kind==='louis-companion'?source.y+oy:source.concealed?-100:source.y+oy;
-     box.z=source.z+ox*s+oz*c;
-     box.yaw=angle+(pose?.yaw??box.baseYaw??0);
-     if(pose){box.roll=pose.roll;box.pitch=pose.pitch;eyeScale=pose.eyeScale;}
+     box.x=source.x+offset[0]*c-offset[2]*s;
+     box.y=source.concealed?-100:source.y+offset[1];
+     box.z=source.z+offset[0]*s+offset[2]*c;
+     box.yaw=angle+(box.baseYaw??0);
     }else{
      box.x=source.x+offset[0];
      box.y=source.concealed?-100:source.y+offset[1]+bob;
