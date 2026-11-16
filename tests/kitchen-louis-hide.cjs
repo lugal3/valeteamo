@@ -5,7 +5,7 @@ const assert=require('node:assert/strict');
 (async()=>{
  const {createHouse,blocked}=await import('../src/lab/world.js');
  const {createLouisEscape,updateLouisEscape,freeLouis,
-  LOUIS_HIDING_SPOT,LOUIS_RESCUE_ROUTE}=await import('../src/lab/louis-escape.js');
+  LOUIS_HIDING_SPOT,LOUIS_RESCUE_ROUTE,LOUIS_EXIT_ROUTE}=await import('../src/lab/louis-escape.js');
  const {KITCHEN_BAR,KITCHEN_HIDE_SPOT,KITCHEN_HIDE_APPROACH}=await import('../src/lab/kitchen-hide-layout.js');
  const {pickupGeometry,geometry}=await import('../src/lab/renderer.js');
  const {sampleLoisRig,writeLoisRigPart}=await import('../src/lab/lois-ps2-rig.js');
@@ -85,10 +85,23 @@ const assert=require('node:assert/strict');
  const after=heightAt(actor);
  assert(Math.abs(after-before)<.10,'head rises smoothly, no instantaneous snap');
  assert.equal(actor.phase,'follow');
+ assert(actor.exitRouteActive,'escaping Louis initially retraces the safe passage');
+ const backTrail=[];
+ for(let i=0;i<430&&actor.exitRouteActive;i++){
+  updateLouisEscape(actor,dt,{x:8.5,y:0,z:2.0,yaw:0});
+  if(i%5===0)backTrail.push({x:actor.x,z:actor.z});
+  assert(!blocked(world.boxes,actor.x,actor.y,actor.z,.155,1.64),
+   'Louis returning to Kitty must not cut through kitchen stone or wall');
+ }
+ assert(!actor.exitRouteActive,'Louis finishes rear-to-front path without stalling');
+ assert(LOUIS_EXIT_ROUTE.length>=5,'exit path retains the walk around the bar');
+ assert(Math.hypot(actor.x-LOUIS_EXIT_ROUTE.at(-1).x,
+  actor.z-LOUIS_EXIT_ROUTE.at(-1).z)<.14,
+  'Louis exits by north gap and returns to front of the bar');
  assert(output.every(Number.isFinite),'no NaN on all skinned geometry');
  console.log('PASS KITCHEN LOUIS HIDE',JSON.stringify({
   counterOrientation:'front-facing',routeSamples:trail.length,hide:{x:actor.x,z:actor.z},
   headTop:Number(headTop.toFixed(3)),stoneTop:KITCHEN_BAR.top,
-  headRiseFirstFrame:Number((after-before).toFixed(4))
+  headRiseFirstFrame:Number((after-before).toFixed(4)),returnSamples:backTrail.length
  }));
 })().catch(e=>{console.error(e);process.exitCode=1;});
