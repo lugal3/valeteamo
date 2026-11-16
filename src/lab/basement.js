@@ -1,3 +1,4 @@
+import {LOIS_VISUAL_ID} from './lois-ps2-profile.js';
 const X=8.55,START=2.53,THROAT=4.15,LANDING=8.2,END=14.8;
 export const HATCH=Object.freeze({x:X,minX:7.91,maxX:9.19,minZ:START,maxZ:THROAT,y:.023});
 const SECTIONS=[[START,THROAT,.64],[THROAT,5.8,.69],[5.8,8.5,.59],[8.5,11.5,.49],[11.5,END,1.03]];
@@ -39,38 +40,26 @@ function installCaptive(add,obj){
  const part=(id,dx,dy,dz,w,h,d,mat,extra={},solid=false)=>add('captive-'+id,x+dx,y+dy,z+dz,w,h,d,mat,solid,{
   ...extra,...(dy>=.76&&!solid&&!id.startsWith('chair-')?{dynamic:true,ambient:'captive-breath'}:{})
  });
- const wood={color:[.39,.26,.17]},skin={color:[.79,.58,.47]},jacket={color:[.36,.40,.47]},denim={color:[.20,.27,.34]};
- const rounded={shape:'round',segments:8,rings:5},bevel={shape:'rounded-box',roundness:.21,segments:6,rings:3};
+ // Preserve the original chair and ropes, but do NOT build a second,
+ // obsolete Louis out of dozens of stationary face/clothing primitives.
+ // The captive is now the same rigged Photo-A actor used after untying.
+ const wood={color:[.39,.26,.17]};
  part('chair-seat',0,.49,0,.52,.075,.52,'wood',wood,true);
  for(const side of [-1,1]){
-  for(const fore of [-1,1])part('chair-leg-'+side+fore,side*.21,.23,fore*.19,.062,.46,.064,'wood',wood,true);
+  for(const fore of [-1,1])
+   part('chair-leg-'+side+fore,side*.21,.23,fore*.19,.062,.46,.064,'wood',wood,true);
   part('chair-post-'+side,side*.213,.83,.222,.064,.72,.067,'wood',wood);
  }
  for(const h of [.73,.93,1.13])part('chair-back-'+h,0,h,.222,.48,.092,.066,'wood',wood);
- part('torso',0,.77,-.025,.40,.46,.255,'plaster',{...bevel,...jacket},true);
- part('shirt',0,.815,-.158,.215,.292,.022,'cream',{...bevel,color:[.71,.69,.62]});
- part('neck',0,1.00,-.046,.137,.16,.14,'paper',{...rounded,...skin});
- part('head',0,1.21,-.064,.305,.368,.297,'paper',{...rounded,...skin,roll:-.11});
- part('hair',.007,1.321,-.043,.319,.202,.297,'wood',{...rounded,color:[.22,.13,.10],roll:-.19});
- part('fringe',-.054,1.329,-.168,.237,.108,.139,'wood',{...rounded,color:[.27,.16,.105],roll:.31});
- part('nose',0,1.207,-.207,.065,.078,.061,'paper',{...rounded,...skin});
- part('jaw-shadow',0,1.107,-.175,.165,.061,.057,'paper',{...rounded,color:[.45,.30,.25]});
- part('mouth',0,1.115,-.201,.081,.012,.017,'bow',{color:[.41,.25,.22]});
- for(const side of [-1,1]){
-  part('ear-'+side,side*.147,1.21,-.069,.054,.087,.057,'paper',{...rounded,...skin});
-  part('brow-'+side,side*.067,1.262,-.194,.073,.016,.019,'wood',{roll:-side*.11,color:[.22,.13,.10]});
-  part('eye-'+side,side*.064,1.237,-.193,.053,.024,.025,'cream',rounded);
-  part('iris-'+side,side*.064,1.236,-.208,.023,.021,.012,'glass',{...rounded,color:[.26,.50,.61]});
-  part('upper-arm-'+side,side*.20,.765,-.014,.13,.33,.145,'plaster',{...bevel,...jacket,roll:side*.09});
-  part('sleeve-'+side,side*.134,.579,-.155,.133,.135,.277,'plaster',{...bevel,...jacket,yaw:side*.27});
-  part('hand-'+side,side*.060,.584,-.290,.095,.079,.109,'paper',{...rounded,...skin});
-  part('thigh-'+side,side*.108,.54,-.193,.164,.155,.37,'plaster',{...bevel,...denim});
-  part('shin-'+side,side*.122,.263,-.355,.144,.43,.149,'plaster',{...bevel,...denim,pitch:.13});
-  part('sneaker-'+side,side*.122,.077,-.441,.152,.132,.281,'cream',{...bevel,color:[.51,.49,.45]});
- }
- for(const [i,dy,dz,w] of [[0,.59,-.257,.28],[1,.61,-.262,.28],[2,.67,-.151,.436]]){
+ for(const [i,dy,dz,w] of [[0,.59,-.257,.28],[1,.61,-.262,.28],[2,.67,-.151,.436]])
   part('rope-'+i,0,dy,dz,w,.023,.023,'trim',{color:[.55,.42,.27],roll:i===1?.06:-.035});
- }
+ // One real actor across both sides of the rescue transition. Offset the
+ // seated bind pose so his hips rest on the chair; no second head/texture.
+ obj('captive-louis','louis-companion','Louis cautivo',x,y-.32,z,{
+  visualPreset:LOIS_VISUAL_ID,visualVariant:'photo-a',yaw:Math.PI,
+  phase:'untying',age:0,walk:0,speed:0,crouch:.55,blink:0,
+  concealed:false,interactable:false,visualReaction:null
+ });
  obj('rescue-louis','rescue','Louis Tomlinson',x,y+1.02,z-.35,{floor:y});
 }
 

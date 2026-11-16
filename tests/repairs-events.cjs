@@ -2,7 +2,10 @@ const assert=require('node:assert/strict');
 module.exports=async()=>{
  const {geometry,HouseRenderer,pickupGeometry}=await import('../src/lab/renderer.js'),{createHouse,setDoor,setDrawer}=await import('../src/lab/world.js');
  const world=createHouse(),key=world.objects.find(o=>o.id==='key');key.concealed=false;
- const boxes=[...world.boxes,...pickupGeometry(world.objects)].filter(b=>b.dynamic),mesh=geometry(boxes);let cursor=0;
+ // This harness mocks only furniture transforms. The new pre-rescue Louis
+ // is a real rigged dynamic actor and is tested by the dedicated rig suite.
+ const boxes=[...world.boxes,...pickupGeometry(world.objects)]
+  .filter(b=>b.dynamic&&b.source?.kind!=='louis-companion'),mesh=geometry(boxes);let cursor=0;
  boxes.forEach((b,i)=>{assert.equal(mesh.ranges[i].start,cursor);cursor+=geometry([b]).vertices.length;assert.equal(mesh.ranges[i].end,cursor);});assert.equal(cursor,mesh.vertices.length);
  const {castsShadow}=await import('../src/lab/lighting.js');
  const renderer=Object.assign(Object.create(HouseRenderer.prototype),{gl:{ARRAY_BUFFER:0,bindBuffer(){},bufferSubData(){}},dynamicBoxes:boxes,dynamicRanges:mesh.ranges,dynamicOrigins:boxes.map(b=>[b.x,b.y,b.z,b.yaw||0,b.roll||0,b.pitch||0]),dynamicPositions:new Float32Array(boxes.length*6).fill(Infinity),dynamicTemplate:mesh.vertices,dynamicVertices:new Float32Array(mesh.vertices),dynamicCasters:boxes.map(castsShadow),fixtures:world.lights.fixtures,dirtyLampShadows:new Set()});

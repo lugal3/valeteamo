@@ -4,11 +4,14 @@
 import {LOIS_PS2_PROFILE} from './lois-ps2-profile.js';
 import {loisBoneForPart} from './lois-ps2-rig.js';
 
-export const LOIS_PS2_VARIANT='ps2-b';
+export const LOIS_PS2_VARIANT='photo-a';
 
-// All lengths are metres. Each piece keeps an identifier understood by the
-// existing legacy animation adapter; rigGroup marks attachments for phase 4.
-export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
+// One production visual for Lois. The former PS2-B and primitive alternatives
+// were removed from runtime selection; even older saved variant flags cannot
+// instantiate them. photoMode is intentionally fixed so bundlers may discard
+// unreachable illustrated fallback branches during production compilation.
+export function buildLoisPs2Model(piece,{quality='mobile'}={}){
+ const photoMode=true;
  const desktop=quality==='desktop';
  const p=LOIS_PS2_PROFILE.palette,parts=[];
  const add=(id,x,y,z,w,h,d,mat,color,extra={})=>

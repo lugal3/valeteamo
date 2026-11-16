@@ -84,11 +84,12 @@ const {chromium}=require('playwright');
    renderer.quality='medium';renderer.render(camera,true,2.3,false,{reduced:false});
    if(renderer.loisFaceTexture.size!==1024||renderer.loisFaceTexture.uploads!==3)
     throw Error('Switching to medium must restore 1024px atlas once');
+   // Older saves must NOT introduce a second mesh/atlas in production.
    const old={...actor,visualVariant:'legacy'};
    renderer.rebuild([...stage,...pickupGeometry([old])]);
    renderer.updateDynamic(4,{reduced:true});
-   if(renderer.loisRigMetrics.samples!==0)throw Error('Legacy fallback still runs PS2 rig');
-   if(renderer.loisFaceTexture.uploads!==3)throw Error('Legacy fallback reloaded face texture');
+   if(renderer.loisRigMetrics.samples!==1)throw Error('Saved legacy selection must use Photo-A rig');
+   if(renderer.loisFaceTexture.uploads!==3)throw Error('Migrated actor reloaded face texture');
    renderer.destroy();
    if(!renderer.loisFaceTexture.disposed)throw Error('GPU atlas must be released when exiting the house');
    // Reenter: resources should be initialized afresh rather than reused after destruction.
@@ -115,7 +116,7 @@ const {chromium}=require('playwright');
     timesMs:{median:pick(.5),p95:pick(.95)},
     textureBytes:{low:512*512*4,medium:1024*1024*4},
     textureUploadsPerQualityCycle:3,
-    legacyRollback:true,reentry:true,glError:error
+    legacyMigration:true,reentry:true,glError:error
    };
   });
   assert.deepEqual(errors,[]);

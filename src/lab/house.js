@@ -412,13 +412,21 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(demo&&config.entry!=='rescue'&&events.phase!=='evaded'){say('Primero despista al perseguidor para que puedan salir.',4);return;}
    puzzle=puzzleEvent(puzzle,'rescue');o.taken=true;
    if(demo){
-    // Leave the ropes on Louis until Kitty visibly unties them; the chair stays.
-    for(const box of world.boxes)if(box.id.startsWith('captive-')&&!box.id.startsWith('captive-chair-')&&!box.id.startsWith('captive-rope-'))box.hiddenGeometry=true;
-    louis=createLouisEscape(world);loisShotDirector=createLoisShotDirector();world.objects.push(louis);
+    // The waiting captive is ALREADY the rigged Photo-A companion.
+    // Reuse that actor instead of spawning a second Louis during untying:
+    // both phases draw the same face texture, rig and body mesh.
+    const captive=world.objects.find(item=>item.id==='captive-louis');
+    const rescued=createLouisEscape(world);
+    louis=captive?Object.assign(captive,rescued):rescued;
+    loisShotDirector=createLoisShotDirector();
+    if(!captive)world.objects.push(louis);
     events.phase='rc-rescue';pursuer.reset();sound.setThreat(false);
     phone.close();resetInput();rebuild();play('cloth',o);play('pickup',o);
     say('Kitty se arrodilla junto a Louis para soltar las cuerdas. Mantén silencio…',4);
    }else{
+    // Non-demo rescue still hides the captive, without leaving a ghost actor.
+    const captive=world.objects.find(item=>item.id==='captive-louis');
+    if(captive)captive.taken=true;
     for(const box of world.boxes)if(box.id.startsWith('captive-rope-'))box.hiddenGeometry=true;
     rebuild();phone.close();resetInput();pursuer.reset();sound.setThreat(false);
     if(!events.complete())events.phase='safe';

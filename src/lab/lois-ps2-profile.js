@@ -14,7 +14,7 @@ export const LOIS_PS2_PROFILE=freezeDeep({
  id:LOIS_VISUAL_ID,
  actorKind:'louis-companion', // Existing save/cutscene key. Never rename during visual work.
  displayName:'Lois',
- reference:'Option B — PS2 semirealistic, photographic UV face / low-poly body',
+ reference:'Option A — approved photographic face and hair, low-poly rigged body',
  palette:{
   blazer:[.14,.16,.20],tshirt:[.85,.84,.82],trousers:[.17,.18,.22],
   shoes:[.11,.12,.14],hair:[.23,.15,.11],eyes:[.31,.51,.66],skin:[.85,.68,.57]
@@ -32,7 +32,7 @@ export const LOIS_PS2_PROFILE=freezeDeep({
  meshLimits:{
   mobileTriangles:3500,desktopTriangles:6500,drawCalls:4,
   targetAnimationFps:60,
-  note:'Keep existing low-poly fallback; never instantiate an extra renderer'
+  note:'Only the approved Photo-A mesh; never instantiate a duplicate actor or renderer'
  },
  expressiveChannels:['blink','gazeYaw','gazePitch','jawOpen','browLift','fear','relief'],
  preservedPhases:['untying','climb','hide','hidden','follow']

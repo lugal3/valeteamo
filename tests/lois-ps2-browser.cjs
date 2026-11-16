@@ -96,40 +96,22 @@ const {chromium}=require('playwright');
    console.log('RENDER',JSON.stringify({name,triangles:data.triangles,vertices:data.vertices,pngBytes:png.length,faceBrightness:Math.round(data.faceBrightness),rigUploads:data.perf.uploads,rigBytes:data.perf.bytes}));
    return png;
   };
-  const photofront=await capture('photo-a','front');
+  // The shipped rescue uses exactly one Photo-A model. Capture it in
+  // every orientation and rescue pose; do not spend CI rendering deleted
+  // illustrated or legacy variants.
+  await capture('photo-a','front');
   await capture('photo-a','threequarter');
   await capture('photo-a','side');
   await capture('photo-a','bust');
   await capture('photo-a','portrait');
   await capture('photo-a','portrait','low');
-  const modern=await capture('ps2-b','front');
-  assert.equal(photofront.equals(modern),false,'photo projection must not look like illustrated fallback');
-  const flat=await capture('ps2-b-flat','front');
-  await capture('ps2-b-flat','portrait');
-  assert.equal(modern.equals(flat),false,'painted face must change pixels compared with untextured skin');
-  await capture('ps2-b','side');
-  await capture('ps2-b','threequarter');
-  await capture('ps2-b','portrait');
-  await capture('ps2-b-faceonly','portrait');
-  await capture('ps2-b-nohair','portrait');
-  await capture('ps2-b','front','low');
-  await capture('ps2-b','portrait','low');
-  await capture('ps2-b','front','medium',{phase:'untying',age:1.3,walk:0,speed:0,crouch:.33,blink:0});
-  await capture('ps2-b','front','medium',{phase:'climb',age:.9,walk:.8,speed:2,crouch:0,blink:0});
-  await capture('ps2-b','front','medium',{phase:'hide',age:.85,walk:0,speed:0,crouch:.78,blink:0});
-  await capture('ps2-b','portrait','medium',{phase:'follow',age:1.42,walk:0,speed:0,crouch:0,blink:1});
-  // Phase 5: character can react nonverbally without new story dialogue.
-  for(const type of ['look-kitty','startle','relief','listen','speak','reach']){
-   const duration={ 'look-kitty':1.05,startle:.75,relief:1.5,listen:1.35,speak:1.6,reach:1.15 }[type];
-   await capture('ps2-b','portrait','medium',{
-    phase:type==='startle'?'hide':type==='listen'?'hidden':'follow',
-    age:1.2,walk:0,speed:0,crouch:type==='listen'?1:0,blink:0,
-    visualReaction:{type,age:duration*.4,duration}
-   });
-  }
-  const old=await capture('legacy','front');
-  assert.equal(modern.equals(old),false,'switching the visual preset must materially change the rendered scene');
+  for(const pose of [
+   {phase:'untying',age:1.3,walk:0,speed:0,crouch:.55,blink:0},
+   {phase:'climb',age:.9,walk:.8,speed:2,crouch:0,blink:0},
+   {phase:'hide',age:.85,walk:0,speed:0,crouch:.78,blink:0},
+   {phase:'follow',age:1.42,walk:0,speed:0,crouch:0,blink:1}
+  ])await capture('photo-a','portrait','medium',pose);
   assert.deepEqual(errors,[],'no runtime page exceptions');
-  console.log('PASS: Lois PS2-B 21-bone animation in rescue poses, blink, WebGL textured/flat/legacy, one-time UV upload.');
+  console.log('PASS: one Photo-A rescue model, 21-bone rig, all directions and poses, no legacy render, one-time texture upload.');
  }finally{await browser?.close();await server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -9,7 +9,7 @@ const assert=require('node:assert/strict');
  const actor={kind:'louis-companion',id:'louis-escape',visualPreset:LOIS_VISUAL_ID,
   x:2.2,y:0,z:4.6,yaw:.4,phase:'follow',age:3.2,walk:1.1,speed:2,crouch:0,blink:0};
  const parts=pickupGeometry([actor]);
- assert(parts.length>40);
+ assert(parts.length>20);
  assert(parts.every(p=>p.rigBone&&p.rigPart),'all PS2 pieces bind to a bone');
  const torso=parts.find(p=>p.rigPart==='torso');
  for(const side of [-1,1]){
@@ -97,11 +97,12 @@ const assert=require('node:assert/strict');
  const at120=sampleLoisRig({...state,dt:1/120});
  assert.deepEqual(at30.bones,at60.bones);assert.deepEqual(at60.bones,at120.bones);
  const old=pickupGeometry([{...actor,visualVariant:'legacy'}]);
- assert(old.every(p=>!p.rigBone),'legacy mesh uses unchanged old animation path');
+ assert(old.every(p=>p.rigBone&&p.photoMapped!==undefined),
+  'saved legacy variant is migrated to the single rigged photo model');
  const game=createHouse(),rescued=createLouisEscape(game);
  let event;for(let i=0;i<900&&rescued.phase!=='hidden';i++)event=updateLouisEscape(rescued,1/30)||event;
  assert.equal(rescued.phase,'hidden');
  assert(freeLouis(rescued));updateLouisEscape(rescued,1/30,{x:rescued.x+.8,y:rescued.y,z:rescued.z+.8,yaw:0});
  assert.equal(rescued.phase,'follow');
- console.log('PASS: phase 4 - 21 parented rigid bones, eyes/jaw/gaze, five rescue states, 30/60/120Hz, old-model rollback and UV stability.');
+ console.log('PASS: phase 4 - 21 parented rigid bones, eyes/jaw/gaze, five rescue states, 30/60/120Hz, single-model migration and UV stability.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
