@@ -3,17 +3,15 @@ const fs=require('node:fs');
 const path=require('node:path');
 (async()=>{
  const {loisFaceSurface}=await import('../src/lab/lois-ps2-face.js');
- const {LOIS_FACE_SOURCE,faceTextureSize}=await import('../src/lab/lois-ps2-texture.js');
+ const {LOIS_PHOTO_SOURCE,faceTextureSize}=await import('../src/lab/lois-ps2-texture.js');
  const {LOIS_PS2_PROFILE}=await import('../src/lab/lois-ps2-profile.js');
  const {FRAGMENT_SHADER}=await import('../src/lab/material-shaders.js');
  assert.equal(faceTextureSize('low'),512);
  assert.equal(faceTextureSize('medium'),1024);
- assert(LOIS_FACE_SOURCE.endsWith('/assets/lois-ps2-face.svg'));
- const src=fs.readFileSync(path.join(__dirname,'../src/lab/assets/lois-ps2-face.svg'),'utf8');
- assert(src.startsWith('<svg')&&src.includes('viewBox="0 0 1024 1024"'));
- assert(src.includes('Seam lies at the back'));
- assert(src.includes('skin')&&src.includes('beard')&&src.includes('eyeshadow'));
- assert(!src.includes('<image')&&!src.includes('href='),'UV art must not hotlink any photo');
+ assert(LOIS_PHOTO_SOURCE.includes('lois-option-a-reference.jpg'));
+ const picture=fs.readFileSync(path.join(__dirname,'../src/lab/assets/lois-option-a-reference.jpg'));
+ assert(picture.length>10000&&picture[0]===255&&picture[1]===216,
+  'the one production photo atlas is a real JPEG');
  assert.equal(LOIS_PS2_PROFILE.atlas.colorSpace,'sRGB');
  assert(FRAGMENT_SHADER.includes('uniform sampler2D uAtlas,uLightDepth,uMaterials,uTV,uLoisFace;'));
  assert(FRAGMENT_SHADER.includes('vArt>1.5&&vArt<2.5'),'TV sampler must not override Lois face');
@@ -45,5 +43,5 @@ const path=require('node:path');
   assert(Math.abs(textured.vertices[l+2]-textured.vertices[r+2])<.00001,'cylindrical seam Z continuous');
   assert.equal(textured.vertices[l+9],0);assert.equal(textured.vertices[r+9],1);
  }
- console.log('PASS: original UV atlas, seam closure, texture/material isolation and reversible fallback.');
+ console.log('PASS: Photo-A UV atlas, seam closure and texture/material isolation.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
