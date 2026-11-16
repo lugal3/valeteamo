@@ -19,7 +19,7 @@ const cameras={
  threequarter:()=>({x:.40,y:1.65,z:.70,yaw:Math.PI+Math.atan(.40/.70),pitch:0}),
  portrait:()=>({x:0,y:1.65,z:.52,yaw:Math.PI,pitch:0})
 };
-let renderer=null,frame=0,last=0,lastDraw=0,view='threequarter',motion='idle',blinkUntil=0,stopped=false;
+let renderer=null,frame=0,last=0,lastDraw=0,view='portrait',motion='idle',blinkUntil=0,stopped=false;
 function error(message){
  stopped=true;cancelAnimationFrame(frame);
  status.hidden=false;status.className='error';
