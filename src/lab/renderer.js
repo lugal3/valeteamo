@@ -177,12 +177,15 @@ export function geometry(boxes){
    for(let row=0;row<rings.length-1;row++){
     for(let k=0;k<sides;k++){
      const a=k*Math.PI*2/sides,b=(k+1)*Math.PI*2/sides;
-     const mid=(a+b)*.5;
-     const n=[Math.cos(mid),.07,Math.sin(mid)];
      const quad=[point(a,row),point(b,row),point(b,row+1),point(a,row+1)];
      for(let v=0;v<4;v++){
       const u=k/sides+(v===1||v===2?1/sides:0),vv=(row+(v>=2?1:0))/(rings.length-1);
-      vertices.push(...quad[v],...color,...n,u,vv,0,style,-Math.sin(mid),0,Math.cos(mid));
+      // Continuous vertex normals soften the segmented neck without adding
+      // polygons; shaded facial skin no longer looks vertically striped.
+      const angle=(v===0||v===3)?a:b;
+      const length=Math.hypot(Math.cos(angle),.07,Math.sin(angle));
+      const n=[Math.cos(angle)/length,.07/length,Math.sin(angle)/length];
+      vertices.push(...quad[v],...color,...n,u,vv,0,style,-Math.sin(angle),0,Math.cos(angle));
      }
      indices.push(offset,offset+2,offset+1,offset,offset+3,offset+2);
      offset+=4;
