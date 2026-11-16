@@ -72,8 +72,10 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
 
  // Sculpted head is a single 3D face surface. Cheeks/nose/chin/lips are
  // parametrically deformed in lois-ps2-face.js, *not* stacked colored balls.
+ // A moderate increase in vertex density supports actual jaw/cheek planes
+ // and more uniform texture deformation without exceeding the mobile budget.
  add('face',0,1.610,.006,photoMode?.398:.326,photoMode?.456:.425,photoMode?.276:.318,'paper',skin,
-  {shape:'lois-face',segments:desktop?32:24,rings:desktop?18:14,rigGroup:'head'});
+  {shape:'lois-face',segments:desktop?36:28,rings:desktop?22:18,rigGroup:'head'});
  for(const side of [-1,1]){
   add('ear-'+side,side*.171,1.610,-.004,.054,.095,.061,'paper',skin,
    {...oval,rigGroup:'head'});
