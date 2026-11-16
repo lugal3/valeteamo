@@ -84,5 +84,9 @@ export function loisAnatomicalHeadPoint(box,u,v){
 
  const relief=socket+brow+noseBridge+noseTip+noseWings+
   cheekbones+temples+philtrum+lips+underlip+chin+jawCorners+mandibularShelf;
- return [box.x+x,box.y+y,box.z+zBase+towardFront*relief];
+ // Every longitudinal meridian must converge at the same pole. Without a
+ // pole mask, the chin Gaussian produced a tiny split at the bottom cap.
+ const pole=clamp((1-Math.abs(vertical))/.10,0,1);
+ const poleMask=pole*pole*(3-2*pole);
+ return [box.x+x,box.y+y,box.z+zBase+towardFront*poleMask*relief];
 }
