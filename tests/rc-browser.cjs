@@ -58,7 +58,11 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   await page.evaluate(()=>window.__rescueHouse.setPose({
    x:8.55,y:-3.55,z:12.35,yaw:0,pitch:0
   }));
-  await page.waitForTimeout(160);
+  // The screenshot supplied by the user has Kitty's flashlight equipped.
+  // Use the same illumination rather than mistaking a dark navy shirt for a
+  // missing torso while reviewing the new captive pose in the real tunnel.
+  await page.locator('[data-equip="flashlight"]').click();
+  await page.waitForTimeout(220);
   await shot('03b-louis-captive-photo-before-untie');
 
   console.log('RC browser: free Louis, climb basement steps, hide behind American-style kitchen bar');
