@@ -84,11 +84,13 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  add('under-lip',0,1.478,.146,.048,.004,.004,'paper',[.74,.57,.51],{...tiny,rigGroup:'head'});}
 
  // Asymmetric, side-swept chestnut silhouette is the main likeness cue.
- add('hair-back',0,photoMode?1.751:1.725,-.043,
-  photoMode?.45:.357,photoMode?.258:.254,photoMode?.346:.306,'wood',hairShadow,
+ add('hair-back',0,photoMode?1.738:1.725,-.043,
+  photoMode?.407:.357,photoMode?.242:.254,photoMode?.310:.306,'wood',hairShadow,
   {shape:'round',segments:desktop?12:10,rings:desktop?6:4,rigGroup:'head'});
- add('hair-cap',-.015,photoMode?1.830:1.802,-.004,
-  photoMode?.432:.355,photoMode?.178:.153,photoMode?.323:.303,'wood',hair,
+ // The actual photo cutouts make the visible tousled crown.
+ // Keep this backing volume inset to avoid the bulky spherical helmet.
+ add('hair-cap',-.015,photoMode?1.815:1.802,-.027,
+  photoMode?.335:.355,photoMode?.132:.153,photoMode?.259:.303,'wood',hair,
   {shape:'round',segments:desktop?12:10,rings:desktop?6:4,rigGroup:'head'});
  if(photoMode){
   // The previous photo variant lost nearly all the tousled hair silhouette:
