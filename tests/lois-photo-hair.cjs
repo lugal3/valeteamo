@@ -3,6 +3,7 @@ const assert=require('node:assert/strict');
  const {buildLoisPs2Model}=await import('../src/lab/lois-ps2-model.js');
  const {geometry,pickupGeometry}=await import('../src/lab/renderer.js');
  const {LOIS_VISUAL_ID}=await import('../src/lab/lois-ps2-profile.js');
+ const {loisFacePoint}=await import('../src/lab/lois-ps2-face.js');
  const piece=(id,x,y,z,w,h,d,mat,props={})=>({id,x,y,z,w,h,d,mat,...props,dynamic:true,solid:false});
  const photo=buildLoisPs2Model(piece,{photoMode:true});
  const classic=buildLoisPs2Model(piece);
@@ -21,6 +22,21 @@ const assert=require('node:assert/strict');
  assert(hairs.some(b=>b.id==='hair-photo-fringe-right'&&b.photoPolygon.length>=12),
   'right fringe uses a tapered, less abrupt silhouette');
  assert(photo.some(b=>b.id==='face'&&b.photoMapped),'photographic face is untouched');
+ // Stage 3: photo-only jaw/cheek volume. Sample the same dimensions in both
+ // modes so the classic silhouette remains the known geometry baseline.
+ const faceBox=photo.find(b=>b.id==='face');
+ const photoJawPoint=loisFacePoint(faceBox,.67,.20);
+ const classicJawPoint=loisFacePoint({...faceBox,photoMapped:false},.67,.20);
+ assert(photoJawPoint[0]>classicJawPoint[0],
+  'photo jaw is gently fuller than the original narrow PS2 chin');
+ const cheekU=.64,cheekV=.47;
+ const photoCheekPoint=loisFacePoint(faceBox,cheekU,cheekV);
+ const theta=(cheekU-.5)*Math.PI*2,phi=(cheekV-.5)*Math.PI;
+ const baseZ=faceBox.z+Math.cos(theta)*Math.cos(phi)*faceBox.d*.5;
+ assert(photoCheekPoint[2]>baseZ,
+  'photo cheek geometry has measured depth without separate facial primitives');
+ assert(photoCheekPoint.every(Number.isFinite)&&photoJawPoint.every(Number.isFinite),
+  'photo-only cheek/jaw adjustment must remain finite');
  const neck=photo.find(b=>b.id==='neck');
  assert(neck?.shape==='lois-neck-lowpoly'&&!neck.photoMapped,
   'the PS2 neck is faceted skin geometry, not a stretched photo map');
