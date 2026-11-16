@@ -30,8 +30,8 @@ const assert=require('node:assert/strict');
  assert(nose[2]-underEye[2]>.035,
   'nose bridge and tip have independent projected 3D volume');
  const chinPole=at(.5,0);
- assert(chinPole[2]>face.z+.023,
-  'the lower pole sits forward to support an actual under-chin');
+ assert(chinPole[2]>face.z+.05,
+  'the closed chin pole rests in front of the throat, not behind a loose neck');
  const sideFront=at(.5,.27),sideOld=baseline(.5,.27);
  assert(sideFront[2]>sideOld[2]+.012,
   'chin shelf and anterior jaw now project beyond the oval');
