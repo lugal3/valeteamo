@@ -15,7 +15,9 @@ export function loisFacePoint(box,u,v){
  const theta=(u-.5)*Math.PI*2,phi=(v-.5)*Math.PI;
  const sin=Math.sin(theta),cos=Math.cos(theta),lat=Math.cos(phi),vertical=Math.sin(phi);
  const xBase=sin*lat*box.w*.5;
- const jaw=1-.22*clamp((-vertical-.16)/.70,0,1);
+ // Photo-A preserves the approved UV artwork and gets a fuller jawline
+ // instead of an artificially pinched chin. Classic PS2-B is unchanged.
+ const jaw=1-(box.photoMapped?.19:.22)*clamp((-vertical-.16)/.70,0,1);
  const x=xBase*jaw;
  const y=vertical*box.h*.5;
  const front=Math.max(0,cos)*Math.pow(Math.max(0,lat),.28);
@@ -31,7 +33,13 @@ export function loisFacePoint(box,u,v){
  const browR=gaussian(x,y,.091,.078,.069,.026)*.010;
  // A photo must supply the facial anatomy: do not emboss a second nose/lips
  // on top of eyes and mouth that already exist in the image.
- const photoRelief=nose*.28+tip*.16+chin*.08+cheekL*.08+cheekR*.08;
+ // The portrait texture already contains all facial features. Add small
+ // structural cheekbone and lower-jaw volume beneath it (no duplicated
+ // photographic nose/lips); keep the UV projection and rigid face intact.
+ const photoCheekbones=(gaussian(x,y,-.113,-.030,.066,.080)+gaussian(x,y,.113,-.030,.066,.080))*.011;
+ const photoJaw=gaussian(x,y,0,-.160,.103,.059)*.005;
+ const photoRelief=nose*.28+tip*.16+chin*.08+cheekL*.08+cheekR*.08+
+  photoCheekbones+photoJaw;
  const z=cos*lat*box.d*.5+front*(box.photoMapped?photoRelief:(nose+tip+philtrum+upperLip+lowerLip+chin+cheekL+cheekR+browL+browR));
  return [box.x+x,box.y+y,box.z+z];
 }
