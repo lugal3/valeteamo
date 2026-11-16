@@ -84,13 +84,20 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
   {shape:'round',segments:desktop?12:10,rings:desktop?6:4,rigGroup:'head'});
  add('hair-cap',-.015,1.802,-.004,.355,.153,.303,'wood',hair,
   {shape:'round',segments:desktop?12:10,rings:desktop?6:4,rigGroup:'head'});
- for(const [i,x,y,z,w,h,roll] of [
+ // The approved photograph already paints the swept fringe across the
+ // forehead. Keep only the two outer hair cards for volume: the old five
+ // overlapping rectangles duplicated the hair and created skin-colored seams.
+ const fringe=photoMode?[
+  [0,-.153,1.792,.102,.080,.090,.36],
+  [4,.136,1.808,.098,.082,.083,-.37]
+ ]:[
   [0,-.148,1.754,.098,.116,.122,.40],
   [1,-.106,1.743,.134,.116,.132,.28],
   [2,-.052,1.734,.166,.111,.133,.22],
   [3,.026,1.750,.171,.100,.106,-.12],
   [4,.112,1.775,.117,.114,.094,-.41]
- ]){
+ ];
+ for(const [i,x,y,z,w,h,roll] of fringe){
   add('fringe-'+i,x,y,z,w,h,.066,'wood',i%2?hairLight:hair,
    {shape:'rounded-box',roundness:.43,segments:desktop?8:6,rings:desktop?4:4,roll,rigGroup:'head'});
  }
