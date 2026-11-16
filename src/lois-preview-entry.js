@@ -7,7 +7,7 @@ const canvas=document.getElementById('lois-canvas');
 const panel=document.getElementById('lois-stage');
 const status=document.getElementById('lois-status');
 const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
-const actor={id:'louis-escape',kind:'louis-companion',visualPreset:LOIS_VISUAL_ID,
+const actor={id:'louis-escape',kind:'louis-companion',visualPreset:LOIS_VISUAL_ID,visualVariant:'photo-a',
  x:0,y:0,z:0,yaw:0,phase:'follow',age:.5,walk:0,speed:0,crouch:0,blink:0};
 const stage=[
  {id:'preview-floor',x:0,y:-.12,z:0,w:14,h:.18,d:14,mat:'floor',color:[.44,.43,.42],solid:false},
