@@ -45,8 +45,12 @@ const assert=require('node:assert/strict');
  const events=[],trail=[];
  let hideStart=null,hiddenSample=null;
  for(let i=0;i<2200&&actor.phase!=='hidden';i++){
-  const phaseBefore=actor.phase;
+  const phaseBefore=actor.phase,yawBefore=actor.yaw;
   const cue=updateLouisEscape(actor,dt);
+  if(phaseBefore==='hide'){
+   const diff=Math.atan2(Math.sin(actor.yaw-yawBefore),Math.cos(actor.yaw-yawBefore));
+   assert(Math.abs(diff)<.39,'Louis turns toward counter gradually, never snaps');
+  }
   if(cue)events.push(cue);
   if(i%6===0)trail.push({x:actor.x,z:actor.z,phase:actor.phase});
   if(actor.phase==='hide'&&phaseBefore!=='hide')hideStart={x:actor.x,y:actor.y,z:actor.z};
@@ -58,6 +62,9 @@ const assert=require('node:assert/strict');
  assert(trail.some(p=>p.phase==='climb'&&p.z<KITCHEN_BAR.northEnd-.22&&p.x>10.5),
   'camera sees Louis walk around counter tip, not teleport behind it');
  assert(actor.crouch>=.99,'he must finish squatting behind the panel');
+ assert(Math.abs(Math.atan2(Math.sin(actor.yaw-KITCHEN_HIDE_SPOT.yaw),
+  Math.cos(actor.yaw-KITCHEN_HIDE_SPOT.yaw)))<.025,
+  'he faces the wood panel before finishing the hide animation');
  // Actual skinned WebGL head and hair, including the new anatomical face.
  const parts=pickupGeometry([actor]),mesh=geometry(parts);
  const bind=[actor.x,actor.y,actor.z],output=new Float32Array(mesh.vertices);
