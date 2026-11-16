@@ -78,6 +78,20 @@ export function geometry(boxes){
   const range={start:first,end:first,indexStart:indices.length,indexEnd:indices.length};ranges.push(range);
   const projectReference=()=>{
    if(!box.photoMapped)return;
+   // Curving the photographic hair onto the scalp must NOT distort the
+   // approved source picture. Hair cards carry source pixels directly in
+   // their temporary UV slots, while the face retains its original
+   // world-to-UV projection.
+   if(box.shape==='lois-photo-hair'){
+    for(let j=first;j<vertices.length;j+=16){
+     const sx=vertices[j+9],sy=vertices[j+10];
+     vertices[j+9]=Math.max(.003,Math.min(.997,(sx-110)/650));
+     vertices[j+10]=Math.max(.003,Math.min(.997,1-sy/850));
+     vertices[j+11]=4;
+     vertices[j+3]=1;vertices[j+4]=1;vertices[j+5]=1;
+    }
+    return;
+   }
    // UV projection from the user's approved OPTION A reference.
    // Source crop: x 110..760, y 0..850. Both hair and face use source pixels.
    const ax=box.source?.x||0,ay=box.source?.y||0;
@@ -99,6 +113,33 @@ export function geometry(boxes){
    for(let i=first;i<vertices.length;i+=16){const dx=vertices[i]-box.x,dy=vertices[i+1]-box.y,x=dx*cr-dy*sr,y=dx*sr+dy*cr,z=vertices[i+2]-box.z,pz=y*sp+z*cp;vertices[i]=box.x+x*c-pz*s;vertices[i+1]=box.y+y*cp-z*sp;vertices[i+2]=box.z+x*s+pz*c;for(const offset of [6,13]){const ax=vertices[i+offset],ay=vertices[i+offset+1],nx=ax*cr-ay*sr,ny=ax*sr+ay*cr,nz=vertices[i+offset+2],rz=ny*sp+nz*cp;vertices[i+offset]=nx*c-rz*s;vertices[i+offset+1]=ny*cp-nz*sp;vertices[i+offset+2]=nx*s+rz*c;}}
    projectReference();
   };
+  if(box.shape==='lois-tee-torso'){
+   // Single tapered T-shirt shell: broader at the shoulders, softened
+   // chest and narrower waist. Prevents the conspicuous rectangular
+   // shirt panel of the old Photo-A body without changing any rig bone.
+   const sides=Math.max(10,Math.round(box.segments||12));
+   const rings=[[-.5,.83,.82],[-.16,.91,.95],[.28,1.09,1.03],[.5,.82,.76]];
+   const point=(a,row)=>{
+    const [yy,width,depth]=rings[row];
+    return [box.x+Math.cos(a)*box.w*.5*width,
+     box.y+yy*box.h,
+     box.z+Math.sin(a)*box.d*.5*depth];
+   };
+   for(let row=0;row<rings.length-1;row++){
+    for(let k=0;k<sides;k++){
+     const a=k*Math.PI*2/sides,b=(k+1)*Math.PI*2/sides,mid=(a+b)*.5;
+     const n=[Math.cos(mid),.03,Math.sin(mid)];
+     const quad=[point(a,row),point(b,row),point(b,row+1),point(a,row+1)];
+     for(let v=0;v<4;v++){
+      const u=k/sides+(v===1||v===2?1/sides:0),vv=(row+(v>=2?1:0))/(rings.length-1);
+      vertices.push(...quad[v],...color,...n,u,vv,0,style,-Math.sin(mid),0,Math.cos(mid));
+     }
+     indices.push(offset,offset+2,offset+1,offset,offset+3,offset+2);
+     offset+=4;
+    }
+   }
+   rotateMesh();continue;
+  }
   if(box.shape==='lois-neck-lowpoly'){
    // Tapered faceted neck. The earlier photographic neck stretched a narrow
    // chin column, while rounded-box read as a pink cube in the portrait view.
@@ -139,15 +180,21 @@ export function geometry(boxes){
    const poly=box.photoPolygon||[];
    if(poly.length>=3){
     const center=poly.reduce((a,p)=>[a[0]+p[0]/poly.length,a[1]+p[1]/poly.length],[0,0]);
-    const map=([sx,sy])=>[
-     box.x+(sx-450)/1300,
-     box.y+1.656+(470-sy)/1327,
-     box.z+(box.photoDepth||.17)
-    ];
+    // The old flat cards floated in front of the head at profile/3-4
+    // angles. Wrap each sample around the cap in X/Z and tuck the very
+    // tall source-image crown into the backing hair shell instead.
+    const map=([sx,sy])=>{
+     const x=(sx-450)/1300,sourceY=1.656+(470-sy)/1327;
+     const crown=Math.max(0,sourceY-1.77);
+     const side=Math.min(1,Math.abs(x)/.23);
+     const y=sourceY-crown*.48;
+     const z=(box.photoDepth||.17)-.086*side*side-.013*Math.min(1,crown/.2);
+     return [box.x+x,box.y+y,box.z+z];
+    };
     for(let k=0;k<poly.length;k++){
      for(const point of [center,poly[k],poly[(k+1)%poly.length]]){
       const xyz=map(point);
-      vertices.push(...xyz,...color,0,0,1,0,0,0,style,1,0,0);
+      vertices.push(...xyz,...color,0,0,1,point[0],point[1],0,style,1,0,0);
      }
      // Two-sided polygons remain visible on 3/4 head turns. The source
      // image has no alpha channel and polygons stay within the hair area.
