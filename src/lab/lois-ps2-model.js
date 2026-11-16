@@ -48,10 +48,13 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  add('jacket-button',.065,.973,.188,.010,.012,.008,'dark',[.43,.44,.48],{...tiny,rigGroup:'body'});
  }
  add('hips',0,.843,-.006,.356,.185,.237,'dark',p.trousers,{...box,rigGroup:'body'});
- add('neck',0,photoMode?1.460:1.449,.011,
-  photoMode?.233:.132,photoMode?.228:.158,photoMode?.175:.133,'paper',
+ // Photo-A neck extends behind the jaw and slightly into the shirt.
+ // The four tapered rings prevent a detached rectangular column in front
+ // and 3/4 views while keeping this actor's body rig and original face UVs.
+ add('neck',0,photoMode?1.452:1.449,photoMode?-.002:.011,
+  photoMode?.225:.132,photoMode?.264:.158,photoMode?.174:.133,'paper',
   photoMode?[.78,.61,.53]:skin,
-  photoMode?{shape:'lois-neck-lowpoly',segments:10,rings:3,rigGroup:'body'}:
+  photoMode?{shape:'lois-neck-lowpoly',segments:12,rings:4,rigGroup:'body'}:
    {...oval,rigGroup:'body'});
 
  // Sculpted head is a single 3D face surface. Cheeks/nose/chin/lips are
