@@ -27,12 +27,13 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
   iris=p.eyes,eyeWhite=[.91,.91,.90],ink=[.13,.16,.20];
 
  // Tailored dark blazer with a light grey crewneck, not a bulky hoodie.
- // The navy Photo-A torso is one softly tapered mesh; the retained shirt
- // primitive is sunk inside the shell so its rectangular face cannot show.
+ // Photo-A wears a single continuous navy T-shirt shell; the previous
+ // separately rendered shirt panel was still drawn over the chest in WebGL,
+ // making a conspicuous floating rectangle. Keep that panel ONLY for PS2-B.
  add('torso',0,1.11,-.015,photoMode?.490:.468,.56,.305,'dark',jacket,
   photoMode?{shape:'lois-tee-torso',segments:12,rings:4,rigGroup:'body'}:{...box,rigGroup:'body'});
- add('shirt',0,1.12,photoMode?.025:.140,photoMode?.30:.248,photoMode?.36:.445,
-  photoMode?.017:.025,'cream',shirt,{...box,rigGroup:'body'});
+ if(!photoMode)
+  add('shirt',0,1.12,.140,.248,.445,.025,'cream',shirt,{...box,rigGroup:'body'});
  if(photoMode){
   // Minimal dark collar silhouette and no suit lapel covering the neck.
   // Keep the collar behind the photo neck. The earlier black raised
@@ -164,10 +165,14 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  // Simple articulated silhouette: arm and leg identifiers deliberately remain
  // compatible with louisPartPose until full bone retargeting in phase 4.
  for(const side of [-1,1]){
-  add('upper-arm-'+side,side*(photoMode?.273:.285),1.172,-.019,.168,.340,.182,'dark',jacket,
-   {...(photoMode?oval:limb),roll:-side*.045,rigGroup:'arm',rigSide:side});
-  add('forearm-'+side,side*.308,.940,.021,.145,.258,.154,'dark',jacket,
-   {...(photoMode?oval:limb),rigGroup:'arm',rigSide:side});
+  // Keep rounded rectangular sleeves, not detached egg-shaped balloons.
+  // The Photo-A dimensions tuck them into the tapered shoulders.
+  add('upper-arm-'+side,side*(photoMode?.269:.285),1.175,-.019,
+   photoMode?.160:.168,photoMode?.326:.340,photoMode?.176:.182,'dark',jacket,
+   {...limb,roll:-side*.045,rigGroup:'arm',rigSide:side});
+  add('forearm-'+side,side*(photoMode?.298:.308),.940,.021,
+   photoMode?.138:.145,photoMode?.248:.258,photoMode?.146:.154,'dark',jacket,
+   {...limb,rigGroup:'arm',rigSide:side});
   add('hand-'+side,side*.315,.764,.078,.095,.132,.107,'paper',skin,
    {...oval,rigGroup:'arm',rigSide:side});
   add('thigh-'+side,side*.123,.647,-.001,.173,.463,.216,'dark',p.trousers,
