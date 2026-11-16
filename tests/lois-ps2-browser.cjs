@@ -42,7 +42,9 @@ const {chromium}=require('playwright');
      const loaded=await renderer.loisFaceTexture.readyPromise;
      if(!loaded)throw Error('Facial atlas could not load: check original SVG and Vite URL');
     }
-    const camera=shot==='portrait'?{x:0,y:1.64,z:.86,yaw:Math.PI,pitch:0}:
+    const camera=variant==='photo-a'&&shot==='portrait'?{x:0,y:1.66,z:.55,yaw:Math.PI,pitch:0}:
+     variant==='photo-a'&&shot==='threequarter'?{x:.34,y:1.66,z:.62,yaw:Math.PI+Math.atan(.34/.62),pitch:0}:
+     shot==='portrait'?{x:0,y:1.64,z:.86,yaw:Math.PI,pitch:0}:
      shot==='side'?{x:2.10,y:1.10,z:0,yaw:-Math.PI/2,pitch:0}:
      shot==='threequarter'?{x:1.40,y:1.20,z:2.10,yaw:Math.PI+Math.atan(1.40/2.10),pitch:0}:
      {x:0,y:1.10,z:2.2,yaw:Math.PI,pitch:0};
