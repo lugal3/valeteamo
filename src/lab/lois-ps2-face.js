@@ -1,3 +1,4 @@
+import {loisAnatomicalHeadPoint} from './lois-head-anatomy.js';
 // Photo-A anatomical head. One watertight parametric surface with a controlled
 // cheek / jaw silhouette, not a photograph stretched over an oval sphere.
 // Local UVs remain continuous and the model keeps the existing 21-bone head rig.
@@ -63,6 +64,11 @@ export function loisFaceColumnU(col,segments){
 // Local x/y/z from UV. The seam is at the back of the head so the *front*
 // occupies a continuous centered region of the eventual photographic UV atlas.
 export function loisFacePoint(box,u,v){
+ // Photo-A now uses a NEW anatomical ring-based sculpt, with separate
+ // forehead/cheek/jaw planes and real nasal and under-chin volume.
+ // Keep non-photo geometry only as a deterministic mathematical baseline
+ // for older rig/geometry tests; no alternative model is shipped.
+ if(box.photoMapped)return loisAnatomicalHeadPoint(box,u,v);
  const theta=(u-.5)*Math.PI*2,phi=(v-.5)*Math.PI;
  const sin=Math.sin(theta),cos=Math.cos(theta),lat=Math.cos(phi),vertical=Math.sin(phi);
  const xBase=sin*lat*box.w*.5;
