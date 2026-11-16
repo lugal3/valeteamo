@@ -52,8 +52,8 @@ const assert=require('node:assert/strict');
   'the PS2 fallback body retains its previous geometry');
  assert(neck.y+neck.h*.5>face.y-face.h*.5+.10,
   'upper neck overlaps the jaw, preventing a visible floating-head gap');
- assert(neck.y-neck.h*.5<shirt.y+shirt.h*.5,
-  'lower neck enters the shirt instead of ending above its neckline');
+ assert(neck.y-neck.h*.5<torso.y+torso.h*.5-.015,
+  'lower neck enters the sculpted torso instead of ending above its neckline');
  assert(!classic.some(b=>b.shape==='lois-photo-hair'),'legacy PS2-B has no added layer');
  const mesh=geometry(photo);
  assert(mesh.vertices.every(Number.isFinite));
