@@ -51,7 +51,7 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  add('neck',0,photoMode?1.460:1.449,.011,
   photoMode?.233:.132,photoMode?.228:.158,photoMode?.175:.133,'paper',
   photoMode?[.78,.61,.53]:skin,
-  photoMode?{shape:'rounded-box',roundness:.2,segments:8,rings:4,rigGroup:'body'}:
+  photoMode?{shape:'lois-neck-lowpoly',segments:10,rings:3,rigGroup:'body'}:
    {...oval,rigGroup:'body'});
 
  // Sculpted head is a single 3D face surface. Cheeks/nose/chin/lips are
