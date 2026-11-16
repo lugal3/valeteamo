@@ -9,10 +9,23 @@ const assert=require('node:assert/strict');
  const boxes=pickupGeometry([actor]);
  const face=boxes.find(x=>x.shape==='lois-face');
  assert(face&&face.photoMapped,'single continuous photo-mapped face');
- assert(boxes.filter(x=>x.photoMapped).length>=8,'real photo spans hair clumps as well');
+ assert(boxes.filter(x=>x.photoMapped).length>=5,'face plus four photographic hair cards remain mapped');
+ assert(boxes.filter(x=>x.shape==='lois-photo-hair').length===4,'photo hair retains four curved front cards');
+ assert(!boxes.some(x=>/ear-|hair-back|hair-cap|temple-|crown/.test(x.rigPart||'')&&x.photoMapped),
+  'no photographic eyes, ears or stripes on scalp backing meshes');
  assert(!boxes.some(x=>/pickup-louis-escape-(iris|eye|pupil|lid|upper-lip|lower-lip|brow|nostril)/.test(x.id)),
   'photo supplies original eyes, eyebrows and lips: no double emoji-style features');
  const mesh=geometry(boxes);
+ // A real profile must not show a second projected face behind the ears.
+ const faceRange=mesh.ranges[boxes.findIndex(x=>x.shape==='lois-face')];
+ let rearHead=0;
+ for(let i=faceRange.start;i<faceRange.end;i+=16){
+  if(mesh.vertices[i+8]<-.35){
+   rearHead++;
+   assert.equal(mesh.vertices[i+11],0,'rear head must use matte skin, not photo sampler');
+  }
+ }
+ assert(rearHead>20,'closed photo head has an unmapped rear hemisphere');
  let count=0;for(let i=0;i<mesh.vertices.length;i+=16){
   if(mesh.vertices[i+11]===4){count++;
    assert(mesh.vertices[i+9]>=0&&mesh.vertices[i+9]<=1);
