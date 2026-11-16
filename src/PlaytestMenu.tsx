@@ -103,7 +103,17 @@ export function PlaytestHouse({id,onExit}:{id:HouseTrialId;onExit:()=>void}){
   }).catch(()=>{if(!cancelled)setStatus('failed');});
   return ()=>{cancelled=true;stop?.();};
  },[id,onExit,trial]);
- if(status==='ready')return null;
+ // The house is rendered as a body-level WebGL layer. Never return an empty
+ // React route: on real iOS the layer may be lost during a context/viewport
+ // transition. This lightweight fallback remains behind the active 3D world.
+ if(status==='ready')return <main className="playtest-menu" data-house-fallback>
+  <div className="playtest-shell"><header className="playtest-header">
+   <h1>Casa 3D</h1><p role="status">La escena se abrió fuera del panel.</p>
+   <p>Si no puedes ver el mundo, vuelve al menú o abre el visor independiente de Lois.</p>
+   <button type="button" className="playtest-back" onClick={onExit}>← Volver a pruebas</button>
+   <a className="playtest-back" href="/lois-preview.html">Ver modelo 3D de Lois</a>
+  </header></div>
+ </main>;
  return <main className="playtest-menu"><div className="playtest-shell"><header className="playtest-header">
   <button type="button" className="playtest-back" onClick={onExit}>← Volver a pruebas</button>
   <h1>{trial.title}</h1>
