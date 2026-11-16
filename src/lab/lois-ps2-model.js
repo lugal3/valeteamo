@@ -20,7 +20,7 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
    // cutouts. Ears must remain matte: photo mapping them sampled strips of
    // eyes and skin, producing floating circular discs in profile. The face
    // rear uses a dedicated skin-only UV patch in renderer.js.
-   photoMapped:photoMode&&(id==='face'||id.startsWith('hair-')||
+   photoMapped:photoMode&&(id==='face'||id==='neck'||id.startsWith('hair-')||
     id.startsWith('temple-')||id==='crown'),
    rigBone:loisBoneForPart(id),rigPart:id}));
  const box={shape:'rounded-box',roundness:.35,segments:desktop?8:6,rings:desktop?5:4};
@@ -70,7 +70,7 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
  add('neck',0,photoMode?1.450:1.449,photoMode?-.002:.011,
   photoMode?.188:.132,photoMode?.220:.158,photoMode?.155:.133,'paper',
   photoMode?[.78,.61,.53]:skin,
-  photoMode?{shape:'lois-neck-lowpoly',segments:14,rings:4,rigGroup:'body'}:
+  photoMode?{shape:'lois-neck-lowpoly',segments:16,rings:6,rigGroup:'body'}:
    {...oval,rigGroup:'body'});
 
  // Sculpted head is a single 3D face surface. Cheeks/nose/chin/lips are
@@ -84,7 +84,8 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
  // Ears are set at the jaw hinge, partially embedded in the skin, rather
  // than hovering as large circular discs in side/profile views.
  for(const side of [-1,1]){
-  add('ear-'+side,side*.184,1.610,-.018,.046,.084,.064,'paper',skin,
+  add('ear-'+side,side*.184,1.610,-.018,.046,.084,.064,'paper',
+   photoMode?[.81,.57,.49]:skin,
    {shape:'round',segments:desktop?14:10,rings:desktop?8:6,rigGroup:'head'});
   if(!photoMode){add('ear-shadow-'+side,side*.197,1.603,.023,.011,.042,.013,'paper',[.69,.46,.40],
    {...tiny,rigGroup:'head'});
