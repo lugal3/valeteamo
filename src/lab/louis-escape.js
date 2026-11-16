@@ -4,16 +4,22 @@ import {sampleBlink} from './animations/face.js';
 import {LOIS_VISUAL_ID} from './lois-ps2-profile.js';
 import {buildLoisPs2Model} from './lois-ps2-model.js';
 import {startLoisReaction,advanceLoisReaction} from './lois-ps2-reactions.js';
+import {KITCHEN_HIDE_APPROACH,KITCHEN_HIDE_SPOT} from './kitchen-hide-layout.js';
 
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 export const LOUIS_UNTIE_SECONDS=3.25;
-const ROUTE=Object.freeze([
+// Preserve the already tested basement climb, but once above ground go
+// AROUND the north tip of the rotated bar into the actual hiding lane.
+// Never pass through a collider or jump to a target behind the furniture.
+const TUNNEL_ROUTE=Object.freeze([
  {x:8.55,z:13.74},{x:8.55,z:12.4},{x:8.55,z:10.2},
  {x:8.55,z:8.0},{x:8.55,z:5.6},{x:8.55,z:4.2},
- {x:8.55,z:2.65},{x:9.5,z:2.2},{x:10.4,z:2.8},
- {x:11.20,z:4.08},{x:11.82,z:4.08}
+ {x:8.55,z:2.65}
 ]);
-export const LOUIS_HIDING_SPOT=Object.freeze({x:11.82,y:0,z:4.08});
+const ROUTE=Object.freeze([...TUNNEL_ROUTE,...KITCHEN_HIDE_APPROACH]);
+const FIRST_KITCHEN_WAYPOINT=TUNNEL_ROUTE.length;
+export const LOUIS_HIDING_SPOT=KITCHEN_HIDE_SPOT;
+export const LOUIS_RESCUE_ROUTE=ROUTE;
 export function createLouisEscape(world){
  const point=ROUTE[0],y=groundHeight(point.x,point.z,-3.55,true);
  return {kind:'louis-companion',id:'louis-escape',label:'Louis rescatado',visualPreset:LOIS_VISUAL_ID,visualVariant:'photo-a',x:point.x,y,z:point.z,yaw:Math.PI,phase:'untying',waypoint:1,age:0,step:0,crouch:.33,concealed:false,interactable:false,walk:0,speed:0,blink:0,visualReaction:null,world};
@@ -32,14 +38,30 @@ export function updateLouisEscape(louis,dt,kitty=null){
  }
  if(louis.phase==='climb'){
   const target=ROUTE[louis.waypoint];
-  if(!target){louis.phase='hide';louis.age=0;louis.yaw=Math.PI;startLoisReaction(louis,'startle');return 'arrived';}
+  if(!target){
+   louis.phase='hide';louis.age=0;louis.crouch=0;
+   louis.x=LOUIS_HIDING_SPOT.x;louis.z=LOUIS_HIDING_SPOT.z;
+   louis.yaw=LOUIS_HIDING_SPOT.yaw;louis.speed=0;
+   startLoisReaction(louis,'startle');return 'arrived';
+  }
   const dx=target.x-louis.x,dz=target.z-louis.z,d=Math.hypot(dx,dz);
   if(d<.055){louis.waypoint++;return null;}
-  const step=Math.min(d,dt*2.10);
-  louis.x+=dx/d*step;louis.z+=dz/d*step;
-  louis.y=groundHeight(louis.x,louis.z,louis.y,true);
-  louis.yaw=Math.atan2(dx,dz);
-  louis.walk+=step;louis.speed=step/Math.max(dt,.0001);
+  const step=Math.min(d,dt*2.10),distanceToMove=step/d;
+  let moved=step;
+  if(louis.waypoint>=FIRST_KITCHEN_WAYPOINT&&louis.y>-.12){
+   // Same swept collision checks used by Kitty. This prevents the old
+   // scripted walk from cutting through the newly rotated stone bar.
+   const position={x:louis.x,y:louis.y,z:louis.z};
+   moved=navigate(position,louis.world,dx*distanceToMove,dz*distanceToMove,1.64);
+   louis.x=position.x;louis.y=position.y;louis.z=position.z;
+  }else{
+   louis.x+=dx*distanceToMove;louis.z+=dz*distanceToMove;
+   louis.y=groundHeight(louis.x,louis.z,louis.y,true);
+  }
+  const facing=Math.atan2(dx,dz);
+  const difference=Math.atan2(Math.sin(facing-louis.yaw),Math.cos(facing-louis.yaw));
+  louis.yaw+=difference*Math.min(1,dt*8);
+  louis.walk+=moved;louis.speed=moved/Math.max(dt,.0001);
  }else if(louis.phase==='hide'){
   louis.crouch=Math.min(1,louis.age/1.1);
   if(louis.age>=1.5){louis.phase='hidden';louis.age=0;louis.concealed=true;startLoisReaction(louis,'listen');return 'hidden';}
@@ -77,11 +99,13 @@ export function louisCamera(louis){
   const dz=louis.z-z;
   return {x:8.55,y,z,yaw:Math.atan2(louis.x-8.55,dz),pitch:Math.atan2(louis.y+1.42-y,Math.max(.1,dz))};
  }
- // Across the open kitchen, framed to show his face while he crouches
- // behind the American-style breakfast bar.
- const x=10.65,z=2.75,y=1.52;
+ // Show the newly front-facing bar from the west/entrance side; Louis
+ // walks around the north end before dropping behind its opaque panel.
+ // The camera never travels inside the stone top or kitchen partition.
+ const x=9.75,z=2.50,y=1.44;
  const dx=louis.x-x,dz=louis.z-z;
- return {x,y,z,yaw:Math.atan2(dx,dz),pitch:Math.atan2(louis.y+1.25-y,Math.hypot(dx,dz))};
+ const targetY=louis.phase==='hide'||louis.phase==='hidden'?louis.y+.82:louis.y+1.25;
+ return {x,y,z,yaw:Math.atan2(dx,dz),pitch:Math.atan2(targetY-y,Math.hypot(dx,dz))};
 }
 // Only Photo-A is shipped in the 3D rescue. The old primitive head/body and
 // louisPartPose fallback were unused in the live flow and inflated the JS
