@@ -53,7 +53,10 @@ function keyModel(piece,red){
 
 export function pickupGeometry(objects){
  return objects.flatMap(o=>{
-  if(o.taken||o.concealed&&!o.dynamic)return [];
+  // Louis' "concealed" state is a REAL crouch behind the kitchen counter,
+  // not removal of his character mesh. Preserve him across unrelated scene
+  // rebuilds (puzzle/RC updates) while leaving ordinary hidden pickups alone.
+  if(o.taken||(o.concealed&&!o.dynamic&&o.kind!=='louis-companion'))return [];
   const piece=(id,dx,dy,dz,w,h,d,mat,extra)=>({id:'pickup-'+o.id+'-'+id,x:o.x+dx,y:o.y+dy,z:o.z+dz,w,h,d,mat,
    solid:false,dynamic:true,source:o,sourceOffset:[dx,dy,dz],...extra});
   if(o.kind==='rc-car')return rcCarModel(piece,o.mode==='packed');
