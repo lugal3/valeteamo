@@ -18,11 +18,15 @@ const assert=require('node:assert/strict');
  assert(left[0]>=300&&left[0]<=320&&left[1]>=535&&left[1]<=585,
   'left profile samples its own real cheek, rather than the opposite cheek');
  const back=src(...loisPhotoFaceUV(0,1.656,-1));
- assert(Math.abs(back[0]-590)<1e-6&&Math.abs(back[1]-560)<1e-6,
+ assert(Math.abs(back[0]-590)<1e-6&&Math.abs(back[1]-555)<1e-6,
   'rear skull remains feature-free and seamless at x=0');
- const chin=src(...loisPhotoFaceUV(0,1.44,1));
- assert(Math.abs(chin[0]-590)<18&&chin[1]>=535&&chin[1]<=585,
-  'underside chin fades to facial skin, not a stretched beard');
+ const chin=src(...loisPhotoFaceUV(0,1.44,0));
+ assert(Math.abs(chin[0]-590)<18&&chin[1]>=525&&chin[1]<=585,
+  'underside-facing chin samples cheek skin, not a stretched beard');
+ const frontChin=src(...loisPhotoFaceUV(0,1.44,1));
+ assert(Math.abs(frontChin[0]-450)<1e-6&&
+  Math.abs(frontChin[1]-(470-(1.44-1.656)*1327))<1e-5,
+  'frontal chin must preserve its photo; no artificial extra mouth line');
  const mouth=src(...loisPhotoFaceUV(0,1.520,1));
  assert(Math.abs(mouth[0]-450)<1e-6&&Math.abs(mouth[1]-(470-(1.520-1.656)*1327))<1e-5,
   'mouth remains sharp and matches original photographic expression');
