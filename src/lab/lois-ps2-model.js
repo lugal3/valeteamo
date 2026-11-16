@@ -13,7 +13,7 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  const p=LOIS_PS2_PROFILE.palette,parts=[];
  const add=(id,x,y,z,w,h,d,mat,color,extra={})=>
   parts.push(piece(id,x,y+(photoMode&&loisBoneForPart(id)==='head'?.065:0),z,w,h,d,mat,{color,...extra,
-   photoMapped:photoMode&&(id==='neck'||id==='face'||id.startsWith('hair-')||id.startsWith('fringe-')||id.startsWith('temple-')||id==='crown'||id.startsWith('ear-')),
+   photoMapped:photoMode&&(id==='face'||id.startsWith('hair-')||id.startsWith('fringe-')||id.startsWith('temple-')||id==='crown'||id.startsWith('ear-')),
    rigBone:loisBoneForPart(id),rigPart:id}));
  const box={shape:'rounded-box',roundness:.35,segments:desktop?8:6,rings:desktop?5:4};
  const limb={shape:'rounded-box',roundness:.38,segments:desktop?8:6,rings:desktop?5:4};
@@ -48,9 +48,11 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  add('jacket-button',.065,.973,.188,.010,.012,.008,'dark',[.43,.44,.48],{...tiny,rigGroup:'body'});
  }
  add('hips',0,.843,-.006,.356,.185,.237,'dark',p.trousers,{...box,rigGroup:'body'});
- add('neck',0,photoMode?1.474:1.449,.011,
-  photoMode?.215:.132,photoMode?.251:.158,photoMode?.158:.133,'paper',skin,
-  {...oval,rigGroup:'body'});
+ add('neck',0,photoMode?1.460:1.449,.011,
+  photoMode?.233:.132,photoMode?.228:.158,photoMode?.175:.133,'paper',
+  photoMode?[.78,.61,.53]:skin,
+  photoMode?{shape:'rounded-box',roundness:.2,segments:8,rings:4,rigGroup:'body'}:
+   {...oval,rigGroup:'body'});
 
  // Sculpted head is a single 3D face surface. Cheeks/nose/chin/lips are
  // parametrically deformed in lois-ps2-face.js, *not* stacked colored balls.
@@ -97,23 +99,20 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
   // approved "OBJETIVO FINAL" canvas. Only the frontal crop is used; this
   // intentionally does not claim to reconstruct the unseen back of the hair.
   const hairLayers=[
-   {id:'hair-photo-mass',depth:.169,points:[
+   {id:'hair-photo-mass',depth:.139,points:[
     [150,304],[144,250],[179,151],[237,99],[316,64],
     [393,43],[471,32],[542,47],[604,77],[667,130],
     [711,210],[712,274],[677,308],[615,311],
     [568,294],[489,322],[411,339],[317,374],[238,393],[158,371]]},
-   {id:'hair-photo-fringe-left',depth:.187,points:[
+   {id:'hair-photo-fringe-left',depth:.155,points:[
     [153,307],[170,226],[244,202],[310,242],[347,288],
     [314,350],[233,404],[143,394]]},
-   {id:'hair-photo-fringe-middle',depth:.196,points:[
+   {id:'hair-photo-fringe-middle',depth:.168,points:[
     [280,238],[365,152],[477,143],[574,199],
     [548,279],[444,340],[331,368],[287,339]]},
-   {id:'hair-photo-fringe-right',depth:.182,points:[
+   {id:'hair-photo-fringe-right',depth:.152,points:[
     [516,165],[617,174],[688,235],[701,288],
-    [659,334],[582,303],[550,255]]},
-   {id:'hair-photo-crown',depth:.170,points:[
-    [274,134],[315,78],[427,47],[523,48],[620,97],
-    [598,136],[492,147],[362,159]]}
+    [659,334],[582,303],[550,255]]}
   ];
   for(const layer of hairLayers)
    add(layer.id,0,0,0,.01,.01,.01,'wood',hair,
