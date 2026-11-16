@@ -22,14 +22,21 @@ jobs:
         run: npm test
       - name: Compilación de las dos entradas web
         run: npm run build
-      - name: Instalar navegador WebGL
-        run: npx playwright install --with-deps chromium
+      - name: Instalar Chromium y Safari WebKit
+        run: npx playwright install --with-deps chromium webkit
       - name: Capturas reales frontales, tres cuartos y primer plano
         run: node tests/lois-ps2-browser.cjs
+      - name: Probar visor directo en Chromium y Safari WebKit
+        run: node tests/ios-blank-lois-direct.cjs
+      - name: Probar rescate completo con autito RC sin regresión
+        run: node tests/rc-browser.cjs
       - name: Guardar los resultados gráficos
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: lois-photo-option-a-real-webgl
-          path: artifacts/lois-photo-a-*.png
+          path: |
+            artifacts/lois-photo-a-*.png
+            artifacts/lois-direct-*.png
+            docs/capturas/rc-finale/*.png
           if-no-files-found: ignore
