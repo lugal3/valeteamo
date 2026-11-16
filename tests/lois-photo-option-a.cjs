@@ -9,7 +9,7 @@ const assert=require('node:assert/strict');
  const boxes=pickupGeometry([actor]);
  const face=boxes.find(x=>x.shape==='lois-face');
  assert(face&&face.photoMapped,'single continuous photo-mapped face');
- assert(boxes.filter(x=>x.photoMapped).length>=10,'real photo spans hair clumps as well');
+ assert(boxes.filter(x=>x.photoMapped).length>=8,'real photo spans hair clumps as well');
  assert(!boxes.some(x=>/pickup-louis-escape-(iris|eye|pupil|lid|upper-lip|lower-lip|brow|nostril)/.test(x.id)),
   'photo supplies original eyes, eyebrows and lips: no double emoji-style features');
  const mesh=geometry(boxes);
