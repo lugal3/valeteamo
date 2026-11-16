@@ -35,10 +35,11 @@ const assert=require('node:assert/strict');
    assert(pixelY>=535&&pixelY<=585,
     'rear skull UV stays below eyes and above mouth in a feature-free strip');
   }
-  if(v[i+1]<face.y-.207&&v[i+8]>.45){
+  if(v[i+1]<face.y-.19&&v[i+8]<.04){
    underside++;
-   assert(Math.abs(uvx-(590-110)/650)<.04,
-    'underchin photo no longer drags mouth/beard down to the neck');
+   const yPixel=(1-uvy)*850;
+   assert(yPixel>=520&&yPixel<=590,
+    'downward/side jaw samples clean skin, not a duplicate lower lip');
   }
  }
  assert(rearHead>20,'closed photo head includes skin-only rear vertices');
