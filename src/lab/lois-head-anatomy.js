@@ -18,8 +18,8 @@ const signedPower=(v,p)=>Math.sign(v)*Math.pow(Math.abs(v),p);
 // scale factor. Broader upper cheeks + angular rear jaw corners follow
 // the user's approved frontal/3/4 bust reference.
 export const LOIS_HEAD_ANATOMY_RINGS=Object.freeze([
- [-1.000,0,0,0,.035],
- [-.970,.30,.28,.38,.032],
+ [-1.000,0,0,0,.065],
+ [-.970,.30,.28,.38,.050],
  [-.900,.51,.54,.63,.025],
  [-.820,.65,.74,.81,.015],
  [-.720,.72,.910,.89,.009],
