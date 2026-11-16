@@ -21,12 +21,16 @@ const smoothstep=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);};
 export function loisPhotoFaceUV(x,y,normalZ){
  const projectedX=450+x*1300;
  const projectedY=470-(y-1.656)*1327;
- // Pixel (590,560) belongs to an unobstructed cheek, not an eye or mouth.
- // Vary the patch minimally with position to retain skin texture and prevent
- // an entirely constant-color strip on the low-poly profile.
- const skinX=590+clamp(x*28,-6,6);
+ // Use BOTH feature-free cheek regions from the same reference:
+ // left ≈(310,560), right ≈(590,560). A fixed right cheek on the entire
+ // skull made the left profile look like a pasted-on strip. Keep the rear UV
+ // continuous across its original seam (x≈0); no second face is introduced.
+ const leftWeight=1-smoothstep(-.13,-.02,x);
+ const skinX=590-280*leftWeight+clamp(x*20,-4,4);
  const skinY=560-clamp((y-1.656)*65,-18,18);
- const frontWeight=smoothstep(.20,.83,normalZ);
+ // Wider transition prevents UV discontinuities even on low-density
+ // side polygons and preserves the original frontal eyes/mouth exactly.
+ const frontWeight=smoothstep(.08,.90,normalZ);
  // Below the chin plane, avoid stretching the lower beard down the throat.
  // Mouth and lips around y≈1.52 retain the untouched frontal projection.
  const chinWeight=smoothstep(-.221,-.175,y-1.656);
