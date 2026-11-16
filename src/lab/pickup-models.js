@@ -2,7 +2,6 @@ import {BEVEL_PROFILE} from './chibi-geometry.js';
 import {notePieces} from './equipment.js';
 import {rcCarModel} from './rc-car.js';
 import {louisModel} from './louis-escape.js';
-import {LOIS_VISUAL_ID} from './lois-ps2-profile.js';
 
 function noteModel(piece,note){
  const yaw=note.mirrored?.25:-.12,c=Math.cos(yaw),s=Math.sin(yaw);
@@ -59,8 +58,9 @@ export function pickupGeometry(objects){
    solid:false,dynamic:true,source:o,sourceOffset:[dx,dy,dz],...extra});
   if(o.kind==='rc-car')return rcCarModel(piece,o.mode==='packed');
   if(o.kind==='louis-companion'){
-   const variant=o.visualVariant==='legacy'?'legacy':o.visualVariant==='photo-a'?'photo-a':o.visualPreset===LOIS_VISUAL_ID?'ps2-b':'legacy';
-   return louisModel(piece,{variant,quality:'mobile'}).map(box=>({...box,baseRoll:box.roll||0,basePitch:box.pitch||0,baseYaw:box.yaw||0}));
+   // Exactly one mesh: the approved Photo-A model before AND after rescue.
+   // Saved visualVariant values from older releases do not resurrect old art.
+   return louisModel(piece,{quality:'mobile'}).map(box=>({...box,baseRoll:box.roll||0,basePitch:box.pitch||0,baseYaw:box.yaw||0}));
   }
   if(o.kind==='note'&&o.mirrored)return notePieces()
    .filter(part=>part.id==='paper'||part.id.startsWith('ink-back'))
