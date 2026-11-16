@@ -19,14 +19,21 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  const limb={shape:'rounded-box',roundness:.38,segments:desktop?8:6,rings:desktop?5:4};
  const oval={shape:'round',segments:desktop?12:8,rings:desktop?7:4};
  const tiny={shape:'round',segments:desktop?8:6,rings:desktop?4:3};
- const jacket=p.blazer,lapel=[.23,.24,.28],liner=[.24,.26,.31],
-  stitch=[.38,.39,.44],shirt=p.tshirt,skin=p.skin,lip=[.66,.46,.44],
+ // The approved Option A bust wears a navy crewneck instead of the old
+ // illustrated PS2 model's blazer. This is visual-only: same actor and rig.
+ const jacket=photoMode?[.13,.15,.25]:p.blazer,lapel=[.23,.24,.28],liner=[.24,.26,.31],
+  stitch=[.38,.39,.44],shirt=photoMode?[.17,.19,.31]:p.tshirt,skin=p.skin,lip=[.66,.46,.44],
   hair=p.hair,hairLight=[.30,.205,.155],hairShadow=[.145,.095,.076],
   iris=p.eyes,eyeWhite=[.91,.91,.90],ink=[.13,.16,.20];
 
  // Tailored dark blazer with a light grey crewneck, not a bulky hoodie.
  add('torso',0,1.11,-.015,.468,.56,.305,'dark',jacket,{...box,rigGroup:'body'});
- add('shirt',0,1.12,.140,.248,.445,.025,'cream',shirt,{...box,rigGroup:'body'});
+ add('shirt',0,1.12,.140,photoMode?.35:.248,.445,.025,'cream',shirt,{...box,rigGroup:'body'});
+ if(photoMode){
+  // Minimal dark collar silhouette and no suit lapel covering the neck.
+  add('crewneck',0,1.403,.119,.216,.034,.032,'dark',[.10,.11,.18],
+   {...box,rigGroup:'body'});
+ }else{
  add('collar',0,1.379,.116,.228,.070,.082,'cream',[.91,.89,.87],{...box,rigGroup:'body'});
  for(const side of [-1,1]){
   const x=side*.154;
@@ -39,6 +46,7 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
    {...box,rigGroup:'body'});
  }
  add('jacket-button',.065,.973,.188,.010,.012,.008,'dark',[.43,.44,.48],{...tiny,rigGroup:'body'});
+ }
  add('hips',0,.843,-.006,.356,.185,.237,'dark',p.trousers,{...box,rigGroup:'body'});
  add('neck',0,1.449,.011,.132,.158,.133,'paper',skin,{...oval,rigGroup:'body'});
 
