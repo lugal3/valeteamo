@@ -9,10 +9,13 @@ const assert=require('node:assert/strict');
  const boxes=pickupGeometry([actor]);
  const face=boxes.find(x=>x.shape==='lois-face');
  assert(face&&face.photoMapped,'single continuous photo-mapped face');
- assert(boxes.filter(x=>x.photoMapped).length>=5,'face plus four photographic hair cards remain mapped');
+ assert(boxes.filter(x=>x.photoMapped).length>=8,'face and textured scalp plus four photographic hair cards are mapped');
  assert(boxes.filter(x=>x.shape==='lois-photo-hair').length===4,'photo hair retains four curved front cards');
- assert(!boxes.some(x=>/ear-|hair-back|hair-cap|temple-|crown/.test(x.rigPart||'')&&x.photoMapped),
-  'no photographic eyes, ears or stripes on scalp backing meshes');
+ assert(boxes.some(x=>x.rigPart==='hair-back'&&x.photoMapped)&&
+  boxes.some(x=>x.rigPart==='hair-cap'&&x.photoMapped),
+  'photo hair shell must retain the approved texture in three-quarter view');
+ assert(!boxes.some(x=>/^ear-/.test(x.rigPart||'')&&x.photoMapped),
+  'no photographic stripes over the ears');
  assert(!boxes.some(x=>/pickup-louis-escape-(iris|eye|pupil|lid|upper-lip|lower-lip|brow|nostril)/.test(x.id)),
   'photo supplies original eyes, eyebrows and lips: no double emoji-style features');
  const mesh=geometry(boxes);
