@@ -87,10 +87,7 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  // The approved photograph already paints the swept fringe across the
  // forehead. Keep only the two outer hair cards for volume: the old five
  // overlapping rectangles duplicated the hair and created skin-colored seams.
- const fringe=photoMode?[
-  [0,-.153,1.792,.102,.080,.090,.36],
-  [4,.136,1.808,.098,.082,.083,-.37]
- ]:[
+ const fringe=photoMode?[]:[
   [0,-.148,1.754,.098,.116,.122,.40],
   [1,-.106,1.743,.134,.116,.132,.28],
   [2,-.052,1.734,.166,.111,.133,.22],
