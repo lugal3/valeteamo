@@ -46,10 +46,10 @@ const assert=require('node:assert/strict');
  const torso=photo.find(b=>b.id==='torso');
  assert(torso?.shape==='lois-tee-torso'&&torso.segments>=12,
   'photo torso must be a tapered T-shirt shell, not a rectangle');
- assert(shirt.z+shirt.d*.5<torso.z+torso.d*.30,
-  'the old rectangular shirt panel must remain hidden inside the torso');
- assert(classic.find(b=>b.id==='torso')?.shape==='rounded-box',
-  'the PS2 fallback body retains its previous geometry');
+ assert(!shirt,'Photo-A must NOT render the floating shirt rectangle');
+ assert(classic.find(b=>b.id==='torso')?.shape==='rounded-box'&&
+  classic.some(b=>b.id==='shirt'),
+  'the PS2 fallback retains its original box and shirt');
  assert(neck.y+neck.h*.5>face.y-face.h*.5+.10,
   'upper neck overlaps the jaw, preventing a visible floating-head gap');
  assert(neck.y-neck.h*.5<torso.y+torso.h*.5-.015,
