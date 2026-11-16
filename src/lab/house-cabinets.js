@@ -38,6 +38,9 @@ export function installRefrigerator(add,obj){
  for(const [i,[dx,dz]] of [[-.05,0],[-.01,-.04],[.03,.028],[.06,-.027],[.0,.048]].entries())
   add('fridge-grape-'+i,x+dx,.582,.79+dz,.047,.047,.047,'foliage',false,{shape:'round',segments:7,rings:4,color:[.49,.59,.22]});
  const inside=obj('fridge-list','inspect','Lista en el refrigerador',x+.15,.58,.86,{concealed:true,text:'Quedan unas uvas y un vaso de agua. En el papel dice «no olvides dejarle comida a Louis».'});
- obj('fridge','cupboard','Refrigerador',x,.75,front,{box,origin:{x,z:front},hinge,swingAngle:-Math.PI*.47,slideDistance:.82,
+ // The rotated breakfast bar changes the approach to the fridge.
+ // Keep the physical refrigerator, door and hinge in place, but expose
+ // the USE target on its front-left accessible corner for mobile players.
+ obj('fridge','cupboard','Refrigerador',x-.29,.76,front+.27,{box,origin:{x,z:front},hinge,swingAngle:-Math.PI*.47,slideDistance:.82,
   parts:[handle,seal].map(part=>({box:part,origin:{x:part.x,z:part.z}})),inside,open:false,amount:0,state:'closed'});
 }

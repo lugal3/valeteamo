@@ -58,6 +58,10 @@ export function sampleLoisRig(source={},reduced=false){
  const travel=clamp(source.walk,0,1e9)*7.2,step=Math.sin(travel)*weight;
  const liftedLeft=Math.max(0,step),liftedRight=Math.max(0,-step);
  const hiding=phase==='hide'||phase==='hidden',untying=phase==='untying';
+ // A normal 18cm crouch left Louis' head poking above the stone bar.
+ // Fold the torso below the screen while the feet stay planted. Continue
+ // the same fold into 'follow' and release it as crouch reaches zero.
+ const lowCover=(hiding||phase==='follow')?crouch:0;
  const fear=visual.face.fear;
  const blink=clamp(visual.face.blink,0,1);
  const breath=visual.chest.breath;
@@ -74,6 +78,9 @@ export function sampleLoisRig(source={},reduced=false){
  shift('root',0,-.18*crouch+(isMoving&&!reduced?Math.abs(step)*.007:0),0);
  shift('pelvis',0,0,crouch*.065);
  angle('pelvis',0,crouch*.13);
+ // Lower the upper-body skeletal branch; unlike a global mesh offset, the
+ // hips and ankles are retained, giving a crouch instead of a teleport.
+ shift('spine',0,-.72*lowCover,0);
  angle('spine',0,(hiding?.26:untying?.055:phase==='climb'?.09:0),0);
  angle('chest',reduced?0:Math.sin(t*1.04)*.012,0,reduced?0:Math.sin(t*.45)*.017);
  shift('chest',0,breath,0);
