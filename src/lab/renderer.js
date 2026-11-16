@@ -1,7 +1,7 @@
 import {createPose,createRigBinding,evaluateRig,JOINT_INDEX} from './character-rig.js';
 import {sampleBlink} from './animations/face.js';
 import {smoothSurface,torusSurface,roundedBoxSurface} from './chibi-geometry.js';
-import {loisFaceSurface} from './lois-ps2-face.js';
+import {loisFaceSurface,loisPhotoFaceUV} from './lois-ps2-face.js';
 import {sampleLoisRig,writeLoisRigPart} from './lois-ps2-rig.js';
 import {createLoisFaceTexture} from './lois-ps2-texture.js';
 import {BATH_MIRROR,mirrorVisible,kittyMirrorPieces,reflectedBathroom,reflectMesh,poseReflectedKitty} from './mirror.js';
@@ -96,27 +96,22 @@ export function geometry(boxes){
    const ax=box.source?.x||0,ay=box.source?.y||0;
    for(let j=first;j<vertices.length;j+=16){
     const x=vertices[j]-ax,y=vertices[j+1]-ay-(box.rigBone==='head'?.065:0);
-    // Maintain the approved photograph on the front. On the hidden back of
-    // the closed head, sample only an unobtrusive cheek-skin patch from that
-    // SAME image, fading its UVs around the side so no duplicate eyes/mouth
-    // or abrupt matte/photo seam can appear in true profile.
-    let srcX=box.rigPart==='neck'?450+x*1500:450+x*1300;
-    let srcY=box.rigPart==='neck'?790-(y-1.45)*440:470-(y-1.656)*1327;
+    // The face has its own landmark-aware UV projection. The approved
+    // frontal photo remains untouched while sides and under-chin sample
+    // feature-free skin from the same atlas, never duplicated eyes/nose.
     if(box.rigPart==='face'){
-     const t=Math.max(0,Math.min(1,(vertices[j+8]+.52)/.87));
-     const blend=t*t*(3-2*t);
-     const skinX=540,skinY=620-(y-1.656)*90;
-     srcX=skinX+(srcX-skinX)*blend;
-     srcY=skinY+(srcY-skinY)*blend;
+     const uv=loisPhotoFaceUV(x,y,vertices[j+8]);
+     vertices[j+9]=uv[0];vertices[j+10]=uv[1];
+    }else{
+     let srcX=box.rigPart==='neck'?450+x*1500:450+x*1300;
+     let srcY=box.rigPart==='neck'?790-(y-1.45)*440:470-(y-1.656)*1327;
+     // Rounded scalp and temples must never sample the photo's eyes.
+     if(box.rigPart==='hair-back'||box.rigPart==='hair-cap'||
+       box.rigPart==='crown'||box.rigPart?.startsWith('temple-'))
+      srcY=Math.min(srcY,310);
+     vertices[j+9]=Math.max(.003,Math.min(.997,(srcX-110)/650));
+     vertices[j+10]=Math.max(.003,Math.min(.997,1-srcY/850));
     }
-    // Photo hair backing is rounded 3D scalp, not a second face!
-    // Limit its UVs to the photographed crown; otherwise low temple
-    // vertices sampled the original eyes, reproducing them in profile.
-    if(box.rigPart==='hair-back'||box.rigPart==='hair-cap'||
-      box.rigPart==='crown'||box.rigPart?.startsWith('temple-'))
-     srcY=Math.min(srcY,310);
-    vertices[j+9]=Math.max(.003,Math.min(.997,(srcX-110)/650));
-    vertices[j+10]=Math.max(.003,Math.min(.997,1-srcY/850));
     vertices[j+11]=4;
     vertices[j+3]=1;vertices[j+4]=1;vertices[j+5]=1;
    }
