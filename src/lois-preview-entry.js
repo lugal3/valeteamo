@@ -16,8 +16,8 @@ const stage=[
 const cameras={
  front:()=>({x:0,y:1.11,z:2.2,yaw:Math.PI,pitch:0}),
  side:()=>({x:.80,y:1.63,z:0,yaw:-Math.PI/2,pitch:0}),
- threequarter:()=>({x:.40,y:1.65,z:.70,yaw:Math.PI+Math.atan(.40/.70),pitch:0}),
- portrait:()=>({x:0,y:1.65,z:.52,yaw:Math.PI,pitch:0})
+ threequarter:()=>({x:.42,y:1.73,z:.77,yaw:Math.PI+Math.atan(.42/.77),pitch:0}),
+ portrait:()=>({x:0,y:1.74,z:.78,yaw:Math.PI,pitch:0})
 };
 let renderer=null,frame=0,last=0,lastDraw=0,view='portrait',motion='idle',blinkUntil=0,stopped=false;
 function error(message){
