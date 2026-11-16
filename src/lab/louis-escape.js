@@ -46,7 +46,9 @@ export function updateLouisEscape(louis,dt,kitty=null){
   if(!target){
    louis.phase='hide';louis.age=0;louis.crouch=0;
    louis.x=LOUIS_HIDING_SPOT.x;louis.z=LOUIS_HIDING_SPOT.z;
-   louis.yaw=LOUIS_HIDING_SPOT.yaw;louis.speed=0;
+   // Keep walking orientation; turn toward the panel during the crouch,
+   // instead of snapping 90 degrees on the arrival frame.
+   louis.speed=0;
    startLoisReaction(louis,'startle');return 'arrived';
   }
   const dx=target.x-louis.x,dz=target.z-louis.z,d=Math.hypot(dx,dz);
@@ -69,6 +71,9 @@ export function updateLouisEscape(louis,dt,kitty=null){
   louis.walk+=moved;louis.speed=moved/Math.max(dt,.0001);
  }else if(louis.phase==='hide'){
   louis.crouch=Math.min(1,louis.age/1.1);
+  const angle=Math.atan2(Math.sin(LOUIS_HIDING_SPOT.yaw-louis.yaw),
+   Math.cos(LOUIS_HIDING_SPOT.yaw-louis.yaw));
+  louis.yaw+=angle*Math.min(1,dt*7);
   if(louis.age>=1.5){louis.phase='hidden';louis.age=0;louis.concealed=true;startLoisReaction(louis,'listen');return 'hidden';}
  }else if(louis.phase==='follow'&&louis.exitRouteActive){
   const target=LOUIS_EXIT_ROUTE[louis.exitWaypoint||0];
