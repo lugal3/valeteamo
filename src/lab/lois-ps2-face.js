@@ -32,7 +32,7 @@ export function loisPhotoFaceUV(x,y,normalZ){
  // The earlier vertical chin fade blended cheek pixels into the front of
  // the jaw, creating a false brown mouth line. Only SIDE/FACING-DOWN
  // polygons switch gradually to the cheek atlas, using the actual normal.
- const frontWeight=smoothstep(.03,.70,normalZ);
+ const frontWeight=smoothstep(.02,.71,normalZ);
  const blend=frontWeight;
  const srcX=skinX+(projectedX-skinX)*blend;
  const srcY=skinY+(projectedY-skinY)*blend;
