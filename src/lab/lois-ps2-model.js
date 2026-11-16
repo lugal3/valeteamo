@@ -12,7 +12,7 @@ export function buildLoisPs2Model(piece,{quality='mobile',photoMode=false}={}){
  const desktop=quality==='desktop';
  const p=LOIS_PS2_PROFILE.palette,parts=[];
  const add=(id,x,y,z,w,h,d,mat,color,extra={})=>
-  parts.push(piece(id,x,y,z,w,h,d,mat,{color,...extra,
+  parts.push(piece(id,x,y+(photoMode&&loisBoneForPart(id)==='head'?.065:0),z,w,h,d,mat,{color,...extra,
    photoMapped:photoMode&&(id==='neck'||id==='face'||id.startsWith('hair-')||id.startsWith('fringe-')||id.startsWith('temple-')||id==='crown'||id.startsWith('ear-')),
    rigBone:loisBoneForPart(id),rigPart:id}));
  const box={shape:'rounded-box',roundness:.35,segments:desktop?8:6,rings:desktop?5:4};
