@@ -1,0 +1,23 @@
+name: Verificar estilos base y tamaño real de la casa 3D
+on:
+  push:
+    branches: [fix/house-3d-missing-base-css]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  casa-3d:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Verificar canvas real y estilos en Chromium y Safari
+        run: node tests/house-css-production-browser.cjs

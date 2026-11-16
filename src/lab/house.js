@@ -30,6 +30,7 @@ import {createRC,syncRCObject,deployRC,driveRC,beepRC,updateRC,stopRC,crashRC,re
 import {createLouisEscape,updateLouisEscape,freeLouis,louisCamera} from './louis-escape.js';
 import {createLoisShotDirector,advanceLoisShot,finishLoisShot} from './lois-ps2-cinematics.js';
 import {createHousePuzzle,puzzleEvent,canOpenDrawer,canRescue,PUZZLE_HINTS} from '../demo/house-puzzles.js';
+import './lab.css'; // Required for #lab3d stacking, fixed fullscreen layout, canvas sizing and HUD.
 import './house.css';
 const FLASH_DRAIN=.24,FLASH_LOW=15,SPARE_CHARGE=55;
 const SPRINT_SECONDS=4;
