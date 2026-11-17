@@ -10,7 +10,8 @@ async function play(){
   await server.listen();
   const base='http://127.0.0.1:'+server.httpServer.address().port+'/';
   browser=await chromium.launch({headless:true});
-  const context=await browser.newContext({viewport:{width:844,height:390},isMobile:true,hasTouch:true,deviceScaleFactor:1});
+  const recordVideo=process.env.PROLOGUE_VIDEO_DIR?{dir:process.env.PROLOGUE_VIDEO_DIR,size:{width:844,height:390}}:undefined;
+  const context=await browser.newContext({viewport:{width:844,height:390},isMobile:true,hasTouch:true,deviceScaleFactor:1,recordVideo});
   const page=await context.newPage(),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
   fs.mkdirSync('artifacts',{recursive:true});
@@ -81,19 +82,26 @@ async function play(){
    await game.locator('xpath=self::*[@data-prologue-stage="'+stage+'"]').waitFor({timeout:12000});
    await page.evaluate(([x,y])=>window.__valePrologue.teleport(x,y),[x,340]);
    if(action){
-    if(stage==='talk-luis'){
+    if(stage==='meet-couple'){
      // A real approach from the side path: inspect position while walking,
      // not just presence of a static NPC suddenly spawned at the target.
      await page.waitForFunction(()=>window.__valePrologue?.luisBeat?.()==='arriving',
       null,{timeout:4500});
-     const start=await page.evaluate(()=>window.__valePrologue.luisPosition());
+     const start=await page.evaluate(()=>{
+      const scene=window.__valePrologue.scene();
+      return {luis:window.__valePrologue.luisPosition(),vale:{x:scene.storyVale.x,y:scene.storyVale.y}};
+     });
      await page.screenshot({path:'artifacts/story-luis-entrance.png'});
      await page.waitForTimeout(440);
-     const progress=await page.evaluate(()=>window.__valePrologue.luisPosition());
-     assert(Math.hypot(progress.x-start.x,progress.y-start.y)>3,
-      'Luis must PHYSICALLY move into the clearing, not just change walk frames');
-     assert.equal(await page.getByRole('button',{name:/Hablar con Luis/}).count(),0,
-      'conversation is unavailable until Luis reaches Kitty and finishes waving');
+     const progress=await page.evaluate(()=>{
+      const scene=window.__valePrologue.scene();
+      return {luis:window.__valePrologue.luisPosition(),vale:{x:scene.storyVale.x,y:scene.storyVale.y},hands:scene.storyHands.active};
+     });
+     for(const person of ['luis','vale'])assert(Math.hypot(progress[person].x-start[person].x,progress[person].y-start[person].y)>3,
+      person+' physically walks into the clearing');
+     assert(progress.hands&&Math.abs(progress.vale.x-progress.luis.x)<35,'the pair walks with joined hands');
+     assert.equal(await page.getByRole('button',{name:/Saludar a Luis y Vale/}).count(),0,
+      'conversation is unavailable until Luis and Vale finish approaching');
      await page.waitForFunction(()=>window.__valePrologue?.luisReady?.(),
       null,{timeout:6000});
     }
@@ -103,14 +111,14 @@ async function play(){
      assert(await page.evaluate(()=>window.__valePrologue.scene().storyTargetCuePlayed),
       'physical clue discovery must have a one-time nonblocking reaction');
     }
-    if(stage==='talk-luis'){
+    if(stage==='meet-couple'){
      const idleTexture=await page.evaluate(()=>window.__valePrologue.scene()?.storyLuis?.texture?.key);
      assert(/^story-person-luis-(down|up|right)-idle-\d$/.test(idleTexture??''),
       'Luis must use the redesigned chibi idle sprite in the original scene');
      await page.screenshot({path:'artifacts/story-luis-chibi-idle.png'});
     }
     await btn.click();
-    if(stage==='talk-luis'){
+    if(stage==='meet-couple'){
      await page.waitForFunction(()=>{
       const key=window.__valePrologue?.scene()?.storyLuis?.texture?.key??'';
       return /story-person-luis-(down|up|right)-talk-\d$/.test(key);
@@ -118,13 +126,13 @@ async function play(){
      await page.screenshot({path:'artifacts/story-luis-chibi-talking.png'});
     }
     await finishDialogue();
-    if(stage==='talk-luis'){
+    if(stage==='meet-couple'){
      // Farewell is a distinct 2-beat animation: hand wave and exit walking,
      // with the next story stage blocked until Luis has left the screen.
      await page.waitForFunction(()=>window.__valePrologue?.luisBeat?.()==='farewell-wave',
       null,{timeout:5000});
      await page.screenshot({path:'artifacts/story-luis-wave-goodbye.png'});
-     assert.equal(await page.evaluate(()=>window.__valePrologue.stage()),'talk-luis',
+     assert.equal(await page.evaluate(()=>window.__valePrologue.stage()),'meet-couple',
       'RPG must not skip directly to next chapter before farewell');
      await page.waitForFunction(()=>window.__valePrologue?.luisBeat?.()==='farewell-walk',
       null,{timeout:5000});
@@ -152,8 +160,26 @@ async function play(){
   assert.equal(await convo.isVisible(),false,'no intrusive dialog until after the bridge');
   await verifyLivingMap('morning_garden');
   await page.screenshot({path:'artifacts/story-acts1-2-introduction.png'});
-  // Reaching the luminous exit must trigger a real full-screen black fade.
-  await page.evaluate(()=>window.__valePrologue.teleport(999));
+  const teleport=()=>page.evaluate(()=>window.__valePrologue.teleport(0));
+  await page.evaluate(()=>window.__valePrologue.exit());
+  assert.equal(await page.evaluate(()=>window.__valePrologue.changing()),false,'feeding unlocks the morning exit');
+  await teleport();
+  await page.screenshot({path:'artifacts/story-churu.png'});
+  await page.getByRole('button',{name:/Recoger Churu/}).tap();
+  await game.locator('xpath=self::*[@data-prologue-stage="feed-cat"]').waitFor();
+  await teleport();
+  await page.getByRole('button',{name:/Alimentar a la gata gris/}).tap();
+  const feeding=page.getByRole('dialog',{name:'Alimentar a la gata gris'});
+  await feeding.getByRole('button',{name:'Intentar otra vez'}).waitFor({timeout:11000});
+  assert.equal(await game.getAttribute('data-fed-grey-cat'),'false');
+  await feeding.getByRole('button',{name:'Intentar otra vez'}).tap();
+  await feeding.getByRole('button',{name:'Ofrecer Churu'}).tap();
+  await page.waitForFunction(()=>window.__valePrologue.scene().storyCat?.texture.key.includes('-eat-'));
+  await page.screenshot({path:'artifacts/story-gata-gris.png'});
+  await game.locator('xpath=self::*[@data-prologue-stage="cat-fed"]').waitFor();
+  assert.equal(await game.getAttribute('data-fed-grey-cat'),'true');
+  // After feeding, reaching the luminous exit triggers the full-screen fade.
+  await page.evaluate(()=>window.__valePrologue.exit());
   await game.locator('xpath=self::*[@data-transition="out"]').waitFor({timeout:5000});
   assert.equal(await page.evaluate(()=>window.__valePrologue.changing()),true,
    'Phaser input is gated while the screen fades');
@@ -162,8 +188,9 @@ async function play(){
   assert.equal(await page.evaluate(()=>window.__valePrologue.world().map),'afternoon_meeting');
   await verifyLivingMap('afternoon_meeting');
   await page.screenshot({path:'artifacts/story-afternoon-map.png'});
-  await finishDialogue();
+  await step('meet-couple',0,/Saludar a Luis y Vale/);
   await game.locator('xpath=self::*[@data-prologue-stage="defend"]').waitFor({timeout:10000});
+  assert(await page.evaluate(()=>window.__valePrologue.scene().storyLouis?.visible),'Louis is present during the defense');
   // Original Corazones controls: WASD for movement, arrows for hearts.
   await page.keyboard.down('ArrowRight');
   await page.waitForTimeout(360);
@@ -172,8 +199,6 @@ async function play(){
   await page.evaluate(()=>window.__valePrologue.defeatShadows());
   await game.locator('xpath=self::*[@data-prologue-stage="talk-louis"]').waitFor({timeout:11000});
   await step('talk-louis',710,/Hablar con Louis/);
-  await game.locator('xpath=self::*[@data-prologue-stage="talk-luis"]').waitFor();
-  await step('talk-luis',1218,/Hablar con Luis/);
   await game.locator('xpath=self::*[@data-prologue-stage="walk-together"]').waitFor();
   await page.screenshot({path:'artifacts/story-luis-and-louis.png'});
   await page.evaluate(()=>window.__valePrologue.teleport(1543,336));
@@ -319,7 +344,7 @@ async function play(){
    'Completing the full 2D trial into the house must leave the normal rescue saves intact');
   assert.deepEqual(errors,[],'no runtime JS errors across FOUR separate 2D maps and the real 3D house');
   await context.close();
-  console.log('PASS: 2D Corazones; animated van arrival/fox/rabbit/hostage/escape; LUNA-07 clue at house; walk-to door/window; real 3D.');
+  console.log('PASS: Churu and retry, joined Luis and Vale, heart defense, animated van, LUNA-07, door/window and real 3D.');
  }finally{await browser?.close();await server.close();}
 }
 play().catch(e=>{console.error(e);process.exitCode=1;});

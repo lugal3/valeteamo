@@ -20,6 +20,8 @@ import {installProloguePeople,luisTextureKey,luisAnimationFrame,
  type LuisFacing,type LuisPose} from './demo/prologue-art';
 import {LUIS_BEATS,makeLuisMotion,luisEntryPoint,luisPointOnPath,
  luisMotionIsBlocking,type LuisMotion} from './demo/luis-choreography';
+import {CHURU_TEXTURE,greyCatTexture,installRescueIntroArt,valeTexture} from './demo/rescue-intro-art';
+import type {PrologueStage} from './demo/prologue-story.js';
 import {buildRescueOverworld,constrainRescue,darknessAt,STORY_POSITIONS,storyArrivalPoint,
  mapForStage,exitReady,RESCUE_SCENES,
  type RescueMapId,type RescueOverworld,type RouteArea} from './demo/rescue-overworld';
@@ -35,8 +37,7 @@ type FloatingNote={s:Phaser.GameObjects.Text,y:number,at:number};
 
 // La historia es una extensión optativa de ESTA MISMA escena Phaser.
 // Sin bridge, 2D Corazones conserva exactamente su juego, controles y cámara.
-export type IsoStoryStage='intro'|'defend'|'talk-louis'|'talk-luis'|'walk-together'|
- 'disappearance'|'ribbon'|'petals'|'wheel'|'door'|'window'|'house';
+export type IsoStoryStage=PrologueStage;
 export type IsoStoryBridge={
  stage:()=>IsoStoryStage;
  objective:(stage:IsoStoryStage)=>string;
@@ -56,6 +57,10 @@ export type IsoStoryBridge={
  travel:(map:RescueMapId,commit:()=>void)=>void;
 };
 type StoryActor=Phaser.GameObjects.Image;
+const CHURU_POSITION={u:5.72,v:4.36};
+const GREY_CAT_POSITION={u:18.12,v:4.87};
+const meetingPoint=(target:IsoPoint,stage:IsoStoryStage):IsoPoint=>
+ stage==='meet-couple'?{u:target.u+.82,v:target.v-.62}:target;
 
 
 export class IsoAdventure extends Phaser.Scene {
@@ -70,6 +75,8 @@ export class IsoAdventure extends Phaser.Scene {
  storyStage:IsoStoryStage='intro';
  storyObjects:Phaser.GameObjects.GameObject[]=[];
  storyLouis?:StoryActor;storyLuis?:StoryActor;storyVillain?:StoryActor;
+ storyVale?:StoryActor;storyHands?:Phaser.GameObjects.Graphics;
+ storyCat?:StoryActor;storyFeeding?:{elapsed:number;done:()=>void};
  storyLouisWalk?:{from:{x:number;y:number};to:{x:number;y:number};elapsed:number;duration:number};
  storyAbduction?:{elapsed:number;origin:IsoPoint;phase:AbductionPhase;done:()=>void;
   van:Phaser.GameObjects.Image;fox:Phaser.GameObjects.Image;
@@ -116,6 +123,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(this.story){
    if(!CHARACTERS.louis.chibiSpriteSheet)installReferenceCharacter(this,'louis');
    installProloguePeople(this);
+   installRescueIntroArt(this);
    this.setStoryStage(this.story.stage(),true);
   }
   else if(this.level===1){for(const p of [{u:6,v:1},{u:2,v:6},{u:6,v:6}]){const xy=toScreen(p),s=this.add.text(xy.x,xy.y-12,'✦',{fontFamily:'Georgia',fontSize:'26px',color:'#ffe4a2',stroke:'#a66f7b',strokeThickness:2}).setOrigin(.5,1).setDepth(xy.y);this.collectibles.push({p,s});}this.total=3;}
@@ -158,7 +166,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.storyExitPending=true;this.clearInput();
   this.story.travel(exit.to,()=>{
    this.changeStoryMap(exit.to);
-   if(exit.to==='afternoon_meeting'&&this.storyStage==='intro')this.story?.arrive();
+   if(exit.to==='afternoon_meeting'&&this.storyStage==='cat-fed')this.story?.arrive();
   });
   return true;
  }
@@ -180,11 +188,12 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   for(const light of this.collectibles)light.s.destroy();this.collectibles=[];
   this.dangers=[];this.bursts=[];this.charm=undefined;this.pendingOffer=false;
   this.storyLouis=undefined;this.storyLuis=undefined;this.storyVillain=undefined;
+  this.storyVale=undefined;this.storyHands=undefined;this.storyCat=undefined;this.storyFeeding=undefined;
   this.storyLouisWalk=undefined;this.storyAbduction=undefined;
   this.storyLuisShadow=undefined;this.storyLuisMotion=undefined;
   this.storyLuisReady=false;this.storyLuisArriving=false;this.storyLuisFarewell=false;
   this.story.near('');
-  if(force)this.p=storyArrivalPoint(stage);
+  if(force)this.p=mapForStage(stage)===this.storyMap?storyArrivalPoint(stage):{...RESCUE_SCENES[this.storyMap].spawn};
   this.p=constrainRescue(this.p,this.storyMap);this.positionPlayer();
   this.story.map(this.storyMap);
   const startArea=this.storyWorld?.area(this.p.u);
@@ -214,34 +223,60 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    this.storyObjects.push(label);
   };
   this.storyTarget={...STORY_POSITIONS[stage]};
+  if(stage==='intro'){
+   const xy=toScreen(CHURU_POSITION);
+   const tube=this.add.image(xy.x,xy.y-4,CHURU_TEXTURE).setOrigin(.5,.85)
+    .setAngle(22).setDepth(xy.y+1);
+   const cloth=this.add.ellipse(xy.x,xy.y+2,42,17,0xc66d8f,.88).setDepth(xy.y-1);
+   this.storyObjects.push(cloth,tube);
+  }
+  if(stage==='feed-cat'||(stage==='cat-fed'&&this.storyMap==='morning_garden')){
+   const xy=toScreen(GREY_CAT_POSITION);
+   this.storyCat=this.add.image(xy.x,xy.y,greyCatTexture('idle',0)).setOrigin(.5,.9)
+    .setScale(1.12).setDepth(xy.y);
+   this.storyObjects.push(this.storyCat);
+   this.story.guide(stage==='feed-cat'?'Cruza el puente. La gata gris espera al otro lado.':'La gata se aleja tranquila. Sigue el sendero hacia el jardín.');
+  }
   if(stage==='defend'){
-   for(const p of [{u:24.6,v:3.4},{u:26.2,v:5.7},{u:28,v:4.2}])this.spawnEnemy(p,false);
+   this.storyLouis=actor('louis',{u:30.1,v:4.85});
+   for(const p of [{u:30.4,v:2.9},{u:32.1,v:5.9},{u:33.4,v:4.0}])this.spawnEnemy(p,false);
    this.story.guide('Las sombras se acercan. ¡Apunta con las flechas, el mouse o el joystick derecho!');
   }
   if(stage==='talk-louis'){
-   // Louis walks out of the garden after combat, never popping into existence.
+   // Louis approaches from the spot where Kitty protected him.
    const origin={u:this.storyTarget.u+1.6,v:this.storyTarget.v+.4};
    this.storyLouis=actor('louis',origin);
-   this.storyLouisWalk={from:toScreen(origin),to:toScreen(this.storyTarget),
+   const from=previousLouis??toScreen(origin);
+   this.storyLouis.setPosition(from.x,from.y).setDepth(from.y);
+   this.storyLouisWalk={from,to:toScreen(this.storyTarget),
     elapsed:0,duration:1300};
   }
-  if(stage==='talk-luis'){
+  if(stage==='talk-luis'||stage==='meet-couple'){
    // Luis waits at the side-path entrance; Kitty sees him WALK INTO the clearing
    // before the interaction appears. Nobody materializes at the conversation spot.
-   const origin=constrainRescue(luisEntryPoint(this.storyTarget),this.storyMap);
+   const meeting=meetingPoint(this.storyTarget,stage);
+   const origin=constrainRescue(luisEntryPoint(meeting),this.storyMap);
    this.storyLuis=actor('luis',origin);
    const xy=toScreen(origin);
    this.storyLuisShadow=this.add.ellipse(xy.x,xy.y+2,31,9,0x534859,.23)
     .setDepth(xy.y-1);
    this.storyObjects.push(this.storyLuisShadow);
-   const next=toScreen({u:35.3,v:6.3});
-   this.storyLouis=actor('louis',{u:35.3,v:6.3});
-   if(previousLouis){
-    this.storyLouis.setPosition(previousLouis.x,previousLouis.y);
-    this.storyLouisWalk={from:previousLouis,to:next,elapsed:0,
-     duration:Math.max(900,Math.min(2900,Math.hypot(next.x-previousLouis.x,next.y-previousLouis.y)*8))};
+   if(stage==='meet-couple'){
+    this.storyVale=this.add.image(xy.x-30,xy.y+2,valeTexture(false,0))
+     .setOrigin(.5,.9).setScale(.87).setDepth(xy.y+2);
+    this.storyHands=this.add.graphics().setDepth(xy.y+3);
+    this.storyObjects.push(this.storyVale,this.storyHands);
+    this.story.guide('Luis y Vale caminan por el sendero de los cerezos. Acércate a saludarlos.');
+   }else{
+    const next=toScreen({u:35.3,v:6.3});
+    this.storyLouis=actor('louis',{u:35.3,v:6.3});
+    if(previousLouis){
+     this.storyLouis.setPosition(previousLouis.x,previousLouis.y);
+     this.storyLouisWalk={from:previousLouis,to:next,elapsed:0,
+      duration:Math.max(900,Math.min(2900,Math.hypot(next.x-previousLouis.x,next.y-previousLouis.y)*8))};
+    }
+    this.story.guide('Luis viene por el camino entre los cerezos. Acércate a saludarlo.');
    }
-   this.story.guide('Luis viene por el camino entre los cerezos. ¡Acércate a saludarlo! ♡');
   }
   if(stage==='walk-together'){
    this.storyLouis=actor('louis',{u:35.5,v:4.6});
@@ -274,7 +309,9 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  }
  storyInteract(){
   if(!this.story||this.story.locked()||luisMotionIsBlocking(this.storyLuisMotion)||!this.storyNear)return;
-  const interactionAt=this.storyVanNear?VAN_NIGHT_POSITION:this.storyTarget;
+  const interactionAt=this.storyVanNear?VAN_NIGHT_POSITION:
+   this.storyStage==='intro'?CHURU_POSITION:this.storyStage==='feed-cat'?GREY_CAT_POSITION:
+   meetingPoint(this.storyTarget,this.storyStage);
   const foot=toScreen(this.p),target=toScreen(interactionAt);
   this.facing=feelFacingToTarget(target.x-foot.x,target.y-foot.y,this.facing);
   this.storyInteractUntil=this.clock+RESCUE_FEEL.interactMs;
@@ -338,9 +375,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  }
  storyTeleportForTest(_unused:number){
   if(!this.story)return;
-  const target=this.storyStage==='intro'?
-   {...RESCUE_SCENES.morning_garden.exit!}:this.storyTarget;
-  this.p=constrainRescue(target,this.storyMap);
+  this.p=constrainRescue(this.storyTarget,this.storyMap);
   this.positionPlayer();this.updateStoryActors(0);
  }
  storyExitForTest(){
@@ -354,20 +389,22 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  // Phaser game loop. No timer, new renderer, or blocking dialog overlay.
  startLuisArrival(){
   if(!this.storyLuis||this.storyLuisArriving||this.storyLuisReady||
-   this.storyStage!=='talk-luis')return;
+   !['talk-luis','meet-couple'].includes(this.storyStage))return;
   this.storyLuisArriving=true;this.story?.near('');this.storyNear='';
-  this.storyLuisMotion=makeLuisMotion('arriving',this.storyTarget);
+  this.storyLuisMotion=makeLuisMotion('arriving',meetingPoint(this.storyTarget,this.storyStage));
   this.clearInput();
  }
  playStoryLuisFarewell(done:()=>void){
-  if(this.storyStage!=='talk-luis'||!this.storyLuis?.active){done();return;}
+  if(!this.storyLuis?.active){done();return;}
   if(this.storyLuisFarewell)return;
   this.storyLuisFarewell=true;this.story?.near('');this.storyNear='';
   this.clearInput();
-  this.storyLuisMotion=makeLuisMotion('farewell-wave',this.storyTarget,done);
+  const meeting=meetingPoint(this.storyTarget,this.storyStage);
+  this.storyLuisMotion=makeLuisMotion('farewell-wave',meeting,done);
   this.showStoryBubble('luis','farewell');
-  this.story?.guide('Luis se despide con la mano y vuelve caminando al sendero ♡');
-  this.luisHeart(this.storyTarget);
+  this.story?.guide(this.storyVale?'Luis y Vale se despiden y vuelven por el sendero.':
+   'Luis se despide con la mano y vuelve caminando al sendero.');
+  this.luisHeart(meeting);
  }
  luisHeart(p:IsoPoint){
   const at=toScreen(p);
@@ -388,15 +425,17 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.storyLuisShadow?.setPosition(xy.x,xy.y+2).setDepth(xy.y-1);
   if(motion.elapsed<motion.duration)return;
   const completed=motion.kind,done=motion.done;
+  const meeting=meetingPoint(this.storyTarget,this.storyStage);
   if(completed==='arriving'){
-   this.storyLuisMotion=makeLuisMotion('greeting',this.storyTarget);
+   this.storyLuisMotion=makeLuisMotion('greeting',meeting);
    this.showStoryBubble('luis','affection');
-   this.luisHeart(this.storyTarget);
+   this.luisHeart(meeting);
   }else if(completed==='greeting'){
    this.storyLuisMotion=undefined;this.storyLuisReady=true;
-   this.story.guide('¡Luis te encontró! Acércate y presiona E para hablar ♡');
+   this.story.guide(this.storyVale?'Luis y Vale están aquí. Pulsa E o toca el botón para saludarlos.':
+    'Acércate a Luis y pulsa E para hablar.');
   }else if(completed==='farewell-wave'){
-   this.storyLuisMotion=makeLuisMotion('farewell-walk',this.storyTarget,done);
+   this.storyLuisMotion=makeLuisMotion('farewell-walk',meeting,done);
   }else{
    // Stage will change only after Luis has visibly walked away.
    this.storyLuisMotion=undefined;
@@ -425,13 +464,53 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   }else{
    facing=dy< -46&&Math.abs(dx)<27?'up':Math.abs(dx)>32?'right':'down';
    // During the RPG dialogue Luis keeps speaking (even while player input locks).
-   if(this.storyStage==='talk-luis'&&this.story.locked())pose='talk';
+   if(this.story.locked())pose='talk';
   }
   const clock=motion?motion.elapsed:this.clock;
   const frame=luisAnimationFrame(clock,pose,this.reducedMotion);
   const texture=luisTextureKey(facing,pose,frame);
   if(npc.texture.key!==texture&&this.textures.exists(texture))npc.setTexture(texture);
   npc.setFlipX(facing==='right'&&dx<0);
+  const vale=this.storyVale,hands=this.storyHands;
+  if(!vale||!hands)return;
+  const alpha=motion?.kind==='farewell-walk'?Math.min(1,(motion.duration-motion.elapsed)/320):1;
+  vale.setTexture(valeTexture(pose==='walk',frame)).setPosition(npc.x-30,npc.y+2)
+   .setDepth(npc.y+2).setAlpha(alpha);
+  npc.setAlpha(alpha);this.storyLuisShadow?.setAlpha(alpha);
+  hands.clear().setDepth(npc.y+3);
+  hands.lineStyle(4,0x634257,alpha).lineBetween(vale.x+12,vale.y-10,npc.x-12,npc.y-10);
+  hands.lineStyle(2,0xf6bf99,alpha).lineBetween(vale.x+12,vale.y-10,npc.x-12,npc.y-10);
+ }
+ playStoryFeeding(done:()=>void){
+  if(!this.storyCat?.active){done();return;}
+  this.storyFeeding={elapsed:0,done};
+  this.storyInteractUntil=this.clock+950;
+  this.storyNear='';this.story?.near('');
+  this.clearInput();
+  this.audio.tone(554,.14,.025,'triangle');
+ }
+ updateStoryCat(dt:number){
+  const cat=this.storyCat;
+  if(!cat?.active)return;
+  if(this.storyFeeding){
+   const feeding=this.storyFeeding;
+   feeding.elapsed+=dt;
+   cat.setTexture(greyCatTexture('eat',this.reducedMotion?0:Math.floor(feeding.elapsed/170)));
+   if(feeding.elapsed>=900){
+    this.storyFeeding=undefined;
+    feeding.done();
+    this.audio.tone(784,.19,.03,'triangle');
+   }
+   return;
+  }
+  const elapsed=this.clock-this.storyStageAt,frame=this.reducedMotion?0:Math.floor(elapsed/280);
+  if(this.storyStage==='cat-fed'){
+   const distance=Math.min(1,Math.max(0,(elapsed-450)/2300));
+   const start=GREY_CAT_POSITION;
+   const xy=toScreen(constrainRescue({u:start.u+.7*distance,v:start.v+2.5*distance},this.storyMap));
+   cat.setPosition(xy.x,xy.y).setDepth(xy.y).setAlpha(Math.min(1,(1-distance)*5))
+    .setTexture(greyCatTexture(distance>0?'walk':'idle',frame));
+  }else cat.setTexture(greyCatTexture('idle',frame));
  }
  playStoryAbduction(done:()=>void){
   // La furgoneta llega, los captores bajan con máscaras, sujetan a Louis,
@@ -553,20 +632,16 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    this.storyDusk=dusk;this.story.dusk(dusk);
   }
   if(stage==='intro'){
-   // No-dialogue tutorial is spatial and limited to the daylight garden.
-   const step=this.p.u>=16?3:this.p.u>=9?2:this.p.u>=4?1:0;
+   const step=this.p.u>=9?2:this.p.u>=3?1:0;
    if(step!==this.storyGuideStep){
     this.storyGuideStep=step;
     const hints=[
      'Camina por el sendero · WASD o joystick izquierdo',
-     'Mira las flores · con las flechas o el mouse disparas corazones',
-     'Escucha el río: sigue el camino y cruza el puente de madera',
-     'Cuando aparezca ♡, usa E o el botón de interacción'
+     'Hay un Churu sobre el paño rosa. Pulsa E o toca el botón para recogerlo.',
+     'El Churu quedó junto al sendero, antes del puente de madera.'
     ];
     this.story.guide(hints[step]);
    }
-   this.checkStoryExit();
-   return;
   }
   if(stage==='walk-together'&&this.storyLouis){
    const foot=toScreen(this.p),npc=this.storyLouis;
@@ -592,14 +667,16 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
     this.storyWalkTriggered=true;this.story.clearing();
    }
   }
-  if(stage==='talk-luis'&&!this.storyLuisReady&&!this.storyLuisArriving&&
+  const meeting=stage==='meet-couple'||stage==='talk-luis';
+  if(meeting&&!this.storyLuisReady&&!this.storyLuisArriving&&
    isoDistance(this.p,this.storyTarget)<LUIS_BEATS.approachRadius)this.startLuisArrival();
   const labels:Partial<Record<IsoStoryStage,string>>={
+   intro:'Recoger Churu','feed-cat':'Alimentar a la gata gris','meet-couple':'Saludar a Luis y Vale',
    'talk-louis':'Hablar con Louis','talk-luis':'Hablar con Luis',
    ribbon:'Examinar Pulsera',petals:'Examinar Pétalos',wheel:'Examinar Huellas',
    door:'Probar puerta',window:'Entrar por la ventana'
   };
-  const canInteract=(stage!=='talk-luis'||this.storyLuisReady)&&
+  const canInteract=(!meeting||this.storyLuisReady)&&
    (stage!=='talk-louis'||!this.storyLouisWalk);
   const vanIsClose=this.storyMap==='night_neighborhood'&&
    ['door','window'].includes(stage)&&
@@ -820,6 +897,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    // Physical NPC and kidnapping motion keeps running during narrative locks.
    this.updateLuisCinematic(dt);
    this.animateStoryLuis();
+   this.updateStoryCat(dt);
    this.updateStoryLouisArrival(dt);
    this.updateStoryAbduction(dt);
   }

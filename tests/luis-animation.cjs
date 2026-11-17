@@ -81,7 +81,7 @@ for(const facing of art.LUIS_FACINGS)
 assert.equal(textures.size,47,'45 animation frames + 2 existing portraits; no extra engine');
 const arcade=fs.readFileSync('src/iso-game.ts','utf8');
 assert(arcade.includes('this.animateStoryLuis();')&&
- arcade.includes("if(this.storyStage==='talk-luis'&&this.story.locked())pose='talk'")&&
+ arcade.includes("if(this.story.locked())pose='talk'")&&
  arcade.includes("npc.setFlipX(facing==='right'&&dx<0)")&&
  arcade.includes('const frame=luisAnimationFrame(clock,pose,this.reducedMotion);'),
  'runtime changes Luis expressions, direction and frames inside original Corazones engine');

@@ -41,12 +41,24 @@ async function verifyDesktop(){
   await page.keyboard.up('d');
   const moved=await page.evaluate(()=>window.__valePrologue.scene().p);
   assert(Math.hypot(moved.u-scene.u,moved.v-scene.v)>.10,'WASD must actually move Kitty in desktop map');
-  // The glowing Pokemon exit is still accessible with keyboard controls.
-  await page.evaluate(()=>window.__valePrologue.teleport(999));
+  const teleport=()=>page.evaluate(()=>window.__valePrologue.teleport(0));
+  await teleport();
+  await page.getByRole('button',{name:/Recoger Churu/}).waitFor();
+  await page.keyboard.press('e',{delay:90});
+  await page.locator('.story-prologue[data-prologue-stage="feed-cat"]').waitFor();
+  await teleport();
+  await page.getByRole('button',{name:/Alimentar a la gata gris/}).waitFor();
+  await page.keyboard.press('e',{delay:90});
+  await page.getByRole('button',{name:'Ofrecer Churu',exact:true}).press('Enter');
+  await page.locator('.story-prologue[data-fed-grey-cat="true"]').waitFor();
+  await page.evaluate(()=>window.__valePrologue.exit());
   await page.locator('.story-prologue[data-transition="out"]').waitFor({timeout:6000});
   await page.waitForFunction(()=>window.__valePrologue?.map?.()==='afternoon_meeting',
    null,{timeout:12000});
   await page.locator('.story-prologue[data-transition="none"]').waitFor({timeout:12000});
+  await teleport();
+  await page.getByRole('button',{name:/Saludar a Luis y Vale/}).waitFor({timeout:6000});
+  await page.keyboard.press('e',{delay:90});
   await page.getByRole('dialog',{name:'Conversación'}).waitFor({timeout:15000});
   await page.screenshot({path:'artifacts/story-desktop-afternoon-dialog.png'});
   const dialog=page.getByRole('dialog',{name:'Conversación'});

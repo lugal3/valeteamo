@@ -43,7 +43,9 @@ assert.equal(world.mapForStage('petals'),'dusk_search');
 assert.equal(world.mapForStage('wheel'),'dusk_search');
 assert.equal(world.mapForStage('door'),'night_neighborhood');
 assert.equal(world.mapForStage('house'),'night_neighborhood');
-assert(world.exitReady('morning_garden','intro'));
+assert(!world.exitReady('morning_garden','intro'));
+assert(!world.exitReady('morning_garden','feed-cat'));
+assert(world.exitReady('morning_garden','cat-fed'));
 assert(!world.exitReady('afternoon_meeting','talk-louis'),
  'can not skip the garden encounter, kidnapping and Louis');
 assert(world.exitReady('afternoon_meeting','ribbon'));
@@ -65,7 +67,7 @@ for(const id of ids)for(const u of [
  const p=world.constrainRescue({u,v:100},id),b=world.routeLimits(p.u);
  assert(p.v<=b.max&&p.v>=b.min,'player is always on safe walkable land');
 }
-const stages=['intro','defend','talk-louis','talk-luis','walk-together','disappearance',
+const stages=['intro','feed-cat','cat-fed','meet-couple','defend','talk-louis','talk-luis','walk-together','disappearance',
  'ribbon','petals','wheel','door','window'];
 for(let i=1;i<stages.length;i++){
  if(stages[i]==='window')continue;

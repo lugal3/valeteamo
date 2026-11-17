@@ -15,7 +15,7 @@ Abre la dirección que muestre Vite. Desde la portada, después de pulsar **PLAY
 | --- | --- | --- |
 | **Abrir mi regalo** o **Continuar la historia** | Historia de cumpleaños con recuerdos, preguntas, tres desafíos isométricos y una carta | [StoryApp.tsx](src/StoryApp.tsx), [StoryGame.tsx](src/StoryGame.tsx), [iso-game.ts](src/iso-game.ts) |
 | **Jugar la aventura clásica** | Juego 2D de seis salas, con combate, tienda y jefe | `ClassicApp` en [main.tsx](src/main.tsx), [game.ts](src/game.ts), [config.ts](src/config.ts), [geometry.ts](src/geometry.ts) |
-| **Jugar la demo de rescate 2D → 3D** | Jardín en Phaser, transición a la casa y rescate final | [RescueDemo.tsx](src/demo/RescueDemo.tsx) → [house.js](src/lab/house.js) |
+| **Jugar la demo de rescate 2D → 3D** | Kitty recoge Churu, alimenta a la gata gris, saluda a Luis y Vale y sigue la furgoneta hasta la casa 3D. | [RescueDemo.tsx](src/demo/RescueDemo.tsx) → [house.js](src/lab/house.js) |
 | **Pruebas → Casa 3D** | Casa desde la entrada por la ventana | [StoryApp.tsx](src/StoryApp.tsx) → [RescueDemo.tsx](src/demo/RescueDemo.tsx) → [house.js](src/lab/house.js) |
 
 **Pruebas** ofrece el recorrido completo de la casa y accesos directos a la llegada, el dormitorio, la trampilla, las pistas, el espejo, la pila, el tablero eléctrico, el piano y el televisor. Cada prueba rápida abre con su posición, inventario y condiciones preparados. Para repetirla usa **Ajustes → Reiniciar prueba**. El menú también ofrece los accesos a los modos 2D. Para móvil en la misma red, consulta [Probar en iPhone](PROBAR-IPHONE.md).
