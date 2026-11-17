@@ -15,6 +15,12 @@ async function play(){
   page.on('pageerror',e=>errors.push(e.message));
   fs.mkdirSync('artifacts',{recursive:true});
   await page.goto(base);
+  const saves={
+   'valeteamo-rescue-v2':JSON.stringify({version:2,phase:'house',heart:true,abducted:true,trail:true,house:true,rescued:false,
+    houseCheckpoint:{version:1,stage:'explore',picked:['note-hall','key']}}),
+   'valeteamo-story-acts-1-2-v1':JSON.stringify({version:1,stage:'house',hp:5,clues:3,completed:true})
+  };
+  await page.evaluate(saves=>{for(const [key,value] of Object.entries(saves))localStorage.setItem(key,value);},saves);
   await page.getByRole('button',{name:'Administración'}).click();
   await page.getByLabel('Código de acceso').fill('LP');
   await page.getByRole('dialog',{name:'Administración'}).getByRole('button',{name:'Entrar'}).click();
@@ -309,6 +315,8 @@ async function play(){
   await page.locator('#lab-canvas').waitFor({state:'visible',timeout:26000});
   await page.locator('.lab-window-intro:not(.lab-hidden)').waitFor({state:'visible',timeout:15000});
   await page.screenshot({path:'artifacts/story-to-house-3d.png'});
+  assert.deepEqual(await page.evaluate(keys=>Object.fromEntries(keys.map(key=>[key,localStorage.getItem(key)])),Object.keys(saves)),saves,
+   'Completing the full 2D trial into the house must leave the normal rescue saves intact');
   assert.deepEqual(errors,[],'no runtime JS errors across FOUR separate 2D maps and the real 3D house');
   await context.close();
   console.log('PASS: 2D Corazones; animated van arrival/fox/rabbit/hostage/escape; LUNA-07 clue at house; walk-to door/window; real 3D.');

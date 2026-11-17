@@ -64,9 +64,11 @@ En PC, pulsa **R** para capturar el ratón o devolver el cursor. El engranaje of
 | Datos | Clave o ámbito |
 | --- | --- |
 | Historia de cumpleaños | `valeteamo-story-v1`, avance, respuestas y preferencias en el navegador |
-| Rescate | `valeteamo-rescue-v2`, avance de la demo normal. Los accesos de Pruebas se abren como partidas de prueba. |
+| Rescate | `valeteamo-story-acts-1-2-v1` guarda el prólogo y `valeteamo-rescue-v2` guarda la entrada 3D, los checkpoints de la casa y el final. Los accesos de Pruebas usan sus propios estados. |
 | Ajustes de la casa | Cámara y barra de objetos comparten `valeteamo-house-camera-v4`, con lectura de ajustes anteriores. El sonido usa `valeteamo-lab-sound-v1`. |
-| Objetos, interruptores y persecución dentro de la casa | Estado de sesión del recorrido 3D |
+| Objetos y puzles de la casa | Las llaves, notas, linterna, caja fuerte, trampilla y avance RC se guardan por hitos. Los interruptores y los movimientos en curso pertenecen a la sesión. |
+
+**Continuar el rescate** retoma el último hito desde un lugar seguro. **Reiniciar casa**, en sus ajustes, borra los hitos del interior. **Volver a jugar**, en el final, reinicia todo el rescate.
 
 Las fotos, preguntas y carta de la historia son ejemplos editables. Consulta [HISTORIA.md](HISTORIA.md) para personalizarlas y revisar la privacidad. Los guardados locales dependen del navegador y del origen, por lo que localhost y Firebase tienen datos separados.
 

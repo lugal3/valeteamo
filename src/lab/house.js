@@ -1,5 +1,6 @@
 import {HouseEvents} from './story-events.js';
 import {HouseMessages} from './hud-messages.js';
+import {captureHouseCheckpoint,restoreHouseCheckpoint,SAFE_REWARD} from './house-checkpoint.js';
 import {PhoneUI} from './phone-ui.js';
 import {FloorSounds} from './floor-sounds.js';
 import {EMOTES} from './animations/emotes.js';
@@ -20,7 +21,7 @@ import {WINDOW_SHOT_SECONDS,WINDOW_LANDING,windowIntroCamera,windowIntroState,sh
 import {navigate,smoothAxis,getStairDirection} from './navigation.js';
 import {interactionTarget} from './interactions.js';
 import {circuitPowered,toggleCircuit,toggleHousePower,updatePowerLever} from './house-lights.js';
-import {inHatch,poseHatch} from './basement.js';
+import {inHatch,poseHatch,poseHatchRug} from './basement.js';
 import {PIANO_NOTES,PIANO_KEYS,PIANO_SCORE,poseTrunk} from './house-additions.js';
 import {HouseTelevision} from './television.js';
 import {updateWallClock} from './wall-clock.js';
@@ -34,6 +35,7 @@ import './lab.css'; // Required for #lab3d stacking, fixed fullscreen layout, ca
 import './house.css';
 const FLASH_DRAIN=.24,FLASH_LOW=15,SPARE_CHARGE=55;
 const SPRINT_SECONDS=4;
+const CHECKPOINT_INTERACTIONS=new Set(['battery','drawer','door','flashlight','hatch','key','note','rc-car','rug']);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const canStand=(state,world)=>!blocked(world.boxes,state.x,state.y,state.z,.2,1.69);
@@ -51,6 +53,7 @@ const ctxRoom=state=>getStairDirection(state)==='Escaleras'?'Escaleras':roomAt(s
 export function launchHouse(onExit,checkpoint='ground',config={}){
  const demo=config.demo===true;
  const scenario=config.trial?config.scenario:null;
+ const checkpointStore=demo&&!config.trial&&checkpoint==='ground'?config.checkpointStore:null;
  const animator=new CharacterAnimator();
  const root=document.createElement('div');root.id='lab3d';root.innerHTML=`
  <canvas id="lab-canvas" aria-label="Escenario tridimensional interactivo de la casa"></canvas>
@@ -114,6 +117,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const mirrorSafe=new MirrorSafePuzzle(),television=new HouseTelevision();
  let safeInput='',activeSafe=null,noteLift=0,noteHold=0,notePresentation=false,capturePhoto=false,piano=null;
  let rc=null,louis=null,loisShotDirector=null,rcTrap={armed:false,closed:false},finalCutscene=null;
+ let resumed=false;
  let equipmentBeforeNote='empty',batterySwap=null;
  const canUseHotbar=()=>ready&&!isSuspended()&&!cinematic&&events.phase!=='arrival'&&events.phase!=='failed'&&events.phase!=='safe'&&rc?.mode!=='driving'&&rc?.mode!=='deploying';
  const phone=new PhoneUI(root,(kind,toggle=true)=>equip(kind,toggle),()=>resetInput(),{canEquip:canUseHotbar,canUse:()=>canUseHotbar()&&!notePresentation,onEdit:()=>{releaseMouse();resetInput();if(isSuspended())sound.pause();else sound.resume();},onPhoto:()=>{capturePhoto=true;}});phone.equip(equipment);
@@ -176,12 +180,16 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   showModal(scenario.title,`<p>${escapeHTML(scenario.description)}</p>`,[['Iniciar prueba','start'],['Volver a pruebas','exit']]);
  }
  function rebuild(){renderer.rebuild([...world.boxes.filter(box=>!box.hiddenGeometry),...pickupGeometry(world.objects)]);}
+ function saveCheckpoint(){
+  if(checkpointStore)checkpointStore.save(captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTrap,batterySwap}));
+ }
  function finishWindowIntro(){
   poseFurniture(world.entryWindow,1);sound.setTension(.55);
   cinematic=null;root.classList.remove('lab-intro-active');$('lab-window-intro').classList.add('lab-hidden');
   Object.assign(s,WINDOW_LANDING);s.eye=WINDOW_LANDING.eye;s.bob=0;
   resetInput();
   if(ready&&!isPaused())sound.resume();
+  saveCheckpoint();
   last=performance.now();say(s.inventory.torch?'Kitty entra con cuidado por la ventana…':'Busca una linterna en el cajón de los mandos.',3);
  }
  function beginWindowIntro(){
@@ -190,7 +198,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   cinematic={elapsed:0,cues:new Set()};root.classList.add('lab-intro-active');$('lab-window-intro').classList.remove('lab-hidden');
   $('lab-intro-caption').textContent='Una ventana entreabierta…';
  }
- function reset(){
+ function reset(saved){
   television.sync(false,false);notePresentation=false;
   louis=null;loisShotDirector=null;rcTrap={armed:false,closed:false};finalCutscene=null;
   releaseMouse();events.reset();mirrorSafe.reset();hudMessages.reset();phone.close();encounterCheckpoint=null;danger.hidden=true;
@@ -240,9 +248,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    }
    if(scenario.events==='car')events.phase='car-preview';
   }
+  const restored=restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,rc,rcTrap,pursuer});
+  resumed=!!restored;
+  if(restored)({louis,equipment,encounterCheckpoint}=restored);
   phone.setInventory(s.inventory);phone.equip(equipment);
   focus=null;lookTarget={yaw:s.yaw,pitch:s.pitch};modalClose();keys.clear();rebuild();
-  if(!scenario)say('Escenario reiniciado · '+(points[checkpoint]||'planta baja'));
+  if(resumed)say('Progreso de la casa recuperado');
+  else if(!scenario)say('Escenario reiniciado · '+(points[checkpoint]||'planta baja'));
  }
  const listener=()=>cameraOf(s);
  const play=(name,o=null,level=1)=>{
@@ -339,7 +351,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }else if(o.kind==='hatch'){
    if(o.amount!==Number(o.open))return;
    if(puzzle.rescued&&louis?.phase==='hidden'&&o.open&&!rcTrap.armed){
-    rcTrap.armed=true;say('Trampa preparada. Usa el auto para atraer al secuestrador al sótano y activa la escotilla.',7);play('latch',o);return;
+    rcTrap.armed=true;saveCheckpoint();say('Trampa preparada. Usa el auto para atraer al secuestrador al sótano y activa la escotilla.',7);play('latch',o);return;
    }
    if(rcTrap.armed&&!rcTrap.closed){say('La trampa está preparada. Espera a que el secuestrador baje y activa el cierre desde la tablet.',5);return;}
    if(s.y<-.04||inHatch(s.x,s.z,.14)){say('Apártate del borde para mover la trampilla');return;}
@@ -440,6 +452,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }else if(o.kind==='hide'){
    beginHiding(o,true);
   }
+  if(CHECKPOINT_INTERACTIONS.has(o.kind))saveCheckpoint();
  }
  function showNote(note,back='close'){
   showModal(note.label,`<p class="house-note-sheet">${escapeHTML(note.text)}</p>`,[[back==='bag'?'Volver a la mochila':'Cerrar',back]]);
@@ -477,7 +490,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(result==='blocked'){feedback.textContent='Deja un poco de espacio delante de la caja para abrirla.';return;}
    if(result==='opened'){
     if(demo)puzzle=puzzleEvent(puzzle,'symbol');
-    s.inventory.notes.push({id:'safe-heart',label:'Sobre de la caja fuerte',text:'El sobre guarda el mismo corazón que aparece en el cuadro del salón.'});phone.setInventory(s.inventory);
+     s.inventory.notes.push({...SAFE_REWARD});phone.setInventory(s.inventory);saveCheckpoint();
     modalClose();play('keys',object);say('Caja abierta · símbolo del corazón obtenido',4);return;
    }
   }else{feedback.textContent='';if(action==='clear')safeInput='';else if(action==='back')safeInput=safeInput.slice(0,-1);else if(/^\d$/.test(action)&&safeInput.length<4)safeInput+=action;}
@@ -510,6 +523,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(batterySwap<BATTERY_SWAP_SECONDS)return;
   s.battery=Math.min(100,s.battery+SPARE_CHARGE);
   batterySwap=null;
+  saveCheckpoint();
   play('light');say('Pila cambiada · '+Math.ceil(s.battery)+'%');
  }
  function drainFlashlight(dt){
@@ -579,7 +593,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    stopRC(rc);equipment='rc';phone.equip('rc');
    const entrance=world.objects.find(o=>o.id==='entrada');entrance.sealed=false;entrance.locked=false;setDoor(entrance,true);
    for(const box of world.boxes)if(box.id.startsWith('entry-padlock'))box.hiddenGeometry=true;
-   freeLouis(louis);events.phase='escape';sound.setThreat(false);resetInput();rebuild();
+    freeLouis(louis);events.phase='escape';sound.setThreat(false);resetInput();rebuild();saveCheckpoint();
    play('door-close',world.hatch);play('latch',world.hatch);
    say('¡Atrapado! El secuestrador está encerrado. Louis sale de su escondite: escapen juntos por la puerta principal.',8);
    return;
@@ -594,8 +608,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(act==='start'){intro=false;modalClose();ready=true;
    void sound.start().then(ok=>{if(!active)return;if(isPaused()&&!cinematic)sound.pause();if(!ok)say('Activa el sonido en Ajustes');});
    const reduce=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true;
-   if(shouldPlayWindowIntro({demo,trial:config.trial,checkpoint,reducedMotion:reduce}))beginWindowIntro();
-   else if(demo&&checkpoint==='ground')finishWindowIntro();
+    if(!resumed){
+     if(shouldPlayWindowIntro({demo,trial:config.trial,checkpoint,reducedMotion:reduce}))beginWindowIntro();
+     else if(demo&&checkpoint==='ground')finishWindowIntro();
+    }
    try{screen.orientation?.lock?.('landscape').catch(()=>{});}catch{}return;}
   if(act==='recharge'){recharge();return;}
   if(act.startsWith('safe:')){safeAction(act.slice(5));return;}
@@ -603,6 +619,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(act==='bag'){if(rc?.mode==='driving')return;bag();return;}
   if(act==='reset'){
    if(scenario){ready=false;intro=true;}
+    checkpointStore?.save(null);
    reset();
    if(scenario)showTrialStart();
    else if(ready&&!isPaused())sound.resume();
@@ -720,7 +737,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    rebuild();play('cloth',louis);say('¡Las cuerdas cedieron! Louis sube con cuidado hacia la cocina.',5);
   }
   if(louisCue==='hidden'){
-   events.phase='rc-setup';say('Louis se escondió tras la barra de la cocina. Prepara la trampa en la escotilla.',6);
+   events.phase='rc-setup';saveCheckpoint();say('Louis se escondió tras la barra de la cocina. Prepara la trampa en la escotilla.',6);
   }
   if(louis&&(['untying','climb','hide'].includes(louis.phase)||(louis.phase==='hidden'&&louis.age<1.6)))return;
   if(rc){
@@ -736,13 +753,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const hatch=world.hatch,hatchTarget=Number(hatch.open);
   if(hatch.amount!==hatchTarget)poseHatch(hatch,clamp(hatch.amount+Math.sign(hatchTarget-hatch.amount)*dt/.64,0,1));
   const rug=world.hatchRug,rugTarget=Number(rug.aside);
-  if(rug.amount!==rugTarget){
-   rug.amount=reducedMotion.matches?rugTarget:clamp(rug.amount+Math.sign(rugTarget-rug.amount)*dt/.44,0,1);
-   const t=rug.amount,offset=1.53*t*t*(3-2*t);
-   rug.x=rug.parts[0].x+offset;
-   for(const {box,x,y} of rug.parts){box.x=x+offset;box.y=y-.09*t+Math.sin(t*Math.PI)*.037;}
-   rug.hatch.concealed=t<1;
-  }
+  if(rug.amount!==rugTarget)poseHatchRug(rug,reducedMotion.matches?rugTarget:clamp(rug.amount+Math.sign(rugTarget-rug.amount)*dt/.44,0,1));
   if(demo&&puzzle.key&&!puzzle.door&&world.objects.find(o=>o.id==='dormitorio').open)puzzle.door=true;
   handAction=Math.max(0,handAction-dt*3.5);
   clickAction=Math.max(0,clickAction-dt*6.0);
@@ -843,10 +854,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(cue==='hide'){setDoor(world.objects.find(o=>o.id==='entrada'),false);poseFurniture(world.entryWindow,0);world.entryWindow.latch.hiddenGeometry=false;rebuild();play('latch',world.entryWindow.box);resetInput();phone.close();say('Cerró la ventana. ¡Escóndete en el armario!',4);}
    if(cue==='patrol'){pursuer.start();say('Se oyen pasos hacia la escalera.',4);}
    if(cue==='resting')pursuer.goToBed();
-   if(cue==='sleep'){sound.setThreat(false);say('Se durmió. Ya es seguro salir.',4);}
+   if(cue==='sleep'){sound.setThreat(false);saveCheckpoint();say('Se durmió. Ya es seguro salir.',4);}
    if(cue==='wake'){phone.close();resetInput();pursuer.wake();sound.sequence('notification',true);sound.setThreat(true);say('¡El mensaje lo despertó!',3);}
    if(cue==='hunt')pursuer.resumeSearch();
-   if(cue==='evaded'){pursuer.retreat();sound.setThreat(false);sound.sequence('notification');say('Se aleja. Busca la trampilla bajo el tapete de la cocina.',5);}
+   if(cue==='evaded'){pursuer.retreat();sound.setThreat(false);sound.sequence('notification');saveCheckpoint();say('Se aleja. Busca la trampilla bajo el tapete de la cocina.',5);}
    if(cue==='safe'||cue==='failed'){phone.close();resetInput();sound.sequence('alert');showModal(cue==='safe'?'Estás a salvo':'Te descubrieron',cue==='safe'?'<p>Te quedas en silencio.</p>':'<p>El perseguidor te alcanzó o vio dónde te escondías.</p><p>Al reintentar conservarás la llave y las pistas de esta sesión.</p>',cue==='safe'?[['Volver a pruebas','exit']]:[['Reintentar desde la llegada','retry-arrival'],['Salir','exit']]);}
   }
   if(events.phase==='arrival')poseArrivalCar(world.car,clamp(events.time/CAR_ARRIVAL_SECONDS,0,1));
@@ -1014,6 +1025,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     }
     phone.setInventory(s.inventory);phone.equip('empty');
    }
+   saveCheckpoint();
    play('pickup');
   }
   hudMessages.update({dt:isPaused()?0:shotDelta,blocked:isSuspended()||!!cinematic,danger:danger.hidden?'':danger.textContent,revelation:readingMirror&&mirrorSafe.collected&&mirrorSafe.revealed&&!mirrorSafe.opened?'En el espejo: '+SAFE_CODE+' · combinación de la caja fuerte':'',unread:phone.messageCount>phone.readCount,messageCount:phone.messageCount,phoneOpen:phone.open,dock:phone.rect});
@@ -1033,7 +1045,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   updateControls();
  }
- try{renderer=new HouseRenderer(canvas,options.quality);reset();}catch(e){
+ try{renderer=new HouseRenderer(canvas,options.quality);reset(checkpointStore?.checkpoint);}catch(e){
   root.innerHTML=`<section class="lab-error"><h2>No se pudo abrir la casa 3D</h2><p>${escapeHTML(String(e.message||e))}</p><button data-act="exit">Volver a pruebas</button></section>`;
  }
  function pointerStick(e){if(!active||isPaused()||phone.open||events.phase==='arrival'||stickPointer!==null||e.button!==0)return;stickPointer=e.pointerId;stickPointerType=e.pointerType||'mouse';capture(e.currentTarget,e.pointerId);moveStick(e);e.preventDefault();}

@@ -1,7 +1,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {GardenPrologue,type PrologueCheckpoint} from './GardenPrologue';
 import {resetPrologue} from './prologue-story.js';
-import {START,advanceRescue,loadRescue,saveRescue,resetRescue,type RescueState} from './progression.js';
+import {START,advanceRescue,loadRescue,saveRescue,resetRescue,openRescueHouseSave,type RescueState} from './progression.js';
 import '../lab/lab.css';
 import './rescue.css';
 
@@ -25,26 +25,19 @@ const checkpointFor=(entry:Entry):PrologueCheckpoint=>
  entry==='abduction'?'walk-together':entry==='trail'?'ribbon':'intro';
 
 export function RescueDemo({onExit,entry='garden',test=false}:{onExit:()=>void;entry?:Entry;test?:boolean}){
- const [state,setState]=useState<RescueState>(()=>initial(entry,test));
- const [mode,setMode]=useState<'garden'|'house'|'end'>(()=>{
-  const progress=initial(entry,test);
-  return progress.rescued?'end':progress.house?'house':'garden';
- });
+ const [progress]=useState(()=>initial(entry,test));
+ const [mode,setMode]=useState<'garden'|'house'|'end'>(progress.rescued?'end':progress.house?'house':'garden');
  const [error,setError]=useState('');
- const phaseRef=useRef(state),entering=useRef(false);
+ const phaseRef=useRef(progress),entering=useRef(false);
 
- const emit=(event:RescueEvent)=>{
-  const next=advanceRescue(phaseRef.current,event);
-  phaseRef.current=next;
-  setState(next);
-  if(!test)saveRescue(next);
- };
  const enterHouse=()=>{
   if(entering.current)return;
   entering.current=true;
   // Mantiene la clave histórica del rescate sincronizada con el nuevo
   // prólogo; la clave y los guardados del arcade original no se tocan.
-  for(const event of ['heart','abduction','trail','house'] as const)emit(event);
+  const events:RescueEvent[]=['heart','abduction','trail','house'];
+  phaseRef.current=events.reduce(advanceRescue,phaseRef.current);
+  if(!test)saveRescue(phaseRef.current);
   setMode('house');
  };
 
@@ -59,9 +52,11 @@ export function RescueDemo({onExit,entry='garden',test=false}:{onExit:()=>void;e
     const checkpoint=entry==='mirror'?'mirror':
       entry==='drawer'?'interactions':
       entry==='lock'||entry==='rescue'?'upstairs':'ground';
+    const checkpointStore=test?undefined:openRescueHouseSave();
     teardown=launchHouse(onExit,checkpoint,{
      demo:true,trial:test&&entry!=='garden',entry,
-     onRescue:()=>{emit('rescue');setMode('end');}
+     checkpointStore,
+     onRescue:()=>{checkpointStore?.finish();setMode('end');}
     });
    }catch(e){if(!cancelled)setError(String(e));}
   };
@@ -73,7 +68,7 @@ export function RescueDemo({onExit,entry='garden',test=false}:{onExit:()=>void;e
 
  const reset=()=>{
   if(!test){resetRescue();resetPrologue();}
-  const fresh={...START};phaseRef.current=fresh;setState(fresh);
+  phaseRef.current={...START};
   entering.current=false;setError('');setMode('garden');
  };
 

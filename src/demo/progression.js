@@ -12,11 +12,40 @@ export function advanceRescue(state,event){
  const s={...state};
  if(event==='heart'&&s.phase==='garden'){s.heart=true;s.phase='heart';}
  if(event==='abduction'&&s.heart&&s.phase==='heart'){s.abducted=true;s.phase='abduction';}
- if(event==='trail'&&s.abducted){s.trail=true;s.phase='trail';}
- if(event==='house'&&s.trail){s.house=true;s.phase='house';}
- if(event==='rescue'&&s.house){s.rescued=true;s.phase='end';}
+ if(event==='trail'&&s.abducted&&s.phase==='abduction'){s.trail=true;s.phase='trail';}
+ if(event==='house'&&s.trail&&s.phase==='trail'){s.house=true;s.phase='house';}
+ if(event==='rescue'&&s.house&&s.phase==='house'){s.rescued=true;s.phase='end';}
  return s;
 }
 export function loadRescue(){try{return parseRescue(localStorage.getItem(RESCUE_SAVE_KEY));}catch{return {...START};}}
 export function saveRescue(s){try{localStorage.setItem(RESCUE_SAVE_KEY,JSON.stringify(s));return true;}catch{return false;}}
 export function resetRescue(){try{localStorage.removeItem(RESCUE_SAVE_KEY);}catch{}}
+
+export function openRescueHouseSave(){
+ try{
+  const storage=globalThis.localStorage;
+  let raw=storage.getItem(RESCUE_SAVE_KEY);
+  if(parseRescue(raw).phase!=='house')return;
+  function write(record){
+   try{
+    // A newer checkpoint, a reset or the ending in another tab takes precedence.
+    if(storage.getItem(RESCUE_SAVE_KEY)!==raw)return;
+    const next=JSON.stringify(record);
+    if(next===raw)return;
+    storage.setItem(RESCUE_SAVE_KEY,next);
+    raw=next;
+   }catch{}
+  }
+  return {
+   checkpoint:JSON.parse(raw).houseCheckpoint,
+   save(checkpoint){
+    const record=JSON.parse(raw);
+    if(record.rescued===true)return;
+    if(checkpoint===null)delete record.houseCheckpoint;
+    else record.houseCheckpoint=checkpoint;
+    write(record);
+   },
+   finish(){write(advanceRescue(parseRescue(raw),'rescue'));}
+  };
+ }catch{}
+}

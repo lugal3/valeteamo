@@ -35,6 +35,14 @@ export function poseHatch(hatch,amount){
  hatch.guard.solid=amount>.92;
 }
 
+export function poseHatchRug(rug,amount){
+ rug.amount=amount;
+ const offset=1.53*amount*amount*(3-2*amount);
+ rug.x=rug.parts[0].x+offset;
+ for(const {box,x,y} of rug.parts){box.x=x+offset;box.y=y-.09*amount+Math.sin(amount*Math.PI)*.037;}
+ rug.hatch.concealed=amount<1;
+}
+
 function installCaptive(add,obj){
  const y=floor(13.74),z=13.74,x=X;
  const part=(id,dx,dy,dz,w,h,d,mat,extra={},solid=false)=>add('captive-'+id,x+dx,y+dy,z+dz,w,h,d,mat,solid,{
