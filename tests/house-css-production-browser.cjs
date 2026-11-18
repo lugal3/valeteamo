@@ -15,13 +15,15 @@ const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
     ['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']:[]});
    try{
     const context=await browser.newContext({viewport:{width:844,height:390},deviceScaleFactor:2,isMobile:true,hasTouch:true});
-    const scenes=['Espejo','Casa 3D','WebGL bloqueado'];
-    if(process.env.HOUSE_PRODUCTION_SCENE_MATRIX==='1')scenes.push(
+    const matrix=process.env.HOUSE_PRODUCTION_SCENE_MATRIX==='1';
+    const scenes=['Espejo','Casa 3D'];
+    if(matrix)scenes.push(
      'Dormitorio y rescate','Llegada del secuestrador','Trampilla y rescate',
      'Auto del secuestrador','Levantarse y entrar al armario','Despertar del secuestrador',
      'Cajón y pistas','Nota y caja fuerte','Leer la nota en el espejo','Cambio automático de pila',
      'Interruptor general','Piano de la sala de música','Televisor y mando'
     );
+    else scenes.push('WebGL bloqueado');
     for(const scene of scenes){
      const page=await context.newPage(),errors=[];
      page.setDefaultTimeout(60000);
@@ -85,7 +87,7 @@ const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
       assert(!result.errors,'3D render error overlay');
       assert.deepEqual(errors,[],'no unhandled JavaScript errors');
       console.log('PASS HOUSE CSS PRODUCTION',JSON.stringify({name,scene,...result}));
-      if(scene==='Casa 3D'){
+      if(scene==='Casa 3D'&&!matrix){
        await page.locator('#lab-dialog [data-act=start]').click();
        if(name==='Chromium'){
         await page.evaluate(()=>{
