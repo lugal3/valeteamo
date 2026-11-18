@@ -332,16 +332,20 @@ export function geometry(boxes){
  }
  return {vertices:new Float32Array(vertices),indices:new Uint16Array(indices),groups,ranges};
 }
-function uploadShadowIndices(gl,buffer,mesh,flags){
+function filteredIndices(mesh,flags){
  const indices=new Uint16Array(mesh.indices.length);let count=0;
  for(let i=0;i<flags.length;i++){
   if(!flags[i])continue;
   const {indexStart,indexEnd}=mesh.ranges[i],slice=mesh.indices.subarray(indexStart,indexEnd);
   indices.set(slice,count);count+=slice.length;
  }
+ return indices.subarray(0,count);
+}
+function uploadShadowIndices(gl,buffer,mesh,flags){
+ const indices=filteredIndices(mesh,flags);
  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,buffer);
- gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices.subarray(0,count),gl.STATIC_DRAW);
- return count;
+ gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
+ return indices.length;
 }
 export class HouseRenderer {
  constructor(canvas,quality='medium'){
@@ -385,7 +389,8 @@ export class HouseRenderer {
   // Avoid fetching the face atlas in unrelated 3D scenes and editor previews.
   // The only retained atlas is Photo-A; no source swapping or duplicate GPU texture.
   if(this.dynamicBoxes.some(box=>box.shape==='lois-face'&&box.faceTexture!==false))this.loisFaceTexture.enable();
-  const dynamic=geometry(this.dynamicBoxes);this.dynamicCount=dynamic.indices.length;
+  const dynamic=geometry(this.dynamicBoxes);this.dynamicMesh=dynamic;this.dynamicCount=dynamic.indices.length;
+  this.dynamicVisible=this.dynamicBoxes.map(()=>true);
   this.dynamicTemplate=dynamic.vertices;this.dynamicVertices=new Float32Array(dynamic.vertices);this.dynamicRanges=dynamic.ranges;
   this.dynamicOrigins=this.dynamicBoxes.map(b=>[b.x,b.y,b.z,b.yaw||0,b.roll||0,b.pitch||0]);this.dynamicPositions=new Float32Array(this.dynamicBoxes.length*6);this.dynamicPositions.fill(Infinity);
   this.dynamicRigBinds=this.dynamicBoxes.map(b=>b.rigBone&&b.source?[b.source.x,b.source.y,b.source.z]:null);
@@ -404,12 +409,30 @@ export class HouseRenderer {
   gl.bindBuffer(gl.ARRAY_BUFFER,this.vbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.ibo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
   this.bind(this.vbo,this.ibo);
-  this.prepareMirror(boxes);
+  this.prepareMirror(boxes,dynamic.indices);
  }
- prepareMirror(boxes){
+ updateVisibility(){
+  // Pickups and the hatch lock already have vertex data. Remove only their
+  // indices, so the walls, rig and reflected scene keep their GPU buffers.
+  const visible=this.dynamicBoxes.map(box=>!box.hiddenGeometry&&!box.source?.taken);
+  if(visible.every((value,i)=>value===this.dynamicVisible[i]))return;
+  const gl=this.gl,indices=filteredIndices(this.dynamicMesh,visible);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.dynamicIbo);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.mirrorBuffers[7]);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
+  this.mirrorMeshes[3].indices=indices;
+  this.dynamicCount=indices.length;
+  if(this.dynamicCasters.some((caster,i)=>caster&&visible[i]!==this.dynamicVisible[i])){
+   this.shadowMeshes[1].count=uploadShadowIndices(gl,this.shadowMeshes[1].indices,this.dynamicMesh,this.dynamicCasters.map((caster,i)=>caster&&visible[i]));
+   this.lightPose='';this.dirtyLampShadows=new Set(this.fixtures);
+  }
+  this.dynamicVisible=visible;
+ }
+ prepareMirror(boxes,dynamicIndices){
   const gl=this.gl;
   this.mirrorBoxes=boxes;this.mirrorEquipment='flashlight';
-  this.mirrorMeshes=[geometry([{...BATH_MIRROR,x:BATH_MIRROR.x-.0005}]),geometry(boxes.filter(b=>!b.dynamic&&!b.id.includes('mirror'))),geometry(kittyMirrorPieces()),{vertices:new Float32Array(this.dynamicVertices.length),indices:geometry(this.dynamicBoxes).indices}];
+  this.mirrorMeshes=[geometry([{...BATH_MIRROR,x:BATH_MIRROR.x-.0005}]),geometry(boxes.filter(b=>!b.dynamic&&!b.id.includes('mirror'))),geometry(kittyMirrorPieces()),{vertices:new Float32Array(this.dynamicVertices.length),indices:dynamicIndices}];
   reflectMesh(this.mirrorMeshes[1].vertices);
   this.kittyVertices=new Float32Array(this.mirrorMeshes[2].vertices.length);this.mirrorPose=null;this.mirrorUploads=0;this.characterBinding=createRigBinding(this.mirrorMeshes[2].groups);
   this.mirrorMeshes.forEach((mesh,i)=>{gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[i*2]);gl.bufferData(gl.ARRAY_BUFFER,mesh.vertices,i===2?gl.DYNAMIC_DRAW:gl.STATIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.mirrorBuffers[i*2+1]);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,mesh.indices,gl.STATIC_DRAW);});
@@ -470,6 +493,7 @@ export class HouseRenderer {
   };
   const bobAmp=reduced?0:0.012,swayAmp=reduced?0:0.14;
   for(let i=0;i<this.dynamicBoxes.length;i++){
+   if(!this.dynamicVisible[i])continue;
    const box=this.dynamicBoxes[i],source=box.source;
    // The PS2 option-B Lois uses a parented rigid rig. The legacy fallback
    // retains the original louisPartPose path below, unchanged.
@@ -687,5 +711,17 @@ export class HouseRenderer {
   if(motion.introHands)this.drawClimbingHands(motion.introHands);
   if(showHand)this.drawFirstPerson(camera,right,up,forward,time,flash,motion);
  }
- destroy(){const gl=this.gl;this.loisFaceTexture.destroy();this.disposeArtwork();if(this.pursuerVbo)gl.deleteBuffer(this.pursuerVbo);if(this.pursuerIbo)gl.deleteBuffer(this.pursuerIbo);for(const b of this.mirrorBuffers)gl.deleteBuffer(b);gl.deleteTexture(this.texture);gl.deleteTexture(this.tvTexture);this.shadows.destroy();for(const mesh of this.shadowMeshes)gl.deleteBuffer(mesh.indices);for(const texture of this.materialTextures)gl.deleteTexture(texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.dynamicVbo);gl.deleteBuffer(this.dynamicIbo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);for(const p of Object.values(this.programs))gl.deleteProgram(p);this.canvas.width=1;this.canvas.height=1;}
+ destroy({keepCanvas=false}={}){
+  if(this.destroyed)return;
+  this.destroyed=true;
+  const gl=this.gl;
+  this.loisFaceTexture.destroy();this.disposeArtwork();this.shadows.destroy();
+  for(const buffer of [...this.mirrorBuffers,...this.shadowMeshes.map(mesh=>mesh.indices),
+   this.vbo,this.ibo,this.dynamicVbo,this.dynamicIbo,this.handVbo,this.handIbo,this.pursuerVbo,this.pursuerIbo]){
+   if(buffer)gl.deleteBuffer(buffer);
+  }
+  for(const texture of [this.texture,this.tvTexture,...this.materialTextures])gl.deleteTexture(texture);
+  for(const program of Object.values(this.programs))gl.deleteProgram(program);
+  if(!keepCanvas){this.canvas.width=1;this.canvas.height=1;}
+ }
 }

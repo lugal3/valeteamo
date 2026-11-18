@@ -37,8 +37,11 @@ export function overlaps(box, x, footY, z, radius=.19, bodyHeight=1.65) {
   if(!box.solid||box.walkSurface||box.id.startsWith('floor-up-'))return false;
   if(!(footY < box.y+box.h/2-.02 && footY+bodyHeight > box.y-box.h/2+.02))return false;
   const yaw=box.yaw||0,c=Math.cos(yaw),s=Math.sin(yaw),rx=x-box.x,rz=z-box.z;
-  const dx=Math.max(0,Math.abs(rx*c+rz*s)-box.w/2),dz=Math.max(0,Math.abs(-rx*s+rz*c)-box.d/2);
-  return dx*dx+dz*dz<radius*radius-1e-10;
+  return overlapsFootprint(rx*c+rz*s,-rx*s+rz*c,box.w/2,box.d/2,radius*radius);
+}
+export function overlapsFootprint(localX,localZ,halfWidth,halfDepth,radiusSquared){
+  const dx=Math.max(0,Math.abs(localX)-halfWidth),dz=Math.max(0,Math.abs(localZ)-halfDepth);
+  return dx*dx+dz*dz<radiusSquared-1e-10;
 }
 export function blocked(boxes,x,footY,z,radius=.19,bodyHeight=1.65) {
   return boxes.some(box=>overlaps(box,x,footY,z,radius,bodyHeight));

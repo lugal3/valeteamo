@@ -1,8 +1,12 @@
 import {blocked,groundHeight,lineBlocked,HEIGHT,HOUSE} from './world.js';
 import {navigate} from './navigation.js';
+import {indexNavigationColliders} from './navigation-collision.js';
 import {BED_EXIT,RISE_SECONDS} from './pursuer-model.js';
 
 const CELL=.4,dist=(a,b)=>Math.hypot(a.x-b.x,(a.y-b.y)*2,a.z-b.z);
+const GRID_COLUMNS=35,GRID_ROWS=38;
+const NEIGHBORS=[[1,0],[-1,0],[0,1],[0,-1]],LEVELS=[0,HEIGHT,-3.55];
+const cellId=(i,j)=>i*(GRID_ROWS+2)+j;
 export const SEARCH_ROUTE=Object.freeze([{x:12,y:HEIGHT,z:4.2},{x:6,y:HEIGHT,z:2.8},{x:2.5,y:HEIGHT,z:3.6},{x:6,y:HEIGHT,z:5.8},{x:6,y:0,z:8.7},{x:8.67,y:0,z:2.20}]);
 const ENTRY_APPROACH={x:5.8,y:0,z:11};
 const QUIET_ROUTE_END=4;
@@ -38,13 +42,15 @@ export class Pursuer{
   if(this.nodes&&this.graphHatchOpen===hatchOpen)return;
   this.graphHatchOpen=hatchOpen;
   const doors=new Set(this.world.objects.filter(o=>o.kind==='door').flatMap(o=>[o.box,...(o.parts||[]).map(p=>p.box)])),boxes=this.world.boxes.filter(b=>b.solid&&!doors.has(b));
+  const isBlocked=indexNavigationColliders(boxes,.16,1.72);
   this.nodes=[];this.cells=new Map();
-  for(let i=0;i<35;i++)for(let j=0;j<38;j++)for(const level of [0,HEIGHT,-3.55]){
-   const x=.2+i*CELL,z=.2+j*CELL,y=groundHeight(x,z,level,hatchOpen),key=i+','+j;if(!Number.isFinite(y)||blocked(boxes,x,y,z,.16,1.72))continue;
-   const cell=this.cells.get(key)||[];if(cell.some(n=>Math.abs(n.y-y)<.1))continue;
+  for(let i=0;i<GRID_COLUMNS;i++)for(let j=0;j<GRID_ROWS;j++)for(const level of LEVELS){
+   const x=.2+i*CELL,z=.2+j*CELL,y=groundHeight(x,z,level,hatchOpen),key=cellId(i,j);
+   const cell=this.cells.get(key)||[];
+   if(!Number.isFinite(y)||cell.some(n=>Math.abs(n.y-y)<.1)||isBlocked(x,y,z))continue;
    const n={x,y,z,i,j,index:this.nodes.length};cell.push(n);this.cells.set(key,cell);this.nodes.push(n);
   }
-  for(const n of this.nodes){n.neighbors=[];for(const [di,dj]of [[1,0],[-1,0],[0,1],[0,-1]])for(const next of this.cells.get((n.i+di)+','+(n.j+dj))||[]){
+  for(const n of this.nodes){n.neighbors=[];for(const [di,dj]of NEIGHBORS)for(const next of this.cells.get(cellId(n.i+di,n.j+dj))||[]){
    if(Math.abs(next.y-n.y)>((n.y<0||next.y<0)?0.60:0.34))continue;
    let clear=true,sampleY=n.y;
    // Check the real walking surface on each substep, not a linear interpolation
@@ -53,7 +59,7 @@ export class Pursuer{
    for(let k=1;k<=8;k++){
     const t=k/8,x=n.x+(next.x-n.x)*t,z=n.z+(next.z-n.z)*t;
     const y=groundHeight(x,z,sampleY,hatchOpen);
-    if(!Number.isFinite(y)||Math.abs(y-sampleY)>.35||blocked(boxes,x,y,z,.16,1.72)){clear=false;break;}
+    if(!Number.isFinite(y)||Math.abs(y-sampleY)>.35||isBlocked(x,y,z)){clear=false;break;}
     sampleY=y;
    }
    if(clear&&Math.abs(sampleY-next.y)<.08)n.neighbors.push(next.index);
@@ -63,9 +69,9 @@ export class Pursuer{
   this.buildGraph();
   // Cache occupancy only for this planning pass: the door/furniture state may change
   // between plans, but remains fixed while the synchronous search is running.
-  const boxes=this.planningBoxes(),availability=new Map();
+  const isBlocked=indexNavigationColliders(this.planningBoxes(),.16,1.72),availability=new Map();
   const available=n=>{
-   if(!availability.has(n.index))availability.set(n.index,!blocked(boxes,n.x,n.y,n.z,.16,1.72));
+   if(!availability.has(n.index))availability.set(n.index,!isBlocked(n.x,n.y,n.z));
    return availability.get(n.index);
   };
   const nearest=p=>{let best=null,d=Infinity;for(const n of this.nodes){const v=dist(n,p);if(v<d&&available(n)){best=n;d=v;}}return best;};
