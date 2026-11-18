@@ -81,10 +81,10 @@ export const HOUSE_TRIALS={
   pose:{x:9.4,floor:0,z:9.18,yaw:Math.PI,pitch:-.13}
  },
  piano:{
-  title:'Piano de la sala de música',
+  title:'Piano del descansillo',
   description:'Kitty ya recogió la partitura. Acércate al piano, siéntate y toca con las teclas del juego o con A, S, D, F, G, H, J y K.',
   objective:'Siéntate al piano y toca la partitura',
-  pose:{x:11.5,floor:1,z:1.85,yaw:Math.PI/2,pitch:-.34},circuit:'musica',score:true
+  pose:{x:6.9,floor:1,z:10.4,yaw:-Math.PI/2,pitch:-.33},circuit:'distribuidor',score:true
  },
  basement:{
   title:'Trampilla y rescate',

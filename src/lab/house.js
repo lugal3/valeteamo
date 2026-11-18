@@ -482,7 +482,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  function placePianoScore(){
   const {piano:instrument,pianoSheet}=world;
-  if(instrument.scorePlaced||!pianoSheet.taken||roomAt(s.x,s.z,s.y)!=='Sala de música'||
+  if(instrument.scorePlaced||!pianoSheet.taken||
+   roomAt(s.x,s.z,s.y)!==roomAt(instrument.x,instrument.z,instrument.y)||
    Math.hypot(s.x-instrument.x,s.z-instrument.z)>1.95)return;
   setPianoScore(instrument,true);
   play('cloth',instrument);say('Kitty colocó la partitura en el atril.');

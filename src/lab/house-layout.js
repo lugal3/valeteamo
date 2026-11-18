@@ -368,11 +368,11 @@ export function buildHouse(spawn='ground'){
  installCabinet(add,obj,{id:'reading-cabinet',label:'Cajón de la sala de lectura',x:2.05,y:HEIGHT,z:5.12,w:1.28,d:.60,
   items:[{id:'reading-battery',kind:'battery',label:'Pila de la sala de lectura',dx:.27},
    {id:PIANO_SHEET_ID,kind:'note',label:'Partitura doblada',dx:-.26,
-    text:'Una melodía corta. Al acercarte al piano de la sala de música, Kitty colocará la partitura en el atril.'}]});
+    text:'Una melodía corta. Al acercarte al piano del descansillo, Kitty colocará la partitura en el atril.'}]});
  installCabinet(add,obj,{id:'landing-cabinet',label:'Cajón del descansillo',x:6.76,y:HEIGHT,z:3.08,w:.97,d:.60,
   items:[{id:'media-flashlight',kind:'flashlight',label:'Linterna',dx:0}]});
  add('reading-rug',1.92,HEIGHT+.012,8.0,2.9,.024,4,'carpet',false,{ao:.88});add('upper-bench',4.95,HEIGHT+.43,11.65,1.15,.18,.48,'velvet');for(const x of [4.55,5.35])add('bench-leg-'+x,x,HEIGHT+.20,11.65,.08,.4,.35,'wood');plant('landing-plant',8.3,HEIGHT,11.54);frame('landing',8.0,HEIGHT+1.85,11.83,'north',0);
- const piano=installPiano(add,obj,{x:12.91,z:1.85,floor:HEIGHT});
+ const piano=installPiano(add,obj,{x:4.84,z:10.40,floor:HEIGHT});
  const pianoSheet=objects.find(item=>item.id===PIANO_SHEET_ID);
  add('reading-tea-saucer',1.69,HEIGHT+.927,7.98,.18,.018,.18,'ceramica',false,{shape:'round'});
  add('reading-tea-cup',1.69,HEIGHT+.98,7.98,.10,.10,.10,'cream',false,{shape:'lathe',profile:CUP_PROFILE,segments:9});

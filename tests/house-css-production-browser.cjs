@@ -21,7 +21,7 @@ const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
      'Dormitorio y rescate','Llegada del secuestrador','Trampilla y rescate',
      'Auto del secuestrador','Levantarse y entrar al armario','Despertar del secuestrador',
      'Cajón y pistas','Nota y caja fuerte','Leer la nota en el espejo','Cambio automático de pila',
-     'Interruptor general','Piano de la sala de música','Televisor y mando'
+     'Interruptor general','Piano del descansillo','Televisor y mando'
     );
     else scenes.push('WebGL bloqueado');
     for(const scene of scenes){

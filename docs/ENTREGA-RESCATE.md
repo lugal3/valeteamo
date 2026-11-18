@@ -6,11 +6,11 @@ Las fases 01 a 07 se revisan juntas en el [PR #32](https://github.com/lugal3/val
 
 Desde «Feliz cumpleaños Vale», abre el rescate y sigue el prólogo de Kitty. Ofrécele el Churu a la gata gris y avanza hasta el encuentro de Luis y Vale. Después de proteger a Louis, fíjate en la media luna y la placa **LUNA-07**. Sigue las pistas de la furgoneta por la villa y entra en la casa por la ventana.
 
-Recoge la llave del cajón del estudio y la linterna del descansillo. La partitura de la sala de lectura se coloca al acercarse al piano. Su compartimento contiene una pista y la llave roja se recoge en la barra de la cocina. Abre el dormitorio, esquiva al perseguidor y baja por la trampilla. Libera a Louis, usa el autito como señuelo, cierra la escotilla cuando el perseguidor entra al túnel y sigue a la gata por la puerta principal.
+Recoge la llave del cajón del estudio y la linterna del descansillo. La partitura de la sala de lectura se coloca al acercarse al piano del descansillo, junto a la escalera. Su compartimento contiene una pista y la llave roja se recoge en la barra de la cocina. Abre el dormitorio, esquiva al perseguidor y baja por la trampilla. Libera a Louis, usa el autito como señuelo, cierra la escotilla cuando el perseguidor entra al túnel y sigue a la gata por la puerta principal.
 
 En escritorio, **E** interactúa, **R** alterna la captura del ratón y **Esc** libera el cursor o guarda la tablet. En móvil, combina el joystick izquierdo con el arrastre derecho. El engranaje reúne sensibilidad, reducción de movimiento, subtítulos y mezcla de audio.
 
-Los efectos añadidos para la escucha del rescate y sus fuentes están en [Prueba de audio](AUDIO-PRUEBA-RESCATE.md).
+Los efectos añadidos y sus fuentes están en [Prueba de audio](AUDIO-PRUEBA-RESCATE.md). Las búsquedas para reemplazos y nuevas grabaciones están en el [catálogo de audio](CATALOGO-AUDIO.md).
 
 ## Verificación
 

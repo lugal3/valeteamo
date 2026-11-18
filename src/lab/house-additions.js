@@ -8,7 +8,7 @@ export const PIANO_REWARD={id:'piano-compartment',label:'Pista del piano',
 
 export function installPiano(add,obj,{x,z,floor}){
  const wood={color:[.34,.22,.18]};
- const part=(id,dx,y,dz,w,h,d,mat='wood',solid=false,extra={})=>add('piano-'+id,x-dx,floor+y,z-dz,w,h,d,mat,solid,{...wood,...extra});
+ const part=(id,dx,y,dz,w,h,d,mat='wood',solid=false,extra={})=>add('piano-'+id,x+dx,floor+y,z+dz,w,h,d,mat,solid,{...wood,...extra});
  part('case',0,.79,0,.60,1.58,1.75,'wood',true);
  part('crown',0,1.58,0,.66,.085,1.85,'trim');
  part('front',.314,1.24,0,.032,.41,1.61,'wood',false,{color:[.46,.31,.22]});
@@ -18,7 +18,7 @@ export function installPiano(add,obj,{x,z,floor}){
  const keys=PIANO_NOTES.map((_,i)=>part('key-'+i,.44,.95,(i-3.5)*.176,.29,.038,.164,'cream',false,{dynamic:true,color:[.91,.82,.68]}));
  for(const i of [0,1,3,4,5])part('black-'+i,.40,.982,(i-3)*.176,.17,.034,.071,'dark',false,{color:[.14,.12,.13]});
  const score=[part('score',.339,1.35,0,.025,.25,.47,'paper',false,
-  {dynamic:true,color:[.88,.78,.58],pitch:-.08})];
+  {dynamic:true,color:[.88,.78,.58],pitch:.08})];
  for(let i=0;i<5;i++)score.push(part('staff-'+i,.355,1.30+i*.018,0,.008,.005,.38,'dark',false,{dynamic:true}));
  for(let i=0;i<8;i++)score.push(part('ink-'+i,.362,1.30+PIANO_SCORE[i]*.011,
   (i-3.5)*.046,.008,.019,.027,'dark',false,{dynamic:true}));
@@ -30,10 +30,10 @@ export function installPiano(add,obj,{x,z,floor}){
  ];
  part('bench',.86,.49,0,.34,.075,.87,'velvet',true,{color:[.42,.22,.26]});
  for(const dx of [.74,.98])for(const dz of [-.36,.36])part('bench-leg-'+dx+dz,dx,.225,dz,.054,.45,.065,'wood',true);
- const piano=obj('piano','piano','Piano antiguo',x-.49,floor+1.1,z,{
-  keys,keyHeight:floor+.95,handOffsetX:-.15,scorePlaced:false,solved:false,
+ const piano=obj('piano','piano','Piano antiguo',x+.49,floor+1.1,z,{
+  keys,keyHeight:floor+.95,handOffsetX:.15,scorePlaced:false,solved:false,
   score:score.map(box=>({box,y:box.y})),compartment:compartment.map(box=>({box,x:box.x})),
-  compartmentAmount:0,seat:{x:x-.86,y:floor+1.24,z,yaw:Math.PI/2,pitch:-.39}
+  compartmentAmount:0,seat:{x:x+.86,y:floor+1.24,z,yaw:-Math.PI/2,pitch:-.39}
  });
  setPianoScore(piano,false);
  return piano;
@@ -47,7 +47,7 @@ export function setPianoScore(piano,placed){
 export function posePianoCompartment(piano,amount){
  piano.compartmentAmount=amount;
  const slide=.22*amount*amount*(3-2*amount);
- for(const part of piano.compartment)part.box.x=part.x-slide;
+ for(const part of piano.compartment)part.box.x=part.x+slide;
 }
 
 export function decorateKitchen(add){

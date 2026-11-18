@@ -21,6 +21,11 @@ module.exports=async()=>{
   }
  }
  const anchors=[['hall',5.9,10.7,0],['study',3.7,3.7,0],['living',3.9,10.7,0],['kitchen',9.3,3.5,0],['bath',8.1,6.1,0],['stair-bottom',12,10.9,0],['stair-top',12,4.1,w.HEIGHT],['bedroom',3.9,3.7,w.HEIGHT],['wardrobe',2.3,3.9,w.HEIGHT],['reading',3.5,10.5,w.HEIGHT],['music',11.5,2.1,w.HEIGHT],['upper-balcony',12.5,11.1,w.HEIGHT]];
+ const pianoCase=house.boxes.find(box=>box.id==='piano-case');
+ assert.equal(w.roomAt(pianoCase.x,pianoCase.z,pianoCase.y),'Distribuidor y descansillo');
+ assert(pianoCase.x-pianoCase.w/2>4.50&&pianoCase.x-pianoCase.w/2<4.65&&
+  pianoCase.z-pianoCase.d/2>7.45&&pianoCase.z+pianoCase.d/2<11.41,
+  'The piano fits against the landing wall between the reading-room door and the bench');
  const routes=anchors.map(([name,x,z,y])=>({name,reachable:queue.some(p=>Math.abs(p.y-y)<.04&&Math.hypot(p.x-x,p.z-z)<.26)}));
  const interactions=['note-hall','drawer','key','mirror-note','mirror-safe','picture-stain','dormitorio','wardrobe','underbed','basement-note','hatch-rug','basement-hatch','house-power',
   'television','media-cabinet','basin-cabinet','bath-tap','kitchen-drawer','fridge','reading-cabinet',
