@@ -58,6 +58,10 @@ export function pianoPerformanceView(instrument,time,reduced){
 function pianoAim(x,y,z,tx,ty,tz){
  return {x,y,z,yaw:Math.atan2(tx-x,tz-z),pitch:Math.atan2(ty-y,Math.hypot(tx-x,tz-z))};
 }
+export function pianoStandingView(instrument){
+ const key=instrument.reward;
+ return pianoAim(instrument.seat.x+.83,instrument.floor+1.63,key.z,key.x,key.y,key.z);
+}
 export function samplePianoPose(instrument,hands,out){
  out.fill(0);
  feet(out,{y:-.10,left:[-.16,.115,.23],right:[.16,.115,.23]});

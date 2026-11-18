@@ -137,14 +137,14 @@ async function run(){
   await page.locator('[data-piano-mode="recital"]').waitFor();
   assert.notEqual((await checkpoint()).pianoSolved,true,'The master key waits for the performance');
   await page.locator('[data-piano-mode="reveal"]').waitFor({timeout:50000});
-  await page.getByText(/Melodía completa/).waitFor();
+  await page.getByRole('dialog',{name:'Piano antiguo'}).waitFor({state:'hidden'});
   await page.waitForFunction(()=>window.__rescueHouse.pianoPuzzle().compartment===1);
   assert.equal((await checkpoint()).pianoSolved,true);
   await shot('03-compartimento-del-piano');
   assert(!(await checkpoint()).picked.includes('master-key'),'The reward can stay in the drawer');
-  await page.getByRole('button',{name:'Recoger llave maestra'}).click();
+  await page.waitForFunction(()=>window.__rescueHouse.snapshot().target==='master-key');
+  await page.keyboard.press('e');
   assert((await checkpoint()).picked.includes('master-key'));
-  await page.keyboard.press('Escape');
   await use('piano');
   await page.locator('[data-piano-mode="practice"]').waitFor();
   assert.equal((await snapshot()).notes,1,'Practice keeps only the found score');

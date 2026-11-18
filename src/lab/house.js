@@ -515,7 +515,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   showModal('Piano antiguo',`<div class="piano-sheet-ui"><div class="piano-title">${object.scorePlaced?'Mia &amp; Sebastian’s Theme':'Piano libre'} <span class="piano-page-label"></span></div>
    <div class="piano-score" role="img" aria-label="Partitura"></div><div class="piano-time" aria-hidden="true"><i></i></div>
    <div class="piano-keys">${pianoKeyboard()}</div></div><output class="piano-result" aria-live="polite"></output>`,
-   [['Levantarse','close'],['Practicar pieza completa','piano-practice'],['Recoger llave maestra','piano-collect']]);
+   [['Levantarse','close']]);
   piano=new PianoSession(object,dialog,sound,saveCheckpoint);
   sound.preparePiano();
   s.poseCamera=object.seat;dialog.classList.add('house-piano-dialog');
@@ -529,12 +529,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(!instrument.solved||key.taken)return;
   key.taken=true;s.inventory.masterKey=true;
   posePianoReward(instrument);renderer.updateVisibility();saveCheckpoint();
-  if(piano){
-   piano.collectButton.hidden=true;
-   piano.practiceButton.focus({preventScroll:true});
-   piano.result.textContent='Llave maestra guardada · Abre la puerta principal';
-   sound.pianoReveal('key');
-  }else{play('pickup',key);say('Llave maestra guardada · Abre la puerta principal',5);}
+  play('pickup',key);say('Llave maestra guardada · Abre la puerta principal',5);
  }
  function showMirrorNote(back='close'){
   showModal('Nota con escritura extraña',`<div class="house-note-sheet mirror-note-paper"><span class="mirror-note-writing" aria-hidden="true">${SAFE_CODE}</span><span class="mirror-note-description">Cuatro cifras escritas al revés.</span></div>${mirrorSafe.revealed?`<p class="mirror-note-reading">Lectura del espejo: <strong>${SAFE_CODE}</strong></p>`:'<p>Las marcas parecen tener sentido desde otro punto de vista.</p>'}`,[['Volver',back]]);
@@ -673,8 +668,6 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   if(act==='mouse'){lockMouse();return;}
   if(act.startsWith('piano:')){playPiano(Number(act.slice(6)));return;}
-  if(act==='piano-practice'){if(pianoRunning())piano?.start('practice');return;}
-  if(act==='piano-collect'){if(piano?.mode==='complete'&&pianoRunning())collectMasterKey();return;}
   if(act==='skip-intro'){if(cinematic)finishWindowIntro();return;}
   if(act==='pause'){togglePause();return;}
   if(act==='resume'){paused=false;modalClose();sound.resume();return;}
@@ -811,7 +804,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    case 'hide':return target.requiresCrouch&&!s.crouched?'Agáchate primero':target.label;
    case 'battery':return 'Recoger pila';
    case 'flashlight':return 'Recoger linterna';
-   case 'piano':return 'Tocar el piano';
+   case 'piano':return target.solved?'Practicar pieza completa':'Tocar el piano';
    case 'rc-car':return 'Recoger auto RC';
    case 'television':return target.power.on?'Apagar tele':'Encender tele';
    case 'power-switch':return target.power.on?'Cortar corriente':'Restablecer corriente';
@@ -1021,13 +1014,23 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    posePianoCompartment(instrument,reducedMotion.matches?1:Math.min(1,instrument.compartmentAmount+shotDelta/.48));
   let thirdPerson=null,actorTime,actorWalk,actorPiano,shotLight=0;
   if(piano){
-   piano.advance(now,pianoRunning(),reducedMotion.matches);
-   const pose=piano.pose(reducedMotion.matches);
-   view=pose.view;hand=false;torch=false;shotLight=.40;
-   if(pose.actor){
-    thirdPerson=piano.object.seat;
-    actorPiano={instrument:piano.object,hands:pose.hands};actorTime=piano.sourceTime;
-   }else if(!pose.hideHands)introHands=pose.hands;
+   const standing=piano.advance(now,pianoRunning(),reducedMotion.matches);
+   if(standing){
+    const y=piano.object.floor;
+    if(!blocked(world.boxes,standing.x,y,standing.z,.2,1.69)){
+     Object.assign(s,{x:standing.x,y,z:standing.z,yaw:standing.yaw,pitch:standing.pitch,eye:1.63,crouched:false});
+    }
+    modalClose();
+    focus=closestObject(world,s);
+    view=cameraOf(s);
+   }else{
+    const pose=piano.pose(reducedMotion.matches);
+    view=pose.view;hand=false;torch=false;shotLight=.40;
+    if(pose.actor){
+     thirdPerson=piano.object.seat;
+     actorPiano={instrument:piano.object,hands:pose.hands};actorTime=piano.sourceTime;
+    }else if(!pose.hideHands)introHands=pose.hands;
+   }
   }
   if(louis&&(['untying','climb','hide'].includes(louis.phase)||(louis.phase==='hidden'&&louis.age<1.6))){
    if(!loisShotDirector)loisShotDirector=createLoisShotDirector();

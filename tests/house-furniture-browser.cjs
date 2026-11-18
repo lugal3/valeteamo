@@ -35,7 +35,7 @@ const {chromium}=require('playwright');
   await use('piano');await page.getByRole('dialog',{name:'Piano antiguo'}).waitFor();
   assert((await snapshot()).view.y>4,'The piano seat is upstairs');
   for(const letter of ['w','t','y','h','y','t','s','j','j','h','y','h','y','t'])await page.keyboard.press(letter);
-  await page.getByText(/Melodía completa/).waitFor();await shot('piano');await close();
+  await page.getByRole('dialog',{name:'Piano antiguo'}).waitFor({state:'hidden'});await shot('piano');
   const spares=(await amenities()).battery.spares;
   await page.evaluate(()=>{
    const {position,camera}=window.__rescueHouse.snapshot();
