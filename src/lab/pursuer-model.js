@@ -113,7 +113,17 @@ export function pursuerPose(actor,reduced=false){
   joints['arm'+side]={py:SHOULDER,x:sway,y:hips,z:shoulderZ,pitch:swing};
   joints['forearm'+side]={py:ELBOW,x:sway,y:hips+(SHOULDER-ELBOW)*(1-Math.cos(swing)),z:shoulderZ-(SHOULDER-ELBOW)*Math.sin(swing),pitch:swing-.13-amount*.20-hurry*.35};
  }
- if(actor.mode==='trapped'){
+ if(actor.captureReach){
+  joints.chest.pitch=.12-.10*actor.captureLift;
+  joints.head.yaw=0;
+  joints.head.pitch=.23-.26*actor.captureLift;
+  for(const side of [-1,1]){
+   const pitch=-actor.captureReach*(1.08+.34*actor.captureLift+side*.09);
+   joints['arm'+side]={py:SHOULDER,pitch,roll:side*.13*actor.captureReach};
+   joints['forearm'+side]={py:ELBOW,pitch:pitch-.26*actor.captureReach,
+    y:(SHOULDER-ELBOW)*(1-Math.cos(pitch)),z:-(SHOULDER-ELBOW)*Math.sin(pitch)};
+  }
+ }else if(actor.mode==='trapped'){
   // Frustrated rhythmic pounding and head turns, retained in low-motion mode.
   const beat=reduced?0:Math.max(0,Math.sin((actor.age||0)*4.2));
   joints.chest={...joints.chest,pitch:.08+beat*.08,roll:Math.sin((actor.age||0)*1.8)*.035};

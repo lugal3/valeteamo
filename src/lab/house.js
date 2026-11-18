@@ -5,6 +5,8 @@ import {PhoneUI} from './phone-ui.js';
 import {FloorSounds} from './floor-sounds.js';
 import {EMOTES} from './animations/emotes.js';
 import {Pursuer} from './pursuer.js';
+import {CAPTURE_BITE,CAPTURE_REVEAL,CAPTURE_SECONDS,captureFrame} from './capture-shot.js';
+import pursuerReveal from './media/pursuer-reveal.jpg';
 import {movementKey,releasedPointer,hasControlTouch} from './movement-input.js';
 import {CharacterAnimator} from './animator.js';
 import {BATH_MIRROR} from './mirror.js';
@@ -36,6 +38,7 @@ import {createLoisShotDirector,advanceLoisShot,finishLoisShot} from './lois-ps2-
 import {createHousePuzzle,puzzleEvent,canOpenBedroom,canRescue,PUZZLE_HINTS} from '../demo/house-puzzles.js';
 import './lab.css'; // Required for #lab3d stacking, fixed fullscreen layout, canvas sizing and HUD.
 import './house.css';
+import './capture-shot.css';
 const FLASH_DRAIN=.24,FLASH_LOW=15,SPARE_CHARGE=55;
 const SPRINT_SECONDS=4;
 const CHECKPOINT_INTERACTIONS=new Set(['battery','drawer','door','flashlight','hatch','key','note','rc-car','rug']);
@@ -61,6 +64,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const root=document.createElement('div');root.id='lab3d';root.innerHTML=`
  <canvas id="lab-canvas" aria-label="Escenario tridimensional interactivo de la casa"></canvas>
  <div class="lab-vignette" aria-hidden="true"></div>
+ <div id="lab-capture" hidden>
+  <img src="${pursuerReveal}" alt="" decoding="async">
+  <div class="capture-jaw capture-jaw-top"></div><div class="capture-jaw capture-jaw-bottom"></div>
+  <div class="capture-dark"></div>
+  <div id="capture-caption" class="capture-caption" role="status"></div>
+ </div>
  <div class="lab-window-intro lab-hidden" id="lab-window-intro" aria-label="Entrada cinematográfica por la ventana">
    <div class="lab-intro-top"></div>
    <div class="lab-intro-caption" id="lab-intro-caption">Una ventana entreabierta…</div>
@@ -126,7 +135,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const mirrorSafe=new MirrorSafePuzzle(),television=new HouseTelevision();
  let safeInput='',activeSafe=null,noteLift=0,noteHold=0,notePresentation=false,capturePhoto=false,piano=null;
  let rc=null,louis=null,loisShotDirector=null,rcTrap={armed:false,closed:false},finalCutscene=null;
- let resumed=false;
+ let resumed=false,lastSafeCheckpoint=null,captureShot=null;
  let equipmentBeforeNote='empty',batterySwap=null;
  const canUseHotbar=()=>ready&&!isSuspended()&&!cinematic&&events.phase!=='arrival'&&events.phase!=='failed'&&events.phase!=='safe'&&rc?.mode!=='driving'&&rc?.mode!=='deploying';
  const phone=new PhoneUI(root,(kind,toggle=true)=>equip(kind,toggle),()=>resetInput(),{canEquip:canUseHotbar,canUse:()=>canUseHotbar()&&!notePresentation,onEdit:()=>{releaseMouse();resetInput();if(isSuspended())sound.pause();else sound.resume();},onPhoto:()=>{capturePhoto=true;}});phone.equip(equipment);
@@ -134,9 +143,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const enableSound=document.createElement('button');enableSound.className='house-enable-sound';enableSound.textContent='Activar sonido';enableSound.hidden=true;root.querySelector('.house-mixer').before(enableSound);
  enableSound.addEventListener('click',async()=>{
   sound.set('muted',false);root.querySelectorAll('[data-setting="mute"]').forEach(el=>el.checked=false);
-  if(await sound.start()&&active&&isSuspended())sound.pause();
+  if(await sound.start()&&active&&isSuspended()&&!captureRunning())sound.pause();
  });
- const $=id=>root.querySelector('#'+id),canvas=$('lab-canvas'),dialog=$('lab-dialog');
+ const $=id=>root.querySelector('#'+id),canvas=$('lab-canvas'),dialog=$('lab-dialog'),captureLayer=$('lab-capture'),captureCaption=$('capture-caption');
  const hudMessages=new HouseMessages(root);
  phone.onPresentationChange=()=>hudMessages.layout(phone.rect,phone.open);
  const controller=new AbortController(),signal=controller.signal;
@@ -154,7 +163,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const say=(text,seconds=2.4)=>hudMessages.say(text,seconds);
  const caption=text=>{if(options.captions!==false)hudMessages.describeSound(text);};
  const isPortrait=()=>window.innerHeight>window.innerWidth;
- const isSuspended=()=>!ready||paused||!!modal||phone.editing||$('lab-camera-settings').open||isPortrait()||document.hidden||!hasFocus||contextLost;
+ const captureRunning=()=>captureShot&&hasFocus&&!document.hidden&&!isPortrait()&&!contextLost;
+ const isSuspended=()=>!ready||paused||!!modal||!!captureShot||phone.editing||$('lab-camera-settings').open||isPortrait()||document.hidden||!hasFocus||contextLost;
  const wakeShot=()=>events.phase==='lockdown'&&pursuer?.mode==='rising';
  const isPaused=()=>isSuspended()||!!cinematic||!!poseTransition||events.phase==='car-preview'||wakeShot();
  const flashlightBeam=()=>s.flashlight&&batterySwap===null&&equipment==='flashlight'&&!s.hidden&&!s.lying&&!animator.performing&&!phone.open&&events.phase!=='arrival';
@@ -203,7 +213,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  function rebuild(){renderer.rebuild([...world.boxes.filter(box=>!box.hiddenGeometry),...pickupGeometry(world.objects)]);}
  function saveCheckpoint(){
-  if(checkpointStore)checkpointStore.save(captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTrap,batterySwap,pursuer}));
+  if(!demo||pursuer.caught||events.phase==='failed')return;
+  lastSafeCheckpoint=captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTrap,batterySwap,pursuer});
+  if(lastSafeCheckpoint.hide&&lastSafeCheckpoint.hide===pursuer.witnessed)lastSafeCheckpoint.hide=undefined;
+  checkpointStore?.save(lastSafeCheckpoint);
  }
  function finishWindowIntro(){
   poseFurniture(world.entryWindow,1);sound.setTension(.55);
@@ -276,6 +289,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   const restored=restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,rc,rcTrap,pursuer});
   resumed=!!restored;
+  lastSafeCheckpoint=restored?saved:null;
   if(restored)({louis,equipment,encounterCheckpoint}=restored);
   sound.setThreat(['patrol','hunt'].includes(events.phase));
   phone.setInventory(s.inventory);phone.equip(equipment);
@@ -896,6 +910,58 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   for(const cue of floorSounds.advance(dt,s,moved))play(cue.kind,cue.origin?{...cue.origin,y:cue.origin.y+.25}:null,cue.level);
  }
  let statsAt=performance.now(),frameCount=0,slowSeconds=0;
+ function beginCapture(){
+  const from=cameraOf(s);
+  const hiding=world.objects.find(object=>object.id===(s.hidden?.objectId||poseTransition?.object.id));
+  if(hiding?.wardrobeLeaves){poseFurniture(hiding,1);renderer.updateVisibility();}
+  captureShot={from,actor:pursuer.snapshot(),elapsed:0};
+  phone.close();releaseMouse();resetInput();sound.stopEmote();
+  $('house-emotes').hidden=true;
+  $('lab-camera-settings').open=false;
+  sound.carEngine(null);sound.rcMotor(0);
+  captureLayer.hidden=false;root.classList.add('house-capture-active');
+  captureCaption.textContent=options.captions!==false?'[El secuestrador te agarra]':'';
+  sound.captureCue('capture-grab');
+ }
+ function renderCapture(delta){
+  const shot=captureShot,previous=shot.elapsed;
+  if(captureRunning())shot.elapsed+=delta;
+  if(shot.elapsed>=CAPTURE_SECONDS){
+   const saved=lastSafeCheckpoint;
+   const restore=saved?.hide&&saved.hide===pursuer.witnessed?{...saved,hide:undefined}:saved;
+   captureShot=null;captureLayer.hidden=true;captureCaption.textContent='';root.classList.remove('house-capture-active');
+   if(restore){
+    const messages=events.messages;
+    reset(restore);
+    events.messages=messages;
+    if(['patrol','hunt'].includes(events.phase))pursuer.cooldown();
+    saveCheckpoint();
+   }else runAction('retry-arrival');
+   say('Volviste al último punto seguro',4);
+   last=performance.now();
+   return;
+  }
+  if(previous<CAPTURE_REVEAL&&shot.elapsed>=CAPTURE_REVEAL){
+   sound.captureCue('capture-reveal');
+   if(options.captions!==false)captureCaption.textContent='[Alarido]';
+  }
+  if(previous<CAPTURE_BITE&&shot.elapsed>=CAPTURE_BITE){
+   sound.captureCue('capture-bite');
+   captureCaption.textContent='';
+  }
+  const shotFrame=captureFrame(shot.from,shot.actor,shot.elapsed,reducedMotion.matches);
+  const style=captureLayer.style;
+  style.setProperty('--capture-grip',`${100-44*shotFrame.grip}%`);
+  style.setProperty('--capture-face',shotFrame.face);
+  style.setProperty('--capture-seal',shotFrame.seal);
+  style.setProperty('--capture-zoom',shotFrame.zoom);
+  style.setProperty('--capture-jaw',shotFrame.jaw);
+  style.setProperty('--capture-dark',shotFrame.dark);
+  if(shotFrame.dark===1)return;
+  try{
+   renderer.render(shotFrame.camera,false,elapsed,false,{shotLight:.31,reduced:reducedMotion.matches,pursuer:shotFrame.actor,television});
+  }catch(e){interruptGraphics('Error de renderizado',String(e.message||e));}
+ }
  function updateStory(delta){
   if(!demo||isSuspended()||cinematic)return;
   if(events.phase==='car-preview'){
@@ -959,6 +1025,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(cue==='wake'){phone.close();resetInput();pursuer.wake();sound.sequence('notification',true);sound.setThreat(true);say('¡El mensaje lo despertó!',3);}
    if(cue==='hunt'){pursuer.resumeSearch();saveCheckpoint();}
    if(cue==='evaded'){pursuer.settleUpstairs();sound.setThreat(false);sound.sequence('notification');saveCheckpoint();say('Sube a revisar la planta alta. Busca la trampilla bajo el tapete de la cocina.',5);}
+   if(cue==='failed'&&pursuer.caught){beginCapture();return;}
    if(cue==='safe'||cue==='failed'){phone.close();resetInput();play('alert',pursuer,.55);showModal(cue==='safe'?'Estás a salvo':'Te descubrieron',cue==='safe'?'<p>Te quedas en silencio.</p>':'<p>El perseguidor te alcanzó o vio dónde te escondías.</p><p>Retomas desde el último momento seguro con la llave y las pistas.</p>',cue==='safe'?[['Volver a pruebas','exit']]:[['Reintentar','retry-arrival'],['Salir','exit']]);}
   }
   if(events.phase==='arrival')poseArrivalCar(world.car,clamp(events.time/CAR_ARRIVAL_SECONDS,0,1));
@@ -972,6 +1039,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(!s||!renderer)return;
   updateHiding(dt);
   updateStory(shotDelta);
+  if(captureShot){renderCapture(shotDelta);return;}
   const greyCat=world.greyCat;
   if(!isSuspended()&&greyCat.active){
    moveGreyCat(greyCat,shotDelta,!!finalCutscene,reducedMotion.matches);
@@ -1180,6 +1248,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  function interruptGraphics(title,message){
   contextLost=true;cancelAnimationFrame(raf);raf=0;
+  captureLayer.hidden=true;
   renderer?.destroy({keepCanvas:true});
   showModal(title,`<p>${escapeHTML(message)}</p>`,[['Volver a pruebas','exit']]);
  }
@@ -1247,14 +1316,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  },{signal});
  function unlockSound(){
   if(isPaused()||sound.settings.muted||sound.context?.state==='running')return;
-  void sound.start().then(ok=>{if(ok&&active&&isPaused()&&!cinematic)sound.pause();});
+  void sound.start().then(ok=>{if(ok&&active&&isPaused()&&!cinematic&&!captureRunning())sound.pause();});
  }
  function endAudioPreview(){
   if(!audioPreview)return;
   audioPreview=false;sound.stopEmote();sound.pause();
  }
  function suspendPianoClock(){if(piano)piano.last=null;}
- function resumeHouseAudio(){if(piano&&pianoRunning())sound.resumePiano();else if(!isSuspended())sound.resume();}
+ function resumeHouseAudio(){if(piano&&pianoRunning())sound.resumePiano();else if(captureRunning()||!isSuspended())sound.resume();}
  $('lab-camera-settings')?.addEventListener('toggle',()=>{
   resetInput();endAudioPreview();suspendPianoClock();
   if($('lab-camera-settings').open)sound.pause();else resumeHouseAudio();
@@ -1285,6 +1354,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  },{signal});
  window.addEventListener('keydown',e=>{
   if(!active||e.altKey||e.ctrlKey||e.metaKey||e.isComposing)return;
+  if(captureShot&&!contextLost){e.preventDefault();return;}
   if(e.isTrusted&&!e.repeat)unlockSound();
   const focused=e.target?.tagName;
   if(e.key==='Escape'&&mouseLocked()){e.preventDefault();releaseMouse();return;}
@@ -1341,6 +1411,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   try{
    renderer=new HouseRenderer(canvas,options.quality);
    rebuild();contextLost=false;paused=false;modalClose();
+   if(captureShot){captureLayer.hidden=false;resumeHouseAudio();}
    if(!ready)startHouse();
    last=statsAt=performance.now();lastPaint=0;frameCount=0;
    raf=requestAnimationFrame(frame);
