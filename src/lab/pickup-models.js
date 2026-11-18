@@ -39,7 +39,7 @@ function batteryModel(piece){
  ];
 }
 
-function keyModel(piece,red){
+function keyModel(piece,{red,master}){
  const pieces=[];
  const tint=red?{color:[.79,.14,.15],glow:true}:{glow:true};
  for(let i=0;i<8;i++){
@@ -47,7 +47,9 @@ function keyModel(piece,red){
   pieces.push(piece('ring-'+i,Math.cos(angle)*.065,0,Math.sin(angle)*.065-.055,.045,.025,.045,'brass',tint));
  }
  pieces.push(piece('shaft',0,0,.08,.035,.025,.18,'brass',tint),piece('tooth',.028,0,.13,.07,.025,.025,'brass',tint));
- if(!red)pieces.push(piece('bow-left',-.045,.025,-.055,.065,.035,.04,'pink',{glow:true,baseYaw:-.15}),piece('bow-right',.045,.025,-.055,.065,.035,.04,'pink',{glow:true,baseYaw:.15}));
+ if(master)pieces.push(piece('crest',0,0,-.138,.054,.030,.052,'brass',tint),
+  piece('ward',.04,0,.078,.094,.028,.026,'brass',tint));
+ else if(!red)pieces.push(piece('bow-left',-.045,.025,-.055,.065,.035,.04,'pink',{glow:true,baseYaw:-.15}),piece('bow-right',.045,.025,-.055,.065,.035,.04,'pink',{glow:true,baseYaw:.15}));
  return pieces;
 }
 
@@ -70,7 +72,7 @@ export function pickupGeometry(objects){
    .map(part=>piece(part.id,part.x,.044-part.z,part.y-.12,part.w,part.d,part.h,'paper',{color:part.color}));
   if(o.kind==='note')return noteModel(piece,o);
   if(o.kind==='battery')return batteryModel(piece);
-  if(o.kind==='key')return keyModel(piece,o.red);
+  if(o.kind==='key')return keyModel(piece,o);
   if(o.kind==='flashlight')return [
    piece('body',0,-.02,0,.075,.075,.19,'torchmetal',{shape:'cylinder',segments:8,color:[.24,.32,.43]}),
    piece('bezel',0,-.02,.101,.111,.111,.061,'brass',{shape:'cylinder',segments:8}),

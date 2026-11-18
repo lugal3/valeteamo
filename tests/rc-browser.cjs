@@ -13,7 +13,7 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
    res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
     <body><button id="launch">Probar RC</button><script type="module">
     import {launchHouse} from "/src/lab/house.js";
-    const checkpoint={version:1,stage:"basement",picked:["key","media-flashlight"]};
+    const checkpoint={version:1,stage:"basement",pianoSolved:true,picked:["key","media-flashlight","piano-sheet","master-key"]};
     document.querySelector("#launch").onclick=()=>window.stopHouse=launchHouse(()=>{},"ground",{
       demo:true,checkpointStore:{checkpoint,save:()=>{}},onRescue:()=>window.endingVisited=true
     });
@@ -169,6 +169,8 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   await shot('06-pursuer-trapped');
 
   console.log('RC browser: Kitty and Louis escape using the physical front door');
+  assert.equal((await page.evaluate(()=>window.__rescueHouse.snapshot())).doors.find(door=>door.id==='entrada').open,false);
+  await use('entrada');
   await page.evaluate(()=>window.__rescueHouse.setPose({x:5.95,y:0,z:11.30,yaw:0,pitch:0}));
   await page.waitForFunction(()=>window.__rescueHouse.greyCat().called);
   // Frame time on headless SwiftShader varies; don't release W before Kitty

@@ -7,6 +7,7 @@ import {createLoisFaceTexture} from './lois-ps2-texture.js';
 import {BATH_MIRROR,mirrorVisible,kittyMirrorPieces,reflectedBathroom,reflectMesh,poseReflectedKitty} from './mirror.js';
 import {ART_SIZE,ART_COLUMNS,ART_ROWS,POSTER_IMAGES,artTile,createArtworkCanvas} from './artwork.js';
 import {climbingHandPieces} from './first-person.js';
+import {samplePianoPose} from './piano-recital.js';
 import {drawViewModel} from './viewmodel.js';
 import {pursuerPieces,posePursuer} from './pursuer-model.js';
 import {sampleWardrobeWalk} from './animations/wardrobe-entry.js';
@@ -529,12 +530,14 @@ export class HouseRenderer {
     const offset=box.sourceOffset||[0,0,0];
     const bob=source.kind==='key'?Math.sin(time*3.2+(source.x+source.z)*2.5)*bobAmp:0;
     const sway=(box.id.includes('bow-left')||box.id.includes('bow-right'))?Math.sin(time*4.2)*swayAmp:0;
-    if(source.kind==='rc-car'){
+    if(source.kind==='rc-car'||source.master){
      const angle=-(source.yaw||0),c=Math.cos(angle),s=Math.sin(angle);
-     box.x=source.x+offset[0]*c-offset[2]*s;
-     box.y=source.concealed?-100:source.y+offset[1];
-     box.z=source.z+offset[0]*s+offset[2]*c;
+     const tilt=source.tilt||0,cp=Math.cos(tilt),sp=Math.sin(tilt),depth=offset[1]*sp+offset[2]*cp;
+     box.x=source.x+offset[0]*c-depth*s;
+     box.y=source.concealed?-100:source.y+offset[1]*cp-offset[2]*sp;
+     box.z=source.z+offset[0]*s+depth*c;
      box.yaw=angle+(box.baseYaw??0);
+     if(source.master)box.pitch=tilt;
     }else{
      box.x=source.x+offset[0];
      box.y=source.concealed?-100:source.y+offset[1]+bob;
@@ -610,26 +613,39 @@ export class HouseRenderer {
  drawClimbingHands(hands){
   const gl=this.gl;gl.uniform1f(this.uniform.uFlash,0);
   for(let side=0;side<2;side++){
+   const hand=hands[side];if(!hand)continue;
    const model=this.handGeometry['climb'+side]??=geometry(climbingHandPieces(side?-1:1));
    const vertices=this.climbVertices??=new Float32Array(model.vertices.length);vertices.set(model.vertices);
-   for(let i=0;i<vertices.length;i+=16){vertices[i]+=hands[side].x;vertices[i+1]+=hands[side].y;vertices[i+2]+=hands[side].z;}
+   const angle=hand.roll||0,flex=hand.flex||0,cr=Math.cos(angle),sr=Math.sin(angle),cf=Math.cos(flex),sf=Math.sin(flex);
+   for(let i=0;i<vertices.length;i+=16){
+    if(angle||flex)for(const offset of [0,6,13]){
+     const at=i+offset,x=vertices[at],y=vertices[at+1],z=vertices[at+2];
+     const lift=y*cf-z*sf;
+     vertices[at]=x*cr-lift*sr;vertices[at+1]=x*sr+lift*cr;vertices[at+2]=y*sf+z*cf;
+    }
+    vertices[i]+=hand.x;vertices[i+1]+=hand.y;vertices[i+2]+=hand.z;
+   }
    gl.bindBuffer(gl.ARRAY_BUFFER,this.handVbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.DYNAMIC_DRAW);
    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.handIbo);if(this.handIndexKind!=='climb'){gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,model.indices,gl.STATIC_DRAW);this.handIndexKind='climb';}
    this.bind(this.handVbo,this.handIbo);gl.drawElements(gl.TRIANGLES,model.indices.length,gl.UNSIGNED_SHORT,0);
   }
  }
  drawActor(subject,motion){
-  const equipment=motion.actorWalk?'empty':motion.equipment||'flashlight',gl=this.gl;
+  const equipment=motion.actorWalk||motion.actorPiano?'empty':motion.equipment||'flashlight',gl=this.gl;
   if(this.actorEquipment!==equipment){this.actorEquipment=equipment;this.actorMesh=geometry(kittyMirrorPieces(equipment));this.actorVertices=new Float32Array(this.actorMesh.vertices.length);this.actorBinding=createRigBinding(this.actorMesh.groups);}
   const animator=motion.animator;
-  if(motion.actorWalk){
+  if(motion.actorPiano){
+   const {instrument,hands}=motion.actorPiano;
+   this.actorPose??=createPose();
+   evaluateRig(this.actorBinding,samplePianoPose(instrument,hands,this.actorPose));
+  }else if(motion.actorWalk){
    this.actorPose??=createPose();this.actorScratch??=createPose();
    evaluateRig(this.actorBinding,sampleWardrobeWalk(motion.actorWalk,this.actorPose,this.actorScratch));
   }else if(animator)evaluateRig(this.actorBinding,animator.sample('look-behind',.5));
   const blink=sampleBlink(motion.actorTime??animator?.time??0,{
    reduced:animator?.reduced??motion.reduced,firstAt:motion.actorTime===undefined?undefined:.25
   });
-  poseReflectedKitty(this.actorMesh.vertices,this.actorVertices,subject,{feetY:motion.feetY,blink},animator?this.actorBinding:null);reflectMesh(this.actorVertices);
+  poseReflectedKitty(this.actorMesh.vertices,this.actorVertices,subject,{feetY:motion.actorPiano?.instrument.floor??motion.feetY,blink},animator?this.actorBinding:null);reflectMesh(this.actorVertices);
   gl.bindBuffer(gl.ARRAY_BUFFER,this.handVbo);gl.bufferData(gl.ARRAY_BUFFER,this.actorVertices,gl.DYNAMIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.handIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,this.actorMesh.indices,gl.STATIC_DRAW);this.handIndexKind='actor';this.bind(this.handVbo,this.handIbo);gl.drawElements(gl.TRIANGLES,this.actorMesh.indices.length,gl.UNSIGNED_SHORT,0);
  }
  drawPursuer(actor,mirrored=false,reduced=false){

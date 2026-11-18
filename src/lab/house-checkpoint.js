@@ -2,7 +2,7 @@ import {poseArrivalCar} from './arrival-car.js';
 import {HATCH,poseHatch,poseHatchRug} from './basement.js';
 import {createLouisEscape,freeLouis,LOUIS_HIDING_SPOT} from './louis-escape.js';
 import {WINDOW_LANDING} from './window-intro.js';
-import {PIANO_REWARD,posePianoCompartment,setPianoScore} from './house-additions.js';
+import {MASTER_KEY_ID,posePianoCompartment,posePianoReward,setPianoScore} from './house-additions.js';
 import {HEIGHT,blocked,groundHeight,poseFurniture,setDoor,setDrawer} from './world.js';
 import {hiddenPose,hidingExit} from './hiding.js';
 import {revealGreyCat} from './grey-cat.js';
@@ -33,6 +33,7 @@ export function captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTr
   mirrorRevealed:mirrorSafe.revealed,safeOpened:mirrorSafe.opened,pianoSolved:world.piano.solved,
   battery:Math.ceil(s.battery),spares:s.inventory.batteries+Number(batterySwap!==null),
   rcOwned:s.inventory.rc||rc.mode==='disabled',trapArmed:rcTrap.armed,
+  exitUnlocked:rcTrap.closed?!world.objects.find(item=>item.id==='entrada').sealed:undefined,
   pursuit,hide:s.hidden?.objectId,blackout:{...world.lights.power.blackout}
  };
 }
@@ -43,12 +44,16 @@ export function restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,r
  const bedroomUnlocked=stage!=='explore';
  const resting=stage==='rest';
  const escapedTrap=stage==='escape';
+ // Old escape checkpoints already had an open exit before the piano key existed.
+ const exitUnlocked=escapedTrap&&saved.exitUnlocked!==false;
  const louisUntied=stage==='rc-setup'||escapedTrap;
  const pursuitCompleted=louisUntied||stage==='basement';
  const patrol=stage==='encounter'&&saved.pursuit?.phase==='patrol';
  const hunt=stage==='rest'&&saved.pursuit?.phase==='hunt';
  const object=id=>world.objects.find(item=>item.id===id);
  const picked=new Set(saved.picked);
+ const solvedPiano=saved.pianoSolved===true&&picked.has('piano-sheet');
+ if(!solvedPiano)picked.delete(MASTER_KEY_ID);
  // Later checkpoints imply the prerequisites even if an older write omitted a pickup.
  if(bedroomUnlocked)picked.add('key');
  if(saved.hatchUnlocked===true||louisUntied)picked.add('red-key');
@@ -85,12 +90,13 @@ export function restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,r
   else inventory.pendingNote={id,label,text};
  }
  if(mirrorSafe.opened)inventory.notes.push({...SAFE_REWARD});
- if(saved.pianoSolved===true&&world.pianoSheet.taken){
+ if(solvedPiano){
   world.piano.solved=true;
   setPianoScore(world.piano,true);
   posePianoCompartment(world.piano,1);
-  inventory.notes.push({...PIANO_REWARD});
  }
+ posePianoReward(world.piano);
+ inventory.masterKey=world.piano.reward.taken===true;
  inventory.key=puzzle.key&&!puzzle.door;
  inventory.torch=!!object('media-flashlight').taken;
  inventory.rc=saved.rcOwned===true||escapedTrap;
@@ -114,7 +120,7 @@ export function restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,r
   events.phase=patrol?'patrol':hunt?'hunt':resting?'sleep':'evaded';events.notified=true;events.replied=true;
   if(hunt)events.remaining=28;
   const entrance=object('entrada');
-  entrance.sealed=hunt||(pursuitCompleted&&!escapedTrap);setDoor(entrance,escapedTrap);
+  entrance.sealed=hunt||(pursuitCompleted&&!exitUnlocked);setDoor(entrance,exitUnlocked);
   poseArrivalCar(world.car,1);
   poseFurniture(world.entryWindow,0);world.entryWindow.latch.hiddenGeometry=false;
   for(const box of world.boxes)if(box.id.startsWith('entry-padlock'))box.hiddenGeometry=!entrance.sealed;

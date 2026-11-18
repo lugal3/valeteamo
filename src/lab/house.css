@@ -1,17 +1,32 @@
 /* House-only styles. Shared 2D styles remain untouched. */
 #lab3d .house-piano-dialog{align-items:end;background:#1d142233}
-#lab3d .house-piano-dialog .lab-paper{width:min(560px,100%);padding:10px 14px;background:#352529;color:#fff1d6;border-color:#947352}
+#lab3d .house-piano-dialog .lab-paper{width:min(570px,100%);padding:8px 14px;background:#352529;color:#fff1d6;border-color:#947352}
 #lab3d .house-piano-dialog :is(.lab-paper-mark,h2){display:none}
 #lab3d:has(.house-piano-dialog) :is(.lab-cross,.lab-joystick,.lab-buttons,.house-hotbar){visibility:hidden}
-#lab3d .house-piano-dialog .lab-paper-actions{margin-top:8px}
-#lab3d .piano-score{margin:0 0 7px;text-align:center;font:600 13px system-ui}
-#lab3d .piano-score span{display:inline-block;padding:3px 6px;border-radius:4px}
-#lab3d .piano-score span[aria-current=step]{background:#ffe6ad;color:#39262d}
-#lab3d .piano-keys{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:3px}
-#lab3d .piano-keys button{min-height:46px;padding:3px;border:0;border-radius:2px 2px 5px 5px;background:#f1dfbf;color:#312321;font-size:11px;box-shadow:inset 0 -4px #bfa786}
-#lab3d .piano-keys button.pressed{transform:translateY(3px);background:#e0c294;box-shadow:inset 0 -1px #bfa786}
-#lab3d .piano-keys small{display:block;font-size:9px}
-#lab3d .piano-result:not(:empty){display:block;margin-top:5px;text-align:center;font-size:11px}
+#lab3d .house-piano-dialog .lab-paper-actions{margin-top:5px}
+#lab3d .house-piano-dialog .lab-paper-body{overflow:visible}
+#lab3d .piano-title{color:#392b29;font:600 12px Georgia,serif;text-align:center;padding-top:4px}
+#lab3d .piano-page-label{margin-left:7px;padding:1px 5px;border:1px solid #bf9f6d;border-radius:5px;color:#604639;font:650 10px system-ui}
+#lab3d .piano-score{height:65px;display:flex;justify-content:center;color:#604639}
+#lab3d .piano-score svg{display:block;width:min(100%,340px);height:100%}
+#lab3d .piano-score line,#lab3d .piano-score path{stroke:currentColor;stroke-width:.78}
+#lab3d .piano-score ellipse,#lab3d .piano-score text{fill:currentColor}
+#lab3d .piano-score text{font:650 12px system-ui;text-anchor:middle}
+#lab3d .piano-score g[aria-current=step]{color:#87420b;filter:drop-shadow(0 0 2px #ffb219) drop-shadow(0 0 3px #ffc04d)}
+#lab3d .piano-sheet-ui{background:#f4e5bf;border:1px solid #aaa07c;border-radius:7px;overflow:hidden}
+#lab3d .piano-time{height:4px;background:#bba781}
+#lab3d .piano-time i{display:block;height:100%;background:#a25b20;transform-origin:left}
+#lab3d .piano-keys{height:68px;position:relative;background:#39262d;touch-action:manipulation}
+#lab3d .piano-keys button{position:absolute;left:calc(var(--slot)*12.5%);margin:0;padding:0 1px 4px;border:1px solid #77604d;border-radius:0 0 5px 5px;font:650 11px system-ui;display:flex;flex-direction:column;align-items:center;justify-content:end;gap:1px;transition:none}
+#lab3d .piano-keys .piano-white{top:0;width:12.5%;height:100%;background:#f1dfbf;color:#312321;box-shadow:inset 0 -4px #bfa786}
+#lab3d .piano-keys .piano-black{top:0;width:8.8%;height:58%;transform:translateX(-50%);z-index:1;background:#322630;color:#fff1d6;border-color:#231a20;box-shadow:0 2px 2px #2114117a}
+#lab3d .piano-keys button[aria-current=step]{background:#ffce69;color:#332115;border-color:#9b551a;box-shadow:inset 0 0 0 2px #ffe4a1,0 0 8px #ffc354}
+#lab3d .piano-keys button.pressed{filter:brightness(.79);padding-bottom:2px}
+#lab3d .piano-keys small{font-size:9px}
+#lab3d .piano-result{display:block;min-height:1.2em;margin-top:4px;text-align:center;font-size:11px}
+#lab3d .house-piano-dialog:is([data-piano-mode=lead],[data-piano-mode=recital],[data-piano-mode=reveal],[data-piano-mode=complete]) .piano-sheet-ui{display:none}
+#lab3d .house-piano-dialog:is([data-piano-mode=recital],[data-piano-mode=reveal]) .lab-paper{width:auto;background:#291e26e6}
+@media (max-height:410px){#lab3d .piano-score{height:53px}#lab3d .piano-keys{height:60px}}
 #lab3d .house-danger{color:#fff0db;pointer-events:none;font-variant-numeric:tabular-nums}
 #lab3d [hidden]{display:none!important}#lab3d.lab-intro-active .house-equipment{visibility:hidden}
 #lab3d.house-arrival .lab-objective,#lab3d.house-arrival .lab-focus,#lab3d.house-arrival .lab-buttons,#lab3d.house-arrival .house-equipment,#lab3d.house-arrival .lab-joystick,#lab3d.house-arrival .lab-toast{visibility:hidden}
