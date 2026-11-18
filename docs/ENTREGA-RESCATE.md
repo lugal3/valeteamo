@@ -10,6 +10,8 @@ Recoge la llave del cajón del estudio y la linterna del descansillo. La partitu
 
 En escritorio, **E** interactúa, **R** alterna la captura del ratón y **Esc** libera el cursor o guarda la tablet. En móvil, combina el joystick izquierdo con el arrastre derecho. El engranaje reúne sensibilidad, reducción de movimiento, subtítulos y mezcla de audio.
 
+Los efectos añadidos para la escucha del rescate y sus fuentes están en [Prueba de audio](AUDIO-PRUEBA-RESCATE.md).
+
 ## Verificación
 
 | Área | Prueba reproducible |

@@ -1,4 +1,4 @@
-// Original music and effects, synthesized locally. start() belongs in a user gesture.
+// Original music and rescue effects. start() belongs in a user gesture.
 import type {AmbientKind} from './demo/rescue-ecology';
 export type MusicTheme='story'|'garden'|'battle'|'final';
 const MELODIES:Record<MusicTheme,number[]>={
@@ -8,13 +8,48 @@ const MELODIES:Record<MusicTheme,number[]>={
  final:[261.63,329.63,392,493.88,523.25,659.25,587.33,493.88,440,523.25,587.33,659.25,783.99,659.25,523.25,392]
 };
 export class Sound {
- ctx?:AudioContext;muted=false;timer?:number;step=0;lastHit=0;lastAmbient=-100;theme:MusicTheme='story';
+ ctx?:AudioContext;timer?:number;step=0;lastHit=0;lastAmbient=-100;theme:MusicTheme='story';
+ private silent=false;
+ private readonly samples=new Map<string,AudioBuffer>();
+ private readonly voices=new Set<AudioBufferSourceNode>();
+ private loading?:AbortController;
+ constructor(private readonly sampleUrls:Readonly<Record<string,string>>={}){}
+ get muted(){return this.silent;}
+ set muted(value:boolean){this.silent=value;if(value)this.stopSamples();}
+ private loadSamples(context:AudioContext){
+  const entries=Object.entries(this.sampleUrls);
+  if(!entries.length)return;
+  const loading=new AbortController();
+  this.loading=loading;
+  for(const [kind,url] of entries){
+   void fetch(url,{signal:loading.signal})
+    .then(response=>{if(!response.ok)throw new Error('Audio unavailable');return response.arrayBuffer();})
+    .then(bytes=>context.decodeAudioData(bytes))
+    .then(buffer=>{if(!loading.signal.aborted)this.samples.set(kind,buffer);})
+    .catch(()=>{}); // The scene can still use its synthesized effect.
+  }
+ }
+ playSample(kind:string,volume:number):boolean{
+  const context=this.ctx,buffer=this.samples.get(kind);
+  if(!context||!buffer||this.muted||context.state!=='running'||this.voices.size>=6)return false;
+  const source=context.createBufferSource(),gain=context.createGain();
+  source.buffer=buffer;gain.gain.value=volume;
+  source.connect(gain);gain.connect(context.destination);
+  this.voices.add(source);
+  source.onended=()=>{this.voices.delete(source);source.disconnect();gain.disconnect();};
+  source.start();
+  return true;
+ }
+ private stopSamples(){
+  for(const source of this.voices)source.stop();
+  this.voices.clear();
+ }
  setTheme(theme:MusicTheme){if(this.theme!==theme){this.theme=theme;this.step=0;}}
  start():Promise<boolean>{
   try{
    const AudioCtor=window.AudioContext||(window as typeof window&{webkitAudioContext?:typeof AudioContext}).webkitAudioContext;
    if(!AudioCtor)return Promise.resolve(false);
-   if(!this.ctx||this.ctx.state==='closed')this.ctx=new AudioCtor();
+   if(!this.ctx||this.ctx.state==='closed'){this.ctx=new AudioCtor();this.loadSamples(this.ctx);}
    const context=this.ctx;
    const resumed=context.state==='running'?Promise.resolve():context.resume();
    if(this.timer===undefined)this.timer=window.setInterval(()=>this.playStep(),360);
@@ -27,7 +62,7 @@ export class Sound {
   this.tone(note,.28,.035,'triangle');if(index%4===0){this.tone(note/2,.58,.022,'sine');this.tone(note*1.5,.33,.009,'sine');}else if(index%4===2)this.tone(note*1.25,.24,.007,'sine');
  }
  resume(){try{if(this.ctx?.state==='suspended')void this.ctx.resume().catch(()=>{});}catch{}}
- suspend(){try{if(this.ctx?.state==='running')void this.ctx.suspend().catch(()=>{});}catch{}}
+ suspend(){this.stopSamples();try{if(this.ctx?.state==='running')void this.ctx.suspend().catch(()=>{});}catch{}}
  tone(f=440,d=.1,v=.05,type:OscillatorType='sine'){try{if(!this.ctx||this.muted||this.ctx.state!=='running')return;const o=this.ctx.createOscillator(),g=this.ctx.createGain(),start=this.ctx.currentTime;o.type=type;o.frequency.value=f;g.gain.setValueAtTime(.001,start);g.gain.linearRampToValueAtTime(v,start+Math.min(.012,d/4));g.gain.exponentialRampToValueAtTime(.001,start+d);o.connect(g);g.connect(this.ctx.destination);o.start();o.stop(start+d);}catch{}}
  // Organic, quiet location-specific ambience. Original oscillators only; no
  // sound files, external fetches, timers or audio-playback in render frames.
@@ -65,5 +100,14 @@ export class Sound {
  }
  hit(){const now=this.ctx?.currentTime??0;if(now-this.lastHit<.06)return;this.lastHit=now;this.tone(520,.08,.026,'triangle');this.tone(780,.06,.015);}
  ui(){this.tone(660,.09,.018,'triangle');this.tone(990,.13,.009,'sine');}
- destroy(){if(this.timer!==undefined)clearInterval(this.timer);this.timer=undefined;const context=this.ctx;this.ctx=undefined;if(context&&context.state!=='closed')void context.close().catch(()=>{});}
+ destroy(){
+  if(this.timer!==undefined)clearInterval(this.timer);
+  this.timer=undefined;
+  this.loading?.abort();
+  this.samples.clear();
+  this.stopSamples();
+  const context=this.ctx;
+  this.ctx=undefined;
+  if(context&&context.state!=='closed')void context.close().catch(()=>{});
+ }
 }

@@ -487,7 +487,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.storyInteractUntil=this.clock+950;
   this.storyNear='';this.story?.near('');
   this.clearInput();
-  this.audio.tone(554,.14,.025,'triangle');
+  if(!this.audio.playSample?.('churu',.12))this.audio.tone(554,.14,.025,'triangle');
  }
  updateStoryCat(dt:number){
   const cat=this.storyCat;
@@ -499,7 +499,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    if(feeding.elapsed>=900){
     this.storyFeeding=undefined;
     feeding.done();
-    this.audio.tone(784,.19,.03,'triangle');
+    if(!this.audio.playSample?.('cat',.14))this.audio.tone(784,.19,.03,'triangle');
    }
    return;
   }
@@ -579,8 +579,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
     this.audio.tone(145,.14,.040,'triangle');
     this.story?.guide('¡Se llevan a Louis! Fíjate en la furgoneta.');
    }
-   if(frame.phase==='close')this.audio.tone(170,.18,.052,'square');
-   if(frame.phase==='escape')this.audio.tone(320,.3,.045,'sawtooth');
+   if(frame.phase==='close'&&!this.audio.playSample?.('van-door',.14))this.audio.tone(170,.18,.052,'square');
+   if(frame.phase==='escape'&&!this.audio.playSample?.('van-away',.16))this.audio.tone(320,.3,.045,'sawtooth');
   }
   const v=toScreen(frame.van),key=vanTexture(frame.doorOpen);
   shot.van.setPosition(v.x,v.y).setDepth(v.y+10);

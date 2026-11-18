@@ -653,7 +653,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    const entrance=world.objects.find(o=>o.id==='entrada');entrance.sealed=false;entrance.locked=false;setDoor(entrance,true);
    for(const box of world.boxes)if(box.id.startsWith('entry-padlock'))box.hiddenGeometry=true;
     freeLouis(louis);revealGreyCat(world.greyCat);events.phase='escape';sound.setThreat(false);resetInput();rebuild();saveCheckpoint();
-   play('door-close',world.hatch);play('latch',world.hatch);
+   play('hatch-close',world.hatch);
    say('¡Atrapado! El secuestrador está encerrado. Louis sale de su escondite: escapen juntos por la puerta principal.',8);
    return;
   }
@@ -898,7 +898,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const power=world.lights.power;
   const blackoutCue=updateBlackout(power,delta,['patrol','hunt','evaded'].includes(events.phase));
   if(blackoutCue==='warning'){play('click',null,.42);say('La corriente está inestable.',2);}
-  if(blackoutCue==='outage'){play('latch',null,.48);say('Corte breve de luz · sigue las luces de la escalera.',4);saveCheckpoint();}
+  if(blackoutCue==='outage'){play('power-cut',null,.55);say('Corte breve de luz · sigue las luces de la escalera.',4);saveCheckpoint();}
   if(blackoutCue==='restored'){say('Volvió la luz.',2);saveCheckpoint();}
   const change=finalPhase?null:events.observe(puzzle);
   if(change==='message')sound.sequence('notification');

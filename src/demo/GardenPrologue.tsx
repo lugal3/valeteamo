@@ -2,6 +2,10 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {StoryGame} from '../StoryGame';
 import {Sound} from '../audio';
+import catSound from '../lab/audio/preview-cat.wav';
+import churuSound from '../lab/audio/preview-churu.wav';
+import vanDoorSound from '../lab/audio/preview-van-door.wav';
+import vanAwaySound from '../lab/audio/preview-van-away.wav';
 import {toScreen} from '../isometric';
 import {VAN_NIGHT_POSITION} from './abduction-van';
 import type {IsoAdventure,IsoStoryBridge,IsoStoryStage} from '../iso-game';
@@ -17,6 +21,7 @@ import './garden-prologue.css';
 type Dialog={lines:PrologueLine[];index:number};
 type Feeding='offer'|'retry'|'eating';
 const FEEDING_WAIT_MS=8000;
+const RESCUE_SAMPLES={cat:catSound,churu:churuSound,'van-door':vanDoorSound,'van-away':vanAwaySound};
 type HouseNavigation={distance:number;heading:number;guided:boolean;near:boolean;vanInspected:boolean;vanDistance:number};
 export type PrologueCheckpoint='intro'|'walk-together'|'ribbon';
 const initial=(test:boolean,checkpoint:PrologueCheckpoint):PrologueState=>
@@ -43,7 +48,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  const feedingRef=useRef<Feeding|null>(null);
  const lockedRef=useRef(false),enteringRef=useRef(false),nextDialogRef=useRef<()=>void>(()=>{});
  const travelingRef=useRef(false),travelTimers=useRef<number[]>([]);
- const audioRef=useRef(new Sound());
+ const [audio]=useState(()=>new Sound(RESCUE_SAMPLES));
  const showFeeding=useCallback((phase:Feeding|null)=>{
   feedingRef.current=phase;lockedRef.current=phase!==null;setFeeding(phase);
  },[]);
@@ -165,7 +170,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
    },680);
    travelTimers.current.push(first);
   },
-  victory:()=>{changed('victory');setGuide('¡Bien! Sigue el camino para encontrar a Louis.');audioRef.current.tone(880,.19,.03);},
+  victory:()=>{changed('victory');setGuide('¡Bien! Sigue el camino para encontrar a Louis.');audio.tone(880,.19,.03);},
   clearing:()=>{
    if(phaseRef.current.stage!=='walk-together')return;
    changed('clearing');
@@ -178,7 +183,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   interact:(stage)=>{
    if(dialogRef.current||lockedRef.current||enteringRef.current)return;
    if(stage==='intro'){
-    changed('churu');audioRef.current.ui();
+    changed('churu');audio.ui();
    }
    if(stage==='feed-cat')showFeeding('offer');
    if(stage==='meet-couple')showDialog(PROLOGUE_DIALOGUES.couple,()=>{
@@ -237,8 +242,8 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  }),[]);
 
  const toggleAudio=()=>{
-  const next=!muted;audioRef.current.muted=next;setMuted(next);
-  if(!next)void audioRef.current.start();
+  const next=!muted;audio.muted=next;setMuted(next);
+  if(!next)void audio.start();
  };
  const restart=()=>{
   for(const timer of travelTimers.current)window.clearTimeout(timer);
@@ -252,7 +257,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   setRestartKey(value=>value+1);
  };
  useEffect(()=>()=>{for(const timer of travelTimers.current)window.clearTimeout(timer);
-  audioRef.current.destroy();
+  audio.destroy();
   if(import.meta.env.DEV)delete (window as Window&{__valePrologue?:unknown}).__valePrologue;
  },[]);
  useEffect(()=>{
@@ -289,10 +294,15 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
 
  return <main className="story-prologue" aria-label="Rescate con el motor original de Corazones"
   data-prologue-stage={run.stage} data-rescue-map={map} data-transition={transition?.phase??'none'}
-  data-fed-grey-cat={run.fedGreyCat}>
+  data-fed-grey-cat={run.fedGreyCat}
+  onClickCapture={event=>{
+   if(!muted&&event.target instanceof Element&&!event.target.closest('.adventure-wrap')){
+    void audio.start();
+   }
+  }}>
   <StoryGame key={restartKey} level={2} character="kitty"
-   story={story} audio={audioRef.current} muted={muted} audioNotice=""
-   onUnlockAudio={()=>{void audioRef.current.start();}}
+   story={story} audio={audio} muted={muted} audioNotice=""
+   onUnlockAudio={()=>{void audio.start();}}
    onToggleAudio={toggleAudio} onExit={onExit} onComplete={()=>{}}
    onSceneReady={scene=>{
     sceneRef.current=scene;
