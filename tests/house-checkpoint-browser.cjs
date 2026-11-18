@@ -47,7 +47,7 @@ async function run(){
   };
 
   const openMenu=async()=>{
-   await page.goto(url);
+   await page.goto(url,{waitUntil:'domcontentloaded'});
    await passBirthdayCountdown(page);
    await page.locator('.playtest-menu[data-admin-panel="lp"]').waitFor();
   };
@@ -69,6 +69,9 @@ async function run(){
    assert.equal(await page.locator('canvas').count(),1,'Only the WebGL house canvas remains');
   };
   const reloadHouse=async()=>{await openMenu();await continueRescue();await waitForHouse();};
+  // A mounted canvas can still be awaiting the sprite loads. Navigate only
+  // once the prologue is playable, so the test doesn't cancel those requests.
+  const waitForPrologue=()=>page.waitForFunction(()=>Boolean(window.__valePrologue?.scene()?.player?.texture));
 
   await openMenu();
   const birthday={version:1,index:0,unlocked:0,character:'louis',muted:true,started:true,answers:{}};
@@ -76,6 +79,7 @@ async function run(){
   await write(PROLOGUE_KEY,{version:1,stage:'ribbon',hp:5,clues:0,completed:false});
   await continueRescue();
   await page.locator('.story-prologue[data-prologue-stage="ribbon"] canvas').waitFor();
+  await waitForPrologue();
   assert.equal(await page.locator('#lab3d').count(),0);
   await shot('01-prologo-reanudado');
 
@@ -211,6 +215,7 @@ async function run(){
   assert.equal((await read(RESCUE_KEY)).houseCheckpoint,undefined);
   await page.getByRole('button',{name:'Volver a jugar',exact:true}).click();
   await page.locator('.story-prologue[data-prologue-stage="intro"]').waitFor();
+  await waitForPrologue();
   assert.equal(await read(RESCUE_KEY),null);
   assert.equal(await read(PROLOGUE_KEY),null);
   console.log('PASS RC checkpoint and normal ending');
