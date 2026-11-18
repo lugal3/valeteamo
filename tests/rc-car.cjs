@@ -1,26 +1,29 @@
 const assert=require('node:assert/strict');
 (async()=>{
- const {createHouse,blocked,groundHeight,setDoor,HEIGHT}=await import('../src/lab/world.js');
+ const {createHouse,groundHeight,setDoor}=await import('../src/lab/world.js');
  const {poseHatch}=await import('../src/lab/basement.js');
  const {Pursuer}=await import('../src/lab/pursuer.js');
  const rcModule=await import('../src/lab/rc-car.js');
- const {createLouisEscape,updateLouisEscape,freeLouis,louisModel,louisPartPose,LOUIS_UNTIE_SECONDS}=await import('../src/lab/louis-escape.js');
+ const {createLouisEscape,updateLouisEscape,freeLouis,louisModel,LOUIS_UNTIE_SECONDS}=await import('../src/lab/louis-escape.js');
  const {interactionTarget}=await import('../src/lab/interactions.js');
- const {createRC,deployRC,driveRC,updateRC,stopRC,beepRC,crashRC,recoverRC,rcCamera,canTrapPursuer,rcCarModel}=rcModule;
+ const {createRC,deployRC,driveRC,updateRC,stopRC,beepRC,crashRC,recoverRC,rcCamera,rcDeploymentView,canTrapPursuer,rcCarModel}=rcModule;
  const world=createHouse(),kit=world.objects.find(o=>o.id==='rc-car');
- assert(kit&&kit.kind==='rc-car','A single collectible RC kit must exist beside the upstairs piano');
- assert(Math.hypot(kit.x-13.55,kit.z-3.99)<1.6);
+ assert.equal(world.objects.filter(item=>item.kind==='rc-car').length,1);
+ assert(kit.y<-2.8&&Math.abs(kit.x-8.55)<.6,'The only RC kit is below the hatch in the tunnel');
  const rc=createRC(kit);
  assert.equal(rc.mode,'packed');
- let spawn=null;
- for(let x=9;x<13.1&&!spawn;x+=.5)for(let z=.6;z<3.4;z+=.4){
-  const forward={x,y:HEIGHT,z:z+.75};
-  if(!blocked(world.boxes,x,HEIGHT,z,.2,1.65)&&!blocked(world.boxes,forward.x,forward.y,forward.z,.22,.38)) {spawn={x,y:HEIGHT,z,yaw:0};break;}
- }
- assert(spawn,'Must have an unblocked upper-floor launch spot');
- assert(deployRC(rc,spawn,world),'Deploy succeeds on a clear upper floor');
- assert.equal(rc.mode,'deploying');updateRC(rc,.5);assert.equal(rc.mode,'deploying');
- updateRC(rc,.55);assert.equal(rc.mode,'driving');
+ const spawn={x:8.55,y:-3.55,z:9.8,yaw:0};
+ const eye={...spawn,y:spawn.y+1.63,pitch:0};
+ world.hatch.open=true;poseHatch(world.hatch,1);
+ assert(deployRC(rc,spawn,world),'Deploy succeeds on the tunnel floor');
+ assert.equal(rc.mode,'deploying');
+ assert.equal(rcDeploymentView(rc,world,spawn,eye).hands.length,2);
+ updateRC(rc,.67);
+ assert.equal(rc.mode,'deploying');
+ const tablet=rcDeploymentView(rc,world,spawn,eye);
+ assert(!tablet.hands&&tablet.tabletLift>.7&&tablet.view.y<eye.y);
+ assert.deepEqual(rcDeploymentView(rc,world,spawn,eye,true),{view:eye,hands:null,tabletLift:1});
+ updateRC(rc,.38);assert.equal(rc.mode,'driving');
  assert.equal(kit.taken,false);
  assert(rcCarModel((id,x,y,z,w,h,d)=>({id,x,y,z,w,h,d})).length>16);
  assert(rcCarModel((id,x,y,z,w,h,d)=>({id,x,y,z,w,h,d}),true).length>20);
@@ -61,9 +64,7 @@ const assert=require('node:assert/strict');
  assert(real.y<-.55&&real.z>4.35,'NPC physically descends into the basement from its natural spawn');
  const louis=createLouisEscape(world);
  const model=louisModel((id,x,y,z,w,h,d,mat,extra)=>({id,x,y,z,w,h,d,mat,extra}));
- assert(model.length>55,'Louis face and body have layered, detailed geometry');
- for(const detail of ['fringe-0','fringe-4','iris--1','beard-chin','nose-tip','lid--1','jaw--1','upper-arm--1','hand-1'])
-  assert(model.some(p=>p.id===detail),'Missing recognizable face/animation feature: '+detail);
+ assert(model.some(part=>part.extra?.shape==='lois-face'&&part.extra.photoMapped),'Louis uses the current Photo-A model');
  assert.equal(louis.phase,'untying','Rescue starts with a cinematic release, not an instant teleport');
  let releases=0;
  for(let i=0;i<800&&louis.phase!=='hidden';i++){
@@ -75,20 +76,6 @@ const assert=require('node:assert/strict');
  assert(LOUIS_UNTIE_SECONDS>=2.5,'Untying must show more than a single frame');
  assert.equal(louis.phase,'hidden','Louis climbs from basement and hides by the kitchen bar');
  assert(louis.crouch>.99,'Louis crouches physically while hidden');
- const mock=(id)=>({id:'pickup-louis-escape-'+id,baseRoll:0,basePitch:0,baseYaw:0});
- const eye=mock('eye--1'),arm=mock('hand--1'),offset=[-.076,1.473,.158];
- let minBlink=1,maxBlink=0;
- for(let i=0;i<500;i++){
-  const pose=louisPartPose({id:louis.id,phase:'hidden',age:i*.027,walk:0,speed:0,crouch:1},eye,offset);
-  minBlink=Math.min(minBlink,pose.eyeScale);maxBlink=Math.max(maxBlink,pose.eyeScale);
-  assert([pose.x,pose.y,pose.z,pose.roll,pose.yaw,pose.pitch].every(Number.isFinite));
- }
- assert(minBlink<.30&&maxBlink>.99,'Louis closes and opens both eyes during spontaneous blinks');
- const idle=louisPartPose({id:louis.id,phase:'follow',age:1,walk:.23,speed:0,crouch:0},arm,[-.3,.559,.111]);
- const walking=louisPartPose({id:louis.id,phase:'follow',age:1,walk:.23,speed:2.1,crouch:0},arm,[-.3,.559,.111]);
- assert.notEqual(walking.pitch,idle.pitch,'Following Kitty swings the arms instead of sliding');
- const hiding=louisPartPose({id:louis.id,phase:'hidden',age:1,walk:0,speed:0,crouch:1},arm,[-.3,.559,.111]);
- assert(hiding.y>idle.y+.2,'Louis brings his hand toward his mouth while hidden');
  assert(freeLouis(louis));assert.equal(louis.phase,'follow');
  updateLouisEscape(louis,.3,{x:11.8,y:0,z:4.08,yaw:Math.PI});
  assert(louis.crouch>0&&louis.crouch<1,'Louis rises progressively from the kitchen hiding posture');

@@ -5,6 +5,8 @@
 #lab3d:has(.house-piano-dialog) :is(.lab-cross,.lab-joystick,.lab-buttons,.house-hotbar){visibility:hidden}
 #lab3d .house-piano-dialog .lab-paper-actions{margin-top:8px}
 #lab3d .piano-score{margin:0 0 7px;text-align:center;font:600 13px system-ui}
+#lab3d .piano-score span{display:inline-block;padding:3px 6px;border-radius:4px}
+#lab3d .piano-score span[aria-current=step]{background:#ffe6ad;color:#39262d}
 #lab3d .piano-keys{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:3px}
 #lab3d .piano-keys button{min-height:46px;padding:3px;border:0;border-radius:2px 2px 5px 5px;background:#f1dfbf;color:#312321;font-size:11px;box-shadow:inset 0 -4px #bfa786}
 #lab3d .piano-keys button.pressed{transform:translateY(3px);background:#e0c294;box-shadow:inset 0 -1px #bfa786}
@@ -236,6 +238,9 @@
 #lab3d.house-rc-driving .house-hotbar,#lab3d.house-rc-driving .lab-buttons,#lab3d.house-rc-driving .lab-look,#lab3d.house-rc-driving .house-charge,#lab3d.house-rc-driving .house-stamina{visibility:hidden;pointer-events:none}
 #lab3d.house-rc-driving .lab-joystick{opacity:1;z-index:28}
 #lab3d.house-rc-driving .lab-focus{visibility:hidden}
+#lab3d.house-rc-deploying :is(.house-hotbar,.lab-buttons,.lab-look,.lab-joystick,.lab-focus,#house-messages,#house-charge,#house-stamina){visibility:hidden;pointer-events:none}
+#lab3d.house-rc-deploying .house-rc-caption{top:max(14px,env(safe-area-inset-top));bottom:auto}
+#lab3d.house-rc-driving #house-messages{visibility:hidden}
 @media(max-height:390px){
  #lab3d .house-rc-display{padding:3px 8px;width:min(360px,55vw);gap:1px}
  #lab3d .house-rc-display strong{font-size:12px}

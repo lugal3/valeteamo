@@ -25,19 +25,25 @@ async function run(){
   browser=await browserType.launch({headless:true,args:browserType===chromium?
    ['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']:[]});
   const page=await browser.newPage({viewport:{width:960,height:540},reducedMotion:'reduce'});
+  const screenshotSession=browserType===chromium?await page.context().newCDPSession(page):null;
   const errors=[];
+  page.setDefaultTimeout(60000);
   page.on('pageerror',error=>errors.push(error.message));
   await page.clock.setFixedTime(new Date('2026-11-16T15:00:00Z'));
   const read=key=>page.evaluate(key=>JSON.parse(localStorage.getItem(key)),key);
   const write=(key,value)=>page.evaluate(([key,value])=>localStorage.setItem(key,JSON.stringify(value)),[key,value]);
   const snapshot=()=>page.evaluate(()=>window.__rescueHouse.snapshot());
-  const use=id=>page.evaluate(id=>window.__rescueHouse.interactWith(id),id);
+  const use=(id,activate=true)=>page.evaluate(([id,activate])=>window.__rescueHouse.interactWith(id,activate),[id,activate]);
   const stage=()=>page.evaluate(()=>window.__rescueHouse.story().phase);
   const checkpoint=async()=> (await read(RESCUE_KEY)).houseCheckpoint;
   const shot=async name=>{
    if(!SHOTS)return;
    fs.mkdirSync(SHOTS,{recursive:true});
-   await page.screenshot({path:path.join(SHOTS,name+'.png')});
+   const filename=path.join(SHOTS,name+'.png');
+   if(screenshotSession){
+    const {data}=await screenshotSession.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});
+    fs.writeFileSync(filename,Buffer.from(data,'base64'));
+   }else await page.screenshot({path:filename});
   };
 
   const openMenu=async()=>{
@@ -50,7 +56,14 @@ async function run(){
    await page.getByRole('button',{name:/Continuar el rescate/}).click();
   };
   const waitForHouse=async()=>{
-   await page.waitForFunction(()=>!!window.__rescueHouse&&document.querySelector('#lab-canvas')?.width>300);
+   try{
+    await page.waitForFunction(()=>!!window.__rescueHouse&&document.querySelector('#lab-canvas')?.width>300);
+   }catch(error){
+    console.log('HOUSE_RELOAD_FAILURE',JSON.stringify(await page.evaluate(()=>({
+     body:document.body.innerText.slice(0,1400),save:localStorage.getItem('valeteamo-rescue-v2')
+    }))),errors);
+    throw error;
+   }
    await page.locator('.story-prologue').waitFor({state:'detached'});
    assert.equal(await page.locator('#lab3d').count(),1);
    assert.equal(await page.locator('canvas').count(),1,'Only the WebGL house canvas remains');
@@ -73,23 +86,50 @@ async function run(){
   await waitForHouse();
   assert.equal((await read(RESCUE_KEY)).phase,'house','A prologue saved during handoff reaches the house');
   assert.equal((await checkpoint()).stage,'explore');
+  console.log('Checkpoint QA: normal house entry');
 
-  await use('note-hall');
-  await page.keyboard.press('Escape');
   await use('drawer');
   await use('key');
-  await use('media-cabinet');
+  assert.equal((await snapshot()).puzzle.note,false,'The study key needs no hall note');
+  await use('landing-cabinet');
+  await use('media-flashlight',false);
+  await shot('00-linterna-dentro-del-cajon');
   await use('media-flashlight');
-  assert.deepEqual(new Set((await checkpoint()).picked),new Set(['note-hall','key','media-flashlight']));
+  assert.deepEqual(new Set((await checkpoint()).picked),new Set(['key','media-flashlight']));
   await page.emulateMedia({reducedMotion:'no-preference'});
   await reloadHouse();
   assert.equal((await snapshot()).cinematic,false);
-  assert.equal((await snapshot()).notes,1);
+  assert.equal((await snapshot()).notes,0);
   assert.equal((await snapshot()).puzzle.key,true);
   assert(await page.locator('[data-equip=key]').isVisible());
   assert(await page.locator('[data-equip=flashlight]').isVisible());
   await assert.rejects(()=>use('key'),/Not available: key/);
   await shot('02-llave-y-linterna-tras-recarga');
+  console.log('Checkpoint QA: study key and upstairs flashlight reloaded');
+  await use('piano');
+  await page.getByRole('dialog',{name:'Atril vacío'}).waitFor();
+  await page.keyboard.press('Escape');
+  await use('reading-cabinet');await use('piano-sheet');
+  await page.keyboard.press('Escape');
+  await use('piano',false);
+  console.log('Checkpoint QA: approaching the piano with its score');
+  await page.waitForFunction(()=>window.__rescueHouse.pianoPuzzle().placed);
+  await use('piano');
+  await page.getByRole('dialog',{name:'Piano antiguo'}).waitFor();
+  await page.keyboard.press('s');
+  await page.getByText('Sigue las notas marcadas en orden.').waitFor();
+  for(const key of ['a','d','g','h','g','d','s','a'])await page.keyboard.press(key);
+  await page.getByText(/Melodía completa/).waitFor();
+  await page.waitForFunction(()=>window.__rescueHouse.pianoPuzzle().compartment===1);
+  assert.equal((await checkpoint()).pianoSolved,true);
+  await shot('03-compartimento-del-piano');
+  await page.keyboard.press('Escape');
+  await page.evaluate(()=>window.__rescueHouse.setPose({x:11.65,y:3.15,z:1.85,yaw:Math.PI/2,pitch:-.35}));
+  await shot('04-atril-y-compartimento');
+  await reloadHouse();
+  assert.deepEqual(await page.evaluate(()=>window.__rescueHouse.pianoPuzzle()),
+   {picked:true,placed:true,solved:true,compartment:1});
+  assert.equal((await snapshot()).notes,2,'Score and compartment clue each persist once');
   console.log('PASS legacy handoff and inventory reload');
 
   await page.emulateMedia({reducedMotion:'reduce'});
@@ -124,15 +164,15 @@ async function run(){
   await reloadHouse();
   await use('mirror-safe');
   await page.waitForFunction(()=>document.querySelector('#lab-dialog[role="dialog"], #lab-dialog [role="dialog"]')?.getAttribute('aria-label')==='Caja fuerte');
-  for(const digit of '1505')await page.locator('[data-act="safe:'+digit+'"]').click();
-  await page.locator('[data-act="safe:submit"]').click();
+  for(const digit of '1505')await page.keyboard.press(digit);
+  await page.keyboard.press('Enter');
   assert.equal((await checkpoint()).safeOpened,true);
   await reloadHouse();
   assert.equal(await stage(),'evaded');
   const safe=await page.evaluate(()=>window.__rescueHouse.mirrorPuzzle());
   assert.equal(safe.opened,true);
   assert.equal(safe.safe.amount,1);
-  assert.equal((await snapshot()).notes,2,'The reward appears once in the backpack');
+  assert.equal((await snapshot()).notes,3,'The reward appears once in the backpack');
 
   const beforeTrial=await read(RESCUE_KEY);
   await openMenu();

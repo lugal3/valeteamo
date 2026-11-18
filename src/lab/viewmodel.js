@@ -32,6 +32,10 @@ function rcHeldPieces(tabletOnly=false){
  return [
   chibiPiece('tablet-back',0,.10,0,.48,.34,.050,[.93,.49,.68],{shape:'rounded-box'}),
   chibiPiece('tablet-screen',0,.10,-.029,.42,.28,.009,[.21,.38,.51],{emissive:true}),
+  chibiPiece('tablet-glass-edge',0,.214,-.036,.32,.012,.006,[.54,.80,.88],{emissive:true}),
+  chibiPiece('tablet-grip-left',-.224,.071,0,.056,.26,.072,[.85,.40,.61],{shape:'rounded-box'}),
+  chibiPiece('tablet-grip-right',.224,.071,0,.056,.26,.072,[.85,.40,.61],{shape:'rounded-box'}),
+  chibiPiece('tablet-link-led',.145,.208,-.037,.024,.018,.007,[.61,.99,.77],{emissive:true}),
   chibiPiece('tablet-joystick-left',-.13,.075,-.038,.074,.074,.008,[.98,.88,.88],{shape:'round'}),
   chibiPiece('tablet-joystick-right',.13,.075,-.038,.074,.074,.008,[.98,.88,.88],{shape:'round'}),
   chibiPiece('paw-left',-.25,-.05,.037,.16,.16,.13,[1,.93,.91],{shape:'round'}),
@@ -114,6 +118,11 @@ export function drawViewModel(renderer, kind='flashlight', state={}){
  // Smoothed actual speed and a small grip rotation settle naturally after a stop.
  const offset=viewModelOffsets(time,motion);
  if(swapping)animateBatterySwap(vertices,groups,offset,motion.batterySwap,reduced);
+ if(kind==='rc-tablet'&&Number.isFinite(motion.tabletLift)){
+  const lift=motion.tabletLift;
+  offset.x-=.37*lift;offset.y-=.26*(1-lift);offset.z+=.10*(1-lift);
+  if(!reduced)offset.pitch+=.33*(1-lift);
+ }
  const cp=Math.cos(offset.pitch),sp=Math.sin(offset.pitch),cr=Math.cos(offset.roll),sr=Math.sin(offset.roll);
  const grip=kind==='phone'?{x:.37,y:-.25,z:.85}:kind==='flashlight'?VIEWMODEL_CONFIG.flashlight:noteGrip;
 

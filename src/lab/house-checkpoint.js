@@ -2,6 +2,7 @@ import {poseArrivalCar} from './arrival-car.js';
 import {HATCH,poseHatch,poseHatchRug} from './basement.js';
 import {createLouisEscape,freeLouis,LOUIS_HIDING_SPOT} from './louis-escape.js';
 import {WINDOW_LANDING} from './window-intro.js';
+import {PIANO_REWARD,posePianoCompartment,setPianoScore} from './house-additions.js';
 import {HEIGHT,blocked,groundHeight,poseFurniture,setDoor,setDrawer} from './world.js';
 
 const VERSION=1;
@@ -25,7 +26,7 @@ export function captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTr
   version:VERSION,stage,drawer:puzzle.drawer,
   picked:world.objects.filter(object=>PICKUPS.has(object.kind)&&object.taken).map(object=>object.id),
   rugAside:world.hatchRug.aside,hatchUnlocked:!world.hatch.locked,hatchOpen:world.hatch.open,
-  mirrorRevealed:mirrorSafe.revealed,safeOpened:mirrorSafe.opened,
+  mirrorRevealed:mirrorSafe.revealed,safeOpened:mirrorSafe.opened,pianoSolved:world.piano.solved,
   battery:Math.ceil(s.battery),spares:s.inventory.batteries+Number(batterySwap!==null),
   rcOwned:s.inventory.rc||rc.mode==='disabled',trapArmed:rcTrap.armed
  };
@@ -43,7 +44,6 @@ export function restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,r
  const picked=new Set(saved.picked);
  // Later checkpoints imply the prerequisites even if an older write omitted a pickup.
  if(bedroomUnlocked)picked.add('key');
- if(picked.has('key')||saved.drawer===true)picked.add('note-hall');
  if(saved.hatchUnlocked===true||louisUntied)picked.add('red-key');
  for(const item of world.objects){
   if(PICKUPS.has(item.kind)&&picked.has(item.id))item.taken=true;
@@ -78,6 +78,12 @@ export function restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,r
   else inventory.pendingNote={id,label,text};
  }
  if(mirrorSafe.opened)inventory.notes.push({...SAFE_REWARD});
+ if(saved.pianoSolved===true&&world.pianoSheet.taken){
+  world.piano.solved=true;
+  setPianoScore(world.piano,true);
+  posePianoCompartment(world.piano,1);
+  inventory.notes.push({...PIANO_REWARD});
+ }
  inventory.key=puzzle.key&&!puzzle.door;
  inventory.torch=!!object('media-flashlight').taken;
  inventory.rc=saved.rcOwned===true||escapedTrap;

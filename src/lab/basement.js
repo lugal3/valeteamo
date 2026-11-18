@@ -125,6 +125,9 @@ export function installBasement(add,obj,lights){
   const at=4.35+i*.47,half=sectionAt(at)[2],dx=(i%2?1:-1)*(half-.09),size=.08+(i%4)*.019;
   add('tunnel-stone-'+i,X+dx,floor(at)+.029,at,size,.068,size*1.4,'earth',false,{shape:'round',segments:5,rings:3,color:i%3?dark:[.41,.39,.33]});
  }
+ // Leave the middle of the tunnel clear so Kitty and Louis can pass beside the kit.
+ const kitZ=7.25,kitFloor=floor(kitZ);
+ obj('rc-car','rc-car','Auto RC y tablet',X-.29,kitFloor+.14,kitZ,{floor:kitFloor,yaw:0,mode:'packed'});
  installCaptive(add,obj);
  return hatch;
 }

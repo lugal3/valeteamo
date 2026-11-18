@@ -57,9 +57,9 @@ La separación útil hoy es por responsabilidad. El 3D vive en `src/lab/`, el pr
 
 ## Recorrido y guardado
 
-La linterna se encuentra en el cajón de los mandos. La llave con lazo del estudio abre el dormitorio y activa la llegada del perseguidor. El acertijo de la nota, el espejo y la caja fuerte es opcional para ese acceso. Tras la primera ronda el perseguidor se acuesta. Un aviso indica cuándo salir del armario, y el mensaje al dejar el dormitorio inicia la segunda persecución. La llave roja de la barra abre la trampilla bajo el tapete de la cocina. El recorrido termina al liberar a Louis en el sótano.
+La linterna brilla en el cajón del descansillo de la planta alta. La llave con lazo se recoge del cajón del estudio y abre el dormitorio. La nota del pasillo y el acertijo del espejo y la caja fuerte son pistas opcionales. Tras la primera ronda el perseguidor se acuesta. Un aviso indica cuándo salir del armario, y el mensaje al dejar el dormitorio inicia la segunda persecución. La llave roja de la barra abre la trampilla bajo el tapete de la cocina. El autito y su tablet están en el túnel hacia Louis.
 
-En PC, pulsa **R** para capturar el ratón o devolver el cursor. El engranaje ofrece la misma opción. En móvil, arrastra para mirar. En el piano, las teclas **A S D F G H J K** y los botones en pantalla tocan la partitura. En el baño, **9** o el selector de emotes activa **What Is Love?**, con diez segundos de audio y coreografía del video de referencia. Consulta las [anotaciones de diseño](docs/INDICE-INFORMES.md#anotaciones-de-diseño) para ver el flujo por actos y las ideas para ambientar los rincones.
+En PC, pulsa **R** para capturar el ratón o devolver el cursor. El engranaje ofrece la misma opción. En móvil, arrastra para mirar. La partitura está en el cajón de la sala de lectura. Kitty la coloca al acercarse al piano de la sala de música. Toca con **A S D F G H J K** o los botones en pantalla para abrir el compartimento. En el baño, **9** o el selector de emotes activa **What Is Love?**, con diez segundos de audio y coreografía del video de referencia. Consulta las [anotaciones de diseño](docs/INDICE-INFORMES.md#anotaciones-de-diseño) para ver el flujo por actos y las ideas para ambientar los rincones.
 
 | Datos | Clave o ámbito |
 | --- | --- |

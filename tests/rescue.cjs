@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');
 (async()=>{
  const {START,RESCUE_SAVE_KEY,advanceRescue,parseRescue,openRescueHouseSave}=await import('../src/demo/progression.js');
- const {createHousePuzzle,puzzleEvent,canOpenDrawer,canOpenBedroom,canRescue}=await import('../src/demo/house-puzzles.js');
+ const {createHousePuzzle,puzzleEvent,canOpenBedroom,canRescue}=await import('../src/demo/house-puzzles.js');
  const unchanged=advanceRescue(START,'house');assert.equal(unchanged.house,false);
  let state=advanceRescue(START,'heart');assert.equal(state.phase,'heart');
  state=advanceRescue(state,'abduction');state=advanceRescue(state,'trail');state=advanceRescue(state,'house');
@@ -27,11 +27,12 @@ const assert=require('node:assert/strict');
  current.finish();current.save(checkpoint);
  assert.deepEqual(JSON.parse(storage.get(RESCUE_SAVE_KEY)),state,'Finishing drops the interior checkpoint');
  delete globalThis.localStorage;
- let puzzle=createHousePuzzle();assert(!canOpenDrawer(puzzle));assert(!canOpenBedroom(puzzle));assert(!canRescue(puzzle));
- puzzle=puzzleEvent(puzzle,'drawer');assert.equal(puzzle.drawer,false,'Cannot bypass note');
- puzzle=puzzleEvent(puzzle,'note');puzzle=puzzleEvent(puzzle,'drawer');assert.equal(puzzle.drawer,true);
- puzzle=puzzleEvent(puzzle,'key');assert.equal(puzzle.key,true);assert(!canOpenBedroom(puzzle));
- puzzle=puzzleEvent(puzzle,'symbol');assert(canOpenBedroom(puzzle));puzzle=puzzleEvent(puzzle,'door');assert(canRescue(puzzle));
+ let puzzle=createHousePuzzle();assert(!canOpenBedroom(puzzle));assert(!canRescue(puzzle));
+ assert.equal(puzzleEvent(puzzle,'key').key,false,'The key still comes from the open drawer');
+ puzzle=puzzleEvent(puzzle,'drawer');assert.equal(puzzle.drawer,true,'The drawer opens before reading the note');
+ puzzle=puzzleEvent(puzzle,'key');assert.equal(puzzle.key,true);assert.equal(puzzle.note,false);
+ assert(canOpenBedroom(puzzle));puzzle=puzzleEvent(puzzle,'door');assert(canRescue(puzzle));
+ assert.equal(puzzle.symbol,false,'The mirror safe stays optional');
  puzzle=puzzleEvent(puzzle,'rescue');assert(puzzle.rescued);
  console.log('PASS: staged rescue, linked puzzles, lock requirements and corrupted-save recovery');
 })().catch(e=>{console.error(e);process.exitCode=1});

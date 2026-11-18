@@ -76,6 +76,33 @@ export function rcCamera(rc,world){
  const distance=Math.hypot(target.x-camera.x,target.z-camera.z);
  return {...camera,yaw:rc.yaw,pitch:Math.atan2(target.y-camera.y,distance)};
 }
+export function rcDeploymentView(rc,world,player,view,reduced=false){
+ if(reduced)return {view,hands:null,tabletLift:1};
+ const t=rc.elapsed/RC_DEPLOY_SECONDS;
+ const ease=value=>{const u=clamp(value,0,1);return u*u*(3-2*u);};
+ const close=Math.hypot(rc.x-player.x,rc.y-player.y,rc.z-player.z)<1.65;
+ const crouch=close?ease(t/.43):0,tablet=ease((t-.46)/.25);
+ const camera={...view,y:view.y-.83*crouch+.23*crouch*tablet,
+  pitch:view.pitch*(1-crouch)-.82*crouch+.38*crouch*tablet};
+ const blend=ease((t-.74)/.26);
+ let next=camera;
+ if(close&&blend>0){
+  const chase=rcCamera(rc,world);
+  if(!lineBlocked(world.boxes,camera,chase)){
+   const yaw=chase.yaw-camera.yaw;
+   next={x:camera.x+(chase.x-camera.x)*blend,y:camera.y+(chase.y-camera.y)*blend,
+    z:camera.z+(chase.z-camera.z)*blend,
+    yaw:camera.yaw+Math.atan2(Math.sin(yaw),Math.cos(yaw))*blend,
+    pitch:camera.pitch+(chase.pitch-camera.pitch)*blend};
+  }
+ }
+ const hands=close&&t<.53?[-1,1].map(side=>({
+  x:rc.x+Math.cos(player.yaw)*side*.18,y:rc.y+.16+.32*(1-crouch),
+  z:rc.z-Math.sin(player.yaw)*side*.18
+ })):null;
+ return {view:next,hands,tabletLift:!hands&&t<.94?tablet*(1-blend):null};
+}
+
 export function canTrapPursuer(pursuer,hatch,armed){
  return !!armed&&hatch.open&&hatch.amount>.92&&pursuer.active&&pursuer.y<-.55&&pursuer.z>4.35&&Math.abs(pursuer.x-8.55)<1.05;
 }
@@ -91,6 +118,12 @@ export function rcCarModel(piece,kit=false){
  add('bow-right',.148,.347,.065,.077,.075,.04,'bow',rose,{shape:'round'});
  add('bow-knot',.111,.345,.094,.041,.043,.035,'brass',cream,{shape:'round'});
  add('spoiler',0,.30,-.32,.41,.036,.065,'bow',rose);
+ add('front-bumper',0,.126,.344,.39,.058,.064,'cream',cream,{shape:'rounded-box',roundness:.24});
+ add('rear-diffuser',0,.104,-.324,.36,.052,.079,'dark',tire);
+ for(const side of [-1,1]){
+  add('side-skirt-'+side,side*.191,.115,0,.043,.054,.35,'bow',rose);
+  add('rear-light-'+side,side*.115,.168,-.346,.088,.037,.023,'torchglass',[1,.28,.48],{glow:true});
+ }
  for(const side of [-1,1])for(const dz of [-.22,.22]){
   add('tire-'+side+'-'+dz,side*.205,.105,dz,.113,.165,.155,'dark',tire,{shape:'cylinder',segments:12,yaw:Math.PI/2});
   add('rim-'+side+'-'+dz,side*.26,.105,dz,.018,.078,.077,'cream',cream,{shape:'cylinder',segments:10,yaw:Math.PI/2});

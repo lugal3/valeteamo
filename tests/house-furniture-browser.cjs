@@ -14,9 +14,7 @@ const {chromium}=require('playwright');
   page.setDefaultTimeout(90000);page.on('pageerror',error=>errors.push(error.message));
   page.on('response',response=>{if(/poster-(titanes|archivo)\.jpg$/.test(response.url()))posters.push(response.status());});
   await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/');await passBirthdayCountdown(page);
-  await page.locator('.splash-start').waitFor();await page.keyboard.press('Enter');
-  await page.getByRole('button',{name:'Pruebas',exact:true}).click();
-  await page.getByRole('button',{name:/^Casa 3D/}).click();
+  await page.getByRole('button',{name:'Casa 3D',exact:true}).click();
   await page.locator('[data-act=start]').click();await page.locator('[data-act=skip-intro]').click();
   const use=(id,activate=true)=>page.evaluate(([id,activate])=>window.__rescueHouse.interactWith(id,activate),[id,activate]);
   const snapshot=()=>page.evaluate(()=>window.__rescueHouse.snapshot());
@@ -30,12 +28,14 @@ const {chromium}=require('playwright');
 
   assert(await page.locator('[data-equip=flashlight]').isHidden());
   assert(await page.locator('#house-lock-mouse').isHidden());
-  await use('media-cabinet');await use('media-flashlight');
+  await use('landing-cabinet');await use('media-flashlight');
   assert(await page.locator('[data-equip=flashlight]').isVisible());
+  await use('piano');await page.getByRole('dialog',{name:'Atril vacío'}).waitFor();await close();
+  await use('reading-cabinet');await use('piano-sheet');await close();
   await use('piano');await page.getByRole('dialog',{name:'Piano antiguo'}).waitFor();
-  assert((await snapshot()).view.y>4,'The piano seat is on the upper landing');
+  assert((await snapshot()).view.y>4,'The piano seat is upstairs');
   for(const letter of ['a','d','g','h','g','d','s','a'])await page.keyboard.press(letter);
-  await page.getByText('Melodía completa',{exact:true}).waitFor();await shot('piano');await close();
+  await page.getByText(/Melodía completa/).waitFor();await shot('piano');await close();
   const spares=(await amenities()).battery.spares;
   await page.evaluate(()=>{
    const {position,camera}=window.__rescueHouse.snapshot();
