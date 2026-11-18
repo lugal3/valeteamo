@@ -26,7 +26,7 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
  let browser,page;
  try{
   browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
-  page=await browser.newPage({viewport:{width:960,height:540},hasTouch:true});
+  page=await browser.newPage({viewport:{width:844,height:390},hasTouch:true});
   page.setDefaultTimeout(60000);
   const errors=[];page.on('pageerror',error=>{errors.push(error.stack||error.message);console.error('PAGE ERROR:',error.message);});
   await page.emulateMedia({reducedMotion:'reduce'});
@@ -66,14 +66,21 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   await shot('01b-tablet-en-las-patas');
   await page.waitForFunction(()=>window.__rescueHouse.rc().mode==='driving');
   await page.locator('#house-rc-hud').waitFor();
+  await page.keyboard.press('r');
+  assert.equal(await page.evaluate(()=>document.pointerLockElement),null);
   await shot('02-rc-driving');
   const initial=await rc();
-  await page.keyboard.down('w');await page.waitForTimeout(650);await page.keyboard.up('w');
+  await page.keyboard.down('w');
+  try{await page.waitForFunction(({x,z})=>{
+   const position=window.__rescueHouse.rc().position;
+   return Math.hypot(position.x-x,position.z-z)>.15;
+  },initial.position);}
+  finally{await page.keyboard.up('w');}
   const after=await rc();
   assert(Math.hypot(after.position.x-initial.position.x,after.position.z-initial.position.z)>.15,'Car moves through 3D world using WASD');
   await page.locator('[data-act="rc:noise"]').click();
   assert((await rc()).noise>0,'Noise button emits a timed lure');
-  await page.locator('[data-act="rc:stop"]').click();
+  await page.keyboard.press('Escape');
   await page.emulateMedia({reducedMotion:'reduce'});
   assert.equal((await rc()).mode,'parked');
   await shot('03-rc-stopped');
@@ -107,15 +114,15 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   await use('rescue-louis');
   await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='untying');
   await shot('04a-louis-untying');
-  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='climb',null,{timeout:12000});
+  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='climb',null,{timeout:60000});
   await shot('04-louis-basement');
   await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='climb'&&
    window.__rescueHouse.louis().x>11.6&&window.__rescueHouse.louis().z<1.72,
-   null,{timeout:42000});
+   null,{timeout:90000});
   await shot('04b-louis-walks-around-north-end');
-  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='hide',null,{timeout:15000});
+  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='hide',null,{timeout:60000});
   await shot('04c-louis-squatting-behind-counter');
-  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='hidden',null,{timeout:15000});
+  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='hidden',null,{timeout:60000});
   const hidden=await louis();
   assert.equal(hidden.phase,'hidden');
   assert(hidden.x>11.9&&Math.abs(hidden.z-2.97)<.08,

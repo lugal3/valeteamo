@@ -14,6 +14,10 @@ module.exports=async()=>{
   update({unread:true,messageCount:2});assert(!nodes['.phone-notice'].hidden);update({unread:false,messageCount:2});assert(nodes['.phone-notice'].hidden);
   hud.say('No cabe la puerta',1);update({phoneOpen:true});assert.equal(visible().length,0);assert(nodes['#lab-objective'].hidden);update({phoneOpen:true,danger:'Escóndete'});assert.deepEqual(visible(),['.house-danger']);
   hud.reset();update({unread:true,messageCount:1});assert(!nodes['.phone-notice'].hidden,'A new session can notify again');
+  hud.reset();hud.describeSound('Cruje el suelo');update();assert.equal(root.dataset.hudMessage,'sound');
+  assert.equal(nodes['#lab-toast'].textContent,'Cruje el suelo');
+  update({danger:'Escóndete'});assert.deepEqual(visible(),['.house-danger']);
+  hud.clearSound();update();assert.equal(visible().length,0);
  }finally{if(oldDocument===undefined)delete global.document;else global.document=oldDocument;if(oldStyle===undefined)delete global.getComputedStyle;else global.getComputedStyle=oldStyle;}
  const intersects=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
  for(const [width,height]of [[568,320],[844,390],[1280,720]])for(const anchor of ['left','right','top','bottom'])for(const size of [40,64])for(const x of [-180,0,180])for(const y of [-120,0,120]){

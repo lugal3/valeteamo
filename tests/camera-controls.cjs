@@ -52,6 +52,8 @@ const near=(a,b,msg,tol=1e-9)=>assert(Math.abs(a-b)<tol,`${msg}: ${a} vs ${b}`);
  const m=new Map(),store={getItem:k=>m.get(k)??null,setItem:(k,v)=>m.set(k,v)};
  assert(writeCameraSettings(store,{sensitivity:1.25,invertX:true}));
  assert.deepEqual(readCameraSettings(store),{sensitivity:1.25,invertX:true});
+ assert(writeCameraSettings(store,{sensitivity:1.25,invertX:true,bob:false,motion:true,captions:false}));
+ assert.deepEqual(readCameraSettings(store),{sensitivity:1.25,invertX:true,bob:false,motion:true,captions:false});
 
  // ── 9. Corrupted JSON → factory default ─────────────────────────────────────
  assert.deepEqual(readCameraSettings({getItem:()=>'{bad'}),

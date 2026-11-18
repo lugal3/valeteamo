@@ -1,7 +1,15 @@
 import {DEFAULT_HUD,normalizeHUD,readHUD,writeHUD,hudRect} from './hud-layout.js';
 import {formatPhoneTime} from './device-time.js';
 import {phoneHome,phoneChat,phoneNotice,gallerySprites,earlierMessages} from './phone-content.js';
-const dockIcon=kind=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${kind==='empty'?'<path d="M6 14c0-4 12-4 12 0 0 5-3 7-6 7s-6-2-6-7Z"/><ellipse cx="6" cy="7" rx="2" ry="3"/><ellipse cx="12" cy="5" rx="2" ry="3"/><ellipse cx="18" cy="7" rx="2" ry="3"/>':kind==='flashlight'?'<path d="m6 4 12 0-2 8v8H8v-8Z"/><path d="M7 8h10M10 16h4M10 2h4"/>':'<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4M11 5h2"/>'}</svg>`;
+const keyIcon='<path d="M14 10 5 19H2v-3l9-9"/><circle cx="15.5" cy="6.5" r="4"/><path d="M7 13l2 2"/>';
+const dockPaths={
+ flashlight:'<path d="m6 4 12 0-2 8v8H8v-8Z"/><path d="M7 8h10M10 16h4"/>',
+ phone:'<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4M11 5h2"/>',
+ key:keyIcon,'red-key':keyIcon,
+ paper:'<path d="M6 3h8l4 4v14H6zM14 3v5h4M9 12h6M9 16h6"/>',
+ rc:'<rect x="2" y="5" width="20" height="14" rx="3"/><path d="M5 11h4m-2-2v4m6-3 3-2 3 2m-5 3h4"/><circle cx="20" cy="16" r=".5"/>'
+};
+const dockIcon=kind=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${dockPaths[kind]}</svg>`;
 
 export class PhoneUI{
  constructor(root,onEquip,onClose,{canUse=()=>true,canEquip=canUse,onEdit=()=>{},onPhoto=()=>{}}={}){
@@ -14,9 +22,9 @@ export class PhoneUI{
   <section class="hud-editor" hidden role="dialog" aria-label="Editar controles"><h2>Coloca tu hotbar</h2><p>La casa queda en pausa mientras ajustas.</p><label>Anclaje <select data-hud="anchor"><option value="left">Izquierda</option><option value="right">Derecha</option><option value="bottom">Abajo</option><option value="top">Arriba</option></select></label><label>Tamaño <input data-hud="size" type="range" min="40" max="64" step="2"></label><label>Desplazar X <input data-hud="x" type="range" min="-180" max="180" step="1"></label><label>Desplazar Y <input data-hud="y" type="range" min="-120" max="120" step="1"></label><label>Opacidad <input data-hud="opacity" type="range" min=".25" max=".9" step=".05"></label><output class="hud-measure"></output><div><button data-layout="copy">Copiar ajuste</button><button data-layout="reset">Restablecer</button><button data-layout="preview">Vista previa</button><button data-layout="done">Listo</button></div><small class="hud-copy-status" role="status"></small></section><div class="hud-preview-tools" hidden><output></output><button data-layout="back">Volver al editor</button><button data-layout="done">Listo</button></div>`;root.append(host);this.host=host;
   const feed=root.querySelector('#house-messages');this.managedNotice=!!feed;if(feed){host.append(feed);feed.append(host.querySelector('.phone-notice'));}
   const nav=host.querySelector('.house-hotbar');nav.querySelector('[data-equip=empty]').remove();
-  for(const [kind,label,key,icon] of [['key','Llave con lazo',4,'⚿'],['red-key','Llave roja',1,'⚿'],['paper','Nota',5,'▤'],['rc','Auto RC y tablet',6,'🏎']]){
+  for(const [kind,label,key] of [['key','Llave con lazo',4],['red-key','Llave roja',1],['paper','Nota',5],['rc','Auto RC y tablet',6]]){
    const button=document.createElement('button');button.type='button';button.dataset.equip=kind;button.setAttribute('aria-label',label);button.title=key+' · '+label;
-   button.innerHTML='<span aria-hidden="true"></span><small>'+key+'</small>';button.querySelector('span').textContent=icon;nav.append(button);
+   button.innerHTML='<span>'+dockIcon(kind)+'</span><small>'+key+'</small>';nav.append(button);
   }
   host.addEventListener('click',e=>{
    const action=e.target.closest('[data-layout]')?.dataset.layout;if(action){this.layoutAction(action);return;}
@@ -36,7 +44,16 @@ export class PhoneUI{
  }
  applyLayout(){
   const nav=this.host.querySelector('.house-hotbar'),count=nav.querySelectorAll('button:not([hidden])').length;
-  const rect=hudRect(this.layout,this.root.clientWidth,this.root.clientHeight,count);this.rect=rect;
+  const width=this.root.clientWidth,height=this.root.clientHeight;
+  const style=getComputedStyle(this.root);
+  const inset=edge=>parseFloat(style.getPropertyValue('--house-safe-'+edge))||0;
+  const left=inset('left'),right=inset('right'),top=inset('top'),bottom=inset('bottom');
+  const rect=hudRect(this.layout,width-left-right,height-top-bottom,count);
+  rect.x+=left;rect.y+=top;
+  if(this.layout.anchor==='bottom'&&width-left-right<680&&count>4){
+   rect.y=Math.min(rect.y,height-bottom-70-rect.h);
+  }
+  this.rect=rect;
   this.root.dataset.hotbarAnchor=this.layout.anchor;this.root.style.setProperty('--hud-slot',rect.slot+'px');this.root.style.setProperty('--hud-opacity',this.layout.opacity);
   Object.assign(nav.style,{left:rect.x+'px',top:rect.y+'px',width:rect.w+'px',height:rect.h+'px'});nav.classList.toggle('vertical',rect.vertical);
   const text=`X ${rect.x} · Y ${rect.y} · ${Math.round(rect.w)} × ${Math.round(rect.h)} px · botón ${Math.round(rect.slot)} px`;
@@ -55,6 +72,9 @@ export class PhoneUI{
  setInventory(inventory){
   const available={flashlight:inventory.torch,phone:true,key:inventory.key,'red-key':inventory.redKey,paper:!!inventory.pendingNote||inventory.notes.length>0,rc:!!inventory.rc};
   for(const button of this.host.querySelectorAll('[data-equip]'))button.hidden=!available[button.dataset.equip];
+  const papers=this.host.querySelector('[data-equip=paper]');
+  const label=inventory.notes.at(-1)?.id==='piano-sheet'&&!inventory.pendingNote?'Partitura':'Notas';
+  papers.title='5 · '+label;papers.setAttribute('aria-label',label);
   this.applyLayout();
  }
  show(app='home'){

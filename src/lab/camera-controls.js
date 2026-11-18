@@ -26,7 +26,7 @@ export function readCameraSettings(storage){
   const v4=JSON.parse(storage?.getItem(CAMERA_SETTINGS_KEY)||'null');
   if(v4!==null){
    return {sensitivity:clamp(Number(v4?.sensitivity)||DEFAULT_CAMERA_SETTINGS.sensitivity,SENSITIVITY_MIN,SENSITIVITY_MAX),
-     invertX:v4?.invertX===true};
+     invertX:v4?.invertX===true,...presentationPreferences(v4)};
   }
   // Migrate from v3: treat factory default (0.82) as "never customised" → use new default.
   const v3=JSON.parse(storage?.getItem(PREV_CAMERA_SETTINGS_KEY)||'null');
@@ -37,6 +37,11 @@ export function readCameraSettings(storage){
   return {sensitivity:sens,invertX:v3?.invertX===true};
  }catch{return {...DEFAULT_CAMERA_SETTINGS};}
 }
+function presentationPreferences(settings){
+ const result={};
+ for(const key of ['bob','motion','captions'])if(typeof settings?.[key]==='boolean')result[key]=settings[key];
+ return result;
+}
 export function writeCameraSettings(storage,settings){
- try{let previous;try{previous=JSON.parse(storage?.getItem(CAMERA_SETTINGS_KEY)||'{}');}catch{previous={};}storage?.setItem(CAMERA_SETTINGS_KEY,JSON.stringify({...previous,sensitivity:clamp(settings.sensitivity,SENSITIVITY_MIN,SENSITIVITY_MAX),invertX:!!settings.invertX}));return true;}catch{return false;}
+ try{let previous;try{previous=JSON.parse(storage?.getItem(CAMERA_SETTINGS_KEY)||'{}');}catch{previous={};}storage?.setItem(CAMERA_SETTINGS_KEY,JSON.stringify({...previous,sensitivity:clamp(settings.sensitivity,SENSITIVITY_MIN,SENSITIVITY_MAX),invertX:!!settings.invertX,...presentationPreferences(settings)}));return true;}catch{return false;}
 }

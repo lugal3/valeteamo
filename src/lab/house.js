@@ -67,6 +67,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    <div class="lab-intro-bottom"></div>
  </div>
  <div class="lab-cross" aria-hidden="true">+</div>
+ <div id="house-mouse-status" class="house-mouse-status" hidden>Esc o R · Liberar ratón</div>
  <div class="lab-top">
    <details class="lab-camera-settings" id="lab-camera-settings"><summary aria-label="Ajustes de la casa">⚙</summary><div class="lab-camera-panel">
      <div class="house-menu-actions">
@@ -78,6 +79,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      <label class="lab-invert-label"><input data-setting="invertX" type="checkbox"> Invertir giro horizontal</label>
      <label>Calidad de imagen <select data-setting="quality" aria-label="Calidad gráfica"><option value="medium">Detalles (auto)</option><option value="low">Modo fluido</option></select></label>
      <label class="lab-preference"><input data-setting="bob" type="checkbox" checked> Balanceo al caminar</label>
+     <label class="lab-preference"><input data-setting="motion" type="checkbox"> Reducir movimiento</label>
+     <label class="lab-preference"><input data-setting="captions" type="checkbox" checked> Subtítulos de sonidos</label>
      <details class="house-mixer"><summary>Mezclador de sonido</summary>
        <label class="lab-preference"><input data-setting="mute" type="checkbox"> Silenciar la casa</label>
        ${MIX_CHANNELS.map(([key,label,preview],i)=>`<div class="mixer-row"><label><span>${label} <output data-level="${key}"></output></span><input data-setting="${key}" type="range" min="0" max="${i<4?1:2}" step=".01" aria-label="${label}"></label><button data-act="audio:${preview||key}" aria-label="Probar ${label}">▶</button></div>`).join('')}
@@ -88,12 +91,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      <button data-act="reset">${scenario?'Reiniciar prueba':'Reiniciar casa'}</button>
      <button data-act="hud">Editar controles / hotbar</button>
      ${demo?'':'<details><summary>Diagnóstico</summary><div id="lab-metrics"></div></details>'}
-     <small class="lab-settings-note">WASD · Caminar / Mayús o joystick fuera del aro · Correr / Flechas · Mirar / C · Agacharse / E · Interactuar y salir de escondites / F · Usar objeto / I · Mochila / Esc · Pausa</small>
+     <details class="lab-settings-note"><summary>Controles</summary><p>WASD para caminar, Mayús para correr y C para agacharte. Arrastra para mirar o pulsa R para capturar el ratón. E interactúa, F usa el objeto equipado, I abre la mochila y Esc libera el ratón o pausa.</p><p>En pantalla táctil, mueve el joystick izquierdo y arrastra a la derecha para mirar. Puedes hacer ambos gestos a la vez.</p></details>
    </div></details>
  </div>
- <div class="lab-focus" id="lab-focus" role="status"></div>
+ <div class="lab-focus" id="lab-focus" role="status" aria-live="polite"></div>
  <div class="house-messages" id="house-messages" hidden>
-  <div class="lab-objective" id="lab-objective">✿ Explora la casa · sigue las pistas</div>
+  <div class="lab-objective" id="lab-objective">Explora la casa</div>
   <div class="lab-toast" id="lab-toast" role="status" aria-live="polite"></div>
  </div>
  <div class="house-charge" id="house-charge" role="meter" aria-label="Batería de la linterna" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" hidden><span class="house-charge-cell" aria-hidden="true"><i id="lab-charge"></i></span><strong id="lab-charge-text" aria-hidden="true">100%</strong></div>
@@ -101,7 +104,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  <div class="lab-joystick" id="lab-joystick" aria-label="Joystick izquierdo, arrastrar para caminar"><div class="lab-stick-ring"><div id="lab-stick" class="lab-stick-thumb">♡</div></div></div>
  <div class="lab-look" id="lab-look" aria-label="Arrastrar para mirar"></div>
  <div class="lab-buttons">
-  <button data-act="interact" id="lab-interact" hidden><small>Usar</small></button>
+  <button data-act="interact" id="lab-interact" aria-keyshortcuts="E" hidden><kbd aria-hidden="true">E</kbd><small>Usar</small></button>
   <button data-act="emotes" aria-label="Elegir emote" aria-controls="house-emotes" aria-expanded="false" hidden>☺<small>Emotes</small></button>
   <button data-act="bag">▣<small>Mochila</small></button>
   <button data-act="flash" id="house-light">☼<small>Luz</small></button>
@@ -109,7 +112,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   <button data-act="crouch" id="lab-crouch" aria-label="Agacharse" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2"/><path d="m13 8-3 4 5 2-2 3h5m-8-5-4 5M7 21h10m-7-12-3 2"/></svg><small>Agachar</small></button>
  </div>
  <div class="house-emotes" id="house-emotes" hidden role="group" aria-label="Emotes"><span>En el espejo · moverte cancela</span>${EMOTES.map(e=>`<button data-act="emote:${e.id}">${e.key} · ${e.label}</button>`).join('')}<button data-act="emote:stop">Detener</button></div>
- <div class="house-rc-hud" id="house-rc-hud" hidden role="group" aria-label="Tablet de control RC"><div class="house-rc-display"><strong>♡ KITTY RC</strong><span>W/S acelerar · A/D girar · joystick táctil</span><output id="house-rc-status">Señal conectada</output></div><div class="house-rc-actions"><button data-act="rc:noise">♪ Hacer ruido</button><button data-act="rc:trap" id="rc-trap-button" hidden>▣ Activar trampa</button><button data-act="rc:stop">✕ Dejar de usar</button></div></div>
+ <div class="house-rc-hud" id="house-rc-hud" hidden role="group" aria-label="Tablet de control RC">
+  <div class="house-rc-display"><strong>Kitty RC</strong><span class="house-rc-keys">W/S acelerar · A/D girar</span><output id="house-rc-status" aria-live="off">Señal conectada</output></div>
+  <div class="house-rc-actions"><button data-act="rc:noise" aria-keyshortcuts="Q">Señuelo <kbd>Q</kbd></button><button data-act="rc:trap" id="rc-trap-button" aria-keyshortcuts="T" hidden>Cerrar escotilla <kbd>T</kbd></button><button data-act="rc:stop" aria-keyshortcuts="X Escape">Guardar <kbd>Esc</kbd></button></div>
+ </div>
  <div class="house-rc-caption" id="house-rc-caption" hidden role="status"></div>
  <div id="lab-turn" class="lab-turn"><div><span>↻</span><h2>Gira tu teléfono</h2><p>La casa se explora en horizontal. Tu lugar se conserva y el mundo queda en pausa.</p><button data-act="exit">Volver a pruebas</button></div></div>
  <div id="lab-dialog" class="lab-dialog lab-hidden"></div>`;
@@ -124,7 +130,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const phone=new PhoneUI(root,(kind,toggle=true)=>equip(kind,toggle),()=>resetInput(),{canEquip:canUseHotbar,canUse:()=>canUseHotbar()&&!notePresentation,onEdit:()=>{releaseMouse();resetInput();if(isSuspended())sound.pause();else sound.resume();},onPhoto:()=>{capturePhoto=true;}});phone.equip(equipment);
  const danger=document.createElement('div');danger.className='house-danger';danger.hidden=true;danger.setAttribute('role','status');root.querySelector('#house-messages').append(danger);
  const enableSound=document.createElement('button');enableSound.className='house-enable-sound';enableSound.textContent='Activar sonido';enableSound.hidden=true;root.querySelector('.house-mixer').before(enableSound);
- enableSound.addEventListener('click',()=>{sound.set('muted',false);root.querySelectorAll('[data-setting="mute"]').forEach(el=>el.checked=false);void sound.start();});
+ enableSound.addEventListener('click',async()=>{
+  sound.set('muted',false);root.querySelectorAll('[data-setting="mute"]').forEach(el=>el.checked=false);
+  if(await sound.start()&&active&&isSuspended())sound.pause();
+ });
  const $=id=>root.querySelector('#'+id),canvas=$('lab-canvas'),dialog=$('lab-dialog');
  const hudMessages=new HouseMessages(root);
  phone.onPresentationChange=()=>hudMessages.layout(phone.rect,phone.open);
@@ -133,23 +142,27 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  let active=true,ready=false,hasFocus=true,focus=null,lookLast={x:0,y:0},paused=false,modal='',intro=true,contextLost=false,stickPointerType=null,lookPointerType=null;
  let lookTarget={yaw:Math.PI,pitch:0},cinematic=null,poseTransition=null,handAction=0,clickAction=0,lastInteraction=-Infinity,audioPreview=false;
  const handDrift={x:0,y:0,vx:0,vy:0};
- const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
+ const motionMedia=window.matchMedia('(prefers-reduced-motion: reduce)');
  const keys=new Set(),joystick={x:0,z:0,sprint:false},velocity={forward:0,side:0};
  const cameraSettings=(()=>{try{return readCameraSettings(window.localStorage)}catch{return {...DEFAULT_CAMERA_SETTINGS}}})();
- const options={sensitivity:cameraSettings.sensitivity,invertX:cameraSettings.invertX,bob:!reducedMotion.matches,quality:'medium'};
+ const options={...cameraSettings,bob:cameraSettings.bob??!motionMedia.matches,quality:'medium'};
+ const reducedMotion={get matches(){return motionMedia.matches||options.motion===true;}};
  const saveCamera=()=>{try{writeCameraSettings(window.localStorage,options)}catch{}};
  const points={ground:'Planta baja',upstairs:'Planta alta',sound:'Iluminación / sonido',interactions:'Interacciones',mirror:'Espejo del baño'};
  const say=(text,seconds=2.4)=>hudMessages.say(text,seconds);
+ const caption=text=>{if(options.captions!==false)hudMessages.describeSound(text);};
  const isPortrait=()=>window.innerHeight>window.innerWidth;
  const isSuspended=()=>!ready||paused||!!modal||phone.editing||$('lab-camera-settings').open||isPortrait()||document.hidden||!hasFocus||contextLost;
  const wakeShot=()=>events.phase==='lockdown'&&pursuer?.mode==='rising';
  const isPaused=()=>isSuspended()||!!cinematic||!!poseTransition||events.phase==='car-preview'||wakeShot();
  const flashlightBeam=()=>s.flashlight&&batterySwap===null&&equipment==='flashlight'&&!s.hidden&&!s.lying&&!animator.performing&&!phone.open&&events.phase!=='arrival';
- const desktop=window.matchMedia('(hover: hover) and (pointer: fine)');
+ const desktop=window.matchMedia('(any-hover: hover) and (any-pointer: fine)');
+ const remoteInUse=()=>['driving','deploying'].includes(rc?.mode);
+ const canLook=()=>!isPaused()&&!phone.open&&events.phase!=='arrival'&&!remoteInUse();
  const mouseLocked=()=>document.pointerLockElement===canvas;
  function releaseMouse(){if(mouseLocked())document.exitPointerLock();}
  function lockMouse(){
-  if(!desktop.matches||!canvas.requestPointerLock||!ready||cinematic||phone.open||paused||modal)return;
+  if(!desktop.matches||!canvas.requestPointerLock||!ready||cinematic||phone.open||phone.editing||paused||modal||poseTransition||wakeShot()||isPortrait()||!hasFocus||contextLost||remoteInUse()||events.phase==='arrival')return;
   $('lab-camera-settings').open=false;resetInput();
   try{const request=canvas.requestPointerLock();request?.catch(()=>say('El navegador no permitió capturar el ratón'));}catch{say('El navegador no permitió capturar el ratón');}
  }
@@ -269,6 +282,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const loc=listener(),source=o?{x:o.x,y:o.y,z:o.z}:null;
   const occluded=source?lineBlocked(world.boxes,loc,source,o?.kind==='door'?'door-'+o.id:''):false;
   sound.effect(name,source,{...loc,yaw:s.yaw},occluded,{level});
+  if(name==='cat')caption('Maullido junto a la salida');
+  if(name==='floor-groan')caption('Cruje el suelo');
  };
  function toggleFlash(){if(s.hidden||s.lying||batterySwap!==null)return;
   sound.resume();
@@ -619,6 +634,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   if(act==='exit'){stop();onExit();return;}
   if(act==='finish'){config.onRescue?.();return;}
+  if(act.startsWith('rc:')&&(rc?.mode!=='driving'||isPaused()))return;
   if(act==='rc:stop'){
    if(stopRC(rc)){equipment='rc';equipmentAge=0;phone.equip('rc');resetInput();say('Tablet guardada · el autito queda en el suelo. Pulsa USAR para conducir de nuevo.',4);}
    return;
@@ -626,7 +642,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(act==='rc:noise'){
    if(beepRC(rc)){
     if(events.phase==='rc-setup'&&!pursuer.active)pursuer.start();
-    play('notification',rc,1.7);say('¡BIP BIP! El autito llama la atención del perseguidor.',2.8);
+    play('rc-beep',rc);
    }return;
   }
   if(act==='rc:trap'){
@@ -701,8 +717,6 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  function updateControls(){
   const target=closestObject(world,s,focus);focus=target;
-  const label=s.hidden?'ESCONDIDA · USAR PARA SALIR':s.lying?'ACOSTADA · USAR PARA LEVANTARTE':target?`${target.label} · USAR`:'';
-  $('lab-focus').textContent=label;
   root.classList.toggle('lab-flash-off',!s.flashlight);
   $('house-light').hidden=equipment!=='flashlight'||!!s.hidden||!!s.lying;
   $('house-use-phone').hidden=!['phone','paper','rc'].includes(equipment)||notePresentation||!!noteLift||!!s.hidden||!!s.lying;
@@ -712,54 +726,46 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   root.querySelector('[data-act=emotes]').hidden=!canEmote;
   if(!canEmote){$('house-emotes').hidden=true;
    root.querySelector('[data-act=emotes]').setAttribute('aria-expanded','false');}
-  $('lab-objective').textContent=scenario?.objective??(config.entry==='mirror'?'◇ Prueba de espejo':demo?(puzzle.rescued?'♥ ¡Louis está a salvo!':!puzzle.key?'⚿ Abre el cajón del estudio y recoge la llave':!puzzle.door?'🚪 Sube y abre el dormitorio':'Busca la trampilla de la cocina'):'Explora libremente · E interactuar');
-  if(events.phase==='hide')$('lab-objective').textContent='Busca un escondite · armario o bajo la cama';
-  if(events.phase==='explore'&&demo&&!s.inventory.torch)$('lab-objective').textContent='Busca la linterna en el cajón del descansillo';
-  if(events.phase==='patrol'||events.phase==='resting')$('lab-objective').textContent='Espera a que termine su ronda';
-  if(events.phase==='sleep')$('lab-objective').textContent='Se durmió · ya es seguro salir del armario';
-  if(events.phase==='car-preview')$('lab-objective').textContent='El auto está entrando al jardín';
-  if(events.phase==='lockdown')$('lab-objective').textContent='El mensaje lo despertó · busca cobertura';
-  if(events.phase==='hunt')$('lab-objective').textContent='Evita su mirada · escóndete sin que te vea entrar';
-  if(events.phase==='evaded')$('lab-objective').textContent='Busca la trampilla bajo el tapete de la cocina';
-  if(events.phase==='escape')$('lab-objective').textContent=world.greyCat.called?'Sigue a la gata gris · sal al jardín con Louis':'Sal por la puerta principal con Louis';
-  if(s.y<-.18&&!puzzle.rescued&&events.phase==='evaded')$('lab-objective').textContent='Sigue el túnel hasta Louis';
-  if(getStairDirection(s)==='Escaleras')$('lab-objective').textContent+=' · ↑↓ Escaleras';
+  let objective=scenario?.objective??(config.entry==='mirror'?'Mira el reflejo':demo?(puzzle.rescued?'Louis está a salvo':!puzzle.key?'Recoge la llave del estudio':!puzzle.door?'Sube y abre el dormitorio':'Busca la trampilla de la cocina'):'Explora la casa');
+  if(events.phase==='explore'&&demo&&!s.inventory.torch)objective='Busca la linterna en el descansillo';
+  if(events.phase==='resting')objective='Espera a que termine la ronda';
+  if(events.phase==='sleep')objective='El perseguidor duerme. Puedes salir.';
+  if(events.phase==='lockdown')objective='Busca cobertura';
+  if(events.phase==='evaded')objective=s.y<-.18&&!puzzle.rescued?'Sigue el túnel hasta Louis':'Busca la trampilla bajo el tapete';
+  if(events.phase==='escape')objective=world.greyCat.called?'Sigue a la gata gris':'Sal al jardín con Louis';
+  if($('lab-objective').textContent!==objective)$('lab-objective').textContent=objective;
   const meter=$('house-charge'),charge=Math.ceil(s.battery);
-  meter.hidden=isSuspended()||!!cinematic||events.phase==='arrival'||phone.open;
+  const hideMeters=isSuspended()||!!cinematic||events.phase==='arrival'||phone.open;
+  meter.hidden=hideMeters||!s.inventory.torch;
   if(meter.getAttribute('aria-valuenow')!==String(charge)){
    meter.setAttribute('aria-valuenow',charge);meter.dataset.level=charge<=FLASH_LOW?'low':'normal';
    $('lab-charge').style.width=charge+'%';$('lab-charge-text').textContent=charge+'%';
   }
   const stamina=$('house-stamina'),reserve=Math.ceil(100*s.stamina/SPRINT_SECONDS);
-  stamina.hidden=meter.hidden||(!s.sprinting&&reserve>=100)||!!s.hidden||!!s.lying;
+  stamina.hidden=hideMeters||(!s.sprinting&&reserve>=100)||!!s.hidden||!!s.lying;
   if(stamina.getAttribute('aria-valuenow')!==String(reserve)){
    stamina.setAttribute('aria-valuenow',reserve);stamina.firstElementChild.style.width=reserve+'%';
   }
   root.classList.toggle('house-sprinting',s.sprinting&&!stamina.hidden);
-  const interactButton=$('lab-interact');interactButton.hidden=!target&&!s.hidden&&!s.lying;
+  const interactButton=$('lab-interact');
+  const canInteract=!!(target||s.hidden||s.lying||poseTransition)&&!isSuspended()&&!cinematic&&!phone.open&&!remoteInUse();
+  interactButton.hidden=!canInteract;
   const hatchMoving=target?.kind==='hatch'&&target.amount!==Number(target.open);
   interactButton.disabled=!!target?.motion||hatchMoving||!!poseTransition;
   root.querySelector('.lab-cross').classList.toggle('lab-target',!!target);
-  interactButton.querySelector('small').textContent=s.hidden||s.lying?'Salir':!target?'Usar':target.kind==='door'?(target.open?'Cerrar puerta':'Abrir puerta'):target.kind==='key'?'Recoger llave':target.kind==='note'?'Leer nota':target.kind==='drawer'?(target.open?'Cerrar cajón':'Abrir cajón'):target.kind==='rescue'?'Liberar a Louis':'Examinar';
-  if(target?.kind==='hide')interactButton.querySelector('small').textContent=target.requiresCrouch&&!s.crouched?'Agáchate primero':target.hideType==='wardrobe'?'Entrar en armario':'Esconderse';
-  if(target?.kind==='battery')interactButton.querySelector('small').textContent='Recoger pila';
-  if(target?.kind==='flashlight')interactButton.querySelector('small').textContent='Recoger linterna';
-  if(target?.kind==='piano')interactButton.querySelector('small').textContent=target.scorePlaced?'Sentarse y tocar':'Examinar el atril';
-  if(target===world.pianoSheet)interactButton.querySelector('small').textContent='Recoger partitura';
-  if(target?.kind==='rc-car')interactButton.querySelector('small').textContent='Recoger auto RC';
-  if(target?.kind==='television')interactButton.querySelector('small').textContent=target.power.on?'Apagar tele':'Encender tele';
-  if(target?.kind==='power-switch')interactButton.querySelector('small').textContent=target.power.on?'Cortar corriente':'Restablecer corriente';
-  if(target?.kind==='rug')interactButton.querySelector('small').textContent=target.aside?'Volver a cubrir':'Apartar tapete';
-  if(target?.kind==='hatch')interactButton.querySelector('small').textContent=hatchMoving?(target.open?'Abriendo…':'Cerrando…'):target.open?'Cerrar trampilla':target.locked?'Abrir candado':'Abrir trampilla';
-  if(target?.kind==='tap')interactButton.querySelector('small').textContent=target.on?'Cerrar llave':'Abrir llave';
-  if(target?.kind==='cupboard')interactButton.querySelector('small').textContent=target.open?'Cerrar refrigerador':'Abrir refrigerador';
-  if(target?.kind==='safe')interactButton.querySelector('small').textContent=mirrorSafe.opened?'Ver contenido':'Introducir código';
-  if(target?.kind==='light-switch')interactButton.querySelector('small').textContent=!housePowered(world.lights.power)?'Sin corriente':target.circuit.on?'Apagar luz':'Encender luz';
+  let action=interactionLabel(target);
+  if(poseTransition)action=poseTransition.entering?'Entrando…':'Saliendo…';
+  if(target?.motion||hatchMoving)action=target.state==='opening'||hatchMoving&&target.open?'Abriendo…':'Cerrando…';
+  const actionLabel=interactButton.querySelector('small');
+  if(actionLabel.textContent!==action)actionLabel.textContent=action;
+  const focusLabel=canInteract&&mouseLocked()?(interactButton.disabled?action:'E o clic · '+action):'';
+  if($('lab-focus').textContent!==focusLabel)$('lab-focus').textContent=focusLabel;
   const remote=rc?.mode==='driving';
   const deploying=rc?.mode==='deploying';
   $('house-rc-hud').hidden=!remote;
   if(remote){
-   $('house-rc-status').textContent=rc.noise>0?'Emitiendo señal sonora · '+Math.ceil(rc.noise)+' s':'Señal conectada · '+Math.round(rc.velocity*10)/10+' m/s';
+   const status=rc.noise>0?'Señuelo activo · '+Math.ceil(rc.noise)+' s':'Señal conectada · '+Math.round(Math.abs(rc.velocity)*10)/10+' m/s';
+   if($('house-rc-status').textContent!==status)$('house-rc-status').textContent=status;
    $('rc-trap-button').hidden=!canTrapPursuer(pursuer,world.hatch,rcTrap.armed);
    interactButton.hidden=true;
   }
@@ -768,12 +774,37 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(announce)$('house-rc-caption').textContent=finalCutscene?'¡Libres! Kitty y Louis cruzan el jardín…':louis?.phase==='untying'?'Kitty desata las cuerdas mientras Louis espera en silencio…':louis?.phase==='hidden'?'Louis se agacha tras la barra americana y mira alrededor…':louis&&['climb','hide'].includes(louis.phase)?'Louis sube del sótano y busca refugio tras la barra americana…':rc.elapsed<.53?'Colocando el autito…':'Conectando la tablet…';
   root.classList.toggle('house-rc-deploying',deploying);
   root.classList.toggle('house-rc-driving',remote);
-  if(poseTransition)interactButton.querySelector('small').textContent=poseTransition.entering?'Entrando…':'Saliendo…';
-  if(target?.motion)interactButton.querySelector('small').textContent=target.state==='opening'?'Abriendo…':'Cerrando…';
   interactButton.classList.toggle('lab-available',!!target||!!s.hidden||!!s.lying);
   $('lab-crouch').classList.toggle('lab-available',s.crouched);
   $('lab-crouch').setAttribute('aria-pressed',String(s.crouched));$('lab-crouch').setAttribute('aria-label',s.crouched?'Levantarse':'Agacharse');$('lab-crouch').querySelector('small').textContent=s.crouched?'Levantar':'Agachar';
   if(!demo&&$('lab-camera-settings').open)$('lab-metrics').textContent=`${fps} FPS · ${ctxRoom(s)} · altura ${s.y.toFixed(1)} m · rumbo ${Math.round((s.yaw*180/Math.PI%360+360)%360)}°`;
+ }
+ function interactionLabel(target){
+  if(s.hidden)return 'Salir del escondite';
+  if(s.lying)return 'Levantarse';
+  if(!target)return 'Usar';
+  if(target===world.pianoSheet)return 'Recoger partitura';
+  switch(target.kind){
+   case 'door':return target.open?'Cerrar puerta':'Abrir puerta';
+   case 'drawer':return target.open?'Cerrar cajón':'Abrir cajón';
+   case 'key':return 'Recoger llave';
+   case 'note':return 'Leer nota';
+   case 'rescue':return 'Liberar a Louis';
+   case 'hide':return target.requiresCrouch&&!s.crouched?'Agáchate primero':target.label;
+   case 'battery':return 'Recoger pila';
+   case 'flashlight':return 'Recoger linterna';
+   case 'piano':return target.scorePlaced?'Tocar el piano':'Examinar el atril';
+   case 'rc-car':return 'Recoger auto RC';
+   case 'television':return target.power.on?'Apagar tele':'Encender tele';
+   case 'power-switch':return target.power.on?'Cortar corriente':'Restablecer corriente';
+   case 'rug':return target.aside?'Volver a cubrir':'Apartar tapete';
+   case 'hatch':return target.open?'Cerrar trampilla':target.locked?'Abrir candado':'Abrir trampilla';
+   case 'tap':return target.on?'Cerrar llave':'Abrir llave';
+   case 'cupboard':return target.open?'Cerrar mueble':'Abrir mueble';
+   case 'safe':return mirrorSafe.opened?'Ver contenido':'Introducir código';
+   case 'light-switch':return !housePowered(world.lights.power)?'Sin corriente':target.circuit.on?'Apagar luz':'Encender luz';
+   default:return target.label||'Examinar';
+  }
  }
  function tick(dt){
   if(isPaused()||finalCutscene)return;
@@ -940,7 +971,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   updateBatterySwap(shotDelta);
   let view=cameraOf(s),hand=!s.hidden&&!s.lying&&!poseTransition&&!animator.performing&&!phone.open,torch=flashlightBeam(),introHands=null,distance=0;
-  if(mouseLocked()&&(isPaused()||phone.open||events.phase==='arrival'))releaseMouse();
+  if(mouseLocked()&&!canLook())releaseMouse();
   if(cinematic){
    if(!paused&&!modal&&!isPortrait()&&!document.hidden&&hasFocus)cinematic.elapsed+=shotDelta;
    const progress=Math.min(1,cinematic.elapsed/WINDOW_SHOT_SECONDS);
@@ -1056,12 +1087,15 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    view={...camera,yaw:Math.atan2(dx,dz),pitch:Math.atan2(s.y+1.01-camera.y,Math.hypot(dx,dz))};torch=false;shotLight=.15;
   }
   sound.carEngine(carShot&&!isSuspended()?world.car.progress:null);
+  sound.rcMotor(rc?.mode==='driving'&&!isPaused()?rc.velocity:0);
   root.classList.toggle('house-arrival',events.phase==='arrival'||events.phase==='car-preview'||wakeShot()||!!actorWalk);
   root.classList.toggle('house-cutaway',carShot||wakeShot()||!!actorWalk);
   const chasing=pursuer.mode==='chase',investigating=pursuer.mode==='investigate',resting=pursuer.mode==='patrol-rest';
   danger.hidden=!['arrival','hide','patrol','hunt'].includes(events.phase)&&!(events.phase==='evaded'&&(chasing||investigating));
   danger.dataset.level=chasing?'chase':investigating?'watch':'search';
-  danger.textContent=events.phase==='hide'?'Escóndete · '+Math.ceil(events.remaining)+' s':events.phase==='arrival'?'Alguien está intentando entrar…':chasing?'Te persigue · gira una esquina':investigating?'Está investigando · busca cobertura':resting?'Se detuvo a descansar':pursuer.mode==='cooldown'?'Se aleja · avanza con cuidado':s.hidden?'Sigue patrullando · espera a que se aleje':'Está patrullando · busca cobertura';
+  const arrivalCaption=options.captions!==false&&events.time<CAR_ARRIVAL_SECONDS?'Se acerca un motor':'Alguien intenta entrar';
+  const threatText=events.phase==='hide'?'Escóndete · '+Math.ceil(events.remaining)+' s':events.phase==='arrival'?arrivalCaption:chasing?'Te persigue · gira una esquina':investigating?'Busca cobertura':world.lights.power.blackout.left>0?'Corte de luz · sigue la escalera':resting?'Se detuvo a descansar':pursuer.mode==='cooldown'?'Se aleja · avanza con cuidado':s.hidden?'Sigue patrullando · espera a que se aleje':'Está patrullando';
+  if(danger.textContent!==threatText)danger.textContent=threatText;
   root.classList.toggle('house-threat',!danger.hidden);
   if(!isSuspended())equipmentAge+=shotDelta;
   phone.update(events,isSuspended()?0:shotDelta);enableSound.hidden=!sound.settings.muted&&!!sound.context&&(sound.paused||sound.context.state==='running');
@@ -1144,18 +1178,29 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   e.preventDefault();
  }
  function endStick(e){if(e.pointerId!==stickPointer)return;const pointer=stickPointer;stickPointer=null;stickPointerType=null;joystick.x=0;joystick.z=0;joystick.sprint=false;releaseCapture($('lab-joystick'),pointer);$('lab-stick').style.transform='translate(0,0)';}
- function pointerLook(e){if(isPaused()||phone.open||events.phase==='arrival'||lookPointer!==null||e.button!==0||e.target.closest('button,input,select,summary,.lab-diagnostics,.phone-screen,.house-hotbar,.house-emotes'))return;
+ function pointerLook(e){if(!canLook()||mouseLocked()||lookPointer!==null||e.button!==0)return;
   lookPointer=e.pointerId;lookPointerType=e.pointerType||'mouse';lookLast={x:e.clientX,y:e.clientY};capture(e.currentTarget,e.pointerId);e.preventDefault();}
  function moveLook(e){if(e.pointerId!==lookPointer)return;if(releasedPointer(e,lookPointerType)){endLook(e);return;}if(isPaused())return;const dx=e.clientX-lookLast.x,dy=e.clientY-lookLast.y;
   lookLast={x:e.clientX,y:e.clientY};
+  aimLook(dx,dy);
+  e.preventDefault();}
+ function aimLook(dx,dy){
   lookTarget=applyLookDelta(lookTarget,dx,dy,options.sensitivity,options.invertX);
   if(s.hidden){const limit=s.hidden.hideType==='wardrobe'?.28:.6;lookTarget.yaw=clamp(lookTarget.yaw,s.hidden.yaw-limit,s.hidden.yaw+limit);lookTarget.pitch=clamp(lookTarget.pitch,-.14,.14);}
-  e.preventDefault();}
+ }
  function endLook(e){if(e.pointerId!==lookPointer)return;const pointer=lookPointer;lookPointer=null;lookPointerType=null;releaseCapture($('lab-look'),pointer);}
  const stick=$('lab-joystick'),look=$('lab-look');
- $('house-lock-mouse').hidden=!desktop.matches||!canvas.requestPointerLock;
- document.addEventListener('mousemove',e=>{if(mouseLocked()&&!isPaused()&&!phone.open)lookTarget=applyLookDelta(lookTarget,e.movementX,e.movementY,options.sensitivity,options.invertX);},{signal});
- document.addEventListener('pointerlockchange',()=>{if(!mouseLocked())resetInput();},{signal});
+ function syncPointerMode(){
+  root.classList.toggle('house-desktop',desktop.matches);
+  $('house-lock-mouse').hidden=!desktop.matches||!canvas.requestPointerLock;
+  const locked=mouseLocked();
+  root.classList.toggle('house-mouse-locked',locked);
+  $('house-mouse-status').hidden=!locked;
+ }
+ syncPointerMode();
+ desktop.addEventListener('change',syncPointerMode,{signal});
+ document.addEventListener('mousemove',e=>{if(mouseLocked()&&canLook())aimLook(e.movementX,e.movementY);},{signal});
+ document.addEventListener('pointerlockchange',()=>{syncPointerMode();resetInput();if(!canLook())releaseMouse();},{signal});
  if(stick&&look){
   stick.addEventListener('pointerdown',pointerStick,{signal});stick.addEventListener('pointermove',moveStick,{signal});
   stick.addEventListener('pointerup',endStick,{signal});stick.addEventListener('pointercancel',endStick,{signal});
@@ -1168,20 +1213,38 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   window.addEventListener('mouseup',e=>{if(e.button!==0)return;if(stickPointerType==='mouse')endStick({pointerId:stickPointer});if(lookPointerType==='mouse')endLook({pointerId:lookPointer});},{signal,capture:true});
   for(const type of ['touchend','touchcancel'])window.addEventListener(type,e=>{if(stickPointerType==='touch'&&!hasControlTouch(e.touches,stick))endStick({pointerId:stickPointer});if(lookPointerType==='touch'&&!hasControlTouch(e.touches,look))endLook({pointerId:lookPointer});},{signal,capture:true,passive:true});
  }
- root.addEventListener('click',e=>{const button=e.target.closest('[data-act]');if(button){e.preventDefault();runAction(button.dataset.act,button);}}, {signal});
+ root.addEventListener('click',e=>{
+  if(e.isTrusted)unlockSound();
+  const button=e.target.closest('[data-act]');
+  if(button){e.preventDefault();runAction(button.dataset.act,button);}
+  else if(e.target===canvas&&mouseLocked()&&canLook()&&e.button===0)runAction('interact');
+ },{signal});
+ function unlockSound(){
+  if(isPaused()||sound.settings.muted||sound.context?.state==='running')return;
+  void sound.start().then(ok=>{if(ok&&active&&isPaused()&&!cinematic)sound.pause();});
+ }
  function endAudioPreview(){
   if(!audioPreview)return;
   audioPreview=false;sound.stopEmote();sound.pause();
  }
  $('lab-camera-settings')?.addEventListener('toggle',()=>{resetInput();endAudioPreview();if(isSuspended())sound.pause();else sound.resume();},{signal});
  root.querySelector('.house-mixer')?.addEventListener('toggle',e=>{if(!e.target.open)endAudioPreview();},{signal});
- reducedMotion.addEventListener('change',()=>{if(s)s.reduceBob=reducedMotion.matches||!options.bob;if(cinematic&&reducedMotion.matches)finishWindowIntro();},{signal});
+ function syncMotion(){
+  root.classList.toggle('house-motion-reduced',reducedMotion.matches);
+  if(s)s.reduceBob=reducedMotion.matches||!options.bob;
+  if(cinematic&&reducedMotion.matches)finishWindowIntro();
+ }
+ motionMedia.addEventListener('change',syncMotion,{signal});
+ syncMotion();
  root.addEventListener('input',e=>{
   const field=e.target,key=field.dataset.setting;if(!key)return;
   if(key==='quality'){options.quality=field.value;renderer.quality=field.value;root.querySelectorAll('[data-setting="quality"]').forEach(el=>{if(el!==field)el.value=field.value;});}
   if(key==='sensitivity'){options.sensitivity=Number(field.value);root.querySelectorAll('[data-setting="sensitivity"]').forEach(el=>{if(el!==field)el.value=field.value;});saveCamera();}
   if(key==='invertX'){options.invertX=field.checked;saveCamera();}
-  if(key==='bob'){options.bob=field.checked;if(s)s.reduceBob=!field.checked||reducedMotion.matches;}
+  if(key==='bob'||key==='motion'||key==='captions'){
+   options[key]=field.checked;saveCamera();syncMotion();
+   if(key==='captions'&&!field.checked)hudMessages.clearSound();
+  }
   if(MIX_CHANNELS.some(([channel])=>channel===key)){
    sound.set(key,Number(field.value));
    root.querySelector(`[data-level="${key}"]`).textContent=Math.round(sound.settings[key]*100)+'%';
@@ -1190,9 +1253,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   root.querySelectorAll('[data-setting="'+key+'"]').forEach(el=>{if(el!==field){if(field.type==='checkbox')el.checked=field.checked;else el.value=field.value;}});
  },{signal});
  window.addEventListener('keydown',e=>{
-  if(!active)return;const focused=e.target?.tagName;
+  if(!active||e.altKey||e.ctrlKey||e.metaKey||e.isComposing)return;
+  if(e.isTrusted&&!e.repeat)unlockSound();
+  const focused=e.target?.tagName;
+  if(e.key==='Escape'&&mouseLocked()){e.preventDefault();releaseMouse();return;}
+  if(e.key==='Escape'&&rc?.mode==='driving'&&!isPaused()){e.preventDefault();runAction('rc:stop');return;}
   if(phone.editing){if(e.key==='Escape'){e.preventDefault();void phone.layoutAction('done');}else if(e.key==='Tab'){const panel=phone.host.querySelector(phone.preview?'.hud-preview-tools':'.hud-editor'),items=[...panel.querySelectorAll('button,input,select')];if(!panel.contains(document.activeElement)||(!e.shiftKey&&document.activeElement===items.at(-1))||(e.shiftKey&&document.activeElement===items[0])){e.preventDefault();(e.shiftKey?items.at(-1):items[0]).focus();}}return;}
-  if(['INPUT','SELECT','TEXTAREA'].includes(focused))return;
+  if(['INPUT','SELECT','TEXTAREA'].includes(focused)&&e.key!=='Escape')return;
+  if(e.key===' '&&['BUTTON','SUMMARY','A'].includes(focused))return;
   if(piano&&e.key!=='Tab'){
    const note=PIANO_KEYS.indexOf(e.key.toLowerCase());
    if(note!==-1){e.preventDefault();if(!e.repeat)playPiano(note);return;}
@@ -1204,7 +1272,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(rc?.mode==='driving'&&!e.repeat&&['q','x','t'].includes(e.key.toLowerCase())){
    e.preventDefault();runAction({q:'rc:noise',x:'rc:stop',t:'rc:trap'}[e.key.toLowerCase()]);return;
   }
-  if(e.key.toLowerCase()==='r'&&!e.repeat&&!isPaused()&&!phone.open){if(mouseLocked())releaseMouse();else lockMouse();return;}
+  if(e.key.toLowerCase()==='r'&&!e.repeat&&canLook()){if(mouseLocked())releaseMouse();else lockMouse();return;}
   if(phone.open){if(e.key==='Escape'){e.preventDefault();phone.close();resetInput();}else if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'].includes(e.key)){e.preventDefault();phone.key(e.key);}else if(e.key==='Tab'){const b=[...root.querySelectorAll('.phone-screen button')],first=b[0],last=b.at(-1);if((e.shiftKey&&document.activeElement===first)||(!e.shiftKey&&document.activeElement===last)){e.preventDefault();(e.shiftKey?last:first).focus();}}return;}
   if((e.key==='p'||e.key==='P')&&equipment==='phone'){runAction('phone');return;}
   if(!e.repeat&&EMOTES.some(em=>em.key===e.key)){runAction('emote:'+EMOTES.find(em=>em.key===e.key).id);return;}
@@ -1227,9 +1295,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(e.key==='i'||e.key==='I')runAction('bag');
  },{signal});
  window.addEventListener('keyup',e=>{const key=movementKey(e);if(key)keys.delete(key);},{signal,capture:true});
- window.addEventListener('blur',()=>{hasFocus=false;resetInput();sound.pause();},{signal});
+ window.addEventListener('blur',()=>{hasFocus=false;releaseMouse();resetInput();sound.pause();},{signal});
  window.addEventListener('focus',()=>{hasFocus=true;resetInput();last=performance.now();if(!isSuspended())sound.resume();},{signal});
- window.addEventListener('pagehide',()=>{hasFocus=false;resetInput();sound.pause();},{signal});
+ window.addEventListener('pagehide',()=>{hasFocus=false;releaseMouse();resetInput();sound.pause();},{signal});
  window.addEventListener('pageshow',()=>{hasFocus=document.hasFocus();resetInput();last=performance.now();if(!isSuspended())sound.resume();},{signal});
  document.addEventListener('visibilitychange',()=>{last=performance.now();if(document.hidden){resetInput();sound.pause();}else if(!isSuspended())sound.resume();},{signal});
  window.addEventListener('resize',()=>{last=performance.now();resetInput();if(isPortrait())sound.pause();else if(!isSuspended())sound.resume();},{signal});
@@ -1243,6 +1311,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   root.querySelectorAll('[data-setting="bob"]').forEach(el=>el.checked=options.bob);
   root.querySelectorAll('[data-setting="sensitivity"]').forEach(el=>el.value=options.sensitivity);
   root.querySelector('[data-setting="invertX"]').checked=options.invertX;
+  root.querySelector('[data-setting="motion"]').checked=options.motion===true;
+  root.querySelector('[data-setting="captions"]').checked=options.captions!==false;
   root.querySelectorAll('[data-setting="quality"]').forEach(el=>el.value=options.quality);
   if(scenario)showTrialStart();
   else if(demo&&!config.trial&&checkpoint==='ground')runAction('start');
