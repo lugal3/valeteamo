@@ -1,7 +1,7 @@
 import {guidePiano,posePianoCompartment,posePianoReward} from './house-additions.js';
 import {ease} from './animations/pose-tools.js';
 import {PIANO_PERFORMANCE} from './piano-performance.js';
-import {PIANO_INTRO,PIANO_INTRO_END,PIANO_SHOW_END,PIANO_REVEAL_SECONDS,PIANO_PRACTICE,PIANO_PRACTICE_END,
+import {PIANO_INTRO,PIANO_INTRO_END,PIANO_SHOW_END,PIANO_REVEAL_SECONDS,PIANO_PRACTICE,
  PIANO_NOTES,PIANO_PAGE_SIZE,pianoWindow,pianoStaff,pianoPerformanceView,pianoStandingView} from './piano-recital.js';
 
 const clamp=value=>Math.max(0,Math.min(1,value));
@@ -62,17 +62,14 @@ export class PianoSession{
   this.tick(now);
   if(this.expire())return;
   this.strike(note);
-  if(this.mode==='free'){this.sound.piano(note);return;}
+  this.sound.piano(note);
+  if(this.mode==='free')return;
   const [time,expected]=this.score[this.index];
   if(note!==expected){
-   const sample=PIANO_PERFORMANCE.find(([,right])=>right===note%12)?.[0];
-   if(sample!==undefined)this.sound.pianoSegment(sample,sample+.25,note,note===12?2:1,true);
-   else this.sound.piano(note);
    this.reset('Nota equivocada · vuelve a la primera nota');return;
   }
   const next=this.score[++this.index];
   if(next){
-   this.sound.pianoSegment(time,next[0],note,1,true);
    const turn=this.mode==='intro'&&this.index%PIANO_PAGE_SIZE===0;
    this.deadline=turn?0:this.now+pianoWindow(this.score,this.index);
    this.result.textContent=turn?'Primera hoja completa · Sigue con la segunda':'';
@@ -80,12 +77,11 @@ export class PianoSession{
   }
   guidePiano(this.object);
   if(this.mode==='practice'){
-   this.sound.pianoSegment(time,PIANO_PRACTICE_END,note);
    this.complete('Pieza completa');return;
   }
-  this.sound.pianoSegment(time,PIANO_SHOW_END,note);
-  this.mode='performance';this.sourceTime=time;this.performanceStart=time;
-  this.cue=PIANO_PERFORMANCE.findIndex(([at])=>at>time);
+  this.sound.pianoSegment(PIANO_INTRO_END,PIANO_SHOW_END,PIANO_INTRO_END-time);
+  this.mode='performance';this.sourceTime=time;
+  this.cue=PIANO_PERFORMANCE.findIndex(([at])=>at>=PIANO_INTRO_END);
   this.stage('lead','Kitty enlaza la melodía…');
  }
  expire(){
@@ -106,7 +102,7 @@ export class PianoSession{
    this.line.style.transform='scaleX('+remaining+')';
   }
   if(this.mode!=='performance')return;
-  const audioTime=this.sourceTime<PIANO_SHOW_END?this.sound.pianoTime(this.performanceStart):null;
+  const audioTime=this.sourceTime<PIANO_SHOW_END?this.sound.pianoTime(PIANO_INTRO_END):null;
   this.sourceTime=audioTime??(this.sourceTime+dt);
   const time=this.sourceTime;
   if(time<PIANO_SHOW_END){
