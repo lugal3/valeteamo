@@ -16,7 +16,7 @@ import {VERTEX_SHADER as VS,FRAGMENT_SHADER as FS} from './material-shaders.js';
 import {MATERIAL,lineBlocked} from './world.js';
 import {materialPixels,materialStyle,surfaceFrame,ATLAS_SIZE,TILE_SIZE,GUTTER,INNER,ATLAS_SIZE_MED,TILE_SIZE_MED,GUTTER_MED,INNER_MED} from './materials.js';
 import {HouseShadows,castsShadow,nearbyLights,FLASH_REACH,FLASH_SPREAD,LAMP_REACH,VISIBLE_LAMPS,NIGHT_SKY} from './lighting.js';
-import {circuitPowered} from './house-lights.js';
+import {circuitPowered,emergencyLight} from './house-lights.js';
 export {pickupGeometry} from './pickup-models.js';
 function shader(gl,kind,source){const s=gl.createShader(kind);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){const msg=gl.getShaderInfoLog(s);gl.deleteShader(s);throw Error('Shader: '+msg);}return s;}
 function program(gl,low=false){const source=low?FS.replace('uniform float uFlash,uOcclude;','uniform float uFlash; const float uOcclude=0.0;'):FS;const p=gl.createProgram(),v=shader(gl,gl.VERTEX_SHADER,VS),f=shader(gl,gl.FRAGMENT_SHADER,source);gl.attachShader(p,v);gl.attachShader(p,f);gl.linkProgram(p);gl.deleteShader(v);gl.deleteShader(f);if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p)||'Shader linkage');return p;}
@@ -521,7 +521,7 @@ export class HouseRenderer {
     box.y=this.dynamicOrigins[i][1]+(reduced||motion.feetY>-.3?0:Math.sin(time*2.3)*.010);
    }
    const at=i*6,bx=box.x,by=box.y,bz=box.z,byaw=box.yaw||0,roll=box.roll||0,pitch=box.pitch||0;
-   const {start,end}=this.dynamicRanges[i],glow=circuitPowered(box.fixture?.circuit)||box.power?.on?32:0;
+   const {start,end}=this.dynamicRanges[i],glow=circuitPowered(box.fixture?.circuit)||box.power?.on||box.fixture&&emergencyLight(box.fixture)?32:0;
    const moved=Math.abs(eyeScale-(this.dynamicEyeScale?.[i]??1))>.00001||Math.fround(bx)!==this.dynamicPositions[at]||Math.fround(by)!==this.dynamicPositions[at+1]||Math.fround(bz)!==this.dynamicPositions[at+2]||Math.fround(byaw)!==this.dynamicPositions[at+3]||Math.fround(roll)!==this.dynamicPositions[at+4]||Math.fround(pitch)!==this.dynamicPositions[at+5];
    if(!moved&&this.dynamicVertices[start+12]===this.dynamicTemplate[start+12]+glow)continue;
    this.dynamicPositions.set([bx,by,bz,byaw,roll,pitch],at);
@@ -556,7 +556,10 @@ export class HouseRenderer {
  updateShadows(camera,flash,light,basis){
   const lamps=nearbyLights(this.fixtures,camera);
   this.lampUniforms.fill(0);
-  lamps.forEach(({x,y,z,tile,strength=1},i)=>this.lampUniforms.set([x,y,z,tile+(strength===1?0:strength)],i*4));
+  lamps.forEach((lamp,i)=>{
+   const {x,y,z,tile,strength=1}=lamp,level=emergencyLight(lamp)?.23:strength;
+   this.lampUniforms.set([x,y,z,tile+(level===1?0:level)],i*4);
+  });
   if(!this.shadows.available)return;
   const pose=flash?[camera.x,camera.y,camera.z,camera.yaw,camera.pitch].join(','):'';
   const torchChanged=flash&&pose!==this.lightPose,dirty=lamps.filter(lamp=>this.dirtyLampShadows.has(lamp));

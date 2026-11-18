@@ -9,7 +9,7 @@ import {movementKey,releasedPointer,hasControlTouch} from './movement-input.js';
 import {CharacterAnimator} from './animator.js';
 import {BATH_MIRROR} from './mirror.js';
 import {MirrorSafePuzzle,SAFE_CODE,MIRROR_HINT} from './mirror-safe.js';
-import {HIDE_SECONDS,hidingFrame} from './hiding.js';
+import {HIDE_SECONDS,hiddenPose,hidingExit,hidingFrame} from './hiding.js';
 import {STAND_SECONDS,wardrobeWalk} from './animations/wardrobe-entry.js';
 import {CAR_ARRIVAL_SECONDS,arrivalCarCamera,poseArrivalCar} from './arrival-car.js';
 import {BED_EXIT} from './pursuer-model.js';
@@ -20,13 +20,14 @@ import {applyLookDelta,followLook,readCameraSettings,writeCameraSettings,DEFAULT
 import {WINDOW_SHOT_SECONDS,WINDOW_LANDING,windowIntroCamera,windowIntroState,shouldPlayWindowIntro} from './window-intro.js';
 import {navigate,smoothAxis,getStairDirection} from './navigation.js';
 import {interactionTarget} from './interactions.js';
-import {circuitPowered,toggleCircuit,toggleHousePower,updatePowerLever} from './house-lights.js';
+import {circuitPowered,housePowered,toggleCircuit,toggleHousePower,updateBlackout,updatePowerLever} from './house-lights.js';
 import {inHatch,poseHatch,poseHatchRug} from './basement.js';
 import {PIANO_NOTES,PIANO_KEYS,PIANO_SCORE,PIANO_REWARD,posePianoCompartment,setPianoScore,poseTrunk} from './house-additions.js';
 import {HouseTelevision} from './television.js';
 import {updateWallClock} from './wall-clock.js';
 import {animateFurniture,updateFurniture,sweepClear} from './furniture-motion.js';
 import {BATTERY_SWAP_SECONDS} from './viewmodel.js';
+import {moveGreyCat,revealGreyCat} from './grey-cat.js';
 import {createRC,syncRCObject,deployRC,driveRC,beepRC,updateRC,stopRC,crashRC,recoverRC,rcCamera,rcDeploymentView,canTrapPursuer} from './rc-car.js';
 import {createLouisEscape,updateLouisEscape,freeLouis,louisCamera} from './louis-escape.js';
 import {createLoisShotDirector,advanceLoisShot,finishLoisShot} from './lois-ps2-cinematics.js';
@@ -87,7 +88,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      <button data-act="reset">${scenario?'Reiniciar prueba':'Reiniciar casa'}</button>
      <button data-act="hud">Editar controles / hotbar</button>
      ${demo?'':'<details><summary>Diagnóstico</summary><div id="lab-metrics"></div></details>'}
-     <small class="lab-settings-note">WASD · Caminar / Mayús o joystick fuera del aro · Correr / Flechas · Mirar / E · Interactuar / F · Usar objeto / I · Mochila / Esc · Pausa</small>
+     <small class="lab-settings-note">WASD · Caminar / Mayús o joystick fuera del aro · Correr / Flechas · Mirar / C · Agacharse / E · Interactuar y salir de escondites / F · Usar objeto / I · Mochila / Esc · Pausa</small>
    </div></details>
  </div>
  <div class="lab-focus" id="lab-focus" role="status"></div>
@@ -181,7 +182,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  function rebuild(){renderer.rebuild([...world.boxes.filter(box=>!box.hiddenGeometry),...pickupGeometry(world.objects)]);}
  function saveCheckpoint(){
-  if(checkpointStore)checkpointStore.save(captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTrap,batterySwap}));
+  if(checkpointStore)checkpointStore.save(captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTrap,batterySwap,pursuer}));
  }
  function finishWindowIntro(){
   poseFurniture(world.entryWindow,1);sound.setTension(.55);
@@ -255,6 +256,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const restored=restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,rc,rcTrap,pursuer});
   resumed=!!restored;
   if(restored)({louis,equipment,encounterCheckpoint}=restored);
+  sound.setThreat(['patrol','hunt'].includes(events.phase));
   phone.setInventory(s.inventory);phone.equip(equipment);
   focus=null;lookTarget={yaw:s.yaw,pitch:s.pitch};modalClose();keys.clear();rebuild();
   if(resumed)say('Progreso de la casa recuperado');
@@ -286,9 +288,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function beginHiding(object,entering){
   cancelEmote({immediate:true});
   if(entering&&object.requiresCrouch&&!s.crouched){say('Agáchate para entrar al escondite');return;}
-  const exitHeight=object.requiresCrouch?1.03:1.63;
-  const from=cameraOf(s),inside={...object.hideCamera},outside={x:object.returnX,y:s.y+exitHeight,z:object.returnZ,yaw:inside.yaw+Math.PI,pitch:0};
-  if(blocked(world.boxes,outside.x,s.y,outside.z,.18,exitHeight+.01)){say('Deja libre el espacio delante del escondite');return;}
+  const from=cameraOf(s),inside={...object.hideCamera},outside=hidingExit(world,object,s.y,s);
+  if(!outside){say('Deja libre el espacio delante del escondite');return;}
   const transition={object,entering,from,inside,outside,elapsed:0,entryElapsed:0};
   const distance=Math.hypot(outside.x-from.x,outside.z-from.z);
   if(entering&&object.wardrobeLeaves&&canStand(s,world)&&!reducedMotion.matches&&(s.crouched||events.phase==='hide'||scenario?.crouched)){
@@ -320,9 +321,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(transition.object.lid){const t=transition.entryElapsed/HIDE_SECONDS;poseTrunk(transition.object.lid,Math.sin(t*Math.PI));}
   if(transition.entryElapsed>=HIDE_SECONDS){
    if(transition.object.wardrobeLeaves)play('door-close',transition.object,.65);
-   if(transition.entering){s.hidden={...transition.inside,objectId:transition.object.id,hideType:transition.object.hideType,returnX:transition.outside.x,returnZ:transition.outside.z};s.yaw=transition.inside.yaw;s.pitch=transition.inside.pitch;sound.setTension(.85);say(transition.object.wardrobeLeaves?'Dentro del armario · mira por las rendijas · USAR para salir':'Escondida · USAR para salir',4);}
-   else{s.hidden=null;s.x=transition.outside.x;s.z=transition.outside.z;s.yaw=frame.camera.yaw;s.pitch=0;sound.setTension(.55);say('Has salido con cuidado');}
-   s.poseCamera=null;poseTransition=null;resetInput();if(!isPaused())sound.resume();
+   const {x,z,crouched,eye}=transition.outside;
+   Object.assign(s,{x,z,crouched,eye});
+   if(transition.entering){s.hidden=hiddenPose(transition.object,transition.outside);s.yaw=transition.inside.yaw;s.pitch=transition.inside.pitch;sound.setTension(.85);say(transition.object.wardrobeLeaves?'Dentro del armario · mira por las rendijas · E o Salir':'Escondida · E o Salir',4);}
+   else{s.hidden=null;s.yaw=frame.camera.yaw;s.pitch=0;sound.setTension(.55);say('Has salido con cuidado');}
+   s.poseCamera=null;poseTransition=null;resetInput();saveCheckpoint();if(!isPaused())sound.resume();
   }
  }
  function exitPose(){
@@ -347,6 +350,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    say(on===null?'Sin corriente · revisa el interruptor general':on?'Luz encendida':'Luz apagada');
   }else if(o.kind==='power-switch'){
    const on=toggleHousePower(o);play('latch',o);
+   if(!on)updateBlackout(world.lights.power,0,false);
    if(!on){world.television.power.on=false;television.sync(false,false);}
    say(on?'Corriente restablecida':'Corriente cortada');
   }else if(o.kind==='rug'){
@@ -416,7 +420,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   else if(o.kind==='piano')openPiano(o);
   else if(o.kind==='safe')showSafe(o);
   else if(o.kind==='television'){
-   if(!world.lights.power.on){say('La tele no tiene corriente');return;}
+   if(!housePowered(world.lights.power)){say('La tele no tiene corriente');return;}
    o.power.on=!o.power.on;
    television.sync(o.power.on,true);
    play(o.power.on?'tv-static':'click',world.television);
@@ -436,7 +440,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     louis=captive?Object.assign(captive,rescued):rescued;
     loisShotDirector=createLoisShotDirector();
     if(!captive)world.objects.push(louis);
-    events.phase='rc-rescue';pursuer.reset();sound.setThreat(false);
+    events.phase='rc-rescue';sound.setThreat(false);
     phone.close();resetInput();rebuild();play('cloth',o);play('pickup',o);
     say('Kitty se arrodilla junto a Louis para soltar las cuerdas. Mantén silencio…',4);
    }else{
@@ -603,7 +607,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(act==='retry-arrival'){
    if(scenario?.events==='wake'){ready=false;intro=true;reset();showTrialStart();return;}
    paused=false;modalClose();Object.assign(s,encounterCheckpoint);s.hidden=null;s.lying=false;s.crouched=false;s.eye=1.63;s.poseCamera=null;poseTransition=null;
-   pursuer.reset();poseFurniture(world.objects.find(o=>o.id==='wardrobe'),0);events.retry();
+   pursuer.reset();poseFurniture(world.objects.find(o=>o.id==='wardrobe'),0);
+   updateBlackout(world.lights.power,0,false);
+   if(world.objects.find(o=>o.id==='entrada').sealed){
+    events.phase='hunt';events.remaining=28;pursuer.resumeSearch();pursuer.cooldown();saveCheckpoint();resetInput();return;
+   }
+   events.retry();
    poseArrivalCar(world.car,0);
    world.objects.find(o=>o.id==='entrada').sealed=false;for(const box of world.boxes)if(box.id.startsWith('entry-padlock'))box.hiddenGeometry=true;
    world.entryWindow.latch.hiddenGeometry=true;poseFurniture(world.entryWindow,1);rebuild();sound.setThreat(true);resetInput();return;
@@ -616,7 +625,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   if(act==='rc:noise'){
    if(beepRC(rc)){
-    if(events.phase==='rc-setup'&&!pursuer.active){pursuer.start();pursuer.nodes=null;}
+    if(events.phase==='rc-setup'&&!pursuer.active)pursuer.start();
     play('notification',rc,1.7);say('¡BIP BIP! El autito llama la atención del perseguidor.',2.8);
    }return;
   }
@@ -627,7 +636,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    stopRC(rc);equipment='rc';phone.equip('rc');
    const entrance=world.objects.find(o=>o.id==='entrada');entrance.sealed=false;entrance.locked=false;setDoor(entrance,true);
    for(const box of world.boxes)if(box.id.startsWith('entry-padlock'))box.hiddenGeometry=true;
-    freeLouis(louis);events.phase='escape';sound.setThreat(false);resetInput();rebuild();saveCheckpoint();
+    freeLouis(louis);revealGreyCat(world.greyCat);events.phase='escape';sound.setThreat(false);resetInput();rebuild();saveCheckpoint();
    play('door-close',world.hatch);play('latch',world.hatch);
    say('¡Atrapado! El secuestrador está encerrado. Louis sale de su escondite: escapen juntos por la puerta principal.',8);
    return;
@@ -712,6 +721,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(events.phase==='lockdown')$('lab-objective').textContent='El mensaje lo despertó · busca cobertura';
   if(events.phase==='hunt')$('lab-objective').textContent='Evita su mirada · escóndete sin que te vea entrar';
   if(events.phase==='evaded')$('lab-objective').textContent='Busca la trampilla bajo el tapete de la cocina';
+  if(events.phase==='escape')$('lab-objective').textContent=world.greyCat.called?'Sigue a la gata gris · sal al jardín con Louis':'Sal por la puerta principal con Louis';
   if(s.y<-.18&&!puzzle.rescued&&events.phase==='evaded')$('lab-objective').textContent='Sigue el túnel hasta Louis';
   if(getStairDirection(s)==='Escaleras')$('lab-objective').textContent+=' · ↑↓ Escaleras';
   const meter=$('house-charge'),charge=Math.ceil(s.battery);
@@ -731,7 +741,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   interactButton.disabled=!!target?.motion||hatchMoving||!!poseTransition;
   root.querySelector('.lab-cross').classList.toggle('lab-target',!!target);
   interactButton.querySelector('small').textContent=s.hidden||s.lying?'Salir':!target?'Usar':target.kind==='door'?(target.open?'Cerrar puerta':'Abrir puerta'):target.kind==='key'?'Recoger llave':target.kind==='note'?'Leer nota':target.kind==='drawer'?(target.open?'Cerrar cajón':'Abrir cajón'):target.kind==='rescue'?'Liberar a Louis':'Examinar';
-  if(target?.kind==='hide')interactButton.querySelector('small').textContent=target.hideType==='wardrobe'?'Entrar en armario':'Esconderse';
+  if(target?.kind==='hide')interactButton.querySelector('small').textContent=target.requiresCrouch&&!s.crouched?'Agáchate primero':target.hideType==='wardrobe'?'Entrar en armario':'Esconderse';
   if(target?.kind==='battery')interactButton.querySelector('small').textContent='Recoger pila';
   if(target?.kind==='flashlight')interactButton.querySelector('small').textContent='Recoger linterna';
   if(target?.kind==='piano')interactButton.querySelector('small').textContent=target.scorePlaced?'Sentarse y tocar':'Examinar el atril';
@@ -744,7 +754,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(target?.kind==='tap')interactButton.querySelector('small').textContent=target.on?'Cerrar llave':'Abrir llave';
   if(target?.kind==='cupboard')interactButton.querySelector('small').textContent=target.open?'Cerrar refrigerador':'Abrir refrigerador';
   if(target?.kind==='safe')interactButton.querySelector('small').textContent=mirrorSafe.opened?'Ver contenido':'Introducir código';
-  if(target?.kind==='light-switch')interactButton.querySelector('small').textContent=!world.lights.power.on?'Sin corriente':target.circuit.on?'Apagar luz':'Encender luz';
+  if(target?.kind==='light-switch')interactButton.querySelector('small').textContent=!housePowered(world.lights.power)?'Sin corriente':target.circuit.on?'Apagar luz':'Encender luz';
   const remote=rc?.mode==='driving';
   const deploying=rc?.mode==='deploying';
   $('house-rc-hud').hidden=!remote;
@@ -823,8 +833,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const body=s.crouched?1.04:1.64;
   const moved=navigate(s,world,dx,dz,body);
   if(events.phase==='escape'&&louis?.phase==='follow'&&s.z>12.35&&s.x>4.6&&s.x<7.2){
-   finalCutscene={elapsed:0};events.phase='ending';resetInput();
-   Object.assign(louis,{x:s.x-.35,y:0,z:s.z-.25,yaw:s.yaw});
+   const ground=0,walk=2.70;
+   finalCutscene={elapsed:0,
+    kitty:{from:{x:s.x,z:s.z},to:{x:5.56,z:14.05},ground,walk,stand:0},
+    louis:{from:{x:clamp(s.x+.36,5.35,6.45),z:s.z-.19},to:{x:6.23,z:13.95},ground,walk,stand:0},
+    louisStride:louis.walk};
+   events.phase='ending';resetInput();
    play('notification');
   }
   s.sprinting=sprint&&moved>.002;
@@ -850,6 +864,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(scenario&&scenario.events!=='arrival'&&scenario.events!=='wake')return;
   const finalPhase=['rc-rescue','rc-setup','escape','ending'].includes(events.phase);
   if(config.entry==='rescue'&&!finalPhase)return;
+  const power=world.lights.power;
+  const blackoutCue=updateBlackout(power,delta,['patrol','hunt','evaded'].includes(events.phase));
+  if(blackoutCue==='warning'){play('click',null,.42);say('La corriente está inestable.',2);}
+  if(blackoutCue==='outage'){play('latch',null,.48);say('Corte breve de luz · sigue las luces de la escalera.',4);saveCheckpoint();}
+  if(blackoutCue==='restored'){say('Volvió la luz.',2);saveCheckpoint();}
   const change=finalPhase?null:events.observe(puzzle);
   if(change==='message')sound.sequence('notification');
   if(change==='arrival'){
@@ -860,11 +879,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    thirdView=null;for(const [dx,dz]of [[1.4,1.4],[-1.4,1.4],[0,1.8],[0,-1.8]]){const camera={x:s.x+dx,y:s.y+1.8,z:s.z+dz};if(!blocked(world.boxes,camera.x,camera.y-.1,camera.z,.1,.2)&&!lineBlocked(world.boxes,camera,{x:s.x,y:s.y+1.2,z:s.z})){thirdView={...camera,yaw:Math.atan2(-dx,-dz),pitch:-.2};break;}}
    setDoor(world.objects.find(o=>o.id==='entrada'),false);
   }
-  if(pursuer.active){
+  if(pursuer.active&&events.phase!=='rc-rescue'){
    const decoy=rc?.mode==='driving'&&(rc.noise>0||pursuer.canSee({x:rc.x,y:rc.y,z:rc.z,hidden:false,crouched:true,flashlight:false}))
     ?{active:true,noisy:rc.noise>0,x:rc.x,y:rc.y,z:rc.z,crouched:true,flashlight:false,hidden:false}:null;
    const hiding=s.hidden?world.objects.find(o=>o.id===s.hidden.objectId):poseTransition?.object;
-   for(const signal of pursuer.update(Math.min(.055,delta),{x:s.x,y:s.y,z:s.z,crouched:s.crouched,flashlight:flashlightBeam(),hidden:!!s.hidden&&!poseTransition,entering:!!poseTransition?.entering,hideId:hiding?.id,hideExit:hiding?{x:hiding.returnX,y:s.y,z:hiding.returnZ}:null},door=>{if(door.id!=='entrada'&&!door.sealed&&!door.locked&&!door.motion&&sweepClear(door,door.amount,1,pursuer)){const result=animateFurniture(door,true,{player:s,reducedMotion:reducedMotion.matches});if(result.started)play('door-open',door);}},decoy)){
+   const previousMode=pursuer.mode;
+   for(const signal of pursuer.update(Math.min(.055,delta),{x:s.x,y:s.y,z:s.z,crouched:s.crouched,flashlight:flashlightBeam(),dark:!housePowered(power),hidden:!!s.hidden&&!poseTransition,entering:!!poseTransition?.entering,hideId:hiding?.id,hideExit:hiding?{x:s.hidden?.returnX??hiding.returnX,y:s.y,z:s.hidden?.returnZ??hiding.returnZ}:null},door=>{if(door.id!=='entrada'&&!door.sealed&&!door.locked&&!door.motion&&sweepClear(door,door.amount,1,pursuer)){const result=animateFurniture(door,true,{player:s,reducedMotion:reducedMotion.matches});if(result.started)play('door-open',door);}},decoy)){
     if(signal==='step')play(pursuer.y>.1&&pursuer.y<HEIGHT-.1?'stair':'wood',pursuer,.8);
     if(signal==='stood')play('wood',pursuer,.9);
     if(signal==='rc-hit'){
@@ -873,8 +893,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      play('alert',pursuer,1.1);
      say('El secuestrador golpeó el auto. Se perdió la señal; lo dejó en otro lugar de la casa ('+Math.round(pos.x)+', '+Math.round(pos.z)+'). Ve a recuperarlo.',7);
     }
-    if(signal==='spotted'){phone.close();sound.sequence('alert');say('¡Te ha visto! Corre y rompe su línea de visión.',3);}
-    if(signal==='lost')say('Te ha perdido de vista. Busca un escondite.',3);
+    if(signal==='investigate')say('Notó movimiento. Busca cobertura.',2.5);
+    if(signal==='spotted'){phone.close();play('alert',pursuer,.6);say('Te vio. Gira una esquina para perderlo.',3);}
+    if(signal==='lost')say('Te perdió de vista. Puedes seguir con cuidado.',3);
     if(signal==='at-entry'){
      const door=world.objects.find(o=>o.id==='entrada');
      if(!door.sealed&&roomAt(s.x,s.z,s.y)!=='Jardín y vecindario'&&sweepClear(door,door.amount,0,s)){
@@ -883,19 +904,20 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      }
     }
    }
+   if(pursuer.mode!==previousMode&&pursuer.mode==='patrol-rest')saveCheckpoint();
   }
   const storyDelta=events.phase==='hide'&&poseTransition?.entering&&poseTransition.object.wardrobeLeaves?0:delta;
   for(const cue of events.advance(storyDelta,!!s.hidden&&!poseTransition,{caught:pursuer.caught,clear:pursuer.lost>4&&pursuer.awareness<.1&&!pursuer.witnessed,visited:pursuer.visited,
    sleeping:pursuer.mode==='sleeping',leftBedroom:!poseTransition&&roomAt(s.x,s.z,s.y)!=='Dormitorio',entranceLocked:world.objects.find(o=>o.id==='entrada').sealed})){
    if(cue==='keys')sound.sequence('keys');if(cue==='knock')sound.sequence('trying');
    if(cue==='hide'){setDoor(world.objects.find(o=>o.id==='entrada'),false);poseFurniture(world.entryWindow,0);world.entryWindow.latch.hiddenGeometry=false;rebuild();play('latch',world.entryWindow.box);resetInput();phone.close();say('Cerró la ventana. ¡Escóndete en el armario!',4);}
-   if(cue==='patrol'){pursuer.start();say('Se oyen pasos hacia la escalera.',4);}
+   if(cue==='patrol'){pursuer.start();saveCheckpoint();say('Se oyen pasos hacia la escalera.',4);}
    if(cue==='resting')pursuer.goToBed();
    if(cue==='sleep'){sound.setThreat(false);saveCheckpoint();say('Se durmió. Ya es seguro salir.',4);}
    if(cue==='wake'){phone.close();resetInput();pursuer.wake();sound.sequence('notification',true);sound.setThreat(true);say('¡El mensaje lo despertó!',3);}
-   if(cue==='hunt')pursuer.resumeSearch();
-   if(cue==='evaded'){pursuer.retreat();sound.setThreat(false);sound.sequence('notification');saveCheckpoint();say('Se aleja. Busca la trampilla bajo el tapete de la cocina.',5);}
-   if(cue==='safe'||cue==='failed'){phone.close();resetInput();sound.sequence('alert');showModal(cue==='safe'?'Estás a salvo':'Te descubrieron',cue==='safe'?'<p>Te quedas en silencio.</p>':'<p>El perseguidor te alcanzó o vio dónde te escondías.</p><p>Al reintentar conservarás la llave y las pistas de esta sesión.</p>',cue==='safe'?[['Volver a pruebas','exit']]:[['Reintentar desde la llegada','retry-arrival'],['Salir','exit']]);}
+   if(cue==='hunt'){pursuer.resumeSearch();saveCheckpoint();}
+   if(cue==='evaded'){pursuer.settleUpstairs();sound.setThreat(false);sound.sequence('notification');saveCheckpoint();say('Sube a revisar la planta alta. Busca la trampilla bajo el tapete de la cocina.',5);}
+   if(cue==='safe'||cue==='failed'){phone.close();resetInput();play('alert',pursuer,.55);showModal(cue==='safe'?'Estás a salvo':'Te descubrieron',cue==='safe'?'<p>Te quedas en silencio.</p>':'<p>El perseguidor te alcanzó o vio dónde te escondías.</p><p>Retomas desde el último momento seguro con la llave y las pistas.</p>',cue==='safe'?[['Volver a pruebas','exit']]:[['Reintentar','retry-arrival'],['Salir','exit']]);}
   }
   if(events.phase==='arrival')poseArrivalCar(world.car,clamp(events.time/CAR_ARRIVAL_SECONDS,0,1));
  }
@@ -907,6 +929,15 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(!s||!renderer)return;
   updateHiding(dt);
   updateStory(shotDelta);
+  const greyCat=world.greyCat;
+  if(!isSuspended()&&greyCat.active){
+   moveGreyCat(greyCat,shotDelta,!!finalCutscene,reducedMotion.matches);
+   if(!greyCat.called&&s.y===0&&s.z>9.7&&Math.abs(s.x-5.9)<1.35){
+    greyCat.called=true;
+    play('cat',{x:greyCat.x,y:.35,z:greyCat.z},.95);
+    say('Es la gatita del Churu. Nos espera junto a la salida.',4);
+   }
+  }
   updateBatterySwap(shotDelta);
   let view=cameraOf(s),hand=!s.hidden&&!s.lying&&!poseTransition&&!animator.performing&&!phone.open,torch=flashlightBeam(),introHands=null,distance=0;
   if(mouseLocked()&&(isPaused()||phone.open||events.phase==='arrival'))releaseMouse();
@@ -986,10 +1017,16 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(finalCutscene){
    if(!isSuspended())finalCutscene.elapsed+=shotDelta;
    const t=Math.min(1,finalCutscene.elapsed/4);
-   view={x:7.4+Math.sin(t*Math.PI)*.8,y:2.7,z:15.8+t*1.2,yaw:Math.PI+.12*t,pitch:-.24};
-   thirdPerson=cameraOf(s);hand=false;torch=false;
+   actorWalk=wardrobeWalk(finalCutscene.elapsed,finalCutscene.kitty);
+   const companion=wardrobeWalk(Math.max(0,finalCutscene.elapsed-.18),finalCutscene.louis);
+   if(reducedMotion.matches)actorWalk.stride=0;
+   Object.assign(louis,{x:companion.x,y:0,z:companion.z,yaw:companion.yaw,
+    walk:finalCutscene.louisStride+companion.distance,speed:companion.stride*.88});
+   const x=7.24+Math.sin(t*Math.PI)*.42,y=2.14,z=15.93+t*.82;
+   view={x,y,z,yaw:Math.atan2(5.82-x,13.45-z),pitch:-.32};
+   thirdPerson=actorWalk;hand=false;torch=false;shotLight=.36;
    if(t===1&&events.phase==='ending'){
-    events.phase='safe';showModal('¡Kitty y Louis escaparon!', '<p>La escotilla quedó asegurada. El secuestrador sigue encerrado en el sótano mientras los dos salen juntos hacia el jardín.</p><p>Fin del rescate ♡</p>',[[config.onRescue?'Ver final':'Volver a pruebas',config.onRescue?'finish':'exit']]);
+    events.phase='safe';showModal('¡Kitty y Louis escaparon!', '<p>La gata gris les muestra el camino hacia el jardín. Louis y Kitty salen juntos.</p><p>Fin del rescate ♡</p>',[[config.onRescue?'Ver final':'Volver a pruebas',config.onRescue?'finish':'exit']]);
    }
   }
   const carShot=events.phase==='car-preview'||events.phase==='arrival'&&events.time<CAR_ARRIVAL_SECONDS;
@@ -1021,7 +1058,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   sound.carEngine(carShot&&!isSuspended()?world.car.progress:null);
   root.classList.toggle('house-arrival',events.phase==='arrival'||events.phase==='car-preview'||wakeShot()||!!actorWalk);
   root.classList.toggle('house-cutaway',carShot||wakeShot()||!!actorWalk);
-  danger.hidden=!['arrival','hide','patrol','hunt'].includes(events.phase);danger.dataset.level=pursuer.mode==='chase'?'chase':pursuer.awareness>.1?'watch':'search';danger.textContent=events.phase==='hide'?'¡ESCÓNDETE! '+Math.ceil(events.remaining)+' s':events.phase==='arrival'?'Alguien está intentando entrar…':pursuer.mode==='chase'?'¡TE PERSIGUE! Rompe su línea de visión':pursuer.awareness>.1?'Te está mirando · busca cobertura':s.hidden?'No salgas todavía · está registrando la casa':'Está buscando · usa un escondite';
+  const chasing=pursuer.mode==='chase',investigating=pursuer.mode==='investigate',resting=pursuer.mode==='patrol-rest';
+  danger.hidden=!['arrival','hide','patrol','hunt'].includes(events.phase)&&!(events.phase==='evaded'&&(chasing||investigating));
+  danger.dataset.level=chasing?'chase':investigating?'watch':'search';
+  danger.textContent=events.phase==='hide'?'Escóndete · '+Math.ceil(events.remaining)+' s':events.phase==='arrival'?'Alguien está intentando entrar…':chasing?'Te persigue · gira una esquina':investigating?'Está investigando · busca cobertura':resting?'Se detuvo a descansar':pursuer.mode==='cooldown'?'Se aleja · avanza con cuidado':s.hidden?'Sigue patrullando · espera a que se aleje':'Está patrullando · busca cobertura';
   root.classList.toggle('house-threat',!danger.hidden);
   if(!isSuspended())equipmentAge+=shotDelta;
   phone.update(events,isSuspended()?0:shotDelta);enableSound.hidden=!sound.settings.muted&&!!sound.context&&(sound.paused||sound.context.state==='running');
@@ -1040,10 +1080,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const raisedNote=noteLift>0&&!phone.open&&!cinematic&&events.phase!=='arrival'&&!s.hidden;
   const visualEquipment=raisedNote||equipment==='paper'&&(s.inventory.pendingNote??s.inventory.notes.at(-1))?.id==='mirror-note'?'note':notePresentation?'empty':equipment,noteRaise=noteLift*noteLift*(3-2*noteLift);
   if(roomAt(s.x,s.z,s.y)!=='Sala de estar')world.television.power.on=false;
-  television.sync(world.television.power.on,!isPaused()&&!phone.open);
+  television.sync(world.television.power.on&&housePowered(world.lights.power),!isPaused()&&!phone.open);
   if(updateWallClock(world.clock)&&!isPaused()&&Math.hypot(s.x-world.clock.x,s.y,s.z-world.clock.z)<4.5)play('clock-tick',world.clock,.55);
   const outdoor=s.y<-.12?0:view.x<0||view.x>HOUSE.width||view.z<0||view.z>HOUSE.depth?1:Math.max(0,1-Math.min(view.x,HOUSE.width-view.x,view.z,HOUSE.depth-view.z)/1.5)*.22;
-  sound.locate({room:roomAt(view.x,view.z,s.y),outdoor,hidden:!!s.hidden,powered:world.lights.power.on});
+  sound.locate({room:roomAt(view.x,view.z,s.y),outdoor,hidden:!!s.hidden,powered:housePowered(world.lights.power)});
   try{
    renderer.render(view,torch,elapsed,hand,{bob:s.bob,action:handAction,clickAction,speed:animator.speed,acceleration:animator.acceleration,walkWeight:animator.weight,reduced:s.reduceBob,swayX:handDrift.x,swayY:handDrift.y,introHands,animator,feetY:s.y,crouched:s.crouched,equipment:visualEquipment,noteRaise,batterySwap,tabletLift,equipLift:raisedNote?-.52*(1-noteRaise):reducedMotion.matches?0:-.22*Math.pow(1-Math.min(1,equipmentAge/.3),2),bathDoorAmount:world.objects.find(o=>o.id==='bano').amount,thirdPerson,actorTime,actorWalk,shotLight,pursuer:pursuer.snapshot(),television});
    if(capturePhoto){capturePhoto=false;if(phone.open&&phone.app==='camera')phone.takePhoto(canvas);}
@@ -1217,7 +1257,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    mirrorPuzzle:()=>({...mirrorSafe.snapshot(),noteLift,safe:(()=>{const o=world.objects.find(o=>o.id==='mirror-safe');return {amount:o.amount,state:o.state};})()}),
    pianoPuzzle:()=>({picked:world.pianoSheet.taken,placed:world.piano.scorePlaced,solved:world.piano.solved,
     compartment:world.piano.compartmentAmount}),
-   amenities:()=>({power:world.lights.power.on,lights:world.lights.circuits.filter(circuitPowered).map(c=>c.id),
+   amenities:()=>({power:housePowered(world.lights.power),blackout:{...world.lights.power.blackout},lights:world.lights.circuits.filter(circuitPowered).map(c=>c.id),
     battery:{charge:s.battery,spares:s.inventory.batteries,swap:batterySwap},
     television:{on:television.powered,time:television.video.currentTime,duration:television.video.duration,frame:renderer.tvFrame},
     clock:{second:world.clock.second,hands:world.clock.hands.map(({hand})=>hand.roll)},
@@ -1225,6 +1265,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    story:()=>({pursuer:pursuer.snapshot(),samples:{loaded:sound.recordings?.buffers.size||0,played:sound.recordings?.played||0,last:sound.recordings?.lastPlayed,errors:sound.recordings?.errors||[]},phase:events.phase,time:events.time,remaining:events.remaining,messages:events.messages.map(m=>({...m})),equipment,phoneOpen:phone.open,hud:{...phone.layout,rect:phone.rect,editing:phone.editing},floorSounds:{steps:floorSounds.steps,triggers:floorSounds.triggers},audio:{lastEffect:sound.lastEffect,effects:sound.effectCount||0,voices:sound.foleyVoices?.size||0}}),
    rc:()=>({mode:rc.mode,elapsed:rc.elapsed,position:{x:rc.x,y:rc.y,z:rc.z,yaw:rc.yaw},noise:rc.noise,crashes:rc.crashes,inventory:!!s.inventory.rc,trap:{...rcTrap},pursuer:{x:pursuer.x,y:pursuer.y,z:pursuer.z,mode:pursuer.mode}}),
    louis:()=>louis?{x:louis.x,y:louis.y,z:louis.z,phase:louis.phase,waypoint:louis.waypoint,age:louis.age,walk:louis.walk,speed:louis.speed,crouch:louis.crouch,reaction:louis.visualReaction?.type??null,cameraPhase:loisShotDirector?.phase??null}:null,
+   greyCat:()=>({active:world.greyCat.active,x:world.greyCat.x,z:world.greyCat.z,called:world.greyCat.called}),
    // DEV-only route harness for deterministic test setup; not in the production build.
    placeRC:(pose)=>{if(rc.mode!=='driving')throw Error('RC must be deployed first');const y=groundHeight(pose.x,pose.z,pose.y??rc.y,world.hatch?.amount>.92);if(!Number.isFinite(y)||blocked(world.boxes,pose.x,y,pose.z,.155,.38))throw Error('Blocked RC test position');rc.x=pose.x;rc.y=y;rc.z=pose.z;rc.yaw=pose.yaw??rc.yaw;rc.noise=0;syncRCObject(rc);return {x:rc.x,y:rc.y,z:rc.z};},
    intro:()=>cinematic?{elapsed:cinematic.elapsed,...windowIntroState(cinematic.elapsed/WINDOW_SHOT_SECONDS),camera:windowIntroCamera(cinematic.elapsed/WINDOW_SHOT_SECONDS)}:null,
@@ -1233,7 +1274,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    setPose:(pose)=>{if(blocked(world.boxes,pose.x,pose.y,pose.z,.2,1.7))throw Error('Blocked test pose');Object.assign(s,pose);resetInput();focus=null;},
    interactWith:async(id,activate=true)=>{
     const o=world.objects.find(o=>o.id===id&&!o.taken);if(!o)throw Error('Not available: '+id);
-    modalClose();paused=false;ready=true;focus=null;s.hidden=null;s.lying=false;s.crouched=false;s.eye=1.63;s.pitch=0;
+    const crouched=activate?!!o.requiresCrouch:s.crouched;
+    modalClose();paused=false;ready=true;focus=null;s.hidden=null;s.lying=false;s.crouched=crouched;s.eye=crouched?1.03:1.63;s.pitch=0;
     const y=o.floor??(o.y>HEIGHT?HEIGHT:0);
     let found=false;
     for(const radius of [.65,.8,1.0,1.25,1.5,1.85,2.15]){
@@ -1241,7 +1283,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      for(let i=0;i<32;i++){
       const a=i*Math.PI*2/32,x=o.x+Math.cos(a)*radius,z=o.z+Math.sin(a)*radius;
       if(o.kind==='hatch'&&inHatch(x,z,.14))continue;
-      if(blocked(world.boxes,x,y,z,.2,1.7))continue;
+     if(blocked(world.boxes,x,y,z,.2,s.crouched?1.05:1.7))continue;
       s.x=x;s.y=y;s.z=z;s.yaw=Math.atan2(o.x-x,o.z-z);
       s.pitch=Math.atan2(o.y-(y+s.eye),Math.hypot(o.x-x,o.z-z));
       if(closestObject(world,s,null)?.id===o.id){

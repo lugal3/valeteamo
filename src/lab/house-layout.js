@@ -1,6 +1,7 @@
 import {BATH_MIRROR,MIRROR_SPAWN} from './mirror.js';
 import {BALUSTER_PROFILE,CUP_PROFILE,CANDLE_PROFILE,CLOCK_PROFILE} from './chibi-geometry.js';
 import {installHouseLights} from './house-lights.js';
+import {installGreyCat} from './grey-cat.js';
 import {installCabinet,installRefrigerator} from './house-cabinets.js';
 import {installLouisAltar} from './louis-altar.js';
 import {installWallClock} from './wall-clock.js';
@@ -337,7 +338,7 @@ export function buildHouse(spawn='ground'){
  obj('battery-upper','battery','Pila del dormitorio',bedsideX+.17,HEIGHT+.78,bedsideZ+.13);
  obj('basement-note','note','Papel clavado en el dormitorio',3.55,HEIGHT+1.46,.19,{text:'Lo bajé a la fuerza. La trampilla queda bajo el tapete rojo de la cocina.'});
  obj('bed','bed','Cama con lazo',bedX,HEIGHT+1.0,2.07,{returnX:2.80,returnZ:2.63});
- obj('underbed','hide','Esconderse bajo la cama',bedX,HEIGHT+.32,2.31,{hideType:'underbed',returnX:bedX,returnZ:2.72,hideCamera:{x:bedX,y:HEIGHT+.28,z:1.72,yaw:0,pitch:0}});
+ obj('underbed','hide','Esconderse bajo la cama',bedX,HEIGHT+.32,2.31,{hideType:'underbed',requiresCrouch:true,returnX:bedX,returnZ:2.72,hideCamera:{x:bedX,y:HEIGHT+.28,z:1.72,yaw:0,pitch:0}});
  // Wardrobe is a hollow shell. Its two physical louvered leaves leave real sight gaps.
  add('wardrobe-back',.18,HEIGHT+1.15,3.85,.12,2.3,1.65,'wood');for(const z of [3.02,4.68])add('wardrobe-side-'+z,.78,HEIGHT+1.15,z,1.3,2.3,.09,'wood');
  add('wardrobe-top',.78,HEIGHT+2.3,3.85,1.3,.08,1.75,'wood');add('wardrobe-bottom',.78,HEIGHT+.06,3.85,1.3,.12,1.75,'wood');
@@ -389,6 +390,7 @@ export function buildHouse(spawn='ground'){
  }
  for(let i=0;i<8;i++){const x=i%2?8.2:3.6,z=13.5+Math.floor(i/2)*1.4;plant('garden-plant-'+i,x,0,z);}
  const car=installArrivalCar(add);
+ const greyCat=installGreyCat(add);
  for(const x of [-9.7,25.7])add('garden-boundary-x'+x,x,.65,12,.15,1.3,40,'wood');for(const z of [-7.7,31.7])add('garden-boundary-z'+z,8,.65,z,36,1.3,.15,'wood');
  add('moon',-2,15,-6,1.4,1.4,1.4,'paper',false,{shape:'round',glow:true});
  
@@ -408,5 +410,5 @@ export function buildHouse(spawn='ground'){
  const lights=installHouseLights(add,obj,HEIGHT);
  const hatch=installBasement(add,obj,lights);
  hatchRug.hatch=hatch;
- return {boxes,objects,lights,television,clock,hatch,hatchRug,entryWindow,car,piano,pianoSheet,spawn:spawns[spawn]||spawns.ground,spawns,rooms:ROOMS,bounds:WORLD_BOUNDS,stair:STAIR,house:HOUSE};
+ return {boxes,objects,lights,television,clock,hatch,hatchRug,entryWindow,car,greyCat,piano,pianoSheet,spawn:spawns[spawn]||spawns.ground,spawns,rooms:ROOMS,bounds:WORLD_BOUNDS,stair:STAIR,house:HOUSE};
 }

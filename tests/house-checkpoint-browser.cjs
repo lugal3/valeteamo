@@ -191,6 +191,7 @@ async function run(){
   assert.equal(await stage(),'rc-setup');
   assert.equal(await page.evaluate(()=>window.__rescueHouse.louis().phase),'hidden');
   assert.equal(await page.evaluate(()=>window.__rescueHouse.rc().trap.armed),true);
+  assert.equal(await page.evaluate(()=>window.__rescueHouse.story().pursuer.active),true);
   assert(await page.locator('[data-equip=rc]').isVisible());
 
   await write(RESCUE_KEY,{...beforeTrial,houseCheckpoint:{...rcSave,stage:'escape'}});
@@ -198,6 +199,7 @@ async function run(){
   assert.equal(await stage(),'escape');
   assert.equal(await page.evaluate(()=>window.__rescueHouse.louis().phase),'follow');
   assert.equal(await page.evaluate(()=>window.__rescueHouse.rc().trap.closed),true);
+  assert.equal(await page.evaluate(()=>window.__rescueHouse.greyCat().active),true);
   assert.equal(await page.evaluate(()=>window.__rescueHouse.amenities().hatch),0);
   await page.evaluate(()=>window.__rescueHouse.setPose({x:5.95,y:0,z:11.30,yaw:0,pitch:0}));
   await page.keyboard.down('w');

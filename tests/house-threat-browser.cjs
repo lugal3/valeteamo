@@ -1,0 +1,133 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs/promises');
+const path=require('node:path');
+const {chromium}=require('playwright');
+
+(async()=>{
+ const {createServer}=await import('vite');
+ const server=await createServer({configFile:false,logLevel:'silent',server:{host:'127.0.0.1',port:0},plugins:[{
+  name:'house-threat-fixture',
+  configureServer(server){
+   server.middlewares.use((request,response,next)=>{
+    if(request.url!=='/__house-threat')return next();
+    response.setHeader('Content-Type','text/html');
+    response.end(`<!doctype html><html lang="es"><head><meta charset="UTF-8"></head><body><script type="module">
+      import {launchHouse} from '/src/lab/house.js';
+      const key='test-house-threat';
+      const checkpoint=JSON.parse(localStorage.getItem(key))??{
+       version:1,stage:'rest',picked:['key','media-flashlight'],pursuit:{phase:'hunt'},blackout:{until:3.5,left:0}
+      };
+      window.closeHouse=launchHouse(()=>{},'ground',{demo:true,checkpointStore:{
+       checkpoint,save:value=>localStorage.setItem(key,JSON.stringify(value))
+      }});
+     </script></body></html>`);
+   });
+  }
+ }]});
+ let browser,page,cdp;
+ const evidence=process.env.HOUSE_THREAT_QA_DIR;
+ const shot=async name=>{
+  if(!evidence)return;
+  const {data}=await cdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});
+  await fs.writeFile(path.join(evidence,name+'.png'),Buffer.from(data,'base64'));
+ };
+ try{
+  await server.listen();
+  if(evidence)await fs.mkdir(evidence,{recursive:true});
+  browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+  page=await browser.newPage({viewport:{width:840,height:480},reducedMotion:'reduce'});
+  page.setDefaultTimeout(45000);
+  cdp=await page.context().newCDPSession(page);
+  const errors=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  const url='http://127.0.0.1:'+server.httpServer.address().port+'/__house-threat';
+  const ready=()=>page.waitForFunction(()=>window.__rescueHouse&&document.querySelector('#lab-canvas')?.width>300);
+  const snapshot=()=>page.evaluate(()=>window.__rescueHouse.snapshot());
+  const story=()=>page.evaluate(()=>window.__rescueHouse.story());
+  const amenities=()=>page.evaluate(()=>window.__rescueHouse.amenities());
+  const save=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('test-house-threat')));
+  const aim=id=>page.evaluate(id=>window.__rescueHouse.interactWith(id,false),id);
+  const interact=()=>page.locator('#lab-interact').dispatchEvent('click');
+  const aimAt=async id=>{
+   await aim(id);
+   await page.waitForFunction(id=>window.__rescueHouse.snapshot().target===id,id);
+  };
+  await page.goto(url);await ready();
+  assert.equal((await story()).phase,'hunt');
+  assert.equal((await story()).pursuer.active,true);
+
+  await aimAt('underbed');await interact();
+  assert.equal((await snapshot()).hidden,false,'The standing player cannot enter under the bed');
+  await page.keyboard.press('c');
+  await aimAt('underbed');
+  assert.equal((await snapshot()).hidden,false,'Crouching and aiming must not hide Kitty');
+  await shot('01-escondite-requiere-interaccion');
+  await page.waitForTimeout(300);
+  await interact();
+  await page.waitForFunction(()=>{
+   const snap=window.__rescueHouse.snapshot();
+   return snap.hideType==='underbed'&&!snap.handVisible;
+  });
+  const tucked=await snapshot();
+  assert.equal(tucked.handVisible,false);
+  await page.keyboard.down('w');
+  try{await page.waitForTimeout(350);}finally{await page.keyboard.up('w');}
+  assert.deepEqual((await snapshot()).position,tucked.position);
+  assert.equal((await save()).hide,'underbed');
+  console.log('Threat QA: standing, crouching, intentional entry and blocked movement');
+
+  await page.reload();await ready();
+  const reloaded=await snapshot();
+  assert.equal(reloaded.hideType,'underbed');
+  assert.deepEqual(reloaded.view,tucked.view);
+  assert.equal((await story()).phase,'hunt');assert.equal((await story()).pursuer.active,true);
+  await shot('02-escondite-restaurado');
+  await page.keyboard.press('e');
+  await page.waitForFunction(()=>!window.__rescueHouse.snapshot().hidden);
+  assert.equal((await save()).hide,undefined);
+  assert.equal(await page.locator('#lab-crouch').getAttribute('aria-pressed'),'true');
+  await page.keyboard.press('c');
+  await aimAt('wardrobe');await page.waitForTimeout(300);await interact();
+  await page.waitForFunction(()=>{
+   const snap=window.__rescueHouse.snapshot();
+   return snap.hideType==='wardrobe'&&!snap.handVisible;
+  });
+  assert.equal((await snapshot()).handVisible,false);
+  await shot('03-armario');
+  await page.waitForTimeout(300);await page.keyboard.press('e');
+  await page.waitForFunction(()=>!window.__rescueHouse.snapshot().hidden);
+  console.log('Threat QA: safe reload and exit from both hiding spots');
+
+  await page.evaluate(()=>{
+   const save=JSON.parse(localStorage.getItem('test-house-threat'));
+   localStorage.setItem('test-house-threat',JSON.stringify({...save,stage:'basement',pursuit:{phase:'evaded'},blackout:{until:1.9,left:0}}));
+  });
+  await page.reload();await ready();
+  assert.equal((await story()).phase,'evaded');
+  assert((await story()).pursuer.active,'The pursuer remains active after the escape from pursuit');
+  const stairs=await page.evaluate(async()=>{
+   const {STAIR}=await import('/src/lab/world.js');
+   const pose={x:STAIR.xMin+.55,y:0,z:STAIR.zBottom+.28,yaw:Math.PI,pitch:.08};
+   window.__rescueHouse.setPose(pose);return pose;
+  });
+  await page.keyboard.press('f');
+  await page.waitForFunction(()=>window.__rescueHouse.amenities().blackout.left>0,null,{timeout:65000});
+  const dark=await amenities();
+  assert.equal(dark.power,false);assert.deepEqual(dark.lights,[]);
+  assert(dark.blackout.left<=5);
+  await shot('04-apagon-en-la-escalera');
+  await page.waitForFunction(()=>window.__rescueHouse.amenities().power,null,{timeout:65000});
+  assert((await amenities()).lights.includes('recibidor'));
+  assert.equal((await story()).pursuer.active,true);
+  assert.equal((await snapshot()).position.x,stairs.x);
+  assert.equal(await page.locator('#lab-canvas').evaluate(canvas=>canvas.getContext('webgl').getError()),0);
+  assert.deepEqual(errors,[]);
+  await page.evaluate(()=>window.closeHouse());
+  console.log('PASS house threat browser: explicit hiding, safe reload and exits, automatic blackout and continued patrol');
+ }catch(error){
+  try{console.log('THREAT_QA_FAILURE',await page?.evaluate(()=>({
+   story:window.__rescueHouse?.story(),snapshot:window.__rescueHouse?.snapshot(),lights:window.__rescueHouse?.amenities()
+  })));await shot('fallo');}catch{}
+  throw error;
+ }finally{await browser?.close();await server.close();}
+})().catch(error=>{console.error(error);process.exitCode=1;});

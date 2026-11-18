@@ -59,6 +59,8 @@ La separación útil hoy es por responsabilidad. El 3D vive en `src/lab/`, el pr
 
 La linterna brilla en el cajón del descansillo de la planta alta. La llave con lazo se recoge del cajón del estudio y abre el dormitorio. La nota del pasillo y el acertijo del espejo y la caja fuerte son pistas opcionales. Tras la primera ronda el perseguidor se acuesta. Un aviso indica cuándo salir del armario, y el mensaje al dejar el dormitorio inicia la segunda persecución. La llave roja de la barra abre la trampilla bajo el tapete de la cocina. El autito y su tablet están en el túnel hacia Louis.
 
+Usa **E** o **Usar** para entrar y salir de un escondite. Para meterte bajo la cama o la escalera, agáchate primero con **C** o **Agachar**. Al recargar, puedes salir del escondite guardado con los mismos controles. El perseguidor patrulla con descansos y vuelve a la planta alta cuando Kitty lo despista. Los cortes breves dejan luces de emergencia en la escalera. Una vez cerrada la trampa, la gata gris espera a Kitty y Louis junto a la salida.
+
 En PC, pulsa **R** para capturar el ratón o devolver el cursor. El engranaje ofrece la misma opción. En móvil, arrastra para mirar. La partitura está en el cajón de la sala de lectura. Kitty la coloca al acercarse al piano de la sala de música. Toca con **A S D F G H J K** o los botones en pantalla para abrir el compartimento. En el baño, **9** o el selector de emotes activa **What Is Love?**, con diez segundos de audio y coreografía del video de referencia. Consulta las [anotaciones de diseño](docs/INDICE-INFORMES.md#anotaciones-de-diseño) para ver el flujo por actos y las ideas para ambientar los rincones.
 
 | Datos | Clave o ámbito |
@@ -81,6 +83,6 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-`npm run test:browser` prueba la historia 2D. Para la casa se ejecutan los scripts específicos según el cambio, por ejemplo `node tests/house-furniture-browser.cjs` para interacciones, `node tests/pursuer-browser.cjs` para la persecución y el final o `node tests/mirror-safe-browser.cjs` para el espejo y la caja fuerte. Las pruebas de la casa pueden generar evidencias en `docs/capturas/`. Revisa el estado de Git antes de incorporar esas salidas.
+`npm run test:browser` prueba la historia 2D. Para la casa se ejecutan los scripts según el cambio. Usa `node tests/house-furniture-browser.cjs` para muebles, `node tests/house-threat-browser.cjs` para escondites y cortes de luz, `node tests/rc-browser.cjs` para el rescate completo con el autito y `node tests/mirror-safe-browser.cjs` para el espejo y la caja fuerte. Las pruebas de la casa pueden generar evidencias en `docs/capturas/`. Revisa el estado de Git antes de incorporar esas salidas.
 
 El sitio público está en [valefc.web.app](https://valefc.web.app/). [firebase.json](firebase.json) configura Hosting. El [workflow de publicación](.github/workflows/firebase-hosting-live.yml) ejecuta pruebas y compilación antes de desplegar al proyecto `valefc`. Se puede lanzar manualmente desde una rama y también se activa con pushes a `main`. Para saber qué versión sirve el sitio, consulta la ejecución de despliegue correspondiente.

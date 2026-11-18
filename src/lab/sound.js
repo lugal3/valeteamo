@@ -136,12 +136,19 @@ export class HouseSound {
   const now=ctx.currentTime,vol=ctx.createGain(),pan=ctx.createStereoPanner();
   pan.pan.value=stereo;
   vol.connect(pan);pan.connect(output);
-  const oscillator=ctx.createOscillator();oscillator.type=kind==='footstep'?'triangle':kind==='pickup'?'sine':'sawtooth';
+  const oscillator=ctx.createOscillator();oscillator.type=kind==='footstep'||kind==='cat'?'triangle':kind==='pickup'?'sine':'sawtooth';
   const base={footstep:95,door:185,drawer:215,pickup:490,light:660,note:380,creak:78,click:425,hide:160,bed:120}[kind]||280;
   const variation=kind==='footstep'?(Math.random()-.5)*20:(Math.random()-.5)*8;
-  oscillator.frequency.setValueAtTime(base+variation,now);
-  oscillator.frequency.exponentialRampToValueAtTime(Math.max(30,(base+variation)*.7),now+.13);
-  const duration=kind==='creak'?.34:kind==='footstep'?.12:.18;
+  const duration=kind==='cat'?.42:kind==='creak'?.34:kind==='footstep'?.12:.18;
+  if(kind==='cat'){
+   oscillator.frequency.setValueAtTime(615,now);
+   oscillator.frequency.exponentialRampToValueAtTime(815,now+.11);
+   oscillator.frequency.exponentialRampToValueAtTime(400,now+.37);
+   this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;
+  }else{
+   oscillator.frequency.setValueAtTime(base+variation,now);
+   oscillator.frequency.exponentialRampToValueAtTime(Math.max(30,(base+variation)*.7),now+.13);
+  }
   vol.gain.setValueAtTime(.0001,now);vol.gain.exponentialRampToValueAtTime(Math.max(.0002,gain),now+.012);
   vol.gain.exponentialRampToValueAtTime(.0001,now+duration);
   oscillator.connect(vol);oscillator.start(now);oscillator.stop(now+duration+.02);
