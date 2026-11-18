@@ -5,6 +5,8 @@ import {advance,goTo,initialProgress,readProgress,writeProgress,type StoryProgre
 import {Sound} from './audio';
 import {FullscreenControl} from './FullscreenControl';
 import {Splash} from './demo/Splash';
+import {loadRescue} from './demo/progression.js';
+import {loadPrologue} from './demo/prologue-story.js';
 import {PlaytestHouse,PlaytestMenu} from './PlaytestMenu';
 import type {HouseTrialId} from './lab/house-trials';
 import './story.css';
@@ -13,6 +15,7 @@ import {stopWelcomeMelody} from './demo/welcome-melody';
 const CosmosExperience=lazy(()=>import('./experience/CosmosExperience'));
 const StoryGame=lazy(()=>import('./StoryGame').then(m=>({default:m.StoryGame})));
 const RescueDemo=lazy(()=>import('./demo/RescueDemo').then(m=>({default:m.RescueDemo})));
+const hasRescueProgress=()=>loadRescue().phase!=='garden'||loadPrologue().stage!=='intro';
 
 function Portrait({character}:{character:CharacterId}){
  return <span className="kitty-reference-portrait" aria-hidden="true" style={{backgroundImage:`url(${new URL(`./sprites/${character}-reference-sheet.png`,document.baseURI).href})`}}/>;
@@ -36,8 +39,9 @@ export function StoryApp({ClassicApp,initialRoute}:{ClassicApp:ComponentType;ini
  const container=useRef<HTMLDivElement>(null);
  const audio=useRef<Sound>(new Sound());
  const [progress,setProgress]=useState<StoryProgress>(()=>readProgress(STORY.length));
- const [screen,setScreen]=useState<'splash'|'cover'|'story'|'game'|'classic'|'rescue'|'tests'|'arcade'|'cosmos'>(initialRoute==='rescue'?'splash':initialRoute==='classic'?'classic':initialRoute==='tests'?'tests':'cover');
- const [splashTarget,setSplashTarget]=useState<'rescue'|null>(initialRoute==='rescue'?'rescue':null);
+ const [screen,setScreen]=useState<'splash'|'cover'|'story'|'game'|'classic'|'rescue'|'tests'|'arcade'|'cosmos'>(()=>
+  initialRoute==='rescue'?(hasRescueProgress()?'rescue':'splash'):initialRoute==='classic'?'classic':initialRoute==='tests'?'tests':'cover');
+ const [splashTarget,setSplashTarget]=useState<'rescue'|null>(screen==='splash'?'rescue':null);
  const [adminGranted]=useState(initialRoute==='tests');
  const [demoEntry,setDemoEntry]=useState<'garden'|'abduction'|'trail'|'house'|'drawer'|'lock'|'rescue'|'mirror'>('garden');
  const [demoTrial,setDemoTrial]=useState(false);const [saved,setSaved]=useState(progress.started);const [storageOK,setStorageOK]=useState(true);
@@ -61,7 +65,12 @@ export function StoryApp({ClassicApp,initialRoute}:{ClassicApp:ComponentType;ini
  const toggleAudio=()=>{const muted=!progress.muted;audio.current.muted=muted;save({...progress,muted});setAudioNotice('');if(muted)audio.current.suspend();else tryAudio();};
  const unlockAudio=()=>{if(!progress.muted)tryAudio();};
  // El picnic sólo acompaña al comienzo del rescate 2D, no al menú ni a las pruebas 3D.
- const openDemo=(entry:typeof demoEntry,trial:boolean)=>{setDemoEntry(entry);setDemoTrial(trial);audio.current.destroy();stopWelcomeMelody();setSplashTarget(entry==='garden'?'rescue':null);setScreen(entry==='garden'?'splash':'rescue');};
+ const resumeRescue=screen==='cover'&&hasRescueProgress();
+ const openDemo=(entry:typeof demoEntry,trial:boolean)=>{
+  const welcome=entry==='garden'&&(trial||!hasRescueProgress());
+  setDemoEntry(entry);setDemoTrial(trial);audio.current.destroy();stopWelcomeMelody();
+  setSplashTarget(welcome?'rescue':null);setScreen(welcome?'splash':'rescue');
+ };
  if(screen==='splash')return <Splash muted={progress.muted} onStart={()=>{if(splashTarget==='rescue'){setSplashTarget(null);setScreen('rescue');}else{if(!progress.muted)tryAudio(true);setScreen('cover');}}}/>;
  if(screen==='cosmos')return <Suspense fallback={<main role="status" style={{display:'grid',placeItems:'center',background:'#0a0719',color:'#ffddf1'}}>Preparando las estrellas…</main>}><CosmosExperience preview startAt={cosmosEntry} onExit={()=>setScreen('tests')} onEnterGame={()=>openDemo('garden',false)}/></Suspense>;
  if(screen==='rescue')return <Suspense fallback={<main className="playtest-loading" role="status">Preparando el rescate 2D…</main>}><RescueDemo key={demoEntry+(demoTrial?'-trial':'-story')} entry={demoEntry} test={demoTrial} onExit={()=>{setScreen(demoTrial?'tests':'cover');if(!demoTrial)unlockAudio();}}/></Suspense>;
@@ -91,7 +100,7 @@ export function StoryApp({ClassicApp,initialRoute}:{ClassicApp:ComponentType;ini
    <div className="cover-copy"><span className="story-kicker"><i/> UN PEQUEÑO REGALO PARA TI <i/></span><h1>Feliz cumpleaños <em>Vale</em></h1><p className="cover-lead">Una pequeña aventura para recorrer despacio, guardar momentos y celebrar todo lo bonito que está por venir.</p>
     <fieldset className="story-characters"><legend>¿QUIÉN TE ACOMPAÑA?</legend>{(Object.keys(CHARACTERS) as CharacterId[]).map(id=><button key={id} className={progress.character===id?'story-character selected':'story-character'} aria-pressed={progress.character===id} onClick={()=>select(id)}><Portrait character={id}/><span>{CHARACTERS[id].name}<small>{id==='kitty'?'UN LAZO DE AMOR':'UN POCO DE MÚSICA'}</small></span><b>{progress.character===id?'♥':'♡'}</b></button>)}</fieldset>
     <div className="cover-actions"><button className="story-button" onClick={()=>{unlockAudio();save({...progress,started:true});setScreen('story');}}>{saved?'Continuar la historia':'Abrir mi regalo'} <span>↗</span></button>{saved&&<button className="text-button" onClick={reset}>Empezar de nuevo</button>}</div>
-    <div className="rescue-cover-buttons"><button className="story-button rescue-new-link" onClick={()=>openDemo('garden',false)}>♥ Jugar la demo de rescate 2D → 3D</button></div><p className="cover-footnote">UNA HISTORIA HECHA PARA TI <span>✦</span> A TU PROPIO RITMO</p>
+    <div className="rescue-cover-buttons"><button className="story-button rescue-new-link" onClick={()=>openDemo('garden',false)}>♥ {resumeRescue?'Continuar el rescate':'Jugar la demo de rescate 2D → 3D'}</button></div><p className="cover-footnote">UNA HISTORIA HECHA PARA TI <span>✦</span> A TU PROPIO RITMO</p>
    </div><div className="cover-art" aria-hidden="true"><div className="art-orbit orbit-a"/><div className="art-orbit orbit-b"/><div className="art-card"><div className="art-garland"><i/><i/><i/><i/><i/><i/><i/></div><span className="art-sun">✳</span><span className="art-star a">✦</span><span className="art-star b">✧</span><div className="art-hill hill-back"/><div className="art-hill hill-front"/><div className="art-path"/><div className="art-tree tree-a"><i/><b/></div><div className="art-tree tree-b"><i/><b/></div><div className="art-avatar"><Portrait character={progress.character}/></div><span className="art-flower f1">✿</span><span className="art-flower f2">✿</span><span className="art-flower f3">✿</span><span className="art-stamp">HECHO CON<br/>MUCHO AMOR <b>♡</b></span></div><p>UN LUGAR PARA LOS MOMENTOS BONITOS <span>01 / 07</span></p></div>
    
    <button className="classic-link" onClick={()=>{audio.current.suspend();setScreen('classic');}}>Jugar la aventura clásica ↗</button>

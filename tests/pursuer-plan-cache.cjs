@@ -3,6 +3,7 @@ const assert=require('node:assert/strict');
 (async()=>{
  const {createHouse,blocked,setDoor}=await import('../src/lab/world.js');
  const {Pursuer,SEARCH_ROUTE}=await import('../src/lab/pursuer.js');
+ const {indexNavigationColliders}=await import('../src/lab/navigation-collision.js');
  const dist=(a,b)=>Math.hypot(a.x-b.x,(a.y-b.y)*2,a.z-b.z);
  const world=createHouse(),p=new Pursuer(world);
  const originalRoute=goal=>{
@@ -27,6 +28,11 @@ const assert=require('node:assert/strict');
   path.unshift(start.index);return path;
  };
  const verify=()=>{
+  const boxes=p.planningBoxes(),indexed=indexNavigationColliders(boxes,.16,1.72);
+  for(let i=0;i<44;i++)for(let j=0;j<48;j++)for(const y of [-3.55,0,.72,3.15]){
+   const x=.13+i*.327,z=.09+j*.317;
+   assert.equal(indexed(x,y,z),blocked(boxes,x,y,z,.16,1.72),'The spatial index must retain exact occupancy');
+  }
   for(const goal of SEARCH_ROUTE){
    const expected=originalRoute(goal),found=p.plan(goal);
    assert.equal(found,expected!==null,'Path availability must match the original search');

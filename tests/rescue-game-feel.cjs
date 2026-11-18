@@ -81,7 +81,8 @@ const hold=F.feelCompanion({x:45,y:0},{x:50,y:0},40);
 assert.equal(hold.position.x,45,'NPC must not slide when Kitty is stationary');
 const still=F.feelCompanion({x:0,y:0},{x:90,y:0},33,true);
 assert(still.position.x>0&&!still.walking,'reduce motion keeps positions correct but disables gait');
-const original=fs.readFileSync('src/iso-game.ts','utf8'),story=fs.readFileSync('src/demo/GardenPrologue.tsx','utf8');
+const original=fs.readFileSync('src/iso-game.ts','utf8').replace(/\r\n/g,'\n');
+const story=fs.readFileSync('src/demo/GardenPrologue.tsx','utf8');
 for(const key of ['feelMotion(this.storyVelocity','this.storyFootfall(traveled)',
  'updateStoryCameraFeel(dt)','renderStoryKitty(dt','feelCompanion({x:npc.x,y:npc.y}',
  'RESCUE_FEEL.interactMs','if(this.story){\n   // Kinetic movement']){

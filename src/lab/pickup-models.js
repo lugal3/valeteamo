@@ -71,7 +71,11 @@ export function pickupGeometry(objects){
   if(o.kind==='note')return noteModel(piece,o);
   if(o.kind==='battery')return batteryModel(piece);
   if(o.kind==='key')return keyModel(piece,o.red);
-  if(o.kind==='flashlight')return [piece('body',0,-.02,0,.075,.075,.19,'torchmetal',{shape:'cylinder',segments:8,color:[.24,.32,.43]}),piece('lens',0,-.02,.105,.111,.111,.06,'brass',{shape:'cylinder',segments:8,glow:true})];
+  if(o.kind==='flashlight')return [
+   piece('body',0,-.02,0,.075,.075,.19,'torchmetal',{shape:'cylinder',segments:8,color:[.24,.32,.43]}),
+   piece('bezel',0,-.02,.101,.111,.111,.061,'brass',{shape:'cylinder',segments:8}),
+   piece('lens',0,-.013,.138,.079,.079,.012,'torchglass',{shape:'round',glow:true,color:[.82,.95,1]})
+  ];
   return [];
  });
 }

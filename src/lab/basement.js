@@ -35,6 +35,14 @@ export function poseHatch(hatch,amount){
  hatch.guard.solid=amount>.92;
 }
 
+export function poseHatchRug(rug,amount){
+ rug.amount=amount;
+ const offset=1.53*amount*amount*(3-2*amount);
+ rug.x=rug.parts[0].x+offset;
+ for(const {box,x,y} of rug.parts){box.x=x+offset;box.y=y-.09*amount+Math.sin(amount*Math.PI)*.037;}
+ rug.hatch.concealed=amount<1;
+}
+
 function installCaptive(add,obj){
  const y=floor(13.74),z=13.74,x=X;
  const part=(id,dx,dy,dz,w,h,d,mat,extra={},solid=false)=>add('captive-'+id,x+dx,y+dy,z+dz,w,h,d,mat,solid,{
@@ -74,8 +82,8 @@ export function installBasement(add,obj,lights){
  for(const dz of [-.54,.54])add('hatch-hinge-'+dz,HATCH.maxX,.050,z+dz,.093,.082,.21,'torchmetal',false,iron);
  const guard=add('hatch-open-guard',HATCH.maxX,.60,z,.11,1.20,THROAT-START,'wood',false,{hiddenGeometry:true});
  const chains=[];
- for(let i=0;i<14;i++)chains.push(add('hatch-chain-'+i,x-.56+i*.085,.073,z+.25,.105,.042,.052,'torchmetal',false,{shape:'torus',majorRadius:.036,tubeRadius:.009,pitch:i%2?Math.PI/2:0,segments:7,rings:4,color:[.34,.34,.38]}));
- chains.push(add('hatch-padlock',x-.25,.092,z+.27,.13,.07,.118,'bow',false,{color:[.64,.19,.16]}));
+ for(let i=0;i<14;i++)chains.push(add('hatch-chain-'+i,x-.56+i*.085,.073,z+.25,.105,.042,.052,'torchmetal',false,{dynamic:true,shape:'torus',majorRadius:.036,tubeRadius:.009,pitch:i%2?Math.PI/2:0,segments:7,rings:4,color:[.34,.34,.38]}));
+ chains.push(add('hatch-padlock',x-.25,.092,z+.27,.13,.07,.118,'bow',false,{dynamic:true,color:[.64,.19,.16]}));
  const hatch=obj('basement-hatch','hatch','Trampilla del sótano',x-.31,.097,z,{concealed:true,locked:true,chains,open:false,amount:0,guard,parts:parts.map(box=>({box,x:box.x,y:box.y}))});
 
  const earth=[.47,.32,.24],dark=[.36,.25,.21];
@@ -117,6 +125,9 @@ export function installBasement(add,obj,lights){
   const at=4.35+i*.47,half=sectionAt(at)[2],dx=(i%2?1:-1)*(half-.09),size=.08+(i%4)*.019;
   add('tunnel-stone-'+i,X+dx,floor(at)+.029,at,size,.068,size*1.4,'earth',false,{shape:'round',segments:5,rings:3,color:i%3?dark:[.41,.39,.33]});
  }
+ // Leave the middle of the tunnel clear so Kitty and Louis can pass beside the kit.
+ const kitZ=7.25,kitFloor=floor(kitZ);
+ obj('rc-car','rc-car','Auto RC y tablet',X-.29,kitFloor+.14,kitZ,{floor:kitFloor,yaw:0,mode:'packed'});
  installCaptive(add,obj);
  return hatch;
 }

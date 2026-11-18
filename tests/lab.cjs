@@ -81,9 +81,25 @@ const assert=require('node:assert/strict');
  const wardrobe=g.objects.find(o=>o.id==='wardrobe');poseFurniture(wardrobe,.035);
  assert(!lineBlocked(g.boxes,{x:.84,y:HEIGHT+1.28,z:3.45},{x:2.25,y:HEIGHT+1.28,z:3.45}),'Actual gaps between louvers permit looking outside');
  assert(lineBlocked(g.boxes,{x:.84,y:HEIGHT+1.22,z:3.45},{x:2.25,y:HEIGHT+1.22,z:3.45}),'Solid louvers still occlude the bedroom');
- const {hidingFrame}=await import('../src/lab/hiding.js'),inside=wardrobe.hideCamera,outside={x:wardrobe.returnX,y:HEIGHT+1.63,z:wardrobe.returnZ,yaw:inside.yaw+Math.PI,pitch:0};
+ const {hidingExit,hidingFrame}=await import('../src/lab/hiding.js'),inside=wardrobe.hideCamera,outside={x:wardrobe.returnX,y:HEIGHT+1.63,z:wardrobe.returnZ,yaw:inside.yaw+Math.PI,pitch:0};
  const enter=hidingFrame({from:outside,inside,outside,progress:1});assert.deepEqual(enter.camera,inside);assert(Math.abs(enter.doorAmount-.035)<1e-9);
  const exit=hidingFrame({from:inside,inside,outside,entering:false,progress:1});assert.equal(exit.camera.x,outside.x);assert.equal(exit.doorAmount,0);
+ for(const spot of g.objects.filter(o=>o.kind==='hide')){
+  const floor=spot.y>HEIGHT?HEIGHT:0,target=hidingExit(g,spot,floor);
+  assert(target&&!blocked(g.boxes,target.x,floor,target.z,.2,target.eye+.02),spot.id+' has a free exit');
+ }
+ const obstruction={id:'test-occupied-wardrobe-exit',x:outside.x,y:HEIGHT+.5,z:outside.z,w:.18,h:1,d:.18,solid:true};
+ const alternate=hidingExit({...g,boxes:[...g.boxes,obstruction]},wardrobe,HEIGHT);
+ assert(alternate&&(alternate.x!==outside.x||alternate.z!==outside.z)&&!overlaps(obstruction,alternate.x,HEIGHT,alternate.z,.2,1.65));
+ const {moveGreyCat,revealGreyCat}=await import('../src/lab/grey-cat.js'),cat=g.greyCat;
+ assert(cat.parts.every(({box})=>box.hiddenGeometry));
+ revealGreyCat(cat);assert(cat.parts.every(({box})=>!box.hiddenGeometry));
+ for(let i=0;i<80;i++){
+  moveGreyCat(cat,.05,i>=28,false);
+  assert(!blocked(g.boxes,cat.x,cat.y,cat.z,.15,.58),'The cat walks along clear garden ground');
+  assert(cat.parts.every(({box})=>[box.x,box.y,box.z].every(Number.isFinite)&&box.y-box.h*.5>-.02));
+ }
+ assert(cat.z>15,'The cat walks ahead along the exit path');
  await require('./repairs-events.cjs')();
  await require('./sensations.cjs')();
  await require('./pursuer.cjs')();

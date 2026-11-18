@@ -2,10 +2,13 @@ import {KITCHEN_BAR,KITCHEN_HIDE_SPOT} from './kitchen-hide-layout.js';
 export const PIANO_NOTES=['Do','Re','Mi','Fa','Sol','La','Si','Do agudo'];
 export const PIANO_KEYS=['a','s','d','f','g','h','j','k'];
 export const PIANO_SCORE=[0,2,4,5,4,2,1,0];
+export const PIANO_SHEET_ID='piano-sheet';
+export const PIANO_REWARD={id:'piano-compartment',label:'Pista del piano',
+ text:'La llave roja está sobre la barra de la cocina. Abre el candado de la trampilla bajo el tapete rojo.'};
 
 export function installPiano(add,obj,{x,z,floor}){
  const wood={color:[.34,.22,.18]};
- const part=(id,dx,y,dz,w,h,d,mat='wood',solid=false,extra={})=>add('piano-'+id,x-dx,floor+y,z-dz,w,h,d,mat,solid,{...wood,...extra});
+ const part=(id,dx,y,dz,w,h,d,mat='wood',solid=false,extra={})=>add('piano-'+id,x+dx,floor+y,z+dz,w,h,d,mat,solid,{...wood,...extra});
  part('case',0,.79,0,.60,1.58,1.75,'wood',true);
  part('crown',0,1.58,0,.66,.085,1.85,'trim');
  part('front',.314,1.24,0,.032,.41,1.61,'wood',false,{color:[.46,.31,.22]});
@@ -14,13 +17,37 @@ export function installPiano(add,obj,{x,z,floor}){
  for(const offset of [-.78,.78])part('cheek-'+offset,.45,.96,offset,.32,.11,.14);
  const keys=PIANO_NOTES.map((_,i)=>part('key-'+i,.44,.95,(i-3.5)*.176,.29,.038,.164,'cream',false,{dynamic:true,color:[.91,.82,.68]}));
  for(const i of [0,1,3,4,5])part('black-'+i,.40,.982,(i-3)*.176,.17,.034,.071,'dark',false,{color:[.14,.12,.13]});
- part('score',.339,1.35,0,.025,.25,.47,'paper',false,{color:[.88,.78,.58],pitch:-.08});
- for(let i=0;i<5;i++)part('staff-'+i,.355,1.30+i*.018,0,.008,.005,.38,'dark');
- for(let i=0;i<8;i++)part('ink-'+i,.362,1.30+PIANO_SCORE[i]*.011,(i-3.5)*.046,.008,.019,.027,'dark');
+ const score=[part('score',.339,1.35,0,.025,.25,.47,'paper',false,
+  {dynamic:true,color:[.88,.78,.58],pitch:.08})];
+ for(let i=0;i<5;i++)score.push(part('staff-'+i,.355,1.30+i*.018,0,.008,.005,.38,'dark',false,{dynamic:true}));
+ for(let i=0;i<8;i++)score.push(part('ink-'+i,.362,1.30+PIANO_SCORE[i]*.011,
+  (i-3.5)*.046,.008,.019,.027,'dark',false,{dynamic:true}));
+ const compartment=[
+  part('compartment-tray',.335,1.087,-.58,.20,.024,.32,'wood',false,{dynamic:true}),
+  part('compartment-clue',.382,1.109,-.58,.10,.012,.21,'paper',false,{dynamic:true,color:[.93,.82,.60]}),
+  part('compartment-panel',.420,1.15,-.58,.040,.112,.34,'wood',false,{dynamic:true,color:[.46,.28,.19]}),
+  part('compartment-knob',.455,1.151,-.58,.036,.032,.065,'brass',false,{dynamic:true})
+ ];
  part('bench',.86,.49,0,.34,.075,.87,'velvet',true,{color:[.42,.22,.26]});
  for(const dx of [.74,.98])for(const dz of [-.36,.36])part('bench-leg-'+dx+dz,dx,.225,dz,.054,.45,.065,'wood',true);
- return obj('piano','piano','Piano antiguo',x-.49,floor+1.1,z,{keys,keyHeight:floor+.95,handOffsetX:-.15,
-  seat:{x:x-.86,y:floor+1.24,z,yaw:Math.PI/2,pitch:-.39}});
+ const piano=obj('piano','piano','Piano antiguo',x+.49,floor+1.1,z,{
+  keys,keyHeight:floor+.95,handOffsetX:.15,scorePlaced:false,solved:false,
+  score:score.map(box=>({box,y:box.y})),compartment:compartment.map(box=>({box,x:box.x})),
+  compartmentAmount:0,seat:{x:x+.86,y:floor+1.24,z,yaw:-Math.PI/2,pitch:-.39}
+ });
+ setPianoScore(piano,false);
+ return piano;
+}
+
+export function setPianoScore(piano,placed){
+ piano.scorePlaced=placed;
+ for(const {box,y} of piano.score)box.y=placed?y:-100;
+}
+
+export function posePianoCompartment(piano,amount){
+ piano.compartmentAmount=amount;
+ const slide=.22*amount*amount*(3-2*amount);
+ for(const part of piano.compartment)part.box.x=part.x+slide;
 }
 
 export function decorateKitchen(add){

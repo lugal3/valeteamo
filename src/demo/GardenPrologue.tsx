@@ -2,10 +2,15 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {StoryGame} from '../StoryGame';
 import {Sound} from '../audio';
+import catSound from '../lab/audio/preview-cat.wav';
+import churuSound from '../lab/audio/preview-churu.wav';
+import vanDoorSound from '../lab/audio/preview-van-door.wav';
+import vanAwaySound from '../lab/audio/preview-van-away.wav';
 import {toScreen} from '../isometric';
 import {VAN_NIGHT_POSITION} from './abduction-van';
 import type {IsoAdventure,IsoStoryBridge,IsoStoryStage} from '../iso-game';
 import {RESCUE_SCENES,type RescueMapId,type RouteArea} from './rescue-overworld';
+import {valeTexture} from './rescue-intro-art';
 import {
  PROLOGUE_START,PROLOGUE_DIALOGUES,PROLOGUE_OBJECTIVES,
  advancePrologue,loadPrologue,savePrologue,resetPrologue,
@@ -14,19 +19,22 @@ import {
 import './garden-prologue.css';
 
 type Dialog={lines:PrologueLine[];index:number};
+type Feeding='offer'|'retry'|'eating';
+const FEEDING_WAIT_MS=8000;
+const RESCUE_SAMPLES={cat:catSound,churu:churuSound,'van-door':vanDoorSound,'van-away':vanAwaySound};
 type HouseNavigation={distance:number;heading:number;guided:boolean;near:boolean;vanInspected:boolean;vanDistance:number};
 export type PrologueCheckpoint='intro'|'walk-together'|'ribbon';
 const initial=(test:boolean,checkpoint:PrologueCheckpoint):PrologueState=>
  test?{...PROLOGUE_START,stage:checkpoint}:loadPrologue();
 
-const label=(speaker:string)=>
- speaker==='Luis'?'Luis · novio de Kitty':speaker==='Louis'?'Louis · invitado':'Kitty';
+const label=(speaker:string)=>speaker==='Louis'?'Louis · invitado':speaker;
 
 export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHouse}:{
  test?:boolean;checkpoint?:PrologueCheckpoint;onExit:()=>void;onEnterHouse:()=>void;
 }){
  const [run,setRun]=useState<PrologueState>(()=>initial(test,checkpoint));
  const [dialog,setDialog]=useState<Dialog|null>(null),[letters,setLetters]=useState(0);
+ const [feeding,setFeeding]=useState<Feeding|null>(null);
  const [near,setNear]=useState(''),[muted,setMuted]=useState(false);
  const [houseNav,setHouseNav]=useState<HouseNavigation|null>(null);
  const [guide,setGuide]=useState(''),[dusk,setDusk]=useState(0),[area,setArea]=useState<RouteArea>('sendero');
@@ -37,9 +45,13 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
 
  const sceneRef=useRef<IsoAdventure|null>(null),phaseRef=useRef(run);
  const dialogRef=useRef<Dialog|null>(null),dialogDone=useRef<null|(()=>void)>(null);
+ const feedingRef=useRef<Feeding|null>(null);
  const lockedRef=useRef(false),enteringRef=useRef(false),nextDialogRef=useRef<()=>void>(()=>{});
  const travelingRef=useRef(false),travelTimers=useRef<number[]>([]);
- const audioRef=useRef(new Sound());
+ const [audio]=useState(()=>new Sound(RESCUE_SAMPLES));
+ const showFeeding=useCallback((phase:Feeding|null)=>{
+  feedingRef.current=phase;lockedRef.current=phase!==null;setFeeding(phase);
+ },[]);
 
  const changed=useCallback((event:PrologueEvent)=>{
   const current=phaseRef.current,next=advancePrologue(current,event);
@@ -54,6 +66,22 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   lockedRef.current=true;dialogDone.current=done??null;
   const next={lines,index:0};dialogRef.current=next;setDialog(next);setLetters(0);
  },[]);
+ const offerChuru=()=>{
+  const scene=sceneRef.current;
+  if(feedingRef.current!=='offer'||!scene)return;
+  showFeeding('eating');
+  scene.playStoryFeeding(()=>{
+   showFeeding(null);changed('fed');
+  });
+ };
+
+ useEffect(()=>{
+  if(feeding!=='offer')return;
+  const timer=window.setTimeout(()=>{
+   if(feedingRef.current==='offer')showFeeding('retry');
+  },FEEDING_WAIT_MS);
+  return()=>window.clearTimeout(timer);
+ },[feeding,showFeeding]);
 
  const nextDialog=useCallback(()=>{
   const current=dialogRef.current;if(!current)return;
@@ -78,6 +106,11 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  },[dialog,letters]);
  useEffect(()=>{
   const handler=(e:KeyboardEvent)=>{
+   if(feedingRef.current&&e.key==='Escape'){
+    e.preventDefault();e.stopImmediatePropagation();
+    if(feedingRef.current!=='eating')showFeeding(null);
+    return;
+   }
    if(!dialogRef.current)return;
    if(['Enter',' ','e','E'].includes(e.key)){
     e.preventDefault();e.stopImmediatePropagation();nextDialogRef.current();
@@ -85,7 +118,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   };
   window.addEventListener('keydown',handler,true);
   return()=>window.removeEventListener('keydown',handler,true);
- },[]);
+ },[showFeeding]);
 
  const actions=useRef({
   ready:()=>{},interact:(_stage:IsoStoryStage)=>{},clearing:()=>{},
@@ -102,7 +135,8 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
     for(const [person,key] of [
      ['kitty','chibi-kitty-down-0'],
      ['louis','chibi-louis-down-0'],
-     ['luis','story-person-luis']
+     ['luis','story-person-luis'],
+     ['vale',valeTexture(false,0)]
     ]){
      if(!scene.textures.exists(key))continue;
      const source=scene.textures.get(key).getSourceImage();
@@ -114,9 +148,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
    // El inicio no tiene NPC ni diálogos bloqueantes. La aventura comienza al andar.
   },
   arrive:()=>{
-   if(phaseRef.current.stage!=='intro'||dialogRef.current)return;
-   setGuide('');
-   showDialog(PROLOGUE_DIALOGUES.intro,()=>changed('begin'));
+   if(phaseRef.current.stage==='cat-fed')changed('arrived');
   },
   guide:(message)=>setGuide(message),
   dusk:(value)=>setDusk(value),
@@ -138,7 +170,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
    },680);
    travelTimers.current.push(first);
   },
-  victory:()=>{changed('victory');setGuide('¡Bien! Sigue el camino para encontrar a Louis.');audioRef.current.tone(880,.19,.03);},
+  victory:()=>{changed('victory');setGuide('¡Bien! Sigue el camino para encontrar a Louis.');audio.tone(880,.19,.03);},
   clearing:()=>{
    if(phaseRef.current.stage!=='walk-together')return;
    changed('clearing');
@@ -150,6 +182,15 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   },
   interact:(stage)=>{
    if(dialogRef.current||lockedRef.current||enteringRef.current)return;
+   if(stage==='intro'){
+    changed('churu');audio.ui();
+   }
+   if(stage==='feed-cat')showFeeding('offer');
+   if(stage==='meet-couple')showDialog(PROLOGUE_DIALOGUES.couple,()=>{
+    const scene=sceneRef.current;
+    if(scene)scene.playStoryLuisFarewell(()=>changed('met'));
+    else changed('met');
+   });
    if(stage==='talk-louis')showDialog(PROLOGUE_DIALOGUES.victory,()=>changed('louis'));
    if(stage==='talk-luis')showDialog(PROLOGUE_DIALOGUES.luis,()=>{
     // Dialogue closes, but the next chapter only begins once Luis has waved
@@ -201,8 +242,8 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  }),[]);
 
  const toggleAudio=()=>{
-  const next=!muted;audioRef.current.muted=next;setMuted(next);
-  if(!next)void audioRef.current.start();
+  const next=!muted;audio.muted=next;setMuted(next);
+  if(!next)void audio.start();
  };
  const restart=()=>{
   for(const timer of travelTimers.current)window.clearTimeout(timer);
@@ -210,12 +251,13 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   if(!test)resetPrologue();
   const next=initial(test,checkpoint);
   phaseRef.current=next;setRun(next);setDialog(null);setLetters(0);
+  showFeeding(null);
   dialogRef.current=null;dialogDone.current=null;lockedRef.current=false;enteringRef.current=false;
   setNear('');setGuide('');setDusk(0);setArea('sendero');setMap('morning_garden');setHouseNav(null);
   setRestartKey(value=>value+1);
  };
  useEffect(()=>()=>{for(const timer of travelTimers.current)window.clearTimeout(timer);
-  audioRef.current.destroy();
+  audio.destroy();
   if(import.meta.env.DEV)delete (window as Window&{__valePrologue?:unknown}).__valePrologue;
  },[]);
  useEffect(()=>{
@@ -248,14 +290,19 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  },[restartKey]);
 
  const currentLine=dialog?.lines[dialog.index];
- const portrait=currentLine?portraits[currentLine.speaker==='Kitty'?'kitty':
-  currentLine.speaker==='Luis'?'luis':'louis']:undefined;
+ const portrait=currentLine?portraits[currentLine.speaker.toLowerCase()]:undefined;
 
  return <main className="story-prologue" aria-label="Rescate con el motor original de Corazones"
-  data-prologue-stage={run.stage} data-rescue-map={map} data-transition={transition?.phase??'none'}>
+  data-prologue-stage={run.stage} data-rescue-map={map} data-transition={transition?.phase??'none'}
+  data-fed-grey-cat={run.fedGreyCat}
+  onClickCapture={event=>{
+   if(!muted&&event.target instanceof Element&&!event.target.closest('.adventure-wrap')){
+    void audio.start();
+   }
+  }}>
   <StoryGame key={restartKey} level={2} character="kitty"
-   story={story} audio={audioRef.current} muted={muted} audioNotice=""
-   onUnlockAudio={()=>{void audioRef.current.start();}}
+   story={story} audio={audio} muted={muted} audioNotice=""
+   onUnlockAudio={()=>{void audio.start();}}
    onToggleAudio={toggleAudio} onExit={onExit} onComplete={()=>{}}
    onSceneReady={scene=>{
     sceneRef.current=scene;
@@ -335,9 +382,24 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
      setHouseNav(previous=>previous?{...previous,guided:started}:previous);
     }}>{houseNav.guided?'✕ Detener guía':'♡ Guiarme caminando'}</button>}
   </aside>}
-  {!dialog&&!houseNav&&guide&&<div className="prologue-guide" role="status">{guide}</div>}
-  {!dialog&&near&&<button type="button" className="prologue-interact"
+  {!dialog&&!feeding&&!houseNav&&guide&&<div className="prologue-guide" role="status">{guide}</div>}
+  {!dialog&&!feeding&&near&&<button type="button" className="prologue-interact"
    onClick={()=>sceneRef.current?.storyInteract()}>{near} · E</button>}
+  {feeding&&feeding!=='eating'&&<div className="prologue-dialog-backdrop" role="dialog"
+   aria-modal="true" aria-label="Alimentar a la gata gris">
+   <section className="prologue-feeding">
+    <h2>La gata gris</h2>
+    <p role="status">{feeding==='offer'?'Ofrécele el Churu antes de que se aleje.':
+     'Se acabó el tiempo. Todavía tienes el Churu.'}</p>
+    {feeding==='offer'&&<span className="prologue-feeding-time" aria-hidden="true"
+     style={{animationDuration:FEEDING_WAIT_MS+'ms'}}/>}
+    <div className="prologue-feeding-actions">
+     {feeding==='offer'?<button key="offer" type="button" autoFocus onClick={offerChuru}>Ofrecer Churu</button>:
+      <button key="retry" type="button" autoFocus onClick={()=>showFeeding('offer')}>Intentar otra vez</button>}
+     <button type="button" onClick={()=>showFeeding(null)}>Ahora no</button>
+    </div>
+   </section>
+  </div>}
   {currentLine&&<div className="prologue-dialog-backdrop" role="dialog"
    aria-modal="true" aria-label="Conversación">
    <div className="prologue-dialog">

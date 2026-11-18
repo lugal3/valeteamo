@@ -31,8 +31,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   await page.keyboard.down('w');await page.waitForFunction(()=>window.__rescueHouse.snapshot().position.y<-2.2);await page.keyboard.up('w');await shot('08-tunel');
   await page.keyboard.down('w');await page.waitForFunction(()=>window.__rescueHouse.snapshot().position.z>12.12);await page.keyboard.up('w');
   await page.getByRole('button',{name:'Liberar a Louis',exact:true}).waitFor();await shot('09-louis');await page.keyboard.press('e');
-  await page.getByRole('dialog',{name:'¡Louis está a salvo!',exact:true}).waitFor();await shot('10-final');assert.equal((await story()).phase,'safe');
-  await page.getByRole('button',{name:'Terminar el juego',exact:true}).click();assert(await page.evaluate(()=>window.rescueFinished));
+  await page.waitForFunction(()=>window.__rescueHouse.story().phase==='rc-setup',null,{timeout:90000});
+  await shot('10-louis-refugiado');assert.equal(await page.evaluate(()=>window.__rescueHouse.louis().phase),'hidden');
   assert.equal((await story()).samples.errors.length,0);assert(requests.length>=16&&requests.every(r=>r.status===200));
   const gl=await page.locator('#lab-canvas').evaluate(c=>c.getContext('webgl').getError());assert.equal(gl,0);await page.evaluate(()=>window.stopHouse());await page.waitForFunction(()=>window.contexts.every(c=>c.state==='closed'));assert.deepEqual(errors,[]);fs.writeFileSync(path.join(folder,'resultados.json'),JSON.stringify({webgl:gl,errors,clips:requests.length,capture:true,retry:true,hiddenEscape:true,advance:true,pause:true,audioClosed:true},null,2));console.log('PASS recorded-audio pursuit browser');
  }catch(e){try{console.log('FAIL STATE',JSON.stringify(await page.evaluate(()=>({story:window.__rescueHouse?.story(),snapshot:window.__rescueHouse?.snapshot()}))));await page.screenshot({path:path.join(folder,'failure.png'),timeout:5000});}catch{}throw e;}finally{await browser?.close();await server.close();}

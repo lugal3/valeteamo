@@ -1,12 +1,13 @@
 import {BATH_MIRROR,MIRROR_SPAWN} from './mirror.js';
 import {BALUSTER_PROFILE,CUP_PROFILE,CANDLE_PROFILE,CLOCK_PROFILE} from './chibi-geometry.js';
 import {installHouseLights} from './house-lights.js';
+import {installGreyCat} from './grey-cat.js';
 import {installCabinet,installRefrigerator} from './house-cabinets.js';
 import {installLouisAltar} from './louis-altar.js';
 import {installWallClock} from './wall-clock.js';
 import {STUDY_SIGN} from './artwork.js';
 import {HATCH,floorAroundHatch,installBasement} from './basement.js';
-import {decorateKitchen,installPiano,installKitchenBar,installExtraHides} from './house-additions.js';
+import {decorateKitchen,installPiano,installKitchenBar,installExtraHides,PIANO_SHEET_ID} from './house-additions.js';
 import {installArrivalCar} from './arrival-car.js';
 // V5: generous landings and an independent, open stairwell. Dimensions in metres.
 export const HEIGHT=3.15;
@@ -198,7 +199,7 @@ export function buildHouse(spawn='ground'){
  obj('coffee-cup','inspect','Taza de café',2.0,.99,8.9,{text:'Todavía queda café en el fondo. La taza está fría.'});
  add('living-rug',2.05,.014,9.12,3.55,.025,3.05,'carpet',false,{ao:.88});
  installCabinet(add,obj,{id:'media-cabinet',label:'Cajón de los mandos',x:2.63,z:5.04,w:1.56,h:.61,d:.46,
-  items:[{id:'media-battery',kind:'battery',label:'Pila del control remoto',dx:.49},{id:'media-flashlight',kind:'flashlight',label:'Linterna',dx:-.40}]});
+  items:[{id:'media-battery',kind:'battery',label:'Pila del control remoto',dx:.49}]});
  const tvStand=boxes.length,tvPower={on:false};
  add('tv-table',4.04,.31,9.42,1.49,.62,.47,'wood');
  for(const x of [3.65,4.42])add('tv-foot-'+x,x,.65,9.42,.12,.06,.24,'dark',false);
@@ -337,7 +338,7 @@ export function buildHouse(spawn='ground'){
  obj('battery-upper','battery','Pila del dormitorio',bedsideX+.17,HEIGHT+.78,bedsideZ+.13);
  obj('basement-note','note','Papel clavado en el dormitorio',3.55,HEIGHT+1.46,.19,{text:'Lo bajé a la fuerza. La trampilla queda bajo el tapete rojo de la cocina.'});
  obj('bed','bed','Cama con lazo',bedX,HEIGHT+1.0,2.07,{returnX:2.80,returnZ:2.63});
- obj('underbed','hide','Esconderse bajo la cama',bedX,HEIGHT+.32,2.31,{hideType:'underbed',returnX:bedX,returnZ:2.72,hideCamera:{x:bedX,y:HEIGHT+.28,z:1.72,yaw:0,pitch:0}});
+ obj('underbed','hide','Esconderse bajo la cama',bedX,HEIGHT+.32,2.31,{hideType:'underbed',requiresCrouch:true,returnX:bedX,returnZ:2.72,hideCamera:{x:bedX,y:HEIGHT+.28,z:1.72,yaw:0,pitch:0}});
  // Wardrobe is a hollow shell. Its two physical louvered leaves leave real sight gaps.
  add('wardrobe-back',.18,HEIGHT+1.15,3.85,.12,2.3,1.65,'wood');for(const z of [3.02,4.68])add('wardrobe-side-'+z,.78,HEIGHT+1.15,z,1.3,2.3,.09,'wood');
  add('wardrobe-top',.78,HEIGHT+2.3,3.85,1.3,.08,1.75,'wood');add('wardrobe-bottom',.78,HEIGHT+.06,3.85,1.3,.12,1.75,'wood');
@@ -365,11 +366,14 @@ export function buildHouse(spawn='ground'){
  chair('reading-chair',.67,HEIGHT,7.55,-Math.PI/2);table('reading-table',1.50,HEIGHT,7.92,.72,.62);lamp('reading-light',1.50,HEIGHT+.92,7.92);shelf('reading-books',.19,HEIGHT,9.8,-Math.PI/2);plant('reading-plant',4.02,HEIGHT,5.33);frame('reading',3.75,HEIGHT+1.9,11.83,'north',2);
  obj('reading-books','inspect','Biblioteca de la planta alta',.47,HEIGHT+1.16,9.8,{text:'Los anuarios tienen los lomos gastados. Entre ellos hay entradas de conciertos archivadas por fecha.'});
  installCabinet(add,obj,{id:'reading-cabinet',label:'Cajón de la sala de lectura',x:2.05,y:HEIGHT,z:5.12,w:1.28,d:.60,
-  items:[{id:'reading-battery',kind:'battery',label:'Pila de la sala de lectura',dx:.24}]});
+  items:[{id:'reading-battery',kind:'battery',label:'Pila de la sala de lectura',dx:.27},
+   {id:PIANO_SHEET_ID,kind:'note',label:'Partitura doblada',dx:-.26,
+    text:'Una melodía corta. Al acercarte al piano del descansillo, Kitty colocará la partitura en el atril.'}]});
+ installCabinet(add,obj,{id:'landing-cabinet',label:'Cajón del descansillo',x:6.76,y:HEIGHT,z:3.08,w:.97,d:.60,
+  items:[{id:'media-flashlight',kind:'flashlight',label:'Linterna',dx:0}]});
  add('reading-rug',1.92,HEIGHT+.012,8.0,2.9,.024,4,'carpet',false,{ao:.88});add('upper-bench',4.95,HEIGHT+.43,11.65,1.15,.18,.48,'velvet');for(const x of [4.55,5.35])add('bench-leg-'+x,x,HEIGHT+.20,11.65,.08,.4,.35,'wood');plant('landing-plant',8.3,HEIGHT,11.54);frame('landing',8.0,HEIGHT+1.85,11.83,'north',0);
- installPiano(add,obj,{x:13.55,z:3.99,floor:HEIGHT});
- // One collectible contains both the pink RC racing car and its touch tablet.
- obj('rc-car','rc-car','Auto RC y tablet',12.36,HEIGHT+.14,4.19,{yaw:Math.PI,mode:'packed'});
+ const piano=installPiano(add,obj,{x:4.84,z:10.40,floor:HEIGHT});
+ const pianoSheet=objects.find(item=>item.id===PIANO_SHEET_ID);
  add('reading-tea-saucer',1.69,HEIGHT+.927,7.98,.18,.018,.18,'ceramica',false,{shape:'round'});
  add('reading-tea-cup',1.69,HEIGHT+.98,7.98,.10,.10,.10,'cream',false,{shape:'lathe',profile:CUP_PROFILE,segments:9});
  add('living-folded-throw',.85,.66,8.59,.28,.065,.37,'velvet',false,{color:[.53,.36,.45],yaw:.08});
@@ -386,6 +390,7 @@ export function buildHouse(spawn='ground'){
  }
  for(let i=0;i<8;i++){const x=i%2?8.2:3.6,z=13.5+Math.floor(i/2)*1.4;plant('garden-plant-'+i,x,0,z);}
  const car=installArrivalCar(add);
+ const greyCat=installGreyCat(add);
  for(const x of [-9.7,25.7])add('garden-boundary-x'+x,x,.65,12,.15,1.3,40,'wood');for(const z of [-7.7,31.7])add('garden-boundary-z'+z,8,.65,z,36,1.3,.15,'wood');
  add('moon',-2,15,-6,1.4,1.4,1.4,'paper',false,{shape:'round',glow:true});
  
@@ -405,5 +410,5 @@ export function buildHouse(spawn='ground'){
  const lights=installHouseLights(add,obj,HEIGHT);
  const hatch=installBasement(add,obj,lights);
  hatchRug.hatch=hatch;
- return {boxes,objects,lights,television,clock,hatch,hatchRug,entryWindow,car,spawn:spawns[spawn]||spawns.ground,spawns,rooms:ROOMS,bounds:WORLD_BOUNDS,stair:STAIR,house:HOUSE};
+ return {boxes,objects,lights,television,clock,hatch,hatchRug,entryWindow,car,greyCat,piano,pianoSheet,spawn:spawns[spawn]||spawns.ground,spawns,rooms:ROOMS,bounds:WORLD_BOUNDS,stair:STAIR,house:HOUSE};
 }

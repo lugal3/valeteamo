@@ -10,7 +10,14 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   s.middlewares.use((req,res,next)=>{
    if(req.url!='/__rc')return next();
    res.setHeader('Content-Type','text/html; charset=utf-8');
-   res.end('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/src/lab/lab.css"></head><body><button id="launch">Probar RC</button><script type="module">import {launchHouse} from "/src/lab/house.js";document.querySelector("#launch").onclick=()=>window.stopHouse=launchHouse(()=>{},"upstairs",{demo:true,trial:true,entry:"rescue",onRescue:()=>window.endingVisited=true});</script></body></html>');
+   res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+    <body><button id="launch">Probar RC</button><script type="module">
+    import {launchHouse} from "/src/lab/house.js";
+    const checkpoint={version:1,stage:"basement",picked:["key","media-flashlight"]};
+    document.querySelector("#launch").onclick=()=>window.stopHouse=launchHouse(()=>{},"ground",{
+      demo:true,checkpointStore:{checkpoint,save:()=>{}},onRescue:()=>window.endingVisited=true
+    });
+    </script></body></html>`);
   });
  }}]});
  await server.listen();
@@ -19,37 +26,62 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
  let browser,page;
  try{
   browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
-  page=await browser.newPage({viewport:{width:960,height:540},hasTouch:true});
-  page.setDefaultTimeout(15000);
+  page=await browser.newPage({viewport:{width:844,height:390},hasTouch:true});
+  page.setDefaultTimeout(60000);
   const errors=[];page.on('pageerror',error=>{errors.push(error.stack||error.message);console.error('PAGE ERROR:',error.message);});
   await page.emulateMedia({reducedMotion:'reduce'});
   await page.goto('http://127.0.0.1:'+port+'/__rc');
   await page.click('#launch');
-  await page.click('[data-act=start]');
   await page.waitForFunction(()=>window.__rescueHouse&&!window.__rescueHouse.snapshot().paused);
-  const use=id=>page.evaluate(id=>window.__rescueHouse.interactWith(id),id);
+  const use=(id,activate=true)=>page.evaluate(([id,activate])=>window.__rescueHouse.interactWith(id,activate),[id,activate]);
   const rc=()=>page.evaluate(()=>window.__rescueHouse.rc());
   const story=()=>page.evaluate(()=>window.__rescueHouse.story());
+  assert.equal((await story()).pursuer.active,true,'The same pursuer is already patrolling before the lure');
   const louis=()=>page.evaluate(()=>window.__rescueHouse.louis());
   const shot=async name=>{if(!process.env.RC_QA_NO_SHOTS)await page.screenshot({path:path.join(folder,name+'.png')});};
 
   console.log('RC browser: collectible, pink tablet, third-person camera and controls');
+  await use('cocina');await use('red-key');await use('hatch-rug');
+  await page.waitForFunction(()=>window.__rescueHouse.amenities().rug===1);
+  await use('basement-hatch');
+  await page.waitForFunction(()=>window.__rescueHouse.amenities().hatch===1);
+  await page.evaluate(()=>window.__rescueHouse.setPose({x:8.55,y:0,z:2.23,yaw:0,pitch:-.17}));
+  await page.keyboard.down('w');
+  try{await page.waitForFunction(()=>window.__rescueHouse.snapshot().position.y<-2.8);}
+  finally{await page.keyboard.up('w');}
+  await use('rc-car',false);
+  await shot('00-rc-en-el-tunel');
   await use('rc-car');
+  assert((await rc()).position.y<-2.8,'RC kit is in the basement');
   assert(await page.locator('[data-equip=rc]').isVisible(),'RC kit added to the inventory');
   await shot('01-rc-pickup');
-  await page.evaluate(()=>window.__rescueHouse.setPose({x:10.0,y:3.15,z:4.2,yaw:Math.PI/2,pitch:0}));
+  await page.evaluate(()=>window.__rescueHouse.setPose({x:8.55,y:-3.55,z:9.8,yaw:0,pitch:0}));
+  await page.emulateMedia({reducedMotion:'no-preference'});
   // Picking up and parking the kit already selects RC; pressing its slot again would toggle it off.
   await page.locator('#house-use-phone').click();
+  await page.waitForFunction(()=>{
+   const {mode,elapsed}=window.__rescueHouse.rc();
+   return mode==='deploying'&&elapsed>.54&&elapsed<.94&&window.__rescueHouse.snapshot().handVisible;
+  });
+  await shot('01b-tablet-en-las-patas');
   await page.waitForFunction(()=>window.__rescueHouse.rc().mode==='driving');
   await page.locator('#house-rc-hud').waitFor();
+  await page.keyboard.press('r');
+  assert.equal(await page.evaluate(()=>document.pointerLockElement),null);
   await shot('02-rc-driving');
   const initial=await rc();
-  await page.keyboard.down('w');await page.waitForTimeout(650);await page.keyboard.up('w');
+  await page.keyboard.down('w');
+  try{await page.waitForFunction(({x,z})=>{
+   const position=window.__rescueHouse.rc().position;
+   return Math.hypot(position.x-x,position.z-z)>.15;
+  },initial.position);}
+  finally{await page.keyboard.up('w');}
   const after=await rc();
   assert(Math.hypot(after.position.x-initial.position.x,after.position.z-initial.position.z)>.15,'Car moves through 3D world using WASD');
   await page.locator('[data-act="rc:noise"]').click();
   assert((await rc()).noise>0,'Noise button emits a timed lure');
-  await page.locator('[data-act="rc:stop"]').click();
+  await page.keyboard.press('Escape');
+  await page.emulateMedia({reducedMotion:'reduce'});
   assert.equal((await rc()).mode,'parked');
   await shot('03-rc-stopped');
 
@@ -82,15 +114,15 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   await use('rescue-louis');
   await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='untying');
   await shot('04a-louis-untying');
-  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='climb',null,{timeout:12000});
+  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='climb',null,{timeout:60000});
   await shot('04-louis-basement');
   await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='climb'&&
    window.__rescueHouse.louis().x>11.6&&window.__rescueHouse.louis().z<1.72,
-   null,{timeout:42000});
+   null,{timeout:90000});
   await shot('04b-louis-walks-around-north-end');
-  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='hide',null,{timeout:15000});
+  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='hide',null,{timeout:60000});
   await shot('04c-louis-squatting-behind-counter');
-  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='hidden',null,{timeout:15000});
+  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='hidden',null,{timeout:60000});
   const hidden=await louis();
   assert.equal(hidden.phase,'hidden');
   assert(hidden.x>11.9&&Math.abs(hidden.z-2.97)<.08,
@@ -98,12 +130,7 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   assert.equal(await story().then(x=>x.phase),'rc-setup');
   await shot('05-louis-hidden-behind-front-facing-kitchen');
 
-  console.log('RC browser: unlock hatch and arm trap');
-  await use('red-key');
-  await use('hatch-rug');
-  await page.waitForFunction(()=>window.__rescueHouse.amenities().rug>.95);
-  await use('basement-hatch');
-  await page.waitForFunction(()=>window.__rescueHouse.amenities().hatch>.92);
+  console.log('RC browser: arm opened hatch trap');
   await use('basement-hatch');
   assert.equal((await rc()).trap.armed,true,'Kitchen hatch trap is armed');
 
@@ -138,16 +165,21 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   assert.equal((await story()).phase,'escape');
   assert.equal((await rc()).trap.closed,true);
   assert.equal((await louis()).phase,'follow');
+  assert.equal(await page.evaluate(()=>window.__rescueHouse.greyCat().active),true);
   await shot('06-pursuer-trapped');
 
   console.log('RC browser: Kitty and Louis escape using the physical front door');
   await page.evaluate(()=>window.__rescueHouse.setPose({x:5.95,y:0,z:11.30,yaw:0,pitch:0}));
+  await page.waitForFunction(()=>window.__rescueHouse.greyCat().called);
   // Frame time on headless SwiftShader varies; don't release W before Kitty
   // actually crosses the exterior trigger at z>12.35.
   await page.keyboard.down('w');
   try{await page.waitForFunction(()=>['ending','safe'].includes(window.__rescueHouse.story().phase),null,{timeout:15000});}
   finally{await page.keyboard.up('w');}
+  await page.waitForFunction(()=>window.__rescueHouse.greyCat().z>14.1,null,{timeout:30000});
+  await shot('06b-gata-guia-al-jardin');
   await page.getByRole('dialog',{name:/Kitty y Louis escaparon/}).waitFor({timeout:30000});
+  assert((await louis()).z>13.8,'Louis walks into the garden during the closing shot');
   await shot('07-final-cinematic');
   assert.equal((await story()).phase,'safe');
   assert.deepEqual(errors,[],'No page errors through complete RC finale');

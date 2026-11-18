@@ -2,7 +2,11 @@ const ids=['door-open','door-close','closet-close','unlock','trying-door','notif
 const emoteURLs=import.meta.glob('./audio/emote-*.{mp3,ogg,wav}',{eager:true,query:'?url',import:'default'});
 export const SAMPLE_URLS=Object.fromEntries([
  ...Object.entries(emoteURLs).map(([path,url])=>[path.split('/').at(-1).replace(/\.[^.]+$/,''),url]),
- ...ids.map(id=>[id,new URL(`./audio/${id}.wav`,import.meta.url).href])
+ ...ids.map(id=>[id,new URL(`./audio/${id}.wav`,import.meta.url).href]),
+ ['cat',new URL('./audio/preview-cat.wav',import.meta.url).href],
+ ['hatch-close',new URL('./audio/preview-hatch-close.wav',import.meta.url).href],
+ ['power-cut',new URL('./audio/preview-power-cut.wav',import.meta.url).href],
+ ['rc-motor',new URL('./audio/preview-rc-motor.wav',import.meta.url).href]
 ]);
 export class RecordedAudio{
  constructor(ctx,effects,music,ambient=music){this.ctx=ctx;this.effects=effects;this.music=music;this.ambient=ambient;this.buffers=new Map();this.voices=new Set();this.loops=new Map();this.offsets={};this.indices={};this.abort=new AbortController();this.dead=false;this.mood='ambient';this.played=0;this.errors=[];}

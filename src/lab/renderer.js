@@ -16,7 +16,7 @@ import {VERTEX_SHADER as VS,FRAGMENT_SHADER as FS} from './material-shaders.js';
 import {MATERIAL,lineBlocked} from './world.js';
 import {materialPixels,materialStyle,surfaceFrame,ATLAS_SIZE,TILE_SIZE,GUTTER,INNER,ATLAS_SIZE_MED,TILE_SIZE_MED,GUTTER_MED,INNER_MED} from './materials.js';
 import {HouseShadows,castsShadow,nearbyLights,FLASH_REACH,FLASH_SPREAD,LAMP_REACH,VISIBLE_LAMPS,NIGHT_SKY} from './lighting.js';
-import {circuitPowered} from './house-lights.js';
+import {circuitPowered,emergencyLight} from './house-lights.js';
 export {pickupGeometry} from './pickup-models.js';
 function shader(gl,kind,source){const s=gl.createShader(kind);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){const msg=gl.getShaderInfoLog(s);gl.deleteShader(s);throw Error('Shader: '+msg);}return s;}
 function program(gl,low=false){const source=low?FS.replace('uniform float uFlash,uOcclude;','uniform float uFlash; const float uOcclude=0.0;'):FS;const p=gl.createProgram(),v=shader(gl,gl.VERTEX_SHADER,VS),f=shader(gl,gl.FRAGMENT_SHADER,source);gl.attachShader(p,v);gl.attachShader(p,f);gl.linkProgram(p);gl.deleteShader(v);gl.deleteShader(f);if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p)||'Shader linkage');return p;}
@@ -332,16 +332,20 @@ export function geometry(boxes){
  }
  return {vertices:new Float32Array(vertices),indices:new Uint16Array(indices),groups,ranges};
 }
-function uploadShadowIndices(gl,buffer,mesh,flags){
+function filteredIndices(mesh,flags){
  const indices=new Uint16Array(mesh.indices.length);let count=0;
  for(let i=0;i<flags.length;i++){
   if(!flags[i])continue;
   const {indexStart,indexEnd}=mesh.ranges[i],slice=mesh.indices.subarray(indexStart,indexEnd);
   indices.set(slice,count);count+=slice.length;
  }
+ return indices.subarray(0,count);
+}
+function uploadShadowIndices(gl,buffer,mesh,flags){
+ const indices=filteredIndices(mesh,flags);
  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,buffer);
- gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices.subarray(0,count),gl.STATIC_DRAW);
- return count;
+ gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
+ return indices.length;
 }
 export class HouseRenderer {
  constructor(canvas,quality='medium'){
@@ -385,7 +389,8 @@ export class HouseRenderer {
   // Avoid fetching the face atlas in unrelated 3D scenes and editor previews.
   // The only retained atlas is Photo-A; no source swapping or duplicate GPU texture.
   if(this.dynamicBoxes.some(box=>box.shape==='lois-face'&&box.faceTexture!==false))this.loisFaceTexture.enable();
-  const dynamic=geometry(this.dynamicBoxes);this.dynamicCount=dynamic.indices.length;
+  const dynamic=geometry(this.dynamicBoxes);this.dynamicMesh=dynamic;this.dynamicCount=dynamic.indices.length;
+  this.dynamicVisible=this.dynamicBoxes.map(()=>true);
   this.dynamicTemplate=dynamic.vertices;this.dynamicVertices=new Float32Array(dynamic.vertices);this.dynamicRanges=dynamic.ranges;
   this.dynamicOrigins=this.dynamicBoxes.map(b=>[b.x,b.y,b.z,b.yaw||0,b.roll||0,b.pitch||0]);this.dynamicPositions=new Float32Array(this.dynamicBoxes.length*6);this.dynamicPositions.fill(Infinity);
   this.dynamicRigBinds=this.dynamicBoxes.map(b=>b.rigBone&&b.source?[b.source.x,b.source.y,b.source.z]:null);
@@ -404,12 +409,30 @@ export class HouseRenderer {
   gl.bindBuffer(gl.ARRAY_BUFFER,this.vbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.ibo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
   this.bind(this.vbo,this.ibo);
-  this.prepareMirror(boxes);
+  this.prepareMirror(boxes,dynamic.indices);
  }
- prepareMirror(boxes){
+ updateVisibility(){
+  // Pickups and the hatch lock already have vertex data. Remove only their
+  // indices, so the walls, rig and reflected scene keep their GPU buffers.
+  const visible=this.dynamicBoxes.map(box=>!box.hiddenGeometry&&!box.source?.taken);
+  if(visible.every((value,i)=>value===this.dynamicVisible[i]))return;
+  const gl=this.gl,indices=filteredIndices(this.dynamicMesh,visible);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.dynamicIbo);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.mirrorBuffers[7]);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
+  this.mirrorMeshes[3].indices=indices;
+  this.dynamicCount=indices.length;
+  if(this.dynamicCasters.some((caster,i)=>caster&&visible[i]!==this.dynamicVisible[i])){
+   this.shadowMeshes[1].count=uploadShadowIndices(gl,this.shadowMeshes[1].indices,this.dynamicMesh,this.dynamicCasters.map((caster,i)=>caster&&visible[i]));
+   this.lightPose='';this.dirtyLampShadows=new Set(this.fixtures);
+  }
+  this.dynamicVisible=visible;
+ }
+ prepareMirror(boxes,dynamicIndices){
   const gl=this.gl;
   this.mirrorBoxes=boxes;this.mirrorEquipment='flashlight';
-  this.mirrorMeshes=[geometry([{...BATH_MIRROR,x:BATH_MIRROR.x-.0005}]),geometry(boxes.filter(b=>!b.dynamic&&!b.id.includes('mirror'))),geometry(kittyMirrorPieces()),{vertices:new Float32Array(this.dynamicVertices.length),indices:geometry(this.dynamicBoxes).indices}];
+  this.mirrorMeshes=[geometry([{...BATH_MIRROR,x:BATH_MIRROR.x-.0005}]),geometry(boxes.filter(b=>!b.dynamic&&!b.id.includes('mirror'))),geometry(kittyMirrorPieces()),{vertices:new Float32Array(this.dynamicVertices.length),indices:dynamicIndices}];
   reflectMesh(this.mirrorMeshes[1].vertices);
   this.kittyVertices=new Float32Array(this.mirrorMeshes[2].vertices.length);this.mirrorPose=null;this.mirrorUploads=0;this.characterBinding=createRigBinding(this.mirrorMeshes[2].groups);
   this.mirrorMeshes.forEach((mesh,i)=>{gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[i*2]);gl.bufferData(gl.ARRAY_BUFFER,mesh.vertices,i===2?gl.DYNAMIC_DRAW:gl.STATIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.mirrorBuffers[i*2+1]);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,mesh.indices,gl.STATIC_DRAW);});
@@ -470,6 +493,7 @@ export class HouseRenderer {
   };
   const bobAmp=reduced?0:0.012,swayAmp=reduced?0:0.14;
   for(let i=0;i<this.dynamicBoxes.length;i++){
+   if(!this.dynamicVisible[i])continue;
    const box=this.dynamicBoxes[i],source=box.source;
    // The PS2 option-B Lois uses a parented rigid rig. The legacy fallback
    // retains the original louisPartPose path below, unchanged.
@@ -521,7 +545,7 @@ export class HouseRenderer {
     box.y=this.dynamicOrigins[i][1]+(reduced||motion.feetY>-.3?0:Math.sin(time*2.3)*.010);
    }
    const at=i*6,bx=box.x,by=box.y,bz=box.z,byaw=box.yaw||0,roll=box.roll||0,pitch=box.pitch||0;
-   const {start,end}=this.dynamicRanges[i],glow=circuitPowered(box.fixture?.circuit)||box.power?.on?32:0;
+   const {start,end}=this.dynamicRanges[i],glow=circuitPowered(box.fixture?.circuit)||box.power?.on||box.fixture&&emergencyLight(box.fixture)?32:0;
    const moved=Math.abs(eyeScale-(this.dynamicEyeScale?.[i]??1))>.00001||Math.fround(bx)!==this.dynamicPositions[at]||Math.fround(by)!==this.dynamicPositions[at+1]||Math.fround(bz)!==this.dynamicPositions[at+2]||Math.fround(byaw)!==this.dynamicPositions[at+3]||Math.fround(roll)!==this.dynamicPositions[at+4]||Math.fround(pitch)!==this.dynamicPositions[at+5];
    if(!moved&&this.dynamicVertices[start+12]===this.dynamicTemplate[start+12]+glow)continue;
    this.dynamicPositions.set([bx,by,bz,byaw,roll,pitch],at);
@@ -556,7 +580,10 @@ export class HouseRenderer {
  updateShadows(camera,flash,light,basis){
   const lamps=nearbyLights(this.fixtures,camera);
   this.lampUniforms.fill(0);
-  lamps.forEach(({x,y,z,tile,strength=1},i)=>this.lampUniforms.set([x,y,z,tile+(strength===1?0:strength)],i*4));
+  lamps.forEach((lamp,i)=>{
+   const {x,y,z,tile,strength=1}=lamp,level=emergencyLight(lamp)?.23:strength;
+   this.lampUniforms.set([x,y,z,tile+(level===1?0:level)],i*4);
+  });
   if(!this.shadows.available)return;
   const pose=flash?[camera.x,camera.y,camera.z,camera.yaw,camera.pitch].join(','):'';
   const torchChanged=flash&&pose!==this.lightPose,dirty=lamps.filter(lamp=>this.dirtyLampShadows.has(lamp));
@@ -684,5 +711,17 @@ export class HouseRenderer {
   if(motion.introHands)this.drawClimbingHands(motion.introHands);
   if(showHand)this.drawFirstPerson(camera,right,up,forward,time,flash,motion);
  }
- destroy(){const gl=this.gl;this.loisFaceTexture.destroy();this.disposeArtwork();if(this.pursuerVbo)gl.deleteBuffer(this.pursuerVbo);if(this.pursuerIbo)gl.deleteBuffer(this.pursuerIbo);for(const b of this.mirrorBuffers)gl.deleteBuffer(b);gl.deleteTexture(this.texture);gl.deleteTexture(this.tvTexture);this.shadows.destroy();for(const mesh of this.shadowMeshes)gl.deleteBuffer(mesh.indices);for(const texture of this.materialTextures)gl.deleteTexture(texture);gl.deleteBuffer(this.vbo);gl.deleteBuffer(this.ibo);gl.deleteBuffer(this.dynamicVbo);gl.deleteBuffer(this.dynamicIbo);gl.deleteBuffer(this.handVbo);gl.deleteBuffer(this.handIbo);for(const p of Object.values(this.programs))gl.deleteProgram(p);this.canvas.width=1;this.canvas.height=1;}
+ destroy({keepCanvas=false}={}){
+  if(this.destroyed)return;
+  this.destroyed=true;
+  const gl=this.gl;
+  this.loisFaceTexture.destroy();this.disposeArtwork();this.shadows.destroy();
+  for(const buffer of [...this.mirrorBuffers,...this.shadowMeshes.map(mesh=>mesh.indices),
+   this.vbo,this.ibo,this.dynamicVbo,this.dynamicIbo,this.handVbo,this.handIbo,this.pursuerVbo,this.pursuerIbo]){
+   if(buffer)gl.deleteBuffer(buffer);
+  }
+  for(const texture of [this.texture,this.tvTexture,...this.materialTextures])gl.deleteTexture(texture);
+  for(const program of Object.values(this.programs))gl.deleteProgram(program);
+  if(!keepCanvas){this.canvas.width=1;this.canvas.height=1;}
+ }
 }

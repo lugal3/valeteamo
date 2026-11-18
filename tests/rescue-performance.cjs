@@ -62,7 +62,7 @@ const blink=P.storyActorIdle(P.ACTING_LIMITS.blinkPeriodMs-75);
 assert.equal(blink.frame,5,'Louis periodically blinks when standing still');
 assert.deepEqual({...P.storyActorIdle(1200,true)},{frame:0,lean:0,breath:0},
  'reduce-motion NPC breathing and flutter are disabled');
-const scene=fs.readFileSync('src/iso-game.ts','utf8');
+const scene=fs.readFileSync('src/iso-game.ts','utf8').replace(/\r\n/g,'\n');
 for(const part of ['this.updateStoryPerformance(dt)','kidnappingReaction(frame.phase,prior)',
  'this.showStoryBubble(\'luis\',\'farewell\')',
  'storyActorIdle(this.clock,this.reducedMotion)','this.storyDramaOffset=smoothCinematicFocus',

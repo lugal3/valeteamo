@@ -92,6 +92,14 @@ export function pursuerPose(actor,reduced=false){
  const hurry=['chase','rc-chase'].includes(actor.mode)?amount:0;
  const joints={hips:{y:hips},chest:{py:1.07,x:sway,y:hips,pitch:.06+hurry*.15,yaw:-Math.sin(step)*.11*amount,roll:sway*.8},
   head:{py:1.52,x:sway,y:hips-.005,z:.033+hurry*.065,yaw:reduced?0:Math.sin((actor.age??0)*(hurry?3.7:2.1))*(hurry?.065:.17),pitch:-.02-hurry*.07}};
+ const settled=1-amount;
+ if(actor.mode==='patrol-rest'){
+  const breath=reduced?0:Math.sin(actor.age*2.2);
+  joints.chest.pitch+=settled*(.07+breath*.016);
+  joints.head.pitch+=settled*(.11+breath*.012);
+ }else if(actor.mode==='investigate'&&!reduced){
+  joints.head.yaw+=settled*Math.sin(actor.age*2.8)*.21;
+ }
  for(const {side,cycle,foot} of feet){
   const dy=HIP+hips-ANKLE-foot.lift;
   const thigh=Math.atan2(foot.z,dy)+Math.acos(clamp(Math.hypot(foot.z,dy)/(2*SEGMENT),0,1));

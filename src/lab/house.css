@@ -5,6 +5,8 @@
 #lab3d:has(.house-piano-dialog) :is(.lab-cross,.lab-joystick,.lab-buttons,.house-hotbar){visibility:hidden}
 #lab3d .house-piano-dialog .lab-paper-actions{margin-top:8px}
 #lab3d .piano-score{margin:0 0 7px;text-align:center;font:600 13px system-ui}
+#lab3d .piano-score span{display:inline-block;padding:3px 6px;border-radius:4px}
+#lab3d .piano-score span[aria-current=step]{background:#ffe6ad;color:#39262d}
 #lab3d .piano-keys{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:3px}
 #lab3d .piano-keys button{min-height:46px;padding:3px;border:0;border-radius:2px 2px 5px 5px;background:#f1dfbf;color:#312321;font-size:11px;box-shadow:inset 0 -4px #bfa786}
 #lab3d .piano-keys button.pressed{transform:translateY(3px);background:#e0c294;box-shadow:inset 0 -1px #bfa786}
@@ -24,8 +26,8 @@
 #lab3d .lab-buttons button[hidden]{display:none!important}
 #lab3d button{transition:transform .09s ease-out,box-shadow .15s ease-out,background-color .15s ease-out}
 #lab3d button:active{transform:scale(.92)}
-#lab3d #lab-interact:not([hidden]){animation:lab-pulse-interact 1.6s ease-in-out infinite}
-@keyframes lab-pulse-interact{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,233,181,.45)}50%{transform:scale(1.05);box-shadow:0 0 14px 4px rgba(255,233,181,.25)}}
+#lab3d #lab-interact{transition:background-color .15s ease-out;touch-action:manipulation}
+#lab3d #lab-interact:active{transform:none}
 
 #lab3d .lab-cross{transition:transform .14s ease-out,border-color .14s ease-out,background-color .14s ease-out,box-shadow .14s ease-out}
 #lab3d .lab-cross.lab-target{border-color:#ffe9b5;background:#ffe9b533;box-shadow:0 0 14px #ffdfa988;transform:translate(-50%,-50%) scale(1.22)}
@@ -146,7 +148,7 @@
 @media(max-height:420px){#lab3d .phone-shell{border-width:5px;border-radius:28px}#lab3d .hud-editor{padding:11px}#lab3d .hud-editor label{margin:6px 0}}
 
 /* One quiet objective and one event channel, in normal flow rather than overlaid. */
-#lab3d{--house-safe-left:env(safe-area-inset-left,0px);--house-safe-right:env(safe-area-inset-right,0px);--house-safe-top:env(safe-area-inset-top,0px)}
+#lab3d{--house-safe-left:env(safe-area-inset-left,0px);--house-safe-right:env(safe-area-inset-right,0px);--house-safe-top:env(safe-area-inset-top,0px);--house-safe-bottom:env(safe-area-inset-bottom,0px)}
 #lab3d .house-messages{position:absolute;z-index:24;display:flex;flex-direction:column;gap:5px;align-items:center;pointer-events:none;color:#f5e8df;visibility:visible}
 #lab3d .house-messages>.lab-objective,#lab3d .house-messages>.lab-toast,#lab3d .house-messages>.house-danger,#lab3d .house-messages>.phone-notice{position:static;inset:auto;transform:none;width:fit-content;min-width:0;max-width:100%;margin:0;box-shadow:none;backdrop-filter:none;border-radius:6px;border:0;text-align:left;font:500 11px/1.4 system-ui;letter-spacing:.01em;overflow-wrap:anywhere}
 #lab3d .house-messages>.lab-objective{padding:3px 8px;background:#1c18255c;color:#e9dce1;border-left:1px solid #edd6de60;text-shadow:0 1px 3px #0c0a12}
@@ -236,13 +238,44 @@
 #lab3d.house-rc-driving .house-hotbar,#lab3d.house-rc-driving .lab-buttons,#lab3d.house-rc-driving .lab-look,#lab3d.house-rc-driving .house-charge,#lab3d.house-rc-driving .house-stamina{visibility:hidden;pointer-events:none}
 #lab3d.house-rc-driving .lab-joystick{opacity:1;z-index:28}
 #lab3d.house-rc-driving .lab-focus{visibility:hidden}
+#lab3d.house-rc-deploying :is(.house-hotbar,.lab-buttons,.lab-look,.lab-joystick,.lab-focus,#house-messages,#house-charge,#house-stamina){visibility:hidden;pointer-events:none}
+#lab3d.house-rc-deploying .house-rc-caption{top:max(14px,env(safe-area-inset-top));bottom:auto}
+#lab3d.house-rc-driving #house-messages{visibility:hidden}
 @media(max-height:390px){
  #lab3d .house-rc-display{padding:3px 8px;width:min(360px,55vw);gap:1px}
  #lab3d .house-rc-display strong{font-size:12px}
  #lab3d .house-rc-display span{font-size:9px}
- #lab3d .house-rc-actions button{min-height:40px;padding:3px;font-size:10px}
+ #lab3d .house-rc-actions button{min-height:44px;padding:3px;font-size:11px}
  #lab3d .house-rc-actions{grid-template-columns:repeat(2,minmax(76px,102px));gap:4px}
 }
+
+#lab3d .lab-top{padding-left:max(10px,var(--house-safe-left));padding-right:max(10px,var(--house-safe-right))}
+#lab3d .lab-settings-note summary{cursor:pointer}
+#lab3d .lab-settings-note p{margin:7px 0;line-height:1.45}
+#lab3d .house-mouse-status{position:absolute;z-index:11;top:max(8px,var(--house-safe-top));left:max(12px,var(--house-safe-left));padding:5px 8px;border-radius:6px;background:#241a2beb;color:#fff0fa;font:600 11px/1.3 system-ui;pointer-events:none}
+#lab3d.house-mouse-locked .lab-top{visibility:hidden}
+#lab3d.house-mouse-locked #lab-interact{visibility:hidden;pointer-events:none}
+#lab3d.house-desktop .lab-look{left:0;cursor:grab}
+#lab3d.house-desktop .lab-look:active{cursor:grabbing}
+#lab3d.house-desktop .lab-stick-ring{width:80px;height:80px;opacity:.74}
+#lab3d.house-desktop #lab-interact{position:fixed;top:57%;left:50%;translate:-50% 0;width:max-content;max-width:45vw;min-height:34px;padding:5px 12px}
+#lab3d #lab-interact small{font:650 12px/1.25 system-ui}
+#lab3d #lab-interact kbd{display:none}
+#lab3d.house-desktop #lab-interact{display:flex;align-items:center;gap:8px}
+#lab3d.house-desktop #lab-interact kbd{display:block;border:1px solid #fbe1ed8c;border-radius:4px;padding:1px 4px;font:600 11px system-ui}
+#lab3d .house-rc-display{width:min(220px,48vw);padding:5px 10px;gap:2px;border-width:1px}
+#lab3d .house-rc-display strong{font-size:12px;letter-spacing:.04em}
+#lab3d .house-rc-actions button{min-height:44px;border-width:1px}
+#lab3d:not(.house-desktop) .house-rc-hud :is(kbd,.house-rc-keys){display:none}
+#lab3d .house-rc-actions kbd{margin-left:3px;font:inherit;color:#ffdded}
+#lab3d .house-rc-actions button[data-act="rc:stop"]{grid-column:2}
+#lab3d.house-rc-driving.house-desktop .lab-joystick{visibility:hidden;pointer-events:none}
+#lab3d.house-motion-reduced :is(.lab-cross,.lab-toast,.lab-focus,button){animation:none!important;transition:none!important}
+#lab3d.house-motion-reduced.house-arrival::after{display:none}
+#lab3d[data-hud-message=sound] .house-messages>.lab-toast{color:#ecddea;font-style:italic}
+#lab3d .house-hotbar [data-equip="red-key"] svg{color:#ff9ba8}
+#lab3d .house-hotbar [data-equip="key"] svg{color:#ffe3ae}
+#lab3d:has(.lab-camera-settings[open]) .house-rc-hud{visibility:hidden;pointer-events:none}
 
 /* CSS display:flex overrides the UA [hidden] rule. Without this, the
    invisible emotes panel intercepts desktop clicks above the 3D canvas. */

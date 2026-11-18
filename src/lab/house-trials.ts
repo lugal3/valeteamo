@@ -8,6 +8,7 @@ export type HouseTrial={
  events?:'arrival'|'evaded'|'wake'|'car';
  crouched?:true;
  note?:true;
+ score?:true;
  circuit?:string;
  battery?:number;
 };
@@ -21,9 +22,9 @@ export const HOUSE_TRIALS={
  },
  drawer:{
   title:'Cajón y pistas',
-  description:'En el estudio, con la pista del pasillo ya leída. Abre el cajón del escritorio y recoge la llave con lazo.',
+  description:'En el estudio. Abre el cajón del escritorio y recoge la llave con lazo sin leer la nota del pasillo.',
   objective:'Abre el cajón del escritorio',
-  pose:{x:2.03,floor:0,z:3.25,yaw:.72,pitch:-.80},puzzleEntry:'drawer'
+  pose:{x:2.03,floor:0,z:3.25,yaw:.72,pitch:-.80}
  },
  safe:{
   title:'Nota y caja fuerte',
@@ -81,9 +82,9 @@ export const HOUSE_TRIALS={
  },
  piano:{
   title:'Piano del descansillo',
-  description:'En la planta alta, frente al piano. Siéntate y toca la partitura con las teclas del juego o con A, S, D, F, G, H, J y K.',
+  description:'Kitty ya recogió la partitura. Acércate al piano, siéntate y toca con las teclas del juego o con A, S, D, F, G, H, J y K.',
   objective:'Siéntate al piano y toca la partitura',
-  pose:{x:11.55,floor:1,z:3.99,yaw:Math.PI/2,pitch:-.34},circuit:'escalera'
+  pose:{x:6.9,floor:1,z:10.4,yaw:-Math.PI/2,pitch:-.33},circuit:'distribuidor',score:true
  },
  basement:{
   title:'Trampilla y rescate',

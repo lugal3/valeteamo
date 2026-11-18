@@ -4,10 +4,57 @@ module.exports=async()=>{
  const world=createHouse(),p=new Pursuer(world);setDoor(world.objects.find(o=>o.id==='entrada'),true);p.start();let highest=0;const hidden={x:2.2,y:3.15,z:3.8,hidden:true};
  for(let i=0;i<700;i++){updateFurniture(world.objects,.05,hidden);p.update(.05,hidden,d=>{if(!d.motion)animateFurniture(d,true,{player:hidden});});highest=Math.max(highest,p.y);assert(!blocked(world.boxes,p.x,p.y,p.z,.15,1.7),'NPC cannot cross walls');if(p.visited>=3)break;}
  assert(highest>3,'NPC actually climbs stairs');assert(p.visited>=3,'Search reaches the bedroom');assert(!p.caught,'Unseen hiding is safe');
- p.reset();p.mode='search';Object.assign(p,{x:6,y:3.15,z:2.8,yaw:-Math.PI/2});const visible={x:5.4,y:3.15,z:2.8,hidden:false};assert(p.canSee(visible));assert(p.update(.05,visible).includes('caught'));
+ p.reset();p.mode='search';Object.assign(p,{x:6,y:3.15,z:2.8,yaw:-Math.PI/2});const visible={x:5.4,y:3.15,z:2.8,hidden:false};assert(p.canSee(visible));
+ assert(!p.update(.05,visible).includes('caught'),'There is time to react even at close range');
+ const sightCues=[];
+ for(let i=0;i<60&&!p.caught;i++)sightCues.push(...p.update(.05,visible));
+ assert(sightCues.includes('investigate')&&sightCues.includes('spotted')&&sightCues.includes('caught'),sightCues.join(', '));
  p.reset();p.mode='search';Object.assign(p,{x:6,y:3.15,z:2.8,yaw:-Math.PI/2});assert(!p.canSee({...visible,x:3,z:4.3}),'Walls occlude perception');
- p.update(.1,{...visible,x:4.8,entering:true,hideId:'wardrobe'});assert.equal(p.witnessed,'wardrobe');assert(p.update(.1,{...visible,hidden:true,hideId:'wardrobe'}).includes('caught'),'Observed hiding is not invisibility');
+ p.update(.3,{...visible,entering:true,hideId:'wardrobe'});assert.equal(p.witnessed,'wardrobe');
+ for(let i=0;i<30&&!p.caught;i++)p.update(.05,{...visible,hidden:true,hideId:'wardrobe'});
+ assert(p.caught,'Observed hiding remains detectable at close range');
  p.reset();assert.equal(p.witnessed,null);assert.equal(p.caught,false);
+
+ Object.assign(p,{x:6,y:3.15,z:2.8,yaw:-Math.PI/2});
+ p.mode='investigate';p.modeTime=3;p.awareness=.99;
+ assert(p.update(.05,visible).includes('spotted'));
+ for(let i=0;i<45;i++)p.update(.05,hidden);
+ assert.equal(p.mode,'cooldown','Breaking line of sight ends the chase promptly');
+ assert(!p.caught);
+ const before=performance.now(),modes=new Set();let plans=0;
+ const plan=p.plan.bind(p);p.plan=(...args)=>{plans++;return plan(...args);};
+ p.settleUpstairs();const startingVisits=p.visited;
+ for(let i=0;i<4800;i++){
+  updateFurniture(world.objects,.05,hidden);
+  p.update(.05,hidden,d=>{if(!d.motion&&!d.locked)animateFurniture(d,true,{player:hidden});});
+  modes.add(p.mode);
+  assert(p.active&&!blocked(world.boxes,p.x,p.y,p.z,.15,1.7),'The pursuer stays in the house and walks through legal positions');
+ }
+ assert(modes.has('patrol-rest')&&modes.has('search'));assert(p.visited-startingVisits>=8,'The patrol keeps making progress');
+ const saved=p.checkpoint(),restored=new Pursuer(world);
+ assert(restored.restorePatrol(saved,true));assert.equal(restored.mode,'cooldown');assert.equal(restored.x,saved.x);assert.equal(restored.route,saved.route);
+ assert(!restored.restorePatrol({...saved,y:99},true));
+ console.log('Patrol QA: 240 simulated seconds, '+(p.visited-startingVisits)+' stops, '+plans+' route plans, '+Math.round(performance.now()-before)+' ms wall time');
+
+ const {circuitPowered,emergencyLight,housePowered,toggleHousePower,updateBlackout}=await import('../src/lab/house-lights.js');
+ const {power,circuits,fixtures,meter}=world.lights,entryLight=circuits.find(c=>c.id==='recibidor');
+ const outageTimes=[],durations=[];let start=0,randomCalls=0,warnings=0;
+ const random=()=>[.2,.63,.37,.75,.8,.55,.22][randomCalls++%7];
+ for(let i=0;i<1800;i++){
+  const now=i*.1,cue=updateBlackout(power,.1,true,random);
+  if(cue==='warning')warnings++;
+  if(cue==='outage'){
+   outageTimes.push(now);start=now;assert(!housePowered(power)&&!circuitPowered(entryLight));
+   assert(fixtures.filter(emergencyLight).length===2,'The stair remains visible');
+  }
+  if(cue==='restored'){durations.push(now-start);assert(circuitPowered(entryLight));}
+ }
+ assert(outageTimes.length>=3&&warnings>=outageTimes.length);
+ assert(durations.every(seconds=>seconds>=3&&seconds<5.2));
+ assert(new Set(durations.map(seconds=>seconds.toFixed(1))).size>=2);
+ toggleHousePower(meter);updateBlackout(power,.1,false);assert(!housePowered(power),'A blackout must never undo the player’s main switch setting');
+ toggleHousePower(meter);
+ console.log('Blackout QA: '+durations.map(seconds=>seconds.toFixed(1)).join(', ')+' s, automatic recovery and two emergency stair lights');
  const s=new HouseEvents({pursuit:true});assert.equal(s.observe({key:true,symbol:false}),'message');s.read();s.advance(1,false);assert.equal(s.observe({key:true,symbol:false,door:true}),'arrival');s.advance(4,false);assert.equal(s.phase,'hide');s.advance(10,true);assert.equal(s.phase,'hunt');s.advance(30,true,{clear:true,visited:0});assert.equal(s.phase,'hunt','No completion before NPC visits upstairs');s.advance(.1,true,{clear:true,visited:2});assert.equal(s.phase,'evaded');assert(s.complete());assert.equal(s.phase,'safe');assert.equal(s.messages.length,3);
  s.retry();s.advance(4,false);s.advance(10,false);s.advance(.1,false,{caught:true});assert.equal(s.phase,'failed');assert(!s.complete());
  const manifest=JSON.parse(fs.readFileSync('src/lab/audio/manifest.json'));assert.equal(manifest.length,16);let total=0;

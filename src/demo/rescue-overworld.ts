@@ -16,7 +16,7 @@ type MapDefinition={id:RescueMapId;label:string;time:string;minU:number;maxU:num
 export const RESCUE_SCENES:Record<RescueMapId,MapDefinition>={
  morning_garden:{id:'morning_garden',label:'Río de los pétalos',time:'Mañana luminosa',
   minU:0,maxU:22,spawn:{u:1.3,v:4.5},
-  exit:{u:20.7,v:4.5,to:'afternoon_meeting',unlock:'intro'}},
+  exit:{u:20.7,v:4.5,to:'afternoon_meeting',unlock:'cat-fed'}},
  afternoon_meeting:{id:'afternoon_meeting',label:'Jardín de cerezos',time:'Tarde dorada',
   minU:23,maxU:45,spawn:{u:23.75,v:4.45},
   exit:{u:43.9,v:4.5,to:'dusk_search',unlock:'ribbon'}},
@@ -30,14 +30,15 @@ export const RESCUE_ROUTE={maxU:82,bridgeStart:10,bridgeEnd:16,
  gardenStart:23,forestStart:46,neighborhoodStart:65,houseStart:72} as const;
 export const RESCUE_MAP_ORDER:RescueMapId[]=['morning_garden','afternoon_meeting','dusk_search','night_neighborhood'];
 export const STORY_POSITIONS={
- intro:{u:1.3,v:4.5},defend:{u:24.2,v:4.5},
+ intro:{u:5.4,v:4.65},'feed-cat':{u:17.6,v:5.05},'cat-fed':{u:20.7,v:4.5},
+ 'meet-couple':{u:28,v:4.45},defend:{u:28.7,v:4.5},
  'talk-louis':{u:29.4,v:4.1},'talk-luis':{u:34.6,v:4.4},
  'walk-together':{u:38.4,v:4.5},disappearance:{u:40.8,v:4.5},
  ribbon:{u:48,v:4.9},petals:{u:53,v:3.8},wheel:{u:59.5,v:4.9},
  door:NIGHT_HOUSE.door,window:NIGHT_HOUSE.window,house:NIGHT_HOUSE.window
 } satisfies Record<string,IsoPoint>;
 export function mapForStage(stage:string):RescueMapId{
- if(['defend','talk-louis','talk-luis','walk-together','disappearance'].includes(stage))return 'afternoon_meeting';
+ if(['meet-couple','defend','talk-louis','talk-luis','walk-together','disappearance'].includes(stage))return 'afternoon_meeting';
  if(['ribbon','petals','wheel'].includes(stage))return 'dusk_search';
  if(['door','window','house'].includes(stage))return 'night_neighborhood';
  return 'morning_garden';
@@ -48,13 +49,14 @@ export function sceneForPosition(u:number):RescueMapId{
 export function exitReady(map:RescueMapId,stage:string):boolean{
  const goal=RESCUE_SCENES[map].exit;
  if(!goal)return false;
- return map==='morning_garden'?stage==='intro':
+ return map==='morning_garden'?stage===goal.unlock:
   map==='afternoon_meeting'?['ribbon','petals','wheel','door','window','house'].includes(stage):
   ['door','window','house'].includes(stage);
 }
 export function storyArrivalPoint(stage:keyof typeof STORY_POSITIONS):IsoPoint{
- const p=STORY_POSITIONS[stage];
- return stage==='intro'?{...p}:RESCUE_SCENES[mapForStage(stage)].spawn;
+ if(stage==='feed-cat')return {u:15.8,v:4.55};
+ if(stage==='cat-fed')return {u:18.2,v:4.55};
+ return {...RESCUE_SCENES[mapForStage(stage)].spawn};
 }
 const clamp=(n:number,min:number,max:number)=>Math.max(min,Math.min(max,n));
 export function rescueArea(u:number):RouteArea{
@@ -531,7 +533,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   bench(scene,28,9.8);bench(scene,36,.2);
   sign(scene,25,1,'CEREZOS');
   // An oval plaza gives room to approach people from different directions.
-  const plaza=scene.add.graphics().setDepth(.8),p=toScreen({u:32,v:4.6});
+  const plaza=scene.add.graphics().setDepth(.8),p=toScreen({u:29.3,v:4.6});
   plaza.fillStyle(0xf7e0bb,.23).fillEllipse(p.x,p.y,230,115);
   plaza.lineStyle(4,0xd7b2a7,.34).strokeEllipse(p.x,p.y,215,102);
   for(const [u,v] of [[26.1,-.1],[29,10.1],[35.2,-.4],[39.1,9.7],[42.3,0]])
@@ -575,6 +577,14 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    color:'#ffe2c2',stroke:'#392a4b',strokeThickness:4
   }).setOrigin(.5).setDepth(vanPlace.y+17);
   const sidewalk=scene.add.graphics().setDepth(.65);
+  for(const u of [67,72,77,81]){
+   const light=toScreen({u,v:4.75});
+   sidewalk.fillStyle(0xe0aa83,.16).fillEllipse(light.x,light.y,82,20);
+   for(let i=0;i<3;i++){
+    sidewalk.fillStyle(0xffd6a2,.23-i*.05)
+     .fillRect(light.x-15+i*4,light.y-4+i*4,29-i*7,2);
+   }
+  }
   // Stone pavement and the 3D x=5.9 front-path / porch. Each paving stone is
   // placed on traversable ground so it visually teaches the actual route.
   for(let u=68;u<=81;u+=.65){

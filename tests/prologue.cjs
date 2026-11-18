@@ -9,8 +9,8 @@ const assert=require('node:assert/strict');
  assert(PROLOGUE_SAVE_KEY!== 'valeteamo-story-v1','new storyline save must not overwrite earlier chapters');
  assert.equal(PROLOGUE_START.stage,'intro');
  const sequence=[
-  ['begin','defend'],['victory','talk-louis'],['louis','talk-luis'],
-  ['luis','walk-together'],['clearing','disappearance'],['abducted','ribbon'],
+  ['churu','feed-cat'],['fed','cat-fed'],['arrived','meet-couple'],['met','defend'],
+  ['victory','talk-louis'],['louis','walk-together'],['clearing','disappearance'],['abducted','ribbon'],
   ['ribbon','petals'],['petals','wheel'],['wheel','door'],
   ['locked','window'],['enter','house']
  ];
@@ -24,7 +24,14 @@ const assert=require('node:assert/strict');
  }
  assert.equal(current.clues,3);
  assert.equal(current.completed,true,'the window is the only route to the house');
- assert.equal(parsePrologue(JSON.stringify(current)).stage,'house');
+ assert.deepEqual(parsePrologue(JSON.stringify(current)),current);
+ assert.equal(current.fedGreyCat,true);
+ assert.equal(current.metCouple,true);
+ const old=parsePrologue(JSON.stringify({version:1,stage:'talk-louis',hp:4}));
+ assert.equal(old.stage,'talk-louis','old saves keep the current checkpoint');
+ assert.equal(old.fedGreyCat,false,'the migration cannot award an unfinished new event');
+ assert.equal(advancePrologue(old,'louis').stage,'talk-luis','old saves can still finish the legacy meeting');
+ assert.equal(parsePrologue(JSON.stringify({...PROLOGUE_START,stage:'feed-cat'})).stage,'feed-cat');
  assert.equal(parsePrologue(JSON.stringify({...PROLOGUE_START,stage:'disappearance'})).stage,
   'walk-together','an interrupted kidnapping must safely replay from the approach');
  assert.equal(parsePrologue('{broken').stage,'intro');
@@ -34,14 +41,13 @@ const assert=require('node:assert/strict');
  assert.equal(hurtPrologue(PROLOGUE_START,3).hp,3);
  assert.equal(hurtPrologue(PROLOGUE_START,50).hp,0);
  assert.equal(healPrologue(hurtPrologue(PROLOGUE_START,5),3).hp,4);
- for(const key of ['intro','victory','luis','warning','abducted','ribbon','petals','wheel','locked','window']){
+ for(const key of ['couple','victory','luis','warning','abducted','ribbon','petals','wheel','locked','window']){
   assert(PROLOGUE_DIALOGUES[key].length>=1&&PROLOGUE_DIALOGUES[key].length<=2,
    key+' should have 1–2 editable, quick story placeholders');
  }
  const voices=Object.values(PROLOGUE_DIALOGUES).flat().map(v=>v.speaker);
- assert(voices.includes('Luis')&&voices.includes('Louis')&&voices.includes('Kitty'));
- assert(PROLOGUE_DIALOGUES.luis.some(line=>line.text.includes('novio de Kitty') || line.text.includes('novio')),
-  'Luis is established as the boyfriend, separate from kidnapped Louis');
+ assert(voices.includes('Luis')&&voices.includes('Vale')&&voices.includes('Louis')&&voices.includes('Kitty'));
+ assert.deepEqual(PROLOGUE_DIALOGUES.couple.map(line=>line.speaker),['Vale','Luis']);
  assert(PROLOGUE_DIALOGUES.warning.some(line=>line.speaker==='Louis'),
   'Louis must directly warn Kitty before being kidnapped');
  const fs=require('node:fs');

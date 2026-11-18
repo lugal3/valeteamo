@@ -96,7 +96,7 @@ assert(E.ECOLOGY_CAPS.wildlife<=8&&E.ECOLOGY_CAPS.flora<=18&&
  E.ECOLOGY_CAPS.particleMotes<=40,'mobile CPU/particle budget is finite');
 const render=fs.readFileSync('src/demo/rescue-ecology-render.ts','utf8');
 const world=fs.readFileSync('src/demo/rescue-overworld.ts','utf8');
-const arcade=fs.readFileSync('src/iso-game.ts','utf8');
+const arcade=fs.readFileSync('src/iso-game.ts','utf8').replace(/\r\n/g,'\n');
 for(const token of ['ecologyWildlifeStep(item.seed','ecologyFloraFrame(item.seed',
  'ecologyMicroEvent(map','ecologyAmbientCue(map','ecologySeeds(map',
  'const dt=clamp(elapsed-previousElapsed,0,70)'])
