@@ -11,6 +11,7 @@ export const MIX_CHANNELS=[
  ['doors','Puertas y armario','door-open'],['steps','Pasos y escalera','stair'],['creaks','Crujidos de la casa','floor-groan'],
  ['objects','Objetos e interacciones','light'],['alerts','Mensajes y alertas','notification'],['emotes','Música de emotes','six-seven']
 ];
+export const mixLimit=key=>key==='master'?3:MIX_CHANNELS.slice(4).some(([name])=>name===key)?2:1;
 const defaults={muted:false,master:1,ambient:.40,effects:.68,music:.34,doors:1.8,steps:1,creaks:1,objects:1,alerts:1,emotes:1};
 const effectChannel=kind=>{
  if(/^(door|closet|latch|unlock|trying|knock|keys|hatch)/.test(kind))return 'doors';
@@ -63,7 +64,7 @@ export class HouseSound {
   for(const [key,bus] of Object.entries(this.channels))bus.gain.setTargetAtTime(this.settings[key],now,.025);
   this.save();
  }
- settingValue(key,value){return key==='muted'?Boolean(value):Math.max(0,Math.min(MIX_CHANNELS.slice(4).some(([name])=>name===key)?2:1,Number(value)||0));}
+ settingValue(key,value){return key==='muted'?Boolean(value):Math.max(0,Math.min(mixLimit(key),Number(value)||0));}
  set(kind,value){this.settings[kind]=this.settingValue(kind,value);if(this.context)this.applySettings();else this.save();}
  emote(id,duration){
   this.stopEmote();
@@ -129,10 +130,13 @@ export class HouseSound {
  stopPiano(){
   this.pianoToken=(this.pianoToken||0)+1;
   if(this.pianoVoice){this.pianoVoice.stop();this.pianoVoice=null;}
+  for(const voice of this.pianoNotes||[])voice.stop();
+  this.pianoNotes?.clear();
   this.pianoClock=null;
  }
- pianoSegment(start,end,note,rate=1){
-  this.stopPiano();
+ pianoSegment(start,end,note,rate=1,sustain=false){
+  if(!sustain)this.stopPiano();
+  this.pianoNotes??=new Set();
   const context=this.context,token=this.pianoToken;
   if(!context||this.settings.muted)return;
   this.preparePiano();
@@ -146,10 +150,16 @@ export class HouseSound {
    gain.gain.setValueAtTime(.0001,now);gain.gain.linearRampToValueAtTime(.75,now+Math.min(.012,duration*.25));
    gain.gain.setValueAtTime(.75,now+duration-Math.min(.045,duration*.3));
    gain.gain.linearRampToValueAtTime(.0001,now+duration);
-   this.pianoVoice=source;
-   this.pianoClock={offset:start,startedAt:now,rate,end:start+length};
+   if(sustain){
+    this.pianoNotes.add(source);
+    this.piano(note,Math.max(0,duration-.10),.58);
+   }else{
+    this.pianoVoice=source;
+    this.pianoClock={offset:start,startedAt:now,rate,end:start+length};
+   }
    source.onended=()=>{
     if(this.pianoVoice===source)this.pianoVoice=null;
+    this.pianoNotes.delete(source);
     source.disconnect();gain.disconnect();
    };
    source.start(now,start,length);
@@ -179,17 +189,18 @@ export class HouseSound {
    note.start(at);note.stop(at+.49);
   }
  }
- piano(index){
-  const ctx=this.context;if(!ctx||this.settings.muted)return;
+ piano(index,delay=0,levelScale=1){
+  const ctx=this.context,token=this.pianoToken;if(!ctx||this.settings.muted)return;
   const frequency=261.626*2**(index/12);
   void ctx.resume().then(()=>{
-   if(this.context!==ctx||ctx.state!=='running'||this.settings.muted)return;
-   const at=ctx.currentTime;
-   for(const [multiple,level,decay] of [[1,.13,.85],[2.005,.045,.46],[3.013,.024,.22],[4.026,.013,.12]]){
+   if(this.context!==ctx||ctx.state!=='running'||this.settings.muted||token!==this.pianoToken)return;
+   const at=ctx.currentTime+delay;
+   this.pianoNotes??=new Set();
+   for(const [multiple,level,decay] of [[1,.13,1.55],[2.005,.045,.84],[3.013,.024,.47],[4.026,.013,.25]]){
     const note=ctx.createOscillator(),gain=ctx.createGain();note.frequency.value=frequency*multiple;
-    gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(level,at+.009);gain.gain.exponentialRampToValueAtTime(.0001,at+decay);
-    note.connect(gain);gain.connect(this.channels.objects);this.sequenceNodes.add(note);
-    note.onended=()=>{note.disconnect();gain.disconnect();this.sequenceNodes.delete(note);};note.start(at);note.stop(at+decay+.02);
+    gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(level*levelScale,at+(delay?.09:.009));gain.gain.exponentialRampToValueAtTime(.0001,at+decay);
+    note.connect(gain);gain.connect(this.channels.objects);this.pianoNotes.add(note);
+    note.onended=()=>{note.disconnect();gain.disconnect();this.pianoNotes.delete(note);};note.start(at);note.stop(at+decay+.02);
    }
   }).catch(()=>{});
  }
