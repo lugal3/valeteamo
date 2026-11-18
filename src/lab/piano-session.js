@@ -1,8 +1,8 @@
 import {guidePiano,posePianoCompartment,posePianoReward} from './house-additions.js';
 import {ease} from './animations/pose-tools.js';
 import {PIANO_PERFORMANCE} from './piano-performance.js';
-import {PIANO_INTRO,PIANO_INTRO_END,PIANO_SHOW_END,PIANO_REVEAL_SECONDS,PIANO_PRACTICE,PIANO_PRACTICE_END,
- PIANO_NOTES,PIANO_PAGE_SIZE,pianoWindow,pianoStaff,pianoPerformanceView} from './piano-recital.js';
+import {PIANO_INTRO,PIANO_INTRO_END,PIANO_SHOW_END,PIANO_REVEAL_SECONDS,PIANO_PRACTICE,
+ PIANO_NOTES,PIANO_PAGE_SIZE,pianoWindow,pianoStaff,pianoPerformanceView,pianoStandingView} from './piano-recital.js';
 
 const clamp=value=>Math.max(0,Math.min(1,value));
 export class PianoSession{
@@ -13,8 +13,6 @@ export class PianoSession{
   this.keys=[...dialog.querySelectorAll('[data-act^="piano:"]')];
   this.line=dialog.querySelector('.piano-time i');
   this.result=dialog.querySelector('.piano-result');
-  this.practiceButton=dialog.querySelector('[data-act="piano-practice"]');
-  this.collectButton=dialog.querySelector('[data-act="piano-collect"]');
   this.start(!object.scorePlaced?'free':object.solved?'practice':'intro');
  }
  stage(mode,label=''){
@@ -25,11 +23,8 @@ export class PianoSession{
   if(mode==='practice'&&!this.object.solved)return;
   this.sound.stopPiano();
   this.mode=mode;
-  this.completeView=null;
   this.score=mode==='practice'?PIANO_PRACTICE:PIANO_INTRO;
   this.page=-1;this.index=0;this.deadline=0;
-  this.practiceButton.hidden=true;
-  this.collectButton.hidden=true;
   this.stage(mode,mode==='free'?'Encuentra la partitura en el cajón de la sala de lectura para iniciar el reto.':
    mode==='practice'?'Práctica guiada · Toca la primera nota':'Toca la nota iluminada y sigue la línea de tiempo');
   if(mode!=='free')this.guide();
@@ -67,17 +62,14 @@ export class PianoSession{
   this.tick(now);
   if(this.expire())return;
   this.strike(note);
-  if(this.mode==='free'){this.sound.piano(note);return;}
+  this.sound.piano(note);
+  if(this.mode==='free')return;
   const [time,expected]=this.score[this.index];
   if(note!==expected){
-   const sample=PIANO_PERFORMANCE.find(([,right])=>right===note%12)?.[0];
-   if(sample!==undefined)this.sound.pianoSegment(sample,sample+.25,note,note===12?2:1,true);
-   else this.sound.piano(note);
    this.reset('Nota equivocada · vuelve a la primera nota');return;
   }
   const next=this.score[++this.index];
   if(next){
-   this.sound.pianoSegment(time,next[0],note,1,true);
    const turn=this.mode==='intro'&&this.index%PIANO_PAGE_SIZE===0;
    this.deadline=turn?0:this.now+pianoWindow(this.score,this.index);
    this.result.textContent=turn?'Primera hoja completa · Sigue con la segunda':'';
@@ -85,12 +77,11 @@ export class PianoSession{
   }
   guidePiano(this.object);
   if(this.mode==='practice'){
-   this.sound.pianoSegment(time,PIANO_PRACTICE_END,note);
    this.complete('Pieza completa');return;
   }
-  this.sound.pianoSegment(time,PIANO_SHOW_END,note);
-  this.mode='performance';this.sourceTime=time;this.performanceStart=time;
-  this.cue=PIANO_PERFORMANCE.findIndex(([at])=>at>time);
+  this.sound.pianoSegment(PIANO_INTRO_END,PIANO_SHOW_END,PIANO_INTRO_END-time);
+  this.mode='performance';this.sourceTime=time;
+  this.cue=PIANO_PERFORMANCE.findIndex(([at])=>at>=PIANO_INTRO_END);
   this.stage('lead','Kitty enlaza la melodía…');
  }
  expire(){
@@ -100,9 +91,7 @@ export class PianoSession{
  complete(label){
   this.mode='complete';
   this.stage('complete',label);
-  this.practiceButton.hidden=false;
-  this.collectButton.hidden=this.object.reward.taken;
-  (this.collectButton.hidden?this.practiceButton:this.collectButton).focus({preventScroll:true});
+  this.dialog.querySelector('[data-act="close"]').focus({preventScroll:true});
  }
  advance(now,running,reduced){
   if(!running){this.last=null;return;}
@@ -113,7 +102,7 @@ export class PianoSession{
    this.line.style.transform='scaleX('+remaining+')';
   }
   if(this.mode!=='performance')return;
-  const audioTime=this.sourceTime<PIANO_SHOW_END?this.sound.pianoTime(this.performanceStart):null;
+  const audioTime=this.sourceTime<PIANO_SHOW_END?this.sound.pianoTime(PIANO_INTRO_END):null;
   this.sourceTime=audioTime??(this.sourceTime+dt);
   const time=this.sourceTime;
   if(time<PIANO_SHOW_END){
@@ -135,8 +124,7 @@ export class PianoSession{
   if(reveal>=.66&&!this.keySound){this.keySound=true;this.sound.pianoReveal('key');}
   if(reveal<PIANO_REVEAL_SECONDS)return;
   this.object.solved=true;posePianoReward(this.object);this.reward();
-  this.completeView=pianoPerformanceView(this.object,time,true);
-  this.complete('Melodía completa · Recoge la llave maestra.');
+  return pianoStandingView(this.object);
  }
  pose(reduced){
   const {object,now}=this;
@@ -167,8 +155,12 @@ export class PianoSession{
    hands[1]={x:knob.x+.06+(1-reach+withdraw)*.26,y:knob.y+.015-withdraw*.22,z:knob.z+.03,flex:.34,roll:-.22};
   }
   const seat={...object.seat,x:object.seat.x+.15,pitch:-.28};
-  const view=automatic?pianoPerformanceView(object,this.sourceTime,reduced):this.completeView||seat;
-  return {view,hands,actor:automatic&&!reveal,hideHands:reveal&&!pulling||!!this.completeView};
+  const view=automatic?pianoPerformanceView(object,this.sourceTime,reduced):seat;
+  if(reveal&&!reduced){
+   const standing=pianoStandingView(object),blend=ease((drawerTime-PIANO_REVEAL_SECONDS+.62)/.62);
+   for(const axis of ['x','y','z','yaw','pitch'])view[axis]+=(standing[axis]-view[axis])*blend;
+  }
+  return {view,hands,actor:automatic&&!reveal,hideHands:reveal&&!pulling};
  }
  close(){
   this.sound.stopPiano();

@@ -89,7 +89,7 @@ En `src/lab/sound.js` se decide el efecto y su volumen. `atmosphere.js`, `spooky
 | Reloj | Generado | `mechanical wall clock single tick dry`; un golpe breve para cada segundo |
 | TV y mando | Estática generada y video mudo | `old CRT static short`, `remote control press`. Si se agrega contenido con audio, buscar un clip propio o autorizado. |
 | Acostarse, esconderse y salir | Generado | `mattress soft creak`, `fabric movement close`, `small bed frame creak`, `closet inside latch` |
-| Teclas del piano del descansillo | Grabación del tutorial y síntesis de respaldo | `upright piano dry chromatic single notes C4–C5`. Para cambiar el timbre, trece notas individuales del mismo piano con volumen parejo. La pista del recital requiere una grabación que siga sus tiempos. |
+| Teclas del piano del descansillo | Muestras de piano vertical y síntesis de respaldo | `upright piano dry chromatic single notes C4–C5`. El recital usa aparte la grabación del tutorial. Las notas de Sadiquecat se tomaron de sus preescuchas CC0 y se ajustaron a WAV mono, con hasta 3,5 s de cola. [Do4](https://freesound.org/people/Sadiquecat/sounds/794435/) · [Mi4](https://freesound.org/people/Sadiquecat/sounds/794459/) · [Sol4](https://freesound.org/people/Sadiquecat/sounds/794463/) · [Do5](https://freesound.org/people/Sadiquecat/sounds/794436/) |
 | Compartimento del piano | Generado | `wood secret compartment slide latch`; mano, pestillo y deslizamiento corto |
 | Caja fuerte | Generado y desbloqueo grabado | `safe keypad short neutral beep`, `safe combination error`, `safe latch bolt open`; separar error de acierto |
 | Altar y tocadiscos | Inspección con sonido genérico | `vinyl needle drop`, `vinyl locked groove crackle`. Una pista autorizada si se decide activar el tocadiscos. |

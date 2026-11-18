@@ -5,6 +5,7 @@ import {spookyFoley} from './spooky-foley.js';
 import {RecordedAudio} from './recorded-audio.js';
 import {playEmoteRhythm} from './emote-audio.js';
 const pianoReference=new URL('./audio/piano-reference.wav',import.meta.url).href;
+const PIANO_ROOTS=[0,4,7,12];
 const KEY='valeteamo-lab-sound-v1';
 export const MIX_CHANNELS=[
  ['master','Volumen maestro'],['ambient','Ambiente'],['music','Música de tensión'],['effects','Todos los efectos'],
@@ -134,41 +135,33 @@ export class HouseSound {
   this.pianoNotes?.clear();
   this.pianoClock=null;
  }
- pianoSegment(start,end,note,rate=1,sustain=false){
-  if(!sustain)this.stopPiano();
-  this.pianoNotes??=new Set();
+ pianoSegment(start,end,delay=0){
   const context=this.context,token=this.pianoToken;
   if(!context||this.settings.muted)return;
   this.preparePiano();
   void context.resume().then(()=>{
    if(this.context!==context||context.state!=='running'||this.pianoToken!==token||this.settings.muted)return;
    const buffer=this.pianoBuffer;
-   if(!buffer||start>=buffer.duration){this.piano(note);return;}
-   const source=context.createBufferSource(),gain=context.createGain(),now=context.currentTime;
-   const length=Math.min(end,buffer.duration)-start,duration=length/rate;
-   source.buffer=buffer;source.playbackRate.value=rate;source.connect(gain);gain.connect(this.channels.objects);
-   gain.gain.setValueAtTime(.0001,now);gain.gain.linearRampToValueAtTime(.75,now+Math.min(.012,duration*.25));
+   if(!buffer||start>=buffer.duration)return;
+   const source=context.createBufferSource(),gain=context.createGain(),now=context.currentTime+delay;
+   const duration=Math.min(end,buffer.duration)-start;
+   source.buffer=buffer;source.connect(gain);gain.connect(this.channels.objects);
+   gain.gain.setValueAtTime(.0001,now);gain.gain.linearRampToValueAtTime(.75,now+Math.min(.065,duration*.25));
    gain.gain.setValueAtTime(.75,now+duration-Math.min(.045,duration*.3));
    gain.gain.linearRampToValueAtTime(.0001,now+duration);
-   if(sustain){
-    this.pianoNotes.add(source);
-    this.piano(note,Math.max(0,duration-.10),.58);
-   }else{
-    this.pianoVoice=source;
-    this.pianoClock={offset:start,startedAt:now,rate,end:start+length};
-   }
+   this.pianoVoice=source;
+   this.pianoClock={offset:start,startedAt:now,end:start+duration};
    source.onended=()=>{
     if(this.pianoVoice===source)this.pianoVoice=null;
-    this.pianoNotes.delete(source);
     source.disconnect();gain.disconnect();
    };
-   source.start(now,start,length);
+   source.start(now,start,duration);
   }).catch(()=>{});
  }
  pianoTime(offset){
   const clock=this.pianoClock;
-  if(!this.pianoVoice||clock?.offset!==offset)return null;
-  return Math.min(clock.end,clock.offset+(this.context.currentTime-clock.startedAt)*clock.rate);
+  if(!this.pianoVoice||clock?.offset!==offset||this.context.currentTime<clock.startedAt)return null;
+  return Math.min(clock.end,clock.offset+this.context.currentTime-clock.startedAt);
  }
  resumePiano(){if(this.context&&!this.settings.muted)void this.context.resume().catch(()=>{});}
  pianoReveal(stage){
@@ -189,20 +182,32 @@ export class HouseSound {
    note.start(at);note.stop(at+.49);
   }
  }
- piano(index,delay=0,levelScale=1){
+ piano(index){
   const ctx=this.context,token=this.pianoToken;if(!ctx||this.settings.muted)return;
   const frequency=261.626*2**(index/12);
-  void ctx.resume().then(()=>{
+  const strike=()=>{
    if(this.context!==ctx||ctx.state!=='running'||this.settings.muted||token!==this.pianoToken)return;
-   const at=ctx.currentTime+delay;
+   const at=ctx.currentTime;
    this.pianoNotes??=new Set();
+   if(this.pianoNotes.size>=48)return;
+   const root=PIANO_ROOTS.reduce((nearest,note)=>Math.abs(note-index)<Math.abs(nearest-index)?note:nearest);
+   const sample=this.recordings?.buffers.get('upright-'+root);
+   if(sample){
+    const voice=ctx.createBufferSource(),gain=ctx.createGain();
+    voice.buffer=sample;voice.playbackRate.value=2**((index-root)/12);
+    gain.gain.value=.52;voice.connect(gain);gain.connect(this.channels.objects);
+    this.pianoNotes.add(voice);
+    voice.onended=()=>{voice.disconnect();gain.disconnect();this.pianoNotes.delete(voice);};
+    voice.start(at);return;
+   }
    for(const [multiple,level,decay] of [[1,.13,1.55],[2.005,.045,.84],[3.013,.024,.47],[4.026,.013,.25]]){
     const note=ctx.createOscillator(),gain=ctx.createGain();note.frequency.value=frequency*multiple;
-    gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(level*levelScale,at+(delay?.09:.009));gain.gain.exponentialRampToValueAtTime(.0001,at+decay);
+    gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(level,at+.009);gain.gain.exponentialRampToValueAtTime(.0001,at+decay);
     note.connect(gain);gain.connect(this.channels.objects);this.pianoNotes.add(note);
     note.onended=()=>{note.disconnect();gain.disconnect();this.pianoNotes.delete(note);};note.start(at);note.stop(at+decay+.02);
    }
-  }).catch(()=>{});
+  };
+  if(ctx.state==='running')strike();else void ctx.resume().then(strike).catch(()=>{});
  }
  // Simple location-dependent stereo and attenuation, including room/floor obstruction.
  effect(kind,origin,listener,occluded=false,{level=1}={}){

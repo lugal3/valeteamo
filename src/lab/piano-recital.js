@@ -12,7 +12,6 @@ export const PIANO_REVEAL_SECONDS=2.55;
 export const PIANO_INTRO=[[16.035,1],[16.845,6],[17.285,8],[17.735,9],[18.085,8],[18.385,6],[18.785,2],
  [19.59,11],[21.39,11],[21.89,9],[22.24,8],[22.59,9],[22.89,8],[23.24,6]];
 export const PIANO_PRACTICE=PIANO_PERFORMANCE.filter(([,right])=>right>=0).map(([time,right])=>[time,right]);
-export const PIANO_PRACTICE_END=116.49;
 const scaleSteps=[0,0,1,1,2,3,3,4,4,5,5,6,7];
 const SHARPS=new Set([1,3,6,8,10]);
 export const PIANO_PAGE_SIZE=7;
@@ -57,6 +56,10 @@ export function pianoPerformanceView(instrument,time,reduced){
 }
 function pianoAim(x,y,z,tx,ty,tz){
  return {x,y,z,yaw:Math.atan2(tx-x,tz-z),pitch:Math.atan2(ty-y,Math.hypot(tx-x,tz-z))};
+}
+export function pianoStandingView(instrument){
+ const key=instrument.reward;
+ return pianoAim(instrument.seat.x+.83,instrument.floor+1.63,key.z,key.x,key.y,key.z);
 }
 export function samplePianoPose(instrument,hands,out){
  out.fill(0);

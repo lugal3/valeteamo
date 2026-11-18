@@ -6,7 +6,8 @@ export const SAMPLE_URLS=Object.fromEntries([
  ['cat',new URL('./audio/preview-cat.wav',import.meta.url).href],
  ['hatch-close',new URL('./audio/preview-hatch-close.wav',import.meta.url).href],
  ['power-cut',new URL('./audio/preview-power-cut.wav',import.meta.url).href],
- ['rc-motor',new URL('./audio/preview-rc-motor.wav',import.meta.url).href]
+ ['rc-motor',new URL('./audio/preview-rc-motor.wav',import.meta.url).href],
+ ...[0,4,7,12].map(note=>['upright-'+note,new URL(`./audio/upright-${note}.wav`,import.meta.url).href])
 ]);
 export class RecordedAudio{
  constructor(ctx,effects,music,ambient=music){this.ctx=ctx;this.effects=effects;this.music=music;this.ambient=ambient;this.buffers=new Map();this.voices=new Set();this.loops=new Map();this.offsets={};this.indices={};this.abort=new AbortController();this.dead=false;this.mood='ambient';this.played=0;this.errors=[];}
