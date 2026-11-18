@@ -15,7 +15,7 @@ import {CAR_ARRIVAL_SECONDS,arrivalCarCamera,poseArrivalCar} from './arrival-car
 import {BED_EXIT} from './pursuer-model.js';
 import {createHouse,HEIGHT,HOUSE,blocked,groundHeight,lineBlocked,setDoor,setDrawer,poseFurniture,roomAt} from './world.js';
 import {HouseRenderer,pickupGeometry} from './renderer.js';
-import {HouseSound,MIX_CHANNELS} from './sound.js';
+import {HouseSound,MIX_CHANNELS,mixLimit} from './sound.js';
 import {applyLookDelta,followLook,readCameraSettings,writeCameraSettings,DEFAULT_CAMERA_SETTINGS,SENSITIVITY_MIN,SENSITIVITY_MAX,SENSITIVITY_STEP} from './camera-controls.js';
 import {WINDOW_SHOT_SECONDS,WINDOW_LANDING,windowIntroCamera,windowIntroState,shouldPlayWindowIntro} from './window-intro.js';
 import {navigate,smoothAxis,getStairDirection} from './navigation.js';
@@ -85,7 +85,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      <label class="lab-preference"><input data-setting="captions" type="checkbox" checked> Subtítulos de sonidos</label>
      <details class="house-mixer"><summary>Mezclador de sonido</summary>
        <label class="lab-preference"><input data-setting="mute" type="checkbox"> Silenciar la casa</label>
-       ${MIX_CHANNELS.map(([key,label,preview],i)=>`<div class="mixer-row"><label><span>${label} <output data-level="${key}"></output></span><input data-setting="${key}" type="range" min="0" max="${i<4?1:2}" step=".01" aria-label="${label}"></label><button data-act="audio:${preview||key}" aria-label="Probar ${label}">▶</button></div>`).join('')}
+       ${MIX_CHANNELS.map(([key,label,preview])=>`<div class="mixer-row"><label><span>${label} <output data-level="${key}"></output></span><input data-setting="${key}" type="range" min="0" max="${mixLimit(key)}" step=".01" aria-label="${label}"></label><button data-act="audio:${preview||key}" aria-label="Probar ${label}">▶</button></div>`).join('')}
        <button data-act="copy-mix">Copiar mezcla</button>
        <textarea class="mixer-export" aria-label="Valores de la mezcla" readonly hidden></textarea>
        <small class="mixer-status" role="status"></small>
@@ -512,12 +512,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function openPiano(object){
   if(!['explore','evaded','escape'].includes(events.phase)){say('Ahora no conviene hacer ruido.');return;}
   placePianoScore();
-  if(!object.scorePlaced){
-   if(world.pianoSheet.taken){say('Acércate al atril para colocar la partitura.');return;}
-   showModal('Atril vacío','<p>La partitura está guardada en el cajón de la sala de lectura de la planta alta.</p>');
-   return;
-  }
-  showModal('Piano antiguo',`<div class="piano-sheet-ui"><div class="piano-title">Mia &amp; Sebastian’s Theme <span class="piano-page-label"></span></div>
+  showModal('Piano antiguo',`<div class="piano-sheet-ui"><div class="piano-title">${object.scorePlaced?'Mia &amp; Sebastian’s Theme':'Piano libre'} <span class="piano-page-label"></span></div>
    <div class="piano-score" role="img" aria-label="Partitura"></div><div class="piano-time" aria-hidden="true"><i></i></div>
    <div class="piano-keys">${pianoKeyboard()}</div></div><output class="piano-result" aria-live="polite"></output>`,
    [['Levantarse','close'],['Practicar pieza completa','piano-practice'],['Recoger llave maestra','piano-collect']]);
@@ -816,7 +811,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    case 'hide':return target.requiresCrouch&&!s.crouched?'Agáchate primero':target.label;
    case 'battery':return 'Recoger pila';
    case 'flashlight':return 'Recoger linterna';
-   case 'piano':return target.scorePlaced?'Tocar el piano':'Examinar el atril';
+   case 'piano':return 'Tocar el piano';
    case 'rc-car':return 'Recoger auto RC';
    case 'television':return target.power.on?'Apagar tele':'Encender tele';
    case 'power-switch':return target.power.on?'Cortar corriente':'Restablecer corriente';

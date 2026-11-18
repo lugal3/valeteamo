@@ -16,6 +16,7 @@
 #lab3d .piano-sheet-ui{background:#f4e5bf;border:1px solid #aaa07c;border-radius:7px;overflow:hidden}
 #lab3d .piano-time{height:4px;background:#bba781}
 #lab3d .piano-time i{display:block;height:100%;background:#a25b20;transform-origin:left}
+#lab3d [data-piano-mode=free] :is(.piano-score,.piano-time,.piano-page-label){display:none}
 #lab3d .piano-keys{height:68px;position:relative;background:#39262d;touch-action:manipulation}
 #lab3d .piano-keys button{position:absolute;left:calc(var(--slot)*12.5%);margin:0;padding:0 1px 4px;border:1px solid #77604d;border-radius:0 0 5px 5px;font:650 11px system-ui;display:flex;flex-direction:column;align-items:center;justify-content:end;gap:1px;transition:none}
 #lab3d .piano-keys .piano-white{top:0;width:12.5%;height:100%;background:#f1dfbf;color:#312321;box-shadow:inset 0 -4px #bfa786}

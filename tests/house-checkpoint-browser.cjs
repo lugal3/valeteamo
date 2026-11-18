@@ -111,7 +111,10 @@ async function run(){
   await shot('02-llave-y-linterna-tras-recarga');
   console.log('Checkpoint QA: study key and upstairs flashlight reloaded');
   await use('piano');
-  await page.getByRole('dialog',{name:'Atril vacío'}).waitFor();
+  await page.locator('[data-piano-mode="free"]').waitFor();
+  await page.keyboard.press('a');
+  assert.equal(await page.locator('.piano-keys [aria-current]').count(),0);
+  assert.equal(await page.locator('input[data-setting="master"]').getAttribute('max'),'3');
   await page.keyboard.press('Escape');
   await use('reading-cabinet');await use('piano-sheet');
   await page.keyboard.press('Escape');

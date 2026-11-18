@@ -15,7 +15,7 @@ export class PianoSession{
   this.result=dialog.querySelector('.piano-result');
   this.practiceButton=dialog.querySelector('[data-act="piano-practice"]');
   this.collectButton=dialog.querySelector('[data-act="piano-collect"]');
-  this.start(object.solved?'practice':'intro');
+  this.start(!object.scorePlaced?'free':object.solved?'practice':'intro');
  }
  stage(mode,label=''){
   this.dialog.dataset.pianoMode=mode;
@@ -30,8 +30,9 @@ export class PianoSession{
   this.page=-1;this.index=0;this.deadline=0;
   this.practiceButton.hidden=true;
   this.collectButton.hidden=true;
-  this.stage(mode,mode==='practice'?'Práctica guiada · Toca la primera nota':'Toca la nota iluminada y sigue la línea de tiempo');
-  this.guide();
+  this.stage(mode,mode==='free'?'Encuentra la partitura en el cajón de la sala de lectura para iniciar el reto.':
+   mode==='practice'?'Práctica guiada · Toca la primera nota':'Toca la nota iluminada y sigue la línea de tiempo');
+  if(mode!=='free')this.guide();
  }
  guide(){
   const page=Math.floor(this.index/PIANO_PAGE_SIZE);
@@ -62,20 +63,21 @@ export class PianoSession{
   this.keys[note].classList.add('pressed');
  }
  press(note,now){
-  if(!['intro','practice'].includes(this.mode)||!this.object.keys[note])return;
+  if(!['intro','practice','free'].includes(this.mode)||!this.object.keys[note])return;
   this.tick(now);
   if(this.expire())return;
   this.strike(note);
+  if(this.mode==='free'){this.sound.piano(note);return;}
   const [time,expected]=this.score[this.index];
   if(note!==expected){
    const sample=PIANO_PERFORMANCE.find(([,right])=>right===note%12)?.[0];
-   if(sample!==undefined)this.sound.pianoSegment(sample,sample+.25,note,note===12?2:1);
-   else {this.sound.stopPiano();this.sound.piano(note);}
+   if(sample!==undefined)this.sound.pianoSegment(sample,sample+.25,note,note===12?2:1,true);
+   else this.sound.piano(note);
    this.reset('Nota equivocada · vuelve a la primera nota');return;
   }
   const next=this.score[++this.index];
   if(next){
-   this.sound.pianoSegment(time,next[0],note);
+   this.sound.pianoSegment(time,next[0],note,1,true);
    const turn=this.mode==='intro'&&this.index%PIANO_PAGE_SIZE===0;
    this.deadline=turn?0:this.now+pianoWindow(this.score,this.index);
    this.result.textContent=turn?'Primera hoja completa · Sigue con la segunda':'';
@@ -93,7 +95,6 @@ export class PianoSession{
  }
  expire(){
   if(!this.deadline||this.now<this.deadline)return false;
-  this.sound.stopPiano();
   this.reset('Se acabó el tiempo · vuelve a la primera nota');return true;
  }
  complete(label){
