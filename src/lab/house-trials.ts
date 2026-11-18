@@ -82,7 +82,7 @@ export const HOUSE_TRIALS={
  },
  piano:{
   title:'Piano del descansillo',
-  description:'Kitty ya recogió la partitura. Acércate al piano, siéntate y toca con las teclas del juego o con A, S, D, F, G, H, J y K.',
+  description:'Kitty ya recogió la partitura. Siéntate y toca las siete notas destacadas antes de que se agote la línea. Las teclas de la pantalla muestran también su atajo.',
   objective:'Siéntate al piano y toca la partitura',
   pose:{x:6.9,floor:1,z:10.4,yaw:-Math.PI/2,pitch:-.33},circuit:'distribuidor',score:true
  },

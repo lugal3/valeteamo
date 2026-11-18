@@ -7,6 +7,7 @@ import {createLoisFaceTexture} from './lois-ps2-texture.js';
 import {BATH_MIRROR,mirrorVisible,kittyMirrorPieces,reflectedBathroom,reflectMesh,poseReflectedKitty} from './mirror.js';
 import {ART_SIZE,ART_COLUMNS,ART_ROWS,POSTER_IMAGES,artTile,createArtworkCanvas} from './artwork.js';
 import {climbingHandPieces} from './first-person.js';
+import {samplePianoPose} from './piano-recital.js';
 import {drawViewModel} from './viewmodel.js';
 import {pursuerPieces,posePursuer} from './pursuer-model.js';
 import {sampleWardrobeWalk} from './animations/wardrobe-entry.js';
@@ -619,17 +620,21 @@ export class HouseRenderer {
   }
  }
  drawActor(subject,motion){
-  const equipment=motion.actorWalk?'empty':motion.equipment||'flashlight',gl=this.gl;
+  const equipment=motion.actorWalk||motion.actorPiano?'empty':motion.equipment||'flashlight',gl=this.gl;
   if(this.actorEquipment!==equipment){this.actorEquipment=equipment;this.actorMesh=geometry(kittyMirrorPieces(equipment));this.actorVertices=new Float32Array(this.actorMesh.vertices.length);this.actorBinding=createRigBinding(this.actorMesh.groups);}
   const animator=motion.animator;
-  if(motion.actorWalk){
+  if(motion.actorPiano){
+   const {instrument,hands}=motion.actorPiano;
+   this.actorPose??=createPose();
+   evaluateRig(this.actorBinding,samplePianoPose(instrument,hands,this.actorPose));
+  }else if(motion.actorWalk){
    this.actorPose??=createPose();this.actorScratch??=createPose();
    evaluateRig(this.actorBinding,sampleWardrobeWalk(motion.actorWalk,this.actorPose,this.actorScratch));
   }else if(animator)evaluateRig(this.actorBinding,animator.sample('look-behind',.5));
   const blink=sampleBlink(motion.actorTime??animator?.time??0,{
    reduced:animator?.reduced??motion.reduced,firstAt:motion.actorTime===undefined?undefined:.25
   });
-  poseReflectedKitty(this.actorMesh.vertices,this.actorVertices,subject,{feetY:motion.feetY,blink},animator?this.actorBinding:null);reflectMesh(this.actorVertices);
+  poseReflectedKitty(this.actorMesh.vertices,this.actorVertices,subject,{feetY:motion.actorPiano?.instrument.floor??motion.feetY,blink},animator?this.actorBinding:null);reflectMesh(this.actorVertices);
   gl.bindBuffer(gl.ARRAY_BUFFER,this.handVbo);gl.bufferData(gl.ARRAY_BUFFER,this.actorVertices,gl.DYNAMIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.handIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,this.actorMesh.indices,gl.STATIC_DRAW);this.handIndexKind='actor';this.bind(this.handVbo,this.handIbo);gl.drawElements(gl.TRIANGLES,this.actorMesh.indices.length,gl.UNSIGNED_SHORT,0);
  }
  drawPursuer(actor,mirrored=false,reduced=false){

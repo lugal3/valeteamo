@@ -63,7 +63,9 @@ Usa **E** o **Usar** para entrar y salir de un escondite. Para meterte bajo la c
 
 En PC, arrastra para mirar o pulsa **R** para capturar el ratón. Pulsa **E** o haz clic para interactuar. Leer una nota, abrir el piano o levantar la tablet libera el cursor. Con la tablet, maneja con **WASD**, activa el señuelo con **Q**, cierra la escotilla con **T** cuando se habilite y guarda la tablet con **Esc**. En móvil, usa el joystick izquierdo y arrastra a la derecha para mirar. En el engranaje puedes ajustar sensibilidad, reducir movimiento, cambiar el volumen por canal y activar los subtítulos de sonidos.
 
-La partitura está en el cajón de la sala de lectura. Kitty la coloca al acercarse al piano del descansillo. Toca con **A S D F G H J K** o los botones en pantalla para abrir el compartimento. En el baño, **9** o el selector de emotes activa **What Is Love?**, con diez segundos de audio y coreografía del video de referencia. Consulta las [anotaciones de diseño](docs/INDICE-INFORMES.md#anotaciones-de-diseño) para ver el flujo por actos y las ideas para ambientar los rincones.
+La partitura está en el cajón de la sala de lectura. Kitty la coloca al acercarse al piano del descansillo. Sigue las siete notas destacadas con las teclas en pantalla o sus atajos. Kitty continúa la interpretación y el compartimento se abre al terminar. Después puedes volver a sentarte para practicar la pieza completa. En el baño, **9** o el selector de emotes activa **What Is Love?**, con diez segundos de audio y coreografía del video de referencia. Consulta las [anotaciones de diseño](docs/INDICE-INFORMES.md#anotaciones-de-diseño) para ver el flujo por actos y las ideas para ambientar los rincones.
+
+El plano cambia al segundo 0:24 del audio del tutorial aportado y se acerca al compartimento al 1:03. La práctica ofrece la voz principal del tutorial reducida a un teclado cromático de una octava. La pista del compartimento se concede una sola vez.
 
 | Datos | Clave o ámbito |
 | --- | --- |

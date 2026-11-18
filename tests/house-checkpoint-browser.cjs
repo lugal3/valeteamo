@@ -121,14 +121,23 @@ async function run(){
   await use('piano');
   await page.getByRole('dialog',{name:'Piano antiguo'}).waitFor();
   await page.keyboard.press('s');
-  await page.getByText('Sigue las notas marcadas en orden.').waitFor();
-  for(const key of ['a','d','g','h','g','d','s','a'])await page.keyboard.press(key);
+  await page.getByText(/Nota equivocada/).waitFor();
+  await page.keyboard.press('w');
+  await page.getByText(/Se acabó el tiempo/).waitFor();
+  for(const key of ['w','t','y','h','y','t','s'])await page.keyboard.press(key);
+  await page.locator('[data-piano-mode="recital"]').waitFor();
+  assert.notEqual((await checkpoint()).pianoSolved,true,'The clue waits for the performance');
+  await page.locator('[data-piano-mode="reveal"]').waitFor({timeout:50000});
   await page.getByText(/Melodía completa/).waitFor();
   await page.waitForFunction(()=>window.__rescueHouse.pianoPuzzle().compartment===1);
   assert.equal((await checkpoint()).pianoSolved,true);
   await shot('03-compartimento-del-piano');
   await page.keyboard.press('Escape');
-  await page.evaluate(()=>window.__rescueHouse.setPose({x:11.65,y:3.15,z:1.85,yaw:Math.PI/2,pitch:-.35}));
+  await use('piano');
+  await page.locator('[data-piano-mode="practice"]').waitFor();
+  assert.equal((await snapshot()).notes,2,'Practice does not award another clue');
+  await page.keyboard.press('Escape');
+  await page.evaluate(()=>window.__rescueHouse.setPose({x:6.9,y:3.15,z:10.4,yaw:-Math.PI/2,pitch:-.33}));
   await shot('04-atril-y-compartimento');
   await reloadHouse();
   assert.deepEqual(await page.evaluate(()=>window.__rescueHouse.pianoPuzzle()),

@@ -22,7 +22,9 @@ import {navigate,smoothAxis,getStairDirection} from './navigation.js';
 import {interactionTarget} from './interactions.js';
 import {circuitPowered,housePowered,toggleCircuit,toggleHousePower,updateBlackout,updatePowerLever} from './house-lights.js';
 import {inHatch,poseHatch,poseHatchRug} from './basement.js';
-import {PIANO_NOTES,PIANO_KEYS,PIANO_SCORE,PIANO_REWARD,posePianoCompartment,setPianoScore,poseTrunk} from './house-additions.js';
+import {PIANO_REWARD,posePianoCompartment,setPianoScore,poseTrunk} from './house-additions.js';
+import {PIANO_KEYS,pianoKeyboard} from './piano-recital.js';
+import {PianoSession} from './piano-session.js';
 import {HouseTelevision} from './television.js';
 import {updateWallClock} from './wall-clock.js';
 import {animateFurniture,updateFurniture,sweepClear} from './furniture-motion.js';
@@ -183,8 +185,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if($('lab-stick'))$('lab-stick').style.transform='translate(0,0)';
   if(s){lookTarget={yaw:s.yaw,pitch:s.pitch};s.sprinting=false;}
  }
- const modalClose=()=>{if(piano&&s){s.poseCamera=null;for(const key of piano.object.keys)key.y=piano.object.keyHeight;}piano=null;modal='';activeSafe=null;safeInput='';dialog.classList.remove('house-piano-dialog');dialog.classList.add('lab-hidden');dialog.innerHTML='';resetInput();if(!isSuspended())sound.resume();};
+ function closePiano(){
+  if(!piano)return;
+  piano.close();piano=null;s.poseCamera=null;
+  dialog.classList.remove('house-piano-dialog');
+ }
+ const modalClose=()=>{closePiano();modal='';activeSafe=null;safeInput='';dialog.classList.add('lab-hidden');dialog.innerHTML='';resetInput();if(!isSuspended())sound.resume();};
  function showModal(title,body,actions=[['Cerrar','close']]){
+  closePiano();
   modal=title;dialog.classList.remove('lab-hidden');
   $('house-messages').hidden=true;
   dialog.innerHTML=`<section class="lab-paper" role="dialog" aria-modal="true" aria-label="${escapeHTML(title)}"><div class="lab-paper-mark">✿ ♡ ✿</div><h2>${escapeHTML(title)}</h2><div class="lab-paper-body">${body}</div><div class="lab-paper-actions">${actions.map(([label,act])=>`<button data-act="${escapeHTML(act)}">${escapeHTML(label)}</button>`).join('')}</div></section>`;
@@ -486,6 +494,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    roomAt(s.x,s.z,s.y)!==roomAt(instrument.x,instrument.z,instrument.y)||
    Math.hypot(s.x-instrument.x,s.z-instrument.z)>1.95)return;
   setPianoScore(instrument,true);
+  sound.preparePiano();
   play('cloth',instrument);say('Kitty colocó la partitura en el atril.');
  }
  function openPiano(object){
@@ -496,32 +505,20 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    showModal('Atril vacío','<p>La partitura está guardada en el cajón de la sala de lectura de la planta alta.</p>');
    return;
   }
-  const notes=PIANO_SCORE.map((note,i)=>`<span data-score-note="${i}" ${i===0?'aria-current="step"':''}>${PIANO_NOTES[note]}</span>`).join(' ');
-  const keys=PIANO_NOTES.map((note,i)=>`<button type="button" data-act="piano:${i}">${note}<small>${PIANO_KEYS[i].toUpperCase()}</small></button>`).join('');
-  showModal('Piano antiguo',`<p class="piano-score" aria-label="Partitura">${notes}</p><div class="piano-keys">${keys}</div><output class="piano-result" aria-live="polite">${object.solved?'Compartimento abierto. Pista en la mochila.':''}</output>`,[['Levantarse','close']]);
-  piano={object,pressed:new Map(),score:0};s.poseCamera=object.seat;dialog.classList.add('house-piano-dialog');
+  showModal('Piano antiguo',`<div class="piano-sheet-ui"><div class="piano-title">Mia &amp; Sebastian’s Theme</div>
+   <div class="piano-score" role="img" aria-label="Partitura"></div><div class="piano-time" aria-hidden="true"><i></i></div>
+   <div class="piano-keys">${pianoKeyboard()}</div></div><output class="piano-result" aria-live="polite"></output>`,
+   [['Levantarse','close'],['Practicar pieza completa','piano-practice']]);
+  piano=new PianoSession(object,dialog,sound,()=>{
+   s.inventory.notes.push({...PIANO_REWARD});
+   phone.setInventory(s.inventory);saveCheckpoint();
+  });
+  sound.preparePiano();
+  s.poseCamera=object.seat;dialog.classList.add('house-piano-dialog');
  }
+ function pianoRunning(){return !paused&&hasFocus&&!document.hidden&&!isPortrait()&&!contextLost&&!$('lab-camera-settings').open;}
  function playPiano(index){
-  if(!piano||!piano.object.keys[index])return;
-  sound.piano(index);piano.pressed.set(index,performance.now());
-  const button=dialog.querySelector('[data-act="piano:'+index+'"]');button?.classList.add('pressed');
-  const correct=index===PIANO_SCORE[piano.score];
-  piano.score=correct?piano.score+1:Number(index===PIANO_SCORE[0]);
-  const result=dialog.querySelector('.piano-result');
-  if(piano.score===PIANO_SCORE.length){
-   const instrument=piano.object;
-   if(!instrument.solved){
-    instrument.solved=true;
-    s.inventory.notes.push({...PIANO_REWARD});
-    phone.setInventory(s.inventory);saveCheckpoint();play('latch',instrument);
-   }
-   result.textContent='Melodía completa · Compartimento abierto. Pista en la mochila.';
-   piano.score=0;
-  }else if(!piano.object.solved){
-   result.textContent=correct?'':'Sigue las notas marcadas en orden.';
-  }
-  dialog.querySelector('[aria-current="step"]')?.removeAttribute('aria-current');
-  dialog.querySelector('[data-score-note="'+piano.score+'"]').setAttribute('aria-current','step');
+  if(piano&&pianoRunning())piano.press(index,performance.now());
  }
  function showMirrorNote(back='close'){
   showModal('Nota con escritura extraña',`<div class="house-note-sheet mirror-note-paper"><span class="mirror-note-writing" aria-hidden="true">${SAFE_CODE}</span><span class="mirror-note-description">Cuatro cifras escritas al revés.</span></div>${mirrorSafe.revealed?`<p class="mirror-note-reading">Lectura del espejo: <strong>${SAFE_CODE}</strong></p>`:'<p>Las marcas parecen tener sentido desde otro punto de vista.</p>'}`,[['Volver',back]]);
@@ -660,6 +657,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   if(act==='mouse'){lockMouse();return;}
   if(act.startsWith('piano:')){playPiano(Number(act.slice(6)));return;}
+  if(act==='piano-practice'){if(pianoRunning())piano?.start('practice');return;}
   if(act==='skip-intro'){if(cinematic)finishWindowIntro();return;}
   if(act==='pause'){togglePause();return;}
   if(act==='resume'){paused=false;modalClose();sound.resume();return;}
@@ -955,7 +953,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  function frame(now){
   if(!active||contextLost)return;raf=requestAnimationFrame(frame);
-  const limit=(paused||!!modal||$('lab-camera-settings').open||isPortrait()||document.hidden||!hasFocus)?1000/15:options.quality==='low'?1000/30:1000/60;
+  const limit=(paused||!!modal&&!piano||$('lab-camera-settings').open||isPortrait()||document.hidden||!hasFocus)?1000/15:
+   options.quality==='low'||piano&&piano.mode!=='performance'?1000/30:1000/60;
   if(now-lastPaint<limit-2)return;
   const shotDelta=Math.min(.1,Math.max(0,(now-last)/1000||0)),dt=Math.min(.055,shotDelta);last=now;lastPaint=now;
   if(!s||!renderer)return;
@@ -1001,19 +1000,16 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const instrument=world.piano;
   if(instrument.solved&&instrument.compartmentAmount<1&&!paused)
    posePianoCompartment(instrument,reducedMotion.matches?1:Math.min(1,instrument.compartmentAmount+shotDelta/.48));
+  let thirdPerson=null,actorTime,actorWalk,actorPiano,shotLight=0;
   if(piano){
-   hand=false;
-   const home=piano.object.keys;
-   const handAt=(index,press=0)=>({x:home[index].x+piano.object.handOffsetX,y:piano.object.keyHeight+.052-press,z:home[index].z});
-   introHands=[handAt(5),handAt(2)];
-   for(const [index,start] of piano.pressed){
-    const t=Math.min(1,(now-start)/180),press=Math.sin(Math.PI*t);
-    home[index].y=piano.object.keyHeight-press*.027;
-    introHands[index<4?1:0]=handAt(index,press*.037);
-    if(t===1){piano.pressed.delete(index);dialog.querySelector('[data-act="piano:'+index+'"]')?.classList.remove('pressed');}
-   }
+   piano.advance(now,pianoRunning(),reducedMotion.matches);
+   const pose=piano.pose(reducedMotion.matches);
+   view=pose.view;hand=false;torch=false;shotLight=.40;
+   if(pose.actor){
+    thirdPerson=piano.object.seat;
+    actorPiano={instrument:piano.object,hands:pose.hands};actorTime=piano.sourceTime;
+   }else if(!pose.hideHands)introHands=pose.hands;
   }
-  let thirdPerson=null,actorTime,actorWalk,shotLight=0;
   if(louis&&(['untying','climb','hide'].includes(louis.phase)||(louis.phase==='hidden'&&louis.age<1.6))){
    if(!loisShotDirector)loisShotDirector=createLoisShotDirector();
    view=advanceLoisShot(loisShotDirector,louis.phase,louisCamera(louis),
@@ -1120,7 +1116,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const outdoor=s.y<-.12?0:view.x<0||view.x>HOUSE.width||view.z<0||view.z>HOUSE.depth?1:Math.max(0,1-Math.min(view.x,HOUSE.width-view.x,view.z,HOUSE.depth-view.z)/1.5)*.22;
   sound.locate({room:roomAt(view.x,view.z,s.y),outdoor,hidden:!!s.hidden,powered:housePowered(world.lights.power)});
   try{
-   renderer.render(view,torch,elapsed,hand,{bob:s.bob,action:handAction,clickAction,speed:animator.speed,acceleration:animator.acceleration,walkWeight:animator.weight,reduced:s.reduceBob,swayX:handDrift.x,swayY:handDrift.y,introHands,animator,feetY:s.y,crouched:s.crouched,equipment:visualEquipment,noteRaise,batterySwap,tabletLift,equipLift:raisedNote?-.52*(1-noteRaise):reducedMotion.matches?0:-.22*Math.pow(1-Math.min(1,equipmentAge/.3),2),bathDoorAmount:world.objects.find(o=>o.id==='bano').amount,thirdPerson,actorTime,actorWalk,shotLight,pursuer:pursuer.snapshot(),television});
+   renderer.render(view,torch,elapsed,hand,{bob:s.bob,action:handAction,clickAction,speed:animator.speed,acceleration:animator.acceleration,walkWeight:animator.weight,reduced:s.reduceBob,swayX:handDrift.x,swayY:handDrift.y,introHands,animator,feetY:s.y,crouched:s.crouched,equipment:visualEquipment,noteRaise,batterySwap,tabletLift,equipLift:raisedNote?-.52*(1-noteRaise):reducedMotion.matches?0:-.22*Math.pow(1-Math.min(1,equipmentAge/.3),2),bathDoorAmount:world.objects.find(o=>o.id==='bano').amount,thirdPerson,actorTime,actorWalk,actorPiano,shotLight,pursuer:pursuer.snapshot(),television});
    if(capturePhoto){capturePhoto=false;if(phone.open&&phone.app==='camera')phone.takePhoto(canvas);}
    phone.updateCamera(canvas,now);
   }catch(e){interruptGraphics('Error de renderizado',String(e.message||e));return;}
@@ -1235,7 +1231,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(!audioPreview)return;
   audioPreview=false;sound.stopEmote();sound.pause();
  }
- $('lab-camera-settings')?.addEventListener('toggle',()=>{resetInput();endAudioPreview();if(isSuspended())sound.pause();else sound.resume();},{signal});
+ function suspendPianoClock(){if(piano)piano.last=null;}
+ function resumeHouseAudio(){if(piano&&pianoRunning())sound.resumePiano();else if(!isSuspended())sound.resume();}
+ $('lab-camera-settings')?.addEventListener('toggle',()=>{
+  resetInput();endAudioPreview();suspendPianoClock();
+  if($('lab-camera-settings').open)sound.pause();else resumeHouseAudio();
+ },{signal});
  root.querySelector('.house-mixer')?.addEventListener('toggle',e=>{if(!e.target.open)endAudioPreview();},{signal});
  function syncMotion(){
   root.classList.toggle('house-motion-reduced',reducedMotion.matches);
@@ -1303,12 +1304,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(e.key==='i'||e.key==='I')runAction('bag');
  },{signal});
  window.addEventListener('keyup',e=>{const key=movementKey(e);if(key)keys.delete(key);},{signal,capture:true});
- window.addEventListener('blur',()=>{hasFocus=false;releaseMouse();resetInput();sound.pause();},{signal});
- window.addEventListener('focus',()=>{hasFocus=true;resetInput();last=performance.now();if(!isSuspended())sound.resume();},{signal});
- window.addEventListener('pagehide',()=>{hasFocus=false;releaseMouse();resetInput();sound.pause();},{signal});
- window.addEventListener('pageshow',()=>{hasFocus=document.hasFocus();resetInput();last=performance.now();if(!isSuspended())sound.resume();},{signal});
- document.addEventListener('visibilitychange',()=>{last=performance.now();if(document.hidden){resetInput();sound.pause();}else if(!isSuspended())sound.resume();},{signal});
- window.addEventListener('resize',()=>{last=performance.now();resetInput();if(isPortrait())sound.pause();else if(!isSuspended())sound.resume();},{signal});
+ window.addEventListener('blur',()=>{hasFocus=false;releaseMouse();resetInput();suspendPianoClock();sound.pause();},{signal});
+ window.addEventListener('focus',()=>{hasFocus=true;resetInput();last=performance.now();resumeHouseAudio();},{signal});
+ window.addEventListener('pagehide',()=>{hasFocus=false;releaseMouse();resetInput();suspendPianoClock();sound.pause();},{signal});
+ window.addEventListener('pageshow',()=>{hasFocus=document.hasFocus();resetInput();last=performance.now();resumeHouseAudio();},{signal});
+ document.addEventListener('visibilitychange',()=>{last=performance.now();if(document.hidden){resetInput();suspendPianoClock();sound.pause();}else resumeHouseAudio();},{signal});
+ window.addEventListener('resize',()=>{last=performance.now();resetInput();if(isPortrait()){suspendPianoClock();sound.pause();}else resumeHouseAudio();},{signal});
  canvas.addEventListener('webglcontextlost',e=>{
   e.preventDefault();
   interruptGraphics('Gráficos interrumpidos','Si el navegador recupera los gráficos, podrás seguir desde aquí.');

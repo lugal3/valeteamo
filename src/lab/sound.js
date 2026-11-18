@@ -4,6 +4,7 @@ import {HouseAtmosphere,playFoley} from './atmosphere.js';
 import {spookyFoley} from './spooky-foley.js';
 import {RecordedAudio} from './recorded-audio.js';
 import {playEmoteRhythm} from './emote-audio.js';
+const pianoReference=new URL('./audio/piano-reference.wav',import.meta.url).href;
 const KEY='valeteamo-lab-sound-v1';
 export const MIX_CHANNELS=[
  ['master','Volumen maestro'],['ambient','Ambiente'],['music','Música de tensión'],['effects','Todos los efectos'],
@@ -116,9 +117,56 @@ export class HouseSound {
   else motor.frequency.setTargetAtTime(75+power*150,ctx.currentTime,.055);
   gain.gain.setTargetAtTime(sampled?.11+power*.11:.018+power*.032,ctx.currentTime,.055);
  }
+ preparePiano(){
+  if(!this.context||this.pianoLoading)return;
+  const context=this.context,signal=this.recordings.abort.signal;
+  this.pianoLoading=fetch(pianoReference,{signal})
+   .then(response=>{if(!response.ok)throw Error('Piano audio unavailable');return response.arrayBuffer();})
+   .then(bytes=>context.decodeAudioData(bytes))
+   .then(buffer=>{if(!signal.aborted)this.pianoBuffer=buffer;})
+   .catch(()=>{if(!signal.aborted)this.pianoLoading=null;});
+ }
+ stopPiano(){
+  this.pianoToken=(this.pianoToken||0)+1;
+  if(this.pianoVoice){this.pianoVoice.stop();this.pianoVoice=null;}
+  this.pianoClock=null;
+ }
+ pianoSegment(start,end,note,rate=1){
+  this.stopPiano();
+  const context=this.context,token=this.pianoToken;
+  if(!context||this.settings.muted)return;
+  this.preparePiano();
+  void context.resume().then(()=>{
+   if(this.context!==context||context.state!=='running'||this.pianoToken!==token||this.settings.muted)return;
+   const buffer=this.pianoBuffer;
+   if(!buffer||start>=buffer.duration){this.piano(note);return;}
+   const source=context.createBufferSource(),gain=context.createGain(),now=context.currentTime;
+   const length=Math.min(end,buffer.duration)-start,duration=length/rate;
+   source.buffer=buffer;source.playbackRate.value=rate;source.connect(gain);gain.connect(this.channels.objects);
+   gain.gain.setValueAtTime(.0001,now);gain.gain.linearRampToValueAtTime(.75,now+Math.min(.012,duration*.25));
+   gain.gain.setValueAtTime(.75,now+duration-Math.min(.045,duration*.3));
+   gain.gain.linearRampToValueAtTime(.0001,now+duration);
+   this.pianoVoice=source;
+   this.pianoClock={offset:start,startedAt:now,rate,end:start+length};
+   source.onended=()=>{
+    if(this.pianoVoice===source)this.pianoVoice=null;
+    source.disconnect();gain.disconnect();
+   };
+   source.start(now,start,length);
+  }).catch(()=>{});
+ }
+ pianoTime(offset){
+  const clock=this.pianoClock;
+  if(!this.pianoVoice||clock?.offset!==offset)return null;
+  return Math.min(clock.end,clock.offset+(this.context.currentTime-clock.startedAt)*clock.rate);
+ }
+ resumePiano(){if(this.context&&!this.settings.muted)void this.context.resume().catch(()=>{});}
+ pianoReveal(){
+  if(!this.settings.muted)this.recordings?.play('unlock',{gain:.34,output:this.channels.objects});
+ }
  piano(index){
   const ctx=this.context;if(!ctx||this.settings.muted)return;
-  const frequency=261.626*2**([0,2,4,5,7,9,11,12][index]/12);
+  const frequency=261.626*2**(index/12);
   void ctx.resume().then(()=>{
    if(this.context!==ctx||ctx.state!=='running'||this.settings.muted)return;
    const at=ctx.currentTime;
@@ -200,5 +248,5 @@ export class HouseSound {
    return true;
   }catch{return false;}
  }
- destroy(){this.stopEmote();this.pause();this.recordings?.destroy();this.atmosphere?.destroy();this.atmosphere=null;this.ambientNodes=[];if(this.context){void this.context.close().catch(()=>{});this.context=null;}}
+ destroy(){this.stopPiano();this.stopEmote();this.pause();this.recordings?.destroy();this.atmosphere?.destroy();this.atmosphere=null;this.ambientNodes=[];if(this.context){void this.context.close().catch(()=>{});this.context=null;}}
 }
