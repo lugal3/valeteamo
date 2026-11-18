@@ -15,7 +15,14 @@ const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
     ['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']:[]});
    try{
     const context=await browser.newContext({viewport:{width:844,height:390},deviceScaleFactor:2,isMobile:true,hasTouch:true});
-    for(const scene of ['Espejo','Casa 3D','WebGL bloqueado']){
+    const scenes=['Espejo','Casa 3D','WebGL bloqueado'];
+    if(process.env.HOUSE_PRODUCTION_SCENE_MATRIX==='1')scenes.push(
+     'Dormitorio y rescate','Llegada del secuestrador','Trampilla y rescate',
+     'Auto del secuestrador','Levantarse y entrar al armario','Despertar del secuestrador',
+     'Cajón y pistas','Nota y caja fuerte','Leer la nota en el espejo','Cambio automático de pila',
+     'Interruptor general','Piano de la sala de música','Televisor y mando'
+    );
+    for(const scene of scenes){
      const page=await context.newPage(),errors=[];
      page.setDefaultTimeout(60000);
      page.on('pageerror',e=>errors.push(e.message));
@@ -40,6 +47,7 @@ const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
       await page.goto(url,{waitUntil:'domcontentloaded'});
       await passBirthdayCountdown(page);
       await page.locator('.playtest-menu[data-admin-panel="lp"]').waitFor();
+      await page.locator('#lp-tres-d details').evaluateAll(groups=>groups.forEach(group=>{group.open=true;}));
       const entry=page.getByRole('button',{name:blocked?'Casa 3D':scene,exact:true});
       await entry.click();
       if(blocked){

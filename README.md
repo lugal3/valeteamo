@@ -78,6 +78,8 @@ Las fotos, preguntas y carta de la historia son ejemplos editables. Consulta [HI
 
 ## Verificar y publicar
 
+El recorrido de revisión, las pruebas de entrega y el material pendiente están en [Entrega del rescate](docs/ENTREGA-RESCATE.md).
+
 ```sh
 npm test
 npm run build
