@@ -530,12 +530,14 @@ export class HouseRenderer {
     const offset=box.sourceOffset||[0,0,0];
     const bob=source.kind==='key'?Math.sin(time*3.2+(source.x+source.z)*2.5)*bobAmp:0;
     const sway=(box.id.includes('bow-left')||box.id.includes('bow-right'))?Math.sin(time*4.2)*swayAmp:0;
-    if(source.kind==='rc-car'){
+    if(source.kind==='rc-car'||source.master){
      const angle=-(source.yaw||0),c=Math.cos(angle),s=Math.sin(angle);
-     box.x=source.x+offset[0]*c-offset[2]*s;
-     box.y=source.concealed?-100:source.y+offset[1];
-     box.z=source.z+offset[0]*s+offset[2]*c;
+     const tilt=source.tilt||0,cp=Math.cos(tilt),sp=Math.sin(tilt),depth=offset[1]*sp+offset[2]*cp;
+     box.x=source.x+offset[0]*c-depth*s;
+     box.y=source.concealed?-100:source.y+offset[1]*cp-offset[2]*sp;
+     box.z=source.z+offset[0]*s+depth*c;
      box.yaw=angle+(box.baseYaw??0);
+     if(source.master)box.pitch=tilt;
     }else{
      box.x=source.x+offset[0];
      box.y=source.concealed?-100:source.y+offset[1]+bob;
@@ -611,9 +613,18 @@ export class HouseRenderer {
  drawClimbingHands(hands){
   const gl=this.gl;gl.uniform1f(this.uniform.uFlash,0);
   for(let side=0;side<2;side++){
+   const hand=hands[side];if(!hand)continue;
    const model=this.handGeometry['climb'+side]??=geometry(climbingHandPieces(side?-1:1));
    const vertices=this.climbVertices??=new Float32Array(model.vertices.length);vertices.set(model.vertices);
-   for(let i=0;i<vertices.length;i+=16){vertices[i]+=hands[side].x;vertices[i+1]+=hands[side].y;vertices[i+2]+=hands[side].z;}
+   const angle=hand.roll||0,flex=hand.flex||0,cr=Math.cos(angle),sr=Math.sin(angle),cf=Math.cos(flex),sf=Math.sin(flex);
+   for(let i=0;i<vertices.length;i+=16){
+    if(angle||flex)for(const offset of [0,6,13]){
+     const at=i+offset,x=vertices[at],y=vertices[at+1],z=vertices[at+2];
+     const lift=y*cf-z*sf;
+     vertices[at]=x*cr-lift*sr;vertices[at+1]=x*sr+lift*cr;vertices[at+2]=y*sf+z*cf;
+    }
+    vertices[i]+=hand.x;vertices[i+1]+=hand.y;vertices[i+2]+=hand.z;
+   }
    gl.bindBuffer(gl.ARRAY_BUFFER,this.handVbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.DYNAMIC_DRAW);
    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.handIbo);if(this.handIndexKind!=='climb'){gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,model.indices,gl.STATIC_DRAW);this.handIndexKind='climb';}
    this.bind(this.handVbo,this.handIbo);gl.drawElements(gl.TRIANGLES,model.indices.length,gl.UNSIGNED_SHORT,0);

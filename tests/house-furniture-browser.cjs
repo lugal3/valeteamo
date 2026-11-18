@@ -34,7 +34,7 @@ const {chromium}=require('playwright');
   await use('reading-cabinet');await use('piano-sheet');await close();
   await use('piano');await page.getByRole('dialog',{name:'Piano antiguo'}).waitFor();
   assert((await snapshot()).view.y>4,'The piano seat is upstairs');
-  for(const letter of ['w','t','y','h','y','t','s'])await page.keyboard.press(letter);
+  for(const letter of ['w','t','y','h','y','t','s','j','j','h','y','h','y','t'])await page.keyboard.press(letter);
   await page.getByText(/Melodía completa/).waitFor();await shot('piano');await close();
   const spares=(await amenities()).battery.spares;
   await page.evaluate(()=>{

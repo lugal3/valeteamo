@@ -7,23 +7,23 @@ export const PIANO_KEYS=['a','w','s','e','d','f','t','g','y','h','u','j','k'];
 export const PIANO_WHITE=[0,2,4,5,7,9,11,12];
 export const PIANO_INTRO_END=24;
 export const PIANO_SHOW_END=63;
-export const PIANO_REVEAL_SECONDS=2.15;
-// Seconds in the supplied recording, with the lead reduced to seven presses.
-export const PIANO_INTRO=[[16.035,1],[16.845,6],[17.285,8],[17.735,9],[18.085,8],[18.385,6],[18.785,2]];
-export const PIANO_SCORE=PIANO_INTRO.map(note=>note[1]);
+export const PIANO_REVEAL_SECONDS=2.55;
+// Two seven-note phrases from the supplied recording.
+export const PIANO_INTRO=[[16.035,1],[16.845,6],[17.285,8],[17.735,9],[18.085,8],[18.385,6],[18.785,2],
+ [19.59,11],[21.39,11],[21.89,9],[22.24,8],[22.59,9],[22.89,8],[23.24,6]];
 export const PIANO_PRACTICE=PIANO_PERFORMANCE.filter(([,right])=>right>=0).map(([time,right])=>[time,right]);
 export const PIANO_PRACTICE_END=116.49;
 const scaleSteps=[0,0,1,1,2,3,3,4,4,5,5,6,7];
 const SHARPS=new Set([1,3,6,8,10]);
-const PAGE_SIZE=7;
+export const PIANO_PAGE_SIZE=7;
 
 export function pianoWindow(score,index){
  if(!index)return 0;
  return (score[index][0]-score[index-1][0])*1.45+.62;
 }
 export function pianoStaff(score,index){
- const first=Math.floor(index/PAGE_SIZE)*PAGE_SIZE;
- const items=score.slice(first,first+PAGE_SIZE);
+ const first=Math.floor(index/PIANO_PAGE_SIZE)*PIANO_PAGE_SIZE;
+ const items=score.slice(first,first+PIANO_PAGE_SIZE);
  const lines=Array.from({length:5},(_,i)=>'<line x1="14" y1="'+(23+i*7)+'" x2="254" y2="'+(23+i*7)+'"/>').join('');
  const notes=items.map(([,note],i)=>{
   const x=31+i*34,y=54-scaleSteps[note]*3.5;
@@ -48,11 +48,11 @@ export function pianoPerformanceView(instrument,time,reduced){
  const animationTime=Math.max(0,time-PIANO_INTRO_END);
  const middle=reduced?0:ease(animationTime/5),wide=reduced?0:ease((animationTime-18)/11);
  if(time>=PIANO_SHOW_END){
-  const panel=instrument.compartment[2].box,t=reduced?1:ease((time-PIANO_SHOW_END)/.65);
+  const panel=instrument.compartment[1].box,t=reduced?1:ease((time-PIANO_SHOW_END)/.65);
   const x=seat.x+.57-t*.02,y=instrument.floor+1.42-t*.20,z=panel.z+.50-t*.25;
-  return pianoAim(x,y,z,panel.x,panel.y,panel.z);
+  return pianoAim(x,y,z,panel.x+.06,panel.y+.08,panel.z);
  }
- return pianoAim(seat.x+1.55-middle*.22,seat.y+.86+wide*.19,seat.z-1.56+middle*.28+wide*.42,
+ return pianoAim(seat.x+1.55-middle*.69+wide*.14,seat.y+.86+middle*.13+wide*.10,seat.z-1.56-middle*.21+wide*.20,
   seat.x-.31,seat.y-.23,seat.z+.10);
 }
 function pianoAim(x,y,z,tx,ty,tz){
@@ -63,8 +63,8 @@ export function samplePianoPose(instrument,hands,out){
  feet(out,{y:-.10,left:[-.16,.115,.23],right:[.16,.115,.23]});
  setJoint(out,'head',.10,0,0);
  const {seat}=instrument;
- for(const [side,{z,y,x}] of [['left',hands[0]],['right',hands[1]]]){
-  arm(out,side,[z-seat.z,y-instrument.floor+.10,Math.max(.14,seat.x-x)],[.28,0,0],.56);
+ for(const [side,{z,y,x,flex,roll}] of [['left',hands[0]],['right',hands[1]]]){
+  arm(out,side,[z-seat.z,y-instrument.floor+.10,Math.max(.14,seat.x-x)],[.18+flex,0,roll],.58);
  }
  return out;
 }

@@ -125,24 +125,34 @@ async function run(){
   await page.keyboard.press('w');
   await page.getByText(/Se acabó el tiempo/).waitFor();
   for(const key of ['w','t','y','h','y','t','s'])await page.keyboard.press(key);
+  await page.getByText('Hoja 2 de 2',{exact:true}).waitFor();
+  assert.equal(await page.locator('[data-piano-mode="intro"]').count(),1);
+  await page.keyboard.press('s');
+  await page.getByText(/Nota equivocada/).waitFor();
+  await page.getByText('Hoja 2 de 2',{exact:true}).waitFor();
+  for(const key of ['j','j','h','y','h','y','t'])await page.keyboard.press(key);
   await page.locator('[data-piano-mode="recital"]').waitFor();
-  assert.notEqual((await checkpoint()).pianoSolved,true,'The clue waits for the performance');
+  assert.notEqual((await checkpoint()).pianoSolved,true,'The master key waits for the performance');
   await page.locator('[data-piano-mode="reveal"]').waitFor({timeout:50000});
   await page.getByText(/Melodía completa/).waitFor();
   await page.waitForFunction(()=>window.__rescueHouse.pianoPuzzle().compartment===1);
   assert.equal((await checkpoint()).pianoSolved,true);
   await shot('03-compartimento-del-piano');
+  assert(!(await checkpoint()).picked.includes('master-key'),'The reward can stay in the drawer');
+  await page.getByRole('button',{name:'Recoger llave maestra'}).click();
+  assert((await checkpoint()).picked.includes('master-key'));
   await page.keyboard.press('Escape');
   await use('piano');
   await page.locator('[data-piano-mode="practice"]').waitFor();
-  assert.equal((await snapshot()).notes,2,'Practice does not award another clue');
+  assert.equal((await snapshot()).notes,1,'Practice keeps only the found score');
   await page.keyboard.press('Escape');
   await page.evaluate(()=>window.__rescueHouse.setPose({x:6.9,y:3.15,z:10.4,yaw:-Math.PI/2,pitch:-.33}));
   await shot('04-atril-y-compartimento');
   await reloadHouse();
   assert.deepEqual(await page.evaluate(()=>window.__rescueHouse.pianoPuzzle()),
    {picked:true,placed:true,solved:true,compartment:1});
-  assert.equal((await snapshot()).notes,2,'Score and compartment clue each persist once');
+  assert.equal((await snapshot()).notes,1,'The score persists without a duplicate note reward');
+  await assert.rejects(()=>use('master-key'),/Not available: master-key/);
   console.log('PASS legacy handoff and inventory reload');
 
   await page.emulateMedia({reducedMotion:'reduce'});
@@ -185,7 +195,7 @@ async function run(){
   const safe=await page.evaluate(()=>window.__rescueHouse.mirrorPuzzle());
   assert.equal(safe.opened,true);
   assert.equal(safe.safe.amount,1);
-  assert.equal((await snapshot()).notes,3,'The reward appears once in the backpack');
+  assert.equal((await snapshot()).notes,2,'The score and safe reward each appear once in the backpack');
 
   const beforeTrial=await read(RESCUE_KEY);
   await openMenu();
@@ -214,6 +224,18 @@ async function run(){
   assert.equal(await page.evaluate(()=>window.__rescueHouse.rc().trap.closed),true);
   assert.equal(await page.evaluate(()=>window.__rescueHouse.greyCat().active),true);
   assert.equal(await page.evaluate(()=>window.__rescueHouse.amenities().hatch),0);
+  // Existing escape checkpoints already opened the door. New ones save the lock.
+  assert.equal((await snapshot()).doors.find(door=>door.id==='entrada').open,true);
+  await write(RESCUE_KEY,{...beforeTrial,houseCheckpoint:{...rcSave,stage:'escape',exitUnlocked:false,
+   picked:rcSave.picked.filter(id=>id!=='master-key')}});
+  await reloadHouse();
+  await use('entrada');
+  assert.equal((await snapshot()).doors.find(door=>door.id==='entrada').open,false);
+  await use('master-key');
+  await use('entrada');
+  assert.equal((await checkpoint()).exitUnlocked,true);
+  await reloadHouse();
+  assert.equal((await snapshot()).doors.find(door=>door.id==='entrada').open,true);
   await page.evaluate(()=>window.__rescueHouse.setPose({x:5.95,y:0,z:11.30,yaw:0,pitch:0}));
   await page.keyboard.down('w');
   try{await page.waitForFunction(()=>['ending','safe'].includes(window.__rescueHouse.story().phase));}

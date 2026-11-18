@@ -22,7 +22,7 @@ import {navigate,smoothAxis,getStairDirection} from './navigation.js';
 import {interactionTarget} from './interactions.js';
 import {circuitPowered,housePowered,toggleCircuit,toggleHousePower,updateBlackout,updatePowerLever} from './house-lights.js';
 import {inHatch,poseHatch,poseHatchRug} from './basement.js';
-import {PIANO_REWARD,posePianoCompartment,setPianoScore,poseTrunk} from './house-additions.js';
+import {posePianoCompartment,posePianoReward,setPianoScore,poseTrunk} from './house-additions.js';
 import {PIANO_KEYS,pianoKeyboard} from './piano-recital.js';
 import {PianoSession} from './piano-session.js';
 import {HouseTelevision} from './television.js';
@@ -244,7 +244,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const torchAvailable=!demo||checkpoint!=='ground'||['drawer','lock','rescue'].includes(config.entry);
   equipment=torchAvailable?'flashlight':'empty';
   s={x:p.x,z:p.z,y:p.y,yaw:p.yaw,pitch:0,eye:1.63,crouched:false,hidden:null,lying:false,bob:0,
-    flashlight:torchAvailable&&demo,battery:100,stamina:SPRINT_SECONDS,sprinting:false,exhausted:false,recoveryDelay:0,reduceBob:!options.bob||reducedMotion.matches,inventory:{notes:[],batteries:p.items?.batteries??Number(demo),key:demo?puzzle.key&&!puzzle.door:!!p.items?.key,redKey:false,torch:torchAvailable,rc:false},distanceSteps:0};
+    flashlight:torchAvailable&&demo,battery:100,stamina:SPRINT_SECONDS,sprinting:false,exhausted:false,recoveryDelay:0,reduceBob:!options.bob||reducedMotion.matches,inventory:{notes:[],batteries:p.items?.batteries??Number(demo),key:demo?puzzle.key&&!puzzle.door:!!p.items?.key,redKey:false,masterKey:false,torch:torchAvailable,rc:false},distanceSteps:0};
   world.objects.find(o=>o.id==='media-flashlight').taken=torchAvailable;
   if(scenario){
    if(scenario.pose){
@@ -398,6 +398,15 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }else if(o.kind==='tap'){
    o.on=!o.on;o.water.y=o.on?1.01:-100;play('click',o);say(o.on?'Llave de agua abierta':'Llave de agua cerrada');
   }else if(o.kind==='door'||o.kind==='cupboard'){
+   if(o.id==='entrada'&&o.sealed&&events.phase==='escape'){
+    if(!s.inventory.masterKey){say('Necesitas la llave maestra del piano del descansillo.',5);play('latch',o);return;}
+    const opened=animateFurniture(o,true,{player:s,reducedMotion:reducedMotion.matches});
+    if(!opened.started){say('Retrocede un poco para abrir la puerta.');return;}
+    o.sealed=false;
+    for(const box of world.boxes)if(box.id.startsWith('entry-padlock'))box.hiddenGeometry=true;
+    renderer.updateVisibility();play('unlock',o);saveCheckpoint();say('La llave maestra abrió la salida.');
+    return;
+   }
    if(demo&&o.id==='dormitorio'&&!canOpenBedroom(puzzle)){say('Busca la llave con lazo en el cajón del estudio.',4);play('latch',o);return;}
    if(o.sealed||o.locked&&!s.inventory.key){say(o.sealed?'Cerró la puerta con un candado. Busca otra salida.':'La puerta tiene un pequeño candado. Busca una llave.');play('latch',o);return;}
     const opening=!o.open;if(pursuer.active&&!sweepClear(o,o.amount,opening?1:0,pursuer)){say('No puedes mover la puerta mientras alguien ocupa el paso.');return;}const result=animateFurniture(o,opening,{player:s,reducedMotion:reducedMotion.matches});
@@ -416,7 +425,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     play('drawer',o);
   }else if(o.kind==='battery'){o.taken=true;s.inventory.batteries++;renderer.updateVisibility();play('pickup',o);say('Pila guardada en la mochila');}
   else if(o.kind==='flashlight'){o.taken=true;s.inventory.torch=true;s.flashlight=true;phone.setInventory(s.inventory);equip('flashlight');renderer.updateVisibility();play('pickup',o);say('Linterna guardada');}
-  else if(o.kind==='key'){o.taken=true;if(o.red)s.inventory.redKey=true;else{s.inventory.key=true;if(demo)puzzle=puzzleEvent(puzzle,'key');}phone.setInventory(s.inventory);renderer.updateVisibility();play('pickup',o);say(o.label+' obtenida');}
+  else if(o.kind==='key'){
+   if(o.master){collectMasterKey();return;}
+   o.taken=true;if(o.red)s.inventory.redKey=true;else{s.inventory.key=true;if(demo)puzzle=puzzleEvent(puzzle,'key');}phone.setInventory(s.inventory);renderer.updateVisibility();play('pickup',o);say(o.label+' obtenida');
+  }
   else if(o.kind==='note'){
    o.taken=true;
    const note={id:o.id,label:o.label,text:o.text};
@@ -498,27 +510,36 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   play('cloth',instrument);say('Kitty colocó la partitura en el atril.');
  }
  function openPiano(object){
-  if(!['explore','evaded'].includes(events.phase)){say('Ahora no conviene hacer ruido.');return;}
+  if(!['explore','evaded','escape'].includes(events.phase)){say('Ahora no conviene hacer ruido.');return;}
   placePianoScore();
   if(!object.scorePlaced){
    if(world.pianoSheet.taken){say('Acércate al atril para colocar la partitura.');return;}
    showModal('Atril vacío','<p>La partitura está guardada en el cajón de la sala de lectura de la planta alta.</p>');
    return;
   }
-  showModal('Piano antiguo',`<div class="piano-sheet-ui"><div class="piano-title">Mia &amp; Sebastian’s Theme</div>
+  showModal('Piano antiguo',`<div class="piano-sheet-ui"><div class="piano-title">Mia &amp; Sebastian’s Theme <span class="piano-page-label"></span></div>
    <div class="piano-score" role="img" aria-label="Partitura"></div><div class="piano-time" aria-hidden="true"><i></i></div>
    <div class="piano-keys">${pianoKeyboard()}</div></div><output class="piano-result" aria-live="polite"></output>`,
-   [['Levantarse','close'],['Practicar pieza completa','piano-practice']]);
-  piano=new PianoSession(object,dialog,sound,()=>{
-   s.inventory.notes.push({...PIANO_REWARD});
-   phone.setInventory(s.inventory);saveCheckpoint();
-  });
+   [['Levantarse','close'],['Practicar pieza completa','piano-practice'],['Recoger llave maestra','piano-collect']]);
+  piano=new PianoSession(object,dialog,sound,saveCheckpoint);
   sound.preparePiano();
   s.poseCamera=object.seat;dialog.classList.add('house-piano-dialog');
  }
  function pianoRunning(){return !paused&&hasFocus&&!document.hidden&&!isPortrait()&&!contextLost&&!$('lab-camera-settings').open;}
  function playPiano(index){
   if(piano&&pianoRunning())piano.press(index,performance.now());
+ }
+ function collectMasterKey(){
+  const {piano:instrument}=world,key=instrument.reward;
+  if(!instrument.solved||key.taken)return;
+  key.taken=true;s.inventory.masterKey=true;
+  posePianoReward(instrument);renderer.updateVisibility();saveCheckpoint();
+  if(piano){
+   piano.collectButton.hidden=true;
+   piano.practiceButton.focus({preventScroll:true});
+   piano.result.textContent='Llave maestra guardada · Abre la puerta principal';
+   sound.pianoReveal('key');
+  }else{play('pickup',key);say('Llave maestra guardada · Abre la puerta principal',5);}
  }
  function showMirrorNote(back='close'){
   showModal('Nota con escritura extraña',`<div class="house-note-sheet mirror-note-paper"><span class="mirror-note-writing" aria-hidden="true">${SAFE_CODE}</span><span class="mirror-note-description">Cuatro cifras escritas al revés.</span></div>${mirrorSafe.revealed?`<p class="mirror-note-reading">Lectura del espejo: <strong>${SAFE_CODE}</strong></p>`:'<p>Las marcas parecen tener sentido desde otro punto de vista.</p>'}`,[['Volver',back]]);
@@ -552,7 +573,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const actions=[['Cerrar mochila','close']];
   const charge=Math.ceil(s.battery);
   if(charge<100&&s.inventory.batteries>0)actions.unshift(['Usar pila (hasta +'+SPARE_CHARGE+'%)','recharge']);
-  showModal('Mi mochila',`<p><b>Auto RC:</b> ${s.inventory.rc?'Auto y tablet listos':'Sin recoger'}</p><p><b>⚿ Llave:</b> ${s.inventory.key?'Llave con lazo · abre el dormitorio':'Sin llave'}</p><p><b>Linterna:</b> ${charge}% · <b>Pilas de repuesto:</b> ${s.inventory.batteries}</p><div class="lab-note-list">${notes}</div>`,actions);
+  showModal('Mi mochila',`<p><b>Auto RC:</b> ${s.inventory.rc?'Auto y tablet listos':'Sin recoger'}</p><p><b>⚿ Llave:</b> ${s.inventory.key?'Llave con lazo · abre el dormitorio':'Sin llave con lazo'}</p>${s.inventory.masterKey?'<p><b>Llave maestra</b> · Abre la puerta principal</p>':''}<p><b>Linterna:</b> ${charge}% · <b>Pilas de repuesto:</b> ${s.inventory.batteries}</p><div class="lab-note-list">${notes}</div>`,actions);
  }
  function startBatterySwap(){
   if(batterySwap!==null||!s.inventory.torch||s.inventory.batteries<1||Math.ceil(s.battery)>=100||s.hidden||s.lying)return false;
@@ -648,16 +669,17 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    rcTrap.closed=true;rcTrap.armed=false;
    world.hatch.open=false;poseHatch(world.hatch,0);pursuer.mode='trapped';pursuer.path=[];
    stopRC(rc);equipment='rc';phone.equip('rc');
-   const entrance=world.objects.find(o=>o.id==='entrada');entrance.sealed=false;entrance.locked=false;setDoor(entrance,true);
-   for(const box of world.boxes)if(box.id.startsWith('entry-padlock'))box.hiddenGeometry=true;
+   const entrance=world.objects.find(o=>o.id==='entrada');entrance.sealed=true;entrance.locked=false;setDoor(entrance,false);
+   for(const box of world.boxes)if(box.id.startsWith('entry-padlock'))box.hiddenGeometry=false;
     freeLouis(louis);revealGreyCat(world.greyCat);events.phase='escape';sound.setThreat(false);resetInput();rebuild();saveCheckpoint();
    play('hatch-close',world.hatch);
-   say('¡Atrapado! El secuestrador está encerrado. Louis sale de su escondite: escapen juntos por la puerta principal.',8);
+   say(s.inventory.masterKey?'¡Atrapado! Abre la puerta principal con la llave maestra y sal con Louis.':'¡Atrapado! La llave maestra del piano abre la puerta principal.',8);
    return;
   }
   if(act==='mouse'){lockMouse();return;}
   if(act.startsWith('piano:')){playPiano(Number(act.slice(6)));return;}
   if(act==='piano-practice'){if(pianoRunning())piano?.start('practice');return;}
+  if(act==='piano-collect'){if(piano?.mode==='complete'&&pianoRunning())collectMasterKey();return;}
   if(act==='skip-intro'){if(cinematic)finishWindowIntro();return;}
   if(act==='pause'){togglePause();return;}
   if(act==='resume'){paused=false;modalClose();sound.resume();return;}
@@ -731,7 +753,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(events.phase==='sleep')objective='El perseguidor duerme. Puedes salir.';
   if(events.phase==='lockdown')objective='Busca cobertura';
   if(events.phase==='evaded')objective=s.y<-.18&&!puzzle.rescued?'Sigue el túnel hasta Louis':'Busca la trampilla bajo el tapete';
-  if(events.phase==='escape')objective=world.greyCat.called?'Sigue a la gata gris':'Sal al jardín con Louis';
+  if(events.phase==='escape')objective=world.objects.find(o=>o.id==='entrada').sealed?
+   s.inventory.masterKey?'Abre la puerta con la llave maestra':'Recoge la llave maestra del piano':
+   world.greyCat.called?'Sigue a la gata gris':'Sal al jardín con Louis';
   if($('lab-objective').textContent!==objective)$('lab-objective').textContent=objective;
   const meter=$('house-charge'),charge=Math.ceil(s.battery);
   const hideMeters=isSuspended()||!!cinematic||events.phase==='arrival'||phone.open;
@@ -784,9 +808,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(!target)return 'Usar';
   if(target===world.pianoSheet)return 'Recoger partitura';
   switch(target.kind){
-   case 'door':return target.open?'Cerrar puerta':'Abrir puerta';
+   case 'door':return target.id==='entrada'&&target.sealed&&events.phase==='escape'?'Abrir con llave maestra':target.open?'Cerrar puerta':'Abrir puerta';
    case 'drawer':return target.open?'Cerrar cajón':'Abrir cajón';
-   case 'key':return 'Recoger llave';
+   case 'key':return target.master?'Recoger llave maestra':'Recoger llave';
    case 'note':return 'Leer nota';
    case 'rescue':return 'Liberar a Louis';
    case 'hide':return target.requiresCrouch&&!s.crouched?'Agáchate primero':target.label;
@@ -862,7 +886,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const dz=(Math.cos(s.yaw)*velocity.forward-Math.sin(s.yaw)*velocity.side)*speed*dt;
   const body=s.crouched?1.04:1.64;
   const moved=navigate(s,world,dx,dz,body);
-  if(events.phase==='escape'&&louis?.phase==='follow'&&s.z>12.35&&s.x>4.6&&s.x<7.2){
+  if(events.phase==='escape'&&!world.objects.find(o=>o.id==='entrada').sealed&&louis?.phase==='follow'&&s.z>12.35&&s.x>4.6&&s.x<7.2){
    const ground=0,walk=2.70;
    finalCutscene={elapsed:0,
     kitty:{from:{x:s.x,z:s.z},to:{x:5.56,z:14.05},ground,walk,stand:0},

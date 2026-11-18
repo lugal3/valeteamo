@@ -6,6 +6,7 @@
 #lab3d .house-piano-dialog .lab-paper-actions{margin-top:5px}
 #lab3d .house-piano-dialog .lab-paper-body{overflow:visible}
 #lab3d .piano-title{color:#392b29;font:600 12px Georgia,serif;text-align:center;padding-top:4px}
+#lab3d .piano-page-label{margin-left:7px;padding:1px 5px;border:1px solid #bf9f6d;border-radius:5px;color:#604639;font:650 10px system-ui}
 #lab3d .piano-score{height:65px;display:flex;justify-content:center;color:#604639}
 #lab3d .piano-score svg{display:block;width:min(100%,340px);height:100%}
 #lab3d .piano-score line,#lab3d .piano-score path{stroke:currentColor;stroke-width:.78}

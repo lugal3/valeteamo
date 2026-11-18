@@ -161,8 +161,23 @@ export class HouseSound {
   return Math.min(clock.end,clock.offset+(this.context.currentTime-clock.startedAt)*clock.rate);
  }
  resumePiano(){if(this.context&&!this.settings.muted)void this.context.resume().catch(()=>{});}
- pianoReveal(){
-  if(!this.settings.muted)this.recordings?.play('unlock',{gain:.34,output:this.channels.objects});
+ pianoReveal(stage){
+  const ctx=this.context;
+  if(!ctx||ctx.state!=='running'||this.settings.muted)return;
+  const output=this.channels.objects;
+  if(stage==='drawer'){
+   playFoley(ctx,output,this.atmosphere.noise,'window',.18,-.13);
+   this.recordings?.play('unlock',{gain:.32,pan:-.13,output});return;
+  }
+  for(const [i,frequency] of [784,1046.5,1318.5].entries()){
+   const at=ctx.currentTime+i*.080,note=ctx.createOscillator(),gain=ctx.createGain();
+   note.frequency.value=frequency;
+   gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(.12-i*.02,at+.009);
+   gain.gain.exponentialRampToValueAtTime(.0001,at+.48);
+   note.connect(gain);gain.connect(output);this.sequenceNodes.add(note);
+   note.onended=()=>{note.disconnect();gain.disconnect();this.sequenceNodes.delete(note);};
+   note.start(at);note.stop(at+.49);
+  }
  }
  piano(index){
   const ctx=this.context;if(!ctx||this.settings.muted)return;
