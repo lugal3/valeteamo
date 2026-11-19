@@ -1,5 +1,6 @@
 import {HEIGHT,STAIR} from './house-layout.js';
 import {ease} from './animations/pose-tools.js';
+import {FACE_PARENTS,pursuerFacePose,pursuerMask} from './pursuer-face.js';
 
 const HIP=.88,KNEE=.47,ANKLE=.06,SEGMENT=HIP-KNEE,SHOULDER=1.40,ELBOW=1.10;
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
@@ -12,7 +13,7 @@ export function pursuerPieces(){
  const round={shape:'round',smooth:true,segments:12,rings:8};
  const bevel={shape:'rounded-box',roundness:.24,segments:8,rings:5};
  const suit=[.23,.26,.32],lapel=[.31,.35,.42],pants=[.16,.18,.24],shirt=[.89,.88,.82];
- const skin=[.94,.79,.73],shade=[.66,.47,.45],hair=[.94,.94,.91],silver=[.70,.73,.77],tie=[.52,.13,.19];
+ const skin=[.94,.79,.73],shade=[.66,.47,.45],tie=[.52,.13,.19];
  add('jacket','chest',0,1.21,0,.625,.62,.36,suit,bevel);
  add('shirt','chest',0,1.34,.168,.225,.28,.036,shirt,bevel);
  for(const side of [-1,1]){
@@ -29,26 +30,12 @@ export function pursuerPieces(){
  for(const y of [1.16,1.068,.985])add('button'+y,'chest',0,y,.182,.024,.024,.013,[.44,.43,.43],round);
  add('waist','hips',0,.94,0,.48,.21,.31,pants,bevel);
  add('neck','head',0,1.52,.007,.16,.18,.16,skin,round);
- add('face','head',0,1.687,0,.351,.414,.329,skin,round);
- add('jaw','head',0,1.605,.042,.285,.151,.251,skin,bevel);
- add('chin','head',0,1.560,.084,.23,.12,.166,skin,round);
- add('nose-bridge','head',0,1.692,.164,.062,.121,.072,skin,round);
- add('nose-tip','head',0,1.646,.196,.083,.057,.066,skin,round);
- add('mouth','head',0,1.590,.166,.106,.012,.019,[.42,.24,.27],round);
- add('hair-back','head',0,1.75,-.057,.348,.277,.254,silver,round);
- add('hair-top','head',-.009,1.861,-.011,.369,.128,.312,hair,{...round,roll:-.17});
- for(let n=0;n<5;n++)add('hair-part'+n,'head',-.137+n*.061,1.868+n*.006,.053,.094,.072,.231,n%2?hair:silver,{...round,roll:-.20,yaw:-.31});
+ add('skull-back','head',0,1.705,-.085,.341,.363,.217,[.56,.39,.33],{...round,faceMaterial:5});
+ add('hair-back','head',0,1.76,-.088,.351,.254,.221,[.15,.13,.13],{...round,faceMaterial:10});
  for(const side of [-1,1]){
   add('ear'+side,'head',side*.174,1.674,-.009,.073,.096,.067,skin,round);
   add('ear-fold'+side,'head',side*.181,1.672,.022,.030,.047,.012,shade,round);
-  add('temple'+side,'head',side*.158,1.771,.022,.061,.151,.141,hair,round);
-  add('eye-socket'+side,'head',side*.074,1.716,.151,.080,.040,.032,shade,round);
-  add('eye-white'+side,'head',side*.074,1.715,.166,.065,.027,.020,[.93,.93,.90],round);
-  add('iris'+side,'head',side*.072,1.715,.174,.029,.027,.013,[.23,.56,.89],round);
-  add('pupil'+side,'head',side*.072,1.715,.183,.013,.018,.008,[.08,.14,.23],round);
-  add('brow'+side,'head',side*.073,1.744,.162,.087,.024,.030,silver,{...round,roll:side*.22});
-  add('eye-crease'+side,'head',side*.084,1.686,.157,.063,.009,.012,shade,{...round,roll:side*.15});
-  add('cheek-crease'+side,'head',side*.059,1.611,.171,.010,.057,.014,shade,{...round,roll:side*-.33});
+  add('temple'+side,'head',side*.158,1.771,-.030,.065,.138,.120,[.18,.15,.14],{...round,faceMaterial:10});
   const x=side*.321,leg=side*.136;
   add('upper-arm'+side,'arm'+side,x,1.26,0,.17,.33,.19,suit,bevel);
   add('sleeve'+side,'forearm'+side,x,.98,0,.154,.29,.165,suit,bevel);
@@ -59,7 +46,7 @@ export function pursuerPieces(){
   add('shoe'+side,'foot'+side,leg,.071,.060,.176,.142,.325,[.083,.082,.111],bevel);
   add('sole'+side,'foot'+side,leg,.025,.060,.182,.048,.333,[.06,.06,.08],bevel);
  }
- return parts;
+ return [...parts,...pursuerMask()];
 }
 
 function footfall(phase,amount){
@@ -115,14 +102,18 @@ export function pursuerPose(actor,reduced=false){
  }
  if(actor.captureReach){
   joints.chest.pitch=.12-.10*actor.captureLift;
-  joints.head.yaw=0;
-  joints.head.pitch=.23-.26*actor.captureLift;
+  const {bite,twitch}=actor.captureFace;
+  joints.head.yaw=twitch*.057*(1-bite);
+  joints.head.pitch=.23-.23*actor.captureLift+bite*.17;
+  joints.head.roll=twitch*.045;
+  joints.head.z+=bite*.085;
   for(const side of [-1,1]){
    const pitch=-actor.captureReach*(1.08+.34*actor.captureLift+side*.09);
    joints['arm'+side]={py:SHOULDER,pitch,roll:side*.13*actor.captureReach};
    joints['forearm'+side]={py:ELBOW,pitch:pitch-.26*actor.captureReach,
     y:(SHOULDER-ELBOW)*(1-Math.cos(pitch)),z:-(SHOULDER-ELBOW)*Math.sin(pitch)};
   }
+  pursuerFacePose(joints,actor.captureFace);
  }else if(actor.mode==='trapped'){
   // Frustrated rhythmic pounding and head turns, retained in low-motion mode.
   const beat=reduced?0:Math.max(0,Math.sin((actor.age||0)*4.2));
@@ -134,6 +125,31 @@ export function pursuerPose(actor,reduced=false){
   }
  }
  return joints;
+}
+
+function jointMatrix({px=0,py=0,pz=0,x=0,y=0,z=0,pitch=0,yaw=0,roll=0,scale=1}={}){
+ const cp=Math.cos(pitch),sp=Math.sin(pitch),cy=Math.cos(yaw),sy=Math.sin(yaw),cr=Math.cos(roll),sr=Math.sin(roll);
+ const r=[
+  cr*cy+sr*sp*sy,-sr*cy+cr*sp*sy,cp*sy,
+  sr*cp,cr*cp,-sp,
+  -cr*sy+sr*sp*cy,sr*sy+cr*sp*cy,cp*cy
+ ].map(n=>n*scale);
+ return {r,t:[
+  px+x-(r[0]*px+r[1]*py+r[2]*pz),
+  py+y-(r[3]*px+r[4]*py+r[5]*pz),
+  pz+z-(r[6]*px+r[7]*py+r[8]*pz)
+ ]};
+}
+
+function attachJoint(parent,child){
+ const a=parent.r,b=child.r;
+ return {
+  r:a.map((_,i)=>{
+   const row=i-i%3,col=i%3;
+   return a[row]*b[col]+a[row+1]*b[col+3]+a[row+2]*b[col+6];
+  }),
+  t:parent.t.map((value,i)=>value+a[i*3]*child.t[0]+a[i*3+1]*child.t[1]+a[i*3+2]*child.t[2])
+ };
 }
 
 export function posePursuer(base,out,groups,actor,reduced=false){
@@ -161,16 +177,32 @@ export function posePursuer(base,out,groups,actor,reduced=false){
   pose.head={py:1.52,pitch:-.02*stand+.16*sit*(1-stand),y:-.005*stand,z:.033*stand,yaw:pose.head.yaw*stand};
   pose.chest={py:1.07,pitch:.06*stand+.25*Math.sin(sit*Math.PI)*(1-stand)};
  }
- for(const {joint,start,end} of groups){
-  const {py=0,x=0,y=0,z=0,pitch=0,yaw=0,roll=0}=pose[joint]||{};
-  const cp=Math.cos(pitch),sp=Math.sin(pitch),cy=Math.cos(yaw),sy=Math.sin(yaw),cr=Math.cos(roll),sr=Math.sin(roll);
+ const matrices=new Map();
+ function matrixFor(joint){
+  if(!matrices.has(joint)){
+   const local=jointMatrix(pose[joint]),parent=FACE_PARENTS[joint];
+   matrices.set(joint,parent?attachJoint(matrixFor(parent),local):local);
+  }
+  return matrices.get(joint);
+ }
+ for(const {joint,start,end,flex} of groups){
+  const {r,t}=matrixFor(joint);
+  const tip=flex&&matrixFor(flex.joint);
+  const flexLength=flex?flex.axis.reduce((n,v)=>n+v*v,0):1;
   for(let i=start*16;i<end*16;i+=16){
+   const weight=flex?clamp(flex.axis.reduce((n,v,k)=>n+v*(base[i+k]-flex.anchor[k]),0)/flexLength,0,1):0;
    for(const offset of [0,6,13]){
     const at=i+offset,position=offset===0;
-    const a=base[at],b=base[at+1]-(position?py:0),d=base[at+2];
-    const u=a*cr-b*sr,v=a*sr+b*cr,n=v*sp+d*cp;
-    const lx=u*cy+n*sy+(position?x:0),lz=-u*sy+n*cy+(position?z:0);
-    const ly=v*cp-d*sp+(position?py+y-(inBed?HIP:0):0),zRot=ly*spRoot+lz*cpRoot;
+    const a=base[at],b=base[at+1],d=base[at+2];
+    let lx=r[0]*a+r[1]*b+r[2]*d+(position?t[0]:0);
+    let ly=r[3]*a+r[4]*b+r[5]*d+(position?t[1]-(inBed?HIP:0):0);
+    let lz=r[6]*a+r[7]*b+r[8]*d+(position?t[2]:0);
+    if(weight){
+     lx+=(tip.r[0]*a+tip.r[1]*b+tip.r[2]*d+(position?tip.t[0]:0)-lx)*weight;
+     ly+=(tip.r[3]*a+tip.r[4]*b+tip.r[5]*d+(position?tip.t[1]:0)-ly)*weight;
+     lz+=(tip.r[6]*a+tip.r[7]*b+tip.r[8]*d+(position?tip.t[2]:0)-lz)*weight;
+    }
+    const zRot=ly*spRoot+lz*cpRoot;
     out[at]=lx*c+zRot*s+(position?originX:0);
     out[at+1]=ly*cpRoot-lz*spRoot+(position?originY:0);
     out[at+2]=-lx*s+zRot*c+(position?originZ:0);

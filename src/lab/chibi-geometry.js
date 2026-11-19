@@ -3,6 +3,22 @@
 const unit=v=>{const length=Math.hypot(...v)||1;return v.map(n=>n/length);};
 const sgnPow=(v,p)=>(v<0?-1:1)*Math.pow(Math.abs(v),p);
 
+export function facetSurface(box,color,style){
+ const vertices=[],indices=[];
+ for(const [i,[a,b,c]] of box.triangles.entries()){
+  const u=b.map((v,k)=>v-a[k]),v=c.map((n,k)=>n-a[k]);
+  const normal=unit([u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]]);
+  const tangent=unit(u),variation=1+(Math.sin(i*17.147)*.5+.12)*(box.facetTint||0);
+  const tint=color.map(channel=>channel*variation),offset=vertices.length/16;
+  for(const p of [a,b,c]){
+   const surfaceTint=box.vertexColor?box.vertexColor(p,tint,box):tint;
+   vertices.push(...p,...surfaceTint,...normal,p[0]*3,(p[1]-1.5)*3,0,style,...tangent);
+  }
+  indices.push(offset,offset+2,offset+1);
+ }
+ return {vertices,indices};
+}
+
 export const BEVEL_PROFILE=[[-.5,0],[-.5,.82],[-.475,.96],[-.435,1],[.435,1],[.475,.96],[.5,.82],[.5,0]];
 const EAR_PROFILE=[[-.5,0],[-.47,.70],[-.34,.98],[-.12,.87],[.10,.63],[.29,.36],[.43,.13],[.48,.035],[.49,0]];
 

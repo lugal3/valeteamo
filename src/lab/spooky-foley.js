@@ -32,11 +32,10 @@ export function spookyFoley(ctx,bus,noise,kind,level,pan,onEnd=()=>{}){
  }else if(kind==='capture-grab'){
   layer({f:106,to:38,amp:1,duration:.28,type:'triangle'});
   layer({f:550,to:108,amp:.62,duration:.39,noiseLayer:true,q:1.2});
- }else if(kind==='capture-reveal'){
-  layer({f:560,to:1990,amp:.95,duration:.49,noiseLayer:true,q:1.4,attack:.026});
-  layer({f:475,to:890,amp:.51,duration:.45,type:'sawtooth',attack:.057});
-  layer({f:530,to:340,amp:.42,duration:.47,type:'sawtooth',attack:.062});
-  layer({f:137,to:37,amp:.92,duration:.49,type:'triangle'});
+ }else if(kind==='capture-tear'){
+  layer({f:680,to:158,amp:.7,duration:.45,noiseLayer:true,q:2.4,attack:.04});
+  layer({at:.10,f:3350,to:890,amp:.47,duration:.23,noiseLayer:true,q:4,attack:.009});
+  layer({at:.19,f:1810,to:540,amp:.57,duration:.17,noiseLayer:true,q:3,attack:.012});
  }else if(kind==='capture-bite'){
   layer({f:1580,to:165,amp:1,duration:.25,noiseLayer:true,q:.9});
   layer({f:124,to:28,amp:1.05,duration:.36,type:'triangle'});

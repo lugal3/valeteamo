@@ -2,6 +2,7 @@
 import {scheduleTensionStep,TENSION_BEAT} from './tension-music.js';
 import {HouseAtmosphere,playFoley} from './atmosphere.js';
 import {spookyFoley} from './spooky-foley.js';
+import {buildCaptureScream} from './capture-scream.js';
 import {RecordedAudio} from './recorded-audio.js';
 import {playEmoteRhythm} from './emote-audio.js';
 const pianoReference=new URL('./audio/piano-reference.wav',import.meta.url).href;
@@ -269,7 +270,18 @@ export class HouseSound {
  captureCue(kind){
   const ctx=this.context;
   if(!ctx||ctx.state!=='running'||this.paused||this.settings.muted)return;
-  const level=kind==='capture-reveal'?.78:kind==='capture-bite'?.46:.32;
+  this.captureScream??=buildCaptureScream(ctx);
+  if(kind==='capture-reveal'){
+   const source=ctx.createBufferSource(),gain=ctx.createGain();
+   source.buffer=this.captureScream;gain.gain.value=2.38;
+   source.connect(gain);gain.connect(this.channels.alerts);
+   this.sequenceNodes.add(source);
+   source.onended=()=>{source.disconnect();gain.disconnect();this.sequenceNodes.delete(source);};
+   source.start();
+   return;
+  }
+  this.foleyVoices??=new Set();
+  const level=kind==='capture-bite'?.56:kind==='capture-tear'?.35:.32;
   const voice=spookyFoley(ctx,this.channels.alerts,this.atmosphere.noise,kind,level,0,v=>this.foleyVoices.delete(v));
   this.foleyVoices.add(voice);
  }

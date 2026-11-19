@@ -112,6 +112,27 @@ void main(){
  }
  float warmth=0.0;
  for(int i=0;i<${VISIBLE_LAMPS};i++)warmth+=lampLight(uLamps[i],world,N,surfaceNormal);
+ if(vArt>4.5){
+  // Procedural skin, wet lining, brushed steel, optics and old enamel.
+  vec3 viewDir=normalize(uEye-vWorld);
+  vec3 key=normalize(-uForward*.78-uRight*.40+uUp*.55);
+  vec3 halfVector=normalize(key+viewDir);
+  float lit=max(0.0,dot(surfaceNormal,key));
+  float rim=pow(1.0-clamp(dot(surfaceNormal,viewDir),0.0,1.0),2.5);
+  vec2 texel=floor(vUV*vec2(157.0,191.0));
+  float grain=fract(sin(dot(texel,vec2(12.7,31.4)))*1973.1);
+  float marbling=sin(vUV.x*37.0+sin(vUV.y*42.0)*1.8)*sin(vUV.y*28.0+sin(vUV.x*27.0));
+  float wet=step(5.5,vArt)*(1.0-step(8.5,vArt));
+  float steel=step(6.5,vArt)*(1.0-step(7.5,vArt));
+  float optical=step(7.5,vArt)*(1.0-step(8.5,vArt));
+  float streak=pow(abs(sin(vUV.y*450.0+sin(vUV.x*69.0)*.45)),9.0);
+  vec3 color=vColor*(.87+.13*grain+.11*marbling+steel*.16*streak);
+  vec3 light=vec3(.28)+vec3(1.0,.76,.61)*uShot*(.36+.89*lit)+vec3(.28,.52,.66)*rim*(.17+.57*uShot);
+  light+=vec3(.94,.99,1.0)*beam+vec3(.88,.72,.55)*warmth*.62;
+  float shine=pow(max(0.0,dot(surfaceNormal,halfVector)),mix(31.0,12.0,steel))*(.017+.21*wet)*(.19+uShot);
+  color=color*light+shine*mix(vec3(1.0,.66,.62),vec3(.71,.87,.92),steel)+color*optical*.74;
+  gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);return;
+ }
  if(vStyle>63.5){
   // Keep the grip legible close to the camera, and light the reflected body in the room.
   vec3 viewDir=normalize(uEye-vWorld);

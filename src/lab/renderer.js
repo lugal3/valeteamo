@@ -1,6 +1,6 @@
 import {createPose,createRigBinding,evaluateRig,JOINT_INDEX} from './character-rig.js';
 import {sampleBlink} from './animations/face.js';
-import {smoothSurface,torusSurface,roundedBoxSurface} from './chibi-geometry.js';
+import {facetSurface,smoothSurface,torusSurface,roundedBoxSurface} from './chibi-geometry.js';
 import {loisFaceSurface,loisPhotoFaceUV} from './lois-ps2-face.js';
 import {sampleLoisRig,writeLoisRigPart} from './lois-ps2-rig.js';
 import {createLoisFaceTexture} from './lois-ps2-texture.js';
@@ -10,6 +10,7 @@ import {climbingHandPieces} from './first-person.js';
 import {samplePianoPose} from './piano-recital.js';
 import {drawViewModel} from './viewmodel.js';
 import {pursuerPieces,posePursuer} from './pursuer-model.js';
+import {pursuerInterior} from './pursuer-face.js';
 import {sampleWardrobeWalk} from './animations/wardrobe-entry.js';
 import {VERTEX_SHADER as VS,FRAGMENT_SHADER as FS} from './material-shaders.js';
 // Minimal WebGL1 3D renderer: real perspective, depth buffer, world geometry and spotlight.
@@ -127,6 +128,7 @@ export function geometry(boxes){
   };
   const rotateMesh=()=>{
    range.end=vertices.length;range.indexEnd=indices.length;
+   if(box.faceMaterial)for(let i=first+11;i<vertices.length;i+=16)vertices[i]=box.faceMaterial;
    if(!box.yaw&&!box.pitch&&!box.roll){projectReference();return;}const c=Math.cos(box.yaw||0),s=Math.sin(box.yaw||0),cp=Math.cos(box.pitch||0),sp=Math.sin(box.pitch||0),cr=Math.cos(box.roll||0),sr=Math.sin(box.roll||0);
    for(let i=first;i<vertices.length;i+=16){const dx=vertices[i]-box.x,dy=vertices[i+1]-box.y,x=dx*cr-dy*sr,y=dx*sr+dy*cr,z=vertices[i+2]-box.z,pz=y*sp+z*cp;vertices[i]=box.x+x*c-pz*s;vertices[i+1]=box.y+y*cp-z*sp;vertices[i+2]=box.z+x*s+pz*c;for(const offset of [6,13]){const ax=vertices[i+offset],ay=vertices[i+offset+1],nx=ax*cr-ay*sr,ny=ax*sr+ay*cr,nz=vertices[i+offset+2],rz=ny*sp+nz*cp;vertices[i+offset]=nx*c-rz*s;vertices[i+offset+1]=ny*cp-nz*sp;vertices[i+offset+2]=nx*s+rz*c;}}
    projectReference();
@@ -238,11 +240,11 @@ export function geometry(boxes){
     groups.push({start:offset,end:offset+mesh.vertices.length/16,joint:box.joint||'root'});
     offset+=mesh.vertices.length/16;rotateMesh();continue;
    }
-  if(box.shape==='lathe'||box.smooth){
-   const mesh=smoothSurface(box,color,style);
+  if(box.triangles||box.shape==='lathe'||box.smooth){
+   const mesh=box.triangles?facetSurface(box,color,style):smoothSurface(box,color,style);
    for(const n of mesh.vertices)vertices.push(n);
    for(const i of mesh.indices)indices.push(offset+i);
-   groups.push({start:offset,end:offset+mesh.vertices.length/16,joint:box.joint||'root',blinkY:box.blinkY});offset+=mesh.vertices.length/16;rotateMesh();continue;
+   groups.push({start:offset,end:offset+mesh.vertices.length/16,joint:box.joint||'root',blinkY:box.blinkY,flex:box.flex});offset+=mesh.vertices.length/16;rotateMesh();continue;
   }
   if(box.shape==='torus'){
    const mesh=torusSurface(box,color,style);
@@ -651,13 +653,20 @@ export class HouseRenderer {
  drawPursuer(actor,mirrored=false,reduced=false){
   const gl=this.gl;
   if(!this.pursuerMesh){
-   this.pursuerMesh=geometry(pursuerPieces());this.pursuerVertices=new Float32Array(this.pursuerMesh.vertices.length);
+   const outside=pursuerPieces();
+   this.pursuerMesh=geometry([...outside,...pursuerInterior()]);this.pursuerVertices=new Float32Array(this.pursuerMesh.vertices.length);
+   const shell=this.pursuerMesh.ranges[outside.length-1];
+   this.pursuerShell={count:shell.indexEnd,groups:this.pursuerMesh.groups.filter(g=>g.end*16<=shell.end),
+    vertices:this.pursuerVertices.subarray(0,shell.end)};
    this.pursuerVbo=gl.createBuffer();this.pursuerIbo=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.pursuerIbo);
    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,this.pursuerMesh.indices,gl.STATIC_DRAW);
   }
-  const out=this.pursuerVertices;
-  posePursuer(this.pursuerMesh.vertices,out,this.pursuerMesh.groups,actor,reduced);
-  if(mirrored)reflectMesh(out);gl.bindBuffer(gl.ARRAY_BUFFER,this.pursuerVbo);gl.bufferData(gl.ARRAY_BUFFER,out,gl.DYNAMIC_DRAW);this.bind(this.pursuerVbo,this.pursuerIbo);gl.drawElements(gl.TRIANGLES,this.pursuerMesh.indices.length,gl.UNSIGNED_SHORT,0);
+  const exposed=actor.captureFace&&(actor.captureFace.left>0||actor.captureFace.right>0||actor.captureFace.jaw>0);
+  const {count,groups,vertices}=exposed
+   ?{count:this.pursuerMesh.indices.length,groups:this.pursuerMesh.groups,vertices:this.pursuerVertices}
+   :this.pursuerShell;
+  posePursuer(this.pursuerMesh.vertices,this.pursuerVertices,groups,actor,reduced);
+  if(mirrored)reflectMesh(vertices);gl.bindBuffer(gl.ARRAY_BUFFER,this.pursuerVbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.DYNAMIC_DRAW);this.bind(this.pursuerVbo,this.pursuerIbo);gl.drawElements(gl.TRIANGLES,count,gl.UNSIGNED_SHORT,0);
  }
  resize(){
   const scale=this.quality==='low'?.55:.80;
@@ -721,7 +730,11 @@ export class HouseRenderer {
   if(this.dynamicCount){this.bind(this.dynamicVbo,this.dynamicIbo);gl.drawElements(gl.TRIANGLES,this.dynamicCount,gl.UNSIGNED_SHORT,0);}
   this.bind(this.vbo,this.ibo);
   gl.drawElements(gl.TRIANGLES,this.count,gl.UNSIGNED_SHORT,0);
-  if(motion.pursuer?.active)this.drawPursuer(motion.pursuer,false,motion.reduced);
+  if(motion.pursuer?.active){
+   if(motion.pursuerLight!==undefined)gl.uniform1f(this.uniform.uShot,motion.pursuerLight);
+   this.drawPursuer(motion.pursuer,false,motion.reduced);
+   if(motion.pursuerLight!==undefined)gl.uniform1f(this.uniform.uShot,motion.shotLight??0);
+  }
   if(!motion.thirdPerson)this.drawMirror(camera,motion);else this.drawActor(motion.thirdPerson,motion);
   gl.uniform1f(this.uniform.uHeld,1);
   if(motion.introHands)this.drawClimbingHands(motion.introHands);

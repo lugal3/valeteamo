@@ -6,7 +6,6 @@ import {FloorSounds} from './floor-sounds.js';
 import {EMOTES} from './animations/emotes.js';
 import {Pursuer} from './pursuer.js';
 import {CAPTURE_BITE,CAPTURE_REVEAL,CAPTURE_SECONDS,captureFrame} from './capture-shot.js';
-import pursuerReveal from './media/pursuer-reveal.jpg';
 import {movementKey,releasedPointer,hasControlTouch} from './movement-input.js';
 import {CharacterAnimator} from './animator.js';
 import {BATH_MIRROR} from './mirror.js';
@@ -65,8 +64,6 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  <canvas id="lab-canvas" aria-label="Escenario tridimensional interactivo de la casa"></canvas>
  <div class="lab-vignette" aria-hidden="true"></div>
  <div id="lab-capture" hidden>
-  <img src="${pursuerReveal}" alt="" decoding="async">
-  <div class="capture-jaw capture-jaw-top"></div><div class="capture-jaw capture-jaw-bottom"></div>
   <div class="capture-dark"></div>
   <div id="capture-caption" class="capture-caption" role="status"></div>
  </div>
@@ -941,6 +938,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    last=performance.now();
    return;
   }
+  if(previous<1.13&&shot.elapsed>=1.13)sound.captureCue('capture-tear');
   if(previous<CAPTURE_REVEAL&&shot.elapsed>=CAPTURE_REVEAL){
    sound.captureCue('capture-reveal');
    if(options.captions!==false)captureCaption.textContent='[Alarido]';
@@ -951,15 +949,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   const shotFrame=captureFrame(shot.from,shot.actor,shot.elapsed,reducedMotion.matches);
   const style=captureLayer.style;
-  style.setProperty('--capture-grip',`${100-44*shotFrame.grip}%`);
-  style.setProperty('--capture-face',shotFrame.face);
-  style.setProperty('--capture-seal',shotFrame.seal);
-  style.setProperty('--capture-zoom',shotFrame.zoom);
-  style.setProperty('--capture-jaw',shotFrame.jaw);
+  style.setProperty('--capture-grip',`${100-25*shotFrame.grip}%`);
   style.setProperty('--capture-dark',shotFrame.dark);
   if(shotFrame.dark===1)return;
   try{
-   renderer.render(shotFrame.camera,false,elapsed,false,{shotLight:.31,reduced:reducedMotion.matches,pursuer:shotFrame.actor,television});
+   renderer.render(shotFrame.camera,false,elapsed,false,{shotLight:.19,pursuerLight:shotFrame.light,reduced:reducedMotion.matches,pursuer:shotFrame.actor,television});
   }catch(e){interruptGraphics('Error de renderizado',String(e.message||e));}
  }
  function updateStory(delta){
