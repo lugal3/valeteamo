@@ -702,7 +702,7 @@ export class HouseRenderer {
   if(mirrored)reflectMesh(vertices);gl.bindBuffer(gl.ARRAY_BUFFER,this.pursuerVbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.DYNAMIC_DRAW);this.bind(this.pursuerVbo,this.pursuerIbo);gl.drawElements(gl.TRIANGLES,count,gl.UNSIGNED_SHORT,0);
  }
  drawCaptureGrasp(camera,basis,actor,grasp){
-  if(grasp.time<grasp.timing.reveal-.24)return;
+  if(grasp.time<grasp.timing.tear+.18)return;
   const gl=this.gl;
   if(!this.tentacles){
    this.tentacles=createTentacleMesh();

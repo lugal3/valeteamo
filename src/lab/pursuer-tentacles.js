@@ -1,135 +1,166 @@
 import {shotEase} from './capture-shot.js';
 import {pursuerGraspAnchor} from './pursuer-model.js';
 
-const RINGS=38,SIDES=17,STRIDE=16,TAU=Math.PI*2;
-const TENDRILS=[
- {side:-1,y:1.643,x:.107,z:.103,r:.039,begin:1.58,speed:.74,kind:'wrist'},
- {side:1,y:1.575,x:.088,z:.096,r:.034,begin:1.72,speed:.66,kind:'wrist'},
- {side:-1,y:1.749,x:.092,z:.086,r:.029,begin:1.53,speed:.86,kind:'upper'},
- {side:1,y:1.672,x:.112,z:.080,r:.025,begin:1.81,speed:.79,kind:'upper'},
- {side:1,y:1.557,x:.022,z:.125,r:.040,begin:2.55,speed:.47,kind:'throat'}
-];
+const STRIDE=16,RINGS=30,SIDES=14,WEB_ROWS=14,WEB_COLS=8,TAU=Math.PI*2;
+const TUBE=(RINGS+1)*(SIDES+1),WEB=(WEB_ROWS+1)*(WEB_COLS+1);
+const SIDES_OF_FACE=[-1,1];
+const mix=(a,b,t)=>a+(b-a)*t;
 const sub=(a,b)=>a.map((n,k)=>n-b[k]);
-const lerp=(a,b,t)=>a.map((n,k)=>n+(b[k]-n)*t);
+const lerp=(a,b,t)=>a.map((n,k)=>mix(n,b[k],t));
 const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
 const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
-function unit(v){const m=Math.hypot(...v)||1;return v.map(n=>n/m);}
+const unit=v=>{const d=Math.hypot(...v)||1;return v.map(n=>n/d);};
 
-function sample(points,t){
- const scaled=t*(points.length-1),i=Math.min(points.length-2,Math.floor(scaled)),s=scaled-i,s2=s*s,s3=s2*s;
- const a=points[Math.max(0,i-1)],b=points[i],c=points[i+1],d=points[Math.min(points.length-1,i+2)];
- const span=Math.hypot(...sub(c,b)),before=Math.hypot(...sub(b,a)),after=Math.hypot(...sub(d,c));
- const inScale=span/(before+span||1),outScale=span/(span+after||1);
- return b.map((v,k)=>(2*s3-3*s2+1)*v+(-2*s3+3*s2)*c[k]
-  +(s3-2*s2+s)*(c[k]-a[k])*inScale+(s3-s2)*(d[k]-b[k])*outScale);
+// Round only the small region around a joint. The lengths on either side
+// retain a clear change of direction as the appendage flexes under load.
+function path(points,u){
+ const scaled=u*(points.length-1),joint=Math.round(scaled),distance=scaled-joint;
+ const bend=.22;
+ if(joint>0&&joint<points.length-1&&Math.abs(distance)<bend){
+  const hinge=points[joint],t=(distance+bend)/(2*bend);
+  const start=lerp(hinge,points[joint-1],bend),end=lerp(hinge,points[joint+1],bend);
+  return lerp(lerp(start,hinge,t),lerp(hinge,end,t),t);
+ }
+ const i=Math.min(points.length-2,Math.floor(scaled));
+ return lerp(points[i],points[i+1],scaled-i);
 }
 
-function handPose(side,{time,timing,drag,swallow,reduced},grip,other){
- const same=side===timing.firstSide;
- const contact=same?timing.grab:timing.lock;
- const raise=shotEase(contact-(same?.45:.61),contact-.043,time);
- const resist=grip*(1-other),pull=grip*drag;
- const wave=reduced?0:Math.sin(time*16+side*1.5)*raise*(1-grip);
- const recoil=reduced?0:resist*(.75+.25*Math.sin((time-contact)*25));
- return {
-  x:side*(.209+.055*swallow+.018*grip+.047*recoil-.048*pull),
-  y:-.253+.065*raise+.045*grip-.036*recoil-.026*pull+.031*wave,
-  z:.303+.025*raise-.055*recoil-.016*grip+.113*pull,
-  roll:side*(.27+grip*.58+recoil*.18-wave*.10),
-  flex:.43+raise*.16+grip*.30-.27*recoil,curl:grip*(.54+.46*other),raise
- };
+function panelIndices(indices,offset,rows,cols,back=false){
+ for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
+  const a=offset+row*(cols+1)+col,b=a+1,c=a+cols+1,d=c+1;
+  indices.push(a,d,b,a,c,d);
+  if(back)indices.push(a,b,d,a,d,c);
+ }
 }
 
 export function createTentacleMesh(){
- const vertices=new Float32Array(TENDRILS.length*(RINGS+1)*(SIDES+1)*STRIDE),indices=[];
- for(let i=0;i<TENDRILS.length;i++)for(let row=0;row<RINGS;row++)for(let side=0;side<SIDES;side++){
-  const a=(i*(RINGS+1)+row)*(SIDES+1)+side,b=a+1,c=a+SIDES+1,d=c+1;
-  indices.push(a,d,b,a,c,d);
- }
+ const vertices=new Float32Array((6*TUBE+4*WEB)*STRIDE),indices=[];
+ for(let i=0;i<6;i++)panelIndices(indices,i*TUBE,RINGS,SIDES);
+ for(let i=0;i<4;i++)panelIndices(indices,6*TUBE+i*WEB,WEB_ROWS,WEB_COLS,true);
  return {vertices,indices:new Uint16Array(indices)};
+}
+
+function write(vertices,index,position,normal,tangent,u,v,rgb,material,stress=0){
+ const at=index*STRIDE;
+ for(let j=0;j<3;j++){
+  vertices[at+j]=position[j];vertices[at+3+j]=rgb[j];
+  vertices[at+6+j]=normal[j];vertices[at+13+j]=tangent[j];
+ }
+ vertices[at+9]=u;vertices[at+10]=v;vertices[at+11]=material;vertices[at+12]=stress;
+}
+
+function poseLimb(vertices,id,points,amount,radius,load,basis,oral=false){
+ const count=points.length-1;
+ let transported=null;
+ for(let row=0;row<=RINGS;row++){
+  const u=row/RINGS,center=path(points,u);
+  const tangent=unit(sub(path(points,Math.min(1,u+.009)),path(points,Math.max(0,u-.009))));
+  const across=transported?.map((n,k)=>n-dot(transported,tangent)*tangent[k]);
+  const normal=unit(across&&dot(across,across)>.03?across:
+   cross(Math.abs(dot(tangent,basis.up))>.88?basis.right:basis.up,tangent));
+  transported=normal;
+  const binormal=cross(tangent,normal);
+  const hinge=Math.max(0,1-Math.abs(u*count-Math.round(u*count))*4)*Math.min(1,u*9);
+  const profile=(1-u)**.64*(.77+.21*Math.sin(u*count*Math.PI)**2+.23*hinge)+.013;
+  const width=radius*profile*amount*(1+.12*load*hinge);
+  for(let k=0;k<=SIDES;k++){
+   const v=k/SIDES,a=v*TAU,c=Math.cos(a),s=Math.sin(a);
+   const lines=1+.12*Math.cos(a*3+u*3)+.072*Math.sin(a*7-u*12);
+   const rib=.94+.06*Math.cos(u*85)*hinge;
+   const direction=normal.map((n,j)=>n*c+binormal[j]*s);
+   const p=center.map((n,j)=>n+(normal[j]*c+binormal[j]*s*.74)*width*lines*rib);
+   const flesh=.45+.55*Math.pow(Math.max(0,s),2);
+   const rgb=[.21+.10*flesh,.050+.048*flesh,.053+.026*flesh];
+   write(vertices,id*TUBE+row*(SIDES+1)+k,p,direction,tangent,u,v,rgb,12,oral?0:hinge*(.61+.39*load));
+  }
+ }
+}
+
+function poseMembrane(vertices,id,[base,elbow,tip],amount,load,basis){
+ const start=lerp(base,elbow,.29),end=lerp(elbow,tip,.66);
+ const a=sub(start,elbow),b=sub(end,elbow);
+ const normal=unit(cross(a,b)),tangent=unit(sub(end,start));
+ const openness=Math.hypot(...sub(start,end))/Math.max(.001,Math.hypot(...a)+Math.hypot(...b));
+ const reach=.54+.22*openness+.14*load;
+ for(let row=0;row<=WEB_ROWS;row++){
+  const u=row/WEB_ROWS;
+  const edge=u<.5?lerp(start,elbow,u*2):lerp(elbow,end,(u-.5)*2);
+  const sag=Math.sin(Math.PI*u)**.83;
+  const rim=lerp(edge,lerp(start,end,u),reach*sag);
+  for(let col=0;col<=WEB_COLS;col++){
+   const v=col/WEB_COLS;
+   const fold=Math.sin(u*32+v*2)*(.014-.009*openness)*Math.sin(v*Math.PI)*sag;
+   const p=lerp(edge,rim,v).map((n,k)=>n+amount*(basis.forward[k]*.008+normal[k]*fold));
+   const shade=.84+.16*openness;
+   write(vertices,6*TUBE+id*WEB+row*(WEB_COLS+1)+col,p,normal,tangent,u,v,
+    [.19*shade,.071*shade,.066*shade],18,load);
+  }
+ }
+}
+
+function handPose(side,{time,timing,drag,swallow,reduced},grip,other){
+ const contact=side===timing.firstSide?timing.grab:timing.lock;
+ const raise=shotEase(timing.reveal-.14,contact-.03,time);
+ const recoil=grip*(1-other),pull=grip*drag;
+ const shake=reduced?0:Math.sin(time*17+side*1.5)*raise*(1-grip);
+ return {
+  x:side*(.182+.054*recoil-.023*pull-.050*swallow),
+  y:-.239+.073*raise-.020*recoil+.025*pull+.012*shake+.026*swallow,
+  z:.296-.028*recoil+.077*pull-.164*swallow,
+  roll:side*(.23+.70*grip+.22*recoil),flex:.32+.27*raise+.26*grip+.26*swallow,
+  curl:grip*(.59+.41*other),raise
+ };
+}
+
+function wristPosition(hand,point){
+ // The cuff in climbingHandPieces is centered at (0, -.07, .15).
+ // Apply the same flex, roll and scale as drawClimbingHands.
+ const y=-.07*Math.cos(hand.flex)-.15*Math.sin(hand.flex);
+ const z=-.07*Math.sin(hand.flex)+.15*Math.cos(hand.flex);
+ return point(hand.x+y*Math.sin(hand.roll)*.67,hand.y+y*Math.cos(hand.roll)*.67,hand.z-z*.67);
 }
 
 export function captureGrasp(camera,basis,actor,grasp,mesh){
  const {time,timing,snare,drag,swallow,reduced,gripLeft,gripRight}=grasp;
  const origin=[camera.x,camera.y,camera.z];
- const point=(x,y,z)=>origin.map((n,i)=>n+basis.right[i]*x+basis.up[i]*y+basis.forward[i]*z);
+ const point=(x,y,z)=>origin.map((n,k)=>n+basis.right[k]*x+basis.up[k]*y+basis.forward[k]*z);
  const anchor=pursuerGraspAnchor(actor,reduced);
- const wristPose=[handPose(-1,grasp,gripLeft,gripRight),handPose(1,grasp,gripRight,gripLeft)];
- const hands=swallow<.94?wristPose.map(hand=>{
+ const wrists=[handPose(-1,grasp,gripLeft,gripRight),handPose(1,grasp,gripRight,gripLeft)];
+ const hands=swallow<.94?wrists.map(hand=>{
   if(!hand.raise)return null;
   const [x,y,z]=point(hand.x,hand.y,hand.z);
   return {x,y,z,roll:hand.roll,flex:hand.flex,curl:hand.curl};
  }):null;
- const vertices=mesh.vertices;
- for(const [id,{side,x,y,z,r,begin,speed,kind}] of TENDRILS.entries()){
-  const screenSide=-side;
-  const grip=screenSide<0?gripLeft:gripRight;
-  const other=screenSide<0?gripRight:gripLeft;
-  const contact=screenSide===timing.firstSide?timing.grab:timing.lock;
-  const emergence=kind==='wrist'?contact-.60:begin+timing.reveal-1.68;
-  const amount=shotEase(emergence,kind==='wrist'?contact+.09:emergence+speed,time);
-  const grab=grip*(1-.23*swallow);
-  const flick=reduced?0:.017*Math.sin(time*15+id*2)*(1-grab);
-  const lower=id===1||kind==='throat';
-  const root=anchor(side*x,y,z,lower);
-  const shoulder=anchor(side*(x+.078*amount),y+(lower?-.021:.043)*amount,z+.068*amount,lower);
-  let waypoints;
-  if(kind==='wrist'){
-   const hand=wristPose[screenSide<0?0:1];
-   // The curl follows the same posed wrist that the renderer draws.
-   const cx=hand.x+screenSide*.022,cy=hand.y-.043,cz=hand.z-.031;
-   const radius=.076-.025*grip;
-   const coil=Array.from({length:5},(_,i)=>{
-    const t=i/4,angle=-.58+(3.35+grab*1.97)*t;
-    return point(cx+screenSide*Math.cos(angle)*radius,cy+Math.sin(angle)*radius*.79,
-     cz-.033*t+.025*(1-grab));
-   });
-   waypoints=[
-    root,shoulder,point(cx+screenSide*.106,cy+.052+flick,cz+.128),...coil
-   ];
-  }else if(kind==='upper'){
-   waypoints=[root,shoulder,point(screenSide*(.277-.053*snare),.139+flick,.336),
-    point(screenSide*(.241-.043*snare),.153+.037*drag,.246),
-    point(screenSide*(.184-.126*swallow),.103-.031*swallow,.195),
-    point(screenSide*(.117-.085*swallow),.044-.015*drag,.111+.055*swallow)];
-  }else{
-   waypoints=[root,anchor(-.059,1.575,.164,true),point(-.122,-.070,.284),
-    point(-.089,-.118,.215),point(.061,-.092,.131),point(.102,-.014,.097)];
-  }
-  const frames=waypoints.map((p,i)=>lerp(root,p,i<2?Math.max(.002,amount):Math.max(.002,amount**(.84+i*.22))));
-  let lastNormal=null;
-  for(let row=0;row<=RINGS;row++){
-   const u=row/RINGS;
-   const center=sample(frames,u);
-   const tangent=unit(sub(sample(frames,Math.min(1,u+.015)),sample(frames,Math.max(0,u-.015))));
-   // Transport the frame down the curve so the tube cannot flip at a bend.
-   const along=lastNormal?dot(lastNormal,tangent):0;
-   const plane=lastNormal?.map((v,i)=>v-along*tangent[i]);
-   const normal=unit(plane&&dot(plane,plane)>.01?plane:cross(Math.abs(tangent[1])>.91?basis.right:basis.up,tangent));
-   lastNormal=normal;
-   const binormal=cross(tangent,normal);
-   const taper=(1-u)**.63;
-   const tension=grip*Math.sin(Math.PI*u)**2;
-   const stretched=kind==='wrist'?tension*(1-other)*.33:0;
-   const contraction=Math.sin(u*17-grip*4.0-id*.7)*.057*grip;
-   const thickness=(r*taper+.0006)*amount*(1+.14*Math.sin(u*15+id)+.065*Math.sin(u*51-id)+contraction+.11*tension-stretched);
-   for(let sideIndex=0;sideIndex<=SIDES;sideIndex++){
-    const v=sideIndex/SIDES,theta=v*TAU+u*1.26;
-    const c=Math.cos(theta),s=Math.sin(theta),rib=.95+.05*Math.cos(theta*3+u*29);
-    const ventral=Math.max(0,Math.sin(theta-.9))**3;
-    const shade=.90+.10*Math.sin(u*173+id)+.04*Math.sin(u*373+theta*6);
-    const index=((id*(RINGS+1)+row)*(SIDES+1)+sideIndex)*STRIDE;
-    for(let j=0;j<3;j++){
-     const direction=normal[j]*c+binormal[j]*s;
-     vertices[index+j]=center[j]+direction*thickness*rib;
-     vertices[index+6+j]=direction;
-     vertices[index+13+j]=tangent[j];
-    }
-    vertices[index+3]=(.155+.115*ventral)*shade;
-    vertices[index+4]=(.031+.043*ventral)*shade;
-    vertices[index+5]=(.048+.034*ventral)*shade;
-    vertices[index+9]=u;vertices[index+10]=v;vertices[index+11]=12;
-   }
+ for(const [i,screenSide] of SIDES_OF_FACE.entries()){
+  const side=-screenSide,lead=screenSide===timing.firstSide;
+  const grip=i===0?gripLeft:gripRight,contact=lead?timing.grab:timing.lock;
+  const tremor=reduced?0:.013*Math.sin(time*18+i*5)*(1-grip);
+  const upper=shotEase(timing.tear+.18+(side<0?0:.12),timing.reveal+.15,time);
+  const lower=shotEase(contact-.65,contact-.012,time);
+  const guides=shotEase(timing.lock+.16,timing.bite-.22,time);
+  const topRoot=anchor(side*.102,1.731,.080);
+  const topFold=anchor(side*.273,1.905+.019*snare,.098+tremor);
+  const topClaw=anchor(side*(.350-.034*drag),1.874-.030*drag,.209);
+  const topTip=anchor(side*(.304-.037*drag),1.782-.046*drag,.265);
+  const root=anchor(side*.103,1.579,.080,true);
+  const shoulder=anchor(side*.257,1.514-.021*drag,.096,true);
+  const wrist=wristPosition(wrists[i],point);
+  const near=wrist.map((n,k)=>n+basis.right[k]*screenSide*(.094-.029*grip)+basis.up[k]*(.068+tremor));
+  const hinge=wrist.map((n,k)=>n+basis.right[k]*screenSide*(.042-.010*grip)-basis.up[k]*.005);
+  const hook=wrist.map((n,k)=>n-basis.right[k]*screenSide*(.013+.025*grip)-basis.up[k]*(.038+.010*grip)-basis.forward[k]*.018);
+  const mouth=anchor(side*.070,1.596,.147,true);
+  const curl=anchor(side*.028,1.590,.219,true);
+  const guideTip=lerp(wrist,curl,.23+.77*swallow);
+  const sets=[
+   [i,[topRoot,topFold,topClaw,topTip],upper,.051,snare],
+   [2+i,[root,shoulder,near,hinge,hook],lower,.061,grip],
+   [4+i,[mouth,curl,guideTip],guides,.022,grip]
+  ];
+  for(const [id,targets,unfold,width,load] of sets){
+   const amount=Math.max(.00001,unfold);
+   const points=targets.map((p,k)=>lerp(targets[0],p,amount**(.64+k*.26)));
+   poseLimb(mesh.vertices,id,points,amount,width,load,basis,id>3);
+   if(id<4)poseMembrane(mesh.vertices,id,points.slice(0,3),amount,load,basis);
   }
  }
  return hands;

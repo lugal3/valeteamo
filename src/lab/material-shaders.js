@@ -47,7 +47,7 @@ float surfaceNoise(vec2 p){
  return mix(mix(surfaceHash(cell),surfaceHash(cell+vec2(1.0,0.0)),f.x),
   mix(surfaceHash(cell+vec2(0.0,1.0)),surfaceHash(cell+1.0),f.x),f.y);
 }
-vec3 captureEye(vec2 uv,vec3 irisTint,vec3 normal,vec3 viewDir,vec3 key){
+vec3 captureEye(vec2 uv,vec3 irisTint,vec3 normal,vec3 viewDir,vec3 key,float exposure){
  vec2 eye=(uv-vec2(.5))*2.0;
  float radius=length(eye),angle=atan(eye.y,eye.x+.0001)/6.2831853+.5;
  float iris=1.0-smoothstep(.55,.61,radius);
@@ -69,8 +69,8 @@ vec3 captureEye(vec2 uv,vec3 irisTint,vec3 normal,vec3 viewDir,vec3 key){
  float cornea=pow(max(0.0,dot(normal,normalize(key+viewDir))),91.0);
  float crescent=pow(max(0.0,dot(normal,normalize(key+viewDir+uRight*.13))),34.0);
  float pin=1.0-smoothstep(.025,.073,length((eye-vec2(-.23,.37))*vec2(1.0,1.33)));
- return albedo*(.14+uShot*(.21+.71*overhead))*(1.0-.52*hood)
-  +vec3(.72,.82,.79)*(cornea*.61+pin*.33)*uShot+vec3(.38,.52,.50)*crescent*uShot*.10;
+ return albedo*(.14+exposure*(.21+.71*overhead))*(1.0-.52*hood)
+  +vec3(.72,.82,.79)*(cornea*.61+pin*.33)*exposure+vec3(.38,.52,.50)*crescent*exposure*.10;
 }
 float shadowTap(vec2 pixel,vec2 corner,float reach,float depth){
  return 1.0-smoothstep(0.0,.035,depth-depthAt(pixel,corner,reach));
@@ -152,7 +152,7 @@ void main(){
   vec3 viewDir=normalize(uEye-vWorld);
   vec3 key=normalize(dot(uPursuerKey,uPursuerKey)>.01?uPursuerKey:-uForward*.61-uRight*.40+uUp*.74);
   if(vArt>15.5&&vArt<16.5){
-   gl_FragColor=vec4(clamp(captureEye(vUV,vColor,surfaceNormal,viewDir,key),0.0,1.0),1.0);
+   gl_FragColor=vec4(clamp(captureEye(vUV,vColor,surfaceNormal,viewDir,key,uShot+.48*beam+.22*warmth),0.0,1.0),1.0);
    return;
   }
   vec3 halfVector=normalize(key+viewDir);
@@ -172,7 +172,9 @@ void main(){
   float dentin=step(12.5,vArt)*(1.0-step(13.5,vArt));
   float tendon=step(13.5,vArt)*(1.0-step(14.5,vArt));
   float saliva=step(14.5,vArt)*(1.0-step(15.5,vArt));
-  float blood=step(16.5,vArt);
+  float blood=step(16.5,vArt)*(1.0-step(17.5,vArt));
+  float membrane=step(17.5,vArt)*(1.0-step(18.5,vArt));
+  float fabric=step(18.5,vArt);
   float wet=max(max(tissue,optical),tentacle+tendon+saliva+blood);
   float ripple=pow(abs(sin(vUV.x*368.0+6.0*soft+vUV.y*17.0)),8.0);
   vec3 across=cross(surfaceNormal,normalize(T+vec3(.0001)));
@@ -208,6 +210,16 @@ void main(){
    color*=.56+.28*sweep+.14*strands;
    fineNormal=normalize(fineNormal+T*(strands-.5)*.19);
   }
+  if(fabric>.5){
+   float wool=surfaceNoise(vUV*vec2(197.0,143.0));
+   float weave=sin(vUV.x*426.0+vUV.y*422.0)*sin(vUV.x*422.0-vUV.y*426.0);
+   color=vColor*(.68+.22*wool+.029*weave);
+   fineNormal=normalize(surfaceNormal+T*(wool-.5)*.16);
+  }
+  if(skin>.5){
+   float ageMark=smoothstep(.68,.86,mottling)*smoothstep(.48,.88,pores);
+   color=vColor*(.68+.090*mottling+.065*pores-.20*ageMark);
+  }
   float gloss=.79;
   float organic=tissue+tendon+tentacle+blood;
   if(organic>.5&&uFasciaReady>.5){
@@ -218,22 +230,39 @@ void main(){
    float relief=texture2D(uFascia,uv+vec2(.011,0.0)).r-fibres.r;
    float ridges=texture2D(uFascia,uv+vec2(0.0,.014)).r-fibres.r;
    fineNormal=normalize(fineNormal+T*relief*.85+across*ridges*.39);
-   vec3 pigment=vec3(.032,.008,.012)+fibres*vec3(.75,.53,.51);
+   vec3 pigment=vec3(.037,.014,.017)+fibres*vec3(.72,.54,.50);
    color=mix(color*(.50+marbled*.78),pigment,.71-.19*tendon);
+   // V on the pharynx mesh carries depth into the mouth.
+   if(tissue>.5&&vColor.r<.11)color*=smoothstep(.014,.11,vColor.r);
    color=mix(color,vec3(.092,.009,.013)+fibres*vec3(.30,.11,.12),blood*.72);
    gloss=mix(.20,.90,smoothstep(.15,.50,marbled+mottling*.09));
   }
+  if(membrane>.5){
+   // Thin webbing stays attached at its edge. Load stretches the veins
+   // and opens the small gaps between the supporting fibres.
+   float grain=surfaceNoise(vUV*vec2(62.0,18.0));
+   float fan=sin(vUV.x*(112.0+14.0*vStyle)+vUV.y*15.0+grain*2.4);
+   float vessels=pow(1.0-abs(fan),12.0)*smoothstep(.05,.28,vUV.y);
+   float transmission=.21+.42*abs(dot(surfaceNormal,key))+.22*vStyle;
+   vec3 sheet=mix(vec3(.18,.074,.064),vec3(.49,.26,.18),transmission);
+   color=sheet*(.65+.32*grain-.46*vessels);
+   fineNormal=normalize(surfaceNormal+T*(grain-.5)*.38);
+  }
+  // Raised ridges around the joints read as dull hard plates over muscle.
+  float plate=tentacle*smoothstep(.39,.80,vStyle)*smoothstep(.31,.59,pores+.26*mottling);
+  color=mix(color,color*vec3(.66,.72,.69)+vec3(.037,.025,.024),plate);
   float lit=pow(max(0.0,dot(fineNormal,key)),1.26);
   float wrapped=max(0.0,dot(fineNormal,normalize(uRight*.72+uUp*.15-uForward*.46)));
-  vec3 light=vec3(.082,.090,.108)+vec3(.97,.85,.77)*uShot*(.11+1.28*lit)
-   +vec3(.42,.50,.57)*wrapped*uShot*.41+vec3(.34,.52,.62)*rim*(.10+.47*uShot);
+  vec3 light=vec3(.082,.091,.099)+vec3(.99,.88,.76)*uShot*(.16+1.04*lit)
+   +vec3(.44,.57,.57)*wrapped*uShot*.58+vec3(.38,.58,.60)*rim*(.11+.58*uShot);
   light+=vec3(.94,.99,1.0)*beam+vec3(.88,.72,.55)*warmth*.45;
   float facingSpec=max(0.0,dot(fineNormal,halfVector));
-  float wetHighlight=wet*(1.0-.44*tendon-.25*tentacle)+saliva*.46;
+  float wetHighlight=wet*(1.0-.44*tendon-.25*tentacle-.44*plate)+saliva*.46;
   float shine=(pow(facingSpec,mix(24.0,57.0,wet))*(.018+.32*wetHighlight*gloss+.15*dentin)
    +.046*wetHighlight*gloss*pow(facingSpec,12.0))
    *uShot*(.43+.57*mottling);
   vec3 spec=shine*mix(vec3(.87,.74,.69),vec3(.65,.83,.85),tentacle*.70+steel*.25);
+  light+=membrane*uShot*vec3(.16,.098,.065)*abs(dot(surfaceNormal,key));
   color=color*light*(1.0-.61*voidMat-.31*saliva)+spec*(1.0-voidMat)+color*optical*.52;
   gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);return;
  }

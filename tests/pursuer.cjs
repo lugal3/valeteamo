@@ -78,6 +78,23 @@ module.exports=async()=>{
  assert(p.update(RISE_SECONDS*.5,hidden).includes('stood'));assert.equal(p.mode,'to-entry');
  posePursuer(mesh.vertices,vertices,mesh.groups,p.snapshot());
  assert(vertices.every((value,i)=>Math.abs(value-upright[i])<.00001),'Rise blends continuously into standing');
+ const {captureBasis,captureFrame,captureTiming}=await import('../src/lab/capture-shot.js');
+ const {pursuerInterior}=await import('../src/lab/pursuer-face.js');
+ const {captureGrasp,createTentacleMesh}=await import('../src/lab/pursuer-tentacles.js');
+ const capture=geometry([...pursuerPieces(true),...pursuerInterior()]);
+ const posedCapture=new Float32Array(capture.vertices.length),limbs=createTentacleMesh();
+ assert(capture.vertices.length/16<65536,'The detailed face fits WebGL 1 indices');
+ const from={x:2.16,y:4.78,z:5.61,yaw:Math.PI,pitch:0};
+ for(const reduced of [false,true])for(let attempt=0;attempt<3;attempt++){
+  const timing=captureTiming(attempt);
+  for(const time of [timing.tear+.19,timing.reveal+.1,timing.lock+.17,timing.bite-.08]){
+   const frame=captureFrame(from,actor,time,reduced,timing);
+   posePursuer(capture.vertices,posedCapture,capture.groups,frame.actor,reduced);
+   const hands=captureGrasp(frame.camera,captureBasis(frame.camera),frame.actor,frame.grasp,limbs);
+   assert(posedCapture.every(Number.isFinite)&&limbs.vertices.every(Number.isFinite),'Fracture, limbs and membranes stay finite through the full shot');
+   if(time===timing.lock+.17)assert(hands.every(hand=>hand?.curl>.85),'Both paws are held once the grip closes');
+  }
+ }
  const {CAR_ARRIVAL_SECONDS,poseArrivalCar,arrivalCarCamera}=await import('../src/lab/arrival-car.js');
  const vehicleScene=new HouseEvents({arrivalLead:CAR_ARRIVAL_SECONDS});vehicleScene.observe({door:true});
  assert.deepEqual(vehicleScene.advance(CAR_ARRIVAL_SECONDS,false),[],'Door cues wait until the car arrives');

@@ -940,6 +940,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    last=performance.now();
    return;
   }
+  const shotFrame=captureFrame(shot.from,shot.actor,shot.elapsed,reducedMotion.matches,timing);
+  const style=captureLayer.style;
+  style.setProperty('--capture-grip',`${100-19*shotFrame.grip-23*shotFrame.grasp.swallow}%`);
+  style.setProperty('--capture-dark',shotFrame.dark);
   const crossed=time=>previous<time&&shot.elapsed>=time;
   if(crossed(timing.breath)){
    sound.captureCue('capture-breath',timing.firstSide*.49);
@@ -952,7 +956,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   if(crossed(timing.grab)){
    sound.captureCue('capture-snare',timing.firstSide*.42);
-   if(options.captions!==false)captureCaption.textContent='[Los tentáculos se cierran]';
+   if(options.captions!==false)captureCaption.textContent='[Las patas se cierran sobre ti]';
   }
   if(crossed(timing.lock))sound.captureCue('capture-tug',-timing.firstSide*.38);
   if(crossed(timing.bite)){
@@ -960,10 +964,6 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    captureCaption.textContent='';
   }
   if(crossed(timing.swallow))sound.captureCue('capture-swallow');
-  const shotFrame=captureFrame(shot.from,shot.actor,shot.elapsed,reducedMotion.matches,timing);
-  const style=captureLayer.style;
-  style.setProperty('--capture-grip',`${100-19*shotFrame.grip-23*shotFrame.grasp.swallow}%`);
-  style.setProperty('--capture-dark',shotFrame.dark);
   if(shotFrame.dark===1)return;
   try{
    renderer.render(shotFrame.camera,false,elapsed+shot.elapsed,false,{shotLight:.09,pursuerLight:shotFrame.light,pursuerKey:shotFrame.key,

@@ -1,6 +1,6 @@
 import {HEIGHT,STAIR} from './house-layout.js';
 import {ease} from './animations/pose-tools.js';
-import {FACE_PARENTS,pursuerFacePose,captureShell} from './pursuer-face.js';
+import {FACE_PARENTS,pursuerFacePose,pursuerShell} from './pursuer-face.js';
 
 const HIP=.88,KNEE=.47,ANKLE=.06,SEGMENT=HIP-KNEE,SHOULDER=1.40,ELBOW=1.10;
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
@@ -60,7 +60,7 @@ export function pursuerPieces(capture=false){
   add('shoe'+side,'foot'+side,leg,.071,.060,.176,.142,.325,[.083,.082,.111],bevel);
   add('sole'+side,'foot'+side,leg,.025,.060,.182,.048,.333,[.06,.06,.08],bevel);
  }
- return capture?captureShell(parts):parts;
+ return pursuerShell(parts,capture);
 }
 
 function footfall(phase,amount){
@@ -116,16 +116,20 @@ export function pursuerPose(actor,reduced=false){
  }
  if(actor.captureReach){
   joints.chest.pitch=.12-.10*actor.captureLift;
-  const {bite,twitch,pressure=0,strain=0}=actor.captureFace;
+  const {bite,jaw,twitch,pressure=0,strain=0}=actor.captureFace;
+  // The torso yields as the jaw opens, leaving space behind the cavity.
+  const drop=.116*jaw;
+  joints.chest.y-=drop;
+  joints.chest.z=-.043*jaw;
   joints.head.yaw=(twitch*.033-.058*pressure-.071*strain)*(1-bite);
   joints.head.pitch=.23-.23*actor.captureLift-.084*pressure+.056*strain+bite*.17;
   joints.head.roll=twitch*.028+.081*pressure-.053*strain;
   joints.head.z+=bite*.057+.028*strain;
   for(const side of [-1,1]){
    const pitch=-actor.captureReach*(1.08+.34*actor.captureLift+side*.09);
-   joints['arm'+side]={py:SHOULDER,pitch,roll:side*.13*actor.captureReach};
+   joints['arm'+side]={py:SHOULDER,y:-drop,z:-.043*jaw,pitch,roll:side*.13*actor.captureReach};
    joints['forearm'+side]={py:ELBOW,pitch:pitch-.26*actor.captureReach,
-    y:(SHOULDER-ELBOW)*(1-Math.cos(pitch)),z:-(SHOULDER-ELBOW)*Math.sin(pitch)};
+    y:(SHOULDER-ELBOW)*(1-Math.cos(pitch))-drop,z:-(SHOULDER-ELBOW)*Math.sin(pitch)-.043*jaw};
   }
   pursuerFacePose(joints,actor.captureFace);
  }else if(actor.mode==='trapped'){
