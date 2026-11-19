@@ -21,11 +21,17 @@ function faceRelief(x,y){
  const cheek=.022*zone(a,y,.111,1.674,.046,.038)-.017*zone(a,y,.111,1.618,.041,.041);
  const brow=.019*zone(a,y,.065,1.744,.051,.026);
  const socket=.030*zone(a,y,.074,1.717,.036,.019);
- const bridge=.054*zone(x,y,.001,1.685,.019,.058),tip=.030*zone(x,y,.002,1.654,.024,.017);
+ const bridge=.048*zone(x,y,.001,1.688,.022,.057),tip=.034*zone(x,y,.002,1.654,.024,.016);
  const ala=.021*zone(a,y,.025,1.648,.015,.013);
  const jaw=.018*zone(a,y,.074,1.571,.044,.032)+.009*zone(x,y,0,1.545,.054,.024);
  const folds=.005*zone(a,y,.053+(1.622-y)*.40,1.619,.006,.030);
- return cheek+brow-socket+bridge+tip+ala+jaw-folds;
+ const lowerLid=.0034*zone(a,y,.081,1.690+.46*(a-.077)**2,.032,.008);
+ const orbitalFold=.0020*zone(a,y,.089,1.688+.23*(a-.083),.032,.0045);
+ const nasolabial=.0034*zone(a,y,.051+.39*(1.632-y),1.623,.009,.025);
+ const lipDent=.0026*zone(a,y,.052,1.600,.014,.0088);
+ const foreheadY=1.797-.34*x*x+.003*Math.sin(x*29);
+ const forehead=.0018*bell(x/.103)*bell((y-foreheadY)/.023)*Math.sin((y-foreheadY)*393);
+ return cheek+brow-socket+bridge+tip+ala+jaw-folds+lowerLid-orbitalFold+nasolabial-lipDent+forehead;
 }
 
 function skinDepth(x,y){
@@ -87,7 +93,7 @@ function clip(polygon,seam){
 
 function sculptHead(face,fractured){
  const {x,y,z,w,h,d,color}=face;
- const bands=fractured?56:28,sectors=fractured?96:48;
+ const bands=fractured?72:28,sectors=fractured?120:48;
  const shell=Array.from({length:bands+1},(_,row)=>{
   const lat=Math.PI*(.5-row/bands),py=y+h*.5*Math.sin(lat),cl=Math.cos(lat);
   return Array.from({length:sectors+1},(_,col)=>{
@@ -122,9 +128,11 @@ function sculptHead(face,fractured){
   for(const triangle of triangles){
    const section=cuts.reduce(clip,triangle);
    for(const p of section){
-    p.uv=[.5+p[0]*2.64,(p[1]-1.481)*2.45];
-    p.normal=normalAt(p);
-    p.tangent=unit(cross([0,1,0],p.normal));
+    if(!p.uv){
+     p.uv=[.5+p[0]*2.64,(p[1]-1.481)*2.45];
+     p.normal=normalAt(p);
+     p.tangent=unit(cross([0,1,0],p.normal));
+    }
    }
    for(let n=1;n<section.length-1;n++)outside.push([section[0],section[n],section[n+1]]);
    if(joint==='head')continue;
@@ -154,19 +162,28 @@ function sculptHead(face,fractured){
  });
 }
 
-function captureHair(){
+function captureHair(capture){
  const profile=[[1.924,.019,.023],[1.916,.087,.085],[1.895,.135,.126],
   [1.868,.165,.151],[1.832,.178,.163],[1.791,.177,.153],[1.756,.163,.144]];
- const rows=profile.map(([height,width,depth],row)=>Array.from({length:49},(_,i)=>{
-  const u=i/48,a=u*tau,side=Math.sin(a),front=Math.cos(a),v=row/(profile.length-1);
+ const subdivisions=capture?3:1,sectors=capture?80:48;
+ const count=(profile.length-1)*subdivisions;
+ const rows=Array.from({length:count+1},(_,row)=>{
+  const v=row/count,segment=Math.min(profile.length-2,Math.floor(row/subdivisions)),t=row/subdivisions-segment;
+  const p0=profile[Math.max(0,segment-1)],p1=profile[segment],p2=profile[segment+1],p3=profile[Math.min(segment+2,profile.length-1)];
+  const [height,width,depth]=p1.map((n,k)=>n+t*((p2[k]-p0[k])*.5+t*(
+   p0[k]-2.5*n+2*p2[k]-.5*p3[k]+t*(.5*(p3[k]-p0[k])+1.5*(n-p2[k])))));
+  return Array.from({length:sectors+1},(_,i)=>{
+  const u=i/sectors,a=u*tau,side=Math.sin(a),front=Math.cos(a);
   const hairline=Math.max(0,front)*(.074+.014*Math.sin(a*3-.48));
-  const sweep=.005*Math.sin(a*6+v*2.8)+.004*Math.sin(a*13+v*4.1);
+  const clump=Math.sin(a*19+v*7.0+.52*Math.sin(a*5));
+  const sweep=.005*Math.sin(a*6+v*2.8)+.004*Math.sin(a*13+v*4.1)+.0019*clump;
   const p=[width*side-.011*(1-v),height+v**3*hairline+sweep,-.030+depth*front];
   p.uv=[u+.115*v,v];
   p.normal=unit([side,1-v*1.28,front]);
   p.tangent=[Math.cos(a),0,-Math.sin(a)];
   return p;
- }));
+  });
+ });
  return poly('capture-swept-hair','head',ribbon(rows),[.61,.62,.605],HAIR,{
   vertexColor:(point,color)=>color.map(n=>n*(.65+.35*(1-point.uv[1]**2)))
  });
@@ -215,7 +232,7 @@ export function pursuerShell(parts,capture){
   if(part.id==='shirt'||part.id.startsWith('collar'))return {...part,joint:capture?'face-collar':'chest',faceMaterial:CAPTURE_FABRIC};
   if(part.joint!=='head')return {...part,faceMaterial:CAPTURE_FABRIC,color:part.color.map(n=>n*.69)};
   const {id}=part;
-  if(id==='hair-top')return captureHair();
+  if(id==='hair-top')return captureHair(capture);
   if(id.startsWith('hair-part')||id.startsWith('temple'))return [];
   if(id==='nose-bridge')return captureNostrils();
   if(id==='nose-tip')return [];
@@ -228,7 +245,7 @@ export function pursuerShell(parts,capture){
    const side=id.endsWith('-1')?-1:1;
    if(id.startsWith('eye-socket'))return captureLids(side);
    if(id.startsWith('eye-white'))return {...part,joint:'face-skin-eye'+side,faceMaterial:EYE,
-    w:.062,h:.029,d:.039,y:1.714,z:.123,segments:28,rings:18,color:[.139,.213,.244],surfaceUV:eyeUV};
+    w:.062,h:.029,d:.039,y:1.714,z:.123,segments:capture?36:28,rings:capture?23:18,color:[.139,.213,.244],surfaceUV:eyeUV};
   }
   return {...part,faceMaterial:id.startsWith('hair')?HAIR:SKIN};
  });
@@ -314,7 +331,7 @@ function muscles(pieces){
 
 function fang(pieces,{joint,dir,i,root,length,width,row}){
  const phase=(i+dir*.27+row*.58)*2.28,lean=.011*Math.sin(phase)*length/.048;
- const taper=[1.03,1,.87,.72,.52,.29,.045];
+ const taper=[1.04,1.015,.97,.89,.80,.70,.57,.43,.27,.13,.043];
  const points=taper.map((_,n)=>{
   const t=n/(taper.length-1),bow=4*t*(1-t);
   return [root[0]+lean*(t*t+.17*bow),root[1]+dir*length*t,root[2]+length*(.17*bow-.32*t*t)];
@@ -327,7 +344,7 @@ function fang(pieces,{joint,dir,i,root,length,width,row}){
  }
  const tints=[[.76,.67,.50],[.62,.53,.41],[.46,.38,.31]];
  pieces.push(poly('fang'+dir+'-'+row+'-'+i,joint,
-  tube(points,taper.map(n=>n*width),row===0?14:9,{aspect:.72,roughness:.10,phase}),
+  tube(points,taper.map(n=>n*width),row===0?20:10,{aspect:.74,roughness:.12,phase}),
   tints[row],TOOTH,{
    facetTint:.035,vertexColor:(p,col)=>{
     const tip=Math.min(1,Math.abs(p[1]-root[1])/length);
@@ -369,9 +386,10 @@ function mouthCavity(){
   [.087,1.590,.111,.072],[.062,1.583,.101,.065],[.033,1.574,.082,.062],
   [.005,1.560,.059,.049],[-.022,1.545,.033,.025],[-.049,1.527,.003,.004]
  ];
- const rows=rings.map(([z,y,w,h],row)=>Array.from({length:57},(_,i)=>{
-  const u=i/56,v=row/(rings.length-1),angle=u*tau;
-  const folds=1+.039*Math.sin(angle*7+row*2)+.025*Math.cos(angle*11+row);
+ const profiles=rings.flatMap((ring,row)=>row===0?[ring]:[mix(rings[row-1],ring,.5),ring]);
+ const rows=profiles.map(([z,y,w,h],row)=>Array.from({length:73},(_,i)=>{
+  const u=i/72,v=row/(profiles.length-1),angle=u*tau;
+  const folds=1+.039*Math.sin(angle*7+row)+.025*Math.cos(angle*11+row*.5);
   const vertex=[w*Math.cos(angle)*folds,y+h*Math.sin(angle)*folds,z+.004*Math.sin(angle*6+row*.87)];
   vertex.uv=[u,v];
   vertex.normal=unit([-Math.cos(angle),-Math.sin(angle),-.31]);
@@ -415,7 +433,7 @@ export function pursuerInterior(){
   solid('orbit-tissue','head',-.078,1.723,.103,.105,.092,.061,[.23,.039,.054],FLESH),
   solid('orbital-shadow','head',-.078,1.731,.104,.077,.059,.045,[.083,.013,.029],11),
   solid('exposed-eye','face-eye',-.078,1.730,.118,.063,.051,.053,[.19,.238,.171],EYE,
-   {surfaceUV:eyeUV,segments:28,rings:20})
+   {surfaceUV:eyeUV,segments:40,rings:28})
  ];
  const lids=[
   [[-.126,1.725,.118],[-.109,1.746,.132],[-.085,1.752,.147],[-.066,1.749,.146],[-.044,1.729,.131]],

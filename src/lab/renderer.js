@@ -377,7 +377,7 @@ export class HouseRenderer {
   this.locations={};
   for(const [quality,p] of Object.entries(this.programs)){
    const atrib={},uniform={};for(const key of ['aPos','aCol','aNormal','aUV','aArt','aStyle','aTangent'])atrib[key]=gl.getAttribLocation(p,key);
-   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld','uTV','uTVSignal','uShot','uLoisFace','uFascia','uFasciaReady','uPursuerKey'])uniform[key]=gl.getUniformLocation(p,key);
+   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld','uTV','uTVSignal','uShot','uLoisFace','uFascia','uFasciaReady','uPursuerSkin','uPursuerSkinReady','uPursuerKey'])uniform[key]=gl.getUniformLocation(p,key);
    uniform.uLamps=gl.getUniformLocation(p,'uLamps[0]');
    this.locations[quality]={atrib,uniform};
   }
@@ -724,10 +724,11 @@ export class HouseRenderer {
   gl.drawElements(gl.TRIANGLES,this.tentacles.indices.length,gl.UNSIGNED_SHORT,0);
  }
  resize(capture=false){
-  const scale=this.quality==='low'?.55:capture?1:.80;
+  const low=this.quality==='low',detailed=capture&&!low;
+  const scale=low?(capture?.70:.55):detailed?1.12:.80;
   const dpr=Math.min(window.devicePixelRatio||1,1.7)*scale;
-  const w=Math.min(1200,Math.max(1,Math.round(this.canvas.clientWidth*dpr)));
-  const h=Math.min(760,Math.max(1,Math.round(this.canvas.clientHeight*dpr)));
+  const w=Math.min(detailed?1600:1200,Math.max(1,Math.round(this.canvas.clientWidth*dpr)));
+  const h=Math.min(detailed?1000:760,Math.max(1,Math.round(this.canvas.clientHeight*dpr)));
   if(w!==this.canvas.width||h!==this.canvas.height){this.canvas.width=w;this.canvas.height=h;this.gl.viewport(0,0,w,h);}
  }
  updateTelevision(television){
@@ -763,6 +764,7 @@ export class HouseRenderer {
   this.program=this.programs[quality];Object.assign(this,this.locations[quality]);gl.useProgram(this.program);
   gl.uniform1i(this.uniform.uAtlas,0);gl.uniform1i(this.uniform.uLightDepth,1);gl.uniform1i(this.uniform.uMaterials,2);gl.uniform1i(this.uniform.uLoisFace,4);
   gl.uniform1i(this.uniform.uFascia,5);gl.uniform1f(this.uniform.uFasciaReady,Number(this.pursuerTexture.ready));
+  gl.uniform1i(this.uniform.uPursuerSkin,6);gl.uniform1f(this.uniform.uPursuerSkinReady,Number(this.pursuerTexture.skinReady));
   this.updateTelevision(motion.television);
   const isLow=quality==='low';
   gl.uniform1f(this.uniform.uAtlasSize,isLow?ATLAS_SIZE:ATLAS_SIZE_MED);

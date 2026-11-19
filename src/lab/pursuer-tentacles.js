@@ -1,7 +1,7 @@
 import {shotEase} from './capture-shot.js';
 import {pursuerGraspAnchor} from './pursuer-model.js';
 
-const STRIDE=16,RINGS=30,SIDES=14,WEB_ROWS=14,WEB_COLS=8,TAU=Math.PI*2;
+const STRIDE=16,RINGS=42,SIDES=22,WEB_ROWS=22,WEB_COLS=12,TAU=Math.PI*2;
 const TUBE=(RINGS+1)*(SIDES+1),WEB=(WEB_ROWS+1)*(WEB_COLS+1);
 const SIDES_OF_FACE=[-1,1];
 const mix=(a,b,t)=>a+(b-a)*t;
@@ -10,6 +10,10 @@ const lerp=(a,b,t)=>a.map((n,k)=>mix(n,b[k],t));
 const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
 const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
 const unit=v=>{const d=Math.hypot(...v)||1;return v.map(n=>n/d);};
+const ringAngles=Array.from({length:SIDES+1},(_,i)=>{
+ const turn=i/SIDES,angle=turn*TAU;
+ return {turn,angle,c:Math.cos(angle),s:Math.sin(angle)};
+});
 
 // Round only the small region around a joint. The lengths on either side
 // retain a clear change of direction as the appendage flexes under load.
@@ -55,7 +59,8 @@ function poseLimb(vertices,id,points,amount,radius,load,basis,oral=false){
  for(let row=0;row<=RINGS;row++){
   const u=row/RINGS,center=path(points,u);
   const tangent=unit(sub(path(points,Math.min(1,u+.009)),path(points,Math.max(0,u-.009))));
-  const across=transported?.map((n,k)=>n-dot(transported,tangent)*tangent[k]);
+  const drift=transported?dot(transported,tangent):0;
+  const across=transported?.map((n,k)=>n-drift*tangent[k]);
   const normal=unit(across&&dot(across,across)>.03?across:
    cross(Math.abs(dot(tangent,basis.up))>.88?basis.right:basis.up,tangent));
   transported=normal;
@@ -64,14 +69,21 @@ function poseLimb(vertices,id,points,amount,radius,load,basis,oral=false){
   const profile=(1-u)**.64*(.77+.21*Math.sin(u*count*Math.PI)**2+.23*hinge)+.013;
   const width=radius*profile*amount*(1+.12*load*hinge);
   for(let k=0;k<=SIDES;k++){
-   const v=k/SIDES,a=v*TAU,c=Math.cos(a),s=Math.sin(a);
-   const lines=1+.12*Math.cos(a*3+u*3)+.072*Math.sin(a*7-u*12);
-   const rib=.94+.06*Math.cos(u*85)*hinge;
-   const direction=normal.map((n,j)=>n*c+binormal[j]*s);
-   const p=center.map((n,j)=>n+(normal[j]*c+binormal[j]*s*.74)*width*lines*rib);
-   const flesh=.45+.55*Math.pow(Math.max(0,s),2);
-   const rgb=[.21+.10*flesh,.050+.048*flesh,.053+.026*flesh];
-   write(vertices,id*TUBE+row*(SIDES+1)+k,p,direction,tangent,u,v,rgb,12,oral?0:hinge*(.61+.39*load));
+   const {turn,angle,c,s}=ringAngles[k];
+   const grain=Math.sin(angle*7-u*12);
+   const lines=1+.12*Math.cos(angle*3+u*3)+.052*grain+.024*Math.sin(angle*11-u*19);
+   const ridge=.92+(.046*Math.cos(u*85+grain*.7)+.059*Math.cos(u*139+angle*3))*hinge;
+   const radius=width*lines*ridge,ellipse=.74;
+   const length=Math.hypot(c,s/ellipse);
+   const at=(id*TUBE+row*(SIDES+1)+k)*STRIDE;
+   for(let j=0;j<3;j++){
+    vertices[at+j]=center[j]+radius*(normal[j]*c+binormal[j]*s*ellipse);
+    vertices[at+6+j]=(normal[j]*c+binormal[j]*s/ellipse)/length;
+    vertices[at+13+j]=tangent[j];
+   }
+   const flesh=.45+.55*Math.max(0,s)**2;
+   vertices[at+3]=.21+.10*flesh;vertices[at+4]=.050+.048*flesh;vertices[at+5]=.053+.026*flesh;
+   vertices[at+9]=u;vertices[at+10]=turn;vertices[at+11]=12;vertices[at+12]=oral?0:hinge*(.61+.39*load);
   }
  }
 }
@@ -87,12 +99,16 @@ function poseMembrane(vertices,id,[base,elbow,tip],amount,load,basis){
   const edge=u<.5?lerp(start,elbow,u*2):lerp(elbow,end,(u-.5)*2);
   const sag=Math.sin(Math.PI*u)**.83;
   const rim=lerp(edge,lerp(start,end,u),reach*sag);
+  const span=sub(rim,edge),spanLength=Math.hypot(...span);
   for(let col=0;col<=WEB_COLS;col++){
    const v=col/WEB_COLS;
-   const fold=Math.sin(u*32+v*2)*(.014-.009*openness)*Math.sin(v*Math.PI)*sag;
+   const phase=u*32+v*2,depth=(.015-.010*openness)*sag;
+   const fold=Math.sin(phase)*depth*Math.sin(v*Math.PI);
+   const slope=depth*(2*Math.cos(phase)*Math.sin(v*Math.PI)+Math.PI*Math.sin(phase)*Math.cos(v*Math.PI));
+   const foldNormal=unit(normal.map((n,k)=>n-span[k]*slope/Math.max(.00045,spanLength**2)));
    const p=lerp(edge,rim,v).map((n,k)=>n+amount*(basis.forward[k]*.008+normal[k]*fold));
    const shade=.84+.16*openness;
-   write(vertices,6*TUBE+id*WEB+row*(WEB_COLS+1)+col,p,normal,tangent,u,v,
+   write(vertices,6*TUBE+id*WEB+row*(WEB_COLS+1)+col,p,foldNormal,tangent,u,v,
     [.19*shade,.071*shade,.066*shade],18,load);
   }
  }

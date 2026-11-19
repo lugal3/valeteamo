@@ -182,6 +182,21 @@ export function pursuerGraspAnchor(actor,reduced){
  };
 }
 
+function poseRigidRange(base,out,start,end,{r,t}){
+ for(let i=start*16;i<end*16;i+=16){
+  const x=base[i],y=base[i+1],z=base[i+2];
+  out[i]=r[0]*x+r[1]*y+r[2]*z+t[0];
+  out[i+1]=r[3]*x+r[4]*y+r[5]*z+t[1];
+  out[i+2]=r[6]*x+r[7]*y+r[8]*z+t[2];
+  for(const at of [i+6,i+13]){
+   const a=base[at],b=base[at+1],d=base[at+2];
+   out[at]=r[0]*a+r[1]*b+r[2]*d;
+   out[at+1]=r[3]*a+r[4]*b+r[5]*d;
+   out[at+2]=r[6]*a+r[7]*b+r[8]*d;
+  }
+ }
+}
+
 export function posePursuer(base,out,groups,actor,reduced=false){
  out.set(base);
  const inBed=['sleeping','lying-down','rising'].includes(actor.mode);
@@ -193,6 +208,9 @@ export function posePursuer(base,out,groups,actor,reduced=false){
  const originX=inBed?1.76+.53*turn+.40*stand:actor.x;
  const originY=inBed?HEIGHT+.98-.10*stand+breath:actor.y;
  const originZ=inBed?1.27+.45*turn:actor.z;
+ // Compose fixed capture pieces once per joint instead of rotating
+ // every position, normal and tangent through two matrices.
+ const captureRoot=actor.captureFace&&!inBed?{r:[c,0,s,0,1,0,-s,0,c],t:[originX,originY,originZ]}:null;
  const pose=pursuerPose(inBed?{...actor,walk:0,speed:0}:actor,reduced);
  if(inBed){
   const thigh=-1.32*sit*(1-stand),lift=Math.sin(stand*Math.PI)*.10;
@@ -216,12 +234,17 @@ export function posePursuer(base,out,groups,actor,reduced=false){
   return matrices.get(joint);
  }
  for(const {joint,start,end,flex,strain} of groups){
-  const {r,t}=matrixFor(joint);
+  const matrix=matrixFor(joint);
+  const cheekPressure=strain?(actor.captureFace?.pressure||0)*(1-.74*(actor.captureFace?.left||0))*.015:0;
+  if(captureRoot&&!flex&&!cheekPressure){
+   poseRigidRange(base,out,start,end,attachJoint(captureRoot,matrix));
+   continue;
+  }
+  const {r,t}=matrix;
   const tip=flex&&matrixFor(flex.joint);
   const flexLength=flex?flex.axis.reduce((n,v)=>n+v*v,0):1;
   const strandBow=(flex?.bow||0)*(actor.captureFace?.jaw||0)*(1-.45*(actor.captureFace?.bite||0));
   const attachment=flex?.release===undefined?1:1-ease(((actor.captureFace?.rupture||0)-flex.release)/.10);
-  const cheekPressure=strain?(actor.captureFace?.pressure||0)*(1-.74*(actor.captureFace?.left||0))*.015:0;
   for(let i=start*16;i<end*16;i+=16){
    const weight=flex?clamp(flex.axis.reduce((n,v,k)=>n+v*(base[i+k]-flex.anchor[k]),0)/flexLength,0,1)*attachment:0;
    for(const offset of [0,6,13]){

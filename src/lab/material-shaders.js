@@ -24,9 +24,9 @@ varying vec3 vColor,vNormal,vWorld,vTangent;
 varying vec2 vUV;
 varying float vArt,vStyle,vDistance;
 uniform vec3 uEye,uLightEye,uForward,uRight,uUp,uPursuerKey;
-uniform sampler2D uAtlas,uLightDepth,uMaterials,uTV,uLoisFace,uFascia;
+uniform sampler2D uAtlas,uLightDepth,uMaterials,uTV,uLoisFace,uFascia,uPursuerSkin;
 uniform float uFlash,uOcclude;
-uniform float uShot,uFasciaReady;
+uniform float uShot,uFasciaReady,uPursuerSkinReady;
 uniform float uHasShadows;
 uniform vec4 uLamps[${VISIBLE_LAMPS}];
 uniform float uTime;
@@ -46,6 +46,9 @@ float surfaceNoise(vec2 p){
  f=f*f*(3.0-2.0*f);
  return mix(mix(surfaceHash(cell),surfaceHash(cell+vec2(1.0,0.0)),f.x),
   mix(surfaceHash(cell+vec2(0.0,1.0)),surfaceHash(cell+1.0),f.x),f.y);
+}
+float materialHeight(vec3 sampleColor){
+ return dot(sampleColor,vec3(.59,.30,.11));
 }
 vec3 captureEye(vec2 uv,vec3 irisTint,vec3 normal,vec3 viewDir,vec3 key,float exposure){
  vec2 eye=(uv-vec2(.5))*2.0;
@@ -177,7 +180,8 @@ void main(){
   float fabric=step(18.5,vArt);
   float wet=max(max(tissue,optical),tentacle+tendon+saliva+blood);
   float ripple=pow(abs(sin(vUV.x*368.0+6.0*soft+vUV.y*17.0)),8.0);
-  vec3 across=cross(surfaceNormal,normalize(T+vec3(.0001)));
+  T=normalize(T-surfaceNormal*dot(T,surfaceNormal)+vec3(.0001));
+  vec3 across=cross(surfaceNormal,T);
   vec3 fineNormal=normalize(surfaceNormal+across*(mottling-.5)*(.13+wet*.20)
    +T*(pores-.5)*(.039+wet*.05));
   vec3 color=vColor*(.63+.31*soft+.18*mottling+.09*pores-.36*vein*wet+steel*.19*ripple);
@@ -199,16 +203,20 @@ void main(){
    float fracture=pow(1.0-abs(crack),11.0)*smoothstep(.20,.74,mottling);
    float rootStain=(1.0-smoothstep(.05,.47,vUV.y))*(.50+.50*soft);
    float enamelPit=smoothstep(.64,.9,pores)*smoothstep(.2,.79,mottling);
-   color*=.86+.22*groove-.28*fracture-.25*enamelPit;
+   float bands=surfaceNoise(vec2(vUV.x*12.0,vUV.y*34.0));
+   float recession=pow(1.0-vUV.y,2.5)*(.32+.68*mottling);
+   color*=.80+.22*groove+.14*bands-.32*fracture-.24*enamelPit;
    color=mix(color,color*vec3(.59,.32,.26),rootStain*.91);
-   color+=vec3(.033,.031,.024)*smoothstep(.28,.91,vUV.y)*(1.0-groove);
-   fineNormal=normalize(fineNormal+T*(groove-.5)*.15);
+   color=mix(color,color*vec3(.68,.57,.43),recession*.52);
+   color+=vec3(.044,.040,.031)*smoothstep(.28,.91,vUV.y)*(1.0-groove);
+   fineNormal=normalize(fineNormal+T*((groove-.5)*.15-.095*fracture)+across*(bands-.5)*.11);
   }
   if(hair>.5){
    float sweep=surfaceNoise(vec2(vUV.x*30.0,vUV.y*3.1));
    float strands=.5+.5*sin(vUV.x*389.0+vUV.y*9.0+7.0*sweep);
-   color*=.56+.28*sweep+.14*strands;
-   fineNormal=normalize(fineNormal+T*(strands-.5)*.19);
+   float silvers=smoothstep(.46,.76,surfaceNoise(vec2(vUV.x*106.0,vUV.y*3.0)));
+   color*=.49+.24*sweep+.20*strands+.13*silvers;
+   fineNormal=normalize(fineNormal+T*(strands-.5)*.14);
   }
   if(fabric>.5){
    float wool=surfaceNoise(vUV*vec2(197.0,143.0));
@@ -217,25 +225,38 @@ void main(){
    fineNormal=normalize(surfaceNormal+T*(wool-.5)*.16);
   }
   if(skin>.5){
-   float ageMark=smoothstep(.68,.86,mottling)*smoothstep(.48,.88,pores);
-   color=vColor*(.68+.090*mottling+.065*pores-.20*ageMark);
+   color=vColor*(.68+.095*mottling+.028*pores);
+   float closeDetail=1.0-smoothstep(.82,1.75,vDistance);
+   if(uPursuerSkinReady>.5&&closeDetail>.001){
+    vec2 uv=vUV*vec2(1.12,1.06)+vec2(.152,.07);
+    vec3 skinTile=texture2D(uPursuerSkin,uv).rgb;
+    float height=materialHeight(skinTile);
+    vec2 slope=vec2(materialHeight(texture2D(uPursuerSkin,uv+vec2(.0029,0.0)).rgb)-height,
+     materialHeight(texture2D(uPursuerSkin,uv+vec2(0.0,.0029)).rgb)-height);
+    fineNormal=normalize(fineNormal-(T*slope.x+across*slope.y)*closeDetail*1.55);
+    vec3 tint=clamp(skinTile/vec3(.692,.556,.470),.57,1.24);
+    color*=mix(vec3(1.0),tint,.72*closeDetail);
+   }
   }
-  float gloss=.79;
+  float gloss=.36;
   float organic=tissue+tendon+tentacle+blood;
   if(organic>.5&&uFasciaReady>.5){
    vec2 uv=mix(vUV,vUV.yx,tentacle)*mix(vec2(1.93,1.28),vec2(1.25,.74),tendon);
    uv+=vec2(vColor.g*5.9,vColor.r*4.3);
    vec3 fibres=texture2D(uFascia,uv).rgb;
-   float marbled=dot(fibres,vec3(.53,.34,.13));
-   float relief=texture2D(uFascia,uv+vec2(.011,0.0)).r-fibres.r;
-   float ridges=texture2D(uFascia,uv+vec2(0.0,.014)).r-fibres.r;
-   fineNormal=normalize(fineNormal+T*relief*.85+across*ridges*.39);
-   vec3 pigment=vec3(.037,.014,.017)+fibres*vec3(.72,.54,.50);
-   color=mix(color*(.50+marbled*.78),pigment,.71-.19*tendon);
+   float marbled=materialHeight(fibres);
+   vec2 slope=vec2(materialHeight(texture2D(uFascia,uv+vec2(.0034,0.0)).rgb)-marbled,
+    materialHeight(texture2D(uFascia,uv+vec2(0.0,.0041)).rgb)-marbled);
+   vec3 du=mix(T,-across,tentacle),dv=mix(across,T,tentacle);
+   fineNormal=normalize(fineNormal-1.48*du*slope.x-.82*dv*slope.y);
+   float grooves=smoothstep(.047,.235,marbled);
+   vec3 pigment=vec3(.025,.012,.017)+fibres*vec3(.84,.80,.78);
+   color=mix(color*(.51+grooves*.50),pigment,.65-.17*tendon);
+   color*=.72+.34*grooves;
    // V on the pharynx mesh carries depth into the mouth.
    if(tissue>.5&&vColor.r<.11)color*=smoothstep(.014,.11,vColor.r);
    color=mix(color,vec3(.092,.009,.013)+fibres*vec3(.30,.11,.12),blood*.72);
-   gloss=mix(.20,.90,smoothstep(.15,.50,marbled+mottling*.09));
+   gloss=mix(.12,.77,smoothstep(.19,.36,marbled+mottling*.09)*(1.0-.57*vein));
   }
   if(membrane>.5){
    // Thin webbing stays attached at its edge. Load stretches the veins
@@ -258,10 +279,11 @@ void main(){
   light+=fabric*uHeld*vec3(.19,.22,.24);
   light+=vec3(.94,.99,1.0)*beam+vec3(.88,.72,.55)*warmth*.45;
   float facingSpec=max(0.0,dot(fineNormal,halfVector));
-  float wetHighlight=wet*(1.0-.44*tendon-.25*tentacle-.44*plate)+saliva*.46;
-  float shine=(pow(facingSpec,mix(24.0,57.0,wet))*(.018+.32*wetHighlight*gloss+.15*dentin)
-   +.046*wetHighlight*gloss*pow(facingSpec,12.0))
-   *uShot*(.43+.57*mottling);
+  float wetHighlight=wet*(1.0-.53*tendon-.38*tentacle-.44*plate)+saliva*.55;
+  float enamel=smoothstep(.30,.81,vUV.y)*dentin;
+  float shine=(pow(facingSpec,mix(16.0,84.0,gloss*wet+enamel*.45))*(.010+.29*wetHighlight*gloss+.072*enamel)
+   +.025*wetHighlight*gloss*pow(facingSpec,13.0))
+   *uShot*(.39+.61*mottling);
   vec3 spec=shine*mix(vec3(.87,.74,.69),vec3(.65,.83,.85),tentacle*.70+steel*.25);
   light+=membrane*uShot*vec3(.16,.098,.065)*abs(dot(surfaceNormal,key));
   color=color*light*(1.0-.61*voidMat-.31*saliva)+spec*(1.0-voidMat)+color*optical*.52;
