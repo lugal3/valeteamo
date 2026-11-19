@@ -38,6 +38,15 @@ float depthAt(vec2 pixel,vec2 corner,float reach){
  vec2 depth=texture2D(uLightDepth,uv).rg;
  return (depth.r+depth.g/255.0)*reach;
 }
+float surfaceHash(vec2 p){
+ return fract(sin(dot(p,vec2(12.73,6.17)))*761.3);
+}
+float surfaceNoise(vec2 p){
+ vec2 cell=floor(p),f=fract(p);
+ f=f*f*(3.0-2.0*f);
+ return mix(mix(surfaceHash(cell),surfaceHash(cell+vec2(1.0,0.0)),f.x),
+  mix(surfaceHash(cell+vec2(0.0,1.0)),surfaceHash(cell+1.0),f.x),f.y);
+}
 float shadowTap(vec2 pixel,vec2 corner,float reach,float depth){
  return 1.0-smoothstep(0.0,.035,depth-depthAt(pixel,corner,reach));
 }
@@ -113,24 +122,41 @@ void main(){
  float warmth=0.0;
  for(int i=0;i<${VISIBLE_LAMPS};i++)warmth+=lampLight(uLamps[i],world,N,surfaceNormal);
  if(vArt>4.5){
-  // Procedural skin, wet lining, brushed steel, optics and old enamel.
+  // Layered pore, fibre and vascular detail in the model's own UV space.
+  // Broad shadowing comes from the sculpted forms. Wet highlights are narrow.
   vec3 viewDir=normalize(uEye-vWorld);
-  vec3 key=normalize(-uForward*.78-uRight*.40+uUp*.55);
+  vec3 key=normalize(-uForward*.61-uRight*.40+uUp*.74);
   vec3 halfVector=normalize(key+viewDir);
-  float lit=max(0.0,dot(surfaceNormal,key));
   float rim=pow(1.0-clamp(dot(surfaceNormal,viewDir),0.0,1.0),2.5);
-  vec2 texel=floor(vUV*vec2(157.0,191.0));
-  float grain=fract(sin(dot(texel,vec2(12.7,31.4)))*1973.1);
-  float marbling=sin(vUV.x*37.0+sin(vUV.y*42.0)*1.8)*sin(vUV.y*28.0+sin(vUV.x*27.0));
-  float wet=step(5.5,vArt)*(1.0-step(8.5,vArt));
+  float soft=surfaceNoise(vUV*vec2(9.0,18.0));
+  float mottling=surfaceNoise(vUV*41.0+vec2(soft,soft*3.0));
+  float pores=surfaceNoise(vUV*vec2(238.0,271.0));
+  float strand=sin(vUV.x*120.0+vUV.y*43.0+soft*12.0+mottling*2.1);
+  float vein=pow(1.0-abs(strand),7.0)*smoothstep(.30,.79,soft);
+  float skin=1.0-step(5.5,vArt);
+  float tissue=step(5.5,vArt)*(1.0-step(6.5,vArt));
   float steel=step(6.5,vArt)*(1.0-step(7.5,vArt));
   float optical=step(7.5,vArt)*(1.0-step(8.5,vArt));
-  float streak=pow(abs(sin(vUV.y*450.0+sin(vUV.x*69.0)*.45)),9.0);
-  vec3 color=vColor*(.87+.13*grain+.11*marbling+steel*.16*streak);
-  vec3 light=vec3(.28)+vec3(1.0,.76,.61)*uShot*(.36+.89*lit)+vec3(.28,.52,.66)*rim*(.17+.57*uShot);
-  light+=vec3(.94,.99,1.0)*beam+vec3(.88,.72,.55)*warmth*.62;
-  float shine=pow(max(0.0,dot(surfaceNormal,halfVector)),mix(31.0,12.0,steel))*(.017+.21*wet)*(.19+uShot);
-  color=color*light+shine*mix(vec3(1.0,.66,.62),vec3(.71,.87,.92),steel)+color*optical*.74;
+  float voidMat=step(10.5,vArt)*(1.0-step(11.5,vArt));
+  float tentacle=step(11.5,vArt);
+  float wet=max(max(tissue,optical),tentacle);
+  float ripple=pow(abs(sin(vUV.x*368.0+6.0*soft+vUV.y*17.0)),8.0);
+  vec3 across=cross(surfaceNormal,normalize(T+vec3(.0001)));
+  vec3 fineNormal=normalize(surfaceNormal+across*(mottling-.5)*(.13+wet*.20)
+   +T*(pores-.5)*(.039+wet*.05));
+  float lit=pow(max(0.0,dot(fineNormal,key)),1.26);
+  float wrapped=max(0.0,dot(fineNormal,normalize(uRight*.72+uUp*.15-uForward*.46)));
+  vec3 color=vColor*(.63+.31*soft+.18*mottling+.09*pores-.36*vein*wet+steel*.19*ripple);
+  color=mix(color,color*vec3(1.13,.67,.73),vein*(.24+.12*skin));
+  color*=1.0-tentacle*.17*ripple;
+  vec3 light=vec3(.125,.147,.161)+vec3(.93,.80,.69)*uShot*(.17+1.14*lit)
+   +vec3(.29,.56,.59)*wrapped*uShot*.35+vec3(.33,.58,.66)*rim*(.14+.62*uShot);
+  light+=vec3(.94,.99,1.0)*beam+vec3(.88,.72,.55)*warmth*.45;
+  float facingSpec=max(0.0,dot(fineNormal,halfVector));
+  float shine=(pow(facingSpec,mix(20.0,47.0,wet))*(.018+.24*wet)+.10*wet*pow(facingSpec,10.0))
+   *uShot*(.43+.57*mottling);
+  vec3 spec=shine*mix(vec3(.87,.74,.69),vec3(.65,.83,.85),tentacle*.70+steel*.25);
+  color=color*light*(1.0-.72*voidMat)+spec*(1.0-voidMat)+color*optical*.52;
   gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);return;
  }
  if(vStyle>63.5){

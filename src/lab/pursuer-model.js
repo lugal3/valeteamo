@@ -1,6 +1,6 @@
 import {HEIGHT,STAIR} from './house-layout.js';
 import {ease} from './animations/pose-tools.js';
-import {FACE_PARENTS,pursuerFacePose,pursuerMask} from './pursuer-face.js';
+import {FACE_PARENTS,pursuerFacePose,captureShell} from './pursuer-face.js';
 
 const HIP=.88,KNEE=.47,ANKLE=.06,SEGMENT=HIP-KNEE,SHOULDER=1.40,ELBOW=1.10;
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
@@ -8,12 +8,12 @@ const TAU=Math.PI*2,STRIDE=1.22,STANCE=.60;
 export const BED_EXIT={x:2.69,y:HEIGHT,z:1.72,yaw:Math.PI/2};
 export const RISE_SECONDS=2.25;
 
-export function pursuerPieces(){
+export function pursuerPieces(capture=false){
  const parts=[],add=(id,joint,x,y,z,w,h,d,color,extra={})=>parts.push({id,joint,x,y,z,w,h,d,color,solid:false,chibi:true,...extra});
  const round={shape:'round',smooth:true,segments:12,rings:8};
  const bevel={shape:'rounded-box',roundness:.24,segments:8,rings:5};
  const suit=[.23,.26,.32],lapel=[.31,.35,.42],pants=[.16,.18,.24],shirt=[.89,.88,.82];
- const skin=[.94,.79,.73],shade=[.66,.47,.45],tie=[.52,.13,.19];
+ const skin=[.94,.79,.73],shade=[.66,.47,.45],hair=[.94,.94,.91],silver=[.70,.73,.77],tie=[.52,.13,.19];
  add('jacket','chest',0,1.21,0,.625,.62,.36,suit,bevel);
  add('shirt','chest',0,1.34,.168,.225,.28,.036,shirt,bevel);
  for(const side of [-1,1]){
@@ -30,12 +30,26 @@ export function pursuerPieces(){
  for(const y of [1.16,1.068,.985])add('button'+y,'chest',0,y,.182,.024,.024,.013,[.44,.43,.43],round);
  add('waist','hips',0,.94,0,.48,.21,.31,pants,bevel);
  add('neck','head',0,1.52,.007,.16,.18,.16,skin,round);
- add('skull-back','head',0,1.705,-.085,.341,.363,.217,[.56,.39,.33],{...round,faceMaterial:5});
- add('hair-back','head',0,1.76,-.088,.351,.254,.221,[.15,.13,.13],{...round,faceMaterial:10});
+ add('face','head',0,1.687,0,.351,.414,.329,skin,round);
+ add('jaw','head',0,1.605,.042,.285,.151,.251,skin,bevel);
+ add('chin','head',0,1.560,.084,.23,.12,.166,skin,round);
+ add('nose-bridge','head',0,1.692,.164,.062,.121,.072,skin,round);
+ add('nose-tip','head',0,1.646,.196,.083,.057,.066,skin,round);
+ add('mouth','head',0,1.590,.166,.106,.012,.019,[.42,.24,.27],round);
+ add('hair-back','head',0,1.75,-.057,.348,.277,.254,silver,round);
+ add('hair-top','head',-.009,1.861,-.011,.369,.128,.312,hair,{...round,roll:-.17});
+ for(let n=0;n<5;n++)add('hair-part'+n,'head',-.137+n*.061,1.868+n*.006,.053,.094,.072,.231,n%2?hair:silver,{...round,roll:-.20,yaw:-.31});
  for(const side of [-1,1]){
   add('ear'+side,'head',side*.174,1.674,-.009,.073,.096,.067,skin,round);
   add('ear-fold'+side,'head',side*.181,1.672,.022,.030,.047,.012,shade,round);
-  add('temple'+side,'head',side*.158,1.771,-.030,.065,.138,.120,[.18,.15,.14],{...round,faceMaterial:10});
+  add('temple'+side,'head',side*.158,1.771,.022,.061,.151,.141,hair,round);
+  add('eye-socket'+side,'head',side*.074,1.716,.151,.080,.040,.032,shade,round);
+  add('eye-white'+side,'head',side*.074,1.715,.166,.065,.027,.020,[.93,.93,.90],round);
+  add('iris'+side,'head',side*.072,1.715,.174,.029,.027,.013,[.23,.56,.89],round);
+  add('pupil'+side,'head',side*.072,1.715,.183,.013,.018,.008,[.08,.14,.23],round);
+  add('brow'+side,'head',side*.073,1.744,.162,.087,.024,.030,silver,{...round,roll:side*.22});
+  add('eye-crease'+side,'head',side*.084,1.686,.157,.063,.009,.012,shade,{...round,roll:side*.15});
+  add('cheek-crease'+side,'head',side*.059,1.611,.171,.010,.057,.014,shade,{...round,roll:side*-.33});
   const x=side*.321,leg=side*.136;
   add('upper-arm'+side,'arm'+side,x,1.26,0,.17,.33,.19,suit,bevel);
   add('sleeve'+side,'forearm'+side,x,.98,0,.154,.29,.165,suit,bevel);
@@ -46,7 +60,7 @@ export function pursuerPieces(){
   add('shoe'+side,'foot'+side,leg,.071,.060,.176,.142,.325,[.083,.082,.111],bevel);
   add('sole'+side,'foot'+side,leg,.025,.060,.182,.048,.333,[.06,.06,.08],bevel);
  }
- return [...parts,...pursuerMask()];
+ return capture?captureShell(parts):parts;
 }
 
 function footfall(phase,amount){

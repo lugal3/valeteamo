@@ -11,6 +11,8 @@ import {samplePianoPose} from './piano-recital.js';
 import {drawViewModel} from './viewmodel.js';
 import {pursuerPieces,posePursuer} from './pursuer-model.js';
 import {pursuerInterior} from './pursuer-face.js';
+import {captureBasis} from './capture-shot.js';
+import {captureGrasp,createTentacleMesh} from './pursuer-tentacles.js';
 import {sampleWardrobeWalk} from './animations/wardrobe-entry.js';
 import {VERTEX_SHADER as VS,FRAGMENT_SHADER as FS} from './material-shaders.js';
 // Minimal WebGL1 3D renderer: real perspective, depth buffer, world geometry and spotlight.
@@ -612,7 +614,7 @@ export class HouseRenderer {
  drawFirstPerson(camera,right,up,forward,time,flash,motion={}){
   drawViewModel(this,motion.equipment||'flashlight',{camera,right,up,forward,time,flash,motion});
  }
- drawClimbingHands(hands){
+ drawClimbingHands(hands,basis=null){
   const gl=this.gl;gl.uniform1f(this.uniform.uFlash,0);
   for(let side=0;side<2;side++){
    const hand=hands[side];if(!hand)continue;
@@ -624,6 +626,15 @@ export class HouseRenderer {
      const at=i+offset,x=vertices[at],y=vertices[at+1],z=vertices[at+2];
      const lift=y*cf-z*sf;
      vertices[at]=x*cr-lift*sr;vertices[at+1]=x*sr+lift*cr;vertices[at+2]=y*sf+z*cf;
+    }
+    if(basis){
+     const {right,up,forward}=basis;
+     for(const offset of [0,6,13]){
+      const at=i+offset,x=vertices[at],y=vertices[at+1],z=vertices[at+2];
+      const scale=offset===0?.67:1;
+      for(let k=0;k<3;k++)vertices[at+k]=(-x*right[k]+y*up[k]-z*forward[k])*scale;
+     }
+     for(let k=3;k<6;k++)vertices[i+k]*=.47;
     }
     vertices[i]+=hand.x;vertices[i+1]+=hand.y;vertices[i+2]+=hand.z;
    }
@@ -652,24 +663,51 @@ export class HouseRenderer {
  }
  drawPursuer(actor,mirrored=false,reduced=false){
   const gl=this.gl;
-  if(!this.pursuerMesh){
-   const outside=pursuerPieces();
-   this.pursuerMesh=geometry([...outside,...pursuerInterior()]);this.pursuerVertices=new Float32Array(this.pursuerMesh.vertices.length);
-   const shell=this.pursuerMesh.ranges[outside.length-1];
-   this.pursuerShell={count:shell.indexEnd,groups:this.pursuerMesh.groups.filter(g=>g.end*16<=shell.end),
-    vertices:this.pursuerVertices.subarray(0,shell.end)};
-   this.pursuerVbo=gl.createBuffer();this.pursuerIbo=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.pursuerIbo);
-   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,this.pursuerMesh.indices,gl.STATIC_DRAW);
+  const name=actor.captureFace?'capture':'patrol';
+  this.pursuerMeshes??={};
+  if(!this.pursuerMeshes[name]){
+   const outside=pursuerPieces(name==='capture');
+   const mesh=geometry(name==='capture'?[...outside,...pursuerInterior()]:outside);
+   const posed=new Float32Array(mesh.vertices.length),shell=mesh.ranges[outside.length-1];
+   this.pursuerMeshes[name]={mesh,posed,shell:{count:shell.indexEnd,
+    groups:mesh.groups.filter(g=>g.end*16<=shell.end),vertices:posed.subarray(0,shell.end)}};
+  }
+  this.pursuerVbo??=gl.createBuffer();this.pursuerIbo??=gl.createBuffer();
+  const {mesh,posed,shell}=this.pursuerMeshes[name];
+  if(this.pursuerIndex!==name){
+   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.pursuerIbo);
+   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,mesh.indices,gl.STATIC_DRAW);
+   this.pursuerIndex=name;
   }
   const exposed=actor.captureFace&&(actor.captureFace.left>0||actor.captureFace.right>0||actor.captureFace.jaw>0);
   const {count,groups,vertices}=exposed
-   ?{count:this.pursuerMesh.indices.length,groups:this.pursuerMesh.groups,vertices:this.pursuerVertices}
-   :this.pursuerShell;
-  posePursuer(this.pursuerMesh.vertices,this.pursuerVertices,groups,actor,reduced);
+   ?{count:mesh.indices.length,groups:mesh.groups,vertices:posed}
+   :shell;
+  posePursuer(mesh.vertices,posed,groups,actor,reduced);
   if(mirrored)reflectMesh(vertices);gl.bindBuffer(gl.ARRAY_BUFFER,this.pursuerVbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.DYNAMIC_DRAW);this.bind(this.pursuerVbo,this.pursuerIbo);gl.drawElements(gl.TRIANGLES,count,gl.UNSIGNED_SHORT,0);
  }
- resize(){
-  const scale=this.quality==='low'?.55:.80;
+ drawCaptureGrasp(camera,basis,actor,grasp){
+  if(grasp.time<1.53)return;
+  const gl=this.gl;
+  if(!this.tentacles){
+   this.tentacles=createTentacleMesh();
+   this.tentacleVbo=gl.createBuffer();this.tentacleIbo=gl.createBuffer();
+   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.tentacleIbo);
+   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,this.tentacles.indices,gl.STATIC_DRAW);
+  }
+  const hands=captureGrasp(camera,basis,actor,grasp,this.tentacles);
+  if(hands){
+   gl.uniform1f(this.uniform.uHeld,1);
+   this.drawClimbingHands(hands,basis);
+   gl.uniform1f(this.uniform.uHeld,0);
+  }
+  gl.bindBuffer(gl.ARRAY_BUFFER,this.tentacleVbo);
+  gl.bufferData(gl.ARRAY_BUFFER,this.tentacles.vertices,gl.DYNAMIC_DRAW);
+  this.bind(this.tentacleVbo,this.tentacleIbo);
+  gl.drawElements(gl.TRIANGLES,this.tentacles.indices.length,gl.UNSIGNED_SHORT,0);
+ }
+ resize(capture=false){
+  const scale=this.quality==='low'?.55:capture?1:.80;
   const dpr=Math.min(window.devicePixelRatio||1,1.7)*scale;
   const w=Math.min(1200,Math.max(1,Math.round(this.canvas.clientWidth*dpr)));
   const h=Math.min(760,Math.max(1,Math.round(this.canvas.clientHeight*dpr)));
@@ -692,7 +730,7 @@ export class HouseRenderer {
  }
  render(camera,flash,time,showHand=false,motion={}){
   this.lastShowHand=showHand;
-  this.resize();const gl=this.gl,quality=this.quality==='low'?'low':'medium';
+  this.resize(!!motion.grasp);const gl=this.gl,quality=this.quality==='low'?'low':'medium';
   if(this.materialQuality!==quality){
    this.materialQuality=quality;
    for(const t of this.materialTextures)gl.deleteTexture(t);
@@ -700,8 +738,7 @@ export class HouseRenderer {
   }
   this.loisFaceTexture.setQuality(quality);
   this.updateDynamic(time,motion);
-  const cy=Math.cos(camera.yaw),sy=Math.sin(camera.yaw),cp=Math.cos(camera.pitch),sp=Math.sin(camera.pitch);
-  const right=[cy,0,-sy],forward=[sy*cp,sp,cy*cp],up=[-sy*sp,cp,-cy*sp];
+  const basis=captureBasis(camera),{right,up,forward}=basis;
   // Keep the light source inside the player's collision radius near walls.
   const light={x:camera.x+right[0]*.12+forward[0]*.06,y:camera.y+forward[1]*.06-.12,z:camera.z+right[2]*.12+forward[2]*.06};
   this.updateShadows(camera,flash,light,{right,up,forward});
@@ -721,7 +758,7 @@ export class HouseRenderer {
   gl.uniform3f(this.uniform.uLightEye,light.x,light.y,light.z);
   gl.uniform3fv(this.uniform.uRight,right);gl.uniform3fv(this.uniform.uUp,up);gl.uniform3fv(this.uniform.uForward,forward);
   gl.uniform2f(this.uniform.uProjection,1.30*this.canvas.height/this.canvas.width,1.30);
-  gl.uniform1f(this.uniform.uNear,.07);gl.uniform1f(this.uniform.uFar,45);
+  gl.uniform1f(this.uniform.uNear,motion.grasp ? .032 : .07);gl.uniform1f(this.uniform.uFar,45);
   gl.uniform1f(this.uniform.uFlash,flash?1:0);gl.uniform1f(this.uniform.uTime,time);
   gl.uniform1f(this.uniform.uShot,motion.shotLight??0);
   gl.uniform1f(this.uniform.uOcclude,this.quality==='low'?0:1);
@@ -733,6 +770,7 @@ export class HouseRenderer {
   if(motion.pursuer?.active){
    if(motion.pursuerLight!==undefined)gl.uniform1f(this.uniform.uShot,motion.pursuerLight);
    this.drawPursuer(motion.pursuer,false,motion.reduced);
+   if(motion.grasp)this.drawCaptureGrasp(camera,basis,motion.pursuer,motion.grasp);
    if(motion.pursuerLight!==undefined)gl.uniform1f(this.uniform.uShot,motion.shotLight??0);
   }
   if(!motion.thirdPerson)this.drawMirror(camera,motion);else this.drawActor(motion.thirdPerson,motion);
@@ -746,7 +784,7 @@ export class HouseRenderer {
   const gl=this.gl;
   this.loisFaceTexture.destroy();this.disposeArtwork();this.shadows.destroy();
   for(const buffer of [...this.mirrorBuffers,...this.shadowMeshes.map(mesh=>mesh.indices),
-   this.vbo,this.ibo,this.dynamicVbo,this.dynamicIbo,this.handVbo,this.handIbo,this.pursuerVbo,this.pursuerIbo]){
+   this.vbo,this.ibo,this.dynamicVbo,this.dynamicIbo,this.handVbo,this.handIbo,this.pursuerVbo,this.pursuerIbo,this.tentacleVbo,this.tentacleIbo]){
    if(buffer)gl.deleteBuffer(buffer);
   }
   for(const texture of [this.texture,this.tvTexture,...this.materialTextures])gl.deleteTexture(texture);

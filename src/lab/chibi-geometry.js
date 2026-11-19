@@ -12,7 +12,7 @@ export function facetSurface(box,color,style){
   const tint=color.map(channel=>channel*variation),offset=vertices.length/16;
   for(const p of [a,b,c]){
    const surfaceTint=box.vertexColor?box.vertexColor(p,tint,box):tint;
-   vertices.push(...p,...surfaceTint,...normal,p[0]*3,(p[1]-1.5)*3,0,style,...tangent);
+   vertices.push(...p,...surfaceTint,...(box.normalAt?.(p)||p.normal||normal),p[0]*3,(p[1]-1.5)*3,0,style,...tangent);
   }
   indices.push(offset,offset+2,offset+1);
  }

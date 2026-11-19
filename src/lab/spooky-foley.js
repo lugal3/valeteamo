@@ -36,9 +36,14 @@ export function spookyFoley(ctx,bus,noise,kind,level,pan,onEnd=()=>{}){
   layer({f:680,to:158,amp:.7,duration:.45,noiseLayer:true,q:2.4,attack:.04});
   layer({at:.10,f:3350,to:890,amp:.47,duration:.23,noiseLayer:true,q:4,attack:.009});
   layer({at:.19,f:1810,to:540,amp:.57,duration:.17,noiseLayer:true,q:3,attack:.012});
+ }else if(kind==='capture-snare'){
+  layer({f:95,to:41,amp:1.18,duration:.44,type:'triangle',attack:.028});
+  layer({f:902,to:228,amp:.94,duration:.37,noiseLayer:true,q:2.7,attack:.047});
+  layer({at:.16,f:541,to:306,amp:.58,duration:.24,noiseLayer:true,q:3.2,attack:.052});
  }else if(kind==='capture-bite'){
-  layer({f:1580,to:165,amp:1,duration:.25,noiseLayer:true,q:.9});
-  layer({f:124,to:28,amp:1.05,duration:.36,type:'triangle'});
+  layer({f:1790,to:190,amp:1.12,duration:.26,noiseLayer:true,q:1.35});
+  layer({f:127,to:29,amp:1.12,duration:.40,type:'triangle'});
+  layer({at:.065,f:319,to:68,amp:.81,duration:.43,noiseLayer:true,q:3.3,attack:.036});
  }else if(kind==='latch')layer({f:1750,to:650,amp:.8,duration:.12,noiseLayer:true,q:2.5});
  return voice;
 }

@@ -5,7 +5,7 @@ import {PhoneUI} from './phone-ui.js';
 import {FloorSounds} from './floor-sounds.js';
 import {EMOTES} from './animations/emotes.js';
 import {Pursuer} from './pursuer.js';
-import {CAPTURE_BITE,CAPTURE_REVEAL,CAPTURE_SECONDS,captureFrame} from './capture-shot.js';
+import {CAPTURE_BITE,CAPTURE_GRAB,CAPTURE_REVEAL,CAPTURE_SECONDS,CAPTURE_TEAR,captureFrame} from './capture-shot.js';
 import {movementKey,releasedPointer,hasControlTouch} from './movement-input.js';
 import {CharacterAnimator} from './animator.js';
 import {BATH_MIRROR} from './mirror.js';
@@ -938,10 +938,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    last=performance.now();
    return;
   }
-  if(previous<1.13&&shot.elapsed>=1.13)sound.captureCue('capture-tear');
+  if(previous<CAPTURE_TEAR&&shot.elapsed>=CAPTURE_TEAR)sound.captureCue('capture-tear');
   if(previous<CAPTURE_REVEAL&&shot.elapsed>=CAPTURE_REVEAL){
    sound.captureCue('capture-reveal');
    if(options.captions!==false)captureCaption.textContent='[Alarido]';
+  }
+  if(previous<CAPTURE_GRAB&&shot.elapsed>=CAPTURE_GRAB){
+   sound.captureCue('capture-snare');
+   if(options.captions!==false)captureCaption.textContent='[Los tentáculos se cierran]';
   }
   if(previous<CAPTURE_BITE&&shot.elapsed>=CAPTURE_BITE){
    sound.captureCue('capture-bite');
@@ -949,11 +953,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   const shotFrame=captureFrame(shot.from,shot.actor,shot.elapsed,reducedMotion.matches);
   const style=captureLayer.style;
-  style.setProperty('--capture-grip',`${100-25*shotFrame.grip}%`);
+  style.setProperty('--capture-grip',`${100-19*shotFrame.grip-23*shotFrame.grasp.swallow}%`);
   style.setProperty('--capture-dark',shotFrame.dark);
   if(shotFrame.dark===1)return;
   try{
-   renderer.render(shotFrame.camera,false,elapsed,false,{shotLight:.19,pursuerLight:shotFrame.light,reduced:reducedMotion.matches,pursuer:shotFrame.actor,television});
+   renderer.render(shotFrame.camera,false,elapsed+shot.elapsed,false,{shotLight:.09,pursuerLight:shotFrame.light,
+    reduced:reducedMotion.matches,pursuer:shotFrame.actor,grasp:shotFrame.grasp,television});
   }catch(e){interruptGraphics('Error de renderizado',String(e.message||e));}
  }
  function updateStory(delta){

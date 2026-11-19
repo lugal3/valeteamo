@@ -3,7 +3,7 @@
  inset: 0;
  z-index: 40;
  overflow: hidden;
- background: radial-gradient(ellipse at 50% 45%, transparent 39%, #070407d9 var(--capture-grip, 100%));
+ background: radial-gradient(ellipse at 50% 46%, transparent 29%, #040309df var(--capture-grip, 100%));
 }
 
 #lab-capture .capture-dark {
