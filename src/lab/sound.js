@@ -291,7 +291,7 @@ export class HouseSound {
    return;
   }
   this.foleyVoices??=new Set();
-  const levels={'capture-bite':.60,'capture-snare':.37,'capture-tug':.47,'capture-tear':.34,'capture-breath':.26,'capture-grab':.32};
+  const levels={'capture-bite':.60,'capture-swallow':.40,'capture-snare':.37,'capture-tug':.47,'capture-tear':.38,'capture-breath':.26,'capture-grab':.32};
   const level=levels[kind];
   if(level===undefined)return;
   const voice=spookyFoley(ctx,this.channels.alerts,this.atmosphere.noise,kind,level,pan,v=>this.foleyVoices.delete(v));

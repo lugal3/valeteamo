@@ -120,7 +120,7 @@ export function pursuerPose(actor,reduced=false){
   joints.head.yaw=(twitch*.033-.058*pressure-.071*strain)*(1-bite);
   joints.head.pitch=.23-.23*actor.captureLift-.084*pressure+.056*strain+bite*.17;
   joints.head.roll=twitch*.028+.081*pressure-.053*strain;
-  joints.head.z+=bite*.085+.028*strain;
+  joints.head.z+=bite*.057+.028*strain;
   for(const side of [-1,1]){
    const pitch=-actor.captureReach*(1.08+.34*actor.captureLift+side*.09);
    joints['arm'+side]={py:SHOULDER,pitch,roll:side*.13*actor.captureReach};
@@ -211,17 +211,23 @@ export function posePursuer(base,out,groups,actor,reduced=false){
   }
   return matrices.get(joint);
  }
- for(const {joint,start,end,flex} of groups){
+ for(const {joint,start,end,flex,strain} of groups){
   const {r,t}=matrixFor(joint);
   const tip=flex&&matrixFor(flex.joint);
   const flexLength=flex?flex.axis.reduce((n,v)=>n+v*v,0):1;
   const strandBow=(flex?.bow||0)*(actor.captureFace?.jaw||0)*(1-.45*(actor.captureFace?.bite||0));
   const attachment=flex?.release===undefined?1:1-ease(((actor.captureFace?.rupture||0)-flex.release)/.10);
+  const cheekPressure=strain?(actor.captureFace?.pressure||0)*(1-.74*(actor.captureFace?.left||0))*.015:0;
   for(let i=start*16;i<end*16;i+=16){
    const weight=flex?clamp(flex.axis.reduce((n,v,k)=>n+v*(base[i+k]-flex.anchor[k]),0)/flexLength,0,1)*attachment:0;
    for(const offset of [0,6,13]){
     const at=i+offset,position=offset===0;
-    const a=base[at],b=base[at+1],d=base[at+2];
+    let a=base[at],b=base[at+1],d=base[at+2];
+    if(position&&cheekPressure){
+     // Tension is local to the patch of skin beside and below the eye.
+     const load=cheekPressure*Math.max(0,1-Math.abs(a+.084)/.104)*Math.max(0,1-Math.abs(b-1.684)/.093);
+     a+=base[at+6]*load;b+=base[at+7]*load*.51;d+=base[at+8]*load;
+    }
     let lx=r[0]*a+r[1]*b+r[2]*d+(position?t[0]:0);
     let ly=r[3]*a+r[4]*b+r[5]*d+(position?t[1]-(inBed?HIP:0):0);
     let lz=r[6]*a+r[7]*b+r[8]*d+(position?t[2]:0);

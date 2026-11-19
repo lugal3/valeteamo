@@ -24,14 +24,19 @@ function sample(points,t){
   +(s3-2*s2+s)*(c[k]-a[k])*inScale+(s3-s2)*(d[k]-b[k])*outScale);
 }
 
-function handPose(side,time,grip,drag,swallow,reduced){
- const raise=shotEase(side<0?1.78:1.92,side<0?2.15:2.31,time);
- const pull=grip*drag,wave=reduced?0:Math.sin(time*16+side*1.5)*raise*(1-grip);
+function handPose(side,{time,timing,drag,swallow,reduced},grip,other){
+ const same=side===timing.firstSide;
+ const contact=same?timing.grab:timing.lock;
+ const raise=shotEase(contact-(same?.45:.61),contact-.043,time);
+ const resist=grip*(1-other),pull=grip*drag;
+ const wave=reduced?0:Math.sin(time*16+side*1.5)*raise*(1-grip);
+ const recoil=reduced?0:resist*(.75+.25*Math.sin((time-contact)*25));
  return {
-  x:side*(.209+.055*swallow+.018*grip-.039*pull),
-  y:-.253+.065*raise+.045*grip-.026*pull+.031*wave,
-  z:.303+.025*raise-.028*grip+.091*pull,
-  roll:side*(.27+grip*.58-wave*.10),flex:.43+raise*.16+grip*.38,raise
+  x:side*(.209+.055*swallow+.018*grip+.047*recoil-.048*pull),
+  y:-.253+.065*raise+.045*grip-.036*recoil-.026*pull+.031*wave,
+  z:.303+.025*raise-.055*recoil-.016*grip+.113*pull,
+  roll:side*(.27+grip*.58+recoil*.18-wave*.10),
+  flex:.43+raise*.16+grip*.30-.27*recoil,curl:grip*(.54+.46*other),raise
  };
 }
 
@@ -45,21 +50,24 @@ export function createTentacleMesh(){
 }
 
 export function captureGrasp(camera,basis,actor,grasp,mesh){
- const {time,snare,drag,swallow,reduced,gripLeft=snare,gripRight=snare}=grasp;
+ const {time,timing,snare,drag,swallow,reduced,gripLeft,gripRight}=grasp;
  const origin=[camera.x,camera.y,camera.z];
  const point=(x,y,z)=>origin.map((n,i)=>n+basis.right[i]*x+basis.up[i]*y+basis.forward[i]*z);
  const anchor=pursuerGraspAnchor(actor,reduced);
- const wristPose=[handPose(-1,time,gripLeft,drag,swallow,reduced),handPose(1,time,gripRight,drag,swallow,reduced)];
- const hands=time>1.78&&swallow<.92?wristPose.map(hand=>{
+ const wristPose=[handPose(-1,grasp,gripLeft,gripRight),handPose(1,grasp,gripRight,gripLeft)];
+ const hands=swallow<.94?wristPose.map(hand=>{
   if(!hand.raise)return null;
   const [x,y,z]=point(hand.x,hand.y,hand.z);
-  return {x,y,z,roll:hand.roll,flex:hand.flex};
+  return {x,y,z,roll:hand.roll,flex:hand.flex,curl:hand.curl};
  }):null;
  const vertices=mesh.vertices;
  for(const [id,{side,x,y,z,r,begin,speed,kind}] of TENDRILS.entries()){
-  const amount=shotEase(begin,begin+speed,time);
   const screenSide=-side;
   const grip=screenSide<0?gripLeft:gripRight;
+  const other=screenSide<0?gripRight:gripLeft;
+  const contact=screenSide===timing.firstSide?timing.grab:timing.lock;
+  const emergence=kind==='wrist'?contact-.60:begin+timing.reveal-1.68;
+  const amount=shotEase(emergence,kind==='wrist'?contact+.09:emergence+speed,time);
   const grab=grip*(1-.23*swallow);
   const flick=reduced?0:.017*Math.sin(time*15+id*2)*(1-grab);
   const lower=id===1||kind==='throat';
@@ -102,8 +110,9 @@ export function captureGrasp(camera,basis,actor,grasp,mesh){
    const binormal=cross(tangent,normal);
    const taper=(1-u)**.63;
    const tension=grip*Math.sin(Math.PI*u)**2;
+   const stretched=kind==='wrist'?tension*(1-other)*.33:0;
    const contraction=Math.sin(u*17-grip*4.0-id*.7)*.057*grip;
-   const thickness=(r*taper+.0006)*amount*(1+.14*Math.sin(u*15+id)+.065*Math.sin(u*51-id)+contraction+.11*tension);
+   const thickness=(r*taper+.0006)*amount*(1+.14*Math.sin(u*15+id)+.065*Math.sin(u*51-id)+contraction+.11*tension-stretched);
    for(let sideIndex=0;sideIndex<=SIDES;sideIndex++){
     const v=sideIndex/SIDES,theta=v*TAU+u*1.26;
     const c=Math.cos(theta),s=Math.sin(theta),rib=.95+.05*Math.cos(theta*3+u*29);

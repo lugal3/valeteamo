@@ -69,7 +69,7 @@ vec3 captureEye(vec2 uv,vec3 irisTint,vec3 normal,vec3 viewDir,vec3 key){
  float cornea=pow(max(0.0,dot(normal,normalize(key+viewDir))),91.0);
  float crescent=pow(max(0.0,dot(normal,normalize(key+viewDir+uRight*.13))),34.0);
  float pin=1.0-smoothstep(.025,.073,length((eye-vec2(-.23,.37))*vec2(1.0,1.33)));
- return albedo*(.18+uShot*(.22+.70*overhead))*(1.0-.42*hood)
+ return albedo*(.14+uShot*(.21+.71*overhead))*(1.0-.52*hood)
   +vec3(.72,.82,.79)*(cornea*.61+pin*.33)*uShot+vec3(.38,.52,.50)*crescent*uShot*.10;
 }
 float shadowTap(vec2 pixel,vec2 corner,float reach,float depth){
@@ -198,7 +198,7 @@ void main(){
    float rootStain=(1.0-smoothstep(.05,.47,vUV.y))*(.50+.50*soft);
    float enamelPit=smoothstep(.64,.9,pores)*smoothstep(.2,.79,mottling);
    color*=.86+.22*groove-.28*fracture-.25*enamelPit;
-   color=mix(color,color*vec3(.74,.49,.38),rootStain*.81);
+   color=mix(color,color*vec3(.59,.32,.26),rootStain*.91);
    color+=vec3(.033,.031,.024)*smoothstep(.28,.91,vUV.y)*(1.0-groove);
    fineNormal=normalize(fineNormal+T*(groove-.5)*.15);
   }
@@ -229,7 +229,9 @@ void main(){
    +vec3(.42,.50,.57)*wrapped*uShot*.41+vec3(.34,.52,.62)*rim*(.10+.47*uShot);
   light+=vec3(.94,.99,1.0)*beam+vec3(.88,.72,.55)*warmth*.45;
   float facingSpec=max(0.0,dot(fineNormal,halfVector));
-  float shine=(pow(facingSpec,mix(24.0,57.0,wet))*(.018+.32*wet*gloss+.15*dentin)+.046*wet*gloss*pow(facingSpec,12.0))
+  float wetHighlight=wet*(1.0-.44*tendon-.25*tentacle)+saliva*.46;
+  float shine=(pow(facingSpec,mix(24.0,57.0,wet))*(.018+.32*wetHighlight*gloss+.15*dentin)
+   +.046*wetHighlight*gloss*pow(facingSpec,12.0))
    *uShot*(.43+.57*mottling);
   vec3 spec=shine*mix(vec3(.87,.74,.69),vec3(.65,.83,.85),tentacle*.70+steel*.25);
   color=color*light*(1.0-.61*voidMat-.31*saliva)+spec*(1.0-voidMat)+color*optical*.52;

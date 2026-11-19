@@ -1,4 +1,11 @@
-export const CAPTURE_BREATH=.61,CAPTURE_TEAR=1.07,CAPTURE_REVEAL=1.68,CAPTURE_GRAB=2.17,CAPTURE_SECOND_GRAB=2.36,CAPTURE_BITE=3.14,CAPTURE_SECONDS=3.89;
+export function captureTiming(attempt=0){
+ const hold=[0,.12,-.08][attempt%3],firstSide=attempt%2===0?-1:1;
+ const bite=3.25+hold;
+ return {firstSide,breath:.61,tear:1.15+hold,reveal:1.77+hold,grab:2.24+hold,lock:2.46+hold,
+  bite,swallow:bite+.13,end:bite+.61};
+}
+
+const defaultTiming=captureTiming();
 
 const mix=(a,b,t)=>a+(b-a)*t;
 export const shotEase=(start,end,time)=>{
@@ -19,54 +26,56 @@ export function captureBasis({yaw,pitch,roll=0}){
  return {right:flat.map((n,i)=>n*c+vertical[i]*s),up:vertical.map((n,i)=>n*c-flat[i]*s),forward};
 }
 
-export function captureFrame(from,actor,time,reduced){
+export function captureFrame(from,actor,time,reduced,timing=defaultTiming){
  const e=(start,end)=>shotEase(start,end,time);
+ const {firstSide,tear,reveal,grab,lock,bite}=timing;
  const dx=from.x-actor.x,dz=from.z-actor.z,distance=Math.hypot(dx,dz);
  const facing=distance>.05?Math.atan2(dx,dz):actor.facing;
- const reach=e(0,.26),lift=e(.07,.79),approach=e(.63,1.31);
- const heldBreath=e(.53,.92)*(1-e(1.48,1.76));
- const snap=e(1.54,1.70)*(1-e(1.78,2.02));
- const recoil=e(1.44,1.75)*(1-e(1.87,2.24));
- const gripLeft=e(CAPTURE_GRAB-.043,CAPTURE_GRAB+.145);
- const gripRight=e(CAPTURE_SECOND_GRAB-.042,CAPTURE_SECOND_GRAB+.146);
- const snare=(gripLeft+gripRight)*.5,tug=e(2.36,2.60),drag=e(2.55,2.89),swallow=e(2.87,3.32);
- const left=e(1.04,1.47)*.21+e(1.52,1.73)*.61+e(1.75,2.02)*.18;
- const right=e(1.31,1.75)*.18+e(1.79,2.09)*.19+e(2.48,2.88)*.50;
- const clamp=e(3.13,3.40);
- const jaw=(e(1.32,1.47)*.16+e(1.59,1.81)*.52-.075*(e(1.88,2.01)-e(2.40,2.75))
-  +.32*e(2.39,2.88))*(1-.91*clamp);
- const pulse=(e(.89,1.10)-e(1.25,1.42))*.37+e(1.50,1.70)*.28;
+ const reach=e(0,.26),lift=e(.07,.79),approach=e(.63,tear+.14);
+ const heldBreath=e(.53,tear-.22)*(1-e(tear+.22,reveal));
+ const snap=e(reveal-.13,reveal+.07)*(1-e(reveal+.13,reveal+.34));
+ const recoil=e(reveal-.28,reveal+.07)*(1-e(reveal+.15,grab));
+ const firstGrip=e(grab-.041,grab+.145),secondGrip=e(lock-.042,lock+.146);
+ const gripLeft=firstSide<0?firstGrip:secondGrip,gripRight=firstSide<0?secondGrip:firstGrip;
+ const snare=(gripLeft+gripRight)*.5,tug=e(lock,lock+.21),drag=e(lock+.12,bite-.25),swallow=e(bite-.44,bite+.08);
+ const left=e(tear-.012,tear+.16)*.28+e(tear+.20,reveal+.16)*.62+e(reveal+.17,reveal+.39)*.10;
+ const upper=e(tear+.12,tear+.34)*.17+e(reveal-.15,reveal+.20)*.83;
+ const right=e(tear+.25,reveal+.04)*.18+e(reveal+.08,reveal+.32)*.19+e(lock+.14,bite-.31)*.50;
+ const clamp=e(bite-.073,bite+.014);
+ const jaw=(e(tear+.24,reveal-.14)*.15+e(reveal-.082,reveal+.16)*.54
+  -.075*(e(reveal+.22,reveal+.35)-e(lock+.08,bite-.36))+.31*e(lock-.01,bite-.28))*(1-.95*clamp);
+ const pulse=(e(tear-.18,tear)-e(tear+.12,tear+.30))*.37+e(reveal-.18,reveal+.03)*.23;
  const twitch=reduced?0:Math.sin(time*46+Math.sin(time*6))*(pulse+.50*snap+.38*snare*(1-drag));
- const glance=e(.56,.93)*(1-e(1.55,1.67));
- const impact=(e(2.34,2.45)-e(2.47,2.62))+(e(2.88,2.99)-e(3.05,3.17))*.55;
+ const focus=e(tear+.11,tear+.21),glance=1-focus;
+ const impact=(e(lock-.025,lock+.09)-e(lock+.13,lock+.26))+(e(bite-.41,bite-.29)-e(bite-.20,bite-.085))*.55;
  const resistance=gripLeft-gripRight;
  const radius=mix(Math.max(.78,distance),.505,approach)+recoil*.091+heldBreath*.030
-  -tug*.033-drag*(reduced?.063:.102)-swallow*(reduced?.119:.234);
+  -tug*.027-drag*(reduced?.051:.077)-swallow*(reduced?.023:.049);
  const turn=e(0,.44);
  const targetYaw=facing+Math.PI,turnDelta=Math.atan2(Math.sin(targetYaw-from.yaw),Math.cos(targetYaw-from.yaw));
- const orbit=reduced?0:Math.sin(Math.PI*approach)*.039-.046*recoil+.078*resistance-.040*snare+.023*drag;
+ const orbit=reduced?0:(Math.sin(Math.PI*approach)*.039-.046*recoil+.078*resistance-.028*snare)*(1-swallow);
  const x=mix(from.x,actor.x+Math.sin(facing)*radius+Math.cos(facing)*orbit,reach);
  const z=mix(from.z,actor.z+Math.cos(facing)*radius-Math.sin(facing)*orbit,reach);
  const y=mix(from.y,actor.y+1.704,lift)+Math.sin(Math.PI*lift)*.22-(snare-drag)*.063-swallow*.157;
- const shake=reduced?0:.024*kick(time,CAPTURE_GRAB)-.061*kick(time,CAPTURE_SECOND_GRAB)+.052*kick(time,2.93);
+ const shake=reduced?0:firstSide*(-.026*kick(time,grab)+.049*kick(time,lock))+.041*kick(time,bite-.29);
  const focusY=actor.y+1.705-.061*jaw-.122*swallow;
  const pitch=Math.atan2(focusY-y,Math.hypot(actor.x-x,actor.z-z));
  const yaw=turn<1?from.yaw+turnDelta*turn:Math.atan2(actor.x-x,actor.z-z);
  const gaze={
-  x:(x-actor.x)*Math.cos(facing)-(z-actor.z)*Math.sin(facing),
-  y:y-actor.y,
+  x:(x-actor.x)*Math.cos(facing)-(z-actor.z)*Math.sin(facing)+firstSide*.051*glance,
+  y:y-actor.y-.039*glance,
   z:(x-actor.x)*Math.sin(facing)+(z-actor.z)*Math.cos(facing)
  };
  return {
   camera:{x,y,z,yaw:yaw+shake,pitch:mix(from.pitch,pitch,turn)-shake*.63,
    roll:reduced?0:.065*Math.sin(Math.PI*lift)-.092*recoil-.16*resistance+.072*tug-.095*drag-.107*swallow},
   actor:{...actor,facing,speed:0,captureReach:reach,captureLift:lift,
-   captureFace:{left,right,jaw,bite:swallow,twitch,glance,gaze,pressure:heldBreath,
-    rupture:e(1.61,2.51),strain:resistance*.59+.53*tug}},
-  grasp:{time,reduced,snare,drag,swallow,gripLeft,gripRight},
+   captureFace:{left,right,upper,jaw,bite:swallow,clamp,twitch,glance,gaze,pressure:heldBreath,
+    rupture:e(tear+.13,lock+.045),strain:resistance*.59+.53*tug}},
+  grasp:{time,reduced,snare,drag,swallow,gripLeft,gripRight,timing},
   grip:reach,
-  key:[.50*Math.cos(facing)+.48*Math.sin(facing),.84,-.50*Math.sin(facing)+.48*Math.cos(facing)],
-  light:mix(.56,.81,approach)-.15*heldBreath+.11*snap+.15*impact-.34*swallow,
-  dark:e(3.04,3.24)
+  key:[.80*Math.cos(facing)+.36*Math.sin(facing),.62,-.80*Math.sin(facing)+.36*Math.cos(facing)],
+  light:mix(.51,.82,approach)-.16*heldBreath+.15*snap+.17*impact-.20*swallow,
+  dark:e(bite-.004,bite+.030)
  };
 }

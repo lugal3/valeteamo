@@ -247,7 +247,8 @@ export function geometry(boxes){
    const mesh=box.triangles?facetSurface(box,color,style):smoothSurface(box,color,style);
    for(const n of mesh.vertices)vertices.push(n);
    for(const i of mesh.indices)indices.push(offset+i);
-   groups.push({start:offset,end:offset+mesh.vertices.length/16,joint:box.joint||'root',blinkY:box.blinkY,flex:box.flex});offset+=mesh.vertices.length/16;rotateMesh();continue;
+   groups.push({start:offset,end:offset+mesh.vertices.length/16,joint:box.joint||'root',blinkY:box.blinkY,
+    flex:box.flex,strain:box.strain});offset+=mesh.vertices.length/16;rotateMesh();continue;
   }
   if(box.shape==='torus'){
    const mesh=torusSurface(box,color,style);
@@ -622,6 +623,18 @@ export class HouseRenderer {
    const hand=hands[side];if(!hand)continue;
    const model=this.handGeometry['climb'+side]??=geometry(climbingHandPieces(side?-1:1));
    const vertices=this.climbVertices??=new Float32Array(model.vertices.length);vertices.set(model.vertices);
+   if(hand.curl){
+    const angle=.82*hand.curl,c=Math.cos(angle),s=Math.sin(angle);
+    // The three fingers fold towards the palm while the tentacle holds the cuff.
+    for(const {start,end} of model.ranges.slice(2,5))for(let i=start;i<end;i+=16){
+     const pivot=-.037,y=vertices[i+1],z=vertices[i+2]-pivot;
+     vertices[i+1]=y*c+z*s;vertices[i+2]=pivot+z*c-y*s;
+     for(const offset of [6,13]){
+      const at=i+offset,ny=vertices[at+1],nz=vertices[at+2];
+      vertices[at+1]=ny*c+nz*s;vertices[at+2]=nz*c-ny*s;
+     }
+    }
+   }
    const angle=hand.roll||0,flex=hand.flex||0,cr=Math.cos(angle),sr=Math.sin(angle),cf=Math.cos(flex),sf=Math.sin(flex);
    for(let i=0;i<vertices.length;i+=16){
     if(angle||flex)for(const offset of [0,6,13]){
@@ -689,7 +702,7 @@ export class HouseRenderer {
   if(mirrored)reflectMesh(vertices);gl.bindBuffer(gl.ARRAY_BUFFER,this.pursuerVbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.DYNAMIC_DRAW);this.bind(this.pursuerVbo,this.pursuerIbo);gl.drawElements(gl.TRIANGLES,count,gl.UNSIGNED_SHORT,0);
  }
  drawCaptureGrasp(camera,basis,actor,grasp){
-  if(grasp.time<1.53)return;
+  if(grasp.time<grasp.timing.reveal-.24)return;
   const gl=this.gl;
   if(!this.tentacles){
    this.tentacles=createTentacleMesh();

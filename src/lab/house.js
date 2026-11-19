@@ -5,7 +5,7 @@ import {PhoneUI} from './phone-ui.js';
 import {FloorSounds} from './floor-sounds.js';
 import {EMOTES} from './animations/emotes.js';
 import {Pursuer} from './pursuer.js';
-import {CAPTURE_BITE,CAPTURE_BREATH,CAPTURE_GRAB,CAPTURE_SECOND_GRAB,CAPTURE_REVEAL,CAPTURE_SECONDS,CAPTURE_TEAR,captureFrame} from './capture-shot.js';
+import {captureFrame,captureTiming} from './capture-shot.js';
 import {movementKey,releasedPointer,hasControlTouch} from './movement-input.js';
 import {CharacterAnimator} from './animator.js';
 import {BATH_MIRROR} from './mirror.js';
@@ -132,7 +132,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const mirrorSafe=new MirrorSafePuzzle(),television=new HouseTelevision();
  let safeInput='',activeSafe=null,noteLift=0,noteHold=0,notePresentation=false,capturePhoto=false,piano=null;
  let rc=null,louis=null,loisShotDirector=null,rcTrap={armed:false,closed:false},finalCutscene=null;
- let resumed=false,lastSafeCheckpoint=null,captureShot=null;
+ let resumed=false,lastSafeCheckpoint=null,captureShot=null,captureCount=0;
  let equipmentBeforeNote='empty',batterySwap=null;
  const canUseHotbar=()=>ready&&!isSuspended()&&!cinematic&&events.phase!=='arrival'&&events.phase!=='failed'&&events.phase!=='safe'&&rc?.mode!=='driving'&&rc?.mode!=='deploying';
  const phone=new PhoneUI(root,(kind,toggle=true)=>equip(kind,toggle),()=>resetInput(),{canEquip:canUseHotbar,canUse:()=>canUseHotbar()&&!notePresentation,onEdit:()=>{releaseMouse();resetInput();if(isSuspended())sound.pause();else sound.resume();},onPhoto:()=>{capturePhoto=true;}});phone.equip(equipment);
@@ -911,7 +911,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const from=cameraOf(s);
   const hiding=world.objects.find(object=>object.id===(s.hidden?.objectId||poseTransition?.object.id));
   if(hiding?.wardrobeLeaves){poseFurniture(hiding,1);renderer.updateVisibility();}
-  captureShot={from,actor:pursuer.snapshot(),elapsed:0};
+  captureShot={from,actor:pursuer.snapshot(),elapsed:0,timing:captureTiming(captureCount++)};
   phone.close();releaseMouse();resetInput();sound.stopEmote();
   $('house-emotes').hidden=true;
   $('lab-camera-settings').open=false;
@@ -922,9 +922,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   sound.captureCue('capture-grab');
  }
  function renderCapture(delta){
-  const shot=captureShot,previous=shot.elapsed;
+  const shot=captureShot,previous=shot.elapsed,timing=shot.timing;
   if(captureRunning())shot.elapsed+=delta;
-  if(shot.elapsed>=CAPTURE_SECONDS){
+  if(shot.elapsed>=timing.end){
    const saved=lastSafeCheckpoint;
    const restore=saved?.hide&&saved.hide===pursuer.witnessed?{...saved,hide:undefined}:saved;
    captureShot=null;captureLayer.hidden=true;captureCaption.textContent='';root.classList.remove('house-capture-active');
@@ -940,25 +940,27 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    last=performance.now();
    return;
   }
-  if(previous<CAPTURE_BREATH&&shot.elapsed>=CAPTURE_BREATH){
-   sound.captureCue('capture-breath');
+  const crossed=time=>previous<time&&shot.elapsed>=time;
+  if(crossed(timing.breath)){
+   sound.captureCue('capture-breath',timing.firstSide*.49);
    if(options.captions!==false)captureCaption.textContent='[Respira muy cerca]';
   }
-  if(previous<CAPTURE_TEAR&&shot.elapsed>=CAPTURE_TEAR)sound.captureCue('capture-tear');
-  if(previous<CAPTURE_REVEAL&&shot.elapsed>=CAPTURE_REVEAL){
+  if(crossed(timing.tear))sound.captureCue('capture-tear',.15);
+  if(crossed(timing.reveal)){
    sound.captureCue('capture-reveal');
    if(options.captions!==false)captureCaption.textContent='[Alarido]';
   }
-  if(previous<CAPTURE_GRAB&&shot.elapsed>=CAPTURE_GRAB){
-   sound.captureCue('capture-snare',-.38);
+  if(crossed(timing.grab)){
+   sound.captureCue('capture-snare',timing.firstSide*.42);
    if(options.captions!==false)captureCaption.textContent='[Los tentáculos se cierran]';
   }
-  if(previous<CAPTURE_SECOND_GRAB&&shot.elapsed>=CAPTURE_SECOND_GRAB)sound.captureCue('capture-tug',.36);
-  if(previous<CAPTURE_BITE&&shot.elapsed>=CAPTURE_BITE){
+  if(crossed(timing.lock))sound.captureCue('capture-tug',-timing.firstSide*.38);
+  if(crossed(timing.bite)){
    sound.captureCue('capture-bite');
    captureCaption.textContent='';
   }
-  const shotFrame=captureFrame(shot.from,shot.actor,shot.elapsed,reducedMotion.matches);
+  if(crossed(timing.swallow))sound.captureCue('capture-swallow');
+  const shotFrame=captureFrame(shot.from,shot.actor,shot.elapsed,reducedMotion.matches,timing);
   const style=captureLayer.style;
   style.setProperty('--capture-grip',`${100-19*shotFrame.grip-23*shotFrame.grasp.swallow}%`);
   style.setProperty('--capture-dark',shotFrame.dark);

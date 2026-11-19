@@ -37,10 +37,9 @@ export function spookyFoley(ctx,bus,noise,kind,level,pan,onEnd=()=>{}){
   layer({at:.055,f:574,to:348,amp:.45,duration:.51,noiseLayer:true,q:1.7,attack:.15});
   layer({at:.23,f:81,to:62,amp:.31,duration:.35,type:'triangle',attack:.08});
  }else if(kind==='capture-tear'){
-  layer({f:445,to:131,amp:.54,duration:.48,noiseLayer:true,q:2.4,attack:.06});
-  layer({at:.09,f:2680,to:590,amp:.30,duration:.13,noiseLayer:true,q:4,attack:.008});
-  layer({at:.24,f:1860,to:410,amp:.53,duration:.15,noiseLayer:true,q:3,attack:.010});
-  layer({at:.43,f:3060,to:520,amp:.68,duration:.19,noiseLayer:true,q:3.9,attack:.007});
+  layer({f:2510,to:457,amp:.81,duration:.12,noiseLayer:true,q:3.5,attack:.006});
+  layer({at:.022,f:164,to:65,amp:.48,duration:.15,type:'triangle'});
+  layer({at:.105,f:1107,to:304,amp:.38,duration:.16,noiseLayer:true,q:2.8,attack:.031});
  }else if(kind==='capture-snare'){
   layer({f:95,to:41,amp:1.18,duration:.44,type:'triangle',attack:.028});
   layer({f:902,to:228,amp:.94,duration:.37,noiseLayer:true,q:2.7,attack:.047});
@@ -50,9 +49,12 @@ export function spookyFoley(ctx,bus,noise,kind,level,pan,onEnd=()=>{}){
   layer({at:.026,f:1140,to:265,amp:.70,duration:.26,noiseLayer:true,q:3.7,attack:.032});
   layer({at:.075,f:433,to:183,amp:.76,duration:.23,noiseLayer:true,q:3.0,attack:.041});
  }else if(kind==='capture-bite'){
-  layer({f:1790,to:190,amp:1.12,duration:.26,noiseLayer:true,q:1.35});
-  layer({f:127,to:29,amp:1.12,duration:.40,type:'triangle'});
-  layer({at:.065,f:319,to:68,amp:.81,duration:.43,noiseLayer:true,q:3.3,attack:.036});
+  layer({f:1790,to:174,amp:1.12,duration:.22,noiseLayer:true,q:1.35});
+  layer({f:139,to:38,amp:1.12,duration:.22,type:'triangle'});
+ }else if(kind==='capture-swallow'){
+  layer({f:123,to:41,amp:.72,duration:.36,noiseLayer:true,q:1.7,attack:.052});
+  layer({at:.034,f:69,to:30,amp:.59,duration:.35,type:'sine',attack:.053});
+  layer({at:.066,f:243,to:94,amp:.39,duration:.28,noiseLayer:true,q:2.85,attack:.04});
  }else if(kind==='latch')layer({f:1750,to:650,amp:.8,duration:.12,noiseLayer:true,q:2.5});
  return voice;
 }
