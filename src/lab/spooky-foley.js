@@ -45,6 +45,10 @@ export function spookyFoley(ctx,bus,noise,kind,level,pan,onEnd=()=>{}){
   layer({f:95,to:41,amp:1.18,duration:.44,type:'triangle',attack:.028});
   layer({f:902,to:228,amp:.94,duration:.37,noiseLayer:true,q:2.7,attack:.047});
   layer({at:.16,f:541,to:306,amp:.58,duration:.24,noiseLayer:true,q:3.2,attack:.052});
+ }else if(kind==='capture-tug'){
+  layer({f:88,to:43,amp:1.01,duration:.35,type:'triangle',attack:.025});
+  layer({at:.026,f:1140,to:265,amp:.70,duration:.26,noiseLayer:true,q:3.7,attack:.032});
+  layer({at:.075,f:433,to:183,amp:.76,duration:.23,noiseLayer:true,q:3.0,attack:.041});
  }else if(kind==='capture-bite'){
   layer({f:1790,to:190,amp:1.12,duration:.26,noiseLayer:true,q:1.35});
   layer({f:127,to:29,amp:1.12,duration:.40,type:'triangle'});

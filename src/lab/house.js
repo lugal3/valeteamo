@@ -5,7 +5,7 @@ import {PhoneUI} from './phone-ui.js';
 import {FloorSounds} from './floor-sounds.js';
 import {EMOTES} from './animations/emotes.js';
 import {Pursuer} from './pursuer.js';
-import {CAPTURE_BITE,CAPTURE_BREATH,CAPTURE_GRAB,CAPTURE_REVEAL,CAPTURE_SECONDS,CAPTURE_TEAR,captureFrame} from './capture-shot.js';
+import {CAPTURE_BITE,CAPTURE_BREATH,CAPTURE_GRAB,CAPTURE_SECOND_GRAB,CAPTURE_REVEAL,CAPTURE_SECONDS,CAPTURE_TEAR,captureFrame} from './capture-shot.js';
 import {movementKey,releasedPointer,hasControlTouch} from './movement-input.js';
 import {CharacterAnimator} from './animator.js';
 import {BATH_MIRROR} from './mirror.js';
@@ -950,9 +950,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(options.captions!==false)captureCaption.textContent='[Alarido]';
   }
   if(previous<CAPTURE_GRAB&&shot.elapsed>=CAPTURE_GRAB){
-   sound.captureCue('capture-snare');
+   sound.captureCue('capture-snare',-.38);
    if(options.captions!==false)captureCaption.textContent='[Los tentáculos se cierran]';
   }
+  if(previous<CAPTURE_SECOND_GRAB&&shot.elapsed>=CAPTURE_SECOND_GRAB)sound.captureCue('capture-tug',.36);
   if(previous<CAPTURE_BITE&&shot.elapsed>=CAPTURE_BITE){
    sound.captureCue('capture-bite');
    captureCaption.textContent='';
@@ -963,7 +964,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   style.setProperty('--capture-dark',shotFrame.dark);
   if(shotFrame.dark===1)return;
   try{
-   renderer.render(shotFrame.camera,false,elapsed+shot.elapsed,false,{shotLight:.09,pursuerLight:shotFrame.light,
+   renderer.render(shotFrame.camera,false,elapsed+shot.elapsed,false,{shotLight:.09,pursuerLight:shotFrame.light,pursuerKey:shotFrame.key,
     reduced:reducedMotion.matches,pursuer:shotFrame.actor,grasp:shotFrame.grasp,television});
   }catch(e){interruptGraphics('Error de renderizado',String(e.message||e));}
  }

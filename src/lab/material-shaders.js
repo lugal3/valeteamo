@@ -23,7 +23,7 @@ precision mediump float;
 varying vec3 vColor,vNormal,vWorld,vTangent;
 varying vec2 vUV;
 varying float vArt,vStyle,vDistance;
-uniform vec3 uEye,uLightEye,uForward,uRight,uUp;
+uniform vec3 uEye,uLightEye,uForward,uRight,uUp,uPursuerKey;
 uniform sampler2D uAtlas,uLightDepth,uMaterials,uTV,uLoisFace,uFascia;
 uniform float uFlash,uOcclude;
 uniform float uShot,uFasciaReady;
@@ -150,7 +150,7 @@ void main(){
   // Layered pore, fibre and vascular detail in the model's own UV space.
   // Broad shadowing comes from the sculpted forms. Wet highlights are narrow.
   vec3 viewDir=normalize(uEye-vWorld);
-  vec3 key=normalize(-uForward*.61-uRight*.40+uUp*.74);
+  vec3 key=normalize(dot(uPursuerKey,uPursuerKey)>.01?uPursuerKey:-uForward*.61-uRight*.40+uUp*.74);
   if(vArt>15.5&&vArt<16.5){
    gl_FragColor=vec4(clamp(captureEye(vUV,vColor,surfaceNormal,viewDir,key),0.0,1.0),1.0);
    return;
@@ -166,6 +166,7 @@ void main(){
   float tissue=step(5.5,vArt)*(1.0-step(6.5,vArt));
   float steel=step(6.5,vArt)*(1.0-step(7.5,vArt));
   float optical=step(7.5,vArt)*(1.0-step(8.5,vArt));
+  float hair=step(9.5,vArt)*(1.0-step(10.5,vArt));
   float voidMat=step(10.5,vArt)*(1.0-step(11.5,vArt));
   float tentacle=step(11.5,vArt)*(1.0-step(12.5,vArt));
   float dentin=step(12.5,vArt)*(1.0-step(13.5,vArt));
@@ -201,6 +202,12 @@ void main(){
    color+=vec3(.033,.031,.024)*smoothstep(.28,.91,vUV.y)*(1.0-groove);
    fineNormal=normalize(fineNormal+T*(groove-.5)*.15);
   }
+  if(hair>.5){
+   float sweep=surfaceNoise(vec2(vUV.x*30.0,vUV.y*3.1));
+   float strands=.5+.5*sin(vUV.x*389.0+vUV.y*9.0+7.0*sweep);
+   color*=.56+.28*sweep+.14*strands;
+   fineNormal=normalize(fineNormal+T*(strands-.5)*.19);
+  }
   float gloss=.79;
   float organic=tissue+tendon+tentacle+blood;
   if(organic>.5&&uFasciaReady>.5){
@@ -218,7 +225,7 @@ void main(){
   }
   float lit=pow(max(0.0,dot(fineNormal,key)),1.26);
   float wrapped=max(0.0,dot(fineNormal,normalize(uRight*.72+uUp*.15-uForward*.46)));
-  vec3 light=vec3(.102,.109,.120)+vec3(.96,.83,.74)*uShot*(.13+1.24*lit)
+  vec3 light=vec3(.082,.090,.108)+vec3(.97,.85,.77)*uShot*(.11+1.28*lit)
    +vec3(.42,.50,.57)*wrapped*uShot*.41+vec3(.34,.52,.62)*rim*(.10+.47*uShot);
   light+=vec3(.94,.99,1.0)*beam+vec3(.88,.72,.55)*warmth*.45;
   float facingSpec=max(0.0,dot(fineNormal,halfVector));

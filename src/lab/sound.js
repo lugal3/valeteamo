@@ -277,7 +277,7 @@ export class HouseSound {
    gain.setTargetAtTime(quiet ? .11 : 1,now,quiet ? .16 : .27);
   }
  }
- captureCue(kind){
+ captureCue(kind,pan=0){
   const ctx=this.context;
   if(!ctx||ctx.state!=='running'||this.paused||this.settings.muted)return;
   this.captureScream??=buildCaptureScream(ctx);
@@ -291,10 +291,10 @@ export class HouseSound {
    return;
   }
   this.foleyVoices??=new Set();
-  const levels={'capture-bite':.60,'capture-snare':.43,'capture-tear':.34,'capture-breath':.26,'capture-grab':.32};
+  const levels={'capture-bite':.60,'capture-snare':.37,'capture-tug':.47,'capture-tear':.34,'capture-breath':.26,'capture-grab':.32};
   const level=levels[kind];
   if(level===undefined)return;
-  const voice=spookyFoley(ctx,this.channels.alerts,this.atmosphere.noise,kind,level,0,v=>this.foleyVoices.delete(v));
+  const voice=spookyFoley(ctx,this.channels.alerts,this.atmosphere.noise,kind,level,pan,v=>this.foleyVoices.delete(v));
   this.foleyVoices.add(voice);
  }
  pause(){this.paused=true;this.carEngine(null);this.rcMotor(0);this.recordings?.pause(this.emoteVoice);this.stopMusic();for(const node of this.sequenceNodes||[])try{node.stop();}catch{}for(const voice of this.foleyVoices||[])voice.stop();this.atmosphere?.pause();try{if(this.context?.state==='running')void this.context.suspend().catch(()=>{});}catch{}}

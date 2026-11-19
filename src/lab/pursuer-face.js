@@ -2,6 +2,7 @@
 // Split its front shell into fitted pieces so the seams only open under load.
 const round={shape:'round',smooth:true,segments:18,rings:12};
 const SKIN=5,FLESH=6,TOOTH=13,TENDON=14,SALIVA=15,EYE=16,BLOOD=17;
+const HAIR=10;
 const tau=Math.PI*2;
 const difference=(a,b)=>a.map((n,i)=>n-b[i]);
 const magnitude=v=>Math.hypot(...v)||1;
@@ -10,6 +11,7 @@ const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]
 const mix=(a,b,t)=>a.map((n,i)=>n+(b[i]-n)*t);
 const poly=(id,joint,triangles,color,faceMaterial,extra)=>({id,joint,triangles,color,faceMaterial,...extra});
 const solid=(id,joint,x,y,z,w,h,d,color,faceMaterial,extra)=>({id,joint,x,y,z,w,h,d,color,faceMaterial,...round,...extra});
+const skinPoint=(x,y,offset=0)=>[x,y,.1645*Math.sqrt(Math.max(0,1-(x/.1755)**2-((y-1.687)/.207)**2))+offset];
 function eyeUV([x,y,z],{w,h}){
  const rear=z<0?1.4:1;
  return [.5+x/w*rear,.5+y/h*rear];
@@ -99,23 +101,71 @@ function fractureShell(face){
  });
 }
 
+function captureHair(){
+ const profile=[[1.924,.019,.023],[1.916,.087,.085],[1.895,.135,.126],
+  [1.868,.165,.151],[1.832,.178,.163],[1.791,.177,.153],[1.756,.163,.144]];
+ const rows=profile.map(([height,width,depth],row)=>Array.from({length:49},(_,i)=>{
+  const u=i/48,a=u*tau,side=Math.sin(a),front=Math.cos(a),v=row/(profile.length-1);
+  const hairline=Math.max(0,front)*(.074+.014*Math.sin(a*3-.48));
+  const sweep=.005*Math.sin(a*6+v*2.8)+.004*Math.sin(a*13+v*4.1);
+  const p=[width*side-.011*(1-v),height+v**3*hairline+sweep,-.030+depth*front];
+  p.uv=[u+.115*v,v];
+  p.normal=unit([side,1-v*1.28,front]);
+  p.tangent=[Math.cos(a),0,-Math.sin(a)];
+  return p;
+ }));
+ return poly('capture-swept-hair','head',ribbon(rows),[.61,.62,.605],HAIR,{
+  vertexColor:(point,color)=>color.map(n=>n*(.65+.35*(1-point.uv[1]**2)))
+ });
+}
+
+function captureNose(){
+ const points=[[-.002,1.752,.152],[-.001,1.727,.163],[.001,1.697,.177],
+  [.002,1.674,.194],[.002,1.651,.197],[-.001,1.638,.180],[-.002,1.627,.157]];
+ return poly('capture-nose','face-nose',tube(points,[.008,.019,.023,.026,.034,.025,.010],16,
+  {aspect:.66,roughness:.026}),[.90,.73,.651],SKIN);
+}
+
+function captureLips(){
+ const line=[[-.054,1.592],[-.029,1.589],[-.007,1.589],[.015,1.586],[.035,1.588],[.052,1.593]];
+ return poly('capture-closed-lips','face-jaw-skin',tube(line.map(([x,y])=>skinPoint(x,y,.005)),
+  [.0012,.0044,.0045,.0049,.0031,.0014],10,{aspect:.68,roughness:.05}),[.38,.194,.195],SKIN);
+}
+
+function captureLids(side){
+ const joint=side<0?'face-receding-skin':'face-right',x=side*.074;
+ const lid=(name,heights,width,color)=>poly(name+side,joint,tube(
+  heights.map(([dx,y,z])=>skinPoint(x+dx,y,z)),width,9,{aspect:.72,roughness:.071}),color,SKIN);
+ return [
+  lid('human-upper-lid',[[-.035,1.713,.010],[-.017,1.729,.017],[.004,1.731,.021],[.024,1.725,.017],[.036,1.716,.009]],
+   [.0027,.0069,.0068,.0053,.0018],[.54,.343,.299]),
+  lid('human-lower-lid',[[-.035,1.711,.010],[-.017,1.703,.018],[.007,1.702,.018],[.026,1.707,.014],[.035,1.714,.009]],
+   [.0025,.0045,.0048,.0039,.0015],[.70,.454,.399])
+ ];
+}
+
 export function captureShell(parts){
  return parts.flatMap(part=>{
   if(part.id==='face')return fractureShell(part);
   if(part.joint!=='head')return part;
   const {id}=part;
+  if(id==='hair-top')return captureHair();
+  if(id.startsWith('hair-part')||id.startsWith('temple'))return [];
+  if(id==='nose-bridge')return captureNose();
+  if(id==='nose-tip')return [];
+  if(id==='jaw'||id==='chin'||id.startsWith('cheek-crease')||id.startsWith('eye-crease'))return [];
+  if(id==='mouth')return captureLips();
   let joint='head',faceMaterial=SKIN;
-  if(id==='jaw'||id==='chin'||id==='mouth')joint='face-jaw-skin';
-  if(id.startsWith('nose'))joint='face-nose';
   if(/^(eye|iris|pupil|brow|cheek)/.test(id)){
    const side=id.endsWith('-1')?-1:1;
    joint=side<0?'face-left':'face-right';
    if(/^(iris|pupil)/.test(id))return [];
+   if(id.startsWith('eye-socket'))return captureLids(side);
    if(id.startsWith('eye-white'))return {...part,joint:'face-skin-eye'+side,faceMaterial:EYE,
-    w:.066,h:.028,d:.035,y:1.715,z:.158,segments:24,rings:16,color:[.106,.226,.293],surfaceUV:eyeUV};
+    w:.063,h:.026,d:.033,y:1.715,z:.156,segments:24,rings:16,color:[.106,.226,.293],surfaceUV:eyeUV};
    else if(side<0)joint='face-receding-skin';
   }
-  if(id.startsWith('hair')||id.startsWith('temple')||id.startsWith('brow'))faceMaterial=10;
+  if(id.startsWith('hair')||id.startsWith('brow'))faceMaterial=HAIR;
   return {...part,joint,faceMaterial};
  });
 }
@@ -149,12 +199,11 @@ function woundDetails(pieces){
   }
  }
  // Follow the old ellipsoid so the torn edge stays stained as the plate moves.
- const skinPoint=(x,y)=>[x,y,.1645*Math.sqrt(Math.max(0,1-(x/.1755)**2-((y-1.687)/.207)**2))+.0011];
  for(const [i,[x,y,end]] of [[.043,1.699,1.644],[.059,1.704,1.657],[.087,1.696,1.626],
   [.107,1.686,1.660],[.044,1.756,1.710],[.077,1.735,1.704]].entries()){
-  const points=[skinPoint(x,y),skinPoint(x+.003,y+(end-y)*.32),
-   skinPoint(x-.005,y+(end-y)*.73),skinPoint(x-.007,end)];
-  pieces.push(poly('blood-runnel'+i,'face-right',tube(points,[.0032,.0039,.0026,.00065],8,{aspect:.47,phase:i}),
+  const points=[skinPoint(x,y,.0011),skinPoint(x+.003,y+(end-y)*.32,.0011),
+   skinPoint(x-.005,y+(end-y)*.73,.0011),skinPoint(x-.007,end,.0011)];
+  pieces.push(poly('blood-runnel'+i,'face-blood',tube(points,[.0032,.0039,.0026,.00065],8,{aspect:.47,phase:i}),
    [.19,.020,.030],BLOOD));
  }
 }
@@ -281,7 +330,7 @@ export function pursuerInterior(){
 export const FACE_PARENTS={
  'face-left':'head','face-right':'head','face-jaw':'head','face-eye':'head',
  'face-skin-eye-1':'face-left','face-skin-eye1':'face-right','face-nose':'face-left',
- 'face-receding-skin':'face-left','face-jaw-skin':'face-jaw',
+ 'face-receding-skin':'face-left','face-jaw-skin':'face-jaw','face-blood':'face-right',
  'face-gullet-upper':'head','face-gullet-lower':'face-jaw',
  'face-palate':'face-gullet-upper','face-tongue':'face-gullet-lower'
 };
@@ -302,6 +351,7 @@ export function pursuerFacePose(joints,face){
   roll:(.052+twitch*.021)*jaw};
  const shed=1-(1-jaw)**3;
  joints['face-jaw-skin']={py:1.521,pz:.079,y:-.037*shed,z:-.055*shed,pitch:.30*shed,scale:1-.72*shed};
+ joints['face-blood']={z:-.013*Math.max(0,1-left*2.7)};
  joints['face-nose']={py:1.675,pz:.180,z:-.072*left,scale:Math.max(.016,1-left*1.55)};
  joints['face-receding-skin']={px:-.080,py:1.717,pz:.137,scale:Math.max(.12,1-left*1.25),z:-.033*left};
  const throat=Math.min(1,Math.max(0,(jaw-.14)/.62));
@@ -311,8 +361,8 @@ export function pursuerFacePose(joints,face){
  joints['face-tongue']={py:1.588,pz:.135,y:jaw*.009,z:(pressure-.4*bite)*.021,
   roll:twitch*.14,pitch:jaw*.16};
  joints['face-eye']={px:-.078,py:1.731,pz:.125,...eyeAim(-.078,1.731,.125),z:.008*left};
- joints['face-skin-eye-1']={px:-.074,py:1.715,pz:.158,...eyeAim(-.074,1.715,.158),
+ joints['face-skin-eye-1']={px:-.074,py:1.715,pz:.156,...eyeAim(-.074,1.715,.156),
   scale:Math.max(.003,1-left*3.4),z:-.022*left};
- joints['face-skin-eye1']={px:.074,py:1.715,pz:.158,...eyeAim(.074,1.715,.158),
+ joints['face-skin-eye1']={px:.074,py:1.715,pz:.156,...eyeAim(.074,1.715,.156),
   y:-.002*pressure,scale:Math.max(.26,1-.27*right-.49*bite-.08*glance),z:-.018*bite};
 }

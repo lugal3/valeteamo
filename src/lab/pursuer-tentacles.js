@@ -1,4 +1,5 @@
 import {shotEase} from './capture-shot.js';
+import {pursuerGraspAnchor} from './pursuer-model.js';
 
 const RINGS=38,SIDES=17,STRIDE=16,TAU=Math.PI*2;
 const TENDRILS=[
@@ -11,12 +12,27 @@ const TENDRILS=[
 const sub=(a,b)=>a.map((n,k)=>n-b[k]);
 const lerp=(a,b,t)=>a.map((n,k)=>n+(b[k]-n)*t);
 const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
 function unit(v){const m=Math.hypot(...v)||1;return v.map(n=>n/m);}
 
 function sample(points,t){
  const scaled=t*(points.length-1),i=Math.min(points.length-2,Math.floor(scaled)),s=scaled-i,s2=s*s,s3=s2*s;
  const a=points[Math.max(0,i-1)],b=points[i],c=points[i+1],d=points[Math.min(points.length-1,i+2)];
- return b.map((v,k)=>.5*((2*v)+(c[k]-a[k])*s+(2*a[k]-5*v+4*c[k]-d[k])*s2+(3*v-a[k]-3*c[k]+d[k])*s3));
+ const span=Math.hypot(...sub(c,b)),before=Math.hypot(...sub(b,a)),after=Math.hypot(...sub(d,c));
+ const inScale=span/(before+span||1),outScale=span/(span+after||1);
+ return b.map((v,k)=>(2*s3-3*s2+1)*v+(-2*s3+3*s2)*c[k]
+  +(s3-2*s2+s)*(c[k]-a[k])*inScale+(s3-s2)*(d[k]-b[k])*outScale);
+}
+
+function handPose(side,time,grip,drag,swallow,reduced){
+ const raise=shotEase(side<0?1.78:1.92,side<0?2.15:2.31,time);
+ const pull=grip*drag,wave=reduced?0:Math.sin(time*16+side*1.5)*raise*(1-grip);
+ return {
+  x:side*(.209+.055*swallow+.018*grip-.039*pull),
+  y:-.253+.065*raise+.045*grip-.026*pull+.031*wave,
+  z:.303+.025*raise-.028*grip+.091*pull,
+  roll:side*(.27+grip*.58-wave*.10),flex:.43+raise*.16+grip*.38,raise
+ };
 }
 
 export function createTentacleMesh(){
@@ -29,31 +45,39 @@ export function createTentacleMesh(){
 }
 
 export function captureGrasp(camera,basis,actor,grasp,mesh){
- const {time,snare,drag,swallow,reduced}=grasp;
+ const {time,snare,drag,swallow,reduced,gripLeft=snare,gripRight=snare}=grasp;
  const origin=[camera.x,camera.y,camera.z];
  const point=(x,y,z)=>origin.map((n,i)=>n+basis.right[i]*x+basis.up[i]*y+basis.forward[i]*z);
- const sin=Math.sin(actor.facing),cos=Math.cos(actor.facing);
- const body=(x,y,z)=>[actor.x+x*cos+z*sin,actor.y+y,actor.z-x*sin+z*cos];
- const lift=shotEase(1.83,2.29,time),flail=reduced?0:Math.sin(time*22)*lift*(1-snare)*.035;
- const handX=.204+swallow*.074, handY=-.228+lift*.058+snare*.030-drag*.026, handZ=.320-drag*.057+swallow*.04;
- const hands=lift>0&&swallow<.85?[-1,1].map(side=>{
-  const [x,y,z]=point(side*handX,handY+side*flail,handZ);
-  return {x,y,z,roll:side*(.33+snare*.37),flex:.74+snare*.29};
+ const anchor=pursuerGraspAnchor(actor,reduced);
+ const wristPose=[handPose(-1,time,gripLeft,drag,swallow,reduced),handPose(1,time,gripRight,drag,swallow,reduced)];
+ const hands=time>1.78&&swallow<.92?wristPose.map(hand=>{
+  if(!hand.raise)return null;
+  const [x,y,z]=point(hand.x,hand.y,hand.z);
+  return {x,y,z,roll:hand.roll,flex:hand.flex};
  }):null;
  const vertices=mesh.vertices;
  for(const [id,{side,x,y,z,r,begin,speed,kind}] of TENDRILS.entries()){
   const amount=shotEase(begin,begin+speed,time);
   const screenSide=-side;
-  const grab=snare*(1-.23*swallow);
+  const grip=screenSide<0?gripLeft:gripRight;
+  const grab=grip*(1-.23*swallow);
   const flick=reduced?0:.017*Math.sin(time*15+id*2)*(1-grab);
-  const root=body(side*x,y-.031*swallow,z+.030*swallow);
-  const shoulder=body(side*(x+.093*amount),y+(id===1?-.032:.059)*amount,z+.071*amount);
+  const lower=id===1||kind==='throat';
+  const root=anchor(side*x,y,z,lower);
+  const shoulder=anchor(side*(x+.078*amount),y+(lower?-.021:.043)*amount,z+.068*amount,lower);
   let waypoints;
   if(kind==='wrist'){
+   const hand=wristPose[screenSide<0?0:1];
+   // The curl follows the same posed wrist that the renderer draws.
+   const cx=hand.x+screenSide*.022,cy=hand.y-.043,cz=hand.z-.031;
+   const radius=.076-.025*grip;
+   const coil=Array.from({length:5},(_,i)=>{
+    const t=i/4,angle=-.58+(3.35+grab*1.97)*t;
+    return point(cx+screenSide*Math.cos(angle)*radius,cy+Math.sin(angle)*radius*.79,
+     cz-.033*t+.025*(1-grab));
+   });
    waypoints=[
-    root,shoulder,point(screenSide*(handX+.113),handY+.053+flick,handZ+.109),
-    point(screenSide*(handX+.047),handY+.016,handZ+.052),point(screenSide*(handX-.036),handY-.034,handZ),
-    point(screenSide*(handX-.010),handY-.073,handZ-.019),point(screenSide*(handX+.059),handY-.043,handZ-.042)
+    root,shoulder,point(cx+screenSide*.106,cy+.052+flick,cz+.128),...coil
    ];
   }else if(kind==='upper'){
    waypoints=[root,shoulder,point(screenSide*(.277-.053*snare),.139+flick,.336),
@@ -61,18 +85,25 @@ export function captureGrasp(camera,basis,actor,grasp,mesh){
     point(screenSide*(.184-.126*swallow),.103-.031*swallow,.195),
     point(screenSide*(.117-.085*swallow),.044-.015*drag,.111+.055*swallow)];
   }else{
-   waypoints=[root,body(-.069,1.512,.188),point(-.122,-.070,.284),
+   waypoints=[root,anchor(-.059,1.575,.164,true),point(-.122,-.070,.284),
     point(-.089,-.118,.215),point(.061,-.092,.131),point(.102,-.014,.097)];
   }
   const frames=waypoints.map((p,i)=>lerp(root,p,i<2?Math.max(.002,amount):Math.max(.002,amount**(.84+i*.22))));
+  let lastNormal=null;
   for(let row=0;row<=RINGS;row++){
    const u=row/RINGS;
    const center=sample(frames,u);
    const tangent=unit(sub(sample(frames,Math.min(1,u+.015)),sample(frames,Math.max(0,u-.015))));
-   const normal=unit(cross(Math.abs(tangent[1])>.91?basis.right:basis.up,tangent)),binormal=cross(tangent,normal);
+   // Transport the frame down the curve so the tube cannot flip at a bend.
+   const along=lastNormal?dot(lastNormal,tangent):0;
+   const plane=lastNormal?.map((v,i)=>v-along*tangent[i]);
+   const normal=unit(plane&&dot(plane,plane)>.01?plane:cross(Math.abs(tangent[1])>.91?basis.right:basis.up,tangent));
+   lastNormal=normal;
+   const binormal=cross(tangent,normal);
    const taper=(1-u)**.63;
-   const tension=snare*Math.sin(Math.PI*u)**2;
-   const thickness=(r*taper+.0006)*amount*(1+.14*Math.sin(u*15+id)+.065*Math.sin(u*51-id)+.11*tension);
+   const tension=grip*Math.sin(Math.PI*u)**2;
+   const contraction=Math.sin(u*17-grip*4.0-id*.7)*.057*grip;
+   const thickness=(r*taper+.0006)*amount*(1+.14*Math.sin(u*15+id)+.065*Math.sin(u*51-id)+contraction+.11*tension);
    for(let sideIndex=0;sideIndex<=SIDES;sideIndex++){
     const v=sideIndex/SIDES,theta=v*TAU+u*1.26;
     const c=Math.cos(theta),s=Math.sin(theta),rib=.95+.05*Math.cos(theta*3+u*29);

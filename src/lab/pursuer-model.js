@@ -116,11 +116,11 @@ export function pursuerPose(actor,reduced=false){
  }
  if(actor.captureReach){
   joints.chest.pitch=.12-.10*actor.captureLift;
-  const {bite,twitch,pressure=0}=actor.captureFace;
-  joints.head.yaw=(twitch*.048-.06*pressure)*(1-bite);
-  joints.head.pitch=.23-.23*actor.captureLift-.084*pressure+bite*.17;
-  joints.head.roll=twitch*.039+.081*pressure;
-  joints.head.z+=bite*.085;
+  const {bite,twitch,pressure=0,strain=0}=actor.captureFace;
+  joints.head.yaw=(twitch*.033-.058*pressure-.071*strain)*(1-bite);
+  joints.head.pitch=.23-.23*actor.captureLift-.084*pressure+.056*strain+bite*.17;
+  joints.head.roll=twitch*.028+.081*pressure-.053*strain;
+  joints.head.z+=bite*.085+.028*strain;
   for(const side of [-1,1]){
    const pitch=-actor.captureReach*(1.08+.34*actor.captureLift+side*.09);
    joints['arm'+side]={py:SHOULDER,pitch,roll:side*.13*actor.captureReach};
@@ -163,6 +163,18 @@ function attachJoint(parent,child){
    return a[row]*b[col]+a[row+1]*b[col+3]+a[row+2]*b[col+6];
   }),
   t:parent.t.map((value,i)=>value+a[i*3]*child.t[0]+a[i*3+1]*child.t[1]+a[i*3+2]*child.t[2])
+ };
+}
+
+export function pursuerGraspAnchor(actor,reduced){
+ const pose=pursuerPose(actor,reduced),head=jointMatrix(pose.head);
+ const jaw=attachJoint(head,jointMatrix(pose['face-jaw']));
+ const c=Math.cos(actor.facing),s=Math.sin(actor.facing);
+ return (x,y,z,lower)=>{
+  const {r,t}=lower?jaw:head;
+  const lx=r[0]*x+r[1]*y+r[2]*z+t[0],ly=r[3]*x+r[4]*y+r[5]*z+t[1];
+  const lz=r[6]*x+r[7]*y+r[8]*z+t[2];
+  return [actor.x+lx*c+lz*s,actor.y+ly,actor.z-lx*s+lz*c];
  };
 }
 
