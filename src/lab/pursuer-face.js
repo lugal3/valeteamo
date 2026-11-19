@@ -2,6 +2,7 @@
 // Split its front shell into fitted pieces so the seams only open under load.
 const round={shape:'round',smooth:true,segments:18,rings:12};
 const SKIN=5,FLESH=6,IRIS=8,ENAMEL=9;
+const TOOTH=13,TENDON=14,SALIVA=15;
 const tau=Math.PI*2;
 const difference=(a,b)=>a.map((n,i)=>n-b[i]);
 const magnitude=v=>Math.hypot(...v)||1;
@@ -21,16 +22,20 @@ function ribbon(rows,reverse=false){
  return triangles;
 }
 
-function tube(points,radii,sides=11){
+function tube(points,radii,sides=11,{aspect=1,roughness=0,phase=0}={}){
  const rings=points.map((point,i)=>{
-  const tangent=unit(difference(points[Math.min(i+1,points.length-1)],points[Math.max(0,i-1)]));
+  const first=Math.max(0,i-1),last=Math.min(i+1,points.length-1),span=difference(points[last],points[first]);
+  const tangent=unit(span),slope=(radii[last]-radii[first])/magnitude(span);
   const axis=unit(cross(Math.abs(tangent[2])>.88?[0,1,0]:[0,0,1],tangent));
   const binormal=cross(tangent,axis);
+  const t=i/(points.length-1);
   return Array.from({length:sides+1},(_,k)=>{
-   const theta=k/sides*tau;
-   const normal=axis.map((v,j)=>v*Math.cos(theta)+binormal[j]*Math.sin(theta));
-   const vertex=point.map((n,j)=>n+radii[i]*normal[j]);
-   vertex.normal=normal;
+   const theta=k/sides*tau,c=Math.cos(theta),s=Math.sin(theta);
+   const relief=1+roughness*(Math.sin(theta*3+phase+t*4.2)+.42*Math.sin(theta*5-phase+t*9.1));
+   const vertex=point.map((n,j)=>n+radii[i]*relief*(axis[j]*c+binormal[j]*s*aspect));
+   vertex.normal=unit(axis.map((n,j)=>n*c+binormal[j]*s/aspect-tangent[j]*slope));
+   vertex.tangent=axis.map((n,j)=>-n*s+binormal[j]*c);
+   vertex.uv=[k/sides,t];
    return vertex;
   });
  });
@@ -113,30 +118,66 @@ export function captureShell(parts){
 
 function muscles(pieces){
  for(const side of [-1,1]){
-  for(let i=0;i<6;i++){
-   const t=i/5,x=side*(.073+t*.055);
-   const root=[x*.63,1.812-t*.031,.101-t*.021];
-   const points=[root,[x*.91,1.786-t*.070,.137-t*.035],
-    [x*1.26,1.668+t*.038,.119-t*.031],[x*1.12,1.605+t*.034,.104-t*.007]];
-   pieces.push(poly('cranial-muscle'+side+i,'head',tube(points,[.002,.012,.010,.002]),
-    [.24+t*.14,.042+t*.03,.052+t*.028],FLESH));
+  for(let i=0;i<7;i++){
+   const t=i/6,x=side*(.059+t*.065),phase=i*2.39+side;
+   const root=[x*.57,1.814-t*.025,.104-t*.027];
+   const points=[root,[x*.86,1.794-t*.046,.126+.006*Math.sin(phase)-t*.021],
+    [x*1.19,1.748-t*.039,.136-t*.046],
+    [x*1.29,1.690+t*.007,.108+t*.019],[x*1.13,1.610+t*.027,.100-t*.007]];
+   const width=.008+.007*Math.cos(phase)**2;
+   pieces.push(poly('cranial-muscle'+side+i,'head',
+    tube(points,[.002,width*.76,width,width*.67,.0016],12,{aspect:.71,roughness:.14,phase}),
+    [.21+t*.12,.053+t*.041,.070+t*.029],TENDON));
   }
-  for(let i=0;i<6;i++){
-   const t=i/5;
-   const root=[side*(.102+t*.048),1.651+t*.032,.084+t*.018];
-   const tip=[side*(.075+t*.038),1.568-t*.012,.151-t*.058];
-   const bend=mix(root,tip,.54);bend[0]+=side*.023;bend[2]+=.015;
-   pieces.push(poly('jaw-ligament'+side+i,'head',tube([root,bend,tip],[.006,.006+t*.004,.004]),
-    [.26+t*.14,.048+t*.043,.060+t*.027],FLESH,{flex:{joint:'face-jaw',anchor:root,axis:difference(tip,root)}}));
+  for(let i=0;i<8;i++){
+   const t=i/7,phase=i*2.41+side;
+   const root=[side*(.100+t*.044),1.650+t*.047,.082+t*.020];
+   const tip=[side*(.068+t*.054),1.568-t*.017,.153-t*.061];
+   const outer=mix(root,tip,.37),inner=mix(root,tip,.67);
+   outer[0]+=side*(.025+.009*Math.sin(phase));outer[2]+=.010+.012*Math.cos(phase);
+   inner[0]+=side*(.015+.011*Math.cos(phase));inner[2]+=.027-.020*t;
+   const width=.004+.005*Math.cos(phase)**2;
+   pieces.push(poly('jaw-ligament'+side+i,'head',
+    tube([root,outer,inner,tip],[width*.63,width,width*.81,width*.64],11,{aspect:.63,roughness:.17,phase}),
+    [.22+t*.13,.063+t*.055,.079+t*.049],TENDON,{flex:{joint:'face-jaw',anchor:root,axis:difference(tip,root)}}));
   }
-  for(let i=0;i<4;i++){
-   const root=[side*(.080+i*.016),1.759-i*.033,.101-.010*i];
-   const tip=[side*(.038+i*.022),1.790-i*.042,.160-.012*i];
-   const bend=mix(root,tip,.55);bend[1]-=.006;
-   pieces.push(poly('split-fibre'+side+i,'head',tube([root,bend,tip],[.0018,.0033,.0015],7),
-    [.35,.097+i*.018,.092],FLESH,{flex:{joint:side<0?'face-left':'face-right',anchor:root,axis:difference(tip,root)}}));
+  for(let i=0;i<7;i++){
+   const t=i/6,phase=i*2.25+side;
+   const root=[side*(.058+t*.062),1.767-t*.105,.107-.020*t];
+   const tip=[side*(.027+t*.086),1.795-t*.138,.161-.037*t];
+   const outer=mix(root,tip,.36),inner=mix(root,tip,.73);
+   outer[1]-=.006+.008*Math.cos(phase);inner[2]+=.012*Math.sin(phase);
+   pieces.push(poly('split-fibre'+side+i,'head',
+    tube([root,outer,inner,tip],[.0017,.0028+.0012*Math.cos(phase)**2,.0018,.0011],7,{roughness:.17,phase}),
+    [.30+t*.09,.093+t*.051,.101+t*.035],TENDON,
+    {flex:{joint:side<0?'face-left':'face-right',anchor:root,axis:difference(tip,root)}}));
   }
  }
+}
+
+function fang(pieces,{joint,dir,i,root,length,width,buried=false}){
+ const phase=(i+dir*.27)*2.28,lean=.009*Math.sin(phase);
+ const taper=[1.03,1,.87,.72,.52,.29,.045];
+ const points=taper.map((_,n)=>{
+  const t=n/(taper.length-1),bow=4*t*(1-t);
+  return [root[0]+lean*(t*t+.17*bow),root[1]+dir*length*t,root[2]+.009*bow-.008*t*t];
+ });
+ // Some crowns have a blunt, oblique chip instead of an intact point.
+ if(i%5===2){
+  taper[taper.length-1]=.15;
+  points.at(-1)[1]-=dir*length*.083;
+  points.at(-1)[0]+=.0018;
+ }
+ pieces.push(poly('fang'+dir+'-'+i+(buried?'-inner':''),joint,
+  tube(points,taper.map(n=>n*width),12,{aspect:.72,roughness:.10,phase}),
+  buried?[.39,.32,.26]:[.69,.62,.48],TOOTH,{
+   facetTint:.035,vertexColor:(p,col)=>{
+    const tip=Math.min(1,Math.abs(p[1]-root[1])/length);
+    const stain=.64+.24*tip+.17*Math.sin(tip*Math.PI)+.13*Math.sin(phase);
+    const rootTint=(1-tip)**4;
+    return col.map((n,k)=>n*stain+rootTint*(k===0?.069:k===2?-.021:0));
+   }
+  }));
 }
 
 function dentition(pieces,upper){
@@ -149,15 +190,11 @@ function dentition(pieces,upper){
   gum.push([x,y,z-.011]);
   const length=(upper?.036:.030)+.020*Math.abs(Math.sin(i*1.83+(upper?0:.9)))-.015*arc;
   const width=.0049+.0025*Math.abs(Math.cos(i*1.67));
-  const lean=.006*Math.sin(i*1.44);
-  const points=[[x,y+dir*.001,z],[x+lean*.29,y+dir*length*.30,z+.007],[x+lean*.65,y+dir*length*.68,z+.006],[x+lean,y+dir*length,z-.002]];
-  pieces.push(poly('fang'+dir+'-'+i,joint,tube(points,[width,width*.86,width*.46,.0005],8),
-   [.64,.60,.49],ENAMEL,{
-    facetTint:.11,vertexColor:(p,col)=>{
-     const stain=.48+.46*Math.min(1,Math.abs(p[1]-y)/length)+.10*Math.sin(i*2.22);
-     return col.map((n,k)=>n*stain+(k===0?.055:0));
-    }
-   }));
+  fang(pieces,{joint,dir,i,root:[x,y,z],length,width});
+  pieces.push(solid('receding-gum'+dir+'-'+i,joint,x,y-dir*.004,z-.005,width*2.18,.016,.018,
+   [.20+.07*Math.sin(i*2.03)**2,.037,.052],FLESH,{segments:8,rings:5}));
+  if(i%2===0&&i>1&&i<15)fang(pieces,{joint,dir,i,root:[x+.006,y-dir*.006,z-.036],
+   length:length*.69,width:width*.64,buried:true});
  }
  pieces.push(poly('gumline'+dir,joint,tube(gum,gum.map((_,i)=>.010+.003*Math.sin(i*.54)**2),11),
   upper?[.235,.036,.048]:[.203,.030,.045],FLESH));
@@ -167,10 +204,10 @@ export function pursuerInterior(){
  const pieces=[
   solid('inner-head','head',0,1.718,.013,.292,.291,.203,[.137,.033,.041],FLESH),
   solid('clivus','head',-.026,1.753,.089,.112,.134,.067,[.203,.049,.049],FLESH,{roll:.14}),
-  solid('throat-recess','face-gullet-upper',0,1.563,.105,.246,.199,.119,[.035,.006,.015],11),
-  solid('soft-palate','face-gullet-upper',0,1.627,.128,.197,.053,.101,[.104,.021,.034],FLESH),
+  solid('throat-recess','face-gullet-upper',0,1.563,.083,.246,.199,.109,[.072,.014,.023],11),
+  solid('soft-palate','face-palate',0,1.627,.125,.197,.053,.100,[.125,.034,.050],FLESH),
   solid('underjaw','face-jaw',0,1.564,.086,.224,.067,.173,[.13,.023,.039],FLESH),
-  solid('tongue','face-gullet-lower',-.009,1.587,.137,.097,.026,.095,[.277,.050,.072],FLESH,{roll:.095}),
+  solid('tongue','face-tongue',-.009,1.587,.135,.097,.026,.095,[.255,.050,.078],FLESH,{roll:.095}),
   solid('orbit-tissue','head',-.078,1.723,.103,.105,.092,.061,[.23,.039,.054],FLESH),
   solid('exposed-eye','face-eye',-.078,1.731,.127,.059,.050,.063,[.45,.39,.30],ENAMEL),
   solid('exposed-iris','face-eye',-.081,1.730,.155,.031,.030,.014,[.148,.40,.323],IRIS),
@@ -187,13 +224,13 @@ export function pursuerInterior(){
  muscles(pieces);
  dentition(pieces,true);
  dentition(pieces,false);
- for(const [i,x] of [-.103,-.073,.058,.105].entries()){
+ for(const [i,x] of [-.108,-.092,-.073,.062,.085,.105].entries()){
   const root=[x,1.636-.021*Math.abs(x)/.105,.148],
    tip=[x*.91,1.577+.013*Math.abs(x)/.105,.147],
    middle=mix(root,tip,.58);
   middle[0]+=.009*Math.sin(i*3.4);middle[2]+=.009;
-  pieces.push(poly('saliva'+i,'face-gullet-upper',tube([root,middle,tip],[.0019,.0008,.0015],7),
-   [.245,.144,.135],FLESH,{flex:{joint:'face-gullet-lower',anchor:root,axis:difference(tip,root)}}));
+  pieces.push(poly('saliva'+i,'face-gullet-upper',tube([root,middle,tip],[.0016,.0006,.0013],7),
+   [.22,.112,.108],SALIVA,{flex:{joint:'face-gullet-lower',anchor:root,axis:difference(tip,root)}}));
  }
  return pieces;
 }
@@ -202,11 +239,12 @@ export const FACE_PARENTS={
  'face-left':'head','face-right':'head','face-jaw':'head','face-eye':'head',
  'face-skin-eye-1':'face-left','face-skin-eye1':'face-right','face-nose':'face-left',
  'face-receding-skin':'face-left','face-jaw-skin':'face-jaw',
- 'face-gullet-upper':'head','face-gullet-lower':'face-jaw'
+ 'face-gullet-upper':'head','face-gullet-lower':'face-jaw',
+ 'face-palate':'face-gullet-upper','face-tongue':'face-gullet-lower'
 };
 
 export function pursuerFacePose(joints,face){
- const {left,right,jaw,twitch,glance,bite}=face;
+ const {left,right,jaw,twitch,glance,bite,pressure=0}=face;
  joints['face-left']={px:-.153,py:1.735,pz:.025,x:-.044*left,y:.039*left,z:-.020*left,
   yaw:-1.02*left,pitch:-.25*left,roll:.30*left};
  joints['face-right']={px:.141,py:1.778,pz:.04,x:.019*right,y:.024*right,z:-.047*right,
@@ -220,6 +258,9 @@ export function pursuerFacePose(joints,face){
  const throat=Math.min(1,Math.max(0,(jaw-.14)/.62));
  joints['face-gullet-upper']={z:-.077*(1-throat),y:.014*(1-throat)};
  joints['face-gullet-lower']={z:-.077*(1-throat),y:-.022*(1-throat)};
+ joints['face-palate']={py:1.627,pz:.125,scale:1+pressure*.11+jaw*.043,y:-.008*pressure};
+ joints['face-tongue']={py:1.588,pz:.135,y:jaw*.009,z:(pressure-.4*bite)*.021,
+  roll:twitch*.14,pitch:jaw*.16};
  joints['face-eye']={px:-.078,py:1.731,pz:.127,yaw:glance*.28,pitch:twitch*.105,z:.010*left};
  joints['face-skin-eye-1']={px:-.073,py:1.716,pz:.169,scale:Math.max(.003,1-left*3.4),z:-.022*left};
  joints['face-skin-eye1']={px:.073,py:1.716,pz:.169,yaw:-.22*glance,scale:Math.max(.26,1-.27*right-.49*bite),z:-.018*bite};

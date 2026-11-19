@@ -138,25 +138,49 @@ void main(){
   float steel=step(6.5,vArt)*(1.0-step(7.5,vArt));
   float optical=step(7.5,vArt)*(1.0-step(8.5,vArt));
   float voidMat=step(10.5,vArt)*(1.0-step(11.5,vArt));
-  float tentacle=step(11.5,vArt);
-  float wet=max(max(tissue,optical),tentacle);
+  float tentacle=step(11.5,vArt)*(1.0-step(12.5,vArt));
+  float dentin=step(12.5,vArt)*(1.0-step(13.5,vArt));
+  float tendon=step(13.5,vArt)*(1.0-step(14.5,vArt));
+  float saliva=step(14.5,vArt);
+  float wet=max(max(tissue,optical),tentacle+tendon+saliva);
   float ripple=pow(abs(sin(vUV.x*368.0+6.0*soft+vUV.y*17.0)),8.0);
   vec3 across=cross(surfaceNormal,normalize(T+vec3(.0001)));
   vec3 fineNormal=normalize(surfaceNormal+across*(mottling-.5)*(.13+wet*.20)
    +T*(pores-.5)*(.039+wet*.05));
-  float lit=pow(max(0.0,dot(fineNormal,key)),1.26);
-  float wrapped=max(0.0,dot(fineNormal,normalize(uRight*.72+uUp*.15-uForward*.46)));
   vec3 color=vColor*(.63+.31*soft+.18*mottling+.09*pores-.36*vein*wet+steel*.19*ripple);
   color=mix(color,color*vec3(1.13,.67,.73),vein*(.24+.12*skin));
   color*=1.0-tentacle*.17*ripple;
+  if(tendon>.5){
+   // U wraps around each bundle. V follows its length as the jaw stretches.
+   float bands=surfaceNoise(vec2(vUV.x*26.0,vUV.y*5.0));
+   float thread=sin(vUV.x*289.0+vUV.y*6.0+bands*4.9+mottling*1.7)*.5+.5;
+   float furrow=pow(thread,5.0);
+   float threadLight=surfaceNoise(vec2(vUV.x*65.0,vUV.y*12.0));
+   fineNormal=normalize(fineNormal+T*(thread-.5)*(.18+.19*bands));
+   color*=.62+.39*threadLight+.35*bands;
+   color+=vec3(.10,.037,.043)*furrow*(.42+.58*bands);
+  }
+  if(dentin>.5){
+   float groove=surfaceNoise(vec2(vUV.x*38.0,vUV.y*5.0));
+   float crack=sin(vUV.x*66.0+vUV.y*.9+groove*3.3);
+   float fracture=pow(1.0-abs(crack),11.0)*smoothstep(.20,.74,mottling);
+   float rootStain=(1.0-smoothstep(.05,.47,vUV.y))*(.50+.50*soft);
+   float enamelPit=smoothstep(.64,.9,pores)*smoothstep(.2,.79,mottling);
+   color*=.86+.22*groove-.28*fracture-.25*enamelPit;
+   color=mix(color,color*vec3(.74,.49,.38),rootStain*.81);
+   color+=vec3(.033,.031,.024)*smoothstep(.28,.91,vUV.y)*(1.0-groove);
+   fineNormal=normalize(fineNormal+T*(groove-.5)*.15);
+  }
+  float lit=pow(max(0.0,dot(fineNormal,key)),1.26);
+  float wrapped=max(0.0,dot(fineNormal,normalize(uRight*.72+uUp*.15-uForward*.46)));
   vec3 light=vec3(.125,.147,.161)+vec3(.93,.80,.69)*uShot*(.17+1.14*lit)
    +vec3(.29,.56,.59)*wrapped*uShot*.35+vec3(.33,.58,.66)*rim*(.14+.62*uShot);
   light+=vec3(.94,.99,1.0)*beam+vec3(.88,.72,.55)*warmth*.45;
   float facingSpec=max(0.0,dot(fineNormal,halfVector));
-  float shine=(pow(facingSpec,mix(20.0,47.0,wet))*(.018+.24*wet)+.10*wet*pow(facingSpec,10.0))
+  float shine=(pow(facingSpec,mix(20.0,47.0,wet))*(.018+.24*wet+.18*dentin)+.10*wet*pow(facingSpec,10.0))
    *uShot*(.43+.57*mottling);
   vec3 spec=shine*mix(vec3(.87,.74,.69),vec3(.65,.83,.85),tentacle*.70+steel*.25);
-  color=color*light*(1.0-.72*voidMat)+spec*(1.0-voidMat)+color*optical*.52;
+  color=color*light*(1.0-.61*voidMat-.31*saliva)+spec*(1.0-voidMat)+color*optical*.52;
   gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);return;
  }
  if(vStyle>63.5){

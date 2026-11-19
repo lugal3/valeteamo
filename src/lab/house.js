@@ -5,7 +5,7 @@ import {PhoneUI} from './phone-ui.js';
 import {FloorSounds} from './floor-sounds.js';
 import {EMOTES} from './animations/emotes.js';
 import {Pursuer} from './pursuer.js';
-import {CAPTURE_BITE,CAPTURE_GRAB,CAPTURE_REVEAL,CAPTURE_SECONDS,CAPTURE_TEAR,captureFrame} from './capture-shot.js';
+import {CAPTURE_BITE,CAPTURE_BREATH,CAPTURE_GRAB,CAPTURE_REVEAL,CAPTURE_SECONDS,CAPTURE_TEAR,captureFrame} from './capture-shot.js';
 import {movementKey,releasedPointer,hasControlTouch} from './movement-input.js';
 import {CharacterAnimator} from './animator.js';
 import {BATH_MIRROR} from './mirror.js';
@@ -918,6 +918,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   sound.carEngine(null);sound.rcMotor(0);
   captureLayer.hidden=false;root.classList.add('house-capture-active');
   captureCaption.textContent=options.captions!==false?'[El secuestrador te agarra]':'';
+  sound.setCaptureQuiet(true);
   sound.captureCue('capture-grab');
  }
  function renderCapture(delta){
@@ -927,6 +928,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    const saved=lastSafeCheckpoint;
    const restore=saved?.hide&&saved.hide===pursuer.witnessed?{...saved,hide:undefined}:saved;
    captureShot=null;captureLayer.hidden=true;captureCaption.textContent='';root.classList.remove('house-capture-active');
+   sound.setCaptureQuiet(false);
    if(restore){
     const messages=events.messages;
     reset(restore);
@@ -937,6 +939,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    say('Volviste al último punto seguro',4);
    last=performance.now();
    return;
+  }
+  if(previous<CAPTURE_BREATH&&shot.elapsed>=CAPTURE_BREATH){
+   sound.captureCue('capture-breath');
+   if(options.captions!==false)captureCaption.textContent='[Respira muy cerca]';
   }
   if(previous<CAPTURE_TEAR&&shot.elapsed>=CAPTURE_TEAR)sound.captureCue('capture-tear');
   if(previous<CAPTURE_REVEAL&&shot.elapsed>=CAPTURE_REVEAL){

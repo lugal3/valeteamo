@@ -29,10 +29,11 @@ export class HouseSound {
    const C=window.AudioContext||window.webkitAudioContext;if(!C)return false;
    this.context=new C();this.master=this.context.createGain();this.master.gain.value=.45*this.settings.master;
    const limiter=this.context.createDynamicsCompressor();limiter.threshold.value=-10;limiter.ratio.value=8;this.master.connect(limiter);limiter.connect(this.context.destination);
-   this.musicBus=this.context.createGain();this.musicBus.gain.value=this.settings.muted?0:this.settings.music;this.musicBus.connect(this.master);
+   this.roomBus=this.context.createGain();this.roomBus.gain.value=this.captureQuiet ? .11 : 1;this.roomBus.connect(this.master);
+   this.musicBus=this.context.createGain();this.musicBus.gain.value=this.settings.muted?0:this.settings.music;this.musicBus.connect(this.roomBus);
    this.effectsBus=this.context.createGain();this.effectsBus.gain.value=this.settings.muted?0:this.settings.effects;this.effectsBus.connect(this.master);this.sequenceNodes=new Set();
-   this.recordedMusicBus=this.context.createGain();this.recordedMusicBus.gain.value=this.settings.muted?0:this.settings.music;this.recordedMusicBus.connect(this.master);
-   this.recordedAmbientBus=this.context.createGain();this.recordedAmbientBus.gain.value=this.settings.muted?0:this.settings.ambient;this.recordedAmbientBus.connect(this.master);
+   this.recordedMusicBus=this.context.createGain();this.recordedMusicBus.gain.value=this.settings.muted?0:this.settings.music;this.recordedMusicBus.connect(this.roomBus);
+   this.recordedAmbientBus=this.context.createGain();this.recordedAmbientBus.gain.value=this.settings.muted?0:this.settings.ambient;this.recordedAmbientBus.connect(this.roomBus);
    this.channels=Object.fromEntries(MIX_CHANNELS.slice(4).map(([name])=>{const gain=this.context.createGain();gain.gain.value=this.settings[name];gain.connect(this.effectsBus);return [name,gain];}));
    this.recordings=new RecordedAudio(this.context,this.effectsBus,this.recordedMusicBus,this.recordedAmbientBus);const ctx=this.context;void this.recordings.load().then(()=>{if(this.context===ctx){this.applySettings();if(!this.paused)this.recordings.setMood(this.threat?'tension':'ambient');}});
    this.startAmbience();
@@ -41,7 +42,7 @@ export class HouseSound {
  }
  startAmbience(){
   if(!this.context)return;const ctx=this.context;
-  this.atmosphere=new HouseAtmosphere(ctx,this.master);this.atmosphere.setVolume(this.settings.muted?0:this.settings.ambient);
+  this.atmosphere=new HouseAtmosphere(ctx,this.roomBus);this.atmosphere.setVolume(this.settings.muted?0:this.settings.ambient);
  }
  locate(environment){this.atmosphere?.locate(environment);}
  startMusic(){
@@ -267,6 +268,15 @@ export class HouseSound {
   oscillator.onended=()=>{oscillator.disconnect();vol.disconnect();pan.disconnect();};
  }
  sequence(kind,loud=false){const ctx=this.context;if(!ctx||this.paused||ctx.state!=='running'||this.settings.muted)return;const output=this.channels[effectChannel(kind)];if(this.recordings?.kind(kind,{gain:kind==='notification'?(loud?.68:.30):.38,output}))return;for(let i=0;i<3;i++){const osc=ctx.createOscillator(),gain=ctx.createGain(),at=ctx.currentTime+i*(kind==='keys'?.11:.28);osc.type=kind==='keys'?'sine':'triangle';osc.frequency.setValueAtTime(kind==='keys'?1700+i*330:85,at);osc.frequency.exponentialRampToValueAtTime(kind==='keys'?1100:38,at+.12);gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(kind==='keys'?.14:.50,at+.008);gain.gain.exponentialRampToValueAtTime(.0001,at+.17);osc.connect(gain);gain.connect(output);osc.start(at);osc.stop(at+.2);this.sequenceNodes.add(osc);osc.onended=()=>{osc.disconnect();gain.disconnect();this.sequenceNodes.delete(osc);};}}
+ setCaptureQuiet(quiet){
+  if(this.captureQuiet===quiet)return;
+  this.captureQuiet=quiet;
+  if(this.roomBus){
+   const now=this.context.currentTime,gain=this.roomBus.gain;
+   gain.cancelScheduledValues(now);
+   gain.setTargetAtTime(quiet ? .11 : 1,now,quiet ? .16 : .27);
+  }
+ }
  captureCue(kind){
   const ctx=this.context;
   if(!ctx||ctx.state!=='running'||this.paused||this.settings.muted)return;
@@ -281,7 +291,9 @@ export class HouseSound {
    return;
   }
   this.foleyVoices??=new Set();
-  const level=kind==='capture-bite'?.60:kind==='capture-snare'?.43:kind==='capture-tear'?.35:.32;
+  const levels={'capture-bite':.60,'capture-snare':.43,'capture-tear':.34,'capture-breath':.26,'capture-grab':.32};
+  const level=levels[kind];
+  if(level===undefined)return;
   const voice=spookyFoley(ctx,this.channels.alerts,this.atmosphere.noise,kind,level,0,v=>this.foleyVoices.delete(v));
   this.foleyVoices.add(voice);
  }

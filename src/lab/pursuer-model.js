@@ -116,10 +116,10 @@ export function pursuerPose(actor,reduced=false){
  }
  if(actor.captureReach){
   joints.chest.pitch=.12-.10*actor.captureLift;
-  const {bite,twitch}=actor.captureFace;
-  joints.head.yaw=twitch*.057*(1-bite);
-  joints.head.pitch=.23-.23*actor.captureLift+bite*.17;
-  joints.head.roll=twitch*.045;
+  const {bite,twitch,pressure=0}=actor.captureFace;
+  joints.head.yaw=(twitch*.048-.06*pressure)*(1-bite);
+  joints.head.pitch=.23-.23*actor.captureLift-.084*pressure+bite*.17;
+  joints.head.roll=twitch*.039+.081*pressure;
   joints.head.z+=bite*.085;
   for(const side of [-1,1]){
    const pitch=-actor.captureReach*(1.08+.34*actor.captureLift+side*.09);

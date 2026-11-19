@@ -4,17 +4,24 @@ const unit=v=>{const length=Math.hypot(...v)||1;return v.map(n=>n/length);};
 const sgnPow=(v,p)=>(v<0?-1:1)*Math.pow(Math.abs(v),p);
 
 export function facetSurface(box,color,style){
- const vertices=[],indices=[];
+ const vertices=[],indices=[],smoothIndices=new Map();
  for(const [i,[a,b,c]] of box.triangles.entries()){
   const u=b.map((v,k)=>v-a[k]),v=c.map((n,k)=>n-a[k]);
   const normal=unit([u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]]);
   const tangent=unit(u),variation=1+(Math.sin(i*17.147)*.5+.12)*(box.facetTint||0);
-  const tint=color.map(channel=>channel*variation),offset=vertices.length/16;
+  const tint=color.map(channel=>channel*variation),corners=[];
   for(const p of [a,b,c]){
-   const surfaceTint=box.vertexColor?box.vertexColor(p,tint,box):tint;
-   vertices.push(...p,...surfaceTint,...(box.normalAt?.(p)||p.normal||normal),p[0]*3,(p[1]-1.5)*3,0,style,...tangent);
+   if(smoothIndices.has(p)){corners.push(smoothIndices.get(p));continue;}
+   // A skinned tube can share the ring vertex, normal and UV across faces.
+   // Flat shell fragments still keep their own directional normals and tint.
+   const offset=vertices.length/16,baseTint=p.uv?color:tint;
+   if(p.uv)smoothIndices.set(p,offset);
+   corners.push(offset);
+   const surfaceTint=box.vertexColor?box.vertexColor(p,baseTint,box):baseTint;
+   vertices.push(...p,...surfaceTint,...(box.normalAt?.(p)||p.normal||normal),
+    ...(p.uv||[p[0]*3,(p[1]-1.5)*3]),0,style,...(p.tangent||tangent));
   }
-  indices.push(offset,offset+2,offset+1);
+  indices.push(corners[0],corners[2],corners[1]);
  }
  return {vertices,indices};
 }

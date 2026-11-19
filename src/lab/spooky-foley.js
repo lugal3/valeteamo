@@ -32,10 +32,15 @@ export function spookyFoley(ctx,bus,noise,kind,level,pan,onEnd=()=>{}){
  }else if(kind==='capture-grab'){
   layer({f:106,to:38,amp:1,duration:.28,type:'triangle'});
   layer({f:550,to:108,amp:.62,duration:.39,noiseLayer:true,q:1.2});
+ }else if(kind==='capture-breath'){
+  layer({f:136,to:67,amp:.73,duration:.64,noiseLayer:true,q:4.2,attack:.17});
+  layer({at:.055,f:574,to:348,amp:.45,duration:.51,noiseLayer:true,q:1.7,attack:.15});
+  layer({at:.23,f:81,to:62,amp:.31,duration:.35,type:'triangle',attack:.08});
  }else if(kind==='capture-tear'){
-  layer({f:680,to:158,amp:.7,duration:.45,noiseLayer:true,q:2.4,attack:.04});
-  layer({at:.10,f:3350,to:890,amp:.47,duration:.23,noiseLayer:true,q:4,attack:.009});
-  layer({at:.19,f:1810,to:540,amp:.57,duration:.17,noiseLayer:true,q:3,attack:.012});
+  layer({f:445,to:131,amp:.54,duration:.48,noiseLayer:true,q:2.4,attack:.06});
+  layer({at:.09,f:2680,to:590,amp:.30,duration:.13,noiseLayer:true,q:4,attack:.008});
+  layer({at:.24,f:1860,to:410,amp:.53,duration:.15,noiseLayer:true,q:3,attack:.010});
+  layer({at:.43,f:3060,to:520,amp:.68,duration:.19,noiseLayer:true,q:3.9,attack:.007});
  }else if(kind==='capture-snare'){
   layer({f:95,to:41,amp:1.18,duration:.44,type:'triangle',attack:.028});
   layer({f:902,to:228,amp:.94,duration:.37,noiseLayer:true,q:2.7,attack:.047});
