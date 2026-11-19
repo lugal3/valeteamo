@@ -255,6 +255,7 @@ void main(){
   float wrapped=max(0.0,dot(fineNormal,normalize(uRight*.72+uUp*.15-uForward*.46)));
   vec3 light=vec3(.082,.091,.099)+vec3(.99,.88,.76)*uShot*(.16+1.04*lit)
    +vec3(.44,.57,.57)*wrapped*uShot*.58+vec3(.38,.58,.60)*rim*(.11+.58*uShot);
+  light+=fabric*uHeld*vec3(.19,.22,.24);
   light+=vec3(.94,.99,1.0)*beam+vec3(.88,.72,.55)*warmth*.45;
   float facingSpec=max(0.0,dot(fineNormal,halfVector));
   float wetHighlight=wet*(1.0-.44*tendon-.25*tentacle-.44*plate)+saliva*.46;

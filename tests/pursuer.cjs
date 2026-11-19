@@ -78,15 +78,27 @@ module.exports=async()=>{
  assert(p.update(RISE_SECONDS*.5,hidden).includes('stood'));assert.equal(p.mode,'to-entry');
  posePursuer(mesh.vertices,vertices,mesh.groups,p.snapshot());
  assert(vertices.every((value,i)=>Math.abs(value-upright[i])<.00001),'Rise blends continuously into standing');
- const {captureBasis,captureFrame,captureTiming}=await import('../src/lab/capture-shot.js');
+ const {captureBasis,captureFrame,capturePath,captureTiming}=await import('../src/lab/capture-shot.js');
  const {pursuerInterior}=await import('../src/lab/pursuer-face.js');
  const {captureGrasp,createTentacleMesh}=await import('../src/lab/pursuer-tentacles.js');
  const capture=geometry([...pursuerPieces(true),...pursuerInterior()]);
  const posedCapture=new Float32Array(capture.vertices.length),limbs=createTentacleMesh();
  assert(capture.vertices.length/16<65536,'The detailed face fits WebGL 1 indices');
+ const eye={x:0,y:1.6,z:0},wall={id:'wall',x:0,y:1.6,z:.45,w:2,h:2,d:.1,solid:true};
+ const constrain=capturePath([wall],eye);
+ const obstructed=constrain({x:.12,y:1.9,z:.8});
+ assert(obstructed.z>.34&&obstructed.z<.37,'Capture camera stays in front of the wall with space for the near plane');
+ const free={x:0,y:1.7,z:-.4};
+ assert.equal(constrain(free),free,'Clear capture camera travel is preserved');
  const from={x:2.16,y:4.78,z:5.61,yaw:Math.PI,pitch:0};
  for(const reduced of [false,true])for(let attempt=0;attempt<3;attempt++){
   const timing=captureTiming(attempt);
+  const start=captureFrame(from,actor,0,reduced,timing);
+  assert(Math.abs(start.camera.z-from.z)<1e-8&&start.lamp===1&&start.projection===1);
+  const lift=captureFrame(from,actor,.30,reduced,timing);
+  const raised=captureGrasp(lift.camera,captureBasis(lift.camera),lift.actor,lift.grasp,null);
+  assert(raised.every(hand=>hand&&hand.curl>0),'Both hands brace before the limbs emerge');
+  if(reduced)assert(lift.camera.roll===0&&lift.projection===1,'Reduced motion disables optical and roll effects');
   for(const time of [timing.tear+.19,timing.reveal+.1,timing.lock+.17,timing.bite-.08]){
    const frame=captureFrame(from,actor,time,reduced,timing);
    posePursuer(capture.vertices,posedCapture,capture.groups,frame.actor,reduced);

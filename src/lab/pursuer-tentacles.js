@@ -101,14 +101,17 @@ function poseMembrane(vertices,id,[base,elbow,tip],amount,load,basis){
 function handPose(side,{time,timing,drag,swallow,reduced},grip,other){
  const contact=side===timing.firstSide?timing.grab:timing.lock;
  const raise=shotEase(timing.reveal-.14,contact-.03,time);
+ const delay=side===timing.firstSide?.038:.083;
+ const guard=shotEase(delay,delay+.27,time)*(1-.66*shotEase(.37,.79,time))*(1-raise);
+ const brace=shotEase(delay+.19,delay+.34,time)*(1-shotEase(.35,.60,time));
  const recoil=grip*(1-other),pull=grip*drag;
- const shake=reduced?0:Math.sin(time*17+side*1.5)*raise*(1-grip);
+ const shake=reduced?0:Math.sin(time*17+side*1.5)*(guard+raise)*(1-grip);
  return {
-  x:side*(.182+.054*recoil-.023*pull-.050*swallow),
-  y:-.239+.073*raise-.020*recoil+.025*pull+.012*shake+.026*swallow,
-  z:.296-.028*recoil+.077*pull-.164*swallow,
-  roll:side*(.23+.70*grip+.22*recoil),flex:.32+.27*raise+.26*grip+.26*swallow,
-  curl:grip*(.59+.41*other),raise
+  x:side*(.182-.044*guard+.054*recoil-.023*pull-.050*swallow),
+  y:-.277+.109*raise+.155*guard-.020*recoil+.025*pull+.012*shake+.026*swallow,
+  z:.296+.043*guard-.028*recoil+.077*pull-.164*swallow,
+  roll:side*(.23-.30*guard+.70*grip+.22*recoil),flex:.32+.42*guard+.27*raise+.26*grip+.26*swallow,
+  curl:.33*brace+grip*(.59+.41*other),visible:time>delay
  };
 }
 
@@ -124,13 +127,14 @@ export function captureGrasp(camera,basis,actor,grasp,mesh){
  const {time,timing,snare,drag,swallow,reduced,gripLeft,gripRight}=grasp;
  const origin=[camera.x,camera.y,camera.z];
  const point=(x,y,z)=>origin.map((n,k)=>n+basis.right[k]*x+basis.up[k]*y+basis.forward[k]*z);
- const anchor=pursuerGraspAnchor(actor,reduced);
  const wrists=[handPose(-1,grasp,gripLeft,gripRight),handPose(1,grasp,gripRight,gripLeft)];
  const hands=swallow<.94?wrists.map(hand=>{
-  if(!hand.raise)return null;
+  if(!hand.visible)return null;
   const [x,y,z]=point(hand.x,hand.y,hand.z);
-  return {x,y,z,roll:hand.roll,flex:hand.flex,curl:hand.curl};
+  return {x,y,z,roll:hand.roll,flex:hand.flex,curl:hand.curl,shade:.88-.37*swallow};
  }):null;
+ if(!mesh)return hands;
+ const anchor=pursuerGraspAnchor(actor,reduced);
  for(const [i,screenSide] of SIDES_OF_FACE.entries()){
   const side=-screenSide,lead=screenSide===timing.firstSide;
   const grip=i===0?gripLeft:gripRight,contact=lead?timing.grab:timing.lock;

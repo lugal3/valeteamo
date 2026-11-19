@@ -15,6 +15,8 @@ export const MIX_CHANNELS=[
 ];
 export const mixLimit=key=>key==='master'?3:MIX_CHANNELS.slice(4).some(([name])=>name===key)?2:1;
 const defaults={muted:false,master:1,ambient:.40,effects:.68,music:.34,doors:1.8,steps:1,creaks:1,objects:1,alerts:1,emotes:1};
+const captureLevels={'capture-bite':.60,'capture-swallow':.40,'capture-snare':.37,'capture-tug':.47,
+ 'capture-tear':.38,'capture-breath':.26,'capture-grab':.32,'capture-pulse':.15};
 const effectChannel=kind=>{
  if(/^(door|closet|latch|unlock|trying|knock|keys|hatch)/.test(kind))return 'doors';
  if(['wood','stair','tile','grass','dirt','stone','footstep'].includes(kind))return 'steps';
@@ -29,7 +31,10 @@ export class HouseSound {
    const C=window.AudioContext||window.webkitAudioContext;if(!C)return false;
    this.context=new C();this.master=this.context.createGain();this.master.gain.value=.45*this.settings.master;
    const limiter=this.context.createDynamicsCompressor();limiter.threshold.value=-10;limiter.ratio.value=8;this.master.connect(limiter);limiter.connect(this.context.destination);
-   this.roomBus=this.context.createGain();this.roomBus.gain.value=this.captureQuiet ? .11 : 1;this.roomBus.connect(this.master);
+   this.roomBus=this.context.createGain();
+   this.roomFilter=this.context.createBiquadFilter();this.roomFilter.type='lowpass';this.roomFilter.Q.value=.35;
+   this.roomBus.connect(this.roomFilter);this.roomFilter.connect(this.master);
+   this.updateRoomAcoustics(true);
    this.musicBus=this.context.createGain();this.musicBus.gain.value=this.settings.muted?0:this.settings.music;this.musicBus.connect(this.roomBus);
    this.effectsBus=this.context.createGain();this.effectsBus.gain.value=this.settings.muted?0:this.settings.effects;this.effectsBus.connect(this.master);this.sequenceNodes=new Set();
    this.recordedMusicBus=this.context.createGain();this.recordedMusicBus.gain.value=this.settings.muted?0:this.settings.music;this.recordedMusicBus.connect(this.roomBus);
@@ -268,31 +273,39 @@ export class HouseSound {
   oscillator.onended=()=>{oscillator.disconnect();vol.disconnect();pan.disconnect();};
  }
  sequence(kind,loud=false){const ctx=this.context;if(!ctx||this.paused||ctx.state!=='running'||this.settings.muted)return;const output=this.channels[effectChannel(kind)];if(this.recordings?.kind(kind,{gain:kind==='notification'?(loud?.68:.30):.38,output}))return;for(let i=0;i<3;i++){const osc=ctx.createOscillator(),gain=ctx.createGain(),at=ctx.currentTime+i*(kind==='keys'?.11:.28);osc.type=kind==='keys'?'sine':'triangle';osc.frequency.setValueAtTime(kind==='keys'?1700+i*330:85,at);osc.frequency.exponentialRampToValueAtTime(kind==='keys'?1100:38,at+.12);gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(kind==='keys'?.14:.50,at+.008);gain.gain.exponentialRampToValueAtTime(.0001,at+.17);osc.connect(gain);gain.connect(output);osc.start(at);osc.stop(at+.2);this.sequenceNodes.add(osc);osc.onended=()=>{osc.disconnect();gain.disconnect();this.sequenceNodes.delete(osc);};}}
- setCaptureQuiet(quiet){
-  if(this.captureQuiet===quiet)return;
+ setCaptureQuiet(quiet,occluded=false){
+  if(this.captureQuiet===quiet&&this.captureOccluded===occluded)return;
   this.captureQuiet=quiet;
-  if(this.roomBus){
-   const now=this.context.currentTime,gain=this.roomBus.gain;
-   gain.cancelScheduledValues(now);
-   gain.setTargetAtTime(quiet ? .11 : 1,now,quiet ? .16 : .27);
+  this.captureOccluded=occluded;
+  this.updateRoomAcoustics();
+ }
+ updateRoomAcoustics(immediate=false){
+  if(!this.roomBus||!this.roomFilter)return;
+  const {currentTime,sampleRate}=this.context;
+  const occluded=this.captureQuiet&&this.captureOccluded;
+  const level=occluded?.08:this.captureQuiet?.26:1;
+  const cutoff=occluded?370:this.captureQuiet?1460:sampleRate*.48;
+  for(const [parameter,target] of [[this.roomBus.gain,level],[this.roomFilter.frequency,cutoff]]){
+   parameter.cancelScheduledValues(currentTime);
+   if(immediate)parameter.setValueAtTime(target,currentTime);
+   else parameter.setTargetAtTime(target,currentTime,this.captureQuiet?.12:.25);
   }
  }
  captureCue(kind,pan=0){
   const ctx=this.context;
   if(!ctx||ctx.state!=='running'||this.paused||this.settings.muted)return;
-  this.captureScream??=buildCaptureScream(ctx);
   if(kind==='capture-reveal'){
-   const source=ctx.createBufferSource(),gain=ctx.createGain();
+   this.captureScream??=buildCaptureScream(ctx);
+   const source=ctx.createBufferSource(),gain=ctx.createGain(),stereo=ctx.createStereoPanner();
    source.buffer=this.captureScream;gain.gain.value=2.38;
-   source.connect(gain);gain.connect(this.channels.alerts);
+   stereo.pan.value=pan;source.connect(gain);gain.connect(stereo);stereo.connect(this.channels.alerts);
    this.sequenceNodes.add(source);
-   source.onended=()=>{source.disconnect();gain.disconnect();this.sequenceNodes.delete(source);};
+   source.onended=()=>{source.disconnect();gain.disconnect();stereo.disconnect();this.sequenceNodes.delete(source);};
    source.start();
    return;
   }
   this.foleyVoices??=new Set();
-  const levels={'capture-bite':.60,'capture-swallow':.40,'capture-snare':.37,'capture-tug':.47,'capture-tear':.38,'capture-breath':.26,'capture-grab':.32};
-  const level=levels[kind];
+  const level=captureLevels[kind];
   if(level===undefined)return;
   const voice=spookyFoley(ctx,this.channels.alerts,this.atmosphere.noise,kind,level,pan,v=>this.foleyVoices.delete(v));
   this.foleyVoices.add(voice);

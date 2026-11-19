@@ -10,7 +10,7 @@ import {climbingHandPieces} from './first-person.js';
 import {samplePianoPose} from './piano-recital.js';
 import {drawViewModel} from './viewmodel.js';
 import {pursuerPieces,posePursuer} from './pursuer-model.js';
-import {pursuerInterior} from './pursuer-face.js';
+import {CAPTURE_FABRIC,pursuerInterior} from './pursuer-face.js';
 import {createPursuerTexture} from './pursuer-texture.js';
 import {captureBasis} from './capture-shot.js';
 import {captureGrasp,createTentacleMesh} from './pursuer-tentacles.js';
@@ -625,7 +625,7 @@ export class HouseRenderer {
    const vertices=this.climbVertices??=new Float32Array(model.vertices.length);vertices.set(model.vertices);
    if(hand.curl){
     const angle=.82*hand.curl,c=Math.cos(angle),s=Math.sin(angle);
-    // The three fingers fold towards the palm while the tentacle holds the cuff.
+     // The fingers fold into the palm as Kitty braces or is held by the cuff.
     for(const {start,end} of model.ranges.slice(2,5))for(let i=start;i<end;i+=16){
      const pivot=-.037,y=vertices[i+1],z=vertices[i+2]-pivot;
      vertices[i+1]=y*c+z*s;vertices[i+2]=pivot+z*c-y*s;
@@ -649,7 +649,8 @@ export class HouseRenderer {
       const scale=offset===0?.67:1;
       for(let k=0;k<3;k++)vertices[at+k]=(-x*right[k]+y*up[k]-z*forward[k])*scale;
      }
-     for(let k=3;k<6;k++)vertices[i+k]*=.47;
+     for(let k=3;k<6;k++)vertices[i+k]*=hand.shade??.47;
+     if(hand.shade!==undefined)vertices[i+11]=CAPTURE_FABRIC;
     }
     vertices[i]+=hand.x;vertices[i+1]+=hand.y;vertices[i+2]+=hand.z;
    }
@@ -702,20 +703,21 @@ export class HouseRenderer {
   if(mirrored)reflectMesh(vertices);gl.bindBuffer(gl.ARRAY_BUFFER,this.pursuerVbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.DYNAMIC_DRAW);this.bind(this.pursuerVbo,this.pursuerIbo);gl.drawElements(gl.TRIANGLES,count,gl.UNSIGNED_SHORT,0);
  }
  drawCaptureGrasp(camera,basis,actor,grasp){
-  if(grasp.time<grasp.timing.tear+.18)return;
+  const limbsVisible=grasp.time>=grasp.timing.tear+.18;
   const gl=this.gl;
-  if(!this.tentacles){
+  if(limbsVisible&&!this.tentacles){
    this.tentacles=createTentacleMesh();
    this.tentacleVbo=gl.createBuffer();this.tentacleIbo=gl.createBuffer();
    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.tentacleIbo);
    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,this.tentacles.indices,gl.STATIC_DRAW);
   }
-  const hands=captureGrasp(camera,basis,actor,grasp,this.tentacles);
+  const hands=captureGrasp(camera,basis,actor,grasp,limbsVisible?this.tentacles:null);
   if(hands){
    gl.uniform1f(this.uniform.uHeld,1);
    this.drawClimbingHands(hands,basis);
    gl.uniform1f(this.uniform.uHeld,0);
   }
+  if(!limbsVisible)return;
   gl.bindBuffer(gl.ARRAY_BUFFER,this.tentacleVbo);
   gl.bufferData(gl.ARRAY_BUFFER,this.tentacles.vertices,gl.DYNAMIC_DRAW);
   this.bind(this.tentacleVbo,this.tentacleIbo);
@@ -745,6 +747,7 @@ export class HouseRenderer {
  }
  render(camera,flash,time,showHand=false,motion={}){
   this.lastShowHand=showHand;
+  const beamPower=typeof flash==='number'?flash:Number(Boolean(flash));
   this.resize(!!motion.grasp);const gl=this.gl,quality=this.quality==='low'?'low':'medium';
   if(this.materialQuality!==quality){
    this.materialQuality=quality;
@@ -773,9 +776,10 @@ export class HouseRenderer {
   gl.uniform3f(this.uniform.uEye,camera.x,camera.y,camera.z);
   gl.uniform3f(this.uniform.uLightEye,light.x,light.y,light.z);
   gl.uniform3fv(this.uniform.uRight,right);gl.uniform3fv(this.uniform.uUp,up);gl.uniform3fv(this.uniform.uForward,forward);
-  gl.uniform2f(this.uniform.uProjection,1.30*this.canvas.height/this.canvas.width,1.30);
+  const projection=1.30*(motion.captureProjection??1);
+  gl.uniform2f(this.uniform.uProjection,projection*this.canvas.height/this.canvas.width,projection);
   gl.uniform1f(this.uniform.uNear,motion.grasp ? .032 : .07);gl.uniform1f(this.uniform.uFar,45);
-  gl.uniform1f(this.uniform.uFlash,flash?1:0);gl.uniform1f(this.uniform.uTime,time);
+  gl.uniform1f(this.uniform.uFlash,beamPower);gl.uniform1f(this.uniform.uTime,time);
   gl.uniform1f(this.uniform.uShot,motion.shotLight??0);
   gl.uniform3fv(this.uniform.uPursuerKey,motion.pursuerKey||[0,0,0]);
   gl.uniform1f(this.uniform.uOcclude,this.quality==='low'?0:1);

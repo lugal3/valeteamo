@@ -2,7 +2,8 @@
 // that split along the same surface during the reveal.
 const round={shape:'round',smooth:true,segments:18,rings:12};
 const SKIN=5,FLESH=6,TOOTH=13,TENDON=14,SALIVA=15,EYE=16,BLOOD=17;
-const HAIR=10,CLOTH=19;
+const HAIR=10;
+export const CAPTURE_FABRIC=19;
 const tau=Math.PI*2;
 const difference=(a,b)=>a.map((n,i)=>n-b[i]);
 const magnitude=v=>Math.hypot(...v)||1;
@@ -191,11 +192,11 @@ function captureLips(){
 
 function captureLids(side){
  const joint=side<0?'face-receding-skin':'face-right',x=side*.074;
- const lid=(name,heights,width,color)=>poly(name+side,joint,tube(
+ const lid=(name,heights,width,color,parent=joint)=>poly(name+side,parent,tube(
   heights.map(([dx,y,z])=>skinPoint(x+dx,y,z)),width,9,{aspect:.72,roughness:.071}),color,SKIN);
  return [
   lid('human-upper-lid',[[-.033,1.713,.002],[-.017,1.722,.004],[.002,1.724,.006],[.022,1.722,.004],[.034,1.715,.002]],
-   [.0011,.0038,.0046,.0036,.0013],[.60,.404,.349]),
+   [.0011,.0038,.0046,.0036,.0013],[.60,.404,.349],'face-blink'+side),
   lid('human-lower-lid',[[-.034,1.712,.002],[-.017,1.705,.005],[.006,1.704,.004],[.023,1.708,.004],[.034,1.714,.001]],
    [.001,.0026,.0030,.0023,.001],[.71,.499,.433])
  ];
@@ -211,8 +212,8 @@ function captureBrow(side){
 export function pursuerShell(parts,capture){
  const pieces=parts.flatMap(part=>{
   if(part.id==='face')return sculptHead(part,capture);
-  if(part.id==='shirt'||part.id.startsWith('collar'))return {...part,joint:capture?'face-collar':'chest',faceMaterial:CLOTH};
-  if(part.joint!=='head')return {...part,faceMaterial:CLOTH,color:part.color.map(n=>n*.69)};
+  if(part.id==='shirt'||part.id.startsWith('collar'))return {...part,joint:capture?'face-collar':'chest',faceMaterial:CAPTURE_FABRIC};
+  if(part.joint!=='head')return {...part,faceMaterial:CAPTURE_FABRIC,color:part.color.map(n=>n*.69)};
   const {id}=part;
   if(id==='hair-top')return captureHair();
   if(id.startsWith('hair-part')||id.startsWith('temple'))return [];
@@ -442,13 +443,14 @@ export function pursuerInterior(){
 export const FACE_PARENTS={
  'face-left':'head','face-brow-flap':'head','face-right':'head','face-jaw':'head','face-eye':'head','face-orbit-lid':'head',
  'face-skin-eye-1':'face-left','face-skin-eye1':'face-right',
+ 'face-blink-1':'face-receding-skin','face-blink1':'face-right',
  'face-receding-skin':'face-left','face-jaw-skin':'face-jaw','face-blood':'face-right',
  'face-gullet-upper':'head','face-gullet-lower':'face-jaw',
  'face-palate':'face-gullet-upper','face-tongue':'face-gullet-lower','face-collar':'chest','face-neck':'head'
 };
 
 export function pursuerFacePose(joints,face){
- const {left,right,upper=left,jaw,twitch,glance,bite,clamp=0,pressure=0,gaze={x:0,y:1.73,z:.50}}=face;
+ const {left,right,upper=left,jaw,twitch,glance,bite,clamp=0,pressure=0,blink=0,gaze={x:0,y:1.73,z:.50}}=face;
  const clampLook=n=>Math.max(-.39,Math.min(.39,n));
  function eyeAim(x,y,z){
   const depth=Math.max(.15,gaze.z-z);
@@ -477,8 +479,10 @@ export function pursuerFacePose(joints,face){
   scale:1-.23*clamp,roll:twitch*.14,pitch:jaw*.16+.15*clamp};
  joints['face-orbit-lid']={py:1.753,pz:.139,y:-.006*(1-glance)-.003*pressure,z:.003*left};
  joints['face-eye']={px:-.078,py:1.730,pz:.118,...eyeAim(-.078,1.730,.118),z:.004*left};
- joints['face-skin-eye-1']={px:-.074,py:1.714,pz:.123,...eyeAim(-.074,1.714,.123),
-  scale:Math.max(.003,1-left*3.4),z:-.022*left};
- joints['face-skin-eye1']={px:.074,py:1.714,pz:.123,...eyeAim(.074,1.714,.123),
-  y:-.002*pressure,scale:Math.max(.26,1-.27*right-.49*bite-.08*glance),z:-.018*bite};
+ for(const side of [-1,1]){
+  const x=side*.074,fold=side<0?Math.max(.003,1-left*3.4):Math.max(.26,1-.27*right-.49*bite-.08*glance);
+  joints['face-blink'+side]={y:-.013*blink};
+  joints['face-skin-eye'+side]={px:x,py:1.714,pz:.123,...eyeAim(x,1.714,.123),
+   y:-.002*pressure,z:-(side<0?.022*left:.018*bite)-.014*blink,scale:fold};
+ }
 }

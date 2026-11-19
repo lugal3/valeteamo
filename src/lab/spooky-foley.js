@@ -32,6 +32,11 @@ export function spookyFoley(ctx,bus,noise,kind,level,pan,onEnd=()=>{}){
  }else if(kind==='capture-grab'){
   layer({f:106,to:38,amp:1,duration:.28,type:'triangle'});
   layer({f:550,to:108,amp:.62,duration:.39,noiseLayer:true,q:1.2});
+  layer({at:.036,f:1640,to:849,amp:.51,duration:.16,noiseLayer:true,q:.9,attack:.034});
+ }else if(kind==='capture-pulse'){
+  layer({f:90,to:44,amp:1,duration:.14,type:'triangle',attack:.022});
+  layer({at:.105,f:104,to:50,amp:.62,duration:.11,type:'triangle',attack:.014});
+  layer({at:.075,f:1280,to:515,amp:.26,duration:.22,noiseLayer:true,q:1.3,attack:.043});
  }else if(kind==='capture-breath'){
   layer({f:136,to:67,amp:.73,duration:.64,noiseLayer:true,q:4.2,attack:.17});
   layer({at:.055,f:574,to:348,amp:.45,duration:.51,noiseLayer:true,q:1.7,attack:.15});

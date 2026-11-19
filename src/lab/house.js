@@ -5,7 +5,7 @@ import {PhoneUI} from './phone-ui.js';
 import {FloorSounds} from './floor-sounds.js';
 import {EMOTES} from './animations/emotes.js';
 import {Pursuer} from './pursuer.js';
-import {captureFrame,captureTiming} from './capture-shot.js';
+import {captureFrame,capturePath,captureTiming} from './capture-shot.js';
 import {movementKey,releasedPointer,hasControlTouch} from './movement-input.js';
 import {CharacterAnimator} from './animator.js';
 import {BATH_MIRROR} from './mirror.js';
@@ -911,7 +911,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const from=cameraOf(s);
   const hiding=world.objects.find(object=>object.id===(s.hidden?.objectId||poseTransition?.object.id));
   if(hiding?.wardrobeLeaves){poseFurniture(hiding,1);renderer.updateVisibility();}
-  captureShot={from,actor:pursuer.snapshot(),elapsed:0,timing:captureTiming(captureCount++)};
+  captureShot={from,actor:pursuer.snapshot(),elapsed:0,timing:captureTiming(captureCount++),
+   constrain:capturePath(world.boxes,from),lamp:flashlightBeam()};
   phone.close();releaseMouse();resetInput();sound.stopEmote();
   $('house-emotes').hidden=true;
   $('lab-camera-settings').open=false;
@@ -940,22 +941,26 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    last=performance.now();
    return;
   }
-  const shotFrame=captureFrame(shot.from,shot.actor,shot.elapsed,reducedMotion.matches,timing);
+  const reduced=reducedMotion.matches;
+  const shotFrame=captureFrame(shot.from,shot.actor,shot.elapsed,reduced,timing,shot.constrain);
   const style=captureLayer.style;
-  style.setProperty('--capture-grip',`${100-19*shotFrame.grip-23*shotFrame.grasp.swallow}%`);
+  style.setProperty('--capture-edge',.49+shotFrame.peripheral);
+  style.setProperty('--capture-falloff',`${92-38*shotFrame.peripheral}%`);
   style.setProperty('--capture-dark',shotFrame.dark);
   const crossed=time=>previous<time&&shot.elapsed>=time;
+  if(timing.pulses.some(crossed))sound.captureCue('capture-pulse');
   if(crossed(timing.breath)){
    sound.captureCue('capture-breath',timing.firstSide*.49);
    if(options.captions!==false)captureCaption.textContent='[Respira muy cerca]';
   }
-  if(crossed(timing.tear))sound.captureCue('capture-tear',.15);
+  if(crossed(timing.tear))sound.captureCue('capture-tear',.32);
   if(crossed(timing.reveal)){
-   sound.captureCue('capture-reveal');
+   sound.captureCue('capture-reveal',.12);
    if(options.captions!==false)captureCaption.textContent='[Alarido]';
   }
   if(crossed(timing.grab)){
    sound.captureCue('capture-snare',timing.firstSide*.42);
+   sound.setCaptureQuiet(true,true);
    if(options.captions!==false)captureCaption.textContent='[Las patas se cierran sobre ti]';
   }
   if(crossed(timing.lock))sound.captureCue('capture-tug',-timing.firstSide*.38);
@@ -966,8 +971,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(crossed(timing.swallow))sound.captureCue('capture-swallow');
   if(shotFrame.dark===1)return;
   try{
-   renderer.render(shotFrame.camera,false,elapsed+shot.elapsed,false,{shotLight:.09,pursuerLight:shotFrame.light,pursuerKey:shotFrame.key,
-    reduced:reducedMotion.matches,pursuer:shotFrame.actor,grasp:shotFrame.grasp,television});
+   renderer.render(shotFrame.camera,shot.lamp?shotFrame.lamp:0,elapsed+shot.elapsed,false,{shotLight:shotFrame.roomLight,
+    pursuerLight:shotFrame.light,pursuerKey:shotFrame.key,captureProjection:shotFrame.projection,
+    reduced,pursuer:shotFrame.actor,grasp:shotFrame.grasp,television});
   }catch(e){interruptGraphics('Error de renderizado',String(e.message||e));}
  }
  function updateStory(delta){
