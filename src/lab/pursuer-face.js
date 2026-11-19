@@ -1,8 +1,7 @@
 // The capture uses the same head dimensions and features as the patrol model.
 // Split its front shell into fitted pieces so the seams only open under load.
 const round={shape:'round',smooth:true,segments:18,rings:12};
-const SKIN=5,FLESH=6,IRIS=8,ENAMEL=9;
-const TOOTH=13,TENDON=14,SALIVA=15;
+const SKIN=5,FLESH=6,TOOTH=13,TENDON=14,SALIVA=15,EYE=16,BLOOD=17;
 const tau=Math.PI*2;
 const difference=(a,b)=>a.map((n,i)=>n-b[i]);
 const magnitude=v=>Math.hypot(...v)||1;
@@ -11,6 +10,10 @@ const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]
 const mix=(a,b,t)=>a.map((n,i)=>n+(b[i]-n)*t);
 const poly=(id,joint,triangles,color,faceMaterial,extra)=>({id,joint,triangles,color,faceMaterial,...extra});
 const solid=(id,joint,x,y,z,w,h,d,color,faceMaterial,extra)=>({id,joint,x,y,z,w,h,d,color,faceMaterial,...round,...extra});
+function eyeUV([x,y,z],{w,h}){
+ const rear=z<0?1.4:1;
+ return [.5+x/w*rear,.5+y/h*rear];
+}
 
 function ribbon(rows,reverse=false){
  const triangles=[];
@@ -84,7 +87,7 @@ function fractureShell(face){
    for(let n=0;n<section.length;n++){
     const a=section[n],b=section[(n+1)%section.length];
     // Cut vertices lie on the linear interpolant through each source triangle.
-    if(cuts.some(cut=>Math.abs(cut(a))<.0022&&Math.abs(cut(b))<.0022)){
+    if(cuts.slice(1).some(cut=>Math.abs(cut(a))<.0012&&Math.abs(cut(b))<.0012)){
      rim.push([a,inset(b),b],[a,inset(a),inset(b)]);
     }
    }
@@ -107,13 +110,53 @@ export function captureShell(parts){
   if(/^(eye|iris|pupil|brow|cheek)/.test(id)){
    const side=id.endsWith('-1')?-1:1;
    joint=side<0?'face-left':'face-right';
-   if(/^(eye-white|iris|pupil)/.test(id))joint='face-skin-eye'+side;
+   if(/^(iris|pupil)/.test(id))return [];
+   if(id.startsWith('eye-white'))return {...part,joint:'face-skin-eye'+side,faceMaterial:EYE,
+    w:.066,h:.028,d:.035,y:1.715,z:.158,segments:24,rings:16,color:[.106,.226,.293],surfaceUV:eyeUV};
    else if(side<0)joint='face-receding-skin';
-   if(id.startsWith('eye-white'))faceMaterial=ENAMEL;
   }
   if(id.startsWith('hair')||id.startsWith('temple')||id.startsWith('brow'))faceMaterial=10;
   return {...part,joint,faceMaterial};
  });
+}
+
+function woundDetails(pieces){
+ for(const side of [-1,1]){
+  for(let i=0;i<15;i++){
+   const t=i/14,phase=i*2.399+side;
+   const root=[side*(.085+.061*t),1.634+.081*t,.110+.013*Math.sin(phase)];
+   const tip=[side*(.071+.064*t),1.560+.078*t,.142-.052*t];
+   const knot=mix(root,tip,.24),bow=mix(root,tip,.66);
+   knot[0]+=side*(.017+.010*Math.sin(phase));knot[2]+=.018+.012*Math.cos(phase);
+   bow[0]+=side*(.010+.016*Math.cos(phase));bow[2]+=.008+.017*Math.sin(phase);
+   const width=.00065+.0008*Math.cos(phase)**2;
+   const skinSide=side<0?'face-left':'face-right';
+   const target=i%4===0?skinSide:'face-jaw';
+   pieces.push(poly('tissue-thread'+side+'-'+i,'head',
+    tube([root,knot,bow,tip],[width*.83,width,width*.76,width*.48],6,{aspect:.75,roughness:.13,phase}),
+    i%3===0?[.34,.103,.109]:[.185,.036,.046],i%3===0?TENDON:BLOOD,
+    {flex:{joint:target,anchor:root,axis:difference(tip,root),bow:side*(.006+.007*Math.sin(phase)),
+     release:i%4===1?.21+.56*t:undefined}}));
+  }
+  for(let i=0;i<6;i++){
+   const t=i/5;
+   const origin=[side*(.089+.036*t),1.636+.030*t,.130-.042*t];
+   const midpoint=[side*(.112+.038*t),1.610+.010*t,.128-.031*t];
+   const tip=[side*(.101+.031*t),1.584+.032*t,.130-.042*t];
+   pieces.push(poly('clotted-gum'+side+i,'face-jaw',
+    tube([origin,midpoint,tip],[.002,.0047,.0022],8,{aspect:.59,phase:i*1.7}),
+    [.23,.025,.042],BLOOD));
+  }
+ }
+ // Follow the old ellipsoid so the torn edge stays stained as the plate moves.
+ const skinPoint=(x,y)=>[x,y,.1645*Math.sqrt(Math.max(0,1-(x/.1755)**2-((y-1.687)/.207)**2))+.0011];
+ for(const [i,[x,y,end]] of [[.043,1.699,1.644],[.059,1.704,1.657],[.087,1.696,1.626],
+  [.107,1.686,1.660],[.044,1.756,1.710],[.077,1.735,1.704]].entries()){
+  const points=[skinPoint(x,y),skinPoint(x+.003,y+(end-y)*.32),
+   skinPoint(x-.005,y+(end-y)*.73),skinPoint(x-.007,end)];
+  pieces.push(poly('blood-runnel'+i,'face-right',tube(points,[.0032,.0039,.0026,.00065],8,{aspect:.47,phase:i}),
+   [.19,.020,.030],BLOOD));
+ }
 }
 
 function muscles(pieces){
@@ -209,19 +252,19 @@ export function pursuerInterior(){
   solid('underjaw','face-jaw',0,1.564,.086,.224,.067,.173,[.13,.023,.039],FLESH),
   solid('tongue','face-tongue',-.009,1.587,.135,.097,.026,.095,[.255,.050,.078],FLESH,{roll:.095}),
   solid('orbit-tissue','head',-.078,1.723,.103,.105,.092,.061,[.23,.039,.054],FLESH),
-  solid('exposed-eye','face-eye',-.078,1.731,.127,.059,.050,.063,[.45,.39,.30],ENAMEL),
-  solid('exposed-iris','face-eye',-.081,1.730,.155,.031,.030,.014,[.148,.40,.323],IRIS),
-  solid('exposed-pupil','face-eye',-.081,1.730,.163,.014,.017,.005,[.026,.018,.020],11),
-  solid('exposed-catchlight','face-eye',-.086,1.738,.164,.005,.005,.003,[.78,.86,.76],IRIS)
+  solid('exposed-eye','face-eye',-.078,1.731,.125,.060,.049,.061,[.19,.238,.171],EYE,
+   {surfaceUV:eyeUV,segments:28,rings:20})
  ];
  const lids=[
   [[-.127,1.725,.122],[-.111,1.752,.130],[-.080,1.767,.142],[-.054,1.753,.142],[-.045,1.733,.127]],
   [[-.127,1.721,.122],[-.112,1.702,.131],[-.091,1.687,.144],[-.058,1.700,.139],[-.047,1.724,.125]]
  ];
  for(const [i,points] of lids.entries()){
-  pieces.push(poly('torn-eyelid'+i,'head',tube(points,[.004,.009,.010,.008,.003],11),[.31,.058,.079],FLESH));
+  pieces.push(poly('torn-eyelid'+i,'head',tube(points,[.003,.011,.009,.012,.003],12,{aspect:.69,roughness:.19,phase:i*3.9}),
+   [.28,.047,.061],BLOOD));
  }
  muscles(pieces);
+ woundDetails(pieces);
  dentition(pieces,true);
  dentition(pieces,false);
  for(const [i,x] of [-.108,-.092,-.073,.062,.085,.105].entries()){
@@ -244,7 +287,13 @@ export const FACE_PARENTS={
 };
 
 export function pursuerFacePose(joints,face){
- const {left,right,jaw,twitch,glance,bite,pressure=0}=face;
+ const {left,right,jaw,twitch,glance,bite,pressure=0,gaze={x:0,y:1.73,z:.50}}=face;
+ const clampLook=n=>Math.max(-.39,Math.min(.39,n));
+ function eyeAim(x,y,z){
+  const depth=Math.max(.15,gaze.z-z);
+  return {yaw:clampLook(Math.atan2(gaze.x-x,depth)-joints.head.yaw),
+   pitch:clampLook(-Math.atan2(gaze.y-y,depth)-joints.head.pitch)};
+ }
  joints['face-left']={px:-.153,py:1.735,pz:.025,x:-.044*left,y:.039*left,z:-.020*left,
   yaw:-1.02*left,pitch:-.25*left,roll:.30*left};
  joints['face-right']={px:.141,py:1.778,pz:.04,x:.019*right,y:.024*right,z:-.047*right,
@@ -261,7 +310,9 @@ export function pursuerFacePose(joints,face){
  joints['face-palate']={py:1.627,pz:.125,scale:1+pressure*.11+jaw*.043,y:-.008*pressure};
  joints['face-tongue']={py:1.588,pz:.135,y:jaw*.009,z:(pressure-.4*bite)*.021,
   roll:twitch*.14,pitch:jaw*.16};
- joints['face-eye']={px:-.078,py:1.731,pz:.127,yaw:glance*.28,pitch:twitch*.105,z:.010*left};
- joints['face-skin-eye-1']={px:-.073,py:1.716,pz:.169,scale:Math.max(.003,1-left*3.4),z:-.022*left};
- joints['face-skin-eye1']={px:.073,py:1.716,pz:.169,yaw:-.22*glance,scale:Math.max(.26,1-.27*right-.49*bite),z:-.018*bite};
+ joints['face-eye']={px:-.078,py:1.731,pz:.125,...eyeAim(-.078,1.731,.125),z:.008*left};
+ joints['face-skin-eye-1']={px:-.074,py:1.715,pz:.158,...eyeAim(-.074,1.715,.158),
+  scale:Math.max(.003,1-left*3.4),z:-.022*left};
+ joints['face-skin-eye1']={px:.074,py:1.715,pz:.158,...eyeAim(.074,1.715,.158),
+  y:-.002*pressure,scale:Math.max(.26,1-.27*right-.49*bite-.08*glance),z:-.018*bite};
 }

@@ -44,11 +44,16 @@ export function captureFrame(from,actor,time,reduced){
  const focusY=actor.y+1.700-.047*jaw-.130*swallow;
  const pitch=Math.atan2(focusY-y,Math.hypot(actor.x-x,actor.z-z));
  const yaw=turn<1?from.yaw+turnDelta*turn:Math.atan2(actor.x-x,actor.z-z);
+ const gaze={
+  x:(x-actor.x)*Math.cos(facing)-(z-actor.z)*Math.sin(facing),
+  y:y-actor.y,
+  z:(x-actor.x)*Math.sin(facing)+(z-actor.z)*Math.cos(facing)
+ };
  return {
   camera:{x,y,z,yaw:yaw+shake,pitch:mix(from.pitch,pitch,turn)+shake,
    roll:reduced?0:.065*Math.sin(Math.PI*lift)-.115*recoil+.13*tug-.096*drag-.14*swallow},
   actor:{...actor,facing,speed:0,captureReach:reach,captureLift:lift,
-   captureFace:{left,right,jaw,bite:swallow,twitch,glance,pressure:heldBreath}},
+   captureFace:{left,right,jaw,bite:swallow,twitch,glance,gaze,pressure:heldBreath,rupture:e(1.61,2.51)}},
   grasp:{time,reduced,snare,drag,swallow},
   grip:reach,
   light:mix(.61,.91,approach)-.18*heldBreath+.17*snap+.16*impact-.39*swallow,

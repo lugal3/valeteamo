@@ -11,6 +11,7 @@ import {samplePianoPose} from './piano-recital.js';
 import {drawViewModel} from './viewmodel.js';
 import {pursuerPieces,posePursuer} from './pursuer-model.js';
 import {pursuerInterior} from './pursuer-face.js';
+import {createPursuerTexture} from './pursuer-texture.js';
 import {captureBasis} from './capture-shot.js';
 import {captureGrasp,createTentacleMesh} from './pursuer-tentacles.js';
 import {sampleWardrobeWalk} from './animations/wardrobe-entry.js';
@@ -358,6 +359,7 @@ export class HouseRenderer {
   const gl=canvas.getContext('webgl',{alpha:false,stencil:true,antialias:false,powerPreference:'low-power',preserveDrawingBuffer:false});
   if(!gl)throw Error('El navegador no permite WebGL. Activa aceleración gráfica o prueba otro navegador.');
   this.gl=gl;this.programs={medium:program(gl),low:program(gl,true)};this.program=this.programs[quality==='low'?'low':'medium'];this.texture=createAtlas(gl);this.disposeArtwork=loadPosterTiles(gl,this.texture);this.materialQuality=quality;this.materialTextures=createMaterials(gl,quality);this.loisFaceTexture=createLoisFaceTexture(gl,quality);
+  this.pursuerTexture=createPursuerTexture(gl);
   this.mirrorSupported=gl.getContextAttributes().stencil;this.mirrorBuffers=Array.from({length:8},()=>gl.createBuffer());this.mirrorDrawn=false;
   this.vbo=gl.createBuffer();this.ibo=gl.createBuffer();this.count=0;
   this.dynamicVbo=gl.createBuffer();this.dynamicIbo=gl.createBuffer();this.dynamicCount=0;this.dynamicBoxes=[];
@@ -374,7 +376,7 @@ export class HouseRenderer {
   this.locations={};
   for(const [quality,p] of Object.entries(this.programs)){
    const atrib={},uniform={};for(const key of ['aPos','aCol','aNormal','aUV','aArt','aStyle','aTangent'])atrib[key]=gl.getAttribLocation(p,key);
-   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld','uTV','uTVSignal','uShot','uLoisFace'])uniform[key]=gl.getUniformLocation(p,key);
+   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld','uTV','uTVSignal','uShot','uLoisFace','uFascia','uFasciaReady'])uniform[key]=gl.getUniformLocation(p,key);
    uniform.uLamps=gl.getUniformLocation(p,'uLamps[0]');
    this.locations[quality]={atrib,uniform};
   }
@@ -744,6 +746,7 @@ export class HouseRenderer {
   this.updateShadows(camera,flash,light,{right,up,forward});
   this.program=this.programs[quality];Object.assign(this,this.locations[quality]);gl.useProgram(this.program);
   gl.uniform1i(this.uniform.uAtlas,0);gl.uniform1i(this.uniform.uLightDepth,1);gl.uniform1i(this.uniform.uMaterials,2);gl.uniform1i(this.uniform.uLoisFace,4);
+  gl.uniform1i(this.uniform.uFascia,5);gl.uniform1f(this.uniform.uFasciaReady,Number(this.pursuerTexture.ready));
   this.updateTelevision(motion.television);
   const isLow=quality==='low';
   gl.uniform1f(this.uniform.uAtlasSize,isLow?ATLAS_SIZE:ATLAS_SIZE_MED);
@@ -782,7 +785,7 @@ export class HouseRenderer {
   if(this.destroyed)return;
   this.destroyed=true;
   const gl=this.gl;
-  this.loisFaceTexture.destroy();this.disposeArtwork();this.shadows.destroy();
+  this.loisFaceTexture.destroy();this.pursuerTexture.destroy();this.disposeArtwork();this.shadows.destroy();
   for(const buffer of [...this.mirrorBuffers,...this.shadowMeshes.map(mesh=>mesh.indices),
    this.vbo,this.ibo,this.dynamicVbo,this.dynamicIbo,this.handVbo,this.handIbo,this.pursuerVbo,this.pursuerIbo,this.tentacleVbo,this.tentacleIbo]){
    if(buffer)gl.deleteBuffer(buffer);

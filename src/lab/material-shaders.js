@@ -24,9 +24,9 @@ varying vec3 vColor,vNormal,vWorld,vTangent;
 varying vec2 vUV;
 varying float vArt,vStyle,vDistance;
 uniform vec3 uEye,uLightEye,uForward,uRight,uUp;
-uniform sampler2D uAtlas,uLightDepth,uMaterials,uTV,uLoisFace;
+uniform sampler2D uAtlas,uLightDepth,uMaterials,uTV,uLoisFace,uFascia;
 uniform float uFlash,uOcclude;
-uniform float uShot;
+uniform float uShot,uFasciaReady;
 uniform float uHasShadows;
 uniform vec4 uLamps[${VISIBLE_LAMPS}];
 uniform float uTime;
@@ -46,6 +46,31 @@ float surfaceNoise(vec2 p){
  f=f*f*(3.0-2.0*f);
  return mix(mix(surfaceHash(cell),surfaceHash(cell+vec2(1.0,0.0)),f.x),
   mix(surfaceHash(cell+vec2(0.0,1.0)),surfaceHash(cell+1.0),f.x),f.y);
+}
+vec3 captureEye(vec2 uv,vec3 irisTint,vec3 normal,vec3 viewDir,vec3 key){
+ vec2 eye=(uv-vec2(.5))*2.0;
+ float radius=length(eye),angle=atan(eye.y,eye.x+.0001)/6.2831853+.5;
+ float iris=1.0-smoothstep(.55,.61,radius);
+ float pupilRadius=.225+.025*irisTint.b;
+ float pupil=1.0-smoothstep(pupilRadius,pupilRadius+.035,radius);
+ float collar=smoothstep(.33,.40,radius)*(1.0-smoothstep(.42,.57,radius));
+ float threads=surfaceNoise(vec2(angle*67.0+radius*3.0,radius*8.0));
+ float radial=sin(6.2831853*angle*43.0+threads*4.3+radius*9.0);
+ float ridge=radial*.26+.34*threads+.58;
+ float vessels=pow(1.0-abs(sin(angle*66.0+5.0*radius+threads*2.7)),14.0);
+ float edge=smoothstep(.59,1.08,radius);
+ vec3 sclera=mix(vec3(.62,.53,.44),vec3(.36,.20,.18),edge*.75);
+ sclera=mix(sclera,vec3(.34,.12,.13),vessels*smoothstep(.63,1.06,radius)*.84);
+ vec3 stroma=irisTint*ridge*(.42+.58*(1.0-smoothstep(.48,.61,radius)));
+ stroma+=vec3(.19,.113,.052)*collar*(threads*.7+.12);
+ vec3 albedo=mix(mix(sclera,stroma,iris),vec3(.018,.011,.010),pupil);
+ float overhead=pow(max(0.0,dot(normal,key)),1.2);
+ float hood=smoothstep(-.19,.83,eye.y)*smoothstep(.28,.91,radius);
+ float cornea=pow(max(0.0,dot(normal,normalize(key+viewDir))),91.0);
+ float crescent=pow(max(0.0,dot(normal,normalize(key+viewDir+uRight*.13))),34.0);
+ float pin=1.0-smoothstep(.025,.073,length((eye-vec2(-.23,.37))*vec2(1.0,1.33)));
+ return albedo*(.18+uShot*(.22+.70*overhead))*(1.0-.42*hood)
+  +vec3(.72,.82,.79)*(cornea*.61+pin*.33)*uShot+vec3(.38,.52,.50)*crescent*uShot*.10;
 }
 float shadowTap(vec2 pixel,vec2 corner,float reach,float depth){
  return 1.0-smoothstep(0.0,.035,depth-depthAt(pixel,corner,reach));
@@ -126,6 +151,10 @@ void main(){
   // Broad shadowing comes from the sculpted forms. Wet highlights are narrow.
   vec3 viewDir=normalize(uEye-vWorld);
   vec3 key=normalize(-uForward*.61-uRight*.40+uUp*.74);
+  if(vArt>15.5&&vArt<16.5){
+   gl_FragColor=vec4(clamp(captureEye(vUV,vColor,surfaceNormal,viewDir,key),0.0,1.0),1.0);
+   return;
+  }
   vec3 halfVector=normalize(key+viewDir);
   float rim=pow(1.0-clamp(dot(surfaceNormal,viewDir),0.0,1.0),2.5);
   float soft=surfaceNoise(vUV*vec2(9.0,18.0));
@@ -141,8 +170,9 @@ void main(){
   float tentacle=step(11.5,vArt)*(1.0-step(12.5,vArt));
   float dentin=step(12.5,vArt)*(1.0-step(13.5,vArt));
   float tendon=step(13.5,vArt)*(1.0-step(14.5,vArt));
-  float saliva=step(14.5,vArt);
-  float wet=max(max(tissue,optical),tentacle+tendon+saliva);
+  float saliva=step(14.5,vArt)*(1.0-step(15.5,vArt));
+  float blood=step(16.5,vArt);
+  float wet=max(max(tissue,optical),tentacle+tendon+saliva+blood);
   float ripple=pow(abs(sin(vUV.x*368.0+6.0*soft+vUV.y*17.0)),8.0);
   vec3 across=cross(surfaceNormal,normalize(T+vec3(.0001)));
   vec3 fineNormal=normalize(surfaceNormal+across*(mottling-.5)*(.13+wet*.20)
@@ -171,13 +201,28 @@ void main(){
    color+=vec3(.033,.031,.024)*smoothstep(.28,.91,vUV.y)*(1.0-groove);
    fineNormal=normalize(fineNormal+T*(groove-.5)*.15);
   }
+  float gloss=.79;
+  float organic=tissue+tendon+tentacle+blood;
+  if(organic>.5&&uFasciaReady>.5){
+   vec2 uv=mix(vUV,vUV.yx,tentacle)*mix(vec2(1.93,1.28),vec2(1.25,.74),tendon);
+   uv+=vec2(vColor.g*5.9,vColor.r*4.3);
+   vec3 fibres=texture2D(uFascia,uv).rgb;
+   float marbled=dot(fibres,vec3(.53,.34,.13));
+   float relief=texture2D(uFascia,uv+vec2(.011,0.0)).r-fibres.r;
+   float ridges=texture2D(uFascia,uv+vec2(0.0,.014)).r-fibres.r;
+   fineNormal=normalize(fineNormal+T*relief*.85+across*ridges*.39);
+   vec3 pigment=vec3(.032,.008,.012)+fibres*vec3(.75,.53,.51);
+   color=mix(color*(.50+marbled*.78),pigment,.71-.19*tendon);
+   color=mix(color,vec3(.092,.009,.013)+fibres*vec3(.30,.11,.12),blood*.72);
+   gloss=mix(.20,.90,smoothstep(.15,.50,marbled+mottling*.09));
+  }
   float lit=pow(max(0.0,dot(fineNormal,key)),1.26);
   float wrapped=max(0.0,dot(fineNormal,normalize(uRight*.72+uUp*.15-uForward*.46)));
-  vec3 light=vec3(.125,.147,.161)+vec3(.93,.80,.69)*uShot*(.17+1.14*lit)
-   +vec3(.29,.56,.59)*wrapped*uShot*.35+vec3(.33,.58,.66)*rim*(.14+.62*uShot);
+  vec3 light=vec3(.102,.109,.120)+vec3(.96,.83,.74)*uShot*(.13+1.24*lit)
+   +vec3(.42,.50,.57)*wrapped*uShot*.41+vec3(.34,.52,.62)*rim*(.10+.47*uShot);
   light+=vec3(.94,.99,1.0)*beam+vec3(.88,.72,.55)*warmth*.45;
   float facingSpec=max(0.0,dot(fineNormal,halfVector));
-  float shine=(pow(facingSpec,mix(20.0,47.0,wet))*(.018+.24*wet+.18*dentin)+.10*wet*pow(facingSpec,10.0))
+  float shine=(pow(facingSpec,mix(24.0,57.0,wet))*(.018+.32*wet*gloss+.15*dentin)+.046*wet*gloss*pow(facingSpec,12.0))
    *uShot*(.43+.57*mottling);
   vec3 spec=shine*mix(vec3(.87,.74,.69),vec3(.65,.83,.85),tentacle*.70+steel*.25);
   color=color*light*(1.0-.61*voidMat-.31*saliva)+spec*(1.0-voidMat)+color*optical*.52;

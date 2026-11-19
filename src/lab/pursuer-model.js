@@ -203,8 +203,10 @@ export function posePursuer(base,out,groups,actor,reduced=false){
   const {r,t}=matrixFor(joint);
   const tip=flex&&matrixFor(flex.joint);
   const flexLength=flex?flex.axis.reduce((n,v)=>n+v*v,0):1;
+  const strandBow=(flex?.bow||0)*(actor.captureFace?.jaw||0)*(1-.45*(actor.captureFace?.bite||0));
+  const attachment=flex?.release===undefined?1:1-ease(((actor.captureFace?.rupture||0)-flex.release)/.10);
   for(let i=start*16;i<end*16;i+=16){
-   const weight=flex?clamp(flex.axis.reduce((n,v,k)=>n+v*(base[i+k]-flex.anchor[k]),0)/flexLength,0,1):0;
+   const weight=flex?clamp(flex.axis.reduce((n,v,k)=>n+v*(base[i+k]-flex.anchor[k]),0)/flexLength,0,1)*attachment:0;
    for(const offset of [0,6,13]){
     const at=i+offset,position=offset===0;
     const a=base[at],b=base[at+1],d=base[at+2];
@@ -215,6 +217,11 @@ export function posePursuer(base,out,groups,actor,reduced=false){
      lx+=(tip.r[0]*a+tip.r[1]*b+tip.r[2]*d+(position?tip.t[0]:0)-lx)*weight;
      ly+=(tip.r[3]*a+tip.r[4]*b+tip.r[5]*d+(position?tip.t[1]:0)-ly)*weight;
      lz+=(tip.r[6]*a+tip.r[7]*b+tip.r[8]*d+(position?tip.t[2]:0)-lz)*weight;
+     if(position&&strandBow){
+      const middle=4*weight*(1-weight);
+      lx+=strandBow*middle;
+      ly-=Math.abs(strandBow)*middle*.62;
+     }
     }
     const zRot=ly*spRoot+lz*cpRoot;
     out[at]=lx*c+zRot*s+(position?originX:0);
