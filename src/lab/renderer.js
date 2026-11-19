@@ -727,8 +727,11 @@ export class HouseRenderer {
   const low=this.quality==='low',detailed=capture&&!low;
   const scale=low?(capture?.70:.55):detailed?1.12:.80;
   const dpr=Math.min(window.devicePixelRatio||1,1.7)*scale;
-  const w=Math.min(detailed?1600:1200,Math.max(1,Math.round(this.canvas.clientWidth*dpr)));
-  const h=Math.min(detailed?1000:760,Math.max(1,Math.round(this.canvas.clientHeight*dpr)));
+  const {clientWidth,clientHeight}=this.canvas,maxWidth=detailed?1600:1200,maxHeight=detailed?1000:760;
+  // Downsample both axes together so a close-up keeps its framing at the cap.
+  const density=capture?Math.min(dpr,maxWidth/Math.max(1,clientWidth),maxHeight/Math.max(1,clientHeight)):dpr;
+  const w=Math.min(maxWidth,Math.max(1,Math.round(clientWidth*density)));
+  const h=Math.min(maxHeight,Math.max(1,Math.round(clientHeight*density)));
   if(w!==this.canvas.width||h!==this.canvas.height){this.canvas.width=w;this.canvas.height=h;this.gl.viewport(0,0,w,h);}
  }
  updateTelevision(television){
