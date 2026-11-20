@@ -1,5 +1,5 @@
 // Coordinates are relative to the fixed cat stage, independent of viewport size.
-export const EMY_MOUTH={x:.49,y:.375};
+export const EMY_MOUTH={x:.485,y:.46};
 export const EMY_FEED_SECONDS=7.5;
 export function churuInReach(x:number,y:number){
  return Number.isFinite(x)&&Number.isFinite(y)&&Math.hypot((x-EMY_MOUTH.x)*1.15,y-EMY_MOUTH.y)<.075;

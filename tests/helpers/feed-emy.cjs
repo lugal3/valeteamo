@@ -6,7 +6,7 @@ module.exports=async function feedEmy(page){
  if(!stage||!tube)throw new Error('Emy feeding stage is not visible');
  await page.mouse.move(tube.x+tube.width/2,tube.y+tube.height*.35);
  await page.mouse.down();
- await page.mouse.move(stage.x+stage.width*.49,stage.y+stage.height*.375,{steps:12});
+ await page.mouse.move(stage.x+stage.width*.485,stage.y+stage.height*.46,{steps:12});
  await page.waitForFunction(()=>Number(document.querySelector('.emy-feeding')?.dataset.progress)>=100,null,{timeout:60000});
  await page.mouse.up();
  await panel.waitFor({state:'hidden',timeout:6000});
