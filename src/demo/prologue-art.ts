@@ -2,7 +2,8 @@ import type Phaser from 'phaser';
 
 // Luis y Louis son personas DISTINTAS en el rescate: el novio tiene pelo oscuro,
 // gafas y tatuaje en el brazo izquierdo; Louis lleva otro sprite (Corazones).
-// Este arte es pixel art ORIGINAL 48x64, reutilizable en todas las escenas,
+// Luis sigue la referencia de la pareja: flequillo negro, gafas y camiseta verde.
+// Este arte es pixel art 48x64, reutilizable en todas las escenas,
 // sin imágenes ajenas, red ni spritesheets grandes en memoria.
 export type ProloguePerson='luis'|'louis';
 export type LuisFacing='down'|'right'|'up';
@@ -16,9 +17,9 @@ type Palette={
  top:string;topShade:string;pants:string;pantsLight:string;glass:string;eye:string;
 };
 const LUIS:Palette={
- ink:'#342b41',skin:'#e9b48f',skinLight:'#fbd4af',skinShade:'#ca8f76',
- hair:'#242536',hairLight:'#414354',top:'#30364b',topShade:'#1d2538',
- pants:'#4d5878',pantsLight:'#67738d',glass:'#22253a',eye:'#634537'
+ ink:'#25252d',skin:'#e9b48f',skinLight:'#fbd4af',skinShade:'#ca8f76',
+ hair:'#202126',hairLight:'#37383d',top:'#659c48',topShade:'#416d35',
+ pants:'#262b31',pantsLight:'#3b4146',glass:'#22253a',eye:'#342c2c'
 };
 const INK=LUIS.ink;
 export function luisTextureKey(facing:LuisFacing,pose:LuisPose,frame:number){
@@ -72,29 +73,22 @@ export function paintLuisChibi(
  b(15,bodyY+2,19,16,p.top);
  b(15,bodyY+11,19,5,p.topShade);
  b(16,bodyY+17,18,2,'#222a3d');
- if(pose==='idle'&&frameIndex===1)b(16,bodyY+5,2,4,'#606982');
+ if(pose==='idle'&&frameIndex===1)b(16,bodyY+5,2,4,'#7dac58');
  b(20,bodyY,8,3,p.skinShade);
  b(21,bodyY-2,6,5,p.skin);
- if(!back){
-  b(16,bodyY+3,3,7,'#5d6578');
-  b(29,bodyY+3,3,7,'#5d6578');
-  b(17,bodyY+3,2,5,p.skinLight);
-  b(30,bodyY+3,2,5,p.skinLight);
-  // Little stitched pink heart on the boyfriend's charcoal vest.
-  if(pose==='idle'&&frameIndex===1)b(18,bodyY+6,2,4,'#646e85');
-  b(21,bodyY+8,3,2,'#f19bb5');b(25,bodyY+8,3,2,'#f19bb5');
-  b(22,bodyY+10,5,3,'#dc7899');b(23,bodyY+13,3,2,'#e8a0b5');
- }else{
-  b(19,bodyY+4,2,12,'#50546a');b(27,bodyY+4,2,12,'#50546a');
-  b(19,bodyY+15,10,2,'#3c4057');
- }
+ // Plain green short-sleeved shirt, matching Luis on the reference card.
+ b(9,bodyY+1,8,7,INK);b(10,bodyY+2,6,5,p.top);
+ b(33,bodyY+1,8,7,INK);b(34,bodyY+2,6,5,p.top);
+ b(17,bodyY+3,2,11,p.top);
+ if(back)b(19,bodyY+3,12,2,p.topShade);
+ else{b(20,bodyY+2,9,2,p.topShade);b(22,bodyY+2,5,1,p.skin);}
  // Anatomical left is viewer RIGHT when facing front; on the back it swaps.
  const tattooOnRight=!back,armLeftX=7+armSwing,armRightX=36-armSwing;
- const armY=bodyY+1;
+ const armY=bodyY+7;
  for(const [x,inkArm] of [[armLeftX,!tattooOnRight],[armRightX,tattooOnRight]] as const){
   const raised=waveUp&&x===armRightX&&!back;
   const ay=raised?bodyY-16:armY;
-  const hh=raised?20:17;
+  const hh=raised?20:11;
   b(x-1,ay-1,9,hh+3,INK);
   b(x,ay,7,hh+1,p.skin);
   b(x+1,ay+1,3,Math.max(3,hh-7),p.skinLight);
@@ -102,13 +96,11 @@ export function paintLuisChibi(
   if(raised){b(x-1,ay-6,9,7,INK);b(x,ay-5,7,5,p.skinLight);}
   if(inkArm){
    // Pixel-ink rose and vine, not a generic dark rectangle tattoo.
-   const mid=ay+6;
-   b(x+2,mid,3,2,'#46465d');
-   b(x+1,mid+3,5,2,'#5a5364');
-   b(x+3,mid+5,2,4,'#4d4b60');
-   b(x+1,mid+8,3,2,'#4d4b60');
-   b(x+5,mid+10,2,3,'#5d5066');
-   b(x+3,mid-2,2,2,'#574c60');
+   const mid=ay+(raised?6:2);
+   b(x+2,mid,3,2,'#46465d');b(x+1,mid+2,4,2,'#5a5364');
+   b(x+3,mid+4,2,3,'#4d4b60');
+   if(raised){b(x+1,mid+8,3,2,'#4d4b60');b(x+5,mid+10,2,3,'#5d5066');}
+
   }
  }
  // Hair/face have a much bigger chibi head, rounded pixel silhouette and
@@ -150,7 +142,7 @@ export function paintLuisChibi(
    if(blink){
     b(17,hy+21,6,2,p.eye);b(30,hy+21,6,2,p.eye);
    }else{
-    b(19,hy+19,3,5,p.eye);b(31,hy+19,3,5,p.eye);
+    b(18,hy+18,5,7,p.eye);b(30,hy+18,5,7,p.eye);
     b(20,hy+19,1,2,'#241f35');b(32,hy+19,1,2,'#241f35');
     b(18,hy+19,2,1,'#fffefd');b(30,hy+19,2,1,'#fffefd');
    }
@@ -159,16 +151,17 @@ export function paintLuisChibi(
    b(24,hy+25,2,2,p.skinShade);
    if(mouthOpen){b(22,hy+28,7,frameIndex===2?3:4,'#82495a');b(24,hy+30,3,1,'#edabb0');}
    else{b(22,hy+28,7,1,'#925c62');b(24,hy+29,4,1,'#d18886');}
-   b(14,hy+17,12,2,p.glass);b(27,hy+17,11,2,p.glass);
+   b(16,hy+17,8,2,p.glass);b(29,hy+17,7,2,p.glass);
    b(14,hy+18,2,9,p.glass);b(24,hy+18,2,9,p.glass);
    b(27,hy+18,2,9,p.glass);b(36,hy+18,2,9,p.glass);
    b(16,hy+26,8,2,p.glass);b(29,hy+26,7,2,p.glass);
+   b(15,hy+25,2,2,p.glass);b(35,hy+25,2,2,p.glass);
    b(25,hy+20,3,2,p.glass);
    b(12,hy+20,2,2,p.glass);b(38,hy+20,3,2,p.glass);
-   b(16,hy+18,4,1,'#fff7ed');b(29,hy+18,4,1,'#fff7ed');
+   b(17,hy+19,1,1,'#fff7ed');b(30,hy+19,1,1,'#fff7ed');
   }
  }
- // Layered swept undercut: silhouette remains consistent in all 4 poses,
+ // Rounded black hair with long, separated bangs from the reference;
  // while the shine and fringe read correctly at 48px resolution.
  b(12,hy+4,28,10,INK);
  b(14,hy+1,23,10,p.hair);
@@ -176,11 +169,12 @@ export function paintLuisChibi(
  b(11,hy+14,7,8,p.hair);
  b(36,hy+12,5,8,p.hair);
  b(16,hy,19,5,p.hair);
- b(17,hy+2,13,3,p.hairLight);
+ b(17,hy+2,13,2,p.hairLight);
  b(14,hy+7,9,3,p.hairLight);
  b(23,hy+9,13,4,p.hair);
  b(19,hy+12,11,5,p.hair);
- b(28,hy+14,5,3,p.hairLight);
+ b(17,hy+12,4,8,p.hair);b(25,hy+12,4,7,p.hair);
+ b(32,hy+11,4,8,p.hair);b(28,hy+14,3,2,p.hairLight);
  b(12,hy+15,4,6,'#222434');
  if(side){
   b(11,hy+9,20,5,p.hair);

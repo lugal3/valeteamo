@@ -38,25 +38,40 @@ export function installRescueIntroArt(scene:Phaser.Scene){
   });
  }
 
- // Vale uses an original, editable chibi placeholder while personal references are pending.
+ // Vale matches the reference card: long black hair, red top and dark trousers.
+ // Keep the same texture keys, four-frame timing and foot anchor for the couple.
  for(const walking of [false,true])for(let frame=0;frame<4;frame++){
   sprite(valeTexture(walking,frame),43,58,b=>{
-   const ink='#513650',hair='#624158',skin='#eeac89',light='#ffd7b0',dress='#658a88';
+   const ink='#25252d',hair='#202126',shine='#37383d',skin='#e9b48f',light='#fbd4af',top='#b93d51';
    const bob=frame===1||frame===3?1:0,step=walking?[2,0,-2,0][frame]:0;
+   // Long hair behind the shoulders, with rounded ends.
+   b(7,13+bob,29,30,ink);b(5,24+bob,33,15,ink);
+   b(8,15+bob,27,27,hair);b(7,36+bob,9,8,hair);b(28,36+bob,8,8,hair);
+   b(8,25+bob,2,12,shine);b(33,24+bob,2,13,shine);
+   // Dark pants and little black shoes, feet stay inside the existing frame.
    b(12,43+step,8,11,ink);b(23,43-step,8,11,ink);
-   b(13,43+step,6,7,skin);b(24,43-step,6,7,skin);
-   b(13,50+step,7,3,'#df8fa9');b(24,50-step,7,3,'#df8fa9');
-   b(12,30+bob,19,13,ink);b(9,39+bob,25,9,ink);
-   b(14,30+bob,15,12,dress);b(11,40+bob,21,6,dress);b(12,43+bob,19,2,'#a4bbaa');
-   b(8,32+bob,6,12,ink);b(29,32+bob,7,12,ink);
-   b(9,33+bob,4,8,skin);b(30,33+bob,5,9,skin);
-   b(34,40+bob,4,4,light);
-   b(10,7+bob,23,23,ink);b(7,12+bob,29,22,ink);b(8,11+bob,27,21,hair);
-   b(12,13+bob,19,17,skin);b(14,15+bob,15,13,light);
-   b(10,9+bob,22,6,hair);b(12,13+bob,7,4,hair);b(28,13+bob,4,7,hair);
-   b(16,20+bob,2,frame===2&&!walking?1:3,ink);b(25,20+bob,2,frame===2&&!walking?1:3,ink);
-   b(14,24+bob,3,2,'#f6a49e');b(27,24+bob,3,2,'#f6a49e');b(20,25+bob,3,1,'#aa5d69');
-   b(29,10+bob,4,5,'#e791a8');b(28,12+bob,6,2,'#ffe0bd');
+   b(13,44+step,6,7,'#30333a');b(24,44-step,6,7,'#30333a');
+   b(11,51+step,10,3,'#1c2026');b(23,51-step,10,3,'#1c2026');
+   b(12,30+bob,19,16,ink);b(14,31+bob,15,13,top);
+   b(14,41+bob,15,3,'#8f2e43');
+   b(18,29+bob,7,5,skin);b(18,33+bob,7,1,'#782a3b');
+   b(9,32+bob,5,12,ink);b(29,32+bob,5,12,ink);
+   b(10,33+bob,3,10,skin);b(30,33+bob,3,10,skin);
+   b(11,34+bob,2,6,light);b(30,34+bob,2,6,light);
+   // Oversized chibi head and big dark eyes.
+   b(10,5+bob,23,26,ink);b(7,10+bob,29,17,ink);
+   b(11,11+bob,21,18,skin);b(13,15+bob,17,13,light);
+   b(16,28+bob,12,2,skin);
+   const blink=frame===2&&!walking;
+   b(14,19+bob,5,blink?1:6,ink);b(25,19+bob,5,blink?1:6,ink);
+   if(!blink){b(15,19+bob,2,2,'#fff8ef');b(26,19+bob,2,2,'#fff8ef');}
+   b(12,25+bob,4,2,'#efa0a0');b(29,25+bob,3,2,'#efa0a0');
+   b(19,26+bob,6,1,'#925c62');b(20,27+bob,4,1,'#925c62');
+   // Black fringe, no bow or hair accessory in the supplied reference.
+   b(11,4+bob,21,10,hair);b(8,9+bob,27,8,hair);
+   b(14,3+bob,15,3,hair);b(13,6+bob,15,2,shine);
+   b(9,14+bob,5,9,hair);b(14,13+bob,4,6,hair);
+   b(20,13+bob,4,5,hair);b(27,13+bob,5,8,hair);
   });
  }
 }
