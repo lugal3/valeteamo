@@ -1,3 +1,4 @@
+import {emySurface,emyTailSurface,writeEmySurface} from './emy-surface.js';
 import {createPose,createRigBinding,evaluateRig,JOINT_INDEX} from './character-rig.js';
 import {sampleBlink} from './animations/face.js';
 import {facetSurface,smoothSurface,torusSurface,roundedBoxSurface} from './chibi-geometry.js';
@@ -235,6 +236,13 @@ export function geometry(boxes){
     }
    }
    rotateMesh();continue;
+  }
+  if(box.emySpec){
+   const mesh=box.emySpec.form==='tail'?(box.emyTailMesh||emyTailSurface()):emySurface(box);
+   const posed=new Float32Array(mesh.vertices.length);writeEmySurface(posed,0,box);
+   vertices.push(...posed);for(const i of mesh.indices)indices.push(offset+i);
+   groups.push({start:offset,end:offset+posed.length/16,joint:'emy'});offset+=posed.length/16;
+   range.end=vertices.length;range.indexEnd=indices.length;continue;
   }
   if(box.shape==='lois-face'){
     const mesh=loisFaceSurface(box,color,style);
@@ -487,6 +495,7 @@ export class HouseRenderer {
   const gl=this.gl;
   gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamicVbo);
   const reduced=motion.reduced||false;
+  this.dynamicRigKeys ||= [];
   const rigCache=new Map(); // once per character each frame, never once per limb
   const shadowedRigs=new Set();
   // Adjacent rigid parts share one GPU upload instead of ~60 tiny calls.
@@ -503,6 +512,19 @@ export class HouseRenderer {
   for(let i=0;i<this.dynamicBoxes.length;i++){
    if(!this.dynamicVisible[i])continue;
    const box=this.dynamicBoxes[i],source=box.source;
+   if(box.emySpec){
+    // Emy alone uses scale-aware anatomical parts and a continuous tail.
+    // Batched with neighboring rig parts; other characters keep their path.
+    const signature=(box.emyRevision||0)+':'+(box.emyTailRevision||0);
+    if(this.dynamicRigKeys[i]===signature)continue;
+    this.dynamicRigKeys[i]=signature;
+    const {start,end}=this.dynamicRanges[i];
+    writeEmySurface(this.dynamicVertices,start,box);
+    if(rigStart<0)rigStart=start;rigEnd=end;
+    this.lightPose='';
+    for(const lamp of this.fixtures)if(Math.hypot(lamp.x-box.x,lamp.y-box.y,lamp.z-box.z)<LAMP_REACH+1)this.dirtyLampShadows.add(lamp);
+    continue;
+   }
    // The PS2 option-B Lois uses a parented rigid rig. The legacy fallback
    // retains the original louisPartPose path below, unchanged.
    if(source?.kind==='louis-companion'&&box.rigBone){

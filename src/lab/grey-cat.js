@@ -1,4 +1,4 @@
-import {installEmyModel} from './emy-cat.js';
+import {installEmyModel,poseEmy} from './emy-cat.js';
 const APPROACH_SECONDS=1.3;
 const smooth=t=>t*t*(3-2*t);
 
@@ -25,14 +25,5 @@ export function moveGreyCat(cat,delta,leaving,reduced){
  cat.z=13.72+1.68*smooth(escape);
  cat.yaw=Math.PI/2+Math.PI/2*turning-Math.PI*smooth(Math.min(1,escape*4));
  const walking=approach<1||escape>0&&escape<1;
- const step=(approach*1.3+escape*1.68)*26,activeMotion=Number(walking&&!reduced);
- const sway=reduced?0:Math.sin(cat.age*4),bob=activeMotion*Math.abs(Math.sin(step))*.022;
- const cos=Math.cos(cat.yaw),sin=Math.sin(cat.yaw);
- for(const {box,x,y,z,roll} of cat.parts){
-  const paw=box.pawPhase?Math.sin(step)*box.pawPhase*activeMotion:0;
-  const side=x+(box.tail?sway*.027*box.tail:0),front=z+paw*.055;
-  box.x=cat.x+side*cos+front*sin;box.z=cat.z-side*sin+front*cos;
-  box.y=y+(box.pawPhase?Math.max(0,paw)*.052:bob);
-  box.yaw=-cat.yaw;box.roll=roll+(box.tail?sway*.15:0);
- }
+ poseEmy(cat,{walking,reduced,mode:walking?'walk':'idle',phase:cat.age});
 }
