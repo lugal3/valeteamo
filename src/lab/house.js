@@ -31,6 +31,7 @@ import {updateWallClock} from './wall-clock.js';
 import {animateFurniture,updateFurniture,sweepClear} from './furniture-motion.js';
 import {BATTERY_SWAP_SECONDS} from './viewmodel.js';
 import {moveGreyCat,revealGreyCat} from './grey-cat.js';
+import {updateUpstairsEmy,petEmy} from './emy-cat.js';
 import {createRC,syncRCObject,deployRC,driveRC,beepRC,updateRC,stopRC,crashRC,recoverRC,rcCamera,rcDeploymentView,canTrapPursuer} from './rc-car.js';
 import {createLouisEscape,updateLouisEscape,freeLouis,louisCamera} from './louis-escape.js';
 import {createLoisShotDirector,advanceLoisShot,finishLoisShot} from './lois-ps2-cinematics.js';
@@ -379,7 +380,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const now=performance.now();if(now-lastInteraction<260)return;lastInteraction=now;handAction=1;
   if(s.hidden||s.lying){exitPose();return;}
   const o=closestObject(world,s,focus);if(!o){say('Acércate a un objeto y míralo para interactuar');return;}
-  if(o.kind==='light-switch'){
+  if(o.kind==='emy-cat'){
+   if(petEmy(world.emy)){play('cat',o,.45);say('Emy ronronea y levanta su patita ♡',3);}
+  }else if(o.kind==='light-switch'){
    const on=toggleCircuit(o.circuit);play('click',o);
    say(on===null?'Sin corriente · revisa el interruptor general':on?'Luz encendida':'Luz apagada');
   }else if(o.kind==='power-switch'){
@@ -1054,6 +1057,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   updateHiding(dt);
   updateStory(shotDelta);
   if(captureShot){renderCapture(shotDelta);return;}
+  if(!isSuspended()){
+   const wasHidden=world.emy.hidden;
+   updateUpstairsEmy(world.emy,shotDelta,{player:s,reduced:reducedMotion.matches,
+    hidden:world.greyCat.active,blocked:(x,y,z,r,h)=>blocked(world.boxes,x,y,z,r,h)});
+   const cat=world.emy,target=world.emyInteraction;
+   Object.assign(target,{x:cat.x,y:cat.y+.38,z:cat.z,interactable:!cat.hidden});
+   if(wasHidden!==cat.hidden)renderer.updateVisibility();
+  }
   const greyCat=world.greyCat;
   if(!isSuspended()&&greyCat.active){
    moveGreyCat(greyCat,shotDelta,!!finalCutscene,reducedMotion.matches);
@@ -1468,6 +1479,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    story:()=>({pursuer:pursuer.snapshot(),samples:{loaded:sound.recordings?.buffers.size||0,played:sound.recordings?.played||0,last:sound.recordings?.lastPlayed,errors:sound.recordings?.errors||[]},phase:events.phase,time:events.time,remaining:events.remaining,messages:events.messages.map(m=>({...m})),equipment,phoneOpen:phone.open,hud:{...phone.layout,rect:phone.rect,editing:phone.editing},floorSounds:{steps:floorSounds.steps,triggers:floorSounds.triggers},audio:{lastEffect:sound.lastEffect,effects:sound.effectCount||0,voices:sound.foleyVoices?.size||0}}),
    rc:()=>({mode:rc.mode,elapsed:rc.elapsed,position:{x:rc.x,y:rc.y,z:rc.z,yaw:rc.yaw},noise:rc.noise,crashes:rc.crashes,inventory:!!s.inventory.rc,trap:{...rcTrap},pursuer:{x:pursuer.x,y:pursuer.y,z:pursuer.z,mode:pursuer.mode}}),
    louis:()=>louis?{x:louis.x,y:louis.y,z:louis.z,phase:louis.phase,waypoint:louis.waypoint,age:louis.age,walk:louis.walk,speed:louis.speed,crouch:louis.crouch,reaction:louis.visualReaction?.type??null,cameraPhase:loisShotDirector?.phase??null}:null,
+   emy:()=>({x:world.emy.x,y:world.emy.y,z:world.emy.z,phase:world.emy.phase,reaction:world.emy.reaction,hidden:world.emy.hidden}),
    greyCat:()=>({active:world.greyCat.active,x:world.greyCat.x,z:world.greyCat.z,called:world.greyCat.called}),
    // DEV-only route harness for deterministic test setup; not in the production build.
    placeRC:(pose)=>{if(rc.mode!=='driving')throw Error('RC must be deployed first');const y=groundHeight(pose.x,pose.z,pose.y??rc.y,world.hatch?.amount>.92);if(!Number.isFinite(y)||blocked(world.boxes,pose.x,y,pose.z,.155,.38))throw Error('Blocked RC test position');rc.x=pose.x;rc.y=y;rc.z=pose.z;rc.yaw=pose.yaw??rc.yaw;rc.noise=0;syncRCObject(rc);return {x:rc.x,y:rc.y,z:rc.z};},

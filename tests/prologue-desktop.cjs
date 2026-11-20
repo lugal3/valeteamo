@@ -47,9 +47,9 @@ async function verifyDesktop(){
   await page.keyboard.press('e',{delay:90});
   await page.locator('.story-prologue[data-prologue-stage="feed-cat"]').waitFor();
   await teleport();
-  await page.getByRole('button',{name:/Alimentar a la gata gris/}).waitFor();
+  await page.getByRole('button',{name:/Alimentar a Emy/}).waitFor();
   await page.keyboard.press('e',{delay:90});
-  await page.getByRole('button',{name:'Ofrecer Churu',exact:true}).press('Enter');
+  await require('./helpers/feed-emy.cjs')(page);
   await page.locator('.story-prologue[data-fed-grey-cat="true"]').waitFor();
   await page.evaluate(()=>window.__valePrologue.exit());
   await page.locator('.story-prologue[data-transition="out"]').waitFor({timeout:6000});

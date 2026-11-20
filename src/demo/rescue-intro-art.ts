@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 
 export const CHURU_TEXTURE='rescue-churu';
-export const greyCatTexture=(pose:'idle'|'eat'|'walk',frame:number)=>`rescue-grey-cat-${pose}-${frame%2}`;
+export const greyCatTexture=(pose:'idle'|'eat'|'walk'|'love'|'love-walk',frame:number)=>`rescue-grey-cat-${pose}-${frame%4}`;
 export const valeTexture=(walking:boolean,frame:number)=>`rescue-vale-${walking?'walk':'idle'}-${frame%4}`;
 
 export function installRescueIntroArt(scene:Phaser.Scene){
@@ -23,20 +23,41 @@ export function installRescueIntroArt(scene:Phaser.Scene){
   b(11,16,2,2,'#78465d');b(16,16,2,2,'#78465d');b(11,25,8,2,'#ffdbe0');
  });
 
- for(const pose of ['idle','eat','walk'] as const)for(const frame of [0,1]){
-  sprite(greyCatTexture(pose,frame),42,31,b=>{
-   const ink='#3e3b53',fur='#9295aa',shade='#666982',bright='#c3c6d6';
-   const nod=pose==='eat'?3+frame:0,step=pose==='walk'?frame*2:0;
-   b(31,10-frame*2,5,12,ink);b(35,7-frame*2,5,8,ink);b(35,9-frame*2,3,6,shade);
-   b(15,12,17,13,ink);b(17,11,13,13,fur);b(20,15,11,8,shade);b(20,12,8,4,bright);
-   b(12+step,21,6,7,ink);b(25-step,21,7,7,ink);b(13+step,23,4,4,bright);b(26-step,23,5,4,fur);
-   b(5,9+nod,16,15,ink);b(7,10+nod,12,12,fur);b(7,17+nod,11,5,bright);
-   b(6,5+nod,4,7,ink);b(16,5+nod,4,7,ink);b(7,7+nod,2,4,'#daa9ba');b(17,7+nod,2,4,'#daa9ba');
-   b(8,14+nod,2,pose==='eat'?1:3,ink);b(15,14+nod,2,pose==='eat'?1:3,ink);
-   b(11,18+nod,3,2,'#9d617a');b(4,19+nod,4,1,bright);
-   if(pose==='eat'){b(0,26,11,3,'#c55379');b(1,25,7,2,'#ffd2db');}
+ // Emy: long silver fur, pale chest ruff, green eyes and a large plume tail.
+ for(const pose of ['idle','eat','walk','love','love-walk'] as const)for(let frame=0;frame<4;frame++){
+  sprite(greyCatTexture(pose,frame),64,48,b=>{
+   const ink='#44464c',fur='#85878a',shade='#62666d',bright='#b8bab7',ruff='#d2d0c5';
+   const love=pose.startsWith('love'),walk=pose.includes('walk'),step=walk?[0,2,0,-2][frame]:0;
+   const blink=pose==='idle'&&frame===3,nod=pose==='eat'?frame%2:0;
+   // Raised bushy tail behind the body, visibly thicker than a shorthair cat.
+   b(45,18,12,20,ink);b(50,9+frame%2,9,20,ink);b(53,5+frame%2,6,15,ink);
+   b(48,18,7,16,fur);b(53,10+frame%2,4,17,bright);b(52,7,4,8,fur);
+   b(23,22,28,19,ink);b(25,23,24,16,fur);b(30,26,16,12,shade);
+   b(27+step,36,8,9,ink);b(42-step,35,8,10,ink);
+   b(28+step,39,7,5,bright);b(43-step,38,6,6,fur);
+   b(15,24+nod,19,19,bright);b(18,25+nod,13,19,ruff);
+   b(13,29+nod,7,8,bright);b(27,31+nod,8,7,bright);b(19,41,5,4,bright);
+   // Pointed tufted ears and fluffy cheeks around a dark tabby forehead.
+   b(9,9+nod,26,23,ink);b(6,20+nod,31,9,ink);
+   b(10,3+nod,6,13,ink);b(27,2+nod,6,13,ink);
+   b(11,6+nod,4,9,'#b08b88');b(28,5+nod,3,9,'#b08b88');
+   b(11,11+nod,22,17,fur);b(8,23+nod,27,7,bright);
+   b(14,12+nod,4,5,shade);b(20,13+nod,4,4,shade);b(26,11+nod,3,6,shade);
+   for(const x of [12,26]){
+    if(love){b(x,19+nod,2,2,'#e2759a');b(x+3,19+nod,2,2,'#e2759a');b(x,21+nod,5,2,'#e2759a');b(x+1,23+nod,3,1,'#e2759a');}
+    else{b(x,19+nod,5,blink?1:5,ink);if(!blink){b(x+1,20+nod,3,3,'#b3c280');b(x+2,19+nod,1,4,'#30373b');b(x+1,19+nod,1,1,'#f2efcf');}}
+   }
+   b(20,24+nod,4,2,'#bd8c7e');b(21,26+nod,2,1,ink);
+   b(17,28+nod,10,1,shade);
+   if(pose==='eat'){b(20,28+nod,4,3,'#e6a3ab');b(20,29+nod,4,1,'#f2bcc0');}
+   b(4,25+nod,9,1,'#e4e1d5');b(3,28+nod,10,1,'#e4e1d5');
+   b(32,25+nod,9,1,'#e4e1d5');b(32,28+nod,10,1,'#e4e1d5');
   });
  }
+ sprite('emy-kitty-wave',18,22,b=>{
+  b(4,3,10,16,'#ad99a9');b(2,7,14,10,'#ad99a9');
+  b(5,4,8,14,'#fff8ed');b(3,8,12,8,'#fff8ed');b(4,16,10,3,'#e6d3de');
+ });
 
  // Vale matches the reference card: long black hair, red top and dark trousers.
  // Keep the same texture keys, four-frame timing and foot anchor for the couple.

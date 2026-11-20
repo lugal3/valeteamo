@@ -1,29 +1,9 @@
+import {installEmyModel} from './emy-cat.js';
 const APPROACH_SECONDS=1.3;
-const FUR=[.48,.50,.59],SHADE=[.30,.32,.40],LIGHT=[.72,.74,.81],EAR=[.75,.49,.59];
 const smooth=t=>t*t*(3-2*t);
 
 export function installGreyCat(add){
- const parts=[];
- const part=(id,x,y,z,w,h,d,color,extra={})=>{
-  const box=add('grey-cat-'+id,x,y,z,w,h,d,'plaster',false,{
-   shape:'round',segments:8,rings:4,color,hiddenGeometry:true,dynamic:true,...extra
-  });
-  parts.push({box,x,y,z,roll:extra.roll||0});
- };
- part('back',0,.265,-.07,.285,.275,.52,FUR);
- part('chest',0,.26,.12,.26,.26,.28,LIGHT);
- part('head',0,.38,.244,.278,.24,.225,FUR);
- part('snout',0,.325,.339,.19,.101,.094,LIGHT);
- part('nose',0,.353,.383,.050,.029,.024,EAR);
- for(const side of [-1,1]){
-  part('ear'+side,side*.092,.51,.24,.10,.16,.071,SHADE,{shape:'gable',roll:-side*.24});
-  part('inner-ear'+side,side*.092,.505,.275,.066,.102,.020,EAR,{shape:'gable',roll:-side*.24});
-  part('eye'+side,side*.076,.396,.339,.048,.057,.024,[.73,.63,.38]);
-  part('pupil'+side,side*.076,.396,.350,.018,.041,.013,[.13,.125,.17]);
-  for(const end of [-1,1])part('paw'+side+end,side*.091,.109,end>0?.13:-.215,.09,.206,.101,end>0?LIGHT:FUR,{pawPhase:side*end});
- }
- part('tail',0,.288,-.331,.082,.085,.24,SHADE,{tail:1});
- part('tail-tip',0,.373,-.452,.074,.19,.069,FUR,{tail:2});
+ const parts=installEmyModel(add,{prefix:'grey-cat',hidden:true});
  return {parts,age:0,active:false,x:4.64,y:0,z:13.72,yaw:Math.PI/2,exitAt:null,called:false};
 }
 

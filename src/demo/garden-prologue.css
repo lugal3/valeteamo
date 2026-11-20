@@ -211,24 +211,3 @@
  .story-prologue .prologue-interact{transition:none}
  .story-prologue .prologue-interact:active{transform:none}
 }
-
-.prologue-feeding{
- width:min(360px,calc(100% - 32px));margin:auto;padding:18px 20px;
- background:#fff4e7;color:#52384f;border:2px solid #dfabbf;border-radius:16px;
- box-shadow:0 8px 27px #27203b60;
-}
-.prologue-feeding h2{margin:0;font-size:20px;color:#57334d}
-.prologue-feeding p{margin:8px 0 12px;font-size:14px}
-.prologue-feeding-actions{display:flex;flex-wrap:wrap;gap:8px}
-.prologue-feeding-actions button{
- min-height:44px;padding:8px 12px;border:1px solid #b985a5;border-radius:9px;
- background:#fffaf4;color:#56334d;font:700 13px system-ui;cursor:pointer;
-}
-.prologue-feeding-actions button:first-child{background:#744264;color:#fffaf4}
-.prologue-feeding-actions button:focus-visible{outline:2px solid #744264;outline-offset:2px}
-.prologue-feeding-time{
- display:block;width:100%;height:4px;margin-bottom:12px;border-radius:4px;
- background:#b25985;transform-origin:left;animation:prologue-feeding-time linear forwards;
-}
-@keyframes prologue-feeding-time{to{transform:scaleX(0)}}
-@media(prefers-reduced-motion:reduce){.prologue-feeding-time{animation:none}}

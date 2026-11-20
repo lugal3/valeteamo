@@ -76,6 +76,7 @@ export class IsoAdventure extends Phaser.Scene {
  storyObjects:Phaser.GameObjects.GameObject[]=[];
  storyLouis?:StoryActor;storyLuis?:StoryActor;storyVillain?:StoryActor;
  storyVale?:StoryActor;storyHands?:Phaser.GameObjects.Graphics;
+ storyChuru?:StoryActor;storyCatPoint:IsoPoint={...GREY_CAT_POSITION};
  storyCat?:StoryActor;storyFeeding?:{elapsed:number;done:()=>void};
  storyLouisWalk?:{from:{x:number;y:number};to:{x:number;y:number};elapsed:number;duration:number};
  storyAbduction?:{elapsed:number;origin:IsoPoint;phase:AbductionPhase;done:()=>void;
@@ -174,6 +175,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  // La historia conserva los sprites del Corazones original; no recreamos el motor.
  setStoryStage(stage:IsoStoryStage,force=false){
   if(!this.story||(!force&&this.storyStage===stage))return;
+  const previousCat={...this.storyCatPoint};
   const previousLouis=this.storyLouis?.active?
    {x:this.storyLouis.x,y:this.storyLouis.y}:undefined;
   this.storyStage=stage;this.storyStageAt=this.clock;
@@ -188,7 +190,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   for(const light of this.collectibles)light.s.destroy();this.collectibles=[];
   this.dangers=[];this.bursts=[];this.charm=undefined;this.pendingOffer=false;
   this.storyLouis=undefined;this.storyLuis=undefined;this.storyVillain=undefined;
-  this.storyVale=undefined;this.storyHands=undefined;this.storyCat=undefined;this.storyFeeding=undefined;
+  this.storyVale=undefined;this.storyHands=undefined;this.storyCat=undefined;this.storyChuru=undefined;this.storyFeeding=undefined;
   this.storyLouisWalk=undefined;this.storyAbduction=undefined;
   this.storyLuisShadow=undefined;this.storyLuisMotion=undefined;
   this.storyLuisReady=false;this.storyLuisArriving=false;this.storyLuisFarewell=false;
@@ -231,11 +233,14 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    this.storyObjects.push(cloth,tube);
   }
   if(stage==='feed-cat'||(stage==='cat-fed'&&this.storyMap==='morning_garden')){
-   const xy=toScreen(GREY_CAT_POSITION);
+   this.storyCatPoint=stage==='cat-fed'?previousCat:{...GREY_CAT_POSITION};
+   const xy=toScreen(this.storyCatPoint);
    this.storyCat=this.add.image(xy.x,xy.y,greyCatTexture('idle',0)).setOrigin(.5,.9)
-    .setScale(1.12).setDepth(xy.y);
+    .setScale(.95).setDepth(xy.y);
    this.storyObjects.push(this.storyCat);
-   this.story.guide(stage==='feed-cat'?'Cruza el puente. La gata gris espera al otro lado.':'La gata se aleja tranquila. Sigue el sendero hacia el jardín.');
+   this.story.guide(stage==='feed-cat'?'Llevas el Churu en la mano. Emy se acercará al cruzar el puente.':'¡Emy está feliz! Kitty se despide. Sigue el sendero.');
+   this.storyChuru=this.add.image(this.player.x+13,this.player.y-14,stage==='feed-cat'?CHURU_TEXTURE:'emy-kitty-wave').setScale(.48).setDepth(this.player.y+1);
+   this.storyObjects.push(this.storyChuru);
   }
   if(stage==='defend'){
    this.storyLouis=actor('louis',{u:30.1,v:4.85});
@@ -310,7 +315,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  storyInteract(){
   if(!this.story||this.story.locked()||luisMotionIsBlocking(this.storyLuisMotion)||!this.storyNear)return;
   const interactionAt=this.storyVanNear?VAN_NIGHT_POSITION:
-   this.storyStage==='intro'?CHURU_POSITION:this.storyStage==='feed-cat'?GREY_CAT_POSITION:
+   this.storyStage==='intro'?CHURU_POSITION:this.storyStage==='feed-cat'?this.storyCatPoint:
    meetingPoint(this.storyTarget,this.storyStage);
   const foot=toScreen(this.p),target=toScreen(interactionAt);
   this.facing=feelFacingToTarget(target.x-foot.x,target.y-foot.y,this.facing);
@@ -484,7 +489,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  playStoryFeeding(done:()=>void){
   if(!this.storyCat?.active){done();return;}
   this.storyFeeding={elapsed:0,done};
-  this.storyInteractUntil=this.clock+950;
+  this.storyInteractUntil=this.clock+2250;
+  this.storyChuru?.setTexture('emy-kitty-wave');
   this.storyNear='';this.story?.near('');
   this.clearInput();
   if(!this.audio.playSample?.('churu',.12))this.audio.tone(554,.14,.025,'triangle');
@@ -495,8 +501,9 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(this.storyFeeding){
    const feeding=this.storyFeeding;
    feeding.elapsed+=dt;
-   cat.setTexture(greyCatTexture('eat',this.reducedMotion?0:Math.floor(feeding.elapsed/170)));
-   if(feeding.elapsed>=900){
+   cat.setTexture(greyCatTexture('love',this.reducedMotion?0:Math.floor(feeding.elapsed/170)));
+   this.storyChuru?.setPosition(this.player.x+15,this.player.y-26).setScale(.7).setAngle(this.reducedMotion?0:Math.sin(feeding.elapsed/110)*19).setDepth(this.player.y+2);
+   if(feeding.elapsed>=2200){
     this.storyFeeding=undefined;
     feeding.done();
     if(!this.audio.playSample?.('cat',.14))this.audio.tone(784,.19,.03,'triangle');
@@ -506,11 +513,24 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const elapsed=this.clock-this.storyStageAt,frame=this.reducedMotion?0:Math.floor(elapsed/280);
   if(this.storyStage==='cat-fed'){
    const distance=Math.min(1,Math.max(0,(elapsed-450)/2300));
-   const start=GREY_CAT_POSITION;
-   const xy=toScreen(constrainRescue({u:start.u+.7*distance,v:start.v+2.5*distance},this.storyMap));
+   const start=this.storyCatPoint;
+   const xy=toScreen(constrainRescue({u:start.u+4.5*distance,v:start.v-.65*distance},this.storyMap));
    cat.setPosition(xy.x,xy.y).setDepth(xy.y).setAlpha(Math.min(1,(1-distance)*5))
-    .setTexture(greyCatTexture(distance>0?'walk':'idle',frame));
-  }else cat.setTexture(greyCatTexture('idle',frame));
+    .setTexture(greyCatTexture(distance>0?'love-walk':'love',frame));
+   this.storyChuru?.setPosition(this.player.x+15,this.player.y-26).setAngle(this.reducedMotion?0:Math.sin(elapsed/110)*19).setDepth(this.player.y+2).setVisible(elapsed<1700);
+  }else{
+   // Only approach on the same bank: Emy never crosses the water/bridge.
+   const close=this.p.u>16.1&&isoDistance(this.p,this.storyCatPoint)<4;
+   const target=constrainRescue({u:this.p.u+.65,v:this.p.v+.25},this.storyMap);
+   const dist=isoDistance(target,this.storyCatPoint),step=close?Math.min(dist,dt*.0015):0;
+   if(dist>1e-5&&step>0){
+    this.storyCatPoint={u:this.storyCatPoint.u+(target.u-this.storyCatPoint.u)*step/dist,v:this.storyCatPoint.v+(target.v-this.storyCatPoint.v)*step/dist};
+   }
+   const xy=toScreen(this.storyCatPoint);
+   cat.setPosition(xy.x,xy.y).setDepth(xy.y).setFlipX(xy.x<this.player.x).setTexture(greyCatTexture(step>.005?'walk':'idle',frame));
+   this.storyTarget={...this.storyCatPoint};
+   this.storyChuru?.setPosition(this.player.x+(this.facing==='left'?-13:13),this.player.y-14).setDepth(this.player.y+1).setAngle(this.facing==='left'?-15:15);
+  }
  }
  playStoryAbduction(done:()=>void){
   // La furgoneta llega, los captores bajan con máscaras, sujetan a Louis,
@@ -671,7 +691,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(meeting&&!this.storyLuisReady&&!this.storyLuisArriving&&
    isoDistance(this.p,this.storyTarget)<LUIS_BEATS.approachRadius)this.startLuisArrival();
   const labels:Partial<Record<IsoStoryStage,string>>={
-   intro:'Recoger Churu','feed-cat':'Alimentar a la gata gris','meet-couple':'Saludar a Luis y Vale',
+   intro:'Recoger Churu','feed-cat':'Alimentar a Emy','meet-couple':'Saludar a Luis y Vale',
    'talk-louis':'Hablar con Louis','talk-luis':'Hablar con Luis',
    ribbon:'Examinar Pulsera',petals:'Examinar Pétalos',wheel:'Examinar Huellas',
    door:'Probar puerta',window:'Entrar por la ventana'

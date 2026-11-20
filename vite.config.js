@@ -8,7 +8,8 @@ export default defineConfig({
   rollupOptions:{
    input:{
     app:resolve(process.cwd(),'index.html'),
-    loisPreview:resolve(process.cwd(),'lois-preview.html')
+    loisPreview:resolve(process.cwd(),'lois-preview.html'),
+    emyPreview:resolve(process.cwd(),'emy-preview.html')
    }
   }
  }

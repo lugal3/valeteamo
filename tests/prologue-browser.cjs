@@ -168,15 +168,14 @@ async function play(){
   await page.getByRole('button',{name:/Recoger Churu/}).tap();
   await game.locator('xpath=self::*[@data-prologue-stage="feed-cat"]').waitFor();
   await teleport();
-  await page.getByRole('button',{name:/Alimentar a la gata gris/}).tap();
-  const feeding=page.getByRole('dialog',{name:'Alimentar a la gata gris'});
-  await feeding.getByRole('button',{name:'Intentar otra vez'}).waitFor({timeout:11000});
+  await page.getByRole('button',{name:/Alimentar a Emy/}).tap();
+  const feeding=page.getByRole('dialog',{name:'Un Churu para Emy',exact:true});
+  await feeding.waitFor();
   assert.equal(await game.getAttribute('data-fed-grey-cat'),'false');
-  await feeding.getByRole('button',{name:'Intentar otra vez'}).tap();
-  await feeding.getByRole('button',{name:'Ofrecer Churu'}).tap();
-  await page.waitForFunction(()=>window.__valePrologue.scene().storyCat?.texture.key.includes('-eat-'));
-  await page.screenshot({path:'artifacts/story-gata-gris.png'});
-  await game.locator('xpath=self::*[@data-prologue-stage="cat-fed"]').waitFor();
+  await feeding.getByRole('button',{name:'Volver al jardín'}).click();
+  await page.getByRole('button',{name:/Alimentar a Emy/}).click();
+  await require('./helpers/feed-emy.cjs')(page);
+  await game.locator('xpath=self::*[@data-prologue-stage="cat-fed"]').waitFor({timeout:8000});
   assert.equal(await game.getAttribute('data-fed-grey-cat'),'true');
   // After feeding, reaching the luminous exit triggers the full-screen fade.
   await page.evaluate(()=>window.__valePrologue.exit());
