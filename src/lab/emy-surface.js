@@ -40,7 +40,9 @@ export function emySurface(box){
    // Broad ear root, convex shell and tapered rounded tip, no roof prisms.
    const radius=Math.pow(Math.sin(Math.PI*v),.65)*(1-.65*v);
    p=[Math.cos(a)*radius*s.w*.72,(v-.5)*s.h,Math.sin(a)*radius*s.d*.70];
-   normal=norm([Math.cos(a)/s.w,.25/s.h,Math.sin(a)/s.d]);
+   const radiusAt=t=>Math.pow(Math.max(0,Math.sin(Math.PI*t)),.65)*(1-.65*t);
+   const slope=(radiusAt(Math.min(1,v+.0001))-radiusAt(Math.max(0,v-.0001)))/.0002;
+   normal=norm([Math.cos(a)/(s.w*.72),-slope/s.h,Math.sin(a)/(s.d*.70)]);
    if(s.form==='lock'){p[1]*=-1;normal[1]*=-1;}
   }
   if(s.form==='almond'){p[1]*=1-.50*Math.abs(p[0]*2/s.w);}
@@ -54,7 +56,7 @@ export function emySurface(box){
   const c=tint(p,s.color,s);
   vertices.push(...p,...c,...normal,u,v,0,64,-Math.sin(a),0,Math.cos(a));
  }
- for(let y=0;y<r;y++)for(let x=0;x<n;x++){const a=y*(n+1)+x,b=a+1,c=a+n+2,d=a+n+1;indices.push(a,b,c,a,c,d);}
+ for(let y=0;y<r;y++)for(let x=0;x<n;x++){const a=y*(n+1)+x,b=a+1,c=a+n+2,d=a+n+1;if(s.form==='lock')indices.push(a,c,b,a,d,c);else indices.push(a,b,c,a,c,d);}
  box.emyMesh={vertices:new Float32Array(vertices),indices};return box.emyMesh;
 }
 export function rotateEmy(v,rx=0,ry=0,rz=0){
@@ -79,7 +81,7 @@ export function emyTailSurface(mode='walk',phase=0){
  for(let i=0;i<=rings;i++){
   const t=i/rings,p=tailPoint(t,mode,phase),a=tailPoint(Math.max(0,t-.001),mode,phase),b=tailPoint(Math.min(1,t+.001),mode,phase),dir=norm(b.map((v,k)=>v-a[k]));
   const right=norm([dir[2],0,-dir[0]]),up=norm([dir[1]*right[2],dir[2]*right[0]-dir[0]*right[2],-dir[1]*right[0]]);
-  const radius=.065*Math.pow(Math.sin(Math.PI*(.11+.88*t)),.55)+.004;
+  const radius=t===1?.00001:.065*Math.pow(Math.sin(Math.PI*(.11+.88*t)),.55)+.004;
   for(let j=0;j<=sides;j++){
    const u=j/sides,angle=u*Math.PI*2,normal=right.map((v,k)=>v*Math.cos(angle)+up[k]*Math.sin(angle));
    const shade=.48+.10*Math.sin(angle)+.035*Math.sin(t*48);

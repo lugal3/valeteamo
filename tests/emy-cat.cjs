@@ -8,13 +8,24 @@ const assert=require('node:assert/strict'),fs=require('fs'),vm=require('vm'),ts=
  for(const hz of [30,60,120]){let p=0;for(let i=0;i<hz*8;i++)p=feed(p,1/hz,true,m.x,m.y);assert.equal(p,100);assert.equal(feed(p,1,true,m.x,m.y),100);}
  const {createHouse,blocked}=await import('../src/lab/world.js'),{updateUpstairsEmy,petEmy}=await import('../src/lab/emy-cat.js');
  const {geometry}=await import('../src/lab/renderer.js');
+ const {emySurface}=await import('../src/lab/emy-surface.js');
  const {emyLandmarks,poseEmy}=await import('../src/lab/emy-cat.js');
  const walk=emyLandmarks('walk',.5,true),sit=emyLandmarks('sit'),groom=emyLandmarks('groom',.7),stretch=emyLandmarks('stretch'),sleep=emyLandmarks('sleep');
  assert(sit.head[1]>walk.head[1]+.05,'sitting raises the neck and head');
  assert(groom.legs['front-1'].paw[1]>.4,'grooming raises a paw to the muzzle');
  assert(stretch.head[1]<walk.head[1]-.20&&stretch.legs.front1.paw[2]>.45,'stretch lowers chest and reaches front paws');
  assert(sleep.body[1]<walk.body[1]-.1&&sleep.head[1]<.23,'sleeping curls the entire body close to the floor');
- const review=createHouse().emy;review.x=review.y=review.z=review.yaw=0;
+ const review=createHouse().emy;
+ for(const part of review.parts){
+  if(part.box.emySpec.form==='fuzz')continue;
+  const mesh=part.box.emyTailMesh||emySurface(part.box),v=mesh.vertices;
+  for(let i=0;i<mesh.indices.length;i+=3){
+   const [a,b,c]=mesh.indices.slice(i,i+3).map(n=>n*16),x=[v[b]-v[a],v[b+1]-v[a+1],v[b+2]-v[a+2]],y=[v[c]-v[a],v[c+1]-v[a+1],v[c+2]-v[a+2]];
+   const dot=(x[1]*y[2]-x[2]*y[1])*v[a+6]+(x[2]*y[0]-x[0]*y[2])*v[a+7]+(x[0]*y[1]-x[1]*y[0])*v[a+8];
+   assert(dot<1e-8,part.id+' outward smooth normals agree with WebGL clockwise winding');
+  }
+ }
+ review.x=review.y=review.z=review.yaw=0;
  for(const mode of ['walk','sit','groom','stretch','sleep','purr']){
   review.age=.7;poseEmy(review,{mode,phase:.7,walking:mode==='walk'});
   const mesh=geometry(review.parts.map(p=>p.box));
