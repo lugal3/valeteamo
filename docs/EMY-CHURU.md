@@ -39,10 +39,16 @@ La revisión reemplaza los volúmenes visibles separados por dos superficies esc
 
 El cuerpo se deforma con los apoyos de hombros, caderas, rodillas y patas. La cabeza tiene su propio marco para conservar la forma del rostro al girar. Al dormir o ronronear se cierran los párpados con la misma textura del rostro. Una compresión suave del pelaje del vientre evita que atraviese el suelo al recogerse; las patas conservan sus apoyos. Las animaciones existentes quedan como base para una próxima revisión de actuación.
 
-La Emy principal tiene 28.256 vértices y 41.838 triángulos, incluidas las fibras de doble cara. La casa completa, con pickups y la gata distante del final, ocupa 62.080 vértices dinámicos y conserva el límite de 65.536 índices de WebGL1. La gata del final usa una versión reducida del mismo esculpido, colores y textura; solo una de las dos es visible a la vez. El renderer comprueba el límite antes de subir los buffers.
+La Emy principal tiene 30.836 vértices y 48.526 triángulos, incluidas las fibras de doble cara. La casa completa, con pickups y la gata distante del final, ocupa 64.837 vértices dinámicos y conserva el límite de 65.536 índices de WebGL1. La gata del final usa una versión reducida del mismo esculpido, colores y textura; solo una de las dos es visible a la vez. El renderer comprueba el límite antes de subir los buffers.
 
 La textura se carga una sola vez en una unidad libre, con mipmaps. Los materiales propios de Emy no alteran las texturas de Louis, Kitty o el perseguidor. La transformación de vértices usa precisión alta para evitar interferencias entre córnea, párpados y capas finas de pelo, conservando las precisiones existentes en la etapa de fragmentos.
 
 `tests/emy-cat.cjs` comprueba conectividad de las superficies, suma de pesos, normales, orientación de triángulos, contacto con el suelo, correspondencia entre escritura dinámica y geometría reconstruida, límite de la casa completa, estados y ruta. En este host, una muestra de 119 pasos tras calentamiento dio 3,45 ms de mediana y 5,86 ms de percentil 95 para calcular la pose y escribir sus vértices. Esto mide CPU local; no acredita FPS en un teléfono ni incluye dibujo GPU.
 
 `export-review.mjs` y `render-review.py` producen vistas del esculpido implementado. La luz y transmisión del pelo de Blender son una presentación de estudio; no equivalen a una captura de la casa. No se modificó el 2D en esta revisión.
+
+## Rostro más suave y pelaje con volumen
+
+Se elimina el relieve separado de las cejas y se reduce el hundimiento orbital de 18 a 4 mm. Se amplía el manto de mejillas, sienes y cuello para cubrir el relieve anatómico, conservando superficies conectadas. Los ojos quedan rodeados por una abertura oscura más fina. Se mantiene el atlas de hebras existente, pero el volumen procede también de la malla y del pelo geométrico.
+
+Las fibras ahora tienen tres tramos curvos en vez de dos, con mayor longitud en las mejillas y la melena y pelo corto en la frente. Solo quedan despejadas las aberturas de ojos y boca: ya no se excluye toda la cara del pelaje. El presupuesto de triángulos de la prueba sube a 50.000 por la subdivisión de las fibras, conservando los límites de vértices individuales y de la escena WebGL1.

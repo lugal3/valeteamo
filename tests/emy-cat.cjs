@@ -42,7 +42,7 @@ const assert=require('node:assert/strict'),fs=require('fs'),vm=require('vm'),ts=
  for(const mode of ['walk','sit','groom','stretch','sleep','purr']){
   review.age=.7;poseEmy(review,{mode,phase:.7,walking:mode==='walk'});
   const mesh=geometry(review.parts.map(p=>p.box));
-  assert(mesh.indices.length/3<48000,'bounded sculpt and fine fur triangle count');
+  assert(mesh.indices.length/3<50000,'bounded sculpt and fine fur triangle count');
   for(let i=0;i<mesh.vertices.length;i+=16){
    assert([...mesh.vertices.slice(i,i+16)].every(Number.isFinite),mode+' finite posed mesh');
    assert(mesh.vertices[i+1]>-.025,mode+' paws and coat remain above the floor');

@@ -12,14 +12,14 @@ export function installEmyModel(add,{prefix='emy',hidden=false}={}){
   parts.push({id,box,x:pos[0],y:pos[1],z:pos[2],joint,base:pos});
  };
  // A fused sculpt replaces the separate torso, joints, cheek and muzzle balls.
- part('coat',[0,0,0],[.40,.63,.85],p.fur,'skin',{asset:hidden?'coatLow':'coat',fibres:hidden?200:2050});
- part('head',[0,0,0],[.38,.43,.25],p.fur,'head',{asset:hidden?'headLow':'head',fibres:hidden?100:850});
+ part('coat',[0,0,0],[.40,.63,.85],p.fur,'skin',{asset:hidden?'coatLow':'coat',fibres:hidden?150:1650});
+ part('head',[0,0,0],[.38,.43,.25],p.fur,'head',{asset:hidden?'headLow':'head',fibres:hidden?80:750});
  for(const side of [-1,1]){
   part('concha'+side,[side*.107,.131,0],[.077,.128,.003],p.ear,'head',{form:'concha',side,segments:16,rings:12});
-  part('socket'+side,[side*.065,.018,.083],[.084,.052,.014],p.dark,'head',{form:'eye',side,segments:20,rings:10});
-  part('iris'+side,[side*.065,.018,.089],[.073,.043,.013],p.eye,'eye',{form:'eye',side,segments:32,rings:14});
-  part('lid'+side,[side*.065,.018,.095],[.085,.053,.009],p.fur,'lid',{form:'eye',side,fur:'head',uvOrigin:[side*.065,.018],segments:18,rings:10});
-  part('closed-eye'+side,[side*.065,.018,.105],[.062,.002,.003],p.dark,'lid',{roll:side*.11,segments:12,rings:6});
+  part('socket'+side,[side*.065,.018,.095],[.079,.046,.010],p.dark,'head',{form:'eye',side,segments:20,rings:10});
+  part('iris'+side,[side*.065,.018,.102],[.073,.043,.009],p.eye,'eye',{form:'eye',side,segments:32,rings:14});
+  part('lid'+side,[side*.065,.018,.108],[.081,.049,.007],p.fur,'lid',{form:'eye',side,fur:'head',uvOrigin:[side*.065,.018],segments:18,rings:10});
+  part('closed-eye'+side,[side*.065,.018,.117],[.062,.002,.003],p.dark,'lid',{roll:side*.11,segments:12,rings:6});
   // Fine curved whiskers grow out of the fused muzzle rather than cheek balls.
   for(let n=0;n<6;n++)for(let j=0;j<4;j++){
    part('whisker'+side+n+'-'+j,[side*(.055+j*.031),-.066+(n-2.5)*.008+(j*j)*.0016*(n-2.5),.156-j*.009],[.037,.0007,.0007],[.73,.73,.69],'head',{segments:4,rings:3,roll:side*(n-2.5)*.09});

@@ -66,24 +66,29 @@ export function sculptSurface(spec){
    while(low<high){const m=(low+high)>>1;if(areas[m]<pick)low=m+1;else high=m;}
    const ids=source.indices.slice(low*3,low*3+3).map(i=>i*6),a=Math.sqrt(rand()),b=rand(),w=[1-a,a*(1-b),a*b];
    const p=[0,1,2].map(k=>ids.reduce((s,id,i)=>s+src[id+k]*w[i],0)),n=unit([3,4,5].map(k=>ids.reduce((s,id,i)=>s+src[id+k]*w[i],0)));
-   const face=head&&p[2]>.055&&Math.abs(p[0])<.10&&p[1]>-.098&&p[1]<.075;
-   if(face)continue; // Do not grow hair across the eyes, nose or mouth.
-   const ear=head&&p[1]>.11,length=head?(ear?.011:.012+rand()*.029):(.022+rand()*.047)*clamp((p[1]-.018)/.10);
+   const eye=head&&p[2]>.065&&[-1,1].some(side=>((p[0]-side*.065)/.047)**2+((p[1]-.018)/.034)**2<1.32);
+   const muzzle=head&&p[2]>.115&&Math.abs(p[0])<.058&&p[1]<-.030;
+   if(eye||muzzle)continue; // Clear only the actual eye/mouth apertures.
+   const ear=head&&p[1]>.11,cheek=head&&Math.abs(p[0])>.090&&p[1]<.08;
+   const forehead=head&&!ear&&!cheek&&p[1]>.030;
+   const mane=!head&&p[2]>.09&&p[1]>.23;
+   const length=head?(ear?.018:cheek?.030+rand()*.027:forehead?.008+rand()*.012:.014+rand()*.022):
+    (mane?.045+rand()*.040:.030+rand()*.048)*clamp((p[1]-.018)/.10);
    if(length<.003)continue;
-   const down=head?[n[0]*.45,-1,n[2]*.08]:[n[0]*.12,-1,n[2]*.08],dot=down.reduce((a,v,k)=>a+v*n[k],0);
+   const down=head?[n[0]*(cheek?1.2:.45),cheek?-.55:-1,n[2]*.10]:[n[0]*.30,-1,n[2]*.12],dot=down.reduce((a,v,k)=>a+v*n[k],0);
    const flow=unit(down.map((v,k)=>v-n[k]*dot));
-   const side=unit([n[1]*flow[2]-n[2]*flow[1],n[2]*flow[0]-n[0]*flow[2],n[0]*flow[1]-n[1]*flow[0]]),width=.00028+rand()*.00043,uv=uvFor(p,head),tint=coatTint(p,head),shade=.98+rand()*.27,offset=vertices.length/16;
+   const side=unit([n[1]*flow[2]-n[2]*flow[1],n[2]*flow[0]-n[0]*flow[2],n[0]*flow[1]-n[1]*flow[0]]),width=(head&&forehead?.00020:.00035)+rand()*.00050,uv=uvFor(p,head),tint=coatTint(p,head),shade=1.18+rand()*.26,offset=vertices.length/16;
    const bind=head?null:weights(p);
-   for(let row=0;row<3;row++){
-    const t=row*.5,half=width*(1-t),bend=Math.sin(t*Math.PI)*.003;
-    const center=p.map((v,k)=>v+n[k]*(.0008+length*.34*Math.sin(t*Math.PI*.8)+bend)+flow[k]*length*t);
-    for(const s of row===2?[0]:[-1,1]){
+   for(let row=0;row<4;row++){
+    const t=row/3,half=width*(1-t),bend=Math.sin(t*Math.PI)*.003;
+    const center=p.map((v,k)=>v+n[k]*(.0008+length*.25*Math.sin(t*Math.PI*.8)+bend)+flow[k]*length*t);
+    for(const s of row===3?[0]:[-1,1]){
      const pt=center.map((v,k)=>v+side[k]*half*s);
      vertices.push(...pt,...tint.map(c=>c*shade),...n,uv[0],uv[1]-length*t*.5,20,65,...side);
      if(bind)skin.push(...bind);
     }
    }
-   const triangles=[0,1,3,0,3,2,2,3,4];
+   const triangles=[0,1,3,0,3,2,2,3,5,2,5,4,4,5,6];
    for(let j=0;j<triangles.length;j+=3){const tri=triangles.slice(j,j+3).map(i=>i+offset);indices.push(...tri,tri[2],tri[1],tri[0]);}
   }
  }

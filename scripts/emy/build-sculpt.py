@@ -3,7 +3,7 @@
 The generated asset is engine-neutral local-space positions, normals and triangles.
 No source photographs are embedded. Dimensions are metres (Y up, +Z muzzle).
 """
-import bpy, math, json
+import bpy, bmesh, math, json
 from pathlib import Path
 from mathutils import Vector
 
@@ -54,6 +54,19 @@ def fuse(name, objects, voxel, target):
     dec=ob.modifiers.new('Even silhouette budget','DECIMATE');dec.ratio=min(1,target/len(ob.data.vertices))
     bpy.ops.object.modifier_apply(modifier=dec.name)
     tri=ob.modifiers.new('Export triangles','TRIANGULATE');bpy.ops.object.modifier_apply(modifier=tri.name)
+    # Remove tiny enclosed voxel/decimation flakes, retaining the connected coat.
+    bm=bmesh.new();bm.from_mesh(ob.data);unseen=set(bm.verts);components=[]
+    while unseen:
+        stack=[unseen.pop()];component=[]
+        while stack:
+            v=stack.pop();component.append(v)
+            for edge in v.link_edges:
+                other=edge.other_vert(v)
+                if other in unseen:unseen.remove(other);stack.append(other)
+        components.append(component)
+    largest=max(components,key=len)
+    bmesh.ops.delete(bm,geom=[v for group in components if group is not largest for v in group],context='VERTS')
+    bm.to_mesh(ob.data);bm.free()
     for p in ob.data.polygons:p.use_smooth=True
     ob.data.update()
     return ob
@@ -62,8 +75,8 @@ body = [
  ellipsoid('ribcage',(0,.315,-.115),(.143,.154,.278)),
  ellipsoid('haunches',(0,.285,-.305),(.151,.153,.143)),
  ellipsoid('shoulder mantle',(0,.350,.075),(.139,.160,.151)),
- ellipsoid('neck',(0,.423,.155),(.111,.141,.118)),
- ellipsoid('mane',(0,.350,.215),(.140,.176,.110)),
+ ellipsoid('neck',(0,.423,.155),(.131,.153,.132)),
+ ellipsoid('mane',(0,.350,.215),(.152,.180,.119)),
  ellipsoid('belly',(0,.235,-.130),(.117,.093,.212)),
 ]
 for front in [True,False]:
@@ -82,22 +95,22 @@ for v in body.data.vertices:
     v.co.x*=1-(1-taper)*min(1,(z-.15)/.08)
 body.data.update()
 
-head=[ellipsoid('cranial wedge',(0,.005,-.015),(.127,.120,.107)),
+head=[ellipsoid('cranial wedge',(0,.005,-.015),(.136,.124,.114)),
       ellipsoid('lower jaw',(0,-.085,.052),(.093,.052,.073)),
       ellipsoid('nasal bridge',(0,-.020,.075),(.045,.074,.065)),
       ellipsoid('muzzle',(0,-.068,.112),(.078,.041,.048)),
       ellipsoid('chin',(0,-.095,.115),(.059,.022,.036))]
 for side in [-1,1]:
- head += [ellipsoid('zygomatic cheek',(side*.085,-.033,.012),(.068,.076,.081)),
-          ellipsoid('brow',(side*.060,.047,.067),(.055,.018,.028)),ear(side)]
+ head += [ellipsoid('zygomatic cheek',(side*.090,-.026,.018),(.086,.086,.087)),
+          ear(side)]
 head=fuse('Emy sculpted face and ears',head,.0018,3300)
-# Shallow orbital depressions shape the eyelid-to-cheek transition.
+# Gentle eyelid clearance, without carving a visible bony eye socket.
 for v in head.data.vertices:
  x,y,z=v.co
  if z>.048:
     for side in [-1,1]:
         r=((x-side*.065)/.047)**2+((y-.018-side*(x-side*.065)*.13)/.030)**2
-        if r<1.8:v.co.z-=.018*math.exp(-r*2.0)*min(1,(z-.048)/.035)
+        if r<1.8:v.co.z-=.004*math.exp(-r*2.0)*min(1,(z-.048)/.035)
 head.data.update()
 
 def export(ob):
