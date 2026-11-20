@@ -10,6 +10,15 @@ const assert=require('node:assert/strict'),fs=require('fs'),vm=require('vm'),ts=
  const {geometry}=await import('../src/lab/renderer.js');
  const {emySurface}=await import('../src/lab/emy-surface.js');
  const {emyLandmarks,poseEmy}=await import('../src/lab/emy-cat.js');
+ const {EMY_SCULPT}=await import('../src/lab/assets/emy/sculpt.js');
+ // The face/ears and torso/limbs must each be a connected sculpt, not an
+ // assortment of intersecting spheres hidden by a material.
+ for(const [name,mesh] of Object.entries(EMY_SCULPT)){
+  const count=mesh.vertices.length/6,parent=Array.from({length:count},(_,i)=>i);
+  const root=i=>{while(parent[i]!==i){parent[i]=parent[parent[i]];i=parent[i];}return i;};
+  for(let i=0;i<mesh.indices.length;i+=3){const [a,b,c]=mesh.indices.slice(i,i+3);parent[root(a)]=root(b);parent[root(c)]=root(b);}
+  assert.equal(new Set(parent.map((_,i)=>root(i))).size,1,name+' has one connected surface');
+ }
  const walk=emyLandmarks('walk',.5,true),sit=emyLandmarks('sit'),groom=emyLandmarks('groom',.7),stretch=emyLandmarks('stretch'),sleep=emyLandmarks('sleep');
  assert(sit.head[1]>walk.head[1]+.05,'sitting raises the neck and head');
  assert(groom.legs['front-1'].paw[1]>.4,'grooming raises a paw to the muzzle');
@@ -17,9 +26,13 @@ const assert=require('node:assert/strict'),fs=require('fs'),vm=require('vm'),ts=
  assert(sleep.body[1]<walk.body[1]-.1&&sleep.head[1]<.23,'sleeping curls the entire body close to the floor');
  const review=createHouse().emy;
  for(const part of review.parts){
+  const skin=emySurface(part.box).skin;
+  if(skin)for(let i=0;i<skin.length;i+=8)assert(Math.abs(skin[i+1]+skin[i+3]+skin[i+5]+skin[i+7]-1)<.00001,'skin weights preserve position at rest');
+ }
+ for(const part of review.parts){
   if(part.box.emySpec.form==='fuzz')continue;
   const mesh=part.box.emyTailMesh||emySurface(part.box),v=mesh.vertices;
-  for(let i=0;i<mesh.indices.length;i+=3){
+  for(let i=0;i<(mesh.baseIndexCount||mesh.indices.length);i+=3){
    const [a,b,c]=mesh.indices.slice(i,i+3).map(n=>n*16),x=[v[b]-v[a],v[b+1]-v[a+1],v[b+2]-v[a+2]],y=[v[c]-v[a],v[c+1]-v[a+1],v[c+2]-v[a+2]];
    const dot=(x[1]*y[2]-x[2]*y[1])*v[a+6]+(x[2]*y[0]-x[0]*y[2])*v[a+7]+(x[0]*y[1]-x[1]*y[0])*v[a+8];
    assert(dot<1e-8,part.id+' outward smooth normals agree with WebGL clockwise winding');
@@ -29,7 +42,7 @@ const assert=require('node:assert/strict'),fs=require('fs'),vm=require('vm'),ts=
  for(const mode of ['walk','sit','groom','stretch','sleep','purr']){
   review.age=.7;poseEmy(review,{mode,phase:.7,walking:mode==='walk'});
   const mesh=geometry(review.parts.map(p=>p.box));
-  assert(mesh.indices.length/3<34000,'bounded smooth surface and fur triangle count');
+  assert(mesh.indices.length/3<48000,'bounded sculpt and fine fur triangle count');
   for(let i=0;i<mesh.vertices.length;i+=16){
    assert([...mesh.vertices.slice(i,i+16)].every(Number.isFinite),mode+' finite posed mesh');
    assert(mesh.vertices[i+1]>-.025,mode+' paws and coat remain above the floor');
@@ -48,7 +61,7 @@ const assert=require('node:assert/strict'),fs=require('fs'),vm=require('vm'),ts=
  assert(all.vertices.length/16<65536,'complete house including both Emy actors fits WebGL1 index buffers');
  for(const hz of [30,60]){
   const world=createHouse(),cat=world.emy,phases=new Set();
-  const mesh=geometry(cat.parts.map(x=>x.box));assert(mesh.vertices.length/16<18000,'cat has a bounded mobile mesh');
+  const mesh=geometry(cat.parts.map(x=>x.box));assert(mesh.vertices.length/16<32000,'detailed Emy stays within the WebGL1 scene budget');
   assert(cat.parts.every(p=>!p.box.solid),'Emy cannot block stairs or trap the player');
   for(let i=0;i<hz*150;i++){
    updateUpstairsEmy(cat,1/hz,{blocked:(...args)=>blocked(world.boxes,...args)});phases.add(cat.phase);

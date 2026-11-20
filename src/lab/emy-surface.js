@@ -1,3 +1,4 @@
+import {sculptSurface} from './emy-sculpt.js';
 // Smooth indexed feline surfaces; local vertices are cached once per part.
 // The same writer is used by WebGL and the offline model review renders.
 const norm=v=>{const l=Math.hypot(...v)||1;return v.map(x=>x/l);};
@@ -18,6 +19,7 @@ function tint(p,c,s){
 export function emySurface(box){
  if(box.emyMesh)return box.emyMesh;
  const s=box.emySpec;
+ if(s.asset)return box.emyMesh=sculptSurface(s);
  if(s.form==='fuzz'){
   const vertices=[],indices=[];let seed=17;const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
   for(let i=0;i<s.count;i++){
@@ -32,6 +34,45 @@ export function emySurface(box){
   return box.emyMesh={vertices:new Float32Array(vertices),indices};
  }
  const n=s.segments||14,r=s.rings||9,vertices=[],indices=[];
+ if(s.form==='nose'){
+  for(let row=0;row<=r;row++)for(let col=0;col<=n;col++){
+   const u=col/n,v=row/r,x=(u-.5)*s.w*Math.pow(1-v,.68),y=(.5-v)*s.h,z=s.d*(.25+.75*Math.sin(Math.PI*u)*Math.sin(Math.PI*v*.86));
+   const shade=.86+.14*Math.sin(Math.PI*u),dx=Math.max(.0008,s.w*Math.pow(1-v,.68));
+   const normal=norm([-s.d*.75*Math.PI*Math.cos(Math.PI*u)*Math.sin(Math.PI*v*.86)/dx,s.d*.75*.86*Math.PI*Math.sin(Math.PI*u)*Math.cos(Math.PI*v*.86)/s.h,1]);
+   vertices.push(x,y,z,...s.color.map(c=>c*shade),...normal,u,v,0,64,1,0,0);
+  }
+  for(let y=0;y<r;y++)for(let x=0;x<n;x++){const a=y*(n+1)+x;indices.push(a,a+1,a+n+2,a,a+n+2,a+n+1);}
+  return box.emyMesh={vertices:new Float32Array(vertices),indices};
+ }
+ if(s.form==='eye'||s.form==='concha'){
+  // A curved almond cornea / triangular ear bowl, not a flattened eyeball.
+  for(let row=0;row<=r;row++)for(let col=0;col<=n;col++){
+   const u=col/n,v=row/r,x=(u-.5)*s.w;
+   const envelope=s.form==='eye'?Math.pow(Math.sin(Math.PI*u),.70):1-v;
+   const y=s.form==='eye'?(v-.5)*s.h*envelope+x*(s.side||1)*.12:(v-.5)*s.h;
+   const xx=s.form==='concha'?x*(1-v)+s.side*v*.033:x;
+   const bulge=s.form==='eye'?Math.sin(Math.PI*u)*Math.sin(Math.PI*v):Math.sin(Math.PI*u)*Math.sin(Math.PI*v)*-.7;
+   const z=s.form==='concha'?.014-.027*v+s.d*bulge:s.d*bulge;
+   const normal=norm([-Math.cos(Math.PI*u)*s.d/s.w, -Math.cos(Math.PI*v)*s.d/s.h,1]);
+   const pink=.72*Math.pow(Math.sin(Math.PI*u),.6)*Math.pow(Math.sin(Math.PI*v),.25);
+   const c=s.form==='concha'?s.color.map((c,k)=>c*pink+[.43,.44,.43][k]*(1-pink)):s.color;
+   vertices.push(xx,y,z,...c,...normal,u,v,0,64,1,0,0);
+  }
+  for(let y=0;y<r;y++)for(let x=0;x<n;x++){const a=y*(n+1)+x;indices.push(a,a+n+2,a+1,a,a+n+1,a+n+2);}
+  if(s.form==='eye'&&s.color[1]>.6&&s.color[2]<.5)for(let i=11;i<vertices.length;i+=16)vertices[i]=21;
+  if(s.uvOrigin)for(let i=0;i<vertices.length;i+=16){
+   vertices[i+9]=((vertices[i]+s.uvOrigin[0])/.36+.5)*.5;vertices[i+10]=.5+((vertices[i+1]+s.uvOrigin[1])/.36+.5)*.5;
+   vertices[i+3]=.94;vertices[i+4]=.98;vertices[i+5]=1.01;vertices[i+11]=20;
+  }
+  const baseIndexCount=indices.length;
+  if(s.form==='concha')for(let j=0;j<42;j++){
+   const t=(j+.5)/42,y=(t-.5)*s.h*.90,u=j%2?.20:.80,x=(u-.5)*s.w*(1-t)+s.side*t*.033,z=.017-.027*t;
+   const offset=vertices.length/16,sign=j%2?1:-1,len=.012+.015*Math.sin(j*31)**2;
+   for(const p of [[x,y,z],[x+.0004,y,z],[x+sign*len,y+len*.36,z+.003]])vertices.push(...p,.71,.72,.69,0,0,1,0,0,0,64,1,0,0);
+   indices.push(offset,offset+1,offset+2,offset+2,offset+1,offset);
+  }
+  return box.emyMesh={vertices:new Float32Array(vertices),indices,baseIndexCount};
+ }
  for(let row=0;row<=r;row++)for(let col=0;col<=n;col++){
   const u=col/n,v=row/r,a=u*Math.PI*2,lat=(v-.5)*Math.PI;
   let p=[Math.cos(a)*Math.cos(lat)*s.w/2,Math.sin(lat)*s.h/2,Math.sin(a)*Math.cos(lat)*s.d/2];
@@ -76,7 +117,7 @@ function tailPoint(t,mode,phase){
  return [sway+.06*Math.sin(t*Math.PI),.30+.27*t+(mode==='purr'?.09*t:0),-.35-.43*t+.07*Math.sin(t*Math.PI)];
 }
 // A continuous swept tube for the tail, with shared seam vertices and normals.
-export function emyTailSurface(mode='walk',phase=0){
+export function emyTailSurface(mode='walk',phase=0,fibres=0){
  const vertices=[],indices=[],rings=22,sides=10;
  for(let i=0;i<=rings;i++){
   const t=i/rings,p=tailPoint(t,mode,phase),a=tailPoint(Math.max(0,t-.001),mode,phase),b=tailPoint(Math.min(1,t+.001),mode,phase),dir=norm(b.map((v,k)=>v-a[k]));
@@ -84,21 +125,52 @@ export function emyTailSurface(mode='walk',phase=0){
   const radius=t===1?.00001:.065*Math.pow(Math.sin(Math.PI*(.11+.88*t)),.55)+.004;
   for(let j=0;j<=sides;j++){
    const u=j/sides,angle=u*Math.PI*2,normal=right.map((v,k)=>v*Math.cos(angle)+up[k]*Math.sin(angle));
-   const shade=.48+.10*Math.sin(angle)+.035*Math.sin(t*48);
-   vertices.push(...p.map((v,k)=>v+normal[k]*radius),shade,shade*1.01,shade*1.02,...normal,u,t,0,64,...right);
+   vertices.push(...p.map((v,k)=>v+normal[k]*radius),.89,.93,.97,...normal,.51+u*.48,.01+t*.48,20,64,...right);
   }
  }
  for(let i=0;i<rings;i++)for(let j=0;j<sides;j++){const a=i*(sides+1)+j;indices.push(a,a+sides+2,a+1,a,a+sides+1,a+sides+2);}
- return {vertices:new Float32Array(vertices),indices};
+ const baseIndexCount=indices.length;
+ let seed=402;const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
+ for(let j=0;j<fibres;j++){
+  const t=.03+rand()*.94,a=rand()*Math.PI*2,p=tailPoint(t,mode,phase),b=tailPoint(Math.min(1,t+.001),mode,phase),dir=norm(b.map((v,k)=>v-p[k]));
+  const right=norm([dir[2],0,-dir[0]]),up=norm([dir[1]*right[2],dir[2]*right[0]-dir[0]*right[2],-dir[1]*right[0]]),normal=right.map((v,k)=>v*Math.cos(a)+up[k]*Math.sin(a));
+  const radius=.065*Math.pow(Math.sin(Math.PI*(.11+.88*t)),.55)+.004,len=.025+rand()*.035,offset=vertices.length/16,shade=1+rand()*.18;
+  for(let row=0;row<3;row++)for(const side of row===2?[0]:[-1,1]){
+   const f=row*.5,w=(1-f)*.0006*side,pt=p.map((v,k)=>v+normal[k]*(radius+.001+len*.32*Math.sin(f*Math.PI*.8))+dir[k]*len*f+right[k]*w);
+   vertices.push(...pt,.89*shade,.93*shade,.97*shade,...normal,.51+a/(Math.PI*2)*.48,.01+t*.48,20,65,...right);
+  }
+  for(const tri of [[0,1,3],[0,3,2],[2,3,4]]){const ids=tri.map(i=>i+offset);indices.push(...ids,ids[2],ids[1],ids[0]);}
+ }
+ return {vertices:new Float32Array(vertices),indices,baseIndexCount};
 }
 export function writeEmySurface(out,start,box){
  const mesh=box.emySpec.form==='tail'?(box.emyTailMesh||emyTailSurface()):emySurface(box),v=mesh.vertices,p=box.emyPose;
+ if(mesh.skin&&box.emyNormalSource!==box.emySkinFrames){
+  box.emyNormalSource=box.emySkinFrames;
+  box.emyNormalFrames=box.emySkinFrames.map(m=>{
+   const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],a=m.slice(0,3),b=m.slice(3,6),c=m.slice(6,9),bc=cross(b,c),det=a.reduce((s,v,k)=>s+v*bc[k],0)||1;
+   return [...bc,...cross(c,a),...cross(a,b)].map(v=>v/det);
+  });
+ }
  const s=p.scale||[1,1,1],a=rotateEmy([1,0,0],...p.rot),b=rotateEmy([0,1,0],...p.rot),c=rotateEmy([0,0,1],...p.rot);
  for(let i=0;i<v.length;i+=16){
-  const at=start+i,x=v[i]*s[0],y=v[i+1]*s[1],z=v[i+2]*s[2];
+  let px=v[i],py=v[i+1],pz=v[i+2],nnx=v[i+6],nny=v[i+7],nnz=v[i+8];
+  if(mesh.skin&&box.emySkinFrames){
+   const at=i/2;let x=0,y=0,z=0,nx=0,ny=0,nz=0;
+   for(let k=0;k<8;k+=2){
+    const id=mesh.skin[at+k],m=box.emySkinFrames[id],n=box.emyNormalFrames[id],w=mesh.skin[at+k+1];
+    x+=(m[0]*px+m[3]*py+m[6]*pz+m[9])*w;y+=(m[1]*px+m[4]*py+m[7]*pz+m[10])*w;z+=(m[2]*px+m[5]*py+m[8]*pz+m[11])*w;
+    nx+=(n[0]*nnx+n[3]*nny+n[6]*nnz)*w;ny+=(n[1]*nnx+n[4]*nny+n[7]*nnz)*w;nz+=(n[2]*nnx+n[5]*nny+n[8]*nnz)*w;
+   }
+   px=x;py=y;pz=z;nnx=nx;nny=ny;nnz=nz;
+   // Soft contact compression for the long belly coat when crouching/curling.
+   // Pads keep their skeletal supports; only the flexible skin is compressed.
+   if(py<.018){const t=(py-.0005)/.003,derivative=1/(1+Math.exp(-t));py=.0005+.003*Math.log1p(Math.exp(t));nny/=Math.max(.025,derivative);}
+  }
+  const at=start+i,x=px*s[0],y=py*s[1],z=pz*s[2];
   for(let k=3;k<16;k++)out[at+k]=v[i+k];
   out[at]=p.pos[0]+a[0]*x+b[0]*y+c[0]*z;out[at+1]=p.pos[1]+a[1]*x+b[1]*y+c[1]*z;out[at+2]=p.pos[2]+a[2]*x+b[2]*y+c[2]*z;
-  const nx=v[i+6]/s[0],ny=v[i+7]/s[1],nz=v[i+8]/s[2];
+  const nx=nnx/s[0],ny=nny/s[1],nz=nnz/s[2];
   const tx=a[0]*nx+b[0]*ny+c[0]*nz,ty=a[1]*nx+b[1]*ny+c[1]*nz,tz=a[2]*nx+b[2]*ny+c[2]*nz,len=Math.hypot(tx,ty,tz)||1;
   out[at+6]=tx/len;out[at+7]=ty/len;out[at+8]=tz/len;
   for(let k=0;k<3;k++)out[at+13+k]=a[k]*v[i+13]+b[k]*v[i+14]+c[k]*v[i+15];

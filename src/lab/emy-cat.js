@@ -1,3 +1,4 @@
+import {emySkinFrames} from './emy-sculpt.js';
 import {rotateEmy,emyTailSurface} from './emy-surface.js';
 // Anatomical proportions from Emy's photos; silver long coat, tabby M,
 // almond green eyes, pink nose, tall tufted ears and a continuous plume tail.
@@ -5,58 +6,31 @@ export const EMY_COLORS=Object.freeze({fur:[.45,.46,.47],dark:[.25,.26,.27],silv
 export function installEmyModel(add,{prefix='emy',hidden=false}={}){
  const parts=[],p=EMY_COLORS;
  const part=(id,pos,size,color,joint,extra={})=>{
+  if(hidden&&!extra.asset)extra={...extra,segments:Math.max(6,Math.floor((extra.segments||14)*.5)),rings:Math.max(4,Math.floor((extra.rings||9)*.5))};
   const spec={w:size[0],h:size[1],d:size[2],color,...extra};
   const box=add(prefix+'-'+id,...pos,...size,'plaster',false,{shape:'emy-surface',color,dynamic:true,hiddenGeometry:hidden,castShadow:true,chibi:true,emySpec:spec,emyPose:{pos,rot:[0,0,0],scale:[1,1,1]}});
   parts.push({id,box,x:pos[0],y:pos[1],z:pos[2],joint,base:pos});
  };
- part('body',[0,.31,-.12],[.29,.32,.55],p.fur,'body',{fur:'coat',segments:28,rings:18});
- part('pelvis',[0,.29,-.31],[.30,.30,.28],p.fur,'pelvis',{fur:'coat'});
- part('shoulders',[0,.35,.09],[.27,.31,.28],p.fur,'shoulders',{fur:'coat'});
- part('neck',[0,.43,.15],[.23,.25,.24],p.silver,'neck',{fur:'ruff'});
- part('chest',[0,.35,.22],[.28,.31,.20],p.ruff,'chest',{fur:'ruff',segments:26,rings:18});
- // All face parts are children of one moving head frame.
- part('head',[0,0,0],[.28,.25,.245],p.fur,'head',{fur:'head',segments:32,rings:22});
- part('throat',[0,-.095,.045],[.21,.13,.17],p.silver,'head',{fur:'ruff'});
+ // A fused sculpt replaces the separate torso, joints, cheek and muzzle balls.
+ part('coat',[0,0,0],[.40,.63,.85],p.fur,'skin',{asset:hidden?'coatLow':'coat',fibres:hidden?200:2050});
+ part('head',[0,0,0],[.38,.43,.25],p.fur,'head',{asset:hidden?'headLow':'head',fibres:hidden?100:850});
  for(const side of [-1,1]){
-  part('cheek'+side,[side*.105,-.045,.025],[.125,.16,.15],p.silver,'head',{fur:'ruff'});
-  part('muzzle'+side,[side*.039,-.058,.122],[.092,.073,.071],p.ruff,'head');
-  part('ear'+side,[side*.096,.120,-.016],[.128,.175,.068],p.fur,'head',{form:'ear'});
-  part('ear-inner'+side,[side*.096,.127,.015],[.088,.124,.012],p.ear,'head',{form:'ear'});
-  // Small silky tufts, not huge polygon spikes.
-  for(let n=0;n<3;n++)part('ear-tuft'+side+n,[side*(.112+n*.006),.205+n*.007,-.015],[.009,.032,.006],p.silver,'head',{form:'ear',segments:8,rings:7});
-  part('socket'+side,[side*.068,.018,.108],[.080,.040,.006],p.dark,'head',{form:'almond'});
-  part('iris'+side,[side*.068,.018,.112],[.069,.033,.004],p.eye,'eye',{form:'almond',segments:24,rings:12});
-  part('lid'+side,[side*.068,.018,.114],[.082,.042,.006],p.fur,'lid',{form:'almond'});
-  part('closed-eye'+side,[side*.068,.018,.119],[.063,.0025,.003],p.dark,'lid');
-  part('pupil'+side,[side*.068,.018,.115],[.009,.029,.002],[.07,.085,.07],'eye',{segments:12,rings:10});
-  part('glint'+side,[side*.062,.026,.117],[.008,.008,.002],[.88,.90,.81],'eye',{segments:10,rings:8});
-  // Curved thin whiskers: linked tapered capsules, no broad triangular cards.
-  for(let n=0;n<4;n++)for(let j=0;j<3;j++){
-   part('whisker'+side+n+'-'+j,[side*(.07+j*.040),-.060+(n-1.5)*.013+(j*j)*.002*(n-1.5),.155-j*.012],[.048,.0015,.0015],[.78,.78,.73],'head',{segments:10,rings:6,roll:side*(n-1.5)*.11});
+  part('concha'+side,[side*.107,.131,0],[.077,.128,.003],p.ear,'head',{form:'concha',side,segments:16,rings:12});
+  part('socket'+side,[side*.065,.018,.083],[.084,.052,.014],p.dark,'head',{form:'eye',side,segments:20,rings:10});
+  part('iris'+side,[side*.065,.018,.089],[.073,.043,.013],p.eye,'eye',{form:'eye',side,segments:32,rings:14});
+  part('lid'+side,[side*.065,.018,.095],[.085,.053,.009],p.fur,'lid',{form:'eye',side,fur:'head',uvOrigin:[side*.065,.018],segments:18,rings:10});
+  part('closed-eye'+side,[side*.065,.018,.105],[.062,.002,.003],p.dark,'lid',{roll:side*.11,segments:12,rings:6});
+  // Fine curved whiskers grow out of the fused muzzle rather than cheek balls.
+  for(let n=0;n<6;n++)for(let j=0;j<4;j++){
+   part('whisker'+side+n+'-'+j,[side*(.055+j*.031),-.066+(n-2.5)*.008+(j*j)*.0016*(n-2.5),.156-j*.009],[.037,.0007,.0007],[.73,.73,.69],'head',{segments:4,rings:3,roll:side*(n-2.5)*.09});
   }
  }
- for(const side of [-1,1]){
-  for(let n=0;n<5;n++)part('cheek-lock'+side+n,[side*(.10+n*.008),-.055-n*.017,.035+n*.004],[.032,.060,.018],n%2?p.silver:p.fur,'head',{form:'lock',roll:side*.34,segments:10,rings:9});
-  for(let n=0;n<5;n++)part('bib-lock'+side+n,[side*(.025+n*.021),.31-(n%2)*.025,.305-n*.011],[.038,.080,.022],n%2?p.ruff:p.silver,'chest-fur',{form:'lock',roll:side*.18,segments:10,rings:9});
-  for(let n=0;n<5;n++)part('flank-lock'+side+n,[side*.135,.29,-.33+n*.088],[.042,.085,.025],p.fur,'body-fur',{form:'lock',roll:side*.18,segments:10,rings:8});
- }
- part('head-fibres',[0,0,0],[.283,.254,.249],p.fur,'head',{form:'fuzz',fur:'head',count:120,length:.016});
- part('chest-fibres',[0,.35,.22],[.28,.31,.20],p.ruff,'chest',{form:'fuzz',count:120,length:.035});
- part('body-fibres',[0,.31,-.12],[.295,.325,.555],p.fur,'body',{form:'fuzz',count:160,length:.026});
- part('bridge',[0,-.008,.097],[.046,.092,.070],p.silver,'head');
- part('nose',[0,-.047,.155],[.037,.026,.018],p.nose,'head',{form:'nose',segments:20,rings:12});
- part('chin',[0,-.094,.128],[.092,.041,.060],p.silver,'head');
- for(const side of [-1,1])part('smile'+side,[side*.017,-.081,.152],[.031,.003,.004],p.dark,'head',{roll:side*.16,segments:10,rings:6});
- part('tongue',[0,-.092,.160],[.021,.034,.009],[.76,.40,.46],'tongue');
- for(const front of [true,false])for(const side of [-1,1]){
-  const tag=(front?'front':'hind')+side;
-  part(tag+'-upper',[side*.10,.25,front?.12:-.30],[front?.070:.105,1,front?.075:.12],p.fur,tag+'-upper',{fur:'coat',segments:14,rings:10});
-  part(tag+'-lower',[side*.10,.13,front?.16:-.32],[.054,1,.055],p.fur,tag+'-lower',{fur:'coat',segments:12,rings:9});
-  part(tag+'-joint',[side*.10,.20,front?.14:-.31],[.075,.075,.075],p.fur,tag+'-joint',{segments:12,rings:9});
-  part(tag+'-paw',[side*.10,.04,front?.20:-.34],[.089,.058,.118],p.silver,tag+'-paw',{segments:16,rings:10});
-  for(let toe=0;toe<2;toe++)part(tag+'-toe'+toe,[side*.10+(toe-.5)*.022,.045,front?.244:-.296],[.002,.016,.008],p.dark,tag+'-toe',{segments:8,rings:5});
- }
- part('tail',[0,0,0],[.55,.62,.9],p.silver,'tail',{form:'tail'});
+ part('nose',[0,-.046,.150],[.035,.025,.015],p.nose,'head',{form:'nose',segments:24,rings:14});
+ for(const side of [-1,1])part('nostril'+side,[side*.010,-.048,.162],[.004,.0014,.001],[.25,.16,.15],'head',{segments:8,rings:5,roll:side*.25});
+ part('philtrum',[0,-.063,.160],[.0018,.017,.002],p.dark,'head',{segments:8,rings:6});
+ for(const side of [-1,1])part('mouth'+side,[side*.016,-.077,.156],[.029,.002,.002],p.dark,'head',{roll:side*.10,segments:10,rings:6});
+ part('tongue',[0,-.086,.163],[.018,.025,.006],[.70,.34,.39],'tongue');
+ part('tail',[0,0,0],[.55,.62,.9],p.silver,'tail',{form:'tail',fibres:hidden?100:520});
  return parts;
 }
 const lerp=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
@@ -83,11 +57,18 @@ export function emyLandmarks(mode='idle',phase=0,walking=false,reduced=false){
 }
 export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.age,headYaw=0,blend=1}={}){
  const l=emyLandmarks(mode,phase,walking,reduced),headRotation=[l.headRot[0],l.headRot[1]+headYaw,l.headRot[2]];
- const blink=l.sleep||cat.age%4.6>4.42,eyes=blink?.035:mode==='purr'?.50:1;
+ const blink=l.sleep||cat.age%4.6>4.42||(mode==='purr'&&Math.sin(phase*2.8)>.15),eyes=blink?.035:mode==='purr'?.65:1;
  const root=p=>{const v=rotateEmy(p,0,cat.yaw,0);return [cat.x+v[0],cat.y+v[1],cat.z+v[2]];};
  for(const part of cat.parts){
   const {box,joint,base}=part;let p=[...base],rot=[0,0,box.emySpec.roll||0],scale=[1,1,1];
-  if(['head','eye','lid','tongue'].includes(joint)){
+  if(joint==='skin'){
+   p=[0,0,0];
+   const next=emySkinFrames(l,rotateEmy),old=box.emySkinFrames;
+   if(!old||next.some((f,i)=>f.some((v,k)=>Math.abs(v-old[i][k])>1e-6))){
+    box.emySkinFrames=old&&blend<1?next.map((f,i)=>lerp(old[i],f,blend)):next;
+    box.emyRevision=(box.emyRevision||0)+1;
+   }
+  }else if(['head','eye','lid','tongue'].includes(joint)){
    p=rotateEmy(base,...headRotation).map((v,i)=>v+l.head[i]);rot=[...headRotation];rot[2]+=box.emySpec.roll||0;
    if(joint==='eye')scale=blink?[.001,.001,.001]:[1,eyes,1];
    if(joint==='lid')scale=blink?[1,1,1]:[.001,.001,.001];
@@ -112,7 +93,7 @@ export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.a
    if(box.emyTailMode!==mode){box.emyTailMode=mode;box.emyTailBlend=1;}
    if(key!==box.emyTailKey||box.emyTailBlend>.002){
    box.emyTailKey=key;box.emyTailBlend*=1-blend;box.emyTailRevision=(box.emyTailRevision||0)+1;
-   const next=emyTailSurface(mode,reduced?0:phase),old=box.emyTailMesh;
+   const next=emyTailSurface(mode,reduced?0:phase,box.emySpec.fibres),old=box.emyTailMesh;
    if(old&&blend<1){for(let i=0;i<next.vertices.length;i+=16){for(let k=0;k<3;k++)next.vertices[i+k]=old.vertices[i+k]+(next.vertices[i+k]-old.vertices[i+k])*blend;}}
    box.emyTailMesh=next;
    }
@@ -136,6 +117,9 @@ export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.a
   if(['pos','rot','scale'].some(key=>box.emyPose[key].some((v,i)=>Math.abs(v-old[key][i])>1e-6)))box.emyRevision=(box.emyRevision||0)+1;
   [box.x,box.y,box.z]=box.emyPose.pos;[box.pitch,box.yaw,box.roll]=box.emyPose.rot;
   const spec=box.emySpec;box.w=spec.w*scale[0];box.h=joint==='tail'?.01:spec.h*scale[1];box.d=spec.d*scale[2];
+  // Skin vertices are in skeleton space. Keep its broad-phase box above the
+  // floor while the independent pose origin stays at the skeleton root.
+  if(joint==='skin'){box.y=cat.y+.315;box.h=.63;}
  }
  cat.landmarks=l;cat.visualMode=mode;
 }
