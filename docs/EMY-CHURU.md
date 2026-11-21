@@ -1,4 +1,4 @@
-# Emy: Churu en 2D y gata animada en la planta alta
+# Emy: Churu en 2D y compañera animada en la casa 3D
 
 La gata toma como referencia las fotos aportadas por el propietario: pelaje gris largo, marcas oscuras en la frente, pecho plateado claro, ojos verdes, nariz rosada y cola tupida. Las fotografías privadas no se incluyen en el repositorio.
 
@@ -16,6 +16,10 @@ Al 100% aparecen los ojos de corazón, una sacudida del panel y vibración donde
 
 En el piso superior Emy recorre el pasillo evitando geometría sólida; alterna caminar, sentarse, asearse, estirarse y dormir. Se detiene cerca de Kitty, gira la cabeza y se puede acariciar con la interacción contextual existente para provocar una reacción de ronroneo y patita levantada. El modelo no bloquea al jugador. Su API de reacción queda separada de la lógica de puzles para ampliarla después.
 
+En el recorrido normal del rescate, Emy espera fuera de la casa hasta que Kitty intenta abrir por primera vez la puerta de la sala de estar. La puerta empieza a abrirse, Kitty gira la vista hacia la ventana del salón y Emy salta por ella antes de caer al suelo. Entonces sigue el trayecto de Kitty por la planta baja, la escalera y la planta alta, recalculando una ruta si un obstáculo corta el rastro. Puede acariciarse mientras está cerca. Cuando Kitty entra en un escondite, Emy llega hasta allí y desaparece con ella; vuelve a salir cuando Kitty sale. Las pruebas aisladas de la planta alta conservan el paseo original.
+
+Después del mensaje que despierta al secuestrador, Emy deja de seguir a Kitty, desciende por la escalera y entra en el baúl del estudio donde se encuentra el escritorio de la llave. La tapa se abre y se cierra durante la entrada. Permanece oculta en este tramo, sin ayuda de pistas ni aparición posterior implementadas todavía. La escena de la ventana ocurre una sola vez y el estado de Emy se guarda con los checkpoints existentes, sin cambiar su versión ni las claves de almacenamiento.
+
 El mismo modelo se reutiliza en la gata del final del rescate; la Emy de arriba se oculta cuando se activa la gata de la salida, evitando dos Emy visibles simultáneamente. Los puzles, el perseguidor y Louis conservan sus condiciones.
 
 ## Vista previa
@@ -25,6 +29,7 @@ El mismo modelo se reutiliza en la gata del final del rescate; la Emy de arriba 
 ## Validación
 
 - `npm test` incluye `tests/emy-cat.cjs`: alcance/soltar el Churu, tiempo de alimentación a 30/60/120 Hz, entradas no finitas, límite de pasos, ruta/colisiones 3D a 30/60 Hz durante 150 segundos, cinco estados, reacción a caricias y visibilidad del final.
+- `tests/emy-companion.cjs` recorre la entrada una sola vez, la mirada de Kitty, el seguimiento entre las dos plantas, las caricias, el escondite compartido, la ruta al baúl y la restauración del estado.
 - `npm run build` compila la app y las páginas independientes de Louis y Emy.
 - Las pruebas de navegador existentes se adaptan al nuevo gesto de alimentación mediante `tests/helpers/feed-emy.cjs`.
 - Revisión manual en navegador: Churu equipado, encuentro en el jardín, panel, arrastre, avance al 100%, ojos de corazón, cierre y saludo de Kitty.

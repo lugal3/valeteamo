@@ -35,7 +35,7 @@ export function installEmyModel(add,{prefix='emy',hidden=false}={}){
 }
 const lerp=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
 export function emyLandmarks(mode='idle',phase=0,walking=false,reduced=false){
- const sit=['sit','groom','purr'].includes(mode),sleep=mode==='sleep',stretch=mode==='stretch',groom=mode==='groom';
+ const sit=['sit','groom','purr'].includes(mode),sleep=mode==='sleep',stretch=mode==='stretch',groom=mode==='groom',jump=mode==='jump';
  const motion=reduced?0:Math.sin(phase*8),bob=walking?Math.abs(motion)*.006:0;
  const body=sleep?[0,.17,-.12]:stretch?[0,.30,-.13]:sit?[0,.32,-.14]:[0,.31+bob,-.12];
  const head=sleep?[.13,.205,.12]:stretch?[0,.245,.35]:sit?[0,.585,.14]:[0,.52+bob,.26];
@@ -47,6 +47,7 @@ export function emyLandmarks(mode='idle',phase=0,walking=false,reduced=false){
   if(walking){const stride=motion*side*(front?1:-1);paw[2]+=stride*.075;paw[1]+=Math.max(0,stride)*.047;}
   if(sit){hip=[side*(front?.095:.115),front?.40:.17,front?.07:-.24];paw=[side*(front?.09:.14),.030,front?.20:-.20];}
   if(stretch){hip=[side*.10,front?.20:.37,front?.21:-.34];paw=[side*.12,.030,front?.48:-.43];}
+  if(jump){hip=[side*.10,front?.37:.30,front?.12:-.30];paw=[side*.12,front?.18:.16,front?.42:-.22];}
   if(sleep){hip=[side*.08,.14,front?.07:-.28];paw=[side*.09,.030,front?.25:-.08];}
   if(groom&&front&&side===-1)paw=[-.065,.46+motion*.012,.29];
   if(mode==='purr'&&front&&side===1)paw=[.125,.13+Math.max(0,motion)*.015,.28];

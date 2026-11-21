@@ -32,6 +32,7 @@ import {animateFurniture,updateFurniture,sweepClear} from './furniture-motion.js
 import {BATTERY_SWAP_SECONDS} from './viewmodel.js';
 import {moveGreyCat,revealGreyCat} from './grey-cat.js';
 import {updateUpstairsEmy,petEmy} from './emy-cat.js';
+import {EMY_ENTRANCE_SECONDS,createEmyCompanion,beginEmyEntrance,emyEntranceCamera,sendEmyToTrunk,updateEmyCompanion,snapshotEmyCompanion,restoreEmyCompanion} from './emy-companion.js';
 import {createRC,syncRCObject,deployRC,driveRC,beepRC,updateRC,stopRC,crashRC,recoverRC,rcCamera,rcDeploymentView,canTrapPursuer} from './rc-car.js';
 import {createLouisEscape,updateLouisEscape,freeLouis,louisCamera} from './louis-escape.js';
 import {createLoisShotDirector,advanceLoisShot,finishLoisShot} from './lois-ps2-cinematics.js';
@@ -135,7 +136,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  let rc=null,louis=null,loisShotDirector=null,rcTrap={armed:false,closed:false},finalCutscene=null;
  let resumed=false,lastSafeCheckpoint=null,captureShot=null,captureCount=0;
  let equipmentBeforeNote='empty',batterySwap=null;
- const canUseHotbar=()=>ready&&!isSuspended()&&!cinematic&&events.phase!=='arrival'&&events.phase!=='failed'&&events.phase!=='safe'&&rc?.mode!=='driving'&&rc?.mode!=='deploying';
+ const canUseHotbar=()=>ready&&!isSuspended()&&!cinematic&&!emyShot&&events.phase!=='arrival'&&events.phase!=='failed'&&events.phase!=='safe'&&rc?.mode!=='driving'&&rc?.mode!=='deploying';
  const phone=new PhoneUI(root,(kind,toggle=true)=>equip(kind,toggle),()=>resetInput(),{canEquip:canUseHotbar,canUse:()=>canUseHotbar()&&!notePresentation,onEdit:()=>{releaseMouse();resetInput();if(isSuspended())sound.pause();else sound.resume();},onPhoto:()=>{capturePhoto=true;}});phone.equip(equipment);
  const danger=document.createElement('div');danger.className='house-danger';danger.hidden=true;danger.setAttribute('role','status');root.querySelector('#house-messages').append(danger);
  const enableSound=document.createElement('button');enableSound.className='house-enable-sound';enableSound.textContent='Activar sonido';enableSound.hidden=true;root.querySelector('.house-mixer').before(enableSound);
@@ -147,7 +148,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const hudMessages=new HouseMessages(root);
  phone.onPresentationChange=()=>hudMessages.layout(phone.rect,phone.open);
  const controller=new AbortController(),signal=controller.signal;
- let renderer,world,bathCircuit,puzzle=createHousePuzzle(config.entry),sound=new HouseSound(),s,raf=0,last=0,lastPaint=0,fps=0,elapsed=0,lookPointer=null,stickPointer=null;
+ let renderer,world,emyCompanion=null,emyShot=null,bathCircuit,puzzle=createHousePuzzle(config.entry),sound=new HouseSound(),s,raf=0,last=0,lastPaint=0,fps=0,elapsed=0,lookPointer=null,stickPointer=null;
  let active=true,ready=false,hasFocus=true,focus=null,lookLast={x:0,y:0},paused=false,modal='',intro=true,contextLost=false,stickPointerType=null,lookPointerType=null;
  let lookTarget={yaw:Math.PI,pitch:0},cinematic=null,poseTransition=null,handAction=0,clickAction=0,lastInteraction=-Infinity,audioPreview=false;
  const handDrift={x:0,y:0,vx:0,vy:0};
@@ -164,7 +165,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const captureRunning=()=>captureShot&&hasFocus&&!document.hidden&&!isPortrait()&&!contextLost;
  const isSuspended=()=>!ready||paused||!!modal||!!captureShot||phone.editing||$('lab-camera-settings').open||isPortrait()||document.hidden||!hasFocus||contextLost;
  const wakeShot=()=>events.phase==='lockdown'&&pursuer?.mode==='rising';
- const isPaused=()=>isSuspended()||!!cinematic||!!poseTransition||events.phase==='car-preview'||wakeShot();
+ const isPaused=()=>isSuspended()||!!cinematic||!!emyShot||!!poseTransition||events.phase==='car-preview'||wakeShot();
  const flashlightBeam=()=>s.flashlight&&batterySwap===null&&equipment==='flashlight'&&!s.hidden&&!s.lying&&!animator.performing&&!phone.open&&events.phase!=='arrival';
  const desktop=window.matchMedia('(any-hover: hover) and (any-pointer: fine)');
  const remoteInUse=()=>['driving','deploying'].includes(rc?.mode);
@@ -172,7 +173,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const mouseLocked=()=>document.pointerLockElement===canvas;
  function releaseMouse(){if(mouseLocked())document.exitPointerLock();}
  function lockMouse(){
-  if(!desktop.matches||!canvas.requestPointerLock||!ready||cinematic||phone.open||phone.editing||paused||modal||poseTransition||wakeShot()||isPortrait()||!hasFocus||contextLost||remoteInUse()||events.phase==='arrival')return;
+  if(!desktop.matches||!canvas.requestPointerLock||!ready||cinematic||emyShot||phone.open||phone.editing||paused||modal||poseTransition||wakeShot()||isPortrait()||!hasFocus||contextLost||remoteInUse()||events.phase==='arrival')return;
   $('lab-camera-settings').open=false;resetInput();
   try{const request=canvas.requestPointerLock();request?.catch(()=>say('El navegador no permitió capturar el ratón'));}catch{say('El navegador no permitió capturar el ratón');}
  }
@@ -209,10 +210,15 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function showTrialStart(){
   showModal(scenario.title,`<p>${escapeHTML(scenario.description)}</p>`,[['Iniciar prueba','start'],['Volver a pruebas','exit']]);
  }
- function rebuild(){renderer.rebuild([...world.boxes.filter(box=>!box.hiddenGeometry),...pickupGeometry(world.objects)]);}
+ function rebuild(){
+  // Keep Emy's skinned meshes in the dynamic buffer while she waits outside
+  // or hides, so the window jump and shared hide can reveal her without a rebuild.
+  renderer.rebuild([...world.boxes.filter(box=>!box.hiddenGeometry||box.emySpec),...pickupGeometry(world.objects)]);
+  renderer.updateVisibility();
+ }
  function saveCheckpoint(){
   if(!demo||pursuer.caught||events.phase==='failed')return;
-  lastSafeCheckpoint=captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTrap,batterySwap,pursuer});
+  lastSafeCheckpoint=captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTrap,batterySwap,pursuer,emy:emyCompanion&&snapshotEmyCompanion(emyCompanion)});
   if(lastSafeCheckpoint.hide&&lastSafeCheckpoint.hide===pursuer.witnessed)lastSafeCheckpoint.hide=undefined;
   checkpointStore?.save(lastSafeCheckpoint);
  }
@@ -231,16 +237,33 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   cinematic={elapsed:0,cues:new Set()};root.classList.add('lab-intro-active');$('lab-window-intro').classList.remove('lab-hidden');
   $('lab-intro-caption').textContent='Una ventana entreabierta…';
  }
+ function beginEmyShot(door){
+  if(!emyCompanion||emyCompanion.stage!=='waiting')return false;
+  const opening=animateFurniture(door,true,{player:s,reducedMotion:reducedMotion.matches});
+  if(!opening.started)return false;
+  beginEmyEntrance(emyCompanion);
+  emyShot={elapsed:0,camera:cameraOf(s),door,jumped:false};
+  phone.close();releaseMouse();resetInput();renderer.updateVisibility();play('door-open',door,.6);
+  say('Kitty se gira al oír un ruido detrás de la ventana…',4);
+  return true;
+ }
+ function finishEmyShot(){
+  const door=emyShot?.door;emyShot=null;
+  if(!door)return;
+  if(door.motion)updateFurniture(world.objects,.1,s);
+  resetInput();saveCheckpoint();say('¡Es Emy! Ha entrado de un salto y ahora te acompaña.',4);
+ }
  function reset(saved){
   television.sync(false,false);notePresentation=false;
   louis=null;loisShotDirector=null;rcTrap={armed:false,closed:false};finalCutscene=null;
   releaseMouse();events.reset();mirrorSafe.reset();hudMessages.reset();phone.close();encounterCheckpoint=null;danger.hidden=true;
    root.querySelector('[data-act=emotes]').setAttribute('aria-expanded','false');
   batterySwap=null;equipmentBeforeNote='empty';
-  animator.reset();sound.stopEmote();floorSounds.reset();if(phone.editing)void phone.layoutAction('done');$('house-emotes').hidden=true;cinematic=null;poseTransition=null;paused=false;lastInteraction=-Infinity;handAction=0;clickAction=0;noteLift=0;noteHold=0;capturePhoto=false;
+  animator.reset();sound.stopEmote();floorSounds.reset();if(phone.editing)void phone.layoutAction('done');$('house-emotes').hidden=true;cinematic=null;emyShot=null;poseTransition=null;paused=false;lastInteraction=-Infinity;handAction=0;clickAction=0;noteLift=0;noteHold=0;capturePhoto=false;
   sound.setTension(.55);
   root.classList.remove('lab-intro-active');$('lab-window-intro').classList.add('lab-hidden');$('lab-camera-settings').open=false;
   world=createHouse(checkpoint);puzzle=createHousePuzzle(scenario?.puzzleEntry??config.entry);pursuer=new Pursuer(world);sound.setThreat(false);
+  emyCompanion=demo&&checkpoint==='ground'?createEmyCompanion(world.emy,{waiting:!scenario}):null;
   rc=createRC(world.objects.find(o=>o.id==='rc-car'));
   bathCircuit=world.lights.circuits.find(circuit=>circuit.id==='bano');
   poseFurniture(world.entryWindow,1);handDrift.x=handDrift.y=handDrift.vx=handDrift.vy=0;
@@ -289,6 +312,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   resumed=!!restored;
   lastSafeCheckpoint=restored?saved:null;
   if(restored)({louis,equipment,encounterCheckpoint}=restored);
+  if(emyCompanion){
+   if(restored){
+    const legacyExplored=!saved?.emy&&saved?.stage==='explore'&&(saved.drawer||saved.picked?.length);
+    restoreEmyCompanion(emyCompanion,saved?.emy??(legacyExplored?{stage:'following'}:null),events.phase);
+   }
+   else if(scenario?.events==='wake')restoreEmyCompanion(emyCompanion,{stage:'following',x:s.x+.5,y:s.y,z:s.z+.5,yaw:s.yaw},'sleep');
+   else if(scenario?.events==='evaded')restoreEmyCompanion(emyCompanion,null,'hunt');
+  }
   sound.setThreat(['patrol','hunt'].includes(events.phase));
   phone.setInventory(s.inventory);phone.equip(equipment);
   focus=null;lookTarget={yaw:s.yaw,pitch:s.pitch};modalClose();keys.clear();rebuild();
@@ -302,7 +333,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const loc=listener(),source=o?{x:o.x,y:o.y,z:o.z}:null;
   const occluded=source?lineBlocked(world.boxes,loc,source,o?.kind==='door'?'door-'+o.id:''):false;
   sound.effect(name,source,{...loc,yaw:s.yaw},occluded,{level});
-  if(name==='cat')caption('Maullido junto a la salida');
+  if(name==='cat')caption(o===world.emy||o?.kind==='emy-cat'?'Maullido de Emy':'Maullido junto a la salida');
   if(name==='floor-groan')caption('Cruje el suelo');
  };
  function toggleFlash(){if(s.hidden||s.lying||batterySwap!==null)return;
@@ -412,6 +443,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }else if(o.kind==='tap'){
    o.on=!o.on;o.water.y=o.on?1.01:-100;play('click',o);say(o.on?'Llave de agua abierta':'Llave de agua cerrada');
   }else if(o.kind==='door'||o.kind==='cupboard'){
+   if(o.id==='salon'&&!o.open&&emyCompanion?.stage==='waiting'&&beginEmyShot(o))return;
    if(o.id==='entrada'&&o.sealed&&events.phase==='escape'){
     if(!s.inventory.masterKey){say('Necesitas la llave maestra del piano del descansillo.',5);play('latch',o);return;}
     const opened=animateFurniture(o,true,{player:s,reducedMotion:reducedMotion.matches});
@@ -774,7 +806,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   root.classList.toggle('house-sprinting',s.sprinting&&!stamina.hidden);
   const interactButton=$('lab-interact');
   const canInteract=!!(target||s.hidden||s.lying||poseTransition)&&!isSuspended()&&!cinematic&&!phone.open&&!remoteInUse();
-  interactButton.hidden=!canInteract;
+  interactButton.hidden=!canInteract||!!emyShot;
   const hatchMoving=target?.kind==='hatch'&&target.amount!==Number(target.open);
   interactButton.disabled=!!target?.motion||hatchMoving||!!poseTransition;
   root.querySelector('.lab-cross').classList.toggle('lab-target',!!target);
@@ -980,7 +1012,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }catch(e){interruptGraphics('Error de renderizado',String(e.message||e));}
  }
  function updateStory(delta){
-  if(!demo||isSuspended()||cinematic)return;
+  if(!demo||isSuspended()||cinematic||emyShot)return;
   if(events.phase==='car-preview'){
    events.time+=delta;poseArrivalCar(world.car,clamp(events.time/CAR_ARRIVAL_SECONDS,0,1));
    if(world.car.progress===1){events.phase='explore';say('Auto estacionado');}
@@ -1039,7 +1071,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(cue==='patrol'){pursuer.start();saveCheckpoint();say('Se oyen pasos hacia la escalera.',4);}
    if(cue==='resting')pursuer.goToBed();
    if(cue==='sleep'){sound.setThreat(false);saveCheckpoint();say('Se durmió. Ya es seguro salir.',4);}
-   if(cue==='wake'){phone.close();resetInput();pursuer.wake();sound.sequence('notification',true);sound.setThreat(true);say('¡El mensaje lo despertó!',3);}
+   if(cue==='wake'){
+    phone.close();resetInput();pursuer.wake();sound.sequence('notification',true);sound.setThreat(true);
+    if(emyCompanion&&sendEmyToTrunk(emyCompanion))say('¡El mensaje lo despertó! Emy corre a esconderse en el baúl del estudio.',4);
+    else say('¡El mensaje lo despertó!',3);
+   }
    if(cue==='hunt'){pursuer.resumeSearch();saveCheckpoint();}
    if(cue==='evaded'){pursuer.settleUpstairs();sound.setThreat(false);sound.sequence('notification');saveCheckpoint();say('Sube a revisar la planta alta. Busca la trampilla bajo el tapete de la cocina.',5);}
    if(cue==='failed'&&pursuer.caught){beginCapture();return;}
@@ -1058,8 +1094,18 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   updateStory(shotDelta);
   if(captureShot){renderCapture(shotDelta);return;}
   if(!isSuspended()){
+   if(emyShot)updateFurniture(world.objects,shotDelta,s);
    const wasHidden=world.emy.hidden;
-   updateUpstairsEmy(world.emy,shotDelta,{player:s,reduced:reducedMotion.matches,
+   if(emyCompanion){
+    const cue=updateEmyCompanion(emyCompanion,emyShot&&reducedMotion.matches?shotDelta*3:shotDelta,{world,player:s,reduced:reducedMotion.matches,finale:world.greyCat.active});
+    if(cue==='jump'&&emyShot&&!emyShot.jumped){emyShot.jumped=true;play('cat',world.emy,.6);play('cloth',world.entryWindow.box,.45);}
+    if(cue==='landed'){play('land',world.emy,.5);if(emyShot)finishEmyShot();}
+    if(cue==='entering-trunk'&&s.hidden?.objectId!=='hide-trunk')poseTrunk(world.objects.find(o=>o.id==='hide-trunk').lid,Math.sin(Math.min(1,emyCompanion.entranceAge/.75)*Math.PI));
+    if(cue==='trunk'){
+     poseTrunk(world.objects.find(o=>o.id==='hide-trunk').lid,0);
+     say('Emy se ocultó en el baúl. Se quedará allí en silencio.',4);saveCheckpoint();
+    }
+   }else updateUpstairsEmy(world.emy,shotDelta,{player:s,reduced:reducedMotion.matches,
     hidden:world.greyCat.active,blocked:(x,y,z,r,h)=>blocked(world.boxes,x,y,z,r,h)});
    const cat=world.emy,target=world.emyInteraction;
    Object.assign(target,{x:cat.x,y:cat.y+.38,z:cat.z,interactable:!cat.hidden});
@@ -1085,6 +1131,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(!paused&&!modal)for(const [at,name] of [[.16,'latch'],[.27,'window'],[.51,'cloth'],[.85,'land']])if(progress>=at&&!cinematic.cues.has(name)){cinematic.cues.add(name);play(name);}
    $('lab-intro-caption').textContent=progress<.18?'La ventana del jardín…':progress<.36?'Deslizo el pestillo despacio…':progress<.62?'Me apoyo y paso al otro lado…':progress<.86?'Con cuidado… sin hacer ruido.':'Ya estoy dentro.';
    if(progress>=1){finishWindowIntro();view=cameraOf(s);hand=true;}
+  }else if(emyShot){
+   emyShot.elapsed=emyCompanion.entranceAge;
+   view=emyEntranceCamera(emyShot.camera,emyShot.elapsed/EMY_ENTRANCE_SECONDS,reducedMotion.matches);
+   hand=false;torch=false;
   }else{
    const beforeX=s.x,beforeZ=s.z;tick(dt);view=cameraOf(s);elapsed+=isPaused()?0:dt;
    const dx=s.x-beforeX,dz=s.z-beforeZ;distance=Math.hypot(dx,dz);const divisor=distance||1;
@@ -1479,7 +1529,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    story:()=>({pursuer:pursuer.snapshot(),samples:{loaded:sound.recordings?.buffers.size||0,played:sound.recordings?.played||0,last:sound.recordings?.lastPlayed,errors:sound.recordings?.errors||[]},phase:events.phase,time:events.time,remaining:events.remaining,messages:events.messages.map(m=>({...m})),equipment,phoneOpen:phone.open,hud:{...phone.layout,rect:phone.rect,editing:phone.editing},floorSounds:{steps:floorSounds.steps,triggers:floorSounds.triggers},audio:{lastEffect:sound.lastEffect,effects:sound.effectCount||0,voices:sound.foleyVoices?.size||0}}),
    rc:()=>({mode:rc.mode,elapsed:rc.elapsed,position:{x:rc.x,y:rc.y,z:rc.z,yaw:rc.yaw},noise:rc.noise,crashes:rc.crashes,inventory:!!s.inventory.rc,trap:{...rcTrap},pursuer:{x:pursuer.x,y:pursuer.y,z:pursuer.z,mode:pursuer.mode}}),
    louis:()=>louis?{x:louis.x,y:louis.y,z:louis.z,phase:louis.phase,waypoint:louis.waypoint,age:louis.age,walk:louis.walk,speed:louis.speed,crouch:louis.crouch,reaction:louis.visualReaction?.type??null,cameraPhase:loisShotDirector?.phase??null}:null,
-   emy:()=>({x:world.emy.x,y:world.emy.y,z:world.emy.z,phase:world.emy.phase,reaction:world.emy.reaction,hidden:world.emy.hidden}),
+   emy:()=>({x:world.emy.x,y:world.emy.y,z:world.emy.z,phase:world.emy.phase,reaction:world.emy.reaction,hidden:world.emy.hidden,companion:emyCompanion?.stage,entrance:emyShot?.elapsed,trunk:emyCompanion?.stage==='trunk'}),
    greyCat:()=>({active:world.greyCat.active,x:world.greyCat.x,z:world.greyCat.z,called:world.greyCat.called}),
    // DEV-only route harness for deterministic test setup; not in the production build.
    placeRC:(pose)=>{if(rc.mode!=='driving')throw Error('RC must be deployed first');const y=groundHeight(pose.x,pose.z,pose.y??rc.y,world.hatch?.amount>.92);if(!Number.isFinite(y)||blocked(world.boxes,pose.x,y,pose.z,.155,.38))throw Error('Blocked RC test position');rc.x=pose.x;rc.y=y;rc.z=pose.z;rc.yaw=pose.yaw??rc.yaw;rc.noise=0;syncRCObject(rc);return {x:rc.x,y:rc.y,z:rc.z};},

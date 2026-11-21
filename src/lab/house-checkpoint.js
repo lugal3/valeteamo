@@ -17,7 +17,7 @@ const STUDY={x:3.3,y:0,z:3.6,yaw:-2.8,pitch:0};
 export const SAFE_REWARD={id:'safe-heart',label:'Sobre de la caja fuerte',
  text:'El sobre guarda el mismo corazón que aparece en el cuadro del salón.'};
 
-export function captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTrap,batterySwap,pursuer}){
+export function captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTrap,batterySwap,pursuer,emy}){
  const bedroom=world.objects.find(object=>object.id==='dormitorio');
  let stage=bedroom.locked?'explore':'encounter';
  if(SECOND_CHASE_PHASES.has(events.phase))stage='rest';
@@ -34,7 +34,7 @@ export function captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTr
   battery:Math.ceil(s.battery),spares:s.inventory.batteries+Number(batterySwap!==null),
   rcOwned:s.inventory.rc||rc.mode==='disabled',trapArmed:rcTrap.armed,
   exitUnlocked:rcTrap.closed?!world.objects.find(item=>item.id==='entrada').sealed:undefined,
-  pursuit,hide:s.hidden?.objectId,blackout:{...world.lights.power.blackout}
+  pursuit,hide:s.hidden?.objectId,blackout:{...world.lights.power.blackout},emy
  };
 }
 
