@@ -37,8 +37,10 @@ const assert=require('node:assert/strict');
  for(let i=0;i<60*60;i++)updateEmyCompanion(companion,1/60,{world,player});
  assert.equal(world.emy.y,3.15,'Emy climbs the stairs behind Kitty');
  assert(Math.hypot(world.emy.x-player.x,world.emy.z-player.z)<1.1);
- player.hidden={objectId:'wardrobe'};
- for(let i=0;i<600&&companion.stage!=='hiding';i++)updateEmyCompanion(companion,1/60,{world,player});
+ const enteringHide={objectId:'wardrobe',returnX:player.x,returnZ:player.z};
+ for(let i=0;i<45&&companion.stage!=='hiding';i++)updateEmyCompanion(companion,1/60,{world,player,enteringHide});
+ assert.equal(player.hidden,null,'Emy takes cover during Kitty’s entry animation');
+ player.hidden=enteringHide;
  assert.equal(companion.stage,'hiding');assert(world.emy.parts.every(part=>part.box.hiddenGeometry));
  player.hidden=null;updateEmyCompanion(companion,1/60,{world,player});
  assert.equal(companion.stage,'following');assert(world.emy.parts.every(part=>!part.box.hiddenGeometry));
@@ -63,6 +65,29 @@ const assert=require('node:assert/strict');
  assert(checkedFit);
  assert.equal(companion.stage,'trunk','Emy uses the stairs and enters the study trunk');
  assert(world.emy.parts.every(part=>part.box.hiddenGeometry));
+ // A planted foot should stay put even when the body turns over it.
+ const {poseEmy}=await import('../src/lab/emy-cat.js');
+ const rig=createHouse().emy;
+ const contacts=new Map();
+ let comparisons=0;
+ for(let i=0;i<120;i++){
+  rig.x+=.008*Math.sin(rig.yaw);
+  rig.z+=.008*Math.cos(rig.yaw);
+  rig.yaw+=.004;
+  poseEmy(rig,{walking:true,mode:'walk',phase:i/60});
+  for(const [key,leg] of Object.entries(rig.landmarks.legs)){
+   const [x,y,z]=leg.paw,cs=Math.cos(rig.yaw),sn=Math.sin(rig.yaw);
+   const foot=[rig.x+x*cs+z*sn,rig.y+y,rig.z-x*sn+z*cs];
+   const old=contacts.get(key);
+   if(old&&rig.footContacts[key]===old.anchor){
+    assert(Math.hypot(...foot.map((v,j)=>v-old.foot[j]))<.00001,'no sliding during support');
+    comparisons++;
+   }
+   if(rig.footContacts[key])contacts.set(key,{foot,anchor:rig.footContacts[key]});
+   else contacts.delete(key);
+  }
+ }
+ assert(comparisons>180);
  const saved=snapshotEmyCompanion(companion),loaded=createEmyCompanion(createHouse().emy);
  restoreEmyCompanion(loaded,saved,'hunt');
  assert.equal(loaded.stage,'trunk');assert(loaded.cat.parts.every(part=>part.box.hiddenGeometry));
