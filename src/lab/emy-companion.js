@@ -69,16 +69,32 @@ function planRoute(companion,world,goal){
  Object.assign(planner,{x:cat.x,y:cat.y,z:cat.z});
  if(planner.plan(goal))companion.route=planner.path.map(({x,y,z})=>({x,y,z}));
 }
+// Test the corridor at cat height, including the walking surface on stairs.
+function clearPassage(world,from,to){
+ const length=distance(from,to);
+ if(length>4)return false;
+ const steps=Math.max(1,Math.ceil(length/.14));
+ let floor=from.y;
+ for(let i=1;i<=steps;i++){
+  const x=from.x+(to.x-from.x)*i/steps,z=from.z+(to.z-from.z)*i/steps;
+  const y=groundHeight(x,z,floor,world.hatch?.amount>.92);
+  if(!Number.isFinite(y)||Math.abs(y-floor)>.23||blocked(world.boxes,x,y,z,.20,.62))return false;
+  floor=y;
+ }
+ return Math.abs(floor-to.y)<.23;
+}
 function moveToward(companion,world,goal,dt,speed){
  const cat=companion.cat,dx=goal.x-cat.x,dz=goal.z-cat.z,d=Math.hypot(dx,dz);
  if(d<.055)return false;
- const step=Math.min(d,speed*dt),nx=cat.x+dx/d*step,nz=cat.z+dz/d*step;
+ const turn=deltaAngle(cat.yaw,Math.atan2(dx,dz));
+ cat.yaw+=turn*(1-Math.exp(-18*dt));
+ const step=Math.min(d,speed*dt*Math.max(.12,Math.cos(turn))),nx=cat.x+dx/d*step,nz=cat.z+dz/d*step;
  const y=groundHeight(nx,nz,cat.y,world.hatch?.amount>.92);
  if(!Number.isFinite(y)||Math.abs(y-cat.y)>.30||blocked(world.boxes,nx,y,nz,.14,.62))return false;
- cat.x=nx;cat.y=y;cat.z=nz;cat.yaw+=deltaAngle(cat.yaw,Math.atan2(dx,dz))*(1-Math.exp(-12*dt));
+ cat.x=nx;cat.y=y;cat.z=nz;
  return true;
 }
-export function updateEmyCompanion(companion,delta,{world,player,reduced=false,finale=false}={}){
+export function updateEmyCompanion(companion,delta,{world,player,enteringHide=null,reduced=false,finale=false}={}){
  const cat=companion.cat,dt=Number.isFinite(delta)?Math.max(0,Math.min(.1,delta)):0;
  if(finale){setVisibility(companion,true);return null;}
  if(companion.stage==='waiting'||companion.stage==='trunk')return null;
@@ -96,28 +112,26 @@ export function updateEmyCompanion(companion,delta,{world,player,reduced=false,f
   if(t>=1){cat.y=0;companion.stage='following';companion.trail=[{...WINDOW_END}];return 'landed';}
   return previous<.3&&t>=.3?'jump':null;
  }
- const hide=player?.hidden;
+ const hide=enteringHide||player?.hidden;
+ let following=companion.stage==='following';
+ if(following&&hide)cat.reaction=0;
  if(companion.stage==='hiding'&&!hide){
-  companion.stage='following';companion.hiddenAt=null;
+  companion.stage='following';companion.hiddenAt=null;following=true;
   // She reappears at the safe floor position where she followed Kitty in.
   setVisibility(companion,false);
  }
  if(companion.stage==='following'&&player&&!hide){
   const last=companion.trail.at(-1);
-  if(!last||Math.hypot(player.x-last.x,player.z-last.z,2*(player.y-last.y))>.30){
+  if(!last||Math.hypot(player.x-last.x,player.z-last.z,2*(player.y-last.y))>.16){
    companion.trail.push({x:player.x,y:player.y,z:player.z});
    if(companion.trail.length>450)companion.trail.shift();
   }
  }
  if(companion.stage==='trunk-run'&&!companion.route.length&&distance(cat,TRUNK_APPROACH)>.42)
   planRoute(companion,world,TRUNK_APPROACH);
- if(companion.stage==='following'&&hide&&distance(cat,{x:player.x,z:player.z})<.9&&Math.abs(cat.y-player.y)<.45){
-  companion.stage='hiding';companion.hiddenAt=hide.objectId;
-  setVisibility(companion,true);
-  return 'hid';
- }
  if(companion.stage==='hiding')return null;
- const heading=companion.stage==='trunk-run'?TRUNK_APPROACH:player;
+ const hideDoor=hide&&player?{x:hide.returnX??player.x,y:player.y,z:hide.returnZ??player.z}:null;
+ const heading=following?(hideDoor||player):TRUNK_APPROACH;
  if(!heading)return null;
  if(companion.stage==='trunk-run'&&distance(cat,TRUNK_APPROACH)<.42&&Math.abs(cat.y)<.25){
   const trunk=world.objects.find(object=>object.id==='hide-trunk');
@@ -155,7 +169,23 @@ export function updateEmyCompanion(companion,delta,{world,player,reduced=false,f
   while(companion.trail.length>1&&distance(cat,companion.trail[0])<.22&&Math.abs(cat.y-companion.trail[0].y)<.27)companion.trail.shift();
   if(companion.trail.length)goal=companion.trail[0];
  }
- const far=distance(cat,heading)> (hide?.28:companion.stage==='following'?.88:.32)||Math.abs(cat.y-heading.y)>.25;
+ const gap=distance(cat,heading);
+ if(following){
+  // Prefer Kitty when there is room for the whole cat. Keep the recorded
+  // footsteps around blind bends and across changes in floor height.
+  if(companion.age>=(companion.nextSight||0)||companion.lastHide!==hide?.objectId){
+   companion.direct=clearPassage(world,cat,heading);
+   companion.nextSight=companion.age+.12;
+   companion.lastHide=hide?.objectId;
+  }
+  if(companion.direct){
+   goal=heading;
+   companion.trail.length=0;
+   companion.route.length=0;
+  }
+ }
+ const stop=following?(hide?.21:.53):.32;
+ const far=gap>stop+.008||Math.abs(cat.y-heading.y)>.25;
  let walking=false;
  if(companion.stage==='trunk-run'&&companion.route.length){
   // The study door can be closed again after Kitty collects the key.
@@ -166,12 +196,15 @@ export function updateEmyCompanion(companion,delta,{world,player,reduced=false,f
     animateFurniture(door,true,{player,reducedMotion:reduced});
   }
  }
- if(far&&cat.reaction<=0)walking=moveToward(companion,world,goal,dt,companion.stage==='trunk-run'?1.4:1.23);
+ if(far&&cat.reaction<=0&&dt>0){
+  const pace=following?Math.min(4.8,.85+3.8*Math.max(0,gap-stop)):1.4;
+  walking=moveToward(companion,world,goal,dt,goal===heading?Math.min(pace,Math.max(0,gap-stop)/dt):pace);
+ }
  if(!walking&&far&&cat.reaction<=0){
   companion.stuck+=dt;
   if(companion.stuck>1.2){planRoute(companion,world,goal);companion.stuck=0;}
  }else companion.stuck=0;
- if(companion.stage==='following'&&hide&&distance(cat,heading)<.9&&Math.abs(cat.y-heading.y)<.45){
+ if(companion.stage==='following'&&hide&&companion.direct&&distance(cat,heading)<.38&&Math.abs(cat.y-heading.y)<.45){
   companion.stage='hiding';companion.hiddenAt=hide.objectId;setVisibility(companion,true);return 'hid';
  }
  if(cat.reaction>0&&player){
@@ -179,7 +212,8 @@ export function updateEmyCompanion(companion,delta,{world,player,reduced=false,f
   cat.yaw+=deltaAngle(cat.yaw,facing)*(1-Math.exp(-6*dt));
 
  }
- const mode=cat.reaction>0?'purr':walking?'walk':'sit';
+ companion.restTime=walking?0:(companion.restTime||0)+dt;
+ const mode=cat.reaction>0?'purr':walking?'walk':companion.restTime<.65?'idle':'sit';
  if(cat.reaction>0)cat.reaction=Math.max(0,cat.reaction-dt);
  cat.phase=mode;poseEmy(cat,{mode,walking,reduced,phase:cat.age,blend:1-Math.exp(-dt*10)});
  return null;

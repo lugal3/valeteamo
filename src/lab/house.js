@@ -1098,7 +1098,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(emyShot)updateFurniture(world.objects,shotDelta,s);
    const wasHidden=world.emy.hidden;
    if(emyCompanion){
-    const cue=updateEmyCompanion(emyCompanion,emyShot&&reducedMotion.matches?shotDelta*3:shotDelta,{world,player:s,reduced:reducedMotion.matches,finale:world.greyCat.active});
+    const enteringHide=poseTransition?.entering?{objectId:poseTransition.object.id,returnX:poseTransition.outside.x,returnZ:poseTransition.outside.z}:null;
+    const cue=updateEmyCompanion(emyCompanion,emyShot&&reducedMotion.matches?shotDelta*3:shotDelta,{world,player:s,enteringHide,reduced:reducedMotion.matches,finale:world.greyCat.active});
     if(cue==='jump'&&emyShot&&!emyShot.jumped){emyShot.jumped=true;play('cat',world.emy,.6);play('cloth',world.entryWindow.box,.45);}
     if(cue==='landed'){play('land',world.emy,.5);if(emyShot)finishEmyShot();}
     if(cue==='entering-trunk'&&s.hidden?.objectId!=='hide-trunk')poseTrunk(world.objects.find(o=>o.id==='hide-trunk').lid,emyCompanion.lidAmount);

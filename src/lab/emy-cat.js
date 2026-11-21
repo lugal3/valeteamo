@@ -34,7 +34,13 @@ export function installEmyModel(add,{prefix='emy',hidden=false}={}){
  return parts;
 }
 const lerp=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
-export function emyLandmarks(mode='idle',phase=0,walking=false,reduced=false){
+// Stance occupies 57% of a stride. The four offsets give a lateral-sequence
+// walk: hind paw, forepaw on the same side, then the other pair.
+const strideLength=.48, stance=.57;
+function stridePhase(travel,front,side){
+ return (travel/strideLength+(side===1?.5:0)+(front?.75:0))%1;
+}
+export function emyLandmarks(mode='idle',phase=0,walking=false,reduced=false,travel=phase*.55){
  const sit=['sit','groom','purr'].includes(mode),sleep=mode==='sleep',stretch=mode==='stretch',groom=mode==='groom',jump=mode==='jump';
  const motion=reduced?0:Math.sin(phase*8),bob=walking?Math.abs(motion)*.006:0;
  const body=sleep?[0,.17,-.12]:stretch?[0,.30,-.13]:sit?[0,.32,-.14]:[0,.31+bob,-.12];
@@ -44,7 +50,13 @@ export function emyLandmarks(mode='idle',phase=0,walking=false,reduced=false){
  for(const front of [true,false])for(const side of [-1,1]){
   const key=(front?'front':'hind')+side;
   let hip=[side*.10,front?.36:.31,front?.11:-.30],paw=[side*.105,.030,front?.20:-.34];
-  if(walking){const stride=motion*side*(front?1:-1);paw[2]+=stride*.075;paw[1]+=Math.max(0,stride)*.047;}
+  if(walking){
+   const cycle=stridePhase(travel,front,side);
+   const swing=Math.max(0,(cycle-stance)/(1-stance));
+   const reach=strideLength*stance;
+   paw[2]+=cycle<stance?reach/2-cycle*strideLength:reach*(swing*swing*(3-2*swing)-.5);
+   paw[1]+=(reduced?.028:.065)*Math.sin(Math.PI*swing)**2;
+  }
   if(sit){hip=[side*(front?.095:.115),front?.40:.17,front?.07:-.24];paw=[side*(front?.09:.14),.030,front?.20:-.20];}
   if(stretch){hip=[side*.10,front?.20:.37,front?.21:-.34];paw=[side*.12,.030,front?.48:-.43];}
   if(jump){hip=[side*.10,front?.37:.30,front?.12:-.30];paw=[side*.12,front?.18:.16,front?.42:-.22];}
@@ -57,7 +69,27 @@ export function emyLandmarks(mode='idle',phase=0,walking=false,reduced=false){
  return {body,head,headRot,legs,sit,sleep,stretch,groom};
 }
 export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.age,headYaw=0,blend=1}={}){
- const l=emyLandmarks(mode,phase,walking,reduced),headRotation=[l.headRot[0],l.headRot[1]+headYaw,l.headRot[2]];
+ const previous=cat.lastFootRoot;
+ const moved=previous?Math.hypot(cat.x-previous.x,cat.z-previous.z):0;
+ cat.walkTravel=(cat.walkTravel||0)+(walking?moved:0);
+ cat.lastFootRoot={x:cat.x,z:cat.z};
+ const l=emyLandmarks(mode,phase,walking,reduced,cat.walkTravel);
+ if(walking){
+  const anchors=cat.footContacts??={};
+  const sn=Math.sin(cat.yaw),cs=Math.cos(cat.yaw);
+  for(const [key,leg] of Object.entries(l.legs)){
+   const cycle=stridePhase(cat.walkTravel,key.startsWith('front'),key.endsWith('-1')?-1:1);
+   if(cycle>=stance){delete anchors[key];continue;}
+   const [x,y,z]=leg.paw;
+   const anchor=anchors[key]??={x:cat.x+x*cs+z*sn,y:cat.y+y,z:cat.z-x*sn+z*cs};
+   const dx=anchor.x-cat.x,dz=anchor.z-cat.z;
+   const foot=[dx*cs-dz*sn,anchor.y-cat.y,dx*sn+dz*cs];
+   for(let i=0;i<3;i++)leg.knee[i]+=(foot[i]-leg.paw[i])*.5;
+   leg.paw=foot;
+  }
+  blend=1;
+ }else cat.footContacts=null;
+ const headRotation=[l.headRot[0],l.headRot[1]+headYaw,l.headRot[2]];
  const blink=l.sleep||cat.age%4.6>4.42||(mode==='purr'&&Math.sin(phase*2.8)>.15),eyes=blink?.035:mode==='purr'?.65:1;
  const root=p=>{const v=rotateEmy(p,0,cat.yaw,0);return [cat.x+v[0],cat.y+v[1],cat.z+v[2]];};
  for(const part of cat.parts){
