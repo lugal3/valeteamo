@@ -42,8 +42,25 @@ const assert=require('node:assert/strict');
  assert.equal(companion.stage,'hiding');assert(world.emy.parts.every(part=>part.box.hiddenGeometry));
  player.hidden=null;updateEmyCompanion(companion,1/60,{world,player});
  assert.equal(companion.stage,'following');assert(world.emy.parts.every(part=>!part.box.hiddenGeometry));
+ setDoor(world.objects.find(o=>o.id==='estudio'),false);
+ const {updateFurniture}=await import('../src/lab/furniture-motion.js');
  assert(sendEmyToTrunk(companion));
- for(let i=0;i<60*80&&companion.stage!=='trunk';i++)updateEmyCompanion(companion,1/60,{world,player});
+ const {geometry}=await import('../src/lab/renderer.js');
+ let checkedFit=false;
+ for(let i=0;i<60*80&&companion.stage!=='trunk';i++){
+  updateEmyCompanion(companion,1/60,{world,player});
+  updateFurniture(world.objects,1/60,player);
+  if(companion.stage==='trunk-enter'&&companion.entranceAge>2.1&&!checkedFit){
+   const mesh=geometry(world.emy.parts.map(part=>part.box)).vertices;
+   const lid=world.boxes.find(box=>box.id==='trunk-lid');
+   for(let v=0;v<mesh.length;v+=16){
+    assert(Math.abs(mesh[v]-lid.x)<.54&&Math.abs(mesh[v+2]-lid.z)<.39,'curled coat fits inside the trunk walls');
+    assert(mesh[v+1]>=.149&&mesh[v+1]<lid.y-lid.h/2,'paws rest on the base and ears clear the closed lid');
+   }
+   checkedFit=true;
+  }
+ }
+ assert(checkedFit);
  assert.equal(companion.stage,'trunk','Emy uses the stairs and enters the study trunk');
  assert(world.emy.parts.every(part=>part.box.hiddenGeometry));
  const saved=snapshotEmyCompanion(companion),loaded=createEmyCompanion(createHouse().emy);

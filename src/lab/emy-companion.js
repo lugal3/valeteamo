@@ -1,17 +1,19 @@
 import {poseEmy} from './emy-cat.js';
+import {animateFurniture} from './furniture-motion.js';
 import {Pursuer} from './pursuer.js';
 import {blocked,groundHeight} from './world.js';
 
 export const EMY_ENTRANCE_SECONDS=3.5;
-const WINDOW_START={x:2.2,y:0,z:12.82};
+const WINDOW_START={x:2.2,y:1.17,z:12.48};
 const WINDOW_END={x:2.65,y:0,z:10.75};
-const TRUNK_APPROACH={x:1.83,y:0,z:2.92};
+const TRUNK_APPROACH={x:2.08,y:0,z:2.25};
 const smooth=t=>{const x=Math.max(0,Math.min(1,t));return x*x*(3-2*x);};
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const deltaAngle=(a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a));
 
 export function createEmyCompanion(cat,{waiting=true}={}){
  const companion={cat,stage:waiting?'waiting':'following',age:0,entranceAge:0,trail:[],route:[],stuck:0,planner:null,hiddenAt:null};
+ companion.lidAmount=0;
  if(!waiting){Object.assign(cat,{x:5.1,y:0,z:10.65,yaw:Math.PI});poseEmy(cat,{mode:'sit'});}
  setVisibility(companion,waiting);
  return companion;
@@ -31,7 +33,8 @@ export function beginEmyEntrance(companion){
 export function emyEntranceCamera(camera,progress,reduced=false){
  // Kitty looks over her shoulder toward the living-room window, then back to the door.
  const look=smooth(progress/.27)*(1-smooth((progress-.78)/.22));
- const peek={x:4.85,z:6.2},windowYaw=Math.atan2(2.2-peek.x,12.2-peek.z);
+ const peek=camera.x<4.4?{x:camera.x,z:camera.z}:{x:4.85,z:6.2};
+ const windowYaw=Math.atan2(2.2-peek.x,12.2-peek.z);
  if(reduced)return {...camera,...peek,yaw:windowYaw,pitch:-.08};
  return {...camera,x:camera.x+(peek.x-camera.x)*look,z:camera.z+(peek.z-camera.z)*look,
   yaw:camera.yaw+deltaAngle(camera.yaw,windowYaw)*look,
@@ -72,7 +75,7 @@ function moveToward(companion,world,goal,dt,speed){
  const step=Math.min(d,speed*dt),nx=cat.x+dx/d*step,nz=cat.z+dz/d*step;
  const y=groundHeight(nx,nz,cat.y,world.hatch?.amount>.92);
  if(!Number.isFinite(y)||Math.abs(y-cat.y)>.30||blocked(world.boxes,nx,y,nz,.14,.62))return false;
- cat.x=nx;cat.y=y;cat.z=nz;cat.yaw=Math.atan2(dx,dz);
+ cat.x=nx;cat.y=y;cat.z=nz;cat.yaw+=deltaAngle(cat.yaw,Math.atan2(dx,dz))*(1-Math.exp(-12*dt));
  return true;
 }
 export function updateEmyCompanion(companion,delta,{world,player,reduced=false,finale=false}={}){
@@ -89,7 +92,7 @@ export function updateEmyCompanion(companion,delta,{world,player,reduced=false,f
   cat.z=WINDOW_START.z+(WINDOW_END.z-WINDOW_START.z)*p;
   cat.y=1.17*(1-p)+Math.sin(p*Math.PI)*.51;
   cat.yaw=Math.atan2(WINDOW_END.x-WINDOW_START.x,WINDOW_END.z-WINDOW_START.z);
-  poseEmy(cat,{mode:p>.04&&p<.98?'jump':'sit',phase:cat.age,blend:1});
+  poseEmy(cat,{mode:p>.04&&p<.98?'jump':'sit',phase:cat.age,blend:1-Math.exp(-24*dt)});
   if(t>=1){cat.y=0;companion.stage='following';companion.trail=[{...WINDOW_END}];return 'landed';}
   return previous<.3&&t>=.3?'jump':null;
  }
@@ -117,14 +120,32 @@ export function updateEmyCompanion(companion,delta,{world,player,reduced=false,f
  const heading=companion.stage==='trunk-run'?TRUNK_APPROACH:player;
  if(!heading)return null;
  if(companion.stage==='trunk-run'&&distance(cat,TRUNK_APPROACH)<.42&&Math.abs(cat.y)<.25){
-  companion.stage='trunk-enter';companion.entranceAge=0;companion.route=[];
+  const trunk=world.objects.find(object=>object.id==='hide-trunk');
+  if(hide?.objectId===trunk.id)return null;
+  companion.stage='trunk-enter';
+  companion.entranceAge=0;
+  companion.route=[];
+  companion.jumpStart={x:cat.x,z:cat.z,yaw:cat.yaw};
+  companion.trunk=trunk;
  }
  if(companion.stage==='trunk-enter'){
-  companion.entranceAge+=dt;
-  cat.x+=(1.28-cat.x)*Math.min(1,dt*2);cat.z+=(2.3-cat.z)*Math.min(1,dt*2);
-  cat.y=Math.max(0,cat.y-dt*.42);
-  poseEmy(cat,{mode:'stretch',phase:cat.age,blend:1});
-  if(companion.entranceAge>.75){companion.stage='trunk';setVisibility(companion,true);return 'trunk';}
+  const t=companion.entranceAge+=dt;
+  const start=companion.jumpStart;
+  const inside=companion.trunk.hideCamera;
+  // Turn along the long axis. Lift clear of the wooden side before crossing it.
+  const travel=smooth((t-.65)/.65);
+  cat.x=start.x+(inside.x-start.x)*travel;
+  cat.z=start.z+(inside.z-start.z)*travel;
+  cat.y=.80*smooth((t-.40)/.26)-.65*smooth((t-1.25)/.42);
+  cat.yaw=start.yaw+deltaAngle(start.yaw,-Math.PI/2)*smooth(t/.42);
+  companion.lidAmount=smooth(t/.42)*(1-smooth((t-1.73)/.52));
+  const mode=t<.40?'idle':t<1.20?'jump':'sleep';
+  poseEmy(cat,{mode,phase:cat.age,blend:1-Math.exp(-23*dt)});
+  if(t>=2.25){
+   companion.stage='trunk';
+   setVisibility(companion,true);
+   return 'trunk';
+  }
   return 'entering-trunk';
  }
  let goal=heading;
@@ -136,6 +157,15 @@ export function updateEmyCompanion(companion,delta,{world,player,reduced=false,f
  }
  const far=distance(cat,heading)> (hide?.28:companion.stage==='following'?.88:.32)||Math.abs(cat.y-heading.y)>.25;
  let walking=false;
+ if(companion.stage==='trunk-run'&&companion.route.length){
+  // The study door can be closed again after Kitty collects the key.
+  for(const door of world.objects){
+   if(door.kind!=='door'||door.open||door.motion||door.locked||door.sealed)continue;
+   if(Math.abs(door.y-1.1-cat.y)>.4||distance(cat,door.origin)>1.1)continue;
+   if(companion.route.slice(0,5).some(node=>distance(node,door.origin)<.55))
+    animateFurniture(door,true,{player,reducedMotion:reduced});
+  }
+ }
  if(far&&cat.reaction<=0)walking=moveToward(companion,world,goal,dt,companion.stage==='trunk-run'?1.4:1.23);
  if(!walking&&far&&cat.reaction<=0){
   companion.stuck+=dt;
@@ -144,8 +174,12 @@ export function updateEmyCompanion(companion,delta,{world,player,reduced=false,f
  if(companion.stage==='following'&&hide&&distance(cat,heading)<.9&&Math.abs(cat.y-heading.y)<.45){
   companion.stage='hiding';companion.hiddenAt=hide.objectId;setVisibility(companion,true);return 'hid';
  }
- const near=player&&Math.abs(player.y-cat.y)<.5&&distance(cat,player)<1.7;
- const mode=cat.reaction>0?'purr':walking?'walk':near?'sit':'sit';
+ if(cat.reaction>0&&player){
+  const facing=Math.atan2(player.x-cat.x,player.z-cat.z);
+  cat.yaw+=deltaAngle(cat.yaw,facing)*(1-Math.exp(-6*dt));
+
+ }
+ const mode=cat.reaction>0?'purr':walking?'walk':'sit';
  if(cat.reaction>0)cat.reaction=Math.max(0,cat.reaction-dt);
  cat.phase=mode;poseEmy(cat,{mode,walking,reduced,phase:cat.age,blend:1-Math.exp(-dt*10)});
  return null;

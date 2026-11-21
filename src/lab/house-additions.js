@@ -158,14 +158,14 @@ export function installExtraHides(add,obj){
  for(let i=0;i<6;i++)add('shower-fold-'+i,8.32+(i%2)*.018,1.29,6.63+i*.115,.055,1.82,.12,'velvet',true,{color:[.40,.57,.56]});
  obj('hide-shower','hide','Esconderse en la ducha',7.98,1.06,6.60,{hideType:'shower',returnX:8.05,returnZ:6.30,hideCamera:{x:7.94,y:1.28,z:7.00,yaw:Math.PI,pitch:0}});
  const x=1.02,z=2.23;
- add('trunk-base',x,.12,z,1.08,.24,.66,'wood',true);
- add('trunk-back',x,.32,z-.30,1.08,.30,.07,'wood',true);
- for(const side of [-1,1])add('trunk-side-'+side,x+side*.51,.32,z,.06,.30,.66,'wood',true);
- add('trunk-front',x,.36,z+.32,1.08,.23,.065,'wood',true);
- const lid=add('trunk-lid',x,.51,z,1.12,.10,.70,'wood',true,{dynamic:true,color:[.43,.28,.21]});
- const straps=[-.35,.35].map(dx=>add('trunk-strap-'+dx,x+dx,.569,z,.078,.018,.71,'brass',false,{dynamic:true}));
- const hinge={y:.51,z:z-.35},parts=[lid,...straps].map(box=>({box,y:box.y,z:box.z}));
- obj('hide-trunk','hide','Esconderse en el baúl',x,.59,z+.37,{hideType:'trunk',returnX:x,returnZ:2.89,hideCamera:{x,y:.425,z,yaw:0,pitch:0},lid:{hinge,parts}});
+ add('trunk-base',x,.075,z,1.20,.15,.90,'wood',true);
+ add('trunk-back',x,.39,z-.42,1.20,.49,.06,'wood',true);
+ for(const side of [-1,1])add('trunk-side-'+side,x+side*.57,.39,z,.06,.49,.90,'wood',true);
+ add('trunk-front',x,.39,z+.42,1.20,.49,.06,'wood',true);
+ const lid=add('trunk-lid',x,.69,z,1.24,.10,.93,'wood',true,{dynamic:true,color:[.43,.28,.21]});
+ const straps=[-.35,.35].map(dx=>add('trunk-strap-'+dx,x+dx,.748,z,.078,.018,.94,'brass',false,{dynamic:true}));
+ const hinge={y:.69,z:z-.465},parts=[lid,...straps].map(box=>({box,y:box.y,z:box.z}));
+ obj('hide-trunk','hide','Esconderse en el baúl',x,.64,z+.48,{hideType:'trunk',returnX:x,returnZ:3.05,hideCamera:{x,y:.425,z,yaw:0,pitch:0},lid:{hinge,parts}});
 }
 
 export function poseTrunk(lid,open){

@@ -412,6 +412,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(s.hidden||s.lying){exitPose();return;}
   const o=closestObject(world,s,focus);if(!o){say('Acércate a un objeto y míralo para interactuar');return;}
   if(o.kind==='emy-cat'){
+   if(Math.hypot(s.x-o.x,s.z-o.z)>1.45){say('Acércate un poco para acariciar a Emy');return;}
    if(petEmy(world.emy)){play('cat',o,.45);say('Emy ronronea y levanta su patita ♡',3);}
   }else if(o.kind==='light-switch'){
    const on=toggleCircuit(o.circuit);play('click',o);
@@ -1100,7 +1101,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     const cue=updateEmyCompanion(emyCompanion,emyShot&&reducedMotion.matches?shotDelta*3:shotDelta,{world,player:s,reduced:reducedMotion.matches,finale:world.greyCat.active});
     if(cue==='jump'&&emyShot&&!emyShot.jumped){emyShot.jumped=true;play('cat',world.emy,.6);play('cloth',world.entryWindow.box,.45);}
     if(cue==='landed'){play('land',world.emy,.5);if(emyShot)finishEmyShot();}
-    if(cue==='entering-trunk'&&s.hidden?.objectId!=='hide-trunk')poseTrunk(world.objects.find(o=>o.id==='hide-trunk').lid,Math.sin(Math.min(1,emyCompanion.entranceAge/.75)*Math.PI));
+    if(cue==='entering-trunk'&&s.hidden?.objectId!=='hide-trunk')poseTrunk(world.objects.find(o=>o.id==='hide-trunk').lid,emyCompanion.lidAmount);
     if(cue==='trunk'){
      poseTrunk(world.objects.find(o=>o.id==='hide-trunk').lid,0);
      say('Emy se ocultó en el baúl. Se quedará allí en silencio.',4);saveCheckpoint();
@@ -1108,7 +1109,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    }else updateUpstairsEmy(world.emy,shotDelta,{player:s,reduced:reducedMotion.matches,
     hidden:world.greyCat.active,blocked:(x,y,z,r,h)=>blocked(world.boxes,x,y,z,r,h)});
    const cat=world.emy,target=world.emyInteraction;
-   Object.assign(target,{x:cat.x,y:cat.y+.38,z:cat.z,interactable:!cat.hidden});
+   Object.assign(target,{x:cat.x,y:cat.y+.38,z:cat.z,interactable:!cat.hidden&&(!emyCompanion||emyCompanion.stage==='following')&&cat.reaction<=0});
    if(wasHidden!==cat.hidden)renderer.updateVisibility();
   }
   const greyCat=world.greyCat;
@@ -1149,6 +1150,19 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    s.walkWeight=animator.weight;view=cameraOf(s);
    if(flashlightBeam()&&!isPaused())drainFlashlight(shotDelta);
    torch=flashlightBeam();
+  }
+  const pet=world.emy;
+  if(pet.reaction>0&&!pet.hidden&&!s.hidden&&!poseTransition&&!phone.open&&!emyShot&&!isSuspended()&&Math.hypot(s.x-pet.x,s.z-pet.z)<1.5){
+   const age=3.4-pet.reaction;
+   const reach=Math.min(1,age/.34,pet.reaction/.34);
+   const stroke=(1-Math.cos(age*Math.PI*2))*.5;
+   const startX=view.x+.18*Math.cos(view.yaw),startZ=view.z-.18*Math.sin(view.yaw);
+   const contact=pet.landmarks.head;
+   const along=contact[2]+.08-stroke*.15;
+   introHands=[null,{x:startX+(pet.x+Math.sin(pet.yaw)*along-startX)*reach,
+    y:view.y-.32+(pet.y+contact[1]+.12-view.y+.32)*reach,
+    z:startZ+(pet.z+Math.cos(pet.yaw)*along-startZ)*reach,flex:-.25,curl:.18}];
+   hand=false;
   }
   if(intro&&demo&&checkpoint==='ground'){view=windowIntroCamera(0);hand=false;torch=false;}
   if(!isPaused())placePianoScore();

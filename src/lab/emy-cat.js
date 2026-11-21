@@ -115,6 +115,11 @@ export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.a
   const desired={pos:root(p),rot:[rot[0],rot[1]+cat.yaw,rot[2]],scale};
   const old=box.emyPose;
   box.emyPose=blend<1?{pos:lerp(old.pos,desired.pos,blend),rot:lerp(old.rot,desired.rot,blend),scale:lerp(old.scale,desired.scale,blend)}:desired;
+  // Yaw wraps at ±pi. Blend across the seam without spinning the face or tail.
+  if(blend<1){
+   const turn=desired.rot[1]-old.rot[1];
+   box.emyPose.rot[1]=old.rot[1]+Math.atan2(Math.sin(turn),Math.cos(turn))*blend;
+  }
   if(['pos','rot','scale'].some(key=>box.emyPose[key].some((v,i)=>Math.abs(v-old[key][i])>1e-6)))box.emyRevision=(box.emyRevision||0)+1;
   [box.x,box.y,box.z]=box.emyPose.pos;[box.pitch,box.yaw,box.roll]=box.emyPose.rot;
   const spec=box.emySpec;box.w=spec.w*scale[0];box.h=joint==='tail'?.01:spec.h*scale[1];box.d=spec.d*scale[2];
