@@ -7,6 +7,11 @@ export const EMY_ENTRANCE_SECONDS=3.5;
 const WINDOW_START={x:2.2,y:1.17,z:12.48};
 const WINDOW_END={x:2.65,y:0,z:10.75};
 const TRUNK_APPROACH={x:2.08,y:0,z:2.25};
+// Emy gives Kitty room to move.  The two thresholds deliberately create a
+// small hysteresis band: walking around her does not make her keep turning
+// and taking little corrective steps, but moving away still calls her along.
+const FOLLOW_STOP=1.08;
+const FOLLOW_RESUME=1.46;
 const smooth=t=>{const x=Math.max(0,Math.min(1,t));return x*x*(3-2*x);};
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const deltaAngle=(a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a));
@@ -24,7 +29,7 @@ function setVisibility(companion,hidden){
 }
 export function beginEmyEntrance(companion){
  if(companion.stage!=='waiting')return false;
- Object.assign(companion,{stage:'entrance',entranceAge:0,trail:[],route:[]});
+ Object.assign(companion,{stage:'entrance',entranceAge:0,trail:[],route:[],chasing:undefined});
  Object.assign(companion.cat,WINDOW_START,{yaw:Math.PI});
  setVisibility(companion,false);
  poseEmy(companion.cat,{mode:'sit'});
@@ -42,7 +47,7 @@ export function emyEntranceCamera(camera,progress,reduced=false){
 }
 export function sendEmyToTrunk(companion){
  if(['waiting','trunk','trunk-enter'].includes(companion.stage))return false;
- companion.stage='trunk-run';companion.trail=[];companion.route=[];companion.stuck=0;
+ companion.stage='trunk-run';companion.trail=[];companion.route=[];companion.stuck=0;companion.chasing=false;
  companion.cat.reaction=0;
  setVisibility(companion,false);
  return true;
@@ -55,7 +60,7 @@ export function snapshotEmyCompanion(companion){
 export function restoreEmyCompanion(companion,saved,storyPhase='explore'){
  const valid=['waiting','following','hiding','trunk-run','trunk'];
  const stage=valid.includes(saved?.stage)?saved.stage:storyPhase==='explore'?'waiting':['sleep','patrol','hide','resting','arrival'].includes(storyPhase)?'following':'trunk';
- companion.stage=stage;companion.trail=[];companion.route=[];companion.stuck=0;
+ companion.stage=stage;companion.trail=[];companion.route=[];companion.stuck=0;companion.chasing=undefined;
  if(['following','hiding','trunk-run'].includes(stage)&&[saved?.x,saved?.y,saved?.z,saved?.yaw].every(Number.isFinite))
   Object.assign(companion.cat,{x:saved.x,y:saved.y,z:saved.z,yaw:saved.yaw});
  else if(stage==='trunk')Object.assign(companion.cat,TRUNK_APPROACH,{yaw:-Math.PI/2});
@@ -170,6 +175,17 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
   if(companion.trail.length)goal=companion.trail[0];
  }
  const gap=distance(cat,heading);
+ if(following&&!hide){
+  const differentFloor=Math.abs(cat.y-heading.y)>.25;
+  if(companion.chasing===undefined)companion.chasing=gap>FOLLOW_RESUME||differentFloor;
+  if(companion.chasing&&!differentFloor&&gap<=FOLLOW_STOP){
+   // Her current spot is intentional once she is close enough.  Discarding
+   // stale breadcrumbs avoids a delayed turn if Kitty circles around Emy.
+   companion.chasing=false;
+   companion.trail.length=0;
+   companion.route.length=0;
+  }else if(!companion.chasing&&(gap>FOLLOW_RESUME||differentFloor))companion.chasing=true;
+ }
  if(following){
   // Prefer Kitty when there is room for the whole cat. Keep the recorded
   // footsteps around blind bends and across changes in floor height.
@@ -184,8 +200,10 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
    companion.route.length=0;
   }
  }
- const stop=following?(hide?.21:.53):.32;
- const far=gap>stop+.008||Math.abs(cat.y-heading.y)>.25;
+ const stop=following?(hide?.21:FOLLOW_STOP):.32;
+ // During normal exploration, only leave the resting ring once Kitty is
+ // properly away.  Hiding remains deliberately close so Emy takes cover.
+ const far=following&&!hide?Boolean(companion.chasing):(gap>stop+.008||Math.abs(cat.y-heading.y)>.25);
  let walking=false;
  if(companion.stage==='trunk-run'&&companion.route.length){
   // The study door can be closed again after Kitty collects the key.

@@ -28,6 +28,27 @@ const assert=require('node:assert/strict');
  assert(petEmy(world.emy));
  updateEmyCompanion(companion,1/60,{world,player});assert.equal(world.emy.phase,'purr');
  world.emy.reaction=0;
+ // Emy preserves a comfortable resting ring: circling close to her must not
+ // turn her into a compass needle or make her shuffle after Kitty.
+ const personalWorld=createHouse();
+ for(const id of ['salon','estudio','dormitorio'])setDoor(personalWorld.objects.find(o=>o.id===id),true);
+ const personalPlayer={x:5.3,y:0,z:7.1,yaw:0,hidden:null};
+ const personal=createEmyCompanion(personalWorld.emy,{waiting:false});
+ Object.assign(personal.cat,{x:4.1,y:0,z:7.1,yaw:.72});
+ const settled={x:personal.cat.x,z:personal.cat.z,yaw:personal.cat.yaw};
+ for(let i=0;i<120;i++){
+  const a=i/120*Math.PI*2;
+  personalPlayer.x=personal.cat.x+1.22*Math.cos(a);
+  personalPlayer.z=personal.cat.z+1.22*Math.sin(a);
+  updateEmyCompanion(personal,1/60,{world:personalWorld,player:personalPlayer});
+ }
+ assert(Math.hypot(personal.cat.x-settled.x,personal.cat.z-settled.z)<.0001,'Emy stays put while Kitty circles nearby');
+ assert(Math.abs(personal.cat.yaw-settled.yaw)<.0001,'Emy does not constantly look at nearby Kitty');
+ personalPlayer.x=7.2;personalPlayer.z=7.1;
+ updateEmyCompanion(personal,1/60,{world:personalWorld,player:personalPlayer});
+ assert(personal.chasing,'Emy resumes following once Kitty really moves away');
+ for(let i=0;i<119;i++)updateEmyCompanion(personal,1/60,{world:personalWorld,player:personalPlayer});
+ assert(personal.cat.x>settled.x+.25,'Emy closes the larger gap without hovering at Kitty’s heels');
  const route=new Pursuer(world);Object.assign(route,player);
  assert(route.plan({x:2.3,y:3.15,z:3.85}));
  for(const point of route.path){Object.assign(player,{x:point.x,y:point.y,z:point.z});
@@ -36,7 +57,7 @@ const assert=require('node:assert/strict');
  Object.assign(player,{x:2.3,y:3.15,z:3.85});
  for(let i=0;i<60*60;i++)updateEmyCompanion(companion,1/60,{world,player});
  assert.equal(world.emy.y,3.15,'Emy climbs the stairs behind Kitty');
- assert(Math.hypot(world.emy.x-player.x,world.emy.z-player.z)<1.1);
+ assert(Math.hypot(world.emy.x-player.x,world.emy.z-player.z)<1.25);
  const enteringHide={objectId:'wardrobe',returnX:player.x,returnZ:player.z};
  for(let i=0;i<45&&companion.stage!=='hiding';i++)updateEmyCompanion(companion,1/60,{world,player,enteringHide});
  assert.equal(player.hidden,null,'Emy takes cover during Kitty’s entry animation');
