@@ -6,6 +6,9 @@ module.exports=async()=>{
  for(const door of house.objects.filter(o=>o.kind==='door'))w.setDoor(door,true);
  for(const id of ['drawer','landing-cabinet','reading-cabinet'])
   w.setDrawer(house.objects.find(o=>o.id===id),true);
+ const safe=house.objects.find(o=>o.id==='mirror-safe');
+ w.poseFurniture(safe,1);safe.open=true;
+ Object.assign(house.pianoSheet,{concealed:false,interactable:true});
  const hatch=house.objects.find(o=>o.id==='basement-hatch');
  assert(hatch.concealed,'The rug covers the hatch at the start');
  hatch.concealed=false;
@@ -27,7 +30,7 @@ module.exports=async()=>{
   pianoCase.z-pianoCase.d/2>7.45&&pianoCase.z+pianoCase.d/2<11.41,
   'The piano fits against the landing wall between the reading-room door and the bench');
  const routes=anchors.map(([name,x,z,y])=>({name,reachable:queue.some(p=>Math.abs(p.y-y)<.04&&Math.hypot(p.x-x,p.z-z)<.26)}));
- const interactions=['note-hall','drawer','key','mirror-note','mirror-safe','picture-stain','dormitorio','wardrobe','underbed','basement-note','hatch-rug','basement-hatch','house-power',
+ const interactions=['note-hall','drawer','key','emy-vent','rc-car','mirror-note','mirror-safe','picture-stain','dormitorio','wardrobe','underbed','basement-note','hatch-rug','basement-hatch','house-power',
   'television','media-cabinet','basin-cabinet','bath-tap','kitchen-drawer','fridge','reading-cabinet',
   'landing-cabinet','media-flashlight','piano-sheet','piano','record-player','louis-altar','president-dossier'].map(id=>{
   const o=house.objects.find(o=>o.id===id);return {id,reachable:queue.some(p=>{const dy=o.y-p.y-1.63,dx=o.x-p.x,dz=o.z-p.z,d=Math.hypot(dx,dy,dz);return d<2.45&&interactionTarget(house,{x:p.x,y:p.y+1.63,z:p.z,yaw:Math.atan2(dx,dz),pitch:Math.atan2(dy,Math.hypot(dx,dz))})?.id===id;})};

@@ -231,6 +231,10 @@ export function buildHouse(spawn='ground'){
  add('study-papers',2.65,.94,2.75,.38,.06,.27,'paper',false);lamp('study-lamp',2.15,.92,2.72);
  for(const box of boxes.slice(studyStart))box.z+=deskOffset;
  for(const item of [drawer,key,drawer.origin,drawer.contents[0].origin,...drawer.parts.map(part=>part.origin)])item.z+=deskOffset;
+ add('emy-vent-back',2.8,.29,.135,.64,.53,.04,'dark',false);
+ for(const x of [2.45,3.15])add('emy-vent-jamb-'+x,x,.29,.24,.07,.58,.24,'torchmetal',false);
+ add('emy-vent-lintel',2.8,.58,.24,.77,.08,.24,'torchmetal',false);
+ obj('emy-vent','vent','Llamar a Emy',2.8,.31,.43,{entrance:{x:2.8,y:0,z:.85},exit:{x:2.8,y:0,z:.85},mode:'recess'});
  shelf('study-shelf',.19,0,3.6,-Math.PI/2);plant('study-plant',4.00,0,4.32);
  frame('study',.95,1.8,.15,'south',15,{label:'Letrero del estudio',text:STUDY_SIGN});
  // Kitchen and bathroom are recognizable rooms, not corridor props.
@@ -328,8 +332,7 @@ export function buildHouse(spawn='ground'){
  obj('mirror-safe','safe','Caja fuerte del dormitorio',safeFront-.06,HEIGHT+.59,safeZ,{box:safeDoor,
   parts:safeParts.map(box=>({box,origin:{x:box.x,z:box.z}})),origin:{x:safeFront,z:safeZ},hinge:{x:safeFront,z:safeZ+.315},
   swingAngle:-Math.PI*.48,slideDistance:.63,amount:0,open:false,state:'closed'});
- add('safe-envelope',safeX,HEIGHT+.18,safeZ,.24,.035,.33,'paper',false);
- add('safe-seal',safeX,HEIGHT+.205,safeZ,.07,.014,.08,'pink',false);
+ obj(PIANO_SHEET_ID,'note','Partitura doblada',safeX-.11,HEIGHT+.21,safeZ,{dynamic:true,concealed:true,interactable:false,text:'Dos hojas para el piano del descansillo. Un dibujo muestra una llave roja entre sus teclas.'});
  table('bedroom-writing-table',3.89,HEIGHT,1.32,.73,.85);
  add('bedroom-writing-book',4.04,HEIGHT+.945,1.08,.23,.06,.30,'wood',false,{color:[.44,.25,.31],yaw:.18});
  add('bedroom-writing-book-pages',4.04,HEIGHT+.961,1.08,.21,.012,.27,'paper',false,{yaw:.18});
@@ -367,9 +370,7 @@ export function buildHouse(spawn='ground'){
  chair('reading-chair',.67,HEIGHT,7.55,-Math.PI/2);table('reading-table',1.50,HEIGHT,7.92,.72,.62);lamp('reading-light',1.50,HEIGHT+.92,7.92);shelf('reading-books',.19,HEIGHT,9.8,-Math.PI/2);plant('reading-plant',4.02,HEIGHT,5.33);frame('reading',3.75,HEIGHT+1.9,11.83,'north',2);
  obj('reading-books','inspect','Biblioteca de la planta alta',.47,HEIGHT+1.16,9.8,{text:'Los anuarios tienen los lomos gastados. Entre ellos hay entradas de conciertos archivadas por fecha.'});
  installCabinet(add,obj,{id:'reading-cabinet',label:'Cajón de la sala de lectura',x:2.05,y:HEIGHT,z:5.12,w:1.28,d:.60,
-  items:[{id:'reading-battery',kind:'battery',label:'Pila de la sala de lectura',dx:.27},
-   {id:PIANO_SHEET_ID,kind:'note',label:'Partitura doblada',dx:-.26,
-    text:'Dos hojas para el piano del descansillo. La anotación al margen dice que la llave roja de la barra abre la trampilla de la cocina.'}]});
+  items:[{id:'reading-battery',kind:'battery',label:'Pila de la sala de lectura',dx:.27}]});
  installCabinet(add,obj,{id:'landing-cabinet',label:'Cajón del descansillo',x:6.76,y:HEIGHT,z:3.08,w:.97,d:.60,
   items:[{id:'media-flashlight',kind:'flashlight',label:'Linterna',dx:0}]});
  add('reading-rug',1.92,HEIGHT+.012,8.0,2.9,.024,4,'carpet',false,{ao:.88});add('upper-bench',4.95,HEIGHT+.43,11.65,1.15,.18,.48,'velvet');for(const x of [4.55,5.35])add('bench-leg-'+x,x,HEIGHT+.20,11.65,.08,.4,.35,'wood');plant('landing-plant',8.3,HEIGHT,11.54);frame('landing',8.0,HEIGHT+1.85,11.83,'north',0);

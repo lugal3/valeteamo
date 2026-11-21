@@ -18,7 +18,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
    console.log('Mirror safe QA:',viewport.width);const context=await browser.newContext({viewport,hasTouch:true,isMobile:viewport.width<700}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.emulateMedia({reducedMotion:'reduce'});await page.goto(`http://127.0.0.1:${port}/__safe`);await page.click('#launch');await page.click('[data-act=start]');const state=()=>page.evaluate(()=>window.__rescueHouse.mirrorPuzzle()),use=(id,activate=true)=>page.evaluate(({id,activate})=>window.__rescueHouse.interactWith(id,activate),{id,activate}),shot=name=>page.screenshot({path:path.join(folder,viewport.width+'-'+name+'.png')});
    await page.evaluate(()=>window.__rescueHouse.setPose({x:8.35,y:0,z:5.55,yaw:Math.PI/2,pitch:0}));await page.waitForTimeout(150);assert(!(await state()).revealed,'Seeing a mirror without the note cannot disclose the code');
    assert(!(await use('dormitorio')).puzzle.door,'The bedroom stays locked until the key is found');
-   await use('landing-cabinet');await use('media-flashlight');await use('note-hall');await page.keyboard.press('Escape');await use('drawer');await use('key');
+   await use('landing-cabinet');await use('media-flashlight');await use('note-hall');await page.keyboard.press('Escape');await use('drawer');await require('./helpers/fetch-ribbon.cjs')(page);
    const bedroom=await use('dormitorio');assert(bedroom.puzzle.door&&!bedroom.puzzle.symbol,'The key alone unlocks the bedroom');
    await page.waitForFunction(()=>window.__rescueHouse.story().phase==='evaded');
    assert.equal((await state()).safe.state,'closed');

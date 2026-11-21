@@ -5,17 +5,16 @@ import {WINDOW_LANDING} from './window-intro.js';
 import {MASTER_KEY_ID,posePianoCompartment,posePianoReward,setPianoScore} from './house-additions.js';
 import {HEIGHT,blocked,groundHeight,poseFurniture,setDoor,setDrawer} from './world.js';
 import {hiddenPose,hidingExit} from './hiding.js';
-import {revealGreyCat} from './grey-cat.js';
 
-const VERSION=1;
+
+const VERSION=2;
 const STAGES=['explore','encounter','rest','basement','rc-setup','escape'];
 const SECOND_CHASE_PHASES=new Set(['sleep','lockdown','hunt']);
 const PICKUPS=new Set(['key','note','flashlight','battery']);
 const BEDROOM={x:2.39,y:HEIGHT,z:3.85,yaw:-Math.PI/2,pitch:-.46};
 const KITCHEN={x:9.75,y:0,z:3.34,yaw:-Math.PI/2,pitch:-.89};
 const STUDY={x:3.3,y:0,z:3.6,yaw:-2.8,pitch:0};
-export const SAFE_REWARD={id:'safe-heart',label:'Sobre de la caja fuerte',
- text:'El sobre guarda el mismo corazón que aparece en el cuadro del salón.'};
+
 
 export function captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTrap,batterySwap,pursuer,emy}){
  const bedroom=world.objects.find(object=>object.id==='dormitorio');
@@ -27,7 +26,7 @@ export function captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTr
  const phase=events.phase==='hide'&&s.hidden?'patrol':events.phase;
  const pursuit=['patrol','hunt','evaded','rc-setup'].includes(phase)?{phase,actor:pursuer?.active?pursuer.checkpoint():null}:null;
  return {
-  version:VERSION,stage,drawer:puzzle.drawer,
+  version:VERSION,stage,powered:world.lights.power.on,drawer:puzzle.drawer,
   picked:world.objects.filter(object=>PICKUPS.has(object.kind)&&object.taken).map(object=>object.id),
   rugAside:world.hatchRug.aside,hatchUnlocked:!world.hatch.locked,hatchOpen:world.hatch.open,
   mirrorRevealed:mirrorSafe.revealed,safeOpened:mirrorSafe.opened,pianoSolved:world.piano.solved,
@@ -39,7 +38,7 @@ export function captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTr
 }
 
 export function restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,rc,rcTrap,pursuer}){
- if(saved?.version!==VERSION||!STAGES.includes(saved.stage)||!Array.isArray(saved.picked))return null;
+ if(![1,VERSION].includes(saved?.version)||!STAGES.includes(saved.stage)||!Array.isArray(saved.picked))return null;
  const stage=saved.stage;
  const bedroomUnlocked=stage!=='explore';
  const resting=stage==='rest';
@@ -53,7 +52,8 @@ export function restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,r
  const object=id=>world.objects.find(item=>item.id===id);
  const picked=new Set(saved.picked);
  const solvedPiano=saved.pianoSolved===true&&picked.has('piano-sheet');
- if(!solvedPiano)picked.delete(MASTER_KEY_ID);
+ if(saved.version===1&&louisUntied)picked.add(MASTER_KEY_ID);
+ world.lights.power.on=saved.powered!==false;
  // Later checkpoints imply the prerequisites even if an older write omitted a pickup.
  if(bedroomUnlocked)picked.add('key');
  if(saved.hatchUnlocked===true||louisUntied)picked.add('red-key');
@@ -63,7 +63,7 @@ export function restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,r
 
  puzzle.note=!!object('note-hall').taken;
  puzzle.key=!!object('key').taken;
- puzzle.drawer=puzzle.key||saved.drawer===true;
+ puzzle.drawer=saved.drawer===true||(saved.version===1&&puzzle.key);
  puzzle.door=bedroomUnlocked;
  puzzle.symbol=saved.safeOpened===true;
  puzzle.rescued=louisUntied;
@@ -78,6 +78,7 @@ export function restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,r
  mirrorSafe.revealed=mirrorSafe.collected&&saved.mirrorRevealed===true;
  mirrorSafe.opened=puzzle.symbol;
  if(mirrorSafe.opened){
+  Object.assign(world.pianoSheet,{concealed:false,interactable:true});
   const safe=object('mirror-safe');
   poseFurniture(safe,1);safe.open=true;safe.state='open';
  }
@@ -89,14 +90,14 @@ export function restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,r
   else if(mirrorSafe.revealed)inventory.notes.push({id,label:'Nota del espejo · resuelta',text});
   else inventory.pendingNote={id,label,text};
  }
- if(mirrorSafe.opened)inventory.notes.push({...SAFE_REWARD});
+
  if(solvedPiano){
   world.piano.solved=true;
   setPianoScore(world.piano,true);
   posePianoCompartment(world.piano,1);
  }
  posePianoReward(world.piano);
- inventory.masterKey=world.piano.reward.taken===true;
+ inventory.masterKey=picked.has(MASTER_KEY_ID);
  inventory.key=puzzle.key&&!puzzle.door;
  inventory.torch=!!object('media-flashlight').taken;
  inventory.rc=saved.rcOwned===true||escapedTrap;
@@ -108,7 +109,7 @@ export function restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,r
 
  const hatch=world.hatch,rug=world.hatchRug;
  hatch.locked=saved.hatchUnlocked!==true&&!louisUntied;
- hatch.open=!hatch.locked&&!escapedTrap&&(saved.hatchOpen===true||stage==='rc-setup');
+ hatch.open=!hatch.locked&&(escapedTrap?exitUnlocked:(saved.hatchOpen===true||stage==='rc-setup'));
  if(!hatch.locked)for(const chain of hatch.chains)chain.hiddenGeometry=true;
  inventory.redKey=!!object('red-key').taken&&hatch.locked;
  rug.aside=saved.rugAside===true||hatch.open;
@@ -151,7 +152,7 @@ export function restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,r
   events.phase=stage;
   if(escapedTrap){
    freeLouis(louis);
-   revealGreyCat(world.greyCat);
+
    Object.assign(pursuer,{mode:'trapped',x:HATCH.x,y:groundHeight(HATCH.x,6,-3,true),z:6});
   }
  }

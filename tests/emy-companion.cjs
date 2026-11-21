@@ -113,5 +113,6 @@ const assert=require('node:assert/strict');
  restoreEmyCompanion(loaded,saved,'hunt');
  assert.equal(loaded.stage,'trunk');assert(loaded.cat.parts.every(part=>part.box.hiddenGeometry));
  assert(!petEmy(loaded.cat),'a hidden cat cannot be petted');
+ await require('./emy-rescue-route.cjs')();
  console.log('PASS Emy companion: one-shot window jump, camera turn, two-floor follow, petting, shared hide, trunk route and restore.');
 })().catch(error=>{console.error(error);process.exitCode=1});

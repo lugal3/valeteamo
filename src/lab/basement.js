@@ -68,6 +68,8 @@ function installCaptive(add,obj){
   phase:'untying',age:0,walk:0,speed:0,crouch:.55,blink:0,
   concealed:false,interactable:false,visualReaction:null
  });
+ add('master-key-hook',x+.55,y+1.35,z,.06,.09,.14,'brass',false);
+ obj('master-key','key','Llave maestra colgada',x+.55,y+1.23,z-.04,{master:true,floor:y,tilt:Math.PI/2});
  obj('rescue-louis','rescue','Louis Tomlinson',x,y+1.02,z-.35,{floor:y});
 }
 
@@ -125,9 +127,8 @@ export function installBasement(add,obj,lights){
   const at=4.35+i*.47,half=sectionAt(at)[2],dx=(i%2?1:-1)*(half-.09),size=.08+(i%4)*.019;
   add('tunnel-stone-'+i,X+dx,floor(at)+.029,at,size,.068,size*1.4,'earth',false,{shape:'round',segments:5,rings:3,color:i%3?dark:[.41,.39,.33]});
  }
- // Leave the middle of the tunnel clear so Kitty and Louis can pass beside the kit.
- const kitZ=7.25,kitFloor=floor(kitZ);
- obj('rc-car','rc-car','Auto RC y tablet',X-.29,kitFloor+.14,kitZ,{floor:kitFloor,yaw:0,mode:'packed'});
+ // Kitty launches the decoy from safety after Louis reaches the kitchen.
+ obj('rc-car','rc-car','Auto RC y tablet',9.45,.14,3.6,{floor:0,yaw:0,mode:'packed'});
  installCaptive(add,obj);
  return hatch;
 }

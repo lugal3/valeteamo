@@ -92,8 +92,7 @@ async function run(){
   assert.equal((await checkpoint()).stage,'explore');
   console.log('Checkpoint QA: normal house entry');
 
-  await use('drawer');
-  await use('key');
+  await require('./helpers/fetch-ribbon.cjs')(page);
   assert.equal((await snapshot()).puzzle.note,false,'The study key needs no hall note');
   await use('landing-cabinet');
   await use('media-flashlight',false);
@@ -116,7 +115,27 @@ async function run(){
   assert.equal(await page.locator('.piano-keys [aria-current]').count(),0);
   assert.equal(await page.locator('input[data-setting="master"]').getAttribute('max'),'3');
   await page.keyboard.press('Escape');
-  await use('reading-cabinet');await use('piano-sheet');
+  await use('dormitorio');
+  assert.equal((await checkpoint()).stage,'encounter');
+  await reloadHouse();
+  assert.equal((await snapshot()).position.y,3.15);
+  await page.waitForFunction(()=>window.__rescueHouse.story().phase==='arrival');
+  assert(await page.locator('[data-equip=key]').isHidden(),'The bedroom already consumed the study key');
+
+  const interior=await read(RESCUE_KEY);
+  await write(RESCUE_KEY,{...interior,houseCheckpoint:{...interior.houseCheckpoint,stage:'rest'}});
+  await reloadHouse();
+  assert.equal(await stage(),'sleep');
+  assert.equal(await page.evaluate(()=>window.__rescueHouse.story().pursuer.mode),'sleeping');
+  await page.evaluate(()=>window.__rescueHouse.setPose({x:5.74,y:3.15,z:2.4,yaw:0,pitch:0}));
+  await page.waitForFunction(()=>['lockdown','hunt'].includes(window.__rescueHouse.story().phase));
+  console.log('PASS hatch, bedroom and pursuit reload');
+
+
+  await write(RESCUE_KEY,{...interior,houseCheckpoint:{...interior.houseCheckpoint,stage:'basement'}});
+  await reloadHouse();
+  await require('./helpers/solve-mirror-safe.cjs')(page);
+  await use('piano-sheet');
   await page.keyboard.press('Escape');
   await use('piano',false);
   console.log('Checkpoint QA: approaching the piano with its score');
@@ -135,32 +154,31 @@ async function run(){
   await page.getByText('Hoja 2 de 2',{exact:true}).waitFor();
   for(const key of ['j','j','h','y','h','y','t'])await page.keyboard.press(key);
   await page.locator('[data-piano-mode="recital"]').waitFor();
-  assert.notEqual((await checkpoint()).pianoSolved,true,'The master key waits for the performance');
+  assert.notEqual((await checkpoint()).pianoSolved,true,'The red key waits for the performance');
   await page.locator('[data-piano-mode="reveal"]').waitFor({timeout:50000});
   await page.getByRole('dialog',{name:'Piano antiguo'}).waitFor({state:'hidden'});
   await page.waitForFunction(()=>window.__rescueHouse.pianoPuzzle().compartment===1);
   assert.equal((await checkpoint()).pianoSolved,true);
   await shot('03-compartimento-del-piano');
-  assert(!(await checkpoint()).picked.includes('master-key'),'The reward can stay in the drawer');
-  await page.waitForFunction(()=>window.__rescueHouse.snapshot().target==='master-key');
+  assert(!(await checkpoint()).picked.includes('red-key'),'The reward can stay in the drawer');
+  await page.waitForFunction(()=>window.__rescueHouse.snapshot().target==='red-key');
   await page.keyboard.press('e');
-  assert((await checkpoint()).picked.includes('master-key'));
+  assert((await checkpoint()).picked.includes('red-key'));
   await use('piano');
   await page.locator('[data-piano-mode="practice"]').waitFor();
-  assert.equal((await snapshot()).notes,1,'Practice keeps only the found score');
+  assert.equal((await snapshot()).notes,2,'Practice keeps only the found score');
   await page.keyboard.press('Escape');
   await page.evaluate(()=>window.__rescueHouse.setPose({x:6.9,y:3.15,z:10.4,yaw:-Math.PI/2,pitch:-.33}));
   await shot('04-atril-y-compartimento');
   await reloadHouse();
   assert.deepEqual(await page.evaluate(()=>window.__rescueHouse.pianoPuzzle()),
    {picked:true,placed:true,solved:true,compartment:1});
-  assert.equal((await snapshot()).notes,1,'The score persists without a duplicate note reward');
-  await assert.rejects(()=>use('master-key'),/Not available: master-key/);
+  assert.equal((await snapshot()).notes,2,'The score persists without a duplicate note reward');
+  await assert.rejects(()=>use('red-key'),/Not available: red-key/);
   console.log('PASS legacy handoff and inventory reload');
 
   await page.emulateMedia({reducedMotion:'reduce'});
   await use('cocina');
-  await use('red-key');
   await use('hatch-rug');
   await page.waitForFunction(()=>window.__rescueHouse.amenities().rug===1);
   await use('basement-hatch');
@@ -169,36 +187,6 @@ async function run(){
   assert.equal(await page.evaluate(()=>window.__rescueHouse.amenities().hatch),1);
   assert(await page.locator('[data-equip="red-key"]').isHidden());
   await assert.rejects(()=>use('red-key'),/Not available: red-key/);
-
-  await use('dormitorio');
-  assert.equal((await checkpoint()).stage,'encounter');
-  await reloadHouse();
-  assert.equal((await snapshot()).position.y,3.15);
-  await page.waitForFunction(()=>window.__rescueHouse.story().phase==='arrival');
-  assert(await page.locator('[data-equip=key]').isHidden(),'The bedroom already consumed the study key');
-
-  const interior=await read(RESCUE_KEY);
-  await write(RESCUE_KEY,{...interior,houseCheckpoint:{...interior.houseCheckpoint,stage:'rest'}});
-  await reloadHouse();
-  assert.equal(await stage(),'sleep');
-  assert.equal(await page.evaluate(()=>window.__rescueHouse.story().pursuer.mode),'sleeping');
-  await page.evaluate(()=>window.__rescueHouse.setPose({x:5.74,y:3.15,z:2.4,yaw:0,pitch:0}));
-  await page.waitForFunction(()=>['lockdown','hunt'].includes(window.__rescueHouse.story().phase));
-  console.log('PASS hatch, bedroom and pursuit reload');
-
-  await write(RESCUE_KEY,{...interior,houseCheckpoint:{...interior.houseCheckpoint,stage:'basement'}});
-  await reloadHouse();
-  await use('mirror-safe');
-  await page.waitForFunction(()=>document.querySelector('#lab-dialog[role="dialog"], #lab-dialog [role="dialog"]')?.getAttribute('aria-label')==='Caja fuerte');
-  for(const digit of '1505')await page.keyboard.press(digit);
-  await page.keyboard.press('Enter');
-  assert.equal((await checkpoint()).safeOpened,true);
-  await reloadHouse();
-  assert.equal(await stage(),'evaded');
-  const safe=await page.evaluate(()=>window.__rescueHouse.mirrorPuzzle());
-  assert.equal(safe.opened,true);
-  assert.equal(safe.safe.amount,1);
-  assert.equal((await snapshot()).notes,2,'The score and safe reward each appear once in the backpack');
 
   const beforeTrial=await read(RESCUE_KEY);
   await openMenu();
@@ -211,7 +199,7 @@ async function run(){
   assert.deepEqual(await read(BIRTHDAY_KEY),birthday);
   console.log('PASS solved safe and trial isolation');
 
-  const rcSave={...beforeTrial.houseCheckpoint,stage:'rc-setup',rcOwned:true,trapArmed:true};
+  const rcSave={...beforeTrial.houseCheckpoint,stage:'rc-setup',picked:[...beforeTrial.houseCheckpoint.picked,'master-key'],rcOwned:true,trapArmed:true};
   await write(RESCUE_KEY,{...beforeTrial,houseCheckpoint:rcSave});
   await reloadHouse();
   assert.equal(await stage(),'rc-setup');
@@ -225,16 +213,14 @@ async function run(){
   assert.equal(await stage(),'escape');
   assert.equal(await page.evaluate(()=>window.__rescueHouse.louis().phase),'follow');
   assert.equal(await page.evaluate(()=>window.__rescueHouse.rc().trap.closed),true);
-  assert.equal(await page.evaluate(()=>window.__rescueHouse.greyCat().active),true);
-  assert.equal(await page.evaluate(()=>window.__rescueHouse.amenities().hatch),0);
+  assert.equal(await page.evaluate(()=>window.__rescueHouse.emy().hidden),true);
+  assert.equal(await page.evaluate(()=>window.__rescueHouse.amenities().hatch),1);
   // Existing escape checkpoints already opened the door. New ones save the lock.
   assert.equal((await snapshot()).doors.find(door=>door.id==='entrada').open,true);
   await write(RESCUE_KEY,{...beforeTrial,houseCheckpoint:{...rcSave,stage:'escape',exitUnlocked:false,
-   picked:rcSave.picked.filter(id=>id!=='master-key')}});
+   picked:rcSave.picked}});
   await reloadHouse();
-  await use('entrada');
   assert.equal((await snapshot()).doors.find(door=>door.id==='entrada').open,false);
-  await use('master-key');
   await use('entrada');
   assert.equal((await checkpoint()).exitUnlocked,true);
   await reloadHouse();
@@ -258,7 +244,7 @@ async function run(){
   await reloadHouse();
   assert.equal(await stage(),'explore');
   assert.equal((await snapshot()).puzzle.key,false);
-  assert.equal((await checkpoint()).version,1,'An unknown interior schema falls back to the window');
+  assert.equal((await checkpoint()).version,2,'An unknown interior schema falls back to the window');
   await page.locator('#lab-camera-settings > summary').click();
   await page.getByRole('button',{name:'Reiniciar casa',exact:true}).click();
   assert.equal(await checkpoint(),undefined);

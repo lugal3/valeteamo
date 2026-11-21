@@ -13,7 +13,7 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
    res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
     <body><button id="launch">Probar RC</button><script type="module">
     import {launchHouse} from "/src/lab/house.js";
-    const checkpoint={version:1,stage:"basement",pianoSolved:true,picked:["key","media-flashlight","piano-sheet","master-key"]};
+    const checkpoint={version:1,stage:"basement",pianoSolved:true,picked:["key","media-flashlight","piano-sheet"]};
     document.querySelector("#launch").onclick=()=>window.stopHouse=launchHouse(()=>{},"ground",{
       demo:true,checkpointStore:{checkpoint,save:()=>{}},onRescue:()=>window.endingVisited=true
     });
@@ -49,10 +49,55 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   await page.keyboard.down('w');
   try{await page.waitForFunction(()=>window.__rescueHouse.snapshot().position.y<-2.8);}
   finally{await page.keyboard.up('w');}
+  // View the rotated bar FROM the doorway: its broad wooden front must
+  // face the player, leaving a walking lane around the north end.
+  await page.evaluate(()=>window.__rescueHouse.setPose({
+   x:8.35,y:0,z:2.50,yaw:Math.PI/2,pitch:-.04
+  }));
+  await page.locator('[data-equip="flashlight"]').click();
+  await page.waitForTimeout(180);
+  await shot('03a-kitchen-facing-door-before-rescue');
+
+
+  // User screenshot regression: before using the rope interaction, Louis
+  // must ALREADY show the approved face, not the old static captive.
+  await page.evaluate(()=>window.__rescueHouse.setPose({
+   x:8.55,y:-3.55,z:12.35,yaw:0,pitch:0
+  }));
+  // The screenshot supplied by the user has Kitty's flashlight equipped.
+  // Use the same illumination rather than mistaking a dark navy shirt for a
+  // missing torso while reviewing the new captive pose in the real tunnel.
+  await page.locator('[data-equip="flashlight"]').click();
+  await page.waitForTimeout(220);
+  await shot('03b-louis-captive-photo-before-untie');
+  // Restore RC selection: the remainder of this test deploys the tablet
+  // through its contextual button and must not stay in flashlight mode.
+
+
+  console.log('RC browser: free Louis, climb basement steps, hide behind American-style kitchen bar');
+  await use('master-key');await use('rescue-louis');
+  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='untying');
+  await shot('04a-louis-untying');
+  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='climb',null,{timeout:60000});
+  await shot('04-louis-basement');
+  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='climb'&&
+   window.__rescueHouse.louis().x>11.6&&window.__rescueHouse.louis().z<1.72,
+   null,{timeout:90000});
+  await shot('04b-louis-walks-around-north-end');
+  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='hide',null,{timeout:60000});
+  await shot('04c-louis-squatting-behind-counter');
+  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='hidden',null,{timeout:60000});
+  const hidden=await louis();
+  assert.equal(hidden.phase,'hidden');
+  assert(hidden.x>11.9&&Math.abs(hidden.z-2.97)<.08,
+   'Louis has moved behind center of the bar, not clipped through its side');
+  assert.equal(await story().then(x=>x.phase),'rc-setup');
+  await shot('05-louis-hidden-behind-front-facing-kitchen');
+
   await use('rc-car',false);
-  await shot('00-rc-en-el-tunel');
+  await shot('00-rc-en-la-cocina');
   await use('rc-car');
-  assert((await rc()).position.y<-2.8,'RC kit is in the basement');
+  assert((await rc()).position.y===0,'Kit waits above ground in the kitchen');
   assert(await page.locator('[data-equip=rc]').isVisible(),'RC kit added to the inventory');
   await shot('01-rc-pickup');
   await page.evaluate(()=>window.__rescueHouse.setPose({x:8.55,y:-3.55,z:9.8,yaw:0,pitch:0}));
@@ -84,51 +129,6 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   await page.emulateMedia({reducedMotion:'reduce'});
   assert.equal((await rc()).mode,'parked');
   await shot('03-rc-stopped');
-
-  // View the rotated bar FROM the doorway: its broad wooden front must
-  // face the player, leaving a walking lane around the north end.
-  await page.evaluate(()=>window.__rescueHouse.setPose({
-   x:8.35,y:0,z:2.50,yaw:Math.PI/2,pitch:-.04
-  }));
-  await page.locator('[data-equip="flashlight"]').click();
-  await page.waitForTimeout(180);
-  await shot('03a-kitchen-facing-door-before-rescue');
-  await page.locator('[data-equip="rc"]').click();
-
-  // User screenshot regression: before using the rope interaction, Louis
-  // must ALREADY show the approved face, not the old static captive.
-  await page.evaluate(()=>window.__rescueHouse.setPose({
-   x:8.55,y:-3.55,z:12.35,yaw:0,pitch:0
-  }));
-  // The screenshot supplied by the user has Kitty's flashlight equipped.
-  // Use the same illumination rather than mistaking a dark navy shirt for a
-  // missing torso while reviewing the new captive pose in the real tunnel.
-  await page.locator('[data-equip="flashlight"]').click();
-  await page.waitForTimeout(220);
-  await shot('03b-louis-captive-photo-before-untie');
-  // Restore RC selection: the remainder of this test deploys the tablet
-  // through its contextual button and must not stay in flashlight mode.
-  await page.locator('[data-equip="rc"]').click();
-
-  console.log('RC browser: free Louis, climb basement steps, hide behind American-style kitchen bar');
-  await use('rescue-louis');
-  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='untying');
-  await shot('04a-louis-untying');
-  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='climb',null,{timeout:60000});
-  await shot('04-louis-basement');
-  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='climb'&&
-   window.__rescueHouse.louis().x>11.6&&window.__rescueHouse.louis().z<1.72,
-   null,{timeout:90000});
-  await shot('04b-louis-walks-around-north-end');
-  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='hide',null,{timeout:60000});
-  await shot('04c-louis-squatting-behind-counter');
-  await page.waitForFunction(()=>window.__rescueHouse.louis()?.phase==='hidden',null,{timeout:60000});
-  const hidden=await louis();
-  assert.equal(hidden.phase,'hidden');
-  assert(hidden.x>11.9&&Math.abs(hidden.z-2.97)<.08,
-   'Louis has moved behind center of the bar, not clipped through its side');
-  assert.equal(await story().then(x=>x.phase),'rc-setup');
-  await shot('05-louis-hidden-behind-front-facing-kitchen');
 
   console.log('RC browser: arm opened hatch trap');
   await use('basement-hatch');
@@ -165,20 +165,20 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   assert.equal((await story()).phase,'escape');
   assert.equal((await rc()).trap.closed,true);
   assert.equal((await louis()).phase,'follow');
-  assert.equal(await page.evaluate(()=>window.__rescueHouse.greyCat().active),true);
+  assert.equal(await page.evaluate(()=>window.__rescueHouse.emy().hidden),true);
   await shot('06-pursuer-trapped');
 
   console.log('RC browser: Kitty and Louis escape using the physical front door');
   assert.equal((await page.evaluate(()=>window.__rescueHouse.snapshot())).doors.find(door=>door.id==='entrada').open,false);
   await use('entrada');
   await page.evaluate(()=>window.__rescueHouse.setPose({x:5.95,y:0,z:11.30,yaw:0,pitch:0}));
-  await page.waitForFunction(()=>window.__rescueHouse.greyCat().called);
+
   // Frame time on headless SwiftShader varies; don't release W before Kitty
   // actually crosses the exterior trigger at z>12.35.
   await page.keyboard.down('w');
   try{await page.waitForFunction(()=>['ending','safe'].includes(window.__rescueHouse.story().phase),null,{timeout:15000});}
   finally{await page.keyboard.up('w');}
-  await page.waitForFunction(()=>window.__rescueHouse.greyCat().z>14.1,null,{timeout:30000});
+  await page.waitForFunction(()=>window.__rescueHouse.emy().z>14.1,null,{timeout:30000});
   await shot('06b-gata-guia-al-jardin');
   await page.getByRole('dialog',{name:/Kitty y Louis escaparon/}).waitFor({timeout:30000});
   assert((await louis()).z>13.8,'Louis walks into the garden during the closing shot');

@@ -8,7 +8,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   await page.emulateMedia({reducedMotion:'reduce'});await page.goto(`http://127.0.0.1:${port}/__house`);await page.click('#launch');await page.click('[data-act=start]');await page.emulateMedia({reducedMotion:'no-preference'});await page.waitForFunction(()=>window.__rescueHouse.story().samples.loaded>=16);
   const cdp=await page.context().newCDPSession(page),shot=async n=>{const {data}=await cdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});fs.writeFileSync(path.join(folder,n+'.png'),Buffer.from(data,'base64'));},story=()=>page.evaluate(()=>window.__rescueHouse.story()),use=id=>page.evaluate(id=>window.__rescueHouse.interactWith(id),id);
   console.log('Pursuit QA: recorded clips, separate doors, notification');await use('bano');await page.evaluate(()=>window.__rescueHouse.interactWith('bano',false));await page.keyboard.press('e');await page.waitForFunction(()=>window.__rescueHouse.story().samples.last==='door-close');await page.waitForFunction(()=>window.__rescueHouse.snapshot().doors.find(d=>d.id==='bano').state==='closed');await page.evaluate(()=>window.__rescueHouse.interactWith('bano',false));await page.keyboard.press('e');await page.waitForFunction(()=>window.__rescueHouse.story().samples.last==='door-open');
-  await use('note-hall');await page.keyboard.press('Escape');await use('drawer');await use('key');await page.waitForFunction(()=>window.__rescueHouse.story().messages.length===1);await page.keyboard.press('3');await page.click('.phone-expand');await page.click('[data-app=messages]');await page.waitForFunction(()=>window.__rescueHouse.story().messages.length===2);await shot('01-aviso');await page.keyboard.press('Escape');
+  await use('note-hall');await page.keyboard.press('Escape');await use('drawer');await require('./helpers/fetch-ribbon.cjs')(page);await page.waitForFunction(()=>window.__rescueHouse.story().messages.length===1);await page.keyboard.press('3');await page.click('.phone-expand');await page.click('[data-app=messages]');await page.waitForFunction(()=>window.__rescueHouse.story().messages.length===2);await shot('01-aviso');await page.keyboard.press('Escape');
   assert(await page.locator('[data-equip=key]').isVisible());await page.keyboard.press('4');assert.equal((await story()).equipment,'key');
   const bedroom=await use('dormitorio');assert(bedroom.puzzle.door&&!bedroom.puzzle.symbol);assert(await page.locator('[data-equip=key]').isHidden());
   await page.waitForFunction(()=>window.__rescueHouse.story().phase==='hide');await shot('02-gracia');
@@ -55,13 +55,17 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   await page.waitForFunction(()=>window.__rescueHouse.story().phase==='evaded',null,{timeout:90000});await shot('06-despistado');assert.equal((await story()).messages.length,4);assert.match((await story()).messages.at(-1).text,/tapete rojo/);
   await page.keyboard.press('e');await page.waitForFunction(()=>!window.__rescueHouse.snapshot().hidden);
   await use('basement-note');await page.getByRole('dialog',{name:'Papel clavado en el dormitorio'}).waitFor();await page.keyboard.press('Escape');
-  await use('cocina');await use('red-key');
+  await require('./helpers/solve-mirror-safe.cjs')(page);
+  await use('piano-sheet');await page.keyboard.press('Escape');await use('piano');
+  for(const key of 'wtyh ytsj jhyhyt'.replaceAll(' ',''))await page.keyboard.press(key);
+  await page.getByRole('dialog',{name:'Piano antiguo'}).waitFor({state:'hidden',timeout:90000});
+  await use('red-key');await use('cocina');
   await use('hatch-rug');await page.waitForFunction(()=>window.__rescueHouse.amenities().rug===1);
   await use('basement-hatch');await page.waitForFunction(()=>window.__rescueHouse.amenities().hatch===1);
   await page.evaluate(()=>window.__rescueHouse.setPose({x:8.55,y:0,z:2.23,yaw:0,pitch:-.17}));await shot('07-escotilla');
   await page.keyboard.down('w');await page.waitForFunction(()=>window.__rescueHouse.snapshot().position.y<-2.2);await page.keyboard.up('w');await shot('08-tunel');
   await page.keyboard.down('w');await page.waitForFunction(()=>window.__rescueHouse.snapshot().position.z>12.12);await page.keyboard.up('w');
-  await page.getByRole('button',{name:'Liberar a Louis',exact:true}).waitFor();await shot('09-louis');await page.keyboard.press('e');
+  await use('master-key');await page.evaluate(()=>window.__rescueHouse.interactWith('rescue-louis',false));await page.getByRole('button',{name:'Liberar a Louis',exact:true}).waitFor();await shot('09-louis');await page.keyboard.press('e');
   await page.waitForFunction(()=>window.__rescueHouse.story().phase==='rc-setup',null,{timeout:90000});
   await shot('10-louis-refugiado');assert.equal(await page.evaluate(()=>window.__rescueHouse.louis().phase),'hidden');
   assert.equal((await story()).samples.errors.length,0);assert(requests.length>=16&&requests.every(r=>r.status===200));

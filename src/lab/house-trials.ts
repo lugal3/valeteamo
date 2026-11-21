@@ -2,7 +2,7 @@ export type HouseTrial={
  title:string;
  description:string;
  objective:string;
- checkpoint?:'mirror';
+ checkpoint?:'mirror'|'ground';
  pose?:{x:number;floor:0|1;z:number;yaw:number;pitch:number};
  puzzleEntry?:'drawer'|'lock'|'rescue';
  events?:'arrival'|'evaded'|'wake'|'car';
@@ -22,9 +22,9 @@ export const HOUSE_TRIALS={
  },
  drawer:{
   title:'Cajón y pistas',
-  description:'En el estudio. Abre el cajón del escritorio y recoge la llave con lazo sin leer la nota del pasillo.',
-  objective:'Abre el cajón del escritorio',
-  pose:{x:2.03,floor:0,z:3.25,yaw:.72,pitch:-.80}
+  description:'En el estudio, apunta al hueco y llama a Emy. Espera a que vuelva con la llave con lazo.',
+  objective:'Llama a Emy frente al hueco',checkpoint:'ground',
+  pose:{x:2.8,floor:0,z:1.55,yaw:Math.PI,pitch:-.86}
  },
  safe:{
   title:'Nota y caja fuerte',
@@ -82,14 +82,14 @@ export const HOUSE_TRIALS={
  },
  piano:{
   title:'Piano del descansillo',
-  description:'Kitty ya recogió las dos hojas. Toca las notas destacadas antes de que se agote la línea y recoge la llave maestra tras el recital.',
+  description:'Kitty ya recogió las dos hojas. Toca las notas destacadas antes de que se agote la línea y recoge la llave roja tras el recital.',
   objective:'Siéntate al piano y toca la partitura',
   pose:{x:6.9,floor:1,z:10.4,yaw:-Math.PI/2,pitch:-.33},circuit:'distribuidor',score:true
  },
  basement:{
   title:'Trampilla y rescate',
   description:'En la cocina con la llave roja y la persecución superada. Mueve el tapete, abre la trampilla y baja por el túnel para liberar a Louis.',
-  objective:'Mueve el tapete y abre la trampilla con la llave roja',
+  objective:'Mueve el tapete y abre la trampilla con la llave roja',checkpoint:'ground',
   pose:{x:9.75,floor:0,z:3.34,yaw:-Math.PI/2,pitch:-.89},puzzleEntry:'rescue',circuit:'cocina',events:'evaded'
  },
  television:{

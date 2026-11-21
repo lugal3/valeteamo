@@ -25,7 +25,7 @@ export class PianoSession{
   this.mode=mode;
   this.score=mode==='practice'?PIANO_PRACTICE:PIANO_INTRO;
   this.page=-1;this.index=0;this.deadline=0;
-  this.stage(mode,mode==='free'?'Encuentra la partitura en el cajón de la sala de lectura para iniciar el reto.':
+  this.stage(mode,mode==='free'?'Encuentra la partitura en la caja fuerte del dormitorio para iniciar el reto.':
    mode==='practice'?'Práctica guiada · Toca la primera nota':'Toca la nota iluminada y sigue la línea de tiempo');
   if(mode!=='free')this.guide();
  }

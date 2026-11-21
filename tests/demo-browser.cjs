@@ -80,7 +80,7 @@ const {chromium}=require('playwright');
   let p=await use('dormitorio');assert.equal(p.puzzle.door,false,'Cannot open locked bedroom early');
   p=await use('drawer');assert.equal(p.puzzle.drawer,true,'Can open the drawer without the note');
   p=await use('note-hall');assert(p.puzzle.note,'Hall note found');
-  p=await use('key');assert(p.puzzle.key,'Key acquired');
+  p=await require('./helpers/fetch-ribbon.cjs')(page);assert(p.puzzle.key,'Key acquired');
   p=await use('picture-stain');assert(!p.puzzle.symbol,'The picture points to the safe instead of granting its contents');
   await page.screenshot({path:path.join(folder,'07-pista-cuadro.png')});
   p=await use('dormitorio');assert(p.puzzle.door&&!p.puzzle.symbol,'Bedroom unlocked with the key alone');

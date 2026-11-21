@@ -94,7 +94,11 @@ export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.a
  const root=p=>{const v=rotateEmy(p,0,cat.yaw,0);return [cat.x+v[0],cat.y+v[1],cat.z+v[2]];};
  for(const part of cat.parts){
   const {box,joint,base}=part;let p=[...base],rot=[0,0,box.emySpec.roll||0],scale=[1,1,1];
+  const turn=cat.earTurn||0,alarm=cat.alarm||0;
+  if(part.id==='head'&&box.earTurn!==turn){box.earTurn=turn;box.emyRevision=(box.emyRevision||0)+1;}
+  if(joint==='eye'&&box.emissive!==!!cat.darkEyes){box.emissive=!!cat.darkEyes;box.emyRevision=(box.emyRevision||0)+1;}
   if(joint==='skin'){
+   scale=[1+.18*alarm,1+.065*alarm,1];
    p=[0,0,0];
    const next=emySkinFrames(l,rotateEmy),old=box.emySkinFrames;
    if(!old||next.some((f,i)=>f.some((v,k)=>Math.abs(v-old[i][k])>1e-6))){
@@ -103,6 +107,7 @@ export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.a
    }
   }else if(['head','eye','lid','tongue'].includes(joint)){
    p=rotateEmy(base,...headRotation).map((v,i)=>v+l.head[i]);rot=[...headRotation];rot[2]+=box.emySpec.roll||0;
+   if(part.id.startsWith('concha'))rot[1]+=turn;
    if(joint==='eye')scale=blink?[.001,.001,.001]:[1,eyes,1];
    if(joint==='lid')scale=blink?[1,1,1]:[.001,.001,.001];
    if(joint==='tongue')scale=l.groom?[1,.65+.35*Math.sin(phase*11),1]:[.01,.01,.01];

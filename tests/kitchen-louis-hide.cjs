@@ -18,9 +18,7 @@ const assert=require('node:assert/strict');
  assert(Math.abs(top.x-KITCHEN_BAR.x)<1e-6);
  assert(Math.abs(top.z-KITCHEN_BAR.z)<1e-6);
  assert(top.solid&&screen.solid,'panel and countertop physically block crossing');
- assert(key.x>=top.x-top.w/2&&key.x<=top.x+top.w/2&&
-  key.z>=top.z-top.d/2&&key.z<=top.z+top.d/2,
-  'red puzzle key remains on top of rotated countertop');
+ assert.equal(key,world.piano.reward,'The kitchen key now comes from the piano');
  const hide=world.objects.find(o=>o.id==='hide-kitchen');
  assert(hide&&hide.x===KITCHEN_HIDE_SPOT.x&&hide.z===KITCHEN_HIDE_SPOT.z);
  assert(KITCHEN_HIDE_SPOT.x>top.x+top.w/2+.3,

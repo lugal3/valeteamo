@@ -155,6 +155,12 @@ export function writeEmySurface(out,start,box){
  const s=p.scale||[1,1,1],a=rotateEmy([1,0,0],...p.rot),b=rotateEmy([0,1,0],...p.rot),c=rotateEmy([0,0,1],...p.rot);
  for(let i=0;i<v.length;i+=16){
   let px=v[i],py=v[i+1],pz=v[i+2],nnx=v[i+6],nny=v[i+7],nnz=v[i+8];
+  if(box.earTurn&&py>.09){
+   const weight=Math.min(1,(py-.09)/.06),angle=box.earTurn*weight;
+   const cs=Math.cos(angle),sn=Math.sin(angle),pivot=Math.sign(px)*.107,dx=px-pivot;
+   px=pivot+cs*dx+sn*pz;pz=cs*pz-sn*dx;
+   const nx=nnx;nnx=cs*nx+sn*nnz;nnz=cs*nnz-sn*nx;
+  }
   if(mesh.skin&&box.emySkinFrames){
    const at=i/2;let x=0,y=0,z=0,nx=0,ny=0,nz=0;
    for(let k=0;k<8;k+=2){
@@ -169,6 +175,7 @@ export function writeEmySurface(out,start,box){
   }
   const at=start+i,x=px*s[0],y=py*s[1],z=pz*s[2];
   for(let k=3;k<16;k++)out[at+k]=v[i+k];
+  if(box.emissive)out[at+12]=96;
   out[at]=p.pos[0]+a[0]*x+b[0]*y+c[0]*z;out[at+1]=p.pos[1]+a[1]*x+b[1]*y+c[1]*z;out[at+2]=p.pos[2]+a[2]*x+b[2]*y+c[2]*z;
   const nx=nnx/s[0],ny=nny/s[1],nz=nnz/s[2];
   const tx=a[0]*nx+b[0]*ny+c[0]*nz,ty=a[1]*nx+b[1]*ny+c[1]*nz,tz=a[2]*nx+b[2]*ny+c[2]*nz,len=Math.hypot(tx,ty,tz)||1;

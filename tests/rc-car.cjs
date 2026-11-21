@@ -9,7 +9,7 @@ const assert=require('node:assert/strict');
  const {createRC,deployRC,driveRC,updateRC,stopRC,beepRC,crashRC,recoverRC,rcCamera,rcDeploymentView,canTrapPursuer,rcCarModel}=rcModule;
  const world=createHouse(),kit=world.objects.find(o=>o.id==='rc-car');
  assert.equal(world.objects.filter(item=>item.kind==='rc-car').length,1);
- assert(kit.y<-2.8&&Math.abs(kit.x-8.55)<.6,'The only RC kit is below the hatch in the tunnel');
+ assert(kit.y>0&&kit.z<4.4&&kit.x>7.5,'The kit is in the kitchen where Louis waits after the rescue');
  const rc=createRC(kit);
  assert.equal(rc.mode,'packed');
  const spawn={x:8.55,y:-3.55,z:9.8,yaw:0};

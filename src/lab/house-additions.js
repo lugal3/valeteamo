@@ -33,8 +33,8 @@ export function installPiano(add,obj,{x,z,floor}){
   part('compartment-panel',.420,1.15,-.58,.040,.112,.34,'wood',false,{dynamic:true,color:[.46,.28,.19]}),
   part('compartment-knob',.455,1.151,-.58,.036,.032,.065,'brass',false,{dynamic:true})
  ];
- const reward=obj(MASTER_KEY_ID,'key','Llave maestra',x+.55,floor+1.14,z-.58,
-  {dynamic:true,master:true,concealed:true,interactable:false,yaw:-.26});
+ const reward=obj('red-key','key','Llave roja del sótano',x+.55,floor+1.14,z-.58,
+  {dynamic:true,red:true,concealed:true,interactable:false,yaw:-.26});
  const sparks=Array.from({length:9},(_,i)=>part('spark-'+i,.58,-100-floor,-.58,.025,.025,.025,
   'brass',false,{dynamic:true,glow:true,shape:'round',color:i%2?[1,.76,.29]:[1,.91,.62]}));
  part('bench',.86,.49,0,.34,.075,.87,'velvet',true,{color:[.42,.22,.26]});
@@ -141,8 +141,7 @@ export function installKitchenBar(add,obj){
  for(const pz of [1.72,2.80])
   add('kitchen-prep-leg-'+pz,13.37,.45,pz,.080,.90,.085,'wood',true);
  add('kitchen-prep-board',13.53,.993,2.28,.32,.034,.51,'wood',false);
- // Keep the puzzle key on the new front-facing worktop.
- obj('red-key','key','Llave roja',x-.02,1.112,z+.05,{red:true});
+
  obj('hide-kitchen','hide','Agacharse detrás del mesón',
   KITCHEN_HIDE_SPOT.x,.83,KITCHEN_HIDE_SPOT.z,{
    requiresCrouch:true,hideType:'kitchen',
