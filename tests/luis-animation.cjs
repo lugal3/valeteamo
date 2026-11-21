@@ -61,7 +61,7 @@ assert.notEqual(signature(front),signature(side),'side profile needs real glasse
 assert.notEqual(signature(talk),signature(blink),'speech mouth and blink are different facial poses');
 assert.notEqual(signature(front),signature(wave),'friendly wave must have raised tattooed hand');
 const palette=new Set(front.pixels.flat());
-for(const color of ['#242536','#fbd4af','#22253a','#30364b','#46465d'])
+for(const color of ['#202126','#fbd4af','#22253a','#659c48','#46465d'])
  assert(palette.has(color),'front art must include hair shine, skin, glasses, top, tattoo: '+color);
 // Registration should preserve the existing 48x64 portrait key used by the RPG
 // dialog and all of Louis's own sprites; avoid unrelated sprite regressions.

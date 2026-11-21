@@ -1,3 +1,5 @@
+import {emySurface,emyTailSurface,writeEmySurface} from './emy-surface.js';
+import {createEmyCoatTexture} from './emy-texture.js';
 import {createPose,createRigBinding,evaluateRig,JOINT_INDEX} from './character-rig.js';
 import {sampleBlink} from './animations/face.js';
 import {facetSurface,smoothSurface,torusSurface,roundedBoxSurface} from './chibi-geometry.js';
@@ -236,6 +238,13 @@ export function geometry(boxes){
    }
    rotateMesh();continue;
   }
+  if(box.emySpec){
+   const mesh=box.emySpec.form==='tail'?(box.emyTailMesh||emyTailSurface()):emySurface(box);
+   const posed=new Float32Array(mesh.vertices.length);writeEmySurface(posed,0,box);
+   for(const value of posed)vertices.push(value);for(const i of mesh.indices)indices.push(offset+i);
+   groups.push({start:offset,end:offset+posed.length/16,joint:'emy'});offset+=posed.length/16;
+   range.end=vertices.length;range.indexEnd=indices.length;continue;
+  }
   if(box.shape==='lois-face'){
     const mesh=loisFaceSurface(box,color,style);
     vertices.push(...mesh.vertices);
@@ -361,6 +370,7 @@ export class HouseRenderer {
   if(!gl)throw Error('El navegador no permite WebGL. Activa aceleración gráfica o prueba otro navegador.');
   this.gl=gl;this.programs={medium:program(gl),low:program(gl,true)};this.program=this.programs[quality==='low'?'low':'medium'];this.texture=createAtlas(gl);this.disposeArtwork=loadPosterTiles(gl,this.texture);this.materialQuality=quality;this.materialTextures=createMaterials(gl,quality);this.loisFaceTexture=createLoisFaceTexture(gl,quality);
   this.pursuerTexture=createPursuerTexture(gl);
+  this.emyCoatTexture=createEmyCoatTexture(gl);
   this.mirrorSupported=gl.getContextAttributes().stencil;this.mirrorBuffers=Array.from({length:8},()=>gl.createBuffer());this.mirrorDrawn=false;
   this.vbo=gl.createBuffer();this.ibo=gl.createBuffer();this.count=0;
   this.dynamicVbo=gl.createBuffer();this.dynamicIbo=gl.createBuffer();this.dynamicCount=0;this.dynamicBoxes=[];
@@ -378,6 +388,7 @@ export class HouseRenderer {
   for(const [quality,p] of Object.entries(this.programs)){
    const atrib={},uniform={};for(const key of ['aPos','aCol','aNormal','aUV','aArt','aStyle','aTangent'])atrib[key]=gl.getAttribLocation(p,key);
    for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld','uTV','uTVSignal','uShot','uLoisFace','uFascia','uFasciaReady','uPursuerSkin','uPursuerSkinReady','uPursuerKey'])uniform[key]=gl.getUniformLocation(p,key);
+   uniform.uEmyCoat=gl.getUniformLocation(p,'uEmyCoat');
    uniform.uLamps=gl.getUniformLocation(p,'uLamps[0]');
    this.locations[quality]={atrib,uniform};
   }
@@ -394,10 +405,12 @@ export class HouseRenderer {
   const gl=this.gl,staticBoxes=boxes.filter(b=>!b.dynamic).sort((a,b)=>order(a)-order(b)),mesh=geometry(staticBoxes);
   const {vertices,indices}=mesh;this.count=indices.length;
   this.dynamicBoxes=boxes.filter(b=>b.dynamic);
+  if(this.dynamicBoxes.some(box=>box.emySpec))this.emyCoatTexture.enable();
   // Avoid fetching the face atlas in unrelated 3D scenes and editor previews.
   // The only retained atlas is Photo-A; no source swapping or duplicate GPU texture.
   if(this.dynamicBoxes.some(box=>box.shape==='lois-face'&&box.faceTexture!==false))this.loisFaceTexture.enable();
   const dynamic=geometry(this.dynamicBoxes);this.dynamicMesh=dynamic;this.dynamicCount=dynamic.indices.length;
+  if(dynamic.vertices.length/16>65530)throw Error('Demasiada geometría dinámica para WebGL1');
   this.dynamicVisible=this.dynamicBoxes.map(()=>true);
   this.dynamicTemplate=dynamic.vertices;this.dynamicVertices=new Float32Array(dynamic.vertices);this.dynamicRanges=dynamic.ranges;
   this.dynamicOrigins=this.dynamicBoxes.map(b=>[b.x,b.y,b.z,b.yaw||0,b.roll||0,b.pitch||0]);this.dynamicPositions=new Float32Array(this.dynamicBoxes.length*6);this.dynamicPositions.fill(Infinity);
@@ -487,6 +500,7 @@ export class HouseRenderer {
   const gl=this.gl;
   gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamicVbo);
   const reduced=motion.reduced||false;
+  this.dynamicRigKeys ||= [];
   const rigCache=new Map(); // once per character each frame, never once per limb
   const shadowedRigs=new Set();
   // Adjacent rigid parts share one GPU upload instead of ~60 tiny calls.
@@ -503,6 +517,19 @@ export class HouseRenderer {
   for(let i=0;i<this.dynamicBoxes.length;i++){
    if(!this.dynamicVisible[i])continue;
    const box=this.dynamicBoxes[i],source=box.source;
+   if(box.emySpec){
+    // Emy alone uses scale-aware anatomical parts and a continuous tail.
+    // Batched with neighboring rig parts; other characters keep their path.
+    const signature=(box.emyRevision||0)+':'+(box.emyTailRevision||0);
+    if(this.dynamicRigKeys[i]===signature)continue;
+    this.dynamicRigKeys[i]=signature;
+    const {start,end}=this.dynamicRanges[i];
+    writeEmySurface(this.dynamicVertices,start,box);
+    if(rigStart<0)rigStart=start;rigEnd=end;
+    this.lightPose='';
+    for(const lamp of this.fixtures)if(Math.hypot(lamp.x-box.x,lamp.y-box.y,lamp.z-box.z)<LAMP_REACH+1)this.dirtyLampShadows.add(lamp);
+    continue;
+   }
    // The PS2 option-B Lois uses a parented rigid rig. The legacy fallback
    // retains the original louisPartPose path below, unchanged.
    if(source?.kind==='louis-companion'&&box.rigBone){
@@ -768,6 +795,7 @@ export class HouseRenderer {
   gl.uniform1i(this.uniform.uAtlas,0);gl.uniform1i(this.uniform.uLightDepth,1);gl.uniform1i(this.uniform.uMaterials,2);gl.uniform1i(this.uniform.uLoisFace,4);
   gl.uniform1i(this.uniform.uFascia,5);gl.uniform1f(this.uniform.uFasciaReady,Number(this.pursuerTexture.ready));
   gl.uniform1i(this.uniform.uPursuerSkin,6);gl.uniform1f(this.uniform.uPursuerSkinReady,Number(this.pursuerTexture.skinReady));
+  gl.uniform1i(this.uniform.uEmyCoat,7);
   this.updateTelevision(motion.television);
   const isLow=quality==='low';
   gl.uniform1f(this.uniform.uAtlasSize,isLow?ATLAS_SIZE:ATLAS_SIZE_MED);
@@ -808,7 +836,7 @@ export class HouseRenderer {
   if(this.destroyed)return;
   this.destroyed=true;
   const gl=this.gl;
-  this.loisFaceTexture.destroy();this.pursuerTexture.destroy();this.disposeArtwork();this.shadows.destroy();
+  this.loisFaceTexture.destroy();this.pursuerTexture.destroy();this.emyCoatTexture.destroy();this.disposeArtwork();this.shadows.destroy();
   for(const buffer of [...this.mirrorBuffers,...this.shadowMeshes.map(mesh=>mesh.indices),
    this.vbo,this.ibo,this.dynamicVbo,this.dynamicIbo,this.handVbo,this.handIbo,this.pursuerVbo,this.pursuerIbo,this.tentacleVbo,this.tentacleIbo]){
    if(buffer)gl.deleteBuffer(buffer);

@@ -3,16 +3,16 @@ import {ATLAS_SIZE,TILE_SIZE,GUTTER,INNER} from './materials.js';
 import {MIRROR_PLANE} from './mirror.js';
 import {HOUSE} from './house-layout.js';
 export const VERTEX_SHADER=`
-precision mediump float;
+precision highp float;
 attribute vec3 aPos,aCol,aNormal,aTangent;
 attribute vec2 aUV;
 attribute float aArt,aStyle;
-uniform vec3 uEye,uRight,uUp,uForward;
+uniform mediump vec3 uEye,uRight,uUp,uForward;
 uniform vec2 uProjection;
 uniform float uNear,uFar;
-varying vec3 vColor,vNormal,vWorld,vTangent;
-varying vec2 vUV;
-varying float vArt,vStyle,vDistance;
+varying mediump vec3 vColor,vNormal,vWorld,vTangent;
+varying mediump vec2 vUV;
+varying mediump float vArt,vStyle,vDistance;
 void main(){
  vec3 diff=aPos-uEye;float z=dot(diff,uForward);
  gl_Position=vec4(dot(diff,uRight)*uProjection.x,dot(diff,uUp)*uProjection.y,z*(uFar+uNear)/(uFar-uNear)-2.0*uFar*uNear/(uFar-uNear),z);
@@ -24,7 +24,7 @@ varying vec3 vColor,vNormal,vWorld,vTangent;
 varying vec2 vUV;
 varying float vArt,vStyle,vDistance;
 uniform vec3 uEye,uLightEye,uForward,uRight,uUp,uPursuerKey;
-uniform sampler2D uAtlas,uLightDepth,uMaterials,uTV,uLoisFace,uFascia,uPursuerSkin;
+uniform sampler2D uAtlas,uLightDepth,uMaterials,uTV,uLoisFace,uFascia,uPursuerSkin,uEmyCoat;
 uniform float uFlash,uOcclude;
 uniform float uShot,uFasciaReady,uPursuerSkinReady;
 uniform float uHasShadows;
@@ -149,6 +149,36 @@ void main(){
  }
  float warmth=0.0;
  for(int i=0;i<${VISIBLE_LAMPS};i++)warmth+=lampLight(uLamps[i],world,N,surfaceNormal);
+ if(vArt>19.5&&vArt<21.5){
+  vec3 viewDir=normalize(uEye-vWorld);
+  vec3 key=normalize(vec3(-.45,.8,.6));
+  float wrap=dot(surfaceNormal,key)*.5+.5;
+  float rim=pow(1.0-max(0.0,dot(surfaceNormal,viewDir)),3.0);
+  vec3 color;
+  float shine=0.0;
+  if(vArt<20.5){
+   vec3 coat=texture2D(uEmyCoat,vUV).rgb;
+   float grey=dot(coat,vec3(.30,.59,.11));
+   color=mix(vec3(grey),coat,.18)*vColor;
+   // Fine fibre relief is restricted to the coat; highlights follow hair flow.
+   float fibres=surfaceNoise(vUV*vec2(410.0,88.0));
+   color*=.93+.13*fibres;
+   shine=.045*rim;
+  }else{
+   vec2 eye=(vUV-.5)*2.0;
+   float radius=length(eye),angle=atan(eye.y,eye.x);
+   float iris=.75+.14*sin(angle*61.0+radius*14.0)+.08*sin(angle*113.0-radius*21.0);
+   float pupil=1.0-smoothstep(.61,.69,length(eye*vec2(6.8,1.0)));
+   float outer=smoothstep(.64,1.02,radius);
+   color=mix(vColor*iris,vec3(.15,.21,.12),outer*.67);
+   color=mix(color,vec3(.018,.026,.021),pupil);
+   float glint=1.0-smoothstep(.025,.10,length((eye-vec2(-.27,.34))*vec2(1.0,1.35)));
+   shine=glint*.48+pow(max(0.0,dot(surfaceNormal,normalize(key+viewDir))),80.0)*.20;
+  }
+  float exposure=clamp(.30+beam+.78*warmth+uShot,.30,1.4);
+  vec3 light=vec3(.71+.30*wrap)*exposure;
+  gl_FragColor=vec4(clamp(color*light+vec3(.80,.87,.86)*shine*exposure,0.0,1.0),1.0);return;
+ }
  if(vArt>4.5){
   // Layered pore, fibre and vascular detail in the model's own UV space.
   // Broad shadowing comes from the sculpted forms. Wet highlights are narrow.

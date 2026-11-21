@@ -17,13 +17,13 @@ import {
  type PrologueState,type PrologueEvent,type PrologueLine
 } from './prologue-story.js';
 import './garden-prologue.css';
+import {EmyFeeding} from './EmyFeeding';
 
 type Dialog={lines:PrologueLine[];index:number};
-type Feeding='offer'|'retry'|'eating';
-const FEEDING_WAIT_MS=8000;
+type Feeding='offer'|'eating';
 const RESCUE_SAMPLES={cat:catSound,churu:churuSound,'van-door':vanDoorSound,'van-away':vanAwaySound};
 type HouseNavigation={distance:number;heading:number;guided:boolean;near:boolean;vanInspected:boolean;vanDistance:number};
-export type PrologueCheckpoint='intro'|'walk-together'|'ribbon';
+export type PrologueCheckpoint='intro'|'feed-cat'|'walk-together'|'ribbon';
 const initial=(test:boolean,checkpoint:PrologueCheckpoint):PrologueState=>
  test?{...PROLOGUE_START,stage:checkpoint}:loadPrologue();
 
@@ -75,14 +75,6 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   });
  };
 
- useEffect(()=>{
-  if(feeding!=='offer')return;
-  const timer=window.setTimeout(()=>{
-   if(feedingRef.current==='offer')showFeeding('retry');
-  },FEEDING_WAIT_MS);
-  return()=>window.clearTimeout(timer);
- },[feeding,showFeeding]);
-
  const nextDialog=useCallback(()=>{
   const current=dialogRef.current;if(!current)return;
   const text=current.lines[current.index].text;
@@ -106,9 +98,8 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  },[dialog,letters]);
  useEffect(()=>{
   const handler=(e:KeyboardEvent)=>{
-   if(feedingRef.current&&e.key==='Escape'){
+   if(feedingRef.current==='eating'&&e.key==='Escape'){
     e.preventDefault();e.stopImmediatePropagation();
-    if(feedingRef.current!=='eating')showFeeding(null);
     return;
    }
    if(!dialogRef.current)return;
@@ -143,6 +134,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
      if(source instanceof HTMLCanvasElement)avatars[person]=source.toDataURL('image/png');
     }
     setPortraits(avatars);
+    if(test&&checkpoint==='feed-cat')scene.storyTeleportForTest(0);
    }
    if(phaseRef.current.stage==='intro')setGuide('Camina por el sendero · WASD o joystick izquierdo');
    // El inicio no tiene NPC ni diálogos bloqueantes. La aventura comienza al andar.
@@ -385,21 +377,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   {!dialog&&!feeding&&!houseNav&&guide&&<div className="prologue-guide" role="status">{guide}</div>}
   {!dialog&&!feeding&&near&&<button type="button" className="prologue-interact"
    onClick={()=>sceneRef.current?.storyInteract()}>{near} · E</button>}
-  {feeding&&feeding!=='eating'&&<div className="prologue-dialog-backdrop" role="dialog"
-   aria-modal="true" aria-label="Alimentar a la gata gris">
-   <section className="prologue-feeding">
-    <h2>La gata gris</h2>
-    <p role="status">{feeding==='offer'?'Ofrécele el Churu antes de que se aleje.':
-     'Se acabó el tiempo. Todavía tienes el Churu.'}</p>
-    {feeding==='offer'&&<span className="prologue-feeding-time" aria-hidden="true"
-     style={{animationDuration:FEEDING_WAIT_MS+'ms'}}/>}
-    <div className="prologue-feeding-actions">
-     {feeding==='offer'?<button key="offer" type="button" autoFocus onClick={offerChuru}>Ofrecer Churu</button>:
-      <button key="retry" type="button" autoFocus onClick={()=>showFeeding('offer')}>Intentar otra vez</button>}
-     <button type="button" onClick={()=>showFeeding(null)}>Ahora no</button>
-    </div>
-   </section>
-  </div>}
+  {feeding==='offer'&&<EmyFeeding audio={audio} onComplete={offerChuru} onCancel={()=>showFeeding(null)}/>}
   {currentLine&&<div className="prologue-dialog-backdrop" role="dialog"
    aria-modal="true" aria-label="Conversación">
    <div className="prologue-dialog">

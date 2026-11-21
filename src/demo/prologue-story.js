@@ -115,7 +115,7 @@ export const PROLOGUE_DIALOGUES={
 };
 export const PROLOGUE_OBJECTIVES={
  intro:'Busca el Churu junto al sendero',
- 'feed-cat':'Cruza el puente y ofrece el Churu a la gata gris',
+ 'feed-cat':'Lleva el Churu en la mano y alimenta a Emy al cruzar el puente',
  'cat-fed':'Continúa por el sendero hacia el jardín',
  'meet-couple':'Saluda a Luis y Vale entre los cerezos',
  defend:'Protege a Louis: derrota a las sombras con corazones',
