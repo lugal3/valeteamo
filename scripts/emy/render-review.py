@@ -48,6 +48,10 @@ bpy.ops.mesh.primitive_plane_add(size=200,location=(0,0,-.009));floor=bpy.contex
 fm=bpy.data.materials.new('Studio charcoal');fm.diffuse_color=(.115,.135,.155,1);floor.data.materials.append(fm)
 bpy.ops.object.camera_add(location=(1.05,1.7,.92));camera=bpy.context.object;scene.camera=camera;camera.data.type='ORTHO';camera.data.ortho_scale=1.15;aim(camera,(0,-.05,.39))
 meshes=json.loads(Path('/tmp/emy-review.json').read_text())
+side='--side' in sys.argv
+if side:
+ camera.location=(1.7,.85,.65);camera.data.ortho_scale=1.30;aim(camera,(0,-.08,.35))
+ meshes=[m for m in meshes if m['mode'] in ['walk','sit','stretch']]
 only='--first' in sys.argv
 for pose in meshes[:1] if only else meshes:
  v=pose['vertices'];ids=pose['indices'];points=[(v[i],v[i+2],v[i+1]) for i in range(0,len(v),16)];tris=[ids[i:i+3] for i in range(0,len(ids),3)]
@@ -63,7 +67,7 @@ for pose in meshes[:1] if only else meshes:
    j=mesh.loops[li].vertex_index;uv.data[li].uv=(v[j*16+9],v[j*16+10])
  mesh.normals_split_custom_set_from_vertices([(v[i+6],v[i+8],v[i+7]) for i in range(0,len(v),16)])
  scene.render.filepath=str(OUTPUT/(pose['mode']+'.png'));bpy.ops.render.render(write_still=True)
- if pose['mode']=='sit':
+ if pose['mode']=='sit' and not side:
   camera.location=(0,1.8,.77);camera.data.ortho_scale=.69;aim(camera,(0,.10,.61));scene.render.filepath=str(OUTPUT/'face.png');bpy.ops.render.render(write_still=True)
   camera.location=(1.05,1.7,.92);camera.data.ortho_scale=1.15;aim(camera,(0,-.05,.39))
  bpy.data.objects.remove(ob,do_unlink=True);bpy.data.meshes.remove(mesh)

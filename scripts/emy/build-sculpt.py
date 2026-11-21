@@ -72,12 +72,12 @@ def fuse(name, objects, voxel, target):
     return ob
 
 body = [
- ellipsoid('ribcage',(0,.315,-.115),(.143,.154,.278)),
- ellipsoid('haunches',(0,.285,-.305),(.151,.153,.143)),
- ellipsoid('shoulder mantle',(0,.350,.075),(.139,.160,.151)),
+ ellipsoid('ribcage',(0,.315,-.115),(.174,.163,.288)),
+ ellipsoid('haunches',(0,.285,-.305),(.176,.159,.151)),
+ ellipsoid('shoulder mantle',(0,.350,.075),(.164,.166,.159)),
  ellipsoid('neck',(0,.423,.155),(.131,.153,.132)),
  ellipsoid('mane',(0,.350,.215),(.152,.180,.119)),
- ellipsoid('belly',(0,.235,-.130),(.117,.093,.212)),
+ ellipsoid('belly',(0,.235,-.130),(.143,.108,.219)),
 ]
 for front in [True,False]:
  for side in [-1,1]:

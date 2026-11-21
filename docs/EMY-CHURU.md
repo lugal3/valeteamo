@@ -39,7 +39,7 @@ La revisión reemplaza los volúmenes visibles separados por dos superficies esc
 
 El cuerpo se deforma con los apoyos de hombros, caderas, rodillas y patas. La cabeza tiene su propio marco para conservar la forma del rostro al girar. Al dormir o ronronear se cierran los párpados con la misma textura del rostro. Una compresión suave del pelaje del vientre evita que atraviese el suelo al recogerse; las patas conservan sus apoyos. Las animaciones existentes quedan como base para una próxima revisión de actuación.
 
-La Emy principal tiene 30.836 vértices y 48.526 triángulos, incluidas las fibras de doble cara. La casa completa, con pickups y la gata distante del final, ocupa 64.837 vértices dinámicos y conserva el límite de 65.536 índices de WebGL1. La gata del final usa una versión reducida del mismo esculpido, colores y textura; solo una de las dos es visible a la vez. El renderer comprueba el límite antes de subir los buffers.
+La Emy principal tiene 31.060 vértices y 48.846 triángulos, incluidas las fibras de doble cara. La casa completa, con pickups y la gata distante del final, ocupa 65.054 vértices dinámicos y conserva el límite de 65.536 índices de WebGL1. La gata del final usa una versión reducida del mismo esculpido, colores y textura; solo una de las dos es visible a la vez. El renderer comprueba el límite antes de subir los buffers.
 
 La textura se carga una sola vez en una unidad libre, con mipmaps. Los materiales propios de Emy no alteran las texturas de Louis, Kitty o el perseguidor. La transformación de vértices usa precisión alta para evitar interferencias entre córnea, párpados y capas finas de pelo, conservando las precisiones existentes en la etapa de fragmentos.
 
@@ -52,3 +52,7 @@ La textura se carga una sola vez en una unidad libre, con mipmaps. Los materiale
 Se elimina el relieve separado de las cejas y se reduce el hundimiento orbital de 18 a 4 mm. Se amplía el manto de mejillas, sienes y cuello para cubrir el relieve anatómico, conservando superficies conectadas. Los ojos quedan rodeados por una abertura oscura más fina. Se mantiene el atlas de hebras existente, pero el volumen procede también de la malla y del pelo geométrico.
 
 Las fibras ahora tienen tres tramos curvos en vez de dos, con mayor longitud en las mejillas y la melena y pelo corto en la frente. Solo quedan despejadas las aberturas de ojos y boca: ya no se excluye toda la cara del pelaje. El presupuesto de triángulos de la prueba sube a 50.000 por la subdivisión de las fibras, conservando los límites de vértices individuales y de la escena WebGL1.
+
+## Manto de los flancos
+
+Se amplía el volumen conectado del torso, hombros, caderas y vientre para evitar una silueta de costillas expuestas. El torso usa la región de pelo largo del atlas de la melena, con tinte gris para mantener continuidad con la cabeza. El muestreo concentra más fibras en los flancos; son más largas, anchas y curvadas hacia abajo y atrás, sin añadir una pieza rígida de costillas. Se conserva la deformación y el contacto con el suelo. El renderer de revisión admite `--side` para comparar sentarse, caminar y estirarse con la misma cámara lateral.

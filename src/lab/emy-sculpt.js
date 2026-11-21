@@ -38,14 +38,15 @@ function weights(p){
 }
 function uvFor(p,head){
  if(head)return [clamp((p[0]/.36+.5)*.5,.006,.494),clamp(.5+(p[1]/.36+.5)*.5,.506,.994)];
- // Planar vertical flow on either flank. Chest colour blends through vertex tint,
+ // Use the same long silky mane tile over the torso, without dark rib-like bands.
+ // Chest colour blends through vertex tint,
  // so triangles never cross unrelated atlas quadrants.
- return [.512+(Math.atan2(p[0]/.15,(p[2]+.14)/.30)/(Math.PI*2)+.5)*.476,.512+clamp(p[1]/.62)*.476];
+ return [.012+(Math.atan2(p[0]/.18,(p[2]+.14)/.30)/(Math.PI*2)+.5)*.476,.012+clamp(p[1]/.62)*.476];
 }
 function coatTint(p,head){
  if(head){const pale=clamp((-p[1]-.035)/.09)*clamp((p[2]+.01)/.12);return [.94+pale*.14,.98+pale*.12,1.01+pale*.10];}
  const pale=clamp((p[2]-.07)/.18)*clamp((.47-p[1])/.13);
- return [.78+pale*.43,.82+pale*.42,.86+pale*.40];
+ return [.66+pale*.39,.69+pale*.38,.72+pale*.36];
 }
 export function sculptSurface(spec){
  const head=spec.asset.startsWith('head'),source=EMY_SCULPT[spec.asset],vertices=[],indices=[...source.indices],skin=[];
@@ -59,7 +60,8 @@ export function sculptSurface(spec){
   const areas=[],src=source.vertices;let area=0;
   for(let i=0;i<source.indices.length;i+=3){
    const [a,b,c]=source.indices.slice(i,i+3).map(n=>n*6),ab=[src[b]-src[a],src[b+1]-src[a+1],src[b+2]-src[a+2]],ac=[src[c]-src[a],src[c+1]-src[a+1],src[c+2]-src[a+2]];
-   area+=Math.hypot(ab[1]*ac[2]-ab[2]*ac[1],ab[2]*ac[0]-ab[0]*ac[2],ab[0]*ac[1]-ab[1]*ac[0]);areas.push(area);
+   const flank=!head&&Math.abs((src[a+3]+src[b+3]+src[c+3])/3)>.45&&(src[a+1]+src[b+1]+src[c+1])/3>.18&&(src[a+2]+src[b+2]+src[c+2])/3<.12;
+   area+=Math.hypot(ab[1]*ac[2]-ab[2]*ac[1],ab[2]*ac[0]-ab[0]*ac[2],ab[0]*ac[1]-ab[1]*ac[0])*(flank?3.2:1);areas.push(area);
   }
   for(let strand=0;strand<spec.fibres;strand++){
    const pick=rand()*area;let low=0,high=areas.length-1;
@@ -71,13 +73,13 @@ export function sculptSurface(spec){
    if(eye||muzzle)continue; // Clear only the actual eye/mouth apertures.
    const ear=head&&p[1]>.11,cheek=head&&Math.abs(p[0])>.090&&p[1]<.08;
    const forehead=head&&!ear&&!cheek&&p[1]>.030;
-   const mane=!head&&p[2]>.09&&p[1]>.23;
+   const mane=!head&&p[2]>.09&&p[1]>.23,flank=!head&&Math.abs(n[0])>.4&&p[1]>.18&&p[2]<.12;
    const length=head?(ear?.018:cheek?.030+rand()*.027:forehead?.008+rand()*.012:.014+rand()*.022):
-    (mane?.045+rand()*.040:.030+rand()*.048)*clamp((p[1]-.018)/.10);
+    (flank?.065+rand()*.040:mane?.045+rand()*.040:.030+rand()*.048)*clamp((p[1]-.018)/.10);
    if(length<.003)continue;
-   const down=head?[n[0]*(cheek?1.2:.45),cheek?-.55:-1,n[2]*.10]:[n[0]*.30,-1,n[2]*.12],dot=down.reduce((a,v,k)=>a+v*n[k],0);
+   const down=head?[n[0]*(cheek?1.2:.45),cheek?-.55:-1,n[2]*.10]:[n[0]*(flank?.45:.30),-1,flank?-.35:n[2]*.12],dot=down.reduce((a,v,k)=>a+v*n[k],0);
    const flow=unit(down.map((v,k)=>v-n[k]*dot));
-   const side=unit([n[1]*flow[2]-n[2]*flow[1],n[2]*flow[0]-n[0]*flow[2],n[0]*flow[1]-n[1]*flow[0]]),width=(head&&forehead?.00020:.00035)+rand()*.00050,uv=uvFor(p,head),tint=coatTint(p,head),shade=1.18+rand()*.26,offset=vertices.length/16;
+   const side=unit([n[1]*flow[2]-n[2]*flow[1],n[2]*flow[0]-n[0]*flow[2],n[0]*flow[1]-n[1]*flow[0]]),width=(flank?.0011:head&&forehead?.00020:.00035)+rand()*(flank?.0007:.00050),uv=uvFor(p,head),tint=coatTint(p,head),shade=1.18+rand()*.26,offset=vertices.length/16;
    const bind=head?null:weights(p);
    for(let row=0;row<4;row++){
     const t=row/3,half=width*(1-t),bend=Math.sin(t*Math.PI)*.003;
