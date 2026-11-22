@@ -34,7 +34,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
    await game.waitForFunction(seconds=>window.__rescueHouse.snapshot().animation.emoteTime>=seconds-.20,seconds);
    await game.waitForFunction(()=>!window.__rescueHouse.snapshot().animation.performing);
   }
-  await game.emulateMedia({reducedMotion:'reduce'});await game.keyboard.press('6');await game.waitForTimeout(400);assert((await snap()).animation.reduced);await game.waitForFunction(()=>!window.__rescueHouse.snapshot().animation.performing);await game.keyboard.press('2');
+  await game.emulateMedia({reducedMotion:'reduce'});await game.keyboard.press('6');await game.waitForTimeout(400);assert((await snap()).animation.reduced);await game.waitForFunction(()=>!window.__rescueHouse.snapshot().animation.performing);await require('./helpers/press-slot.cjs')(game,'flashlight');
   await game.evaluate(()=>window.__rescueHouse.setPose({x:8.35,y:0,z:5.55,yaw:-Math.PI/2,pitch:0}));await game.waitForTimeout(200);const away=(await snap()).animation.evaluations;await game.waitForTimeout(300);assert.equal((await snap()).animation.evaluations,away,'No per-frame body sampling away from mirror');
   assert.equal(await game.locator('#lab-canvas').evaluate(c=>c.getContext('webgl').getError()),0);assert.deepEqual(errors,[]);await context.close();
   fs.writeFileSync(path.join(folder,'verificacion.json'),JSON.stringify({studio:true,mirror:true,emoteInterrupt:true,crouch:true,pause:true,reducedMotion:true,visibilityCulling:true,webgl:0,errors},null,2));console.log('PASS animation quality browser: authored sequences, actual mirror, pause, walk interrupt, crouch, reduced motion and culling');

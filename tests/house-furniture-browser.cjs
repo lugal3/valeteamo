@@ -69,11 +69,11 @@ const {chromium}=require('playwright');
   assert.notDeepEqual((await amenities()).clock.hands,clock.hands);
   assert.equal(await page.evaluate(()=>window.__rescueHouse.story().audio.lastEffect),'clock-tick');await shot('reloj-del-pasillo');
 
-  await page.keyboard.press('3');await page.keyboard.press('p');
+  await require('./helpers/press-slot.cjs')(page,'phone');await page.keyboard.press('p');
   await page.getByRole('button',{name:'WhatsApp',exact:true}).click();
   await page.getByText('Hace varias horas').waitFor();await page.getByText(/Ten cuidado cuando llegues/).waitFor();
   assert.equal(await page.locator('.phone-composer').getAttribute('aria-hidden'),'true');await shot('telefono-chat-previo');
-  await close();await page.keyboard.press('2');
+  await close();await require('./helpers/press-slot.cjs')(page,'flashlight');
 
   await pose(23.5,8);await page.keyboard.down('Shift');await page.keyboard.down('w');
   await page.waitForFunction(()=>window.__rescueHouse.amenities().sprinting);await page.getByRole('meter',{name:'Estamina'}).waitFor();

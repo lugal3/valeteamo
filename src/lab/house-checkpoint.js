@@ -13,7 +13,7 @@ import {checkpointLives} from './capture-lives.js';
 const VERSION=2;
 const STAGES=['explore','encounter','rest','basement','rc-setup','escape'];
 const SECOND_CHASE_PHASES=new Set(['sleep','lockdown','hunt']);
-const PICKUPS=new Set(['key','note','flashlight','battery']);
+const PICKUPS=new Set(['screwdriver','key','note','flashlight','battery']);
 const BEDROOM={x:2.39,y:HEIGHT,z:3.85,yaw:-Math.PI/2,pitch:-.46};
 const KITCHEN={x:9.75,y:0,z:3.34,yaw:-Math.PI/2,pitch:-.89};
 const STUDY={x:3.3,y:0,z:3.6,yaw:-2.8,pitch:0};
@@ -103,6 +103,8 @@ export function restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,r
   posePianoCompartment(world.piano,1);
  }
  posePianoReward(world.piano);
+ inventory.screwdriver=picked.has('screwdriver')&&!world.studyVent.unlatched;
+ if(world.studyVent.unlatched)world.studyVent.tool.taken=true;
  inventory.masterKey=picked.has(MASTER_KEY_ID);
  inventory.key=puzzle.key&&!puzzle.door;
  inventory.torch=!!object('media-flashlight').taken;

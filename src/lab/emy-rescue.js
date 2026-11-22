@@ -5,6 +5,7 @@ import {roomAt} from './world.js';
 
 // Scene references and completion predicates are editable in route order.
 export const RESCUE_ROUTE=[
+ ['Busca el destornillador en el cajón del estudio','drawer',c=>c.s.inventory.screwdriver||c.world.studyVent.unlatched||c.puzzle.key],
  ['Retira la tapa del conducto del estudio','emy-vent',c=>c.world.studyVent.unlatched||c.puzzle.key],
  ['Envía a Emy a buscar la llave del dormitorio','emy-vent',c=>c.puzzle.key],
  ['Abre el dormitorio','dormitorio',c=>c.puzzle.door],

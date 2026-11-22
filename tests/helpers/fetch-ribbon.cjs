@@ -7,6 +7,11 @@ module.exports=async page=>{
  const studyOpen=await page.evaluate(()=>window.__rescueHouse.snapshot().doors.find(o=>o.id==='estudio').open);
  if(!studyOpen)await use('estudio');
  if(!await page.evaluate(()=>window.__rescueHouse.emy().ventOpen)){
+  if(!await page.locator('[data-equip=screwdriver]').isVisible()){
+   if(!await page.evaluate(()=>window.__rescueHouse.snapshot().drawer.amount===1))await use('drawer');
+   await use('screwdriver');
+  }
+  if(await page.locator('[data-equip=screwdriver]').getAttribute('aria-pressed')!=='true')await page.locator('[data-equip=screwdriver]').click();
   await use('emy-vent');
   await page.waitForFunction(()=>window.__rescueHouse.emy().ventOpen);
   await page.waitForTimeout(280);

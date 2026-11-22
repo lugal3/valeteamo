@@ -15,11 +15,12 @@ module.exports=async()=>{
  const state={world,s,puzzle:{},events:{phase:'explore'},mirrorSafe:{},rcTrap:{}};
  const tracker=createRescueObjectives();
  let changes=0;tracker.addEventListener('change',()=>changes++);
- assert.equal(tracker.update(state).target,vent);
- tracker.update(state);assert.equal(changes,1);
+ assert.equal(tracker.update(state).target,item('drawer'));
+ s.inventory.screwdriver=true;assert.equal(tracker.update(state).target,vent);
+ tracker.update(state);assert.equal(changes,2);
  const {removeVentCover,advanceVentCover}=await import('../src/lab/study-vent.js');
  assert(!requestRibbonKey(cat,vent,key));
- assert(removeVentCover(vent,false));assert(!removeVentCover(vent,false));
+ assert(!removeVentCover(vent,false));assert(removeVentCover(vent,false,'screwdriver'));assert(!removeVentCover(vent,false));
  advanceVentCover(vent,.3);assert(!requestRibbonKey(cat,vent,key));
  // Reloading during removal finishes detaching the cover but grants no key.
  const saved=captureHouseCheckpoint({...state,rc:{},batterySwap:null,pursuer:hunter});
@@ -30,9 +31,9 @@ module.exports=async()=>{
  const retry=captureLoss(3,saved,null);
  restoreHouseCheckpoint(retry.checkpoint,resumed);
  assert.equal(resumed.s.lives,2);assert(resumedWorld.studyVent.unlatched&&!resumed.s.inventory.key);
- advanceVentCover(vent,.6);assert.equal(vent.coverAmount,1);
- assert(vent.cover.every(({box})=>box.x>3.2));
- tracker.update(state);assert.equal(changes,2);
+ advanceVentCover(vent,3.2);assert.equal(vent.coverAmount,1);
+ assert(vent.cover.every(({box})=>box.y<.15));
+ tracker.update(state);assert.equal(changes,3);
  assert(requestRibbonKey(cat,vent,key));assert(!requestRibbonKey(cat,vent,key));
  const cues=[],stages=new Set();
  assert(vent.entrance.y>1.2);
@@ -52,7 +53,7 @@ module.exports=async()=>{
  assert(cues.length>=4&&cues.slice(0,-1).every(cue=>cue==='scratch'));assert.equal(cues.at(-1),'delivered');assert.equal(cat.stage,'following');
  assert(Math.hypot(cat.cat.x-s.x,cat.cat.z-s.z)<.86);
  state.puzzle.key=true;assert.equal(tracker.update(state).target,item('dormitorio'));
- assert.equal(changes,3);
+ assert.equal(changes,4);
  assert(world.pianoSheet.concealed);assert.equal(world.piano.reward,item('red-key'));
  const master=item('master-key'),x=7.86,z=12.26,y=groundHeight(x,z,master.floor,true);
  assert(y<0&&!blocked(world.boxes,x,y,z,.2,1.7));

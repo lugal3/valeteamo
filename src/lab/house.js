@@ -190,7 +190,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function equip(kind,toggle=false){
   const inventory=s.inventory;
   if(notePresentation&&kind!=='flashlight')return;
-  if(kind==='rc'&&!inventory.rc||kind==='flashlight'&&!inventory.torch||kind==='key'&&!inventory.key||kind==='red-key'&&!inventory.redKey||kind==='paper'&&!inventory.notes.length&&!inventory.pendingNote)return;
+  if(kind==='screwdriver'&&(!inventory.screwdriver||world.studyVent.unlatched)||kind==='rc'&&!inventory.rc||kind==='flashlight'&&!inventory.torch||kind==='key'&&!inventory.key||kind==='red-key'&&!inventory.redKey||kind==='paper'&&!inventory.notes.length&&!inventory.pendingNote)return;
   cancelEmote();equipment=toggle&&equipment===kind?'empty':kind;equipmentAge=0;phone.equip(notePresentation?'empty':equipment);resetInput();
  }
  function releaseCapture(element,pointer){try{if(pointer!==null&&element?.hasPointerCapture(pointer))element.releasePointerCapture(pointer);}catch{}}
@@ -277,8 +277,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   world.objects.find(o=>o.id==='emy-vent').interactable=!!emyCompanion&&!puzzle.key;
   if(emyCompanion){
    const drawer=world.objects.find(o=>o.id==='drawer'),key=world.objects.find(o=>o.id==='key');
-   drawer.contents=[];
-   Object.assign(key,{x:2.8,y:world.studyVent.entrance.y+.105,z:.31,concealed:false,interactable:false});
+   const tool=world.studyVent.tool;
+   drawer.contents=[{object:tool,origin:{x:tool.x,z:tool.z}}];
+   Object.assign(key,{x:world.studyVent.x,y:world.studyVent.entrance.y+.105,z:world.studyVent.entrance.z-world.studyVent.depth,concealed:false,interactable:false});
   }
   rc=createRC(world.objects.find(o=>o.id==='rc-car'));
   bathCircuit=world.lights.circuits.find(circuit=>circuit.id==='bano');
@@ -326,6 +327,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(scenario.events==='car')events.phase='car-preview';
   }
   const restored=restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,rc,rcTrap,pursuer});
+  if(world.studyVent.unlatched||puzzle.key)world.studyVent.tool.taken=true;
   if(puzzle.key){world.studyVent.interactable=false;world.studyVent.unlatched=true;poseVentCover(world.studyVent,1);}
   resumed=!!restored;
   // Keep an initial safe position even when a trial starts during a chase.
@@ -448,7 +450,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(s.hidden||s.lying){exitPose();return;}
   const o=closestObject(world,s,focus);if(!o){say('Acércate a un objeto y míralo para interactuar');return;}
   if(o.kind==='vent'){
-   if(removeVentCover(o,reducedMotion.matches)){
+   if(!o.unlatched&&equipment!=='screwdriver'){say(s.inventory.screwdriver?'Equipa el destornillador para quitar los tornillos.':'La rejilla tiene cuatro tornillos. Revisa el cajón del escritorio.');return;}
+   if(removeVentCover(o,reducedMotion.matches,equipment)){
+    equip('empty');
+    if(o.coverAmount===1){s.inventory.screwdriver=false;phone.setInventory(s.inventory);}
     play('latch',o);saveCheckpoint();return;
    }
    if(o.coverAmount<1)return;
@@ -520,6 +525,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     else say(opening?'Abriendo cajón…':'Cerrando cajón…');
     play('drawer',o);
   }else if(o.kind==='battery'){o.taken=true;s.inventory.batteries++;renderer.updateVisibility();play('pickup',o);say('Pila guardada en la mochila');}
+  else if(o.kind==='screwdriver'){o.taken=true;s.inventory.screwdriver=true;phone.setInventory(s.inventory);equip('screwdriver');renderer.updateVisibility();play('pickup',o);saveCheckpoint();return;}
   else if(o.kind==='flashlight'){o.taken=true;s.inventory.torch=true;s.flashlight=true;phone.setInventory(s.inventory);equip('flashlight');renderer.updateVisibility();play('pickup',o);say('Linterna guardada');}
   else if(o.kind==='key'){
    if(o.master){o.taken=true;s.inventory.masterKey=true;phone.setInventory(s.inventory);renderer.updateVisibility();play('pickup',o);say('Llave maestra guardada');saveCheckpoint();return;}
@@ -899,7 +905,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(target===world.pianoSheet)return 'Recoger partitura';
   switch(target.kind){
    case 'door':return target.id==='entrada'&&target.sealed&&events.phase==='escape'?'Abrir con llave maestra':target.open?'Cerrar puerta':'Abrir puerta';
-   case 'vent':return !target.unlatched?'Retirar la tapa':target.coverAmount<1?'Retirando la tapa…':'Enviar a Emy al conducto';
+   case 'screwdriver':return 'Recoger destornillador';
+   case 'vent':return !target.unlatched?(equipment==='screwdriver'?'Desatornillar rejilla':'Examinar tornillos'):target.coverAmount<1?'Retirando la tapa…':'Enviar a Emy al conducto';
    case 'drawer':return target.open?'Cerrar cajón':'Abrir cajón';
    case 'key':return target.master?'Recoger llave maestra':'Recoger llave';
    case 'note':return 'Leer nota';
@@ -1176,6 +1183,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(captureShot){torchMarker.hidden=true;renderCapture(shotDelta);return;}
   if(!isSuspended()&&!finalCutscene){
    advanceVentCover(world.studyVent,shotDelta);
+   if(world.studyVent.coverAmount===1&&s.inventory.screwdriver){
+    s.inventory.screwdriver=false;
+    if(equipment==='screwdriver')equip('empty');
+    phone.setInventory(s.inventory);
+   }
    if(emyShot||poseTransition)updateFurniture(world.objects,shotDelta,s);
    const wasHidden=world.emy.hidden;
    if(emyCompanion){
@@ -1542,9 +1554,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(key==='mute')sound.set('muted',field.checked);
   root.querySelectorAll('[data-setting="'+key+'"]').forEach(el=>{if(el!==field){if(field.type==='checkbox')el.checked=field.checked;else el.value=field.value;}});
  },{signal});
+ root.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')root.classList.remove('house-keyboard');},true);
  window.addEventListener('keydown',e=>{
   if(!active||e.altKey||e.ctrlKey||e.metaKey||e.isComposing)return;
   if(captureShot&&!contextLost){e.preventDefault();return;}
+  root.classList.add('house-keyboard');
   if(e.isTrusted&&!e.repeat)unlockSound();
   const focused=e.target?.tagName;
   if(e.key==='Escape'&&mouseLocked()){e.preventDefault();releaseMouse();return;}
@@ -1559,7 +1573,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   if(modal==='Caja fuerte'&&e.key!=='Tab'){if(/^\d$/.test(e.key)){e.preventDefault();safeAction(e.key);}else if(e.key==='Backspace'||e.key==='Delete'){e.preventDefault();safeAction(e.key==='Delete'?'clear':'back');}else if(e.key==='Enter'){e.preventDefault();safeAction('submit');}else if(e.key==='Escape'){e.preventDefault();modalClose();}return;}
   if((events.phase==='safe'||events.phase==='failed')&&!['Tab','Enter',' '].includes(e.key)){e.preventDefault();return;}
-  if(['1','2','3','4','5','6'].includes(e.key)&&!isPaused()&&events.phase!=='arrival'){if(!e.repeat&&rc.mode!=='driving'&&rc.mode!=='deploying')equip([s.inventory.redKey?'red-key':'empty','flashlight','phone','key','paper','rc'][Number(e.key)-1],true);return;}
+  if(/^[1-9]$/.test(e.key)&&!isPaused()&&!phone.open&&events.phase!=='arrival'){
+   const slot=phone.visibleSlots()[Number(e.key)-1];
+   if(slot){if(!e.repeat&&!remoteInUse())equip(slot.dataset.equip,true);return;}
+  }
   if(rc?.mode==='driving'&&!e.repeat&&['q','x','t'].includes(e.key.toLowerCase())){
    e.preventDefault();runAction({q:'rc:noise',x:'rc:stop',t:'rc:trap'}[e.key.toLowerCase()]);return;
   }

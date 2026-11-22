@@ -33,8 +33,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
    const bathDoor=()=>page.evaluate(()=>window.__rescueHouse.snapshot().doors.find(d=>d.id==='bano'));
    await page.waitForTimeout(300);assert.equal((await bathDoor()).state,'closed','Walking into range does not open a door');
    await page.click('#lab-interact');await page.waitForFunction(()=>window.__rescueHouse.snapshot().doors.find(d=>d.id==='bano').state==='open');
-   await page.keyboard.press('2');await page.keyboard.press('f');
-   await page.keyboard.press('3');
+   await require('./helpers/press-slot.cjs')(page,'flashlight');await page.keyboard.press('f');
+   await require('./helpers/press-slot.cjs')(page,'phone');
    await page.evaluate(()=>window.__rescueHouse.setPose({x:8.35,y:0,z:5.55,yaw:Math.PI/2,pitch:0}));
    await page.waitForFunction(()=>window.__rescueHouse.snapshot().mirror.drawn&&!window.__rescueHouse.snapshot().flashlight&&window.__rescueHouse.mirrorPuzzle().noteLift===0&&window.__rescueHouse.amenities().notePresentation);
    assert.equal(await page.locator('[data-equip=phone]').getAttribute('aria-pressed'),'false');

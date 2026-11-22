@@ -319,3 +319,5 @@
 
 #lab3d.house-emy-action, #lab3d.house-emy-action * {cursor:none}
 #lab3d.house-emy-action :is(.lab-cross,.lab-focus) {visibility:hidden}
+
+#lab3d:not(.house-keyboard) .house-equipment .house-hotbar button small {display:none;}

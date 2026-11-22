@@ -22,8 +22,8 @@ export const HOUSE_TRIALS={
  },
  drawer:{
   title:'Cajón y pistas',
-  description:'En el estudio, retira la tapa de ventilación y vuelve a interactuar para enviar a Emy. Espera a que vuelva con la llave con lazo.',
-  objective:'Retira la tapa y envía a Emy',checkpoint:'ground',
+  description:'Abre el cajón del escritorio, recoge el destornillador, desatornilla la rejilla alta y vuelve a interactuar para enviar a Emy. Espera a que vuelva con la llave con lazo.',
+  objective:'Busca el destornillador y envía a Emy',checkpoint:'ground',
   pose:{x:1.8,floor:0,z:2.95,yaw:2.36,pitch:.02}
  },
  safe:{

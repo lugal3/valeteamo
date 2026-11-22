@@ -1,4 +1,4 @@
-import {installVentCover,VENT_BASE} from './study-vent.js';
+import {installVentCover,screwdriverModel,VENT_BASE,VENT_X,VENT_FACE} from './study-vent.js';
 import {BATH_MIRROR,MIRROR_SPAWN} from './mirror.js';
 import {BALUSTER_PROFILE,CUP_PROFILE,CANDLE_PROFILE,CLOCK_PROFILE} from './chibi-geometry.js';
 import {installHouseLights} from './house-lights.js';
@@ -81,7 +81,7 @@ export function buildHouse(spawn='ground'){
  for(const floor of [0,HEIGHT]){
   partition('x','west-'+floor,0,0,12,[window(2),window(8.5)],floor);
   partition('x','east-'+floor,14,0,12,[window(1.6),window(7.2)],floor,'wall2');
-  partition('z','north-'+floor,0,0,14,[window(2.5),window(9.8)],floor);
+  partition('z','north-'+floor,0,0,14,[window(2.5),...(floor===0?[{center:VENT_X,width:.78,sill:VENT_BASE+.035,height:.555}]:[]),window(9.8)],floor);
   partition('z','south-'+floor,12,0,14,floor===0?[window(2.2,1.54,true),{center:5.9,width:1.3}]:[window(2.2),window(6.1),window(12.1)],floor);
   // Fase 3: split by room
   const wpStudy=floor===0?'wall_study':'wall_bedroom';
@@ -232,17 +232,15 @@ export function buildHouse(spawn='ground'){
  add('study-papers',2.65,.94,2.75,.38,.06,.27,'paper',false);lamp('study-lamp',2.15,.92,2.72);
  for(const box of boxes.slice(studyStart))box.z+=deskOffset;
  for(const item of [drawer,key,drawer.origin,drawer.contents[0].origin,...drawer.parts.map(part=>part.origin)])item.z+=deskOffset;
- add('emy-vent-back',2.8,VENT_BASE+.29,.135,.64,.53,.04,'dark',false);
- // This inspection duct extends into the room: Kitty cannot fit under its roof.
- for(const x of [2.43,3.17])add('emy-duct-side-'+x,x,VENT_BASE+.28,.98,.065,.56,1.72,'torchmetal');
- // An inspection grate keeps the key in sight while blocking a human arm.
- for(const x of [2.47,3.13])add('emy-duct-rail-'+x,x,VENT_BASE+.60,.98,.15,.10,1.72,'torchmetal');
- for(let i=0;i<12;i++)add('emy-duct-grate-'+i,2.8,VENT_BASE+.60,.18+i*.145,.56,.085,.042,'torchmetal');
- add('emy-duct-floor',2.8,VENT_BASE+.035,.98,.72,.055,1.72,'dark',false);
- for(const z of [.32,.88,1.44,1.83])add('emy-duct-seam-'+z,2.8,VENT_BASE+.656,z,.83,.022,.045,'brass',false);
- add('emy-duct-landing',2.8,VENT_BASE+.035,2.22,.85,.08,.81,'torchmetal');
- for(const x of [2.48,3.12])add('emy-duct-bracket-'+x,x,VENT_BASE-.11,1.63,.06,.20,.65,'torchmetal',false);
- const studyVent=obj('emy-vent','vent','Conducto del estudio',2.8,VENT_BASE+.38,1.94,{cover:installVentCover(add),coverAmount:0,unlatched:false,takeoff:{x:1.85,y:0,z:2.72},entrance:{x:2.8,y:VENT_BASE+.075,z:2.31},exit:{x:2.8,y:VENT_BASE+.075,z:2.31},depth:1.73,mode:'recess'});
+ const driver=screwdriverModel((id,x,y,z,w,h,d,mat,extra)=>add('working-driver-'+id,0,-100,0,w,h,d,mat,false,{...extra,dynamic:true,offset:[x,y,z]}));
+ const tool=obj('screwdriver','screwdriver','Destornillador',key.x,.70,key.z-.12,{dynamic:true,concealed:true,interactable:false});
+ add('emy-vent-back',VENT_X,VENT_BASE+.31,-1.49,.84,.62,.04,'dark',false);
+ for(const side of [-1,1]){
+  add('emy-duct-side-'+side,VENT_X+side*.41,VENT_BASE+.31,-.69,.05,.59,1.61,'torchmetal',false);
+  add('emy-duct-panel-'+side,VENT_X,VENT_BASE+.31+side*.30,-.69,.84,.05,1.61,'dark',false);
+ }
+ const lip={x:VENT_X,y:VENT_BASE+.035,z:VENT_FACE};
+ const studyVent=obj('emy-vent','vent','Conducto del estudio',VENT_X,VENT_BASE+.31,VENT_FACE+.07,{tool,driver,cover:installVentCover(add),coverAmount:0,unlatched:false,takeoff:{x:VENT_X-.20,y:0,z:1.48},entrance:lip,exit:{...lip},depth:1.42,mode:'recess'});
  shelf('study-shelf',.19,0,3.6,-Math.PI/2);plant('study-plant',4.00,0,4.32);
  frame('study',.95,1.8,.15,'south',15,{label:'Letrero del estudio',text:STUDY_SIGN});
  // Kitchen and bathroom are recognizable rooms, not corridor props.

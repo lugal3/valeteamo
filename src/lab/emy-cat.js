@@ -6,7 +6,7 @@ export const EMY_COLORS=Object.freeze({fur:[.45,.46,.47],dark:[.25,.26,.27],silv
 export function installEmyModel(add,{prefix='emy',hidden=false}={}){
  const parts=[],p=EMY_COLORS;
  const part=(id,pos,size,color,joint,extra={})=>{
-  if(hidden&&!extra.asset)extra={...extra,segments:Math.max(6,Math.floor((extra.segments||14)*.5)),rings:Math.max(4,Math.floor((extra.rings||9)*.5))};
+  if(hidden&&!extra.asset)extra={...extra,segments:Math.max(4,Math.floor((extra.segments||14)*.5)),rings:Math.max(3,Math.floor((extra.rings||9)*.5))};
   const spec={w:size[0],h:size[1],d:size[2],color,...extra};
   const box=add(prefix+'-'+id,...pos,...size,'plaster',false,{shape:'emy-surface',color,dynamic:true,hiddenGeometry:hidden,castShadow:true,chibi:true,emySpec:spec,emyPose:{pos,rot:[0,0,0],scale:[1,1,1]}});
   parts.push({id,box,x:pos[0],y:pos[1],z:pos[2],joint,base:pos});

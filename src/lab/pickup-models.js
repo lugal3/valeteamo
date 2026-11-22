@@ -1,3 +1,4 @@
+import {screwdriverModel} from './study-vent.js';
 import {BEVEL_PROFILE} from './chibi-geometry.js';
 import {notePieces} from './equipment.js';
 import {rcCarModel} from './rc-car.js';
@@ -71,6 +72,7 @@ export function pickupGeometry(objects){
    .filter(part=>part.id==='paper'||part.id.startsWith('ink-back'))
    .map(part=>piece(part.id,part.x,.044-part.z,part.y-.12,part.w,part.d,part.h,'paper',{color:part.color}));
   if(o.kind==='note')return noteModel(piece,o);
+  if(o.kind==='screwdriver')return screwdriverModel((id,x,y,z,...shape)=>piece(id,z-.15,y,x,...shape.slice(0,4),{...shape[4],yaw:Math.PI/2}));
   if(o.kind==='battery')return batteryModel(piece);
   if(o.kind==='key')return keyModel(piece,o);
   if(o.kind==='flashlight')return [

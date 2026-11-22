@@ -1,3 +1,4 @@
+import {screwdriverModel} from './study-vent.js';
 import {CHIBI,chibiPiece,placePieces,torchModel,grippingPaw} from './chibi-model.js';
 import {geometry} from './renderer.js';
 import {notePieces,phonePieces,keyPieces} from './equipment.js';
@@ -46,6 +47,10 @@ function rcHeldPieces(tabletOnly=false){
 }
 export function viewModelPieces(kind='flashlight', flash=true){
  if(kind==='rc'||kind==='rc-tablet')return placePieces(rcHeldPieces(kind==='rc-tablet'),{...noteGrip,scale:.84,prefix:'view-rc-'});
+ if(kind==='screwdriver'){
+  const tool=screwdriverModel((id,x,y,z,w,h,d,mat,extra)=>chibiPiece(id,x,-.025+y,.115-z,w,h,d,extra.color??[.65,.65,.62],{...extra,mat}));
+  return placePieces([...tool,...grippingPaw()],{...noteGrip,prefix:'view-driver-'});
+ }
  if(kind==='phone')return placePieces(phonePieces(),{x:.37,y:-.25,z:.85,scale:1,prefix:'view-phone-'});
  if(kind==='note')return placePieces(notePieces(),{...noteGrip,prefix:'view-note-'});
  if(kind==='paper')return placePieces(notePieces(.9,false),{...noteGrip,prefix:'view-paper-'});

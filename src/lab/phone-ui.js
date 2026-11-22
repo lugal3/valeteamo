@@ -5,6 +5,7 @@ const keyIcon='<path d="M14 10 5 19H2v-3l9-9"/><circle cx="15.5" cy="6.5" r="4"/
 const dockPaths={
  flashlight:'<path d="m6 4 12 0-2 8v8H8v-8Z"/><path d="M7 8h10M10 16h4"/>',
  phone:'<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4M11 5h2"/>',
+ screwdriver:'<path d="m4 20 8-8m-1-2 6-7 4 4-7 7z"/>',
  key:keyIcon,'red-key':keyIcon,
  paper:'<path d="M6 3h8l4 4v14H6zM14 3v5h4M9 12h6M9 16h6"/>',
  rc:'<rect x="2" y="5" width="20" height="14" rx="3"/><path d="M5 11h4m-2-2v4m6-3 3-2 3 2m-5 3h4"/><circle cx="20" cy="16" r=".5"/>'
@@ -17,7 +18,7 @@ export class PhoneUI{
   this.gallery=[...gallerySprites];this.selectedPhoto=null;this.photoCount=0;this.messageTimes=new WeakMap();this.messageCount=0;this.latestNotice=null;this.clockMinute=-1;this.history=earlierMessages();
   this.canUse=canUse;this.onEdit=onEdit;this.editing=false;this.preview=false;this.onPresentationChange=()=>{};
   try{this.layout=readHUD(window.localStorage);}catch{this.layout={...DEFAULT_HUD};}
-  const host=document.createElement('div');host.className='house-equipment';host.innerHTML=`<nav class="house-hotbar" aria-label="Objetos equipados"><button data-equip="empty" aria-label="Mano vacía" title="1 · Mano vacía"><span></span><small>1</small></button><button data-equip="flashlight" aria-label="Equipar linterna" title="2 · Linterna"><span></span><small>2</small></button><button data-equip="phone" aria-label="Equipar teléfono" title="3 · Teléfono"><span></span><small>3</small><b class="phone-badge" hidden>●</b></button></nav><button class="phone-notice" type="button" hidden></button>
+  const host=document.createElement('div');host.className='house-equipment';host.innerHTML=`<nav class="house-hotbar" aria-label="Objetos equipados"><button data-equip="flashlight" aria-label="Equipar linterna" title="Linterna"><span></span><small></small></button><button data-equip="phone" aria-label="Equipar teléfono" title="Teléfono"><span></span><small></small><b class="phone-badge" hidden>●</b></button></nav><button class="phone-notice" type="button" hidden></button>
   <section class="phone-screen" hidden role="dialog" aria-modal="true" aria-label="Teléfono de Kitty"><div class="phone-shell" data-page="home"><div class="phone-status"><time></time><i aria-hidden="true"></i><svg viewBox="0 0 44 14" aria-hidden="true"><path fill="currentColor" d="M1 10h2v3H1zm4-3h2v6H5zm4-3h2v9H9zm4-3h2v12h-2zm8 3h17v6H21z"/><rect x="19" y="2" width="21" height="10" rx="2" stroke="currentColor" fill="none"/><path d="M42 5v4" stroke="currentColor"/></svg></div><header><button data-app="home" aria-label="Volver al inicio del teléfono">‹</button><b></b><button data-app="close" aria-label="Guardar teléfono">×</button></header><main tabindex="-1"></main><button class="phone-home-indicator" data-app="home" aria-label="Inicio del teléfono"></button></div></section>
   <section class="hud-editor" hidden role="dialog" aria-label="Editar controles"><h2>Coloca tu hotbar</h2><p>La casa queda en pausa mientras ajustas.</p><label>Anclaje <select data-hud="anchor"><option value="left">Izquierda</option><option value="right">Derecha</option><option value="bottom">Abajo</option><option value="top">Arriba</option></select></label><label>Tamaño <input data-hud="size" type="range" min="40" max="64" step="2"></label><label>Desplazar X <input data-hud="x" type="range" min="-180" max="180" step="1"></label><label>Desplazar Y <input data-hud="y" type="range" min="-120" max="120" step="1"></label><label>Opacidad <input data-hud="opacity" type="range" min=".25" max=".9" step=".05"></label><output class="hud-measure"></output><div><button data-layout="copy">Copiar ajuste</button><button data-layout="reset">Restablecer</button><button data-layout="preview">Vista previa</button><button data-layout="done">Listo</button></div><small class="hud-copy-status" role="status"></small></section><div class="hud-preview-tools" hidden><output></output><button data-layout="back">Volver al editor</button><button data-layout="done">Listo</button></div>`;root.append(host);this.host=host;
   this.settings=root.querySelector('#lab-camera-settings');
@@ -26,10 +27,10 @@ export class PhoneUI{
    this.settings.hidden=true;
   }
   const feed=root.querySelector('#house-messages');this.managedNotice=!!feed;if(feed){host.append(feed);feed.append(host.querySelector('.phone-notice'));}
-  const nav=host.querySelector('.house-hotbar');nav.querySelector('[data-equip=empty]').remove();
-  for(const [kind,label,key] of [['key','Llave con lazo',4],['red-key','Llave roja',1],['paper','Nota',5],['rc','Auto RC y tablet',6]]){
-   const button=document.createElement('button');button.type='button';button.dataset.equip=kind;button.setAttribute('aria-label',label);button.title=key+' · '+label;
-   button.innerHTML='<span>'+dockIcon(kind)+'</span><small>'+key+'</small>';nav.append(button);
+  const nav=host.querySelector('.house-hotbar');
+  for(const [kind,label] of [['key','Llave con lazo'],['red-key','Llave roja'],['paper','Nota'],['rc','Auto RC y tablet'],['screwdriver','Destornillador']]){
+   const button=document.createElement('button');button.type='button';button.dataset.equip=kind;button.setAttribute('aria-label',label);button.title=label;
+   button.innerHTML='<span>'+dockIcon(kind)+'</span><small></small>';nav.append(button);
   }
   host.addEventListener('click',e=>{
    const action=e.target.closest('[data-layout]')?.dataset.layout;if(action){this.layoutAction(action);return;}
@@ -74,12 +75,14 @@ export class PhoneUI{
   if(action==='copy'){const text=JSON.stringify({...this.layout,viewport:[this.root.clientWidth,this.root.clientHeight],rect:this.rect});try{await navigator.clipboard.writeText(text);this.host.querySelector('.hud-copy-status').textContent='Ajuste copiado. Puedes pegarlo junto a tu captura.';}catch{this.host.querySelector('.hud-copy-status').textContent=text;}}
  }
  equip(kind){for(const b of this.host.querySelectorAll('[data-equip]'))b.setAttribute('aria-pressed',String(b.dataset.equip===kind));if(kind!=='phone')this.close();}
+ visibleSlots(){return [...this.host.querySelectorAll('[data-equip]:not([hidden])')];}
  setInventory(inventory){
-  const available={flashlight:inventory.torch,phone:true,key:inventory.key,'red-key':inventory.redKey,paper:!!inventory.pendingNote||inventory.notes.length>0,rc:!!inventory.rc};
+  const available={screwdriver:inventory.screwdriver,flashlight:inventory.torch,phone:true,key:inventory.key,'red-key':inventory.redKey,paper:!!inventory.pendingNote||inventory.notes.length>0,rc:!!inventory.rc};
   for(const button of this.host.querySelectorAll('[data-equip]'))button.hidden=!available[button.dataset.equip];
   const papers=this.host.querySelector('[data-equip=paper]');
   const label=inventory.notes.at(-1)?.id==='piano-sheet'&&!inventory.pendingNote?'Partitura':'Notas';
-  papers.title='5 · '+label;papers.setAttribute('aria-label',label);
+  papers.setAttribute('aria-label',label);
+  this.visibleSlots().forEach((button,i)=>{button.querySelector('small').textContent=String(i+1);button.title=button.getAttribute('aria-label');});
   this.applyLayout();
  }
  show(app='home'){
