@@ -1,4 +1,7 @@
+import {progressStops} from './rescue-progress.js';
+
 export type HouseTrial={
+ milestone?:number;
  title:string;
  description:string;
  objective:string;
@@ -13,7 +16,21 @@ export type HouseTrial={
  battery?:number;
 };
 
-export const HOUSE_TRIALS={
+const nextActions=[
+ 'Envía a Emy al conducto abierto.', 'Usa la llave con lazo en el dormitorio.',
+ 'Escucha la llegada y busca refugio.', 'Usa el código de la nota para abrir la caja.',
+ 'Recoge la partitura de la caja abierta.', 'Coloca la partitura y toca el piano.',
+ 'Recoge la llave roja que liberó el piano.', 'Baja al sótano y busca la llave maestra.',
+ 'Libera a Louis y acompáñalo a la cocina.', 'Prepara la trampa y conduce el auto RC.',
+ 'Usa la llave maestra en la salida.', 'Cruza la salida abierta con Louis para reproducir el final.'
+];
+type StopId=`hito-${number}`;
+export const milestoneIds=progressStops.map((_,i):StopId=>`hito-${i+1}`);
+const milestoneTrials=Object.fromEntries(progressStops.map(({percent,label},i)=>[milestoneIds[i],{
+ title:`${percent}% · ${label}`,description:nextActions[i],objective:nextActions[i],checkpoint:'ground',milestone:i+1
+}])) as Record<StopId,HouseTrial>;
+const legacyTrials={
+
  mirror:{
   title:'Espejo',
   description:'En el baño, frente al espejo y con la linterna encendida. Mira el reflejo y abre Emotes para probar los bailes.',
@@ -100,4 +117,5 @@ export const HOUSE_TRIALS={
  }
 } as const satisfies Record<string,HouseTrial>;
 
-export type HouseTrialId=keyof typeof HOUSE_TRIALS;
+export type HouseTrialId=keyof typeof legacyTrials | StopId;
+export const HOUSE_TRIALS:Record<HouseTrialId,HouseTrial>={...legacyTrials,...milestoneTrials};

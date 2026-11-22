@@ -8,6 +8,17 @@ module.exports=async()=>{
  const {rescueProgress}=await import('../src/lab/rescue-progress.js');
  const {Pursuer}=await import('../src/lab/pursuer.js');
  const {captureHouseCheckpoint,restoreHouseCheckpoint}=await import('../src/lab/house-checkpoint.js');
+ const {trialCheckpoint}=await import('../src/lab/trial-checkpoint.js');
+ const {progressStops}=await import('../src/lab/rescue-progress.js');
+ for(const [index,stop] of progressStops.entries()){
+  const w=createHouse(),ctx={world:w,s:{inventory:{notes:[]}},puzzle:{},events:{phase:'explore'},mirrorSafe:{},rc:{object:w.objects.find(o=>o.id==='rc-car')},rcTrap:{},pursuer:new Pursuer(w)};
+  assert(restoreHouseCheckpoint(trialCheckpoint(index+1),ctx));
+  // The final replay starts at the open exit so the player can trigger the actual ending.
+  assert.equal(rescueProgress(ctx).percent,index===11?99:stop.percent);
+  if(index===1)assert(ctx.s.inventory.key&&w.objects.find(o=>o.id==='dormitorio').locked);
+  if(index===8)assert(ctx.s.inventory.masterKey&&!ctx.puzzle.rescued);
+  if(index===11)assert(!w.objects.find(o=>o.id==='entrada').sealed);
+ }
  const world=createHouse(),item=id=>world.objects.find(o=>o.id===id);
  for(const door of world.objects.filter(o=>o.kind==='door'))setDoor(door,true);
  const s={x:1.8,y:0,z:2.95,inventory:{notes:[]}},cat=createEmyCompanion(world.emy,{waiting:false});

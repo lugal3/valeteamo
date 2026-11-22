@@ -6,7 +6,7 @@ const dockPaths={
  flashlight:'<path d="m6 4 12 0-2 8v8H8v-8Z"/><path d="M7 8h10M10 16h4"/>',
  phone:'<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4M11 5h2"/>',
  screwdriver:'<path d="m4 20 8-8m-1-2 6-7 4 4-7 7z"/>',
- key:keyIcon,'red-key':keyIcon,
+ key:keyIcon,'master-key':keyIcon,'red-key':keyIcon,
  paper:'<path d="M6 3h8l4 4v14H6zM14 3v5h4M9 12h6M9 16h6"/>',
  rc:'<rect x="2" y="5" width="20" height="14" rx="3"/><path d="M5 11h4m-2-2v4m6-3 3-2 3 2m-5 3h4"/><circle cx="20" cy="16" r=".5"/>'
 };
@@ -27,15 +27,16 @@ export class PhoneUI{
    this.settings.hidden=true;
   }
   const feed=root.querySelector('#house-messages');this.managedNotice=!!feed;if(feed){host.append(feed);feed.append(host.querySelector('.phone-notice'));}
-  const nav=host.querySelector('.house-hotbar');
-  for(const [kind,label] of [['key','Llave con lazo'],['red-key','Llave roja'],['paper','Nota'],['rc','Auto RC y tablet'],['screwdriver','Destornillador']]){
+  const nav=this.nav=host.querySelector('.house-hotbar');
+  root.append(nav);
+  nav.addEventListener('click',event=>{const slot=event.target.closest('[data-equip]');if(slot&&!this.editing&&canEquip())onEquip(slot.dataset.equip);});
+  for(const [kind,label] of [['key','Llave con lazo'],['red-key','Llave roja'],['master-key','Llave maestra'],['paper','Nota'],['rc','Auto RC y tablet'],['screwdriver','Destornillador']]){
    const button=document.createElement('button');button.type='button';button.dataset.equip=kind;button.setAttribute('aria-label',label);button.title=label;
    button.innerHTML='<span>'+dockIcon(kind)+'</span><small></small>';nav.append(button);
   }
   host.addEventListener('click',e=>{
    const action=e.target.closest('[data-layout]')?.dataset.layout;if(action){this.layoutAction(action);return;}
    if(this.editing)return;
-   const equip=e.target.closest('[data-equip]');if(equip){if(canEquip())onEquip(equip.dataset.equip);return;}
    if(!this.open&&!canUse())return;
    if(e.target.closest('.phone-notice')){onEquip('phone',false);this.show('messages');return;}
    const b=e.target.closest('[data-app]');if(b){if(b.dataset.app==='close'){this.close();onClose();}else{this.app=b.dataset.app;this.selectedPhoto=null;if(this.app==='snake')this.resetSnake();this.last='';}}
@@ -44,13 +45,14 @@ export class PhoneUI{
    if(e.target.classList.contains('phone-screen')){this.close();onClose();}
    const d=e.target.closest('[data-dir]');if(d)this.turn(Number(d.dataset.dir));
   });
-  for(const kind of ['flashlight','phone'])host.querySelector('[data-equip='+kind+'] span').innerHTML=dockIcon(kind);
+  for(const kind of ['flashlight','phone'])nav.querySelector('[data-equip='+kind+'] span').innerHTML=dockIcon(kind);
   host.addEventListener('input',e=>{const key=e.target.dataset.hud;if(!key)return;this.layout=normalizeHUD({...this.layout,[key]:e.target.value});this.applyLayout();try{writeHUD(window.localStorage,this.layout);}catch{}});
-  this.resize=()=>this.applyLayout();window.addEventListener('resize',this.resize);this.applyLayout();
+  this.resize=()=>this.applyLayout();window.addEventListener('resize',this.resize);this.observer=new ResizeObserver(this.resize);this.observer.observe(root);this.applyLayout();
  }
  applyLayout(){
-  const nav=this.host.querySelector('.house-hotbar'),count=nav.querySelectorAll('button:not([hidden])').length;
+  const nav=this.nav,count=nav.querySelectorAll('button:not([hidden])').length;
   const width=this.root.clientWidth,height=this.root.clientHeight;
+  if(!width||!height)return;
   const style=getComputedStyle(this.root);
   const inset=edge=>parseFloat(style.getPropertyValue('--house-safe-'+edge))||0;
   const left=inset('left'),right=inset('right'),top=inset('top'),bottom=inset('bottom');
@@ -74,12 +76,12 @@ export class PhoneUI{
   if(action==='reset'){this.layout={...DEFAULT_HUD};try{writeHUD(window.localStorage,this.layout);}catch{}this.syncEditor();}
   if(action==='copy'){const text=JSON.stringify({...this.layout,viewport:[this.root.clientWidth,this.root.clientHeight],rect:this.rect});try{await navigator.clipboard.writeText(text);this.host.querySelector('.hud-copy-status').textContent='Ajuste copiado. Puedes pegarlo junto a tu captura.';}catch{this.host.querySelector('.hud-copy-status').textContent=text;}}
  }
- equip(kind){for(const b of this.host.querySelectorAll('[data-equip]'))b.setAttribute('aria-pressed',String(b.dataset.equip===kind));if(kind!=='phone')this.close();}
- visibleSlots(){return [...this.host.querySelectorAll('[data-equip]:not([hidden])')];}
+ equip(kind){for(const b of this.nav.querySelectorAll('[data-equip]'))b.setAttribute('aria-pressed',String(b.dataset.equip===kind));if(kind!=='phone')this.close();}
+ visibleSlots(){return [...this.nav.querySelectorAll('[data-equip]:not([hidden])')];}
  setInventory(inventory){
-  const available={screwdriver:inventory.screwdriver,flashlight:inventory.torch,phone:true,key:inventory.key,'red-key':inventory.redKey,paper:!!inventory.pendingNote||inventory.notes.length>0,rc:!!inventory.rc};
-  for(const button of this.host.querySelectorAll('[data-equip]'))button.hidden=!available[button.dataset.equip];
-  const papers=this.host.querySelector('[data-equip=paper]');
+  const available={'master-key':inventory.masterKey,screwdriver:inventory.screwdriver,flashlight:inventory.torch,phone:true,key:inventory.key,'red-key':inventory.redKey,paper:!!inventory.pendingNote||inventory.notes.length>0,rc:!!inventory.rc};
+  for(const button of this.nav.querySelectorAll('[data-equip]'))button.hidden=!available[button.dataset.equip];
+  const papers=this.nav.querySelector('[data-equip=paper]');
   const label=inventory.notes.at(-1)?.id==='piano-sheet'&&!inventory.pendingNote?'Partitura':'Notas';
   papers.setAttribute('aria-label',label);
   this.visibleSlots().forEach((button,i)=>{button.querySelector('small').textContent=String(i+1);button.title=button.getAttribute('aria-label');});
@@ -92,7 +94,7 @@ export class PhoneUI{
   if(this.events)this.update(this.events,0);
   this.host.querySelector('[data-app=close]').focus();this.onPresentationChange();
  }
- close(){if(this.settings){this.settings.open=false;this.settings.hidden=true;}const wasOpen=this.open;this.open=false;this.root.classList.remove('house-phone-open');this.host.querySelector('.phone-screen').hidden=true;if(wasOpen&&this.previousFocus?.isConnected)this.previousFocus.focus();if(wasOpen)this.onPresentationChange();}
+ close(){if(this.settings){this.settings.open=false;this.settings.hidden=true;}const wasOpen=this.open;this.open=false;this.root.classList.remove('house-phone-open');this.host.querySelector('.phone-screen').hidden=true;if(wasOpen&&this.previousFocus?.isConnected)this.previousFocus.focus({preventScroll:true});if(wasOpen)this.onPresentationChange();}
  resetSnake(){this.snake=[[4,6],[3,6],[2,6]];this.food=[9,6];this.direction=[1,0];this.pending=[1,0];this.clock=0;this.score=0;this.dead=false;}
  turn(index){const d=[[0,-1],[1,0],[0,1],[-1,0]][index];if(d[0]!==-this.direction[0]||d[1]!==-this.direction[1])this.pending=d;}
  key(key){const n={ArrowUp:0,w:0,ArrowRight:1,d:1,ArrowDown:2,s:2,ArrowLeft:3,a:3}[key];if(this.open&&this.app==='snake'&&n!==undefined)this.turn(n);}
@@ -119,7 +121,7 @@ export class PhoneUI{
   if(this.open&&this.app==='messages')this.readCount=this.messageCount;
   for(const message of events.messages)if(!this.messageTimes.has(message))this.messageTimes.set(message,formatPhoneTime());
   const latest=incoming.at(-1),unread=this.messageCount>this.readCount;
-  this.host.querySelector('.phone-badge').hidden=!unread;
+  this.nav.querySelector('.phone-badge').hidden=!unread;
   const notice=this.host.querySelector('.phone-notice');
   if(!this.managedNotice)notice.hidden=!unread||this.open;
   if(latest&&latest!==this.latestNotice){notice.innerHTML=phoneNotice(latest,this.messageTimes.get(latest));this.latestNotice=latest;}
@@ -153,5 +155,5 @@ export class PhoneUI{
   if(this.app==='camera')main.innerHTML=`<div class="phone-camera-view"><canvas width="320" height="200" aria-label="Visor de la casa"></canvas></div><div class="phone-camera-actions"><button data-app="photos" aria-label="Abrir Fotos">${this.photoCount?`<img src="${this.gallery[0].url}" alt="">`:'▧'}</button><button data-photo="take" aria-label="Fotografiar la casa"></button></div>`;
   if(previous!==this.app)main.focus({preventScroll:true});
  }
- destroy(){window.removeEventListener('resize',this.resize);this.host.remove();}
+ destroy(){this.observer.disconnect();this.nav.remove();window.removeEventListener('resize',this.resize);this.host.remove();}
 }

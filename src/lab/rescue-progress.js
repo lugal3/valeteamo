@@ -13,6 +13,7 @@ const milestones=[
  [99,'Trampa del auto RC','M2 15v-4l4-1 2-4h8l3 4 3 1v4z M7 16v2m10-2v2',c=>c.rcTrap.closed],
  [100,'Escape al jardín','M4 20V3h10v4M9 13h12m-5-5 5 5-5 5',c=>c.events.phase==='safe'&&c.rcTrap.closed]
 ];
+export const progressStops=milestones.map(([percent,label])=>({percent,label}));
 export function rescueProgress(context){
  let percent=0,mask='';
  const rows=milestones.map(([value,label,path,done])=>{

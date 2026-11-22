@@ -1,5 +1,5 @@
 import {useEffect,useState} from 'react';
-import {HOUSE_TRIALS,type HouseTrial,type HouseTrialId} from './lab/house-trials';
+import {HOUSE_TRIALS,milestoneIds,type HouseTrial,type HouseTrialId} from './lab/house-trials';
 import './playtest-menu.css';
 
 type MenuAction='cosmos-countdown'|'cosmos-gift'|'cosmos-intro'|'cosmos-loading'|'cosmos-galaxy'|'house'|'rescue'|'arcade'|'classic'|'story'|HouseTrialId;
@@ -38,11 +38,11 @@ const areas:Area[]=[
   id:'tres-d',number:'03',title:'3D',
   subtitle:'Casa, encuentros y puzzles. Los controles de diagnóstico quedan disponibles sin saturar la vista.',
   cards:[
-   {id:'house',title:'Casa 3D',description:'Entrada por la ventana y recorrido completo por la casa.'},
-   checkpoint('mirror'),checkpoint('bedroom'),checkpoint('arrival'),checkpoint('basement')
+   {id:'house',title:'Casa 3D · 0% · Entrada',description:'Entrada por la ventana y recorrido completo por la casa.'},
+   ...milestoneIds.map(checkpoint)
   ],
   advanced:[
-   {title:'Cinemáticas y escondites',cards:[checkpoint('car'),checkpoint('wardrobe'),checkpoint('wake')]},
+   {title:'Escenas y mecánicas aisladas',cards:[checkpoint('mirror'),checkpoint('bedroom'),checkpoint('arrival'),checkpoint('basement'),checkpoint('car'),checkpoint('wardrobe'),checkpoint('wake')]},
    {title:'Pistas y objetos',cards:[checkpoint('drawer'),checkpoint('safe'),checkpoint('mirror-note')]},
    {title:'Interacciones y sonido',cards:[checkpoint('battery'),checkpoint('power'),checkpoint('piano'),checkpoint('television')]}
   ]

@@ -29,8 +29,8 @@
 #lab3d .house-piano-dialog:is([data-piano-mode=recital],[data-piano-mode=reveal]) .lab-paper{width:auto;background:#291e26e6}
 @media (max-height:410px){#lab3d .piano-score{height:53px}#lab3d .piano-keys{height:60px}}
 #lab3d .house-danger{color:#fff0db;pointer-events:none;font-variant-numeric:tabular-nums}
-#lab3d [hidden]{display:none!important}#lab3d.lab-intro-active .house-equipment{visibility:hidden}
-#lab3d.house-arrival .lab-objective,#lab3d.house-arrival .lab-focus,#lab3d.house-arrival .lab-buttons,#lab3d.house-arrival .house-equipment,#lab3d.house-arrival .lab-joystick,#lab3d.house-arrival .lab-toast{visibility:hidden}
+#lab3d [hidden]{display:none!important}#lab3d.lab-intro-active :is(.house-equipment,.house-hotbar){visibility:hidden}
+#lab3d.house-arrival .lab-objective,#lab3d.house-arrival .lab-focus,#lab3d.house-arrival .lab-buttons,#lab3d.house-arrival .lab-joystick,#lab3d.house-arrival .lab-toast{visibility:hidden}
 #lab3d.house-cutaway :is(.lab-cross,#house-charge){visibility:hidden}
 #lab3d.house-arrival::after{content:"";position:absolute;inset:0;background:#000;z-index:10;pointer-events:none;animation:house-arrival-fade .3s ease-out forwards}@keyframes house-arrival-fade{from{opacity:1}to{opacity:0}}@media(prefers-reduced-motion:reduce){#lab3d.house-arrival::after{display:none}}
 #lab3d .lab-window-intro button[data-act=pause]{left:max(14px,env(safe-area-inset-left));right:auto}
@@ -320,4 +320,4 @@
 #lab3d.house-emy-action, #lab3d.house-emy-action * {cursor:none}
 #lab3d.house-emy-action :is(.lab-cross,.lab-focus) {visibility:hidden}
 
-#lab3d:not(.house-keyboard) .house-equipment .house-hotbar button small {display:none;}
+#lab3d:not(.house-keyboard) .house-hotbar button small {display:none;}

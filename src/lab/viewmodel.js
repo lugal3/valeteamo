@@ -54,7 +54,7 @@ export function viewModelPieces(kind='flashlight', flash=true){
  if(kind==='phone')return placePieces(phonePieces(),{x:.37,y:-.25,z:.85,scale:1,prefix:'view-phone-'});
  if(kind==='note')return placePieces(notePieces(),{...noteGrip,prefix:'view-note-'});
  if(kind==='paper')return placePieces(notePieces(.9,false),{...noteGrip,prefix:'view-paper-'});
- if(kind==='key'||kind==='red-key')return placePieces(keyPieces(kind==='red-key'),{...noteGrip,prefix:'view-key-'});
+ if(kind==='key'||kind==='red-key'||kind==='master-key')return placePieces(keyPieces(kind==='red-key'),{...noteGrip,prefix:'view-key-'});
  const cfg = VIEWMODEL_CONFIG[kind] || VIEWMODEL_CONFIG.flashlight;
  const base = [...torchModel(flash), ...grippingPaw(), ...dustPieces(flash)];
  return placePieces(base, {x: cfg.x, y: cfg.y, z: cfg.z, scale: cfg.scale, prefix: 'view-'});
@@ -122,6 +122,9 @@ export function drawViewModel(renderer, kind='flashlight', state={}){
 
  // Smoothed actual speed and a small grip rotation settle naturally after a stop.
  const offset=viewModelOffsets(time,motion);
+ if(Number.isFinite(motion.keyTurn)&&!reduced){
+  const turn=Math.sin(Math.PI*motion.keyTurn/.52);offset.z+=.16*turn;offset.roll+=.85*turn;
+ }
  if(swapping)animateBatterySwap(vertices,groups,offset,motion.batterySwap,reduced);
  if(kind==='rc-tablet'&&Number.isFinite(motion.tabletLift)){
   const lift=motion.tabletLift;

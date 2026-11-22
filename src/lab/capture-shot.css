@@ -22,7 +22,7 @@
  text-shadow: 0 1px 5px #000, 0 1px 10px #000;
 }
 
-#lab3d.house-capture-active > :is(.lab-top, .lab-cross, .lab-look, .lab-joystick, .lab-buttons, .lab-focus, .house-equipment, .house-charge, .house-stamina, .house-mouse-status, .house-rc-hud) {
+#lab3d.house-capture-active > :is(.lab-top, .lab-cross, .lab-look, .lab-joystick, .lab-buttons, .lab-focus, .house-equipment, .house-hotbar, .house-charge, .house-stamina, .house-mouse-status, .house-rc-hud) {
  display: none;
 }
 

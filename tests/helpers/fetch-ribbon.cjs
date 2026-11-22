@@ -18,5 +18,7 @@ module.exports=async page=>{
  }
  await use('emy-vent');
  await page.waitForFunction(()=>window.__rescueHouse.snapshot().puzzle.key,null,{timeout:90000});
+ await page.locator('.house-hotbar').waitFor({state:'visible'});
+ await page.locator('.house-hotbar [data-equip=key]').waitFor({state:'visible'});
  return {puzzle:(await page.evaluate(()=>window.__rescueHouse.snapshot())).puzzle};
 };
