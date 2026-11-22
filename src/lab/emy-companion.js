@@ -36,15 +36,17 @@ export function beginEmyEntrance(companion){
  poseEmy(companion.cat,{mode:'sit'});
  return true;
 }
-export function emyEntranceCamera(camera,progress,reduced=false){
+export function emyEntranceCamera(camera,progress,reduced=false,cat){
  // Kitty looks over her shoulder toward the living-room window, then back to the door.
  const look=smooth(progress/.27)*(1-smooth((progress-.78)/.22));
  const peek=camera.x<4.4?{x:camera.x,z:camera.z}:{x:4.85,z:6.2};
- const windowYaw=Math.atan2(2.2-peek.x,12.2-peek.z);
+ const dx=(cat?.x??2.2)-peek.x,dz=(cat?.z??12.2)-peek.z;
+ const windowYaw=Math.atan2(dx,dz);
+ const pitch=Math.atan2((cat?.y??1.17)+.36-camera.y,Math.hypot(dx,dz));
  if(reduced)return {...camera,...peek,yaw:windowYaw,pitch:-.08};
  return {...camera,x:camera.x+(peek.x-camera.x)*look,z:camera.z+(peek.z-camera.z)*look,
   yaw:camera.yaw+deltaAngle(camera.yaw,windowYaw)*look,
-  pitch:camera.pitch+(-.08-camera.pitch)*look};
+  pitch:camera.pitch+(pitch-camera.pitch)*look};
 }
 export function sendEmyToTrunk(companion){
  if(['waiting','trunk','trunk-enter'].includes(companion.stage))return false;
@@ -54,7 +56,7 @@ export function sendEmyToTrunk(companion){
  return true;
 }
 export function requestRibbonKey(companion,vent,key){
- if(companion?.stage!=='following'||key.taken)return false;
+ if(companion?.stage!=='following'||vent.coverAmount!==1||key.taken)return false;
  companion.fetch={vent,key,phase:'approach',time:0};
  companion.route=[];
  companion.stuck=0;
@@ -62,36 +64,55 @@ export function requestRibbonKey(companion,vent,key){
  companion.cat.reaction=0;
  return true;
 }
+// Wind up on planted paws, follow a short ballistic arc, then absorb impact.
+function leapPose(cat,from,to,time,airTime,arc,landingYaw){
+ const u=Math.max(0,Math.min(1,(time-.20)/airTime)),travel=smooth(u);
+ const settle=Math.max(0,Math.min(1,(time-.20-airTime)/.30));
+ cat.x=from.x+(to.x-from.x)*travel;cat.z=from.z+(to.z-from.z)*travel;
+ cat.y=from.y+(to.y-from.y)*u+4*arc*u*(1-u);
+ const heading=Math.atan2(to.x-from.x,to.z-from.z),startYaw=from.yaw??heading;
+ cat.yaw=startYaw+deltaAngle(startYaw,heading)*smooth(time/.20);
+ if(landingYaw!==undefined)cat.yaw+=deltaAngle(heading,landingYaw)*smooth(settle);
+ return {flight:u,compression:time<.20?smooth(time/.20):u<1?1-smooth(u/.20):Math.sin(Math.PI*settle),
+  airborne:u>0&&u<1};
+}
 // Approach and return use the same collision checks as ordinary following.
 // The short crawl inside the prop is authored, with a separate optional exit.
 function fetchKey(companion,world,player,dt,reduced){
  const job=companion.fetch,{cat}=companion,{vent,key}=job;
- let walking=false,mode='walk',cue=null;
- if(job.phase==='crawl'){
+ let walking=false,mode='walk',cue=null,leap;
+ if(job.phase==='leap-in'||job.phase==='leap-out'){
+  const entering=job.phase==='leap-in',from=job.start,to=entering?vent.entrance:vent.takeoff;
+  job.time+=dt;leap=leapPose(cat,from,to,job.time,.64,.63,entering?Math.PI:undefined);mode='leap';
+  if(job.time>=1.14){job.phase=entering?'crawl':'return';job.time=0;}
+ }else if(job.phase==='crawl'){
   job.time+=dt;
   const exit=vent.mode==='through'?vent.exit:vent.entrance;
-  if(job.time<.65){
-   cat.yaw=Math.PI;
-   cat.z=vent.entrance.z-.48*smooth(job.time/.65);
-  }else if(job.time<2.15){
-   if(job.time>=(job.nextScratch??0)){cue='scratch';job.nextScratch=job.time+.42;}
-   setVisibility(companion,true);
-   key.concealed=true;
-  }else{
-   setVisibility(companion,false);
-   cat.x=exit.x;cat.y=exit.y;cat.z=exit.z-.48*(1-smooth((job.time-2.15)/.65));cat.yaw=0;
-   key.concealed=false;
-   if(job.time>=2.8)job.phase='return';
+  const depth=vent.depth??.48;
+  const inward=smooth(job.time/1.35),outward=smooth((job.time-2.7)/1.35);
+  cat.x=outward?exit.x:vent.entrance.x;
+  cat.y=outward?exit.y:vent.entrance.y;
+  cat.z=(outward?exit.z:vent.entrance.z)-depth*inward*(1-outward);
+  cat.yaw=Math.PI*(1-smooth((job.time-2.25)/.45));
+  if(job.time>1.35&&job.time<2.65&&job.time>=(job.nextScratch??0)){cue='scratch';job.nextScratch=job.time+.32;}
+  if(job.time>=2.18)job.carrying=true;
+  walking=job.time<1.35||job.time>2.7;
+  if(job.time>=4.05){
+   job.phase='leap-out';job.start={x:cat.x,y:cat.y,z:cat.z,yaw:cat.yaw};job.time=0;
   }
   mode='stretch';
  }else{
-  const returning=job.phase==='return',goal=returning?player:vent.entrance;
+  const returning=job.phase==='return',goal=returning?player:vent.takeoff;
   if(distance(cat,goal)<(returning?.85:.17)&&Math.abs(cat.y-goal.y)<.3&&clearPassage(world,cat,goal)){
    if(returning){
-    companion.stage='following';companion.fetch=null;companion.route=[];companion.chasing=false;
-    return 'delivered';
-   }
-   job.phase='crawl';job.time=0;companion.route=[];
+    mode='sit';
+    cat.yaw+=deltaAngle(cat.yaw,Math.atan2(player.x-cat.x,player.z-cat.z))*(1-Math.exp(-dt*8));
+    job.offerTime=(job.offerTime||0)+dt;
+    if(job.offerTime>=.55){
+     companion.stage='following';companion.fetch=null;companion.route=[];companion.chasing=false;
+     return 'delivered';
+    }
+   }else{job.phase='leap-in';job.start={x:cat.x,y:cat.y,z:cat.z,yaw:cat.yaw};job.time=0;companion.route=[];}
   }else{
    let point=goal;
    if(!clearPassage(world,cat,goal)){
@@ -105,16 +126,20 @@ function fetchKey(companion,world,player,dt,reduced){
    walking=moveToward(companion,world,point,dt,1.65);
   }
  }
- poseEmy(cat,{mode,walking,phase:cat.age,reduced,blend:1-Math.exp(-15*dt)});
- if(job.phase==='return'||job.phase==='crawl'&&job.time>=2.15){
+ poseEmy(cat,{mode,walking,leap,phase:cat.age,reduced,blend:1-Math.exp(-15*dt)});
+ if(job.carrying){
   const mouth=cat.parts.find(p=>p.id==='philtrum').box;
-  Object.assign(key,{x:mouth.x,y:mouth.y-.03,z:mouth.z});
+  // The ring sits between her teeth, with the shaft hanging down as she turns.
+  const tilt=1.10,offset=.055*Math.cos(tilt);
+  Object.assign(key,{carried:true,yaw:cat.yaw,tilt,x:mouth.x+Math.sin(cat.yaw)*offset,
+   y:mouth.y-.055*Math.sin(tilt),z:mouth.z+Math.cos(cat.yaw)*offset});
  }
  return cue;
 }
 export function snapshotEmyCompanion(companion){
  const {cat,stage}=companion;
- if(stage==='fetch'&&companion.fetch.phase==='crawl')return {stage:'following',...companion.fetch.vent.entrance,yaw:0};
+ if(stage==='closet-entry')return {stage:'following',x:companion.closetEntry.x,y:cat.y,z:companion.closetEntry.z,yaw:cat.yaw};
+ if(stage==='fetch'&&['leap-in','crawl','leap-out'].includes(companion.fetch.phase))return {stage:'following',...companion.fetch.vent.takeoff,yaw:0};
  return {stage:['entrance','fetch'].includes(stage)?'following':stage==='trunk-enter'?'trunk':stage,
   x:cat.x,y:cat.y,z:cat.z,yaw:cat.yaw};
 }
@@ -174,17 +199,29 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  if(finale){setVisibility(companion,true);return null;}
  if(companion.stage==='waiting'||companion.stage==='trunk')return null;
  companion.age+=dt;cat.age+=dt;
+ if(companion.stage==='closet-entry'){
+  const step=companion.closetEntry;
+  const t=smooth((step.time+=dt)/.76);
+  cat.x=step.x+(step.inside.x-step.x)*t;cat.z=step.z+(step.inside.z-step.z)*t;
+  cat.yaw=Math.atan2(step.inside.x-step.x,step.inside.z-step.z);
+  poseEmy(cat,{mode:'walk',walking:true,phase:cat.age,reduced});
+  if(t===1){
+   setVisibility(companion,true);cat.x=step.x;cat.z=step.z;
+   companion.stage='hiding';companion.hiddenAt='wardrobe';return 'hid';
+  }
+  return null;
+ }
  if(companion.stage==='fetch')return fetchKey(companion,world,player,dt,reduced);
  if(companion.stage==='entrance'){
   const previous=companion.entranceAge/EMY_ENTRANCE_SECONDS;
   companion.entranceAge=Math.min(EMY_ENTRANCE_SECONDS,companion.entranceAge+dt);
   const t=companion.entranceAge/EMY_ENTRANCE_SECONDS;
-  const p=smooth((t-.30)/.55);
-  cat.x=WINDOW_START.x+(WINDOW_END.x-WINDOW_START.x)*p;
-  cat.z=WINDOW_START.z+(WINDOW_END.z-WINDOW_START.z)*p;
-  cat.y=1.17*(1-p)+Math.sin(p*Math.PI)*.51;
-  cat.yaw=Math.atan2(WINDOW_END.x-WINDOW_START.x,WINDOW_END.z-WINDOW_START.z);
-  poseEmy(cat,{mode:p>.04&&p<.98?'jump':'sit',phase:cat.age,blend:1-Math.exp(-24*dt)});
+  const clock=(t-.30)*EMY_ENTRANCE_SECONDS+.20;
+  if(clock<0){poseEmy(cat,{mode:'sit',reduced});return null;}
+  const leap=leapPose(cat,WINDOW_START,WINDOW_END,clock,.86,.50);
+  poseEmy(cat,{mode:'leap',leap,phase:cat.age,reduced,blend:1-Math.exp(-24*dt)});
+  const contact=.30+.86/EMY_ENTRANCE_SECONDS;
+  if(previous<contact&&t>=contact)return 'touchdown';
   if(t>=1){cat.y=0;companion.stage='following';companion.trail=[{...WINDOW_END}];return 'landed';}
   return previous<.3&&t>=.3?'jump':null;
  }
@@ -239,6 +276,10 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
   }
   return 'entering-trunk';
  }
+ if(following&&hide&&companion.lastHide!==hide.objectId){
+  companion.route=[];companion.trail=[];
+  if(!clearPassage(world,cat,heading))planRoute(companion,world,heading);
+ }
  let goal=heading;
  while(companion.route.length&&distance(cat,companion.route[0])<.12&&Math.abs(cat.y-companion.route[0].y)<.24)companion.route.shift();
  if(companion.route.length)goal=companion.route[0];
@@ -277,16 +318,21 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  // properly away.  Hiding remains deliberately close so Emy takes cover.
  const far=following&&!hide&&!companion.altarWait?Boolean(companion.chasing):(gap>stop+.008||Math.abs(cat.y-heading.y)>.25);
  let walking=false;
- if(companion.stage==='trunk-run'&&companion.route.length)openRouteDoor(companion,world,player,reduced);
+ if((companion.stage==='trunk-run'||hide)&&companion.route.length)openRouteDoor(companion,world,player,reduced);
  if(far&&cat.reaction<=0&&dt>0){
   const pace=following?Math.min(4.8,.85+3.8*Math.max(0,gap-stop)):1.4;
   walking=moveToward(companion,world,goal,dt,goal===heading?Math.min(pace,Math.max(0,gap-stop)/dt):pace);
  }
  if(!walking&&far&&cat.reaction<=0){
   companion.stuck+=dt;
-  if(companion.stuck>1.2){planRoute(companion,world,goal);companion.stuck=0;}
+  if(companion.stuck>1.2){planRoute(companion,world,hide?heading:goal);companion.stuck=0;}
  }else companion.stuck=0;
  if(companion.stage==='following'&&hide&&companion.direct&&distance(cat,heading)<.38&&Math.abs(cat.y-heading.y)<.45){
+  if(hide.objectId==='wardrobe'&&enteringHide){
+   const closet=world.objects.find(o=>o.id===hide.objectId);
+   companion.closetEntry={x:cat.x,z:cat.z,time:0,inside:closet.hideCamera};
+   companion.stage='closet-entry';return null;
+  }
   companion.stage='hiding';companion.hiddenAt=hide.objectId;setVisibility(companion,true);return 'hid';
  }
  if(companion.altarWait&&following&&!walking){cat.yaw+=deltaAngle(cat.yaw,Math.PI)*(1-Math.exp(-4*dt));}
@@ -296,7 +342,7 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
 
  }
  companion.restTime=walking?0:(companion.restTime||0)+dt;
- const mode=cat.reaction>0?'purr':walking?'walk':companion.restTime<.65?'idle':'sit';
+ const mode=cat.reaction>0?'purr':walking?'walk':cat.alarm>.2?'idle':companion.restTime<.65?'idle':'sit';
  if(cat.reaction>0)cat.reaction=Math.max(0,cat.reaction-dt);
  cat.phase=mode;poseEmy(cat,{mode,walking,reduced,phase:cat.age,blend:1-Math.exp(-dt*10)});
  return null;

@@ -23,7 +23,7 @@ import {VERTEX_SHADER as VS,FRAGMENT_SHADER as FS} from './material-shaders.js';
 import {MATERIAL,lineBlocked} from './world.js';
 import {materialPixels,materialStyle,surfaceFrame,ATLAS_SIZE,TILE_SIZE,GUTTER,INNER,ATLAS_SIZE_MED,TILE_SIZE_MED,GUTTER_MED,INNER_MED} from './materials.js';
 import {HouseShadows,castsShadow,nearbyLights,FLASH_REACH,FLASH_SPREAD,LAMP_REACH,VISIBLE_LAMPS,NIGHT_SKY} from './lighting.js';
-import {circuitPowered,emergencyLight} from './house-lights.js';
+import {circuitPowered} from './house-lights.js';
 export {pickupGeometry} from './pickup-models.js';
 function shader(gl,kind,source){const s=gl.createShader(kind);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){const msg=gl.getShaderInfoLog(s);gl.deleteShader(s);throw Error('Shader: '+msg);}return s;}
 function program(gl,low=false){const source=low?FS.replace('uniform float uFlash,uOcclude;','uniform float uFlash; const float uOcclude=0.0;'):FS;const p=gl.createProgram(),v=shader(gl,gl.VERTEX_SHADER,VS),f=shader(gl,gl.FRAGMENT_SHADER,source);gl.attachShader(p,v);gl.attachShader(p,f);gl.linkProgram(p);gl.deleteShader(v);gl.deleteShader(f);if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p)||'Shader linkage');return p;}
@@ -564,14 +564,14 @@ export class HouseRenderer {
     const offset=box.sourceOffset||[0,0,0];
     const bob=source.kind==='key'?Math.sin(time*3.2+(source.x+source.z)*2.5)*bobAmp:0;
     const sway=(box.id.includes('bow-left')||box.id.includes('bow-right'))?Math.sin(time*4.2)*swayAmp:0;
-    if(source.kind==='rc-car'||source.master){
+    if(source.kind==='rc-car'||source.master||source.carried){
      const angle=-(source.yaw||0),c=Math.cos(angle),s=Math.sin(angle);
      const tilt=source.tilt||0,cp=Math.cos(tilt),sp=Math.sin(tilt),depth=offset[1]*sp+offset[2]*cp;
      box.x=source.x+offset[0]*c-depth*s;
      box.y=source.concealed?-100:source.y+offset[1]*cp-offset[2]*sp;
      box.z=source.z+offset[0]*s+depth*c;
      box.yaw=angle+(box.baseYaw??0);
-     if(source.master)box.pitch=tilt;
+     if(source.master||source.carried)box.pitch=tilt;
     }else{
      box.x=source.x+offset[0];
      box.y=source.concealed?-100:source.y+offset[1]+bob;
@@ -582,7 +582,7 @@ export class HouseRenderer {
     box.y=this.dynamicOrigins[i][1]+(reduced||motion.feetY>-.3?0:Math.sin(time*2.3)*.010);
    }
    const at=i*6,bx=box.x,by=box.y,bz=box.z,byaw=box.yaw||0,roll=box.roll||0,pitch=box.pitch||0;
-   const {start,end}=this.dynamicRanges[i],glow=circuitPowered(box.fixture?.circuit)||box.power?.on||box.fixture&&emergencyLight(box.fixture)?32:0;
+   const {start,end}=this.dynamicRanges[i],glow=circuitPowered(box.fixture?.circuit)||box.power?.on?32:0;
    const moved=Math.abs(eyeScale-(this.dynamicEyeScale?.[i]??1))>.00001||Math.fround(bx)!==this.dynamicPositions[at]||Math.fround(by)!==this.dynamicPositions[at+1]||Math.fround(bz)!==this.dynamicPositions[at+2]||Math.fround(byaw)!==this.dynamicPositions[at+3]||Math.fround(roll)!==this.dynamicPositions[at+4]||Math.fround(pitch)!==this.dynamicPositions[at+5];
    if(!moved&&this.dynamicVertices[start+12]===this.dynamicTemplate[start+12]+glow)continue;
    this.dynamicPositions.set([bx,by,bz,byaw,roll,pitch],at);
@@ -618,7 +618,7 @@ export class HouseRenderer {
   const lamps=nearbyLights(this.fixtures,camera);
   this.lampUniforms.fill(0);
   lamps.forEach((lamp,i)=>{
-   const {x,y,z,tile,strength=1}=lamp,level=emergencyLight(lamp)?.23:strength;
+   const {x,y,z,tile,strength:level=1}=lamp;
    this.lampUniforms.set([x,y,z,tile+(level===1?0:level)],i*4);
   });
   if(!this.shadows.available)return;

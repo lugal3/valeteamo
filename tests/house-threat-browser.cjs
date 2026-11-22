@@ -105,25 +105,24 @@ const {chromium}=require('playwright');
   await page.reload();await ready();
   assert.equal((await story()).phase,'evaded');
   assert((await story()).pursuer.active,'The pursuer remains active after the escape from pursuit');
-  const stairs=await page.evaluate(async()=>{
+  await page.evaluate(async()=>{
    const {STAIR}=await import('/src/lab/world.js');
    const pose={x:STAIR.xMin+.55,y:0,z:STAIR.zBottom+.28,yaw:Math.PI,pitch:.08};
    window.__rescueHouse.setPose(pose);return pose;
   });
-  await page.keyboard.press('f');
-  await page.waitForFunction(()=>window.__rescueHouse.amenities().blackout.left>0,null,{timeout:65000});
-  const dark=await amenities();
-  assert.equal(dark.power,false);assert.deepEqual(dark.lights,[]);
-  assert(dark.blackout.left<=5);
+  assert.equal((await amenities()).power,true,'An old blackout timer cannot trip the house supply');
+  await aimAt('house-power');await interact();
+  assert.equal((await amenities()).power,false);
   await shot('04-apagon-en-la-escalera');
-  await page.waitForFunction(()=>window.__rescueHouse.amenities().power,null,{timeout:65000});
+  await page.waitForTimeout(5500);
+  assert.equal((await amenities()).power,false,'A tripped breaker stays off');
+  await aimAt('house-power');await interact();
   assert((await amenities()).lights.includes('recibidor'));
   assert.equal((await story()).pursuer.active,true);
-  assert.equal((await snapshot()).position.x,stairs.x);
   assert.equal(await page.locator('#lab-canvas').evaluate(canvas=>canvas.getContext('webgl').getError()),0);
   assert.deepEqual(errors,[]);
   await page.evaluate(()=>window.closeHouse());
-  console.log('PASS house threat browser: explicit hiding, safe reload and exits, automatic blackout and continued patrol');
+  console.log('PASS house threat browser: explicit hiding, safe reload and exits, manual power restoration and continued patrol');
  }catch(error){
   try{console.log('THREAT_QA_FAILURE',await page?.evaluate(()=>({
    story:window.__rescueHouse?.story(),snapshot:window.__rescueHouse?.snapshot(),lights:window.__rescueHouse?.amenities()

@@ -23,6 +23,7 @@ const assert=require('node:assert/strict');
   const cue=updateEmyCompanion(companion,1/60,{world,player});if(cue)cues.push(cue);
  }
  assert.equal(cues.filter(cue=>cue==='jump').length,1);
+ assert(cues.indexOf('touchdown')>cues.indexOf('jump')&&cues.indexOf('landed')>cues.indexOf('touchdown'));
  assert.equal(cues.filter(cue=>cue==='landed').length,1);
  assert.equal(companion.stage,'following');assert.equal(world.emy.y,0);
  assert(petEmy(world.emy));
@@ -59,7 +60,12 @@ const assert=require('node:assert/strict');
  assert.equal(world.emy.y,3.15,'Emy climbs the stairs behind Kitty');
  assert(Math.hypot(world.emy.x-player.x,world.emy.z-player.z)<1.25);
  const enteringHide={objectId:'wardrobe',returnX:player.x,returnZ:player.z};
- for(let i=0;i<45&&companion.stage!=='hiding';i++)updateEmyCompanion(companion,1/60,{world,player,enteringHide});
+ let sawEntry=false;
+ for(let i=0;i<180&&companion.stage!=='hiding';i++){
+  updateEmyCompanion(companion,1/60,{world,player,enteringHide});
+  if(companion.stage==='closet-entry'){sawEntry=true;assert(!world.emy.hidden);}
+ }
+ assert(sawEntry,'Emy visibly crosses the wardrobe threshold before Kitty moves');
  assert.equal(player.hidden,null,'Emy takes cover during Kitty’s entry animation');
  player.hidden=enteringHide;
  assert.equal(companion.stage,'hiding');assert(world.emy.parts.every(part=>part.box.hiddenGeometry));

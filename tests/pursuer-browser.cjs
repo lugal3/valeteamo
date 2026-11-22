@@ -1,3 +1,4 @@
+const togglePhoneSettings=require('./helpers/toggle-phone-settings.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),net=require('node:net'),{chromium}=require('playwright');
 (async()=>{
  const folder=path.resolve(process.env.HOUSE_QA_DIR||'docs/capturas/perseguidor/juego');fs.mkdirSync(folder,{recursive:true});const reserve=net.createServer();await new Promise(r=>reserve.listen(0,'127.0.0.1',r));const port=reserve.address().port;await new Promise(r=>reserve.close(r));
@@ -13,6 +14,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   const bedroom=await use('dormitorio');assert(bedroom.puzzle.door&&!bedroom.puzzle.symbol);assert(await page.locator('[data-equip=key]').isHidden());
   await page.waitForFunction(()=>window.__rescueHouse.story().phase==='hide');await shot('02-gracia');
   await page.evaluate(()=>window.__rescueHouse.setPose({x:12,y:3.15,z:4.2,yaw:0,pitch:-.4}));await page.waitForFunction(()=>window.__rescueHouse.story().phase==='patrol',null,{timeout:30000});await page.waitForFunction(()=>window.__rescueHouse.story().pursuer.y>2,null,{timeout:45000});await shot('03-perseguidor');
+  assert(await page.locator('#house-lives').isHidden());
   await page.locator('#lab-capture').waitFor({timeout:45000});
   assert.equal((await story()).pursuer.caught,true);
   assert(await page.locator('[data-act=retry-arrival]').isHidden());
@@ -28,7 +30,13 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   assert(cues.find(cue=>cue.kind==='capture-tug')?.pan>0);
   await shot('04-captura');
   console.log('Pursuit QA: automatic checkpoint recovery, wardrobe, sleep and wake');
+  await page.getByRole('heading',{name:'Te atraparon'}).waitFor();
   await page.locator('#lab-capture').waitFor({state:'hidden'});
+  const lives=page.locator('#house-lives');
+  await lives.waitFor();
+  assert.equal(await lives.locator('.kitty-life').count(),3);
+  assert.equal(await lives.locator('.full').count(),2);
+  assert.equal(await lives.locator('.lost').count(),1);
   const frames=await page.evaluate(()=>window.captureFrames);
   assert(frames.some(f=>f.face.left===0&&f.face.right===0));
   assert(frames.some(f=>f.grasp.drag>.8));
@@ -51,7 +59,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   await page.waitForFunction(()=>window.__rescueHouse.story().phase==='lockdown');assert((await story()).messages.some(m=>m.id==='wake'));
   await use('wardrobe');await page.waitForFunction(()=>window.__rescueHouse.snapshot().hidden);
   await page.waitForFunction(()=>window.__rescueHouse.story().phase==='hunt',null,{timeout:90000});
-  await page.locator('#lab-camera-settings > summary').click();await page.getByRole('button',{name:'Pausa',exact:true}).click();const paused=await story();await page.waitForTimeout(300);assert.equal((await story()).remaining,paused.remaining);assert.deepEqual((await story()).pursuer,paused.pursuer);await page.getByRole('button',{name:'Continuar',exact:true}).click();
+  await togglePhoneSettings(page);await page.getByRole('button',{name:'Pausa',exact:true}).click();const paused=await story();await page.waitForTimeout(300);assert.equal((await story()).remaining,paused.remaining);assert.deepEqual((await story()).pursuer,paused.pursuer);await page.getByRole('button',{name:'Continuar',exact:true}).click();
   await page.waitForFunction(()=>window.__rescueHouse.story().phase==='evaded',null,{timeout:90000});await shot('06-despistado');assert.equal((await story()).messages.length,4);assert.match((await story()).messages.at(-1).text,/tapete rojo/);
   await page.keyboard.press('e');await page.waitForFunction(()=>!window.__rescueHouse.snapshot().hidden);
   await use('basement-note');await page.getByRole('dialog',{name:'Papel clavado en el dormitorio'}).waitFor();await page.keyboard.press('Escape');

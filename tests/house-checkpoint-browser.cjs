@@ -1,3 +1,4 @@
+const togglePhoneSettings=require('./helpers/toggle-phone-settings.cjs');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const net=require('node:net');
@@ -245,7 +246,7 @@ async function run(){
   assert.equal(await stage(),'explore');
   assert.equal((await snapshot()).puzzle.key,false);
   assert.equal((await checkpoint()).version,2,'An unknown interior schema falls back to the window');
-  await page.locator('#lab-camera-settings > summary').click();
+  await togglePhoneSettings(page);
   await page.getByRole('button',{name:'Reiniciar casa',exact:true}).click();
   assert.equal(await checkpoint(),undefined);
   assert.equal((await read(RESCUE_KEY)).phase,'house');

@@ -6,7 +6,7 @@ const MOUNT=[[-.5,.62],[-.46,.89],[-.30,1],[.48,1],[.5,0]];
 const SHADE=CUP_PROFILE.map(([y,radius],i)=>[y,i===CUP_PROFILE.length-1?.98:radius]);
 
 export function installHouseLights(add,obj,height){
- const circuits=[],fixtures=[],power={on:true,blackout:{until:0,left:0}};
+ const circuits=[],fixtures=[],power={on:true};
  function circuit(id,room,mounts,switches,on=false){
   const state={id,room,on,supply:power,switches:[]};circuits.push(state);
   for(const [x,floor,z,drop=.37] of mounts){
@@ -68,31 +68,8 @@ export function installHouseLights(add,obj,height){
  return {circuits,fixtures,power,meter};
 }
 
-export const housePowered=power=>power?.on!==false&&!(power?.blackout?.left>0);
+export const housePowered=power=>power?.on!==false;
 export const circuitPowered=circuit=>!!circuit?.on&&housePowered(circuit.supply);
-export const emergencyLight=fixture=>fixture.emergency&&fixture.circuit.supply?.blackout?.left>0;
-
-export function updateBlackout(power,dt,active,random=Math.random){
- const blackout=power.blackout;
- if(!active||!power.on){
-  if(blackout.left>0){blackout.left=0;blackout.until=0;return 'restored';}
-  blackout.until=0;return null;
- }
- if(blackout.left>0){
-  blackout.left=Math.max(0,blackout.left-dt);
-  return blackout.left===0?'restored':null;
- }
- if(blackout.until===0)blackout.until=12+random()*10;
- const before=blackout.until;
- blackout.until=Math.max(0,blackout.until-dt);
- if(blackout.until===0){
-  blackout.until=29+random()*19;
-  blackout.left=3+random()*2;
-  return 'outage';
- }
- return before>1.3&&blackout.until<=1.3?'warning':null;
-}
-
 export function toggleCircuit(circuit){
  if(!housePowered(circuit.supply))return null;
  circuit.on=!circuit.on;

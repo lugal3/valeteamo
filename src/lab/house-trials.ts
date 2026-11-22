@@ -22,9 +22,9 @@ export const HOUSE_TRIALS={
  },
  drawer:{
   title:'Cajón y pistas',
-  description:'En el estudio, apunta al hueco y llama a Emy. Espera a que vuelva con la llave con lazo.',
-  objective:'Llama a Emy frente al hueco',checkpoint:'ground',
-  pose:{x:2.8,floor:0,z:1.55,yaw:Math.PI,pitch:-.86}
+  description:'En el estudio, retira la tapa de ventilación y vuelve a interactuar para enviar a Emy. Espera a que vuelva con la llave con lazo.',
+  objective:'Retira la tapa y envía a Emy',checkpoint:'ground',
+  pose:{x:1.8,floor:0,z:2.95,yaw:2.36,pitch:.02}
  },
  safe:{
   title:'Nota y caja fuerte',

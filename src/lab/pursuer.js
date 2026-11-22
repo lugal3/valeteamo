@@ -14,7 +14,7 @@ const CHASE_SECONDS=5.5,COOLDOWN_SECONDS=5;
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 export class Pursuer{
  constructor(world){this.world=world;this.reset();}
- reset(){this.x=5.8;this.y=0;this.z=11;this.yaw=this.facing=Math.PI;this.mode='dormant';this.awareness=0;this.lost=10;this.witnessed=null;this.lastSeen=null;this.path=[];this.route=0;this.visited=0;this.replan=0;this.walk=this.speed=this.age=this.bedTime=0;this.stepDistance=0;this.caught=false;this.stuck=0;this.task=null;this.modeTime=0;this.quiet=false;}
+ reset(){this.breakerDelay=15;this.breakerGoal=null;this.intruderSeen=false;this.x=5.8;this.y=0;this.z=11;this.yaw=this.facing=Math.PI;this.mode='dormant';this.awareness=0;this.lost=10;this.witnessed=null;this.lastSeen=null;this.path=[];this.route=0;this.visited=0;this.replan=0;this.walk=this.speed=this.age=this.bedTime=0;this.stepDistance=0;this.caught=false;this.stuck=0;this.task=null;this.modeTime=0;this.quiet=false;}
  get active(){return this.mode!=='dormant';}
  start(){this.reset();this.mode='search';this.plan(SEARCH_ROUTE[0]);}
  goToBed(){this.mode='to-bed';this.task=BED_EXIT;this.plan(this.task);}
@@ -108,38 +108,59 @@ export class Pursuer{
    this.lastSeen={x:decoy.x,y:decoy.y,z:decoy.z};this.task=null;this.witnessed=null;
    this.modeTime=6;
   }else if(this.mode==='rc-chase'&&this.modeTime===0)this.cooldown();
+  const inPatrol=['search','patrol-rest','cooldown','investigate','chase'].includes(this.mode);
+  const inSight=inPatrol&&!this.task&&this.canSee(p);
+  if(inSight){
+   this.intruderSeen=true;this.breakerGoal=null;
+   if(this.mode==='patrol-rest'||this.mode==='cooldown'){this.mode='search';this.replan=0;}
+  }
   if(this.mode==='patrol-rest'){
    if(this.modeTime>0){this.age+=dt;this.speed*=Math.exp(-8*dt);return cues;}
    this.mode='search';this.replan=0;
   }
   if(this.mode==='cooldown'&&this.modeTime===0){this.mode='search';this.replan=0;}
   const watching=!this.task&&!['cooldown','rc-chase'].includes(this.mode);
-  const visible=watching&&this.canSee(p);
+  const visible=watching&&inSight;
+  const near=visible&&Math.hypot(this.x-p.x,this.z-p.z)<1.15;
   this.lost=visible?0:this.lost+dt;
-  this.awareness=clamp(this.awareness+dt*(visible?(p.crouched?.56:.93):-.65),0,1);
+  this.awareness=clamp(this.awareness+dt*(visible?(near?4.8:p.crouched?1:1.7):-.65),0,1);
   if(visible){this.lastSeen={x:p.x,y:p.y,z:p.z};if(p.entering)this.witnessed=p.hideId;}
-  const witnessed=p.hidden&&this.witnessed===p.hideId;
-  if(this.mode==='search'&&this.awareness>=.26){
+  const witnessed=!!this.witnessed&&(p.hidden||p.entering)&&this.witnessed===p.hideId;
+  if(!p.hidden&&!p.entering)this.witnessed=null;
+  if(this.mode==='search'&&(this.awareness>=.26||witnessed)){
    this.mode='investigate';this.modeTime=3;this.replan=0;cues.push('investigate');
   }
   if((this.awareness>=1||witnessed)&&this.mode==='investigate'){
    this.mode='chase';this.modeTime=CHASE_SECONDS;this.replan=0;cues.push('spotted');
-  }else if(this.mode==='chase'&&(this.modeTime===0||(this.lost>2&&!witnessed))){
+  }else if(this.mode==='chase'&&(!visible&&!witnessed&&(this.modeTime===0||this.lost>2))){
    this.cooldown();cues.push('lost');
   }else if(this.mode==='investigate'&&this.modeTime===0)this.cooldown();
   if(bait&&Math.abs(this.y-decoy.y)<.55&&Math.hypot(this.x-decoy.x,this.z-decoy.z)<.75){this.mode='search';this.lastSeen=null;cues.push('rc-hit');return cues;}
-  if(this.mode==='chase'&&this.modeTime<CHASE_SECONDS-.85&&(visible||witnessed)&&Math.abs(this.y-p.y)<.6&&Math.hypot(this.x-p.x,this.z-p.z)<(witnessed?1.25:.72)){
-   if(this.quiet){this.cooldown();cues.push('lost');}
-   else{this.caught=true;cues.push('caught');return cues;}
+  const contact=witnessed?(p.hideExit||p):p;
+  if(this.mode==='chase'&&(witnessed||(visible&&!cues.includes('spotted')))&&Math.abs(this.y-contact.y)<.65&&Math.hypot(this.x-contact.x,this.z-contact.z)<(witnessed?1.1:.92)){
+   this.caught=true;cues.push('caught');return cues;
+  }
+  // A discovered intruder prompts a detour only during an otherwise free patrol.
+  if(this.mode!=='search'||!this.world.lights.power.on)this.breakerGoal=null;
+  if(this.intruderSeen&&!visible&&this.mode==='search'&&!this.task&&this.world.lights.power.on){
+   this.breakerDelay-=dt;
+   const meter=this.world.lights.meter;
+   if(this.breakerDelay<=0&&!this.breakerGoal){this.breakerGoal={x:meter.x,y:0,z:meter.z+.58};this.replan=0;}
+   if(this.breakerGoal&&Math.abs(this.y)<.2&&Math.hypot(this.x-meter.x,this.z-meter.z)<1){
+    this.yaw=this.facing=Math.atan2(meter.x-this.x,meter.z-this.z);
+    this.speed=0;this.path=[];this.breakerGoal=null;this.breakerDelay=65+Math.random()*30;
+    this.mode='patrol-rest';this.modeTime=.85;this.replan=0;
+    cues.push('cut-power');return cues;
+   }
   }
   this.replan-=dt;
-  const target=this.task||(this.mode==='rc-chase'||this.mode==='investigate'||this.mode==='chase'?witnessed?(p.hideExit||this.lastSeen):this.lastSeen:SEARCH_ROUTE[this.route]);
+  const target=this.task||this.breakerGoal||(this.mode==='rc-chase'||this.mode==='investigate'||this.mode==='chase'?witnessed?(p.hideExit||this.lastSeen):this.lastSeen:SEARCH_ROUTE[this.route]);
   if(!target)return cues;
   if(this.replan<=0&&(this.mode==='chase'||this.mode==='rc-chase'||!this.path.length||this.stuck>.5||!this.goal||dist(target,this.goal)>.5))this.plan(target);
   for(const door of this.world.objects)if(door.kind==='door'&&door.state!=='open'&&Math.abs(door.y-1.1-this.y)<1.2&&Math.hypot(door.x-this.x,door.z-this.z)<1.6)onDoor(door);
   let moved=0;
   const next=this.path[0];if(next){const dx=next.x-this.x,dz=next.z-this.z,d=Math.hypot(dx,dz);if(d<.07){this.path.shift();}else{
-   this.yaw=Math.atan2(dx,dz);const pace=this.mode==='rc-chase'?2.15:this.mode==='chase'?1.94:1.45;
+   this.yaw=Math.atan2(dx,dz);const pace=this.mode==='rc-chase'?2.15:this.mode==='chase'?3.75:1.85;
    const step=Math.min(d,dt*pace);moved=navigate(this,this.world,dx/d*step,dz/d*step,1.72);this.walk+=moved;this.stepDistance+=moved;this.stuck=moved<.003?this.stuck+dt:0;
    if(this.stepDistance>.65){this.stepDistance%=.65;cues.push('step');}
   }}else if(this.goal&&dist(this,this.goal)<.8){

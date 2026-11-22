@@ -36,25 +36,21 @@ module.exports=async()=>{
  assert(!restored.restorePatrol({...saved,y:99},true));
  console.log('Patrol QA: 240 simulated seconds, '+(p.visited-startingVisits)+' stops, '+plans+' route plans, '+Math.round(performance.now()-before)+' ms wall time');
 
- const {circuitPowered,emergencyLight,housePowered,toggleHousePower,updateBlackout}=await import('../src/lab/house-lights.js');
- const {power,circuits,fixtures,meter}=world.lights,entryLight=circuits.find(c=>c.id==='recibidor');
- const outageTimes=[],durations=[];let start=0,randomCalls=0,warnings=0;
- const random=()=>[.2,.63,.37,.75,.8,.55,.22][randomCalls++%7];
- for(let i=0;i<1800;i++){
-  const now=i*.1,cue=updateBlackout(power,.1,true,random);
-  if(cue==='warning')warnings++;
-  if(cue==='outage'){
-   outageTimes.push(now);start=now;assert(!housePowered(power)&&!circuitPowered(entryLight));
-   assert(fixtures.filter(emergencyLight).length===2,'The stair remains visible');
-  }
-  if(cue==='restored'){durations.push(now-start);assert(circuitPowered(entryLight));}
- }
- assert(outageTimes.length>=3&&warnings>=outageTimes.length);
- assert(durations.every(seconds=>seconds>=3&&seconds<5.2));
- assert(new Set(durations.map(seconds=>seconds.toFixed(1))).size>=2);
- toggleHousePower(meter);updateBlackout(power,.1,false);assert(!housePowered(power),'A blackout must never undo the player’s main switch setting');
+ const {housePowered,toggleHousePower}=await import('../src/lab/house-lights.js');
+ const {meter,power}=world.lights;
+ p.start();
+ const patrol=()=>{updateFurniture(world.objects,.05,hidden);return p.update(.05,hidden,door=>{
+  if(!door.motion&&!door.locked)animateFurniture(door,true,{player:hidden});
+ });};
+ for(let i=0;i<1800;i++)assert(!patrol().includes('cut-power'),'No detour before spotting Kitty');
+ p.intruderSeen=true;
+ let cut=false;
+ for(let i=0;i<3600&&!cut;i++)cut=patrol().includes('cut-power');
+ assert(cut,'After spotting Kitty the hunter can reach the breaker on foot');
+ assert(Math.abs(p.y)<.2&&Math.hypot(p.x-meter.x,p.z-meter.z)<1);
  toggleHousePower(meter);
- console.log('Blackout QA: '+durations.map(seconds=>seconds.toFixed(1)).join(', ')+' s, automatic recovery and two emergency stair lights');
+ for(let i=0;i<400;i++)assert(!patrol().includes('cut-power')&&!housePowered(power));
+ toggleHousePower(meter);assert(housePowered(power));
  const s=new HouseEvents({pursuit:true});assert.equal(s.observe({key:true,symbol:false}),'message');s.read();s.advance(1,false);assert.equal(s.observe({key:true,symbol:false,door:true}),'arrival');s.advance(4,false);assert.equal(s.phase,'hide');s.advance(10,true);assert.equal(s.phase,'hunt');s.advance(30,true,{clear:true,visited:0});assert.equal(s.phase,'hunt','No completion before NPC visits upstairs');s.advance(.1,true,{clear:true,visited:2});assert.equal(s.phase,'evaded');assert(s.complete());assert.equal(s.phase,'safe');assert.equal(s.messages.length,3);
  s.retry();s.advance(4,false);s.advance(10,false);s.advance(.1,false,{caught:true});assert.equal(s.phase,'failed');assert(!s.complete());
  const manifest=JSON.parse(fs.readFileSync('src/lab/audio/manifest.json'));assert.equal(manifest.length,16);let total=0;

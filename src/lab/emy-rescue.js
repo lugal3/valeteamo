@@ -5,7 +5,8 @@ import {roomAt} from './world.js';
 
 // Scene references and completion predicates are editable in route order.
 export const RESCUE_ROUTE=[
- ['Pide a Emy la llave del hueco del estudio','emy-vent',c=>c.puzzle.key],
+ ['Retira la tapa del conducto del estudio','emy-vent',c=>c.world.studyVent.unlatched||c.puzzle.key],
+ ['Envía a Emy a buscar la llave del dormitorio','emy-vent',c=>c.puzzle.key],
  ['Abre el dormitorio','dormitorio',c=>c.puzzle.door],
  ['Busca refugio y espera a que se duerma','wardrobe',c=>!['explore','arrival','hide','patrol','resting'].includes(c.events.phase)],
  ['Lee la nota invertida del dormitorio','mirror-note',c=>c.mirrorSafe.collected||c.mirrorSafe.opened],

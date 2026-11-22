@@ -1,3 +1,4 @@
+const togglePhoneSettings=require('./helpers/toggle-phone-settings.cjs');
 const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=require('playwright');
 (async()=>{
@@ -23,7 +24,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=requ
   const flashlight=(await snap()).flashlight;await page.locator('#lab3d [data-act="flash"]').click();await page.waitForTimeout(180);assert.notEqual((await snap()).flashlight,flashlight);await page.screenshot({path:'/tmp/chibi-qa/05-linterna-apagada.png'});await page.locator('#lab3d [data-act="flash"]').click();
   await page.setViewportSize({width:740,height:360});await page.waitForTimeout(250);const compact=await page.locator('#lab3d .lab-stick-ring').boundingBox();assert.equal(compact.width,100,'Larger 100px joystick on compact landscape');
   const joystick=await page.locator('#lab-joystick').boundingBox(),buttons=await page.locator('.lab-buttons').boundingBox();assert(joystick.x+joystick.width<buttons.x,'Thumb controls do not overlap');await page.screenshot({path:'/tmp/chibi-qa/06-controles-movil.png'});
-  await page.setViewportSize({width:960,height:540});await page.locator('#lab-camera-settings > summary').click();await page.locator('.lab-exit').click();await page.getByRole('button',{name:/^Casa 3D/}).click();await page.locator('#lab-dialog [data-act="start"]').click();await page.waitForFunction(()=>window.__rescueHouse?.intro()?.phase==='climb');await page.getByRole('button',{name:'Pausar entrada',exact:true}).click();await page.screenshot({path:'/tmp/chibi-qa/07-manos-ventana.png'});
+  await page.setViewportSize({width:960,height:540});await togglePhoneSettings(page);await page.locator('.lab-exit').click();await page.getByRole('button',{name:/^Casa 3D/}).click();await page.locator('#lab-dialog [data-act="start"]').click();await page.waitForFunction(()=>window.__rescueHouse?.intro()?.phase==='climb');await page.getByRole('button',{name:'Pausar entrada',exact:true}).click();await page.screenshot({path:'/tmp/chibi-qa/07-manos-ventana.png'});
   assert.deepEqual(errors,[]);console.log('PASS chibi browser: shaded mirror, visible idle animation, larger joystick drag/release, separate look input, light on/off, compact landscape, climbing paws and no JS errors');
  }finally{await browser?.close();await server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

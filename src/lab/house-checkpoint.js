@@ -1,3 +1,4 @@
+import {poseVentCover} from './study-vent.js';
 import {poseArrivalCar} from './arrival-car.js';
 import {HATCH,poseHatch,poseHatchRug} from './basement.js';
 import {createLouisEscape,freeLouis,LOUIS_HIDING_SPOT} from './louis-escape.js';
@@ -6,6 +7,8 @@ import {MASTER_KEY_ID,posePianoCompartment,posePianoReward,setPianoScore} from '
 import {HEIGHT,blocked,groundHeight,poseFurniture,setDoor,setDrawer} from './world.js';
 import {hiddenPose,hidingExit} from './hiding.js';
 
+
+import {checkpointLives} from './capture-lives.js';
 
 const VERSION=2;
 const STAGES=['explore','encounter','rest','basement','rc-setup','escape'];
@@ -26,19 +29,20 @@ export function captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTr
  const phase=events.phase==='hide'&&s.hidden?'patrol':events.phase;
  const pursuit=['patrol','hunt','evaded','rc-setup'].includes(phase)?{phase,actor:pursuer?.active?pursuer.checkpoint():null}:null;
  return {
-  version:VERSION,stage,powered:world.lights.power.on,drawer:puzzle.drawer,
+  version:VERSION,stage,ventOpen:world.studyVent.unlatched,lives:checkpointLives(s.lives),intruderSeen:!!pursuer?.intruderSeen,powered:world.lights.power.on,drawer:puzzle.drawer,
   picked:world.objects.filter(object=>PICKUPS.has(object.kind)&&object.taken).map(object=>object.id),
   rugAside:world.hatchRug.aside,hatchUnlocked:!world.hatch.locked,hatchOpen:world.hatch.open,
   mirrorRevealed:mirrorSafe.revealed,safeOpened:mirrorSafe.opened,pianoSolved:world.piano.solved,
   battery:Math.ceil(s.battery),spares:s.inventory.batteries+Number(batterySwap!==null),
   rcOwned:s.inventory.rc||rc.mode==='disabled',trapArmed:rcTrap.armed,
   exitUnlocked:rcTrap.closed?!world.objects.find(item=>item.id==='entrada').sealed:undefined,
-  pursuit,hide:s.hidden?.objectId,blackout:{...world.lights.power.blackout},emy
+  pursuit,hide:s.hidden?.objectId,emy
  };
 }
 
 export function restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,rc,rcTrap,pursuer}){
  if(![1,VERSION].includes(saved?.version)||!STAGES.includes(saved.stage)||!Array.isArray(saved.picked))return null;
+ s.lives=checkpointLives(saved.lives);
  const stage=saved.stage;
  const bedroomUnlocked=stage!=='explore';
  const resting=stage==='rest';
@@ -63,6 +67,8 @@ export function restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,r
 
  puzzle.note=!!object('note-hall').taken;
  puzzle.key=!!object('key').taken;
+ world.studyVent.unlatched=saved.ventOpen===true||puzzle.key;
+ poseVentCover(world.studyVent,Number(world.studyVent.unlatched));
  puzzle.drawer=saved.drawer===true||(saved.version===1&&puzzle.key);
  puzzle.door=bedroomUnlocked;
  puzzle.symbol=saved.safeOpened===true;
@@ -136,10 +142,7 @@ export function restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,r
    else if(hunt){pursuer.resumeSearch();pursuer.cooldown();}
    else pursuer.start();
   }
-  const {until,left}=saved.blackout??{};
-  if(Number.isFinite(until)&&Number.isFinite(left)){
-   world.lights.power.blackout={until:Math.max(0,Math.min(48,until)),left:Math.max(0,Math.min(5,left))};
-  }
+  pursuer.intruderSeen=saved.intruderSeen===true;
  }
  if(louisUntied){
   object('rescue-louis').taken=true;
@@ -157,7 +160,7 @@ export function restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,r
   }
  }
 
- const pose=pursuitCompleted?KITCHEN:bedroomUnlocked?BEDROOM:puzzle.drawer||puzzle.note?STUDY:WINDOW_LANDING;
+ const pose=pursuitCompleted?KITCHEN:bedroomUnlocked?BEDROOM:world.studyVent.unlatched||puzzle.drawer||puzzle.note?STUDY:WINDOW_LANDING;
  const safePose=blocked(world.boxes,pose.x,pose.y,pose.z,.2,1.69)?WINDOW_LANDING:pose;
  Object.assign(s,safePose);
  const hide=object(saved.hide);

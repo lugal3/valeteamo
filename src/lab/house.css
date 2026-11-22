@@ -301,3 +301,21 @@
 #lab3d .lab-buttons button[data-act=emotes][aria-expanded=true]{
  background:#95657d;border-color:#ffddf1;outline:2px solid #ffe7bf
 }
+
+#lab3d .phone-shell #lab-camera-settings {position:static;flex:1;min-height:0;overflow:auto;touch-action:pan-y;color:#fff}
+#lab3d .phone-shell #lab-camera-settings>summary {display:none}
+#lab3d .phone-shell .lab-camera-panel {position:static;width:auto;max-height:none;box-sizing:border-box;overflow:visible;border:0;border-radius:0;padding:12px}
+#lab3d .phone-shell [hidden] {display:none!important}
+#lab3d .phone-app-icon.settings {background:#58627b}
+#lab3d .phone-app-icon.progress {background:#387e6b}
+#lab3d .rescue-progress strong {font:700 24px system-ui}
+#lab3d .rescue-progress progress {width:100%;accent-color:#35806b}
+#lab3d .rescue-progress ol {padding:0;list-style:none}
+#lab3d .rescue-progress li {display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #ddd;font:500 12px system-ui}
+#lab3d .rescue-progress li.complete {color:#27614e}
+#lab3d .rescue-progress li span {margin-left:auto}
+#lab3d .rescue-progress svg {width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.6}
+#lab3d .torch-silhouette {position:absolute;pointer-events:none;transform:translate(-50%,-50%);height:auto;filter:drop-shadow(0 0 3px #a6e9ff);z-index:1}
+
+#lab3d.house-emy-action, #lab3d.house-emy-action * {cursor:none}
+#lab3d.house-emy-action :is(.lab-cross,.lab-focus) {visibility:hidden}

@@ -20,6 +20,11 @@ export class PhoneUI{
   const host=document.createElement('div');host.className='house-equipment';host.innerHTML=`<nav class="house-hotbar" aria-label="Objetos equipados"><button data-equip="empty" aria-label="Mano vacía" title="1 · Mano vacía"><span></span><small>1</small></button><button data-equip="flashlight" aria-label="Equipar linterna" title="2 · Linterna"><span></span><small>2</small></button><button data-equip="phone" aria-label="Equipar teléfono" title="3 · Teléfono"><span></span><small>3</small><b class="phone-badge" hidden>●</b></button></nav><button class="phone-notice" type="button" hidden></button>
   <section class="phone-screen" hidden role="dialog" aria-modal="true" aria-label="Teléfono de Kitty"><div class="phone-shell" data-page="home"><div class="phone-status"><time></time><i aria-hidden="true"></i><svg viewBox="0 0 44 14" aria-hidden="true"><path fill="currentColor" d="M1 10h2v3H1zm4-3h2v6H5zm4-3h2v9H9zm4-3h2v12h-2zm8 3h17v6H21z"/><rect x="19" y="2" width="21" height="10" rx="2" stroke="currentColor" fill="none"/><path d="M42 5v4" stroke="currentColor"/></svg></div><header><button data-app="home" aria-label="Volver al inicio del teléfono">‹</button><b></b><button data-app="close" aria-label="Guardar teléfono">×</button></header><main tabindex="-1"></main><button class="phone-home-indicator" data-app="home" aria-label="Inicio del teléfono"></button></div></section>
   <section class="hud-editor" hidden role="dialog" aria-label="Editar controles"><h2>Coloca tu hotbar</h2><p>La casa queda en pausa mientras ajustas.</p><label>Anclaje <select data-hud="anchor"><option value="left">Izquierda</option><option value="right">Derecha</option><option value="bottom">Abajo</option><option value="top">Arriba</option></select></label><label>Tamaño <input data-hud="size" type="range" min="40" max="64" step="2"></label><label>Desplazar X <input data-hud="x" type="range" min="-180" max="180" step="1"></label><label>Desplazar Y <input data-hud="y" type="range" min="-120" max="120" step="1"></label><label>Opacidad <input data-hud="opacity" type="range" min=".25" max=".9" step=".05"></label><output class="hud-measure"></output><div><button data-layout="copy">Copiar ajuste</button><button data-layout="reset">Restablecer</button><button data-layout="preview">Vista previa</button><button data-layout="done">Listo</button></div><small class="hud-copy-status" role="status"></small></section><div class="hud-preview-tools" hidden><output></output><button data-layout="back">Volver al editor</button><button data-layout="done">Listo</button></div>`;root.append(host);this.host=host;
+  this.settings=root.querySelector('#lab-camera-settings');
+  if(this.settings){
+   host.querySelector('.phone-home-indicator').before(this.settings);
+   this.settings.hidden=true;
+  }
   const feed=root.querySelector('#house-messages');this.managedNotice=!!feed;if(feed){host.append(feed);feed.append(host.querySelector('.phone-notice'));}
   const nav=host.querySelector('.house-hotbar');nav.querySelector('[data-equip=empty]').remove();
   for(const [kind,label,key] of [['key','Llave con lazo',4],['red-key','Llave roja',1],['paper','Nota',5],['rc','Auto RC y tablet',6]]){
@@ -30,7 +35,7 @@ export class PhoneUI{
    const action=e.target.closest('[data-layout]')?.dataset.layout;if(action){this.layoutAction(action);return;}
    if(this.editing)return;
    const equip=e.target.closest('[data-equip]');if(equip){if(canEquip())onEquip(equip.dataset.equip);return;}
-   if(!canUse())return;
+   if(!this.open&&!canUse())return;
    if(e.target.closest('.phone-notice')){onEquip('phone',false);this.show('messages');return;}
    const b=e.target.closest('[data-app]');if(b){if(b.dataset.app==='close'){this.close();onClose();}else{this.app=b.dataset.app;this.selectedPhoto=null;if(this.app==='snake')this.resetSnake();this.last='';}}
    if(e.target.closest('[data-photo=take]'))onPhoto();
@@ -84,7 +89,7 @@ export class PhoneUI{
   if(this.events)this.update(this.events,0);
   this.host.querySelector('[data-app=close]').focus();this.onPresentationChange();
  }
- close(){const wasOpen=this.open;this.open=false;this.root.classList.remove('house-phone-open');this.host.querySelector('.phone-screen').hidden=true;if(wasOpen&&this.previousFocus?.isConnected)this.previousFocus.focus();if(wasOpen)this.onPresentationChange();}
+ close(){if(this.settings){this.settings.open=false;this.settings.hidden=true;}const wasOpen=this.open;this.open=false;this.root.classList.remove('house-phone-open');this.host.querySelector('.phone-screen').hidden=true;if(wasOpen&&this.previousFocus?.isConnected)this.previousFocus.focus();if(wasOpen)this.onPresentationChange();}
  resetSnake(){this.snake=[[4,6],[3,6],[2,6]];this.food=[9,6];this.direction=[1,0];this.pending=[1,0];this.clock=0;this.score=0;this.dead=false;}
  turn(index){const d=[[0,-1],[1,0],[0,1],[-1,0]][index];if(d[0]!==-this.direction[0]||d[1]!==-this.direction[1])this.pending=d;}
  key(key){const n={ArrowUp:0,w:0,ArrowRight:1,d:1,ArrowDown:2,s:2,ArrowLeft:3,a:3}[key];if(this.open&&this.app==='snake'&&n!==undefined)this.turn(n);}
@@ -120,14 +125,20 @@ export class PhoneUI{
   if(this.clockMinute!==minute){this.clockMinute=minute;this.host.querySelector('.phone-status time').textContent=formatPhoneTime();}
   if(this.app==='messages')events.read();
   if(this.app==='snake'&&!this.dead){this.clock+=dt;if(this.clock>=.18){this.clock=0;this.direction=this.pending;const head=[this.snake[0][0]+this.direction[0],this.snake[0][1]+this.direction[1]],eat=head[0]===this.food[0]&&head[1]===this.food[1],body=eat?this.snake:this.snake.slice(0,-1);if(head.some(v=>v<0||v>=12)||body.some(p=>p[0]===head[0]&&p[1]===head[1]))this.dead=true;else{this.snake.unshift(head);if(eat){this.score++;const free=[];for(let x=0;x<12;x++)for(let y=0;y<12;y++)if(!this.snake.some(p=>p[0]===x&&p[1]===y))free.push([x,y]);if(free.length)this.food=free[Math.floor(Math.random()*free.length)];else this.dead=true;}else this.snake.pop();}}}
-  const stamp=[this.app,events.messages.length,events.replyAt!==null,this.score,this.dead,this.photoCount].join('|');
+  const stamp=[this.app,events.messages.length,events.replyAt!==null,this.score,this.dead,this.photoCount,this.app==='progress'?this.progress?.mask:0].join('|');
   if(stamp!==this.last){this.last=stamp;this.renderApp(events,unread);}
   if(this.app==='snake'){const c=this.host.querySelector('canvas').getContext('2d');c.fillStyle='#222b29';c.fillRect(0,0,240,240);c.fillStyle='#f49cba';c.fillRect(this.food[0]*20+2,this.food[1]*20+2,16,16);c.fillStyle='#bad59e';for(const [x,y]of this.snake)c.fillRect(x*20+1,y*20+1,18,18);}
  }
  renderApp(events,unread){
   const shell=this.host.querySelector('.phone-shell'),main=shell.querySelector('main'),previous=shell.dataset.page;
   shell.dataset.page=this.app;
-  shell.querySelector('header b').innerHTML={home:'',messages:'<span class="phone-avatar">L</span> Mi Luis ❤️',snake:'Snake · '+this.score,photos:'Fotos',camera:'Cámara'}[this.app];
+  if(this.settings){
+   this.settings.hidden=this.app!=='settings';
+   this.settings.open=this.app==='settings';
+  }
+  main.hidden=this.app==='settings';
+  if(this.app==='progress')main.innerHTML=this.progress?.html||'';
+  shell.querySelector('header b').innerHTML={home:'',messages:'<span class="phone-avatar">L</span> Mi Luis ❤️',snake:'Snake · '+this.score,photos:'Fotos',camera:'Cámara',settings:'Settings',progress:'Progreso'}[this.app];
   shell.querySelector('header [data-app=home]').hidden=this.app==='home';
   if(this.app==='home')main.innerHTML=phoneHome(unread);
   if(this.app==='messages'){

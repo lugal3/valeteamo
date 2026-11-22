@@ -155,6 +155,13 @@ export function writeEmySurface(out,start,box){
  const s=p.scale||[1,1,1],a=rotateEmy([1,0,0],...p.rot),b=rotateEmy([0,1,0],...p.rot),c=rotateEmy([0,0,1],...p.rot);
  for(let i=0;i<v.length;i+=16){
   let px=v[i],py=v[i+1],pz=v[i+2],nnx=v[i+6],nny=v[i+7],nnz=v[i+8];
+  // Each sculpted guard hair has seven vertices. Lift its tip away from
+  // the flank and back while keeping both root vertices attached.
+  if(box.bristle&&mesh.skin&&i/16>=mesh.baseCount&&py>.16){
+   const row=Math.floor(((i/16-mesh.baseCount)%7)/2);
+   const lift=.044*box.bristle*(row/3)**2;
+   px+=nnx*lift;py+=(.45+Math.max(0,nny))*lift;pz+=nnz*lift;
+  }
   if(box.earTurn&&py>.09){
    const weight=Math.min(1,(py-.09)/.06),angle=box.earTurn*weight;
    const cs=Math.cos(angle),sn=Math.sin(angle),pivot=Math.sign(px)*.107,dx=px-pivot;

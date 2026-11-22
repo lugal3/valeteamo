@@ -68,12 +68,27 @@ export function emyLandmarks(mode='idle',phase=0,walking=false,reduced=false,tra
  }
  return {body,head,headRot,legs,sit,sleep,stretch,groom};
 }
-export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.age,headYaw=0,blend=1}={}){
+export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.age,headYaw=0,blend=1,leap}={}){
  const previous=cat.lastFootRoot;
  const moved=previous?Math.hypot(cat.x-previous.x,cat.z-previous.z):0;
  cat.walkTravel=(cat.walkTravel||0)+(walking?moved:0);
  cat.lastFootRoot={x:cat.x,z:cat.z};
  const l=emyLandmarks(mode,phase,walking,reduced,cat.walkTravel);
+ if(leap){
+  const {compression,flight,airborne}=leap;
+  l.body[1]-=.105*compression;l.head[1]-=.13*compression;
+  l.headRot[0]+=.18*compression;
+  for(const [name,leg] of Object.entries(l.legs)){
+   const front=name.startsWith('front');
+   leg.hip[1]-=.10*compression;leg.knee[1]-=.06*compression;
+   if(airborne){
+    const tuck=Math.sin(Math.PI*flight);
+    leg.paw[1]+=(front?.13:.18)*tuck;
+    leg.paw[2]+=(front?.18:-.08)*tuck;
+    leg.knee[1]+=.065*tuck;
+   }
+  }
+ }
  if(walking){
   const anchors=cat.footContacts??={};
   const sn=Math.sin(cat.yaw),cs=Math.cos(cat.yaw);
@@ -89,8 +104,11 @@ export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.a
   }
   blend=1;
  }else cat.footContacts=null;
- const headRotation=[l.headRot[0],l.headRot[1]+headYaw,l.headRot[2]];
- const blink=l.sleep||cat.age%4.6>4.42||(mode==='purr'&&Math.sin(phase*2.8)>.15),eyes=blink?.035:mode==='purr'?.65:1;
+ const fear=cat.alarm||0;
+ l.head[1]+=.044*fear;l.head[2]-=.035*fear;
+ l.body[1]+=.055*fear;
+ const headRotation=[l.headRot[0]-.14*fear,l.headRot[1]+headYaw,l.headRot[2]];
+ const blink=l.sleep||cat.age%4.6>4.42||(mode==='purr'&&Math.sin(phase*2.8)>.15),eyes=blink?.035:mode==='purr'?.65:1+.43*fear;
  const root=p=>{const v=rotateEmy(p,0,cat.yaw,0);return [cat.x+v[0],cat.y+v[1],cat.z+v[2]];};
  for(const part of cat.parts){
   const {box,joint,base}=part;let p=[...base],rot=[0,0,box.emySpec.roll||0],scale=[1,1,1];
@@ -98,7 +116,8 @@ export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.a
   if(part.id==='head'&&box.earTurn!==turn){box.earTurn=turn;box.emyRevision=(box.emyRevision||0)+1;}
   if(joint==='eye'&&box.emissive!==!!cat.darkEyes){box.emissive=!!cat.darkEyes;box.emyRevision=(box.emyRevision||0)+1;}
   if(joint==='skin'){
-   scale=[1+.18*alarm,1+.065*alarm,1];
+   if(box.bristle!==alarm){box.bristle=alarm;box.emyRevision=(box.emyRevision||0)+1;}
+   scale=[1+.27*alarm,1+.18*alarm,1];
    p=[0,0,0];
    const next=emySkinFrames(l,rotateEmy),old=box.emySkinFrames;
    if(!old||next.some((f,i)=>f.some((v,k)=>Math.abs(v-old[i][k])>1e-6))){

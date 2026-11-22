@@ -1,3 +1,4 @@
+const togglePhoneSettings=require('./helpers/toggle-phone-settings.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),net=require('node:net'),{chromium,webkit}=require('playwright');
 (async()=>{
  const reserve=net.createServer();await new Promise(r=>reserve.listen(0,'127.0.0.1',r));const port=reserve.address().port;await new Promise(r=>reserve.close(r));
@@ -88,7 +89,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     await page.waitForFunction(()=>window.__rescueHouse.snapshot().drawer.state==='open');
    }
    if(!observe){
-    await page.locator('#lab-camera-settings > summary').click();
+    await togglePhoneSettings(page);
     await page.getByLabel('Reducir movimiento',{exact:true}).check();
     await page.getByLabel('Subtítulos de sonidos',{exact:true}).uncheck();
     await page.keyboard.press('Escape');

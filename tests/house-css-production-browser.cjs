@@ -1,3 +1,4 @@
+const togglePhoneSettings=require('./helpers/toggle-phone-settings.cjs');
 // Regression for a real report: #lab3d existed but z-index was "auto"
 // and canvas backing buffer stayed 2x2, while the LP fallback obscured the 3D.
 const assert=require('node:assert/strict');
@@ -109,7 +110,7 @@ const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
         console.log('PASS HOUSE WEBGL RESTORE',name);
        }
        for(let entryNumber=0;entryNumber<2;entryNumber++){
-        await page.locator('#lab-camera-settings > summary').click();
+        await togglePhoneSettings(page);
         await page.locator('.lab-exit').click();
         await page.locator('#lab3d').waitFor({state:'detached'});
         await page.waitForFunction(()=>window.testHouseAudio.every(ctx=>ctx.state==='closed'));

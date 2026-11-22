@@ -1,3 +1,4 @@
+const togglePhoneSettings=require('./helpers/toggle-phone-settings.cjs');
 const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
 // House-only regressions. CDP sends two real browser touch contacts; pose setup
 // is DEV-only and is never used during the measured movement/rotation interval.
@@ -73,7 +74,7 @@ async function main(){
   await page.evaluate(()=>window.dispatchEvent(new Event('blur')));const blur=await snap();
   await page.keyboard.up('w');await page.evaluate(()=>window.dispatchEvent(new Event('focus')));await page.waitForTimeout(300);
   assert.deepEqual((await snap()).position,blur.position,'Focus recovery clears held keys');
-  await page.locator('#lab-camera-settings > summary').click();
+  await togglePhoneSettings(page);
   const sensitivity=page.locator('#lab-camera-settings [data-setting="sensitivity"]');
   await sensitivity.evaluate(el=>{el.value='1.25';el.dispatchEvent(new Event('input',{bubbles:true}));});await page.locator('#lab-camera-settings [data-setting="invertX"]').check();
   await page.locator('.house-mixer > summary').click();await page.locator('#lab-camera-settings [data-setting="mute"]').check();
@@ -130,7 +131,7 @@ async function main(){
   await page.evaluate(()=>window.__rescueHouse.interactWith('drawer')); // close
   await page.evaluate(()=>window.__rescueHouse.interactWith('drawer')); // reopen
   await assert.rejects(page.evaluate(()=>window.__rescueHouse.interactWith('key')),/Not available/,'Opening an empty drawer never respawns the key');
-  await page.locator('#lab-camera-settings > summary').click();await page.locator('.lab-exit').click();await page.locator('#lab3d').waitFor({state:'detached'});
+  await togglePhoneSettings(page);await page.locator('.lab-exit').click();await page.locator('#lab3d').waitFor({state:'detached'});
   await page.waitForFunction(()=>window.__houseContexts.every(c=>c.state==='closed'));
 
   console.log('3D: complete window shot, reduced-motion landing and repeated teardown');

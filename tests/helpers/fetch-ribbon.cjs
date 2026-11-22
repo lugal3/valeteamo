@@ -6,6 +6,11 @@ module.exports=async page=>{
  }
  const studyOpen=await page.evaluate(()=>window.__rescueHouse.snapshot().doors.find(o=>o.id==='estudio').open);
  if(!studyOpen)await use('estudio');
+ if(!await page.evaluate(()=>window.__rescueHouse.emy().ventOpen)){
+  await use('emy-vent');
+  await page.waitForFunction(()=>window.__rescueHouse.emy().ventOpen);
+  await page.waitForTimeout(280);
+ }
  await use('emy-vent');
  await page.waitForFunction(()=>window.__rescueHouse.snapshot().puzzle.key,null,{timeout:90000});
  return {puzzle:(await page.evaluate(()=>window.__rescueHouse.snapshot())).puzzle};

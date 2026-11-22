@@ -1,3 +1,4 @@
+import {installVentCover,VENT_BASE} from './study-vent.js';
 import {BATH_MIRROR,MIRROR_SPAWN} from './mirror.js';
 import {BALUSTER_PROFILE,CUP_PROFILE,CANDLE_PROFILE,CLOCK_PROFILE} from './chibi-geometry.js';
 import {installHouseLights} from './house-lights.js';
@@ -231,10 +232,17 @@ export function buildHouse(spawn='ground'){
  add('study-papers',2.65,.94,2.75,.38,.06,.27,'paper',false);lamp('study-lamp',2.15,.92,2.72);
  for(const box of boxes.slice(studyStart))box.z+=deskOffset;
  for(const item of [drawer,key,drawer.origin,drawer.contents[0].origin,...drawer.parts.map(part=>part.origin)])item.z+=deskOffset;
- add('emy-vent-back',2.8,.29,.135,.64,.53,.04,'dark',false);
- for(const x of [2.45,3.15])add('emy-vent-jamb-'+x,x,.29,.24,.07,.58,.24,'torchmetal',false);
- add('emy-vent-lintel',2.8,.58,.24,.77,.08,.24,'torchmetal',false);
- obj('emy-vent','vent','Llamar a Emy',2.8,.31,.43,{entrance:{x:2.8,y:0,z:.85},exit:{x:2.8,y:0,z:.85},mode:'recess'});
+ add('emy-vent-back',2.8,VENT_BASE+.29,.135,.64,.53,.04,'dark',false);
+ // This inspection duct extends into the room: Kitty cannot fit under its roof.
+ for(const x of [2.43,3.17])add('emy-duct-side-'+x,x,VENT_BASE+.28,.98,.065,.56,1.72,'torchmetal');
+ // An inspection grate keeps the key in sight while blocking a human arm.
+ for(const x of [2.47,3.13])add('emy-duct-rail-'+x,x,VENT_BASE+.60,.98,.15,.10,1.72,'torchmetal');
+ for(let i=0;i<12;i++)add('emy-duct-grate-'+i,2.8,VENT_BASE+.60,.18+i*.145,.56,.085,.042,'torchmetal');
+ add('emy-duct-floor',2.8,VENT_BASE+.035,.98,.72,.055,1.72,'dark',false);
+ for(const z of [.32,.88,1.44,1.83])add('emy-duct-seam-'+z,2.8,VENT_BASE+.656,z,.83,.022,.045,'brass',false);
+ add('emy-duct-landing',2.8,VENT_BASE+.035,2.22,.85,.08,.81,'torchmetal');
+ for(const x of [2.48,3.12])add('emy-duct-bracket-'+x,x,VENT_BASE-.11,1.63,.06,.20,.65,'torchmetal',false);
+ const studyVent=obj('emy-vent','vent','Conducto del estudio',2.8,VENT_BASE+.38,1.94,{cover:installVentCover(add),coverAmount:0,unlatched:false,takeoff:{x:1.85,y:0,z:2.72},entrance:{x:2.8,y:VENT_BASE+.075,z:2.31},exit:{x:2.8,y:VENT_BASE+.075,z:2.31},depth:1.73,mode:'recess'});
  shelf('study-shelf',.19,0,3.6,-Math.PI/2);plant('study-plant',4.00,0,4.32);
  frame('study',.95,1.8,.15,'south',15,{label:'Letrero del estudio',text:STUDY_SIGN});
  // Kitchen and bathroom are recognizable rooms, not corridor props.
@@ -372,7 +380,8 @@ export function buildHouse(spawn='ground'){
  installCabinet(add,obj,{id:'reading-cabinet',label:'Cajón de la sala de lectura',x:2.05,y:HEIGHT,z:5.12,w:1.28,d:.60,
   items:[{id:'reading-battery',kind:'battery',label:'Pila de la sala de lectura',dx:.27}]});
  installCabinet(add,obj,{id:'landing-cabinet',label:'Cajón del descansillo',x:6.76,y:HEIGHT,z:3.08,w:.97,d:.60,
-  items:[{id:'media-flashlight',kind:'flashlight',label:'Linterna',dx:0}]});
+  items:[]});
+ obj('media-flashlight','flashlight','Linterna',6.76,HEIGHT+.90,3.19,{dynamic:true});
  add('reading-rug',1.92,HEIGHT+.012,8.0,2.9,.024,4,'carpet',false,{ao:.88});add('upper-bench',4.95,HEIGHT+.43,11.65,1.15,.18,.48,'velvet');for(const x of [4.55,5.35])add('bench-leg-'+x,x,HEIGHT+.20,11.65,.08,.4,.35,'wood');plant('landing-plant',8.3,HEIGHT,11.54);frame('landing',8.0,HEIGHT+1.85,11.83,'north',0);
  const piano=installPiano(add,obj,{x:4.84,z:10.40,floor:HEIGHT});
  const pianoSheet=objects.find(item=>item.id===PIANO_SHEET_ID);
@@ -414,5 +423,5 @@ export function buildHouse(spawn='ground'){
  const lights=installHouseLights(add,obj,HEIGHT);
  const hatch=installBasement(add,obj,lights);
  hatchRug.hatch=hatch;
- return {boxes,objects,lights,television,clock,hatch,hatchRug,entryWindow,car,greyCat,emy,emyInteraction,piano,pianoSheet,spawn:spawns[spawn]||spawns.ground,spawns,rooms:ROOMS,bounds:WORLD_BOUNDS,stair:STAIR,house:HOUSE};
+ return {boxes,objects,studyVent,lights,television,clock,hatch,hatchRug,entryWindow,car,greyCat,emy,emyInteraction,piano,pianoSheet,spawn:spawns[spawn]||spawns.ground,spawns,rooms:ROOMS,bounds:WORLD_BOUNDS,stair:STAIR,house:HOUSE};
 }

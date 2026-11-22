@@ -103,6 +103,7 @@ const assert=require('node:assert/strict');
  await require('./repairs-events.cjs')();
  await require('./sensations.cjs')();
  await require('./pursuer.cjs')();
+ await require('./capture-lives.cjs')();
  await require('./hud-messages.cjs')();
  await require('./mirror-safe.cjs')();
  console.log('PASS: defined rooms, supplied posters, closed hatch, real louver sight gaps and deterministic hiding endpoints');

@@ -1,3 +1,4 @@
+const togglePhoneSettings=require('./helpers/toggle-phone-settings.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),net=require('node:net'),{chromium}=require('playwright');
 (async()=>{
  const observe=!!process.env.HOUSE_HUD_OBSERVE,baseline=process.env.HOUSE_HUD_BASELINE,folder=path.resolve(process.env.HOUSE_QA_DIR||'docs/capturas/hud-discreto',observe?'antes':'despues');fs.mkdirSync(folder,{recursive:true});assert(!baseline||/^[a-f0-9]{7,40}$/.test(baseline));
@@ -24,7 +25,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     assert.match(await page.locator('.phone-chat .outgoing').textContent(),/Veré qué puedo hacer/);
     await page.screenshot({path:path.join(folder,viewport.width+'-chat.png')});await page.keyboard.press('Escape');
    }
-   for(const anchor of ['top','right','bottom','left']){await page.locator('#lab-camera-settings > summary').click();await page.click('[data-act=hud]');await page.selectOption('[data-hud=anchor]',anchor);await page.click('[data-layout=done]');await page.waitForTimeout(80);await check('03-anclaje-'+anchor);}
+   for(const anchor of ['top','right','bottom','left']){await togglePhoneSettings(page);await page.click('[data-act=hud]');await page.selectOption('[data-hud=anchor]',anchor);await page.click('[data-layout=done]');await page.waitForTimeout(80);await check('03-anclaje-'+anchor);}
    await use('dormitorio');await page.waitForFunction(()=>window.__rescueHouse.story().phase==='arrival');await check('04-llegada',{danger:true});await page.waitForFunction(()=>window.__rescueHouse.story().phase==='hide',null,{timeout:45000});await check('05-esconderse',{danger:true});
    await page.keyboard.press('3');await page.click('.phone-expand');await page.waitForTimeout(100);await check('06-peligro-con-telefono',{phone:true,danger:true});await page.keyboard.press('Escape');await page.keyboard.press('Escape');await page.getByRole('dialog',{name:'Pausa',exact:true}).waitFor();if(!observe)assert.equal(await page.locator('.house-messages').isVisible(),false,'Pause clears the message area');await page.getByRole('button',{name:'Continuar',exact:true}).click();
    assert.equal(await page.locator('#lab-canvas').evaluate(c=>c.getContext('webgl').getError()),0);assert.deepEqual(errors,[]);await page.evaluate(()=>window.stopHouse());await context.close();

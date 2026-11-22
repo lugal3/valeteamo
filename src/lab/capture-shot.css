@@ -25,3 +25,49 @@
 #lab3d.house-capture-active > :is(.lab-top, .lab-cross, .lab-look, .lab-joystick, .lab-buttons, .lab-focus, .house-equipment, .house-charge, .house-stamina, .house-mouse-status, .house-rc-hud) {
  display: none;
 }
+
+#capture-loss {
+ position: absolute;
+ inset: 0;
+ display: grid;
+ place-content: center;
+ text-align: center;
+ color: #fff3ef;
+ background: radial-gradient(ellipse at center, #35202a 0%, #100d13 70%);
+}
+#capture-loss h2 { margin: 0; font: 700 clamp(26px,6vh,48px)/1.15 system-ui; }
+#capture-loss p { margin: .6em 0 0; font: 500 clamp(13px,3vh,18px) system-ui; }
+#house-lives {
+ position: absolute;
+ z-index: 41;
+ top: max(12px, env(safe-area-inset-top));
+ left: 50%;
+ transform: translateX(-50%);
+ padding: 6px 16px 9px;
+ border: 1px solid #d8adb44f;
+ border-radius: 13px;
+ background: #1a131cf2;
+ text-align: center;
+ pointer-events: none;
+ color: #fff1f3;
+ font: 600 13px/1.25 system-ui;
+}
+#lab3d.house-capture-active #house-lives { top: 66%; }
+#capture-loss[hidden], #house-lives[hidden] { display: none; }
+.life-slots { display: flex; justify-content: center; gap: 4px; }
+.kitty-life {
+ display: block;
+ width: clamp(29px,7vh,44px);
+ aspect-ratio: 32 / 40;
+ background: url('/sprites/templates/chibi-kitty.png') left top / 600% auto no-repeat;
+ image-rendering: pixelated;
+}
+.kitty-life.empty, .kitty-life.lost { opacity: .24; filter: grayscale(1); }
+.kitty-life.lost { animation: kitty-life-lost .85s ease-out both; }
+@keyframes kitty-life-lost {
+ 0%, 18% { opacity: 1; filter: none; transform: none; }
+ 46% { opacity: 1; transform: translateY(-4px) rotate(-6deg); }
+ 100% { opacity: .24; filter: grayscale(1); transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .kitty-life.lost { animation: none; } }
+#lab3d.house-motion-reduced .kitty-life.lost { animation: none; }
