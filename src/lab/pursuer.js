@@ -17,8 +17,9 @@ export class Pursuer{
  reset(){this.breakerDelay=15;this.breakerGoal=null;this.intruderSeen=false;this.x=5.8;this.y=0;this.z=11;this.yaw=this.facing=Math.PI;this.mode='dormant';this.awareness=0;this.lost=10;this.witnessed=null;this.lastSeen=null;this.path=[];this.route=0;this.visited=0;this.replan=0;this.walk=this.speed=this.age=this.bedTime=0;this.stepDistance=0;this.caught=false;this.stuck=0;this.task=null;this.modeTime=0;this.quiet=false;this.noiseGoal=null;this.noiseRemaining=0;this.stunned=0;}
  get active(){return this.mode!=='dormant';}
  hearNoise(position,intensity=1){
-  if(!this.active||['sleeping','lying-down','rising','trapped','stunned','rc-chase','chase'].includes(this.mode))return false;
+  if(!this.active||['dormant','sleeping','lying-down','rising','to-bed','to-entry','trapped','stunned','rc-chase','chase'].includes(this.mode))return false;
   if(!position||![position.x,position.y,position.z].every(Number.isFinite))return false;
+  if(this.mode==='investigate'&&this.awareness>=.26)return false;
   const changed=this.mode!=='noise-investigate'||!this.noiseGoal||dist(this.noiseGoal,position)>.6;
   this.noiseGoal={x:position.x,y:position.y,z:position.z};
   this.noiseRemaining=Math.max(this.noiseRemaining,Math.min(9,3+intensity*2.5));
@@ -36,7 +37,7 @@ export class Pursuer{
  wake(){this.mode='rising';this.bedTime=0;}
  resumeSearch(){this.task=null;this.mode='search';this.route=4;this.visited=0;this.clearSight();this.plan(SEARCH_ROUTE[this.route]);}
  clearSight(){this.witnessed=null;this.lastSeen=null;this.awareness=0;this.lost=10;}
- cooldown(){this.clearSight();this.mode='cooldown';this.modeTime=COOLDOWN_SECONDS;this.replan=0;}
+ cooldown(){this.clearSight();this.mode='cooldown';this.modeTime=COOLDOWN_SECONDS;this.replan=0;this.noiseGoal=null;this.noiseRemaining=0;}
  settleUpstairs(){this.quiet=true;this.task=null;this.route=3;this.cooldown();}
  checkpoint(){
   return {x:this.x,y:this.y,z:this.z,facing:this.facing,route:this.route,visited:this.visited,
