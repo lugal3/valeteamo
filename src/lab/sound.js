@@ -227,6 +227,22 @@ export class HouseSound {
   if(gain<.0007)return;
   const yaw=listener.yaw||0,dx=origin?origin.x-listener.x:0,dz=origin?origin.z-listener.z:0;
   const stereo=Math.max(-.85,Math.min(.85,(dx*Math.cos(yaw)-dz*Math.sin(yaw))/Math.max(1,distance)));
+  if(kind==='clatter'){
+   // Three staggered percussive glass/ceramic strikes; bounded, self-cleaning WebAudio nodes.
+   const frequencies=[1120,1740,2380],now=ctx.currentTime;
+   for(let i=0;i<frequencies.length;i++){
+    const at=now+i*.043,osc=ctx.createOscillator(),amp=ctx.createGain(),pan=ctx.createStereoPanner();
+    osc.type='triangle';osc.frequency.setValueAtTime(frequencies[i],at);
+    osc.frequency.exponentialRampToValueAtTime(frequencies[i]*.60,at+.135);
+    amp.gain.setValueAtTime(.0001,at);
+    amp.gain.exponentialRampToValueAtTime(Math.max(.0002,gain*(.85-i*.19)),at+.008);
+    amp.gain.exponentialRampToValueAtTime(.0001,at+.18+i*.025);
+    pan.pan.value=stereo;osc.connect(amp);amp.connect(pan);pan.connect(output);
+    osc.start(at);osc.stop(at+.24+i*.025);
+    osc.onended=()=>{osc.disconnect();amp.disconnect();pan.disconnect();};
+   }
+   this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;
+  }
   if(kind==='clock-tick'||kind==='tv-static'||kind==='scratch'){
    playFoley(ctx,output,this.atmosphere.noise,kind,gain*(kind==='clock-tick'?.82:1.7),stereo);
    this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;
