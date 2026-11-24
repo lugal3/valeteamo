@@ -24,7 +24,7 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 | 08 | **2D flow, storytelling and 2D→3D transition** | IMPLEMENTED — QA pending | Kawaii day→night pacing, credible meeting/kidnap, no pop-ins, coherent front window, seamless house handoff |
 | 09 | **Louis, puzzles and progression** | IN PROGRESS — QA pending | Natural rescue/companion animations, verified cover and body rig, contextual dialogue, progressive puzzle hints/checkpoints |
 | 10 | **Cinematics, endings and reactive audio** | IN PROGRESS — QA pending | Understandable Emy-rescue and escape/loss cutscenes, synchronized spatial audio, proper camera framing on PC/iPhone |
-| 11 | **HUD, tutorials, accessibility and mobile feel** | NOT STARTED | Clean contextual controls, phone/hotbar, orientation/safe areas, motion/audio/text options |
+| 11 | **HUD, tutorials, accessibility and mobile feel** | IN PROGRESS — QA pending | Clean contextual controls, phone/hotbar, orientation/safe areas, motion/audio/text options |
 | 12 | **Optimization, playthrough QA and release** | NOT STARTED | Full automated/manual end-to-end test matrix, capture evidence, compare baselines, PR review, then merge and deploy |
 
 ### Phase details & completion criteria
@@ -192,3 +192,11 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 - Added `tests/cinematic-cues.cjs` to `npm test` for monotonically ordered events, exactly-once playback, large frame leaps, pausing and unchanged cinematic gating.
 - **Phase 09 bug fixed:** latest CI failed `louis-rescue-feel.cjs` because the turn eased too quickly with a large yaw difference; follow/climb turning now also has a 4.8 rad/s angular velocity ceiling.
 - **Validation pending:** GitHub Actions on current head, visual/lip-sync timing PC/iPhone, full gameplay and additional loss/capture cinematics. No merge or deployment.
+
+## Phase 11 progress — contextual HUD and mobile accessibility (QA pending)
+
+- Added `hud-context.js` with short platform-aware RC driving, horn, trap, throwable and threat instructions. These are rendered in existing game HUD overlays, not extra popups or a separate controller.
+- Widened landscape mobile safe-area handling, increased RC touch targets, added high-contrast keyboard focus and hiding enforcement for transient overlays. Reduced-motion options remain authoritative.
+- Threat status now has a meaningful accessibility label while preserving the existing live warning and chase state handling.
+- Added `tests/hud-game-feel.cjs` to `npm test` for platform instructions, trap control, safe areas, screen-reader labels and overlay hiding.
+- **Pending:** full automated build, real-device landscape hit testing, voiceover/keyboard testing, screenshots and existing phase regressions. No merge or release.
