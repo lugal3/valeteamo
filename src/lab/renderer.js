@@ -432,6 +432,63 @@ export class HouseRenderer {
   this.bind(this.vbo,this.ibo);
   this.prepareMirror(boxes,dynamic.indices);
  }
+ // A dedicated tiny dynamic batch avoids exceeding UNSIGNED_SHORT indices in
+ // the already dense Emy/Lois buffer (WebGL1 on mobile has no guaranteed uint extension).
+ setNoiseProps(props=[]){
+  this.noiseProps=props;
+  this.noiseCount=0;
+  if(!props.length)return;
+  const gl=this.gl;
+  this.noiseVbo??=gl.createBuffer();
+  this.noiseIbo??=gl.createBuffer();
+  const mesh=geometry(props.map(prop=>({...prop.box,yaw:0,pitch:0,roll:0})));
+  if(mesh.vertices.length/16>65530)throw Error('Demasiados objetos ruidosos para WebGL1');
+  this.noiseTemplate=new Float32Array(mesh.vertices);
+  this.noiseVertices=new Float32Array(mesh.vertices);
+  this.noiseRanges=mesh.ranges;
+  this.noiseOrigins=props.map(prop=>({x:prop.box.x,y:prop.box.y,z:prop.box.z}));
+  this.noiseSignatures=props.map(()=>null);
+  this.noiseCount=mesh.indices.length;
+  gl.bindBuffer(gl.ARRAY_BUFFER,this.noiseVbo);
+  gl.bufferData(gl.ARRAY_BUFFER,this.noiseVertices,gl.DYNAMIC_DRAW);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.noiseIbo);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,mesh.indices,gl.STATIC_DRAW);
+  this.vertexCount+=mesh.vertices.length/16;
+  this.triangleCount+=mesh.indices.length/3;
+ }
+ drawNoiseProps(){
+  if(!this.noiseCount)return;
+  const gl=this.gl;
+  gl.bindBuffer(gl.ARRAY_BUFFER,this.noiseVbo);
+  for(let i=0;i<this.noiseProps.length;i++){
+   const prop=this.noiseProps[i],box=prop.box;
+   const signature=[box.x,box.y,box.z,box.roll||0,box.pitch||0,box.yaw||0].join(',');
+   if(signature===this.noiseSignatures[i])continue;
+   this.noiseSignatures[i]=signature;
+   const {start,end}=this.noiseRanges[i],origin=this.noiseOrigins[i];
+   const roll=box.roll||0,pitch=box.pitch||0,yaw=box.yaw||0;
+   const cr=Math.cos(roll),sr=Math.sin(roll),cp=Math.cos(pitch),sp=Math.sin(pitch),cy=Math.cos(yaw),sy=Math.sin(yaw);
+   const rotate=(x,y,z)=>{
+    const rx=x*cr-y*sr,ry=x*sr+y*cr;
+    const px=rx,py=ry*cp-z*sp,pz=ry*sp+z*cp;
+    return [px*cy-pz*sy,py,px*sy+pz*cy];
+   };
+   for(let k=start;k<end;k+=16){
+    const dx=this.noiseTemplate[k]-origin.x,dy=this.noiseTemplate[k+1]-origin.y,dz=this.noiseTemplate[k+2]-origin.z;
+    const pos=rotate(dx,dy,dz);
+    this.noiseVertices[k]=box.x+pos[0];
+    this.noiseVertices[k+1]=box.y+pos[1];
+    this.noiseVertices[k+2]=box.z+pos[2];
+    for(const offset of [6,13]){
+     const norm=rotate(this.noiseTemplate[k+offset],this.noiseTemplate[k+offset+1],this.noiseTemplate[k+offset+2]);
+     for(let j=0;j<3;j++)this.noiseVertices[k+offset+j]=norm[j];
+    }
+   }
+   gl.bufferSubData(gl.ARRAY_BUFFER,start*4,this.noiseVertices.subarray(start,end));
+  }
+  this.bind(this.noiseVbo,this.noiseIbo);
+  gl.drawElements(gl.TRIANGLES,this.noiseCount,gl.UNSIGNED_SHORT,0);
+ }
  updateVisibility(){
   // Pickups and the hatch lock already have vertex data. Remove only their
   // indices, so the walls, rig and reflected scene keep their GPU buffers.
@@ -844,6 +901,7 @@ export class HouseRenderer {
   if(this.dynamicCount){this.bind(this.dynamicVbo,this.dynamicIbo);gl.drawElements(gl.TRIANGLES,this.dynamicCount,gl.UNSIGNED_SHORT,0);}
   this.bind(this.vbo,this.ibo);
   gl.drawElements(gl.TRIANGLES,this.count,gl.UNSIGNED_SHORT,0);
+  this.drawNoiseProps();
   if(motion.pursuer?.active){
    if(motion.pursuerLight!==undefined)gl.uniform1f(this.uniform.uShot,motion.pursuerLight);
    this.drawPursuer(motion.pursuer,false,motion.reduced);
@@ -862,7 +920,7 @@ export class HouseRenderer {
   const gl=this.gl;
   this.loisFaceTexture.destroy();this.pursuerTexture.destroy();this.emyCoatTexture.destroy();this.disposeArtwork();this.shadows.destroy();
   for(const buffer of [...this.mirrorBuffers,...this.shadowMeshes.map(mesh=>mesh.indices),
-   this.vbo,this.ibo,this.dynamicVbo,this.dynamicIbo,this.handVbo,this.handIbo,this.pursuerVbo,this.pursuerIbo,this.tentacleVbo,this.tentacleIbo]){
+   this.vbo,this.ibo,this.dynamicVbo,this.dynamicIbo,this.noiseVbo,this.noiseIbo,this.handVbo,this.handIbo,this.pursuerVbo,this.pursuerIbo,this.tentacleVbo,this.tentacleIbo]){
    if(buffer)gl.deleteBuffer(buffer);
   }
   for(const texture of [this.texture,this.tvTexture,...this.materialTextures])gl.deleteTexture(texture);
