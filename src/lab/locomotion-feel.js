@@ -54,5 +54,11 @@ export function advanceEye(current,crouched,dt){
  return blend(Number.isFinite(current)?current:target,target,dt,MOTION_RESPONSE.eye);
 }
 export function isOnStairs(state,getStairDirection,inHatch){
- return !!getStairDirection(state)||(state.y<-.025&&inHatch(state.x,state.z));
+ // Slow slightly BEFORE feet reach the lip, not after the first ramp tick.
+ // Geometry stays authoritative: these probes affect only speed, not collision.
+ const edge=.12;
+ return !!getStairDirection(state)||
+  !!getStairDirection({...state,z:state.z-edge})||
+  !!getStairDirection({...state,z:state.z+edge})||
+  (state.y<-.025&&inHatch(state.x,state.z));
 }
