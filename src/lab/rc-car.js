@@ -4,6 +4,9 @@ import {inHatch} from './basement.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export const RC_SPEED=3.4;
+export const RC_ACCEL=9.5;
+export const RC_BRAKE=14;
+export const RC_IDLE_DECEL=11;
 // Wider view ONLY while the RC tablet is in driving mode (the house stays unchanged).
 export const RC_PROJECTION=1.02;
 export const RC_CAMERA_DISTANCE=2.05;
@@ -16,7 +19,7 @@ export const RC_RECOVERY_SPOTS=Object.freeze([
  {x:2.72,y:0,z:8.14}
 ]);
 export function createRC(object){
- return {object,mode:'packed',x:object.x,y:object.y-.14,z:object.z,yaw:Math.PI,elapsed:0,noise:0,beeps:0,crashes:0,velocity:0};
+ return {object,mode:'packed',x:object.x,y:object.y-.14,z:object.z,yaw:Math.PI,elapsed:0,noise:0,beeps:0,crashes:0,velocity:0,driveSpeed:0,steerAngle:0,roll:0};
 }
 export function deployRC(rc,player,world){
  if(!['packed','parked'].includes(rc.mode))return false;
@@ -26,7 +29,7 @@ export function deployRC(rc,player,world){
   if(!Number.isFinite(y)||Math.abs(y-player.y)>.30||blocked(world.boxes,x,y,z,.22,.30))return false;
   Object.assign(rc,{x,z,y,yaw:player.yaw});
  }
- rc.mode='deploying';rc.elapsed=0;rc.object.taken=false;rc.object.interactable=false;
+ rc.mode='deploying';rc.elapsed=0;rc.driveSpeed=0;rc.steerAngle=0;rc.roll=0;rc.object.taken=false;rc.object.interactable=false;
  syncRCObject(rc);return true;
 }
 export function syncRCObject(rc){
@@ -34,13 +37,25 @@ export function syncRCObject(rc){
 }
 export function driveRC(rc,world,input,dt){
  if(rc.mode!=='driving'||dt<=0)return 0;
- const steer=clamp(Number(input.steer)||0,-1,1),throttle=clamp(Number(input.throttle)||0,-1,1);
- rc.yaw+=steer*dt*2.65*(throttle<-.03?-1:1);
- const speed=RC_SPEED*throttle,dx=Math.sin(rc.yaw)*speed*dt,dz=Math.cos(rc.yaw)*speed*dt;
+ const step=clamp(dt,0,.055);
+ const steer=clamp(Number.isFinite(input?.steer)?input.steer:0,-1,1);
+ const throttle=clamp(Number.isFinite(input?.throttle)?input.throttle:0,-1,1);
+ const desired=RC_SPEED*throttle;
+ const current=Number.isFinite(rc.driveSpeed)?rc.driveSpeed:0;
+ const rate=!throttle?RC_IDLE_DECEL:current*desired<0?RC_BRAKE:Math.abs(desired)<Math.abs(current)?RC_BRAKE:RC_ACCEL;
+ rc.driveSpeed=current+clamp(desired-current,-rate*step,rate*step);
+ if(Math.abs(rc.driveSpeed)<.025&&Math.abs(throttle)<.02)rc.driveSpeed=0;
+ const steerBlend=1-Math.exp(-12*step);
+ rc.steerAngle=(rc.steerAngle||0)+(steer-(rc.steerAngle||0))*steerBlend;
+ const pace=Math.min(1,Math.abs(rc.driveSpeed)/.75);
+ rc.yaw+=rc.steerAngle*step*2.65*pace*(rc.driveSpeed<0?-1:1);
+ const speed=rc.driveSpeed,dx=Math.sin(rc.yaw)*speed*step,dz=Math.cos(rc.yaw)*speed*step;
  const before={x:rc.x,z:rc.z},car={x:rc.x,y:rc.y,z:rc.z};
  const distance=navigate(car,world,dx,dz,.38);
  Object.assign(rc,{x:car.x,y:car.y,z:car.z});
- rc.velocity=distance/Math.max(dt,.001);
+ rc.velocity=distance/Math.max(step,.001);
+ if(distance<Math.abs(speed*step)*.12&&Math.abs(speed)>.3)rc.driveSpeed*=.26;
+ rc.roll=clamp(-rc.steerAngle*rc.velocity*.018,-.095,.095);
  syncRCObject(rc);
  return Math.hypot(rc.x-before.x,rc.z-before.z);
 }
@@ -53,11 +68,11 @@ export function updateRC(rc,dt){
  rc.noise=Math.max(0,rc.noise-dt);
 }
 export function stopRC(rc){
- if(rc.mode==='driving'||rc.mode==='deploying'){rc.mode='parked';rc.noise=0;rc.velocity=0;return true;}
+ if(rc.mode==='driving'||rc.mode==='deploying'){rc.mode='parked';rc.noise=0;rc.velocity=0;rc.driveSpeed=0;rc.roll=0;return true;}
  return false;
 }
 export function crashRC(rc,world){
- rc.crashes++;rc.mode='disabled';rc.noise=0;rc.velocity=0;
+ rc.crashes++;rc.mode='disabled';rc.noise=0;rc.velocity=0;rc.driveSpeed=0;rc.roll=0;
  const choices=RC_RECOVERY_SPOTS.slice(rc.crashes%RC_RECOVERY_SPOTS.length).concat(RC_RECOVERY_SPOTS.slice(0,rc.crashes%RC_RECOVERY_SPOTS.length));
  const pos=choices.find(p=>!blocked(world.boxes,p.x,p.y,p.z,.20,.4))||RC_RECOVERY_SPOTS[0];
  Object.assign(rc,{x:pos.x,y:pos.y,z:pos.z,yaw:0});
@@ -66,7 +81,7 @@ export function crashRC(rc,world){
 }
 export function recoverRC(rc){
  if(rc.mode!=='disabled'&&rc.mode!=='parked')return false;
- rc.mode='packed';rc.object.taken=true;rc.object.interactable=false;rc.noise=0;
+ rc.mode='packed';rc.object.taken=true;rc.object.interactable=false;rc.noise=0;rc.driveSpeed=0;rc.roll=0;
  return true;
 }
 export function rcCamera(rc,world){
