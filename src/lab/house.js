@@ -97,7 +97,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  </div>
  <div class="house-emy-map" id="house-emy-map" hidden role="dialog" aria-modal="true" aria-label="Enviar a Emy a una habitación">
   <header><strong>¿Adónde enviamos a Emy?</strong><button data-act="emy:close" aria-label="Cerrar mapa">✕</button></header>
-  <nav><button data-act="emy:floor:0" id="house-emy-floor-0">Planta baja</button><button data-act="emy:floor:1" id="house-emy-floor-1">Planta alta</button></nav>
+  <p class="house-emy-intro">Elige una habitación en cualquiera de los dos pisos.</p>
   <div class="house-emy-map-rooms" id="house-emy-map-rooms"></div>
   <small>Selecciona una habitación · Emy hará ruido durante unos 25 segundos cuando llegue.</small>
  </div>
@@ -799,16 +799,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(act==='emy:map'){
     if(emyAbilities.distractCooldown>0){say('Emy necesita descansar '+Math.ceil(emyAbilities.distractCooldown)+' s.');return;}
     $('house-emy-menu').hidden=true;$('house-emy-map').hidden=false;
-    runAction('emy:floor:0');return;
-   }
-   if(act.startsWith('emy:floor:')){
-    const floor=Number(act.slice('emy:floor:'.length));
-    if(floor!==0&&floor!==1)return;
-    $('house-emy-map-rooms').innerHTML=emyFloorMap(world.rooms,floor);
-    for(const n of [0,1])$('house-emy-floor-'+n).setAttribute('aria-pressed',String(n===floor));
+    $('house-emy-map-rooms').innerHTML='<div class="house-emy-two-floors"><section><h3>Planta baja</h3>'+emyFloorMap(world.rooms,0)+'</section><section><h3>Planta alta</h3>'+emyFloorMap(world.rooms,1)+'</section></div>';
     return;
    }
-   if(act.startsWith('emy:room:')){
+    if(act.startsWith('emy:room:')){
     const room=roomChoices(world.rooms).find(r=>r.id===act.slice('emy:room:'.length));
     const target=roomDestination(world,room);
     if(!target){say('Emy no encuentra un lugar seguro en esa habitación.');return;}
@@ -1541,6 +1535,18 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const outdoor=s.y<-.12?0:view.x<0||view.x>HOUSE.width||view.z<0||view.z>HOUSE.depth?1:Math.max(0,1-Math.min(view.x,HOUSE.width-view.x,view.z,HOUSE.depth-view.z)/1.5)*.22;
   sound.locate({room:roomAt(view.x,view.z,s.y),outdoor,hidden:!!s.hidden,powered:housePowered(world.lights.power)});
   try{
+   const wave=$('house-emy-wave');
+   if(emyAbilities.wave>0&&!world.emy.hidden){
+    const dx=world.emy.x-view.x,dy=world.emy.y+.43-view.y,dz=world.emy.z-view.z;
+    const forward=dx*Math.sin(view.yaw)+dz*Math.cos(view.yaw),side=dx*Math.cos(view.yaw)-dz*Math.sin(view.yaw);
+    const depth=forward*Math.cos(view.pitch)+dy*Math.sin(view.pitch);
+    if(depth>.15){
+     const factor=.65*canvas.clientHeight/depth;
+     const radius=(1.1-emyAbilities.wave)*500;
+     wave.hidden=false;
+     Object.assign(wave.style,{left:(canvas.clientWidth/2+side*factor)+'px',top:(canvas.clientHeight/2-(dy*Math.cos(view.pitch)-forward*Math.sin(view.pitch))*factor)+'px',width:Math.max(12,radius*2)+'px',height:Math.max(12,radius*2)+'px',opacity:String(Math.min(1,emyAbilities.wave/1.1))});
+    }else wave.hidden=true;
+   }else wave.hidden=true;
    renderer.render(view,torch,elapsed,hand,{scanOutline:emyAbilities.scan>0&&pursuer.active,bob:s.bob,action:handAction,clickAction,speed:animator.speed,acceleration:animator.acceleration,walkWeight:animator.weight,reduced:s.reduceBob,swayX:handDrift.x,swayY:handDrift.y,introHands,animator,feetY:s.y,crouched:s.crouched,equipment:visualEquipment,keyTurn:keyTurn?.time,noteRaise,batterySwap,tabletLift,equipLift:raisedNote?-.52*(1-noteRaise):reducedMotion.matches?0:-.22*Math.pow(1-Math.min(1,equipmentAge/.3),2),bathDoorAmount:world.objects.find(o=>o.id==='bano').amount,thirdPerson,actorTime,actorWalk,actorPiano,shotLight,pursuer:finalCutscene?{...pursuer.snapshot(),captureReach:Math.min(1,finalCutscene.elapsed/.8)*Math.max(0,Math.min(1,(2.45-finalCutscene.elapsed)/.35)),captureLift:0,captureFace:{jaw:0,bite:0,twitch:0,left:0,right:0,glance:0}}:pursuer.snapshot(),television});
    if(capturePhoto){capturePhoto=false;if(phone.open&&phone.app==='camera')phone.takePhoto(canvas);}
    phone.updateCamera(canvas,now);
