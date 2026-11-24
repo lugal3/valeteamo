@@ -71,5 +71,19 @@ const assert=require('node:assert/strict');
  }
  assert(finished&&rings>=13,'Emy must distract for roughly 25 s and return to follow');
  assert.equal(closeCat.stage,'following');
+ // A thrown object near Emy triggers an actual collision-safe animated sidestep,
+ // rather than instantly moving or replacing the cat model.
+ const dodgeWorld=createHouse(),dodgeCat=createEmyCompanion(dodgeWorld.emy,{waiting:false});
+ const dodgeProps=installNoiseProps(dodgeWorld),dodgeProp=dodgeProps[0];
+ const start={x:dodgeCat.cat.x,y:dodgeCat.cat.y,z:dodgeCat.cat.z};
+ Object.assign(dodgeProp,{x:start.x+.08,y:start.y+.38,z:start.z-.08,
+  flight:{vx:0,vy:0,vz:1,ttl:1}});
+ const dodgeCues=stepNoiseProps([dodgeProp],.016,dodgeWorld,null,dodgeCat.cat);
+ assert(dodgeCues.some(cue=>cue.kind==='evade'),'Emy must detect an incoming throwable');
+ assert(dodgeCat.cat.dodge,'Dodge must have an animated target pose');
+ assert.equal(dodgeCat.cat.x,start.x,'Dodge starts at original location without teleport');
+ for(let i=0;i<35;i++)updateEmyCompanion(dodgeCat,1/60,{world:dodgeWorld,player:start});
+ assert(!dodgeCat.cat.dodge,'Dodge animation finishes cleanly');
+ assert(Math.hypot(dodgeCat.cat.x-start.x,dodgeCat.cat.z-start.z)>.4,'Emy moves aside physically');
  console.log('PASS Emy abilities: scan cooldown, floor-map rooms, throwable-noise, pursuer stun and distract checkpoint');
 })().catch(error=>{console.error(error);process.exitCode=1;});
