@@ -25,7 +25,7 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 | 09 | **Louis, puzzles and progression** | IN PROGRESS — QA pending | Natural rescue/companion animations, verified cover and body rig, contextual dialogue, progressive puzzle hints/checkpoints |
 | 10 | **Cinematics, endings and reactive audio** | IN PROGRESS — QA pending | Understandable Emy-rescue and escape/loss cutscenes, synchronized spatial audio, proper camera framing on PC/iPhone |
 | 11 | **HUD, tutorials, accessibility and mobile feel** | IN PROGRESS — QA pending | Clean contextual controls, phone/hotbar, orientation/safe areas, motion/audio/text options |
-| 12 | **Optimization, playthrough QA and release** | NOT STARTED | Full automated/manual end-to-end test matrix, capture evidence, compare baselines, PR review, then merge and deploy |
+| 12 | **Optimization, playthrough QA and release** | IN PROGRESS — CI and manual QA pending | Full automated/manual end-to-end test matrix, capture evidence, compare baselines, PR review, then merge and deploy |
 
 ### Phase details & completion criteria
 
@@ -204,3 +204,11 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 ### Phase 11 browser regression repair
 
 - The last Phase 10 browser CI failed in `tests/emy-abilities-browser.cjs` at the old assumption that handheld throwable controls contain two buttons. The Phase 06 feature added the third soft-throw action, so the browser test now explicitly checks all three existing actions (normal throw, soft throw, drop). This is a test expectation update, not the removal of any gameplay control.
+
+## Phase 12 — integrated QA rollout (release still blocked)
+
+- Added dedicated **read-only** GitHub workflow `.github/workflows/valeteamo-v2-release-qa.yml`, splitting `npm test` / `test:perf` / `build` from parallel, separately reported 2D story, 3D checkpoint, RC rescue, threat/hide, mobile input, production CSS and Emy Chromium mobile/desktop + WebKit runs. Artifacts are collected per scenario.
+- Strengthened full `prologue-browser.cjs` with Act I/III and real unmount of 2D when 3D takes over; strengthened Emy browser QA with actual throwable instruction visibility.
+- Fixed an observed cosmic CI `emotes-browser.cjs` timeout when Playwright waited for an unrelated navigation after clicking the start button; the test now clicks physically and waits for the real house snapshot to become unpaused.
+- Full release checklist and known risks: `docs/VALETEAMO-V2-RELEASE-AUDIT.md`. All stages 04–11 still need feature-completeness and visual/performance review; static ambience is intentional, RC suspension/combined tactics are not delivered.
+- **Never treat workflow dispatch, test registration or source upload as passing QA.** Merge/deploy require actual all-green results, visual manual approval, and audio permissions review.
