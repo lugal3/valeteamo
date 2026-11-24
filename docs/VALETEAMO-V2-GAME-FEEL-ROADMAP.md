@@ -19,7 +19,7 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 | 03 | **Pursuer perception + fair stealth AI** | **DONE — QA passed** | Separate sight/hearing/suspicion/chase/search states, last-seen positions, visible-door logic and unbiased hide searching |
 | 04 | **Emy's autonomous personality** | IMPLEMENTED — QA pending | Sit, groom, stretch, orient ears to noise, cautious follow, “Quédate aquí”, safe hold, consistent cross-floor routing |
 | 05 | **House environmental life** | IMPLEMENTED — QA pending | Identity of every room, small ambient props, lighting, wind/dust, performant atmosphere without clutter |
-| 06 | **Throwable objects + sound/material physics** | NOT STARTED | Glass/ceramic/metal/wood/carpet responses, controlled throw strengths, predictable collisions, noise investigation |
+| 06 | **Throwable objects + sound/material physics** | IMPLEMENTED — QA pending | Glass/ceramic/metal/wood/carpet responses, controlled throw strengths, predictable collisions, noise investigation |
 | 07 | **RC controls, camera, and strategy** | NOT STARTED | Smoother drive and camera; suspension/bumps, legible tablet HUD, horn, combined RC/Emy tactics |
 | 08 | **2D flow, storytelling and 2D→3D transition** | NOT STARTED | Kawaii day→night pacing, credible meeting/kidnap, no pop-ins, coherent front window, seamless house handoff |
 | 09 | **Louis, puzzles and progression** | NOT STARTED | Natural rescue/companion animations, verified cover and body rig, contextual dialogue, progressive puzzle hints/checkpoints |
@@ -142,3 +142,13 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 - `renderer.js` animates seven small details in the **existing WebGL1 dynamic geometry batch**, with deterministic math, reduced-motion support and no shadow casting; no separate particle system.
 - Added `tests/house-ambience.cjs` to `npm test`: checks identifiers, floors, visual-only flags, limited dynamic budget and shared batching.
 - **QA pending**: verify `npm test`, `test:perf`, `build`, mobile/desktop Chromium and WebKit. Do not mark completed or merge until CI is green.
+
+## Phase 06 — controlled throw, material sound and reaction (QA pending)
+
+- Introduced `noise-materials.js` for bounded, deterministic light/normal throw strength and glass/ceramic/metal/wood impact responses versus soft/wood/metal/hard surfaces.
+- Existing physics, collision checks, Emy evasions, pursuer stun and positional investigation remain authoritative. Each object still emits a single impact with location, material, surface and acoustic intensity; soft surfaces lower the AI alert.
+- Added **Lanzar suave** to the object HUD, without changing the existing G throw or V drop shortcut.
+- The existing WebAudio `clatter` synthesizer varies impact pitch/attenuation from the impact context, with no additional downloads or asset files.
+- Added `tests/noise-materials.cjs` to the complete `npm test` run.
+- **Important phase 05 correction:** an initial GitHub Actions run failed the saturated 16-bit WebGL1 dynamic mesh budget. Decor details were changed to static, preserving navigation/visual accents without consuming dynamic vertex indices. Animated curtains/dust are intentionally deferred until a separate budget-safe solution exists; do not claim their animation as delivered.
+- **Validation:** current commit's CI/browser tests not yet verified. No release or merge.
