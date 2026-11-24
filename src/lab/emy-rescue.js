@@ -81,3 +81,32 @@ export function poseEscapeAmbush(shot,cat,enemy,reduced){
  poseEmy(cat,{mode:land<1?'jump':run>0?'walk':'idle',walking:run>0&&run<1,phase:t,reduced});
  return appeared;
 }
+
+// An emergency rescue happens exactly ONCE when the fourth life marker
+// reaches zero. Emy leaps in from the side instead of teleporting Kitty or
+// swapping the existing pursuer mesh. This is a 3D pose on the SAME Emy rig.
+export function poseEmyLastChance(shot,cat,enemy,reduced=false){
+ const t=Math.max(0,shot.elapsed),home=shot.kitty,threat=shot.attacker;
+ const appear=t>=.55,leap=ease((t-.55)/.78),retreat=ease((t-1.40)/.72);
+ if(!appear)return false;
+ const wasHidden=cat.hidden;
+ cat.hidden=false;
+ for(const {box} of cat.parts)box.hiddenGeometry=false;
+ const sideX=home.x-.92,sideZ=home.z+.58;
+ const strikeX=threat.x-.16,strikeZ=threat.z+.13;
+ Object.assign(cat,{
+  x:sideX+(strikeX-sideX)*leap-.20*retreat,
+  z:sideZ+(strikeZ-sideZ)*leap+.56*retreat,
+  y:home.y+(leap<1?Math.sin(Math.PI*leap)*.40:0),
+  yaw:Math.atan2(threat.x-sideX,threat.z-sideZ),
+  reaction:t<1.45?1:0
+ });
+ enemy.x=threat.x+(threat.x-home.x)*.55*retreat;
+ enemy.y=threat.y;
+ enemy.z=threat.z+(threat.z-home.z)*.55*retreat;
+ enemy.facing=enemy.yaw=threat.yaw??0;
+ enemy.speed=0;
+ if(t>=1.4)enemy.mode='stunned';
+ poseEmy(cat,{mode:t<1.45?'jump':'idle',walking:false,phase:t,reduced});
+ return wasHidden;
+}
