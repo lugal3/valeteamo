@@ -160,7 +160,7 @@ export function snapshotEmyCompanion(companion){
  const {cat,stage}=companion;
  if(stage==='closet-entry')return {stage:'following',x:companion.closetEntry.x,y:cat.y,z:companion.closetEntry.z,yaw:cat.yaw};
  if(stage==='fetch'&&['leap-in','crawl','leap-out'].includes(companion.fetch.phase))return {stage:'following',...companion.fetch.vent.takeoff,yaw:0};
- return {stage:['entrance','fetch','distract'].includes(stage)?'following':stage==='trunk-enter'?'trunk':stage,
+ return {stage:['entrance','fetch','distract','hold'].includes(stage)?'following':stage==='trunk-enter'?'trunk':stage,
   x:cat.x,y:cat.y,z:cat.z,yaw:cat.yaw};
 }
 export function restoreEmyCompanion(companion,saved,storyPhase='explore'){
@@ -279,7 +279,11 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
   cat.yaw+=deltaAngle(cat.yaw,Math.PI*.5)*(1-Math.exp(-dt*4));
   poseEmy(cat,{mode:'idle',walking:false,phase:cat.age,reduced,blend:1-Math.exp(-9*dt)});
   if(job.remaining<=0){
-   companion.stage='following';companion.distraction=null;companion.trail=[];companion.route=[];companion.chasing=undefined;
+   // The noise finishes at the commanded room even when Kitty is hidden on
+   // another floor. Do NOT automatically path back toward a live hiding spot:
+   // that creates unfair noise and exposes Kitty's wardrobe to the pursuer.
+   companion.stage=enteringHide||player?.hidden?'hold':'following';
+   companion.distraction=null;companion.trail=[];companion.route=[];companion.chasing=undefined;
    return 'distract-done';
   }
   if(job.nextNoise<=0){job.nextNoise=1.5;return 'distract-noise';}
@@ -287,6 +291,28 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  }
  if(companion.altarWait&&companion.stage==='following')player=ALTAR_THRESHOLD;
  const hide=enteringHide||player?.hidden;
+ // "hold" is a safe, quiet companion state, distinct from the story's
+ // initial "waiting" and physical "hiding". No teleport, no route, no
+ // cat noise, no approach to the wardrobe. The player can hide instantly.
+ if(companion.stage==='hold'){
+  if(hide){
+   poseEmy(cat,{mode:'sit',walking:false,phase:cat.age,reduced,blend:1-Math.exp(-8*dt)});
+   return null;
+  }
+  companion.stage='following';
+  companion.route=[];companion.trail=[];companion.chasing=undefined;
+ }
+ // Only a nearby Emy may OPTIONALLY join Kitty's wardrobe. A remote Emy,
+ // especially on another floor, must stop instead of travelling for ages
+ // toward a hiding player. This never gates Kitty's animation in house.js.
+ if(companion.stage==='following'&&hide&&player&&
+  (Math.abs(cat.y-player.y)>.48||distance(cat,player)>1.45)){
+  companion.stage='hold';
+  companion.trail=[];companion.route=[];companion.chasing=undefined;
+  cat.reaction=0;
+  poseEmy(cat,{mode:'sit',walking:false,phase:cat.age,reduced});
+  return null;
+ }
  let following=companion.stage==='following';
  if(following&&hide)cat.reaction=0;
  if(companion.stage==='hiding'&&!hide){
@@ -388,7 +414,7 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
   if(companion.stuck>1.2){planRoute(companion,world,hide?heading:goal);companion.stuck=0;}
  }else companion.stuck=0;
  if(companion.stage==='following'&&hide&&companion.direct&&distance(cat,heading)<.38&&Math.abs(cat.y-heading.y)<.45){
-  if(hide.objectId==='wardrobe'&&enteringHide){
+  if(hide.objectId==='wardrobe'&&(enteringHide||player?.hidden?.objectId==='wardrobe')){
    const closet=world.objects.find(o=>o.id===hide.objectId);
    companion.closetEntry={x:cat.x,z:cat.z,time:0,inside:closet.hideCamera};
    companion.stage='closet-entry';return null;
