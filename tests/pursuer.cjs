@@ -19,7 +19,10 @@ module.exports=async()=>{
  p.mode='investigate';p.modeTime=3;p.awareness=.99;
  assert(p.update(.05,visible).includes('spotted'));
  for(let i=0;i<45;i++)p.update(.05,hidden);
- assert.equal(p.mode,'cooldown','Breaking line of sight ends the chase promptly');
+ assert.equal(p.mode,'trail-search','Breaking line of sight triggers a grounded last-seen search');
+ assert(!p.caught,'A hidden Kitty must not be caught without visual evidence');
+ for(let i=0;i<180;i++)p.update(.05,hidden);
+ assert.equal(p.mode,'cooldown','A last-seen search must finish and release the pursuer');
  assert(!p.caught);
  const before=performance.now(),modes=new Set();let plans=0;
  const plan=p.plan.bind(p);p.plan=(...args)=>{plans++;return plan(...args);};
