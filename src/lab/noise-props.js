@@ -1,4 +1,4 @@
-// Lightweight, deterministic noise props. Shares the existing dynamic house geometry.
+// Lightweight, deterministic props. Their small render batch stays separate from the full WebGL1 dynamic scene.
 import {blocked,groundHeight,segmentHitsBox} from './world.js';
 const SPECS=[
  ['glass-living','Vaso',2.45,.995,8.79,0,'glass'],
@@ -14,10 +14,12 @@ export function installNoiseProps(world){
   const size=form==='plate'?[.22,.027,.22]:form==='glass'?[.105,.18,.105]:[.13,.12,.13];
   const box={id:'noise-'+id,x,y,z,w:size[0],h:size[1],d:size[2],mat:form==='glass'?'glass':'cream',solid:false,dynamic:true,
    shape:form==='plate'?'round':'lathe',segments:12,color:form==='glass'?[.70,.87,.93]:[.94,.86,.79]};
-  world.boxes.push(box);
+  // Do not insert these meshes into world.boxes: the existing Emy/Lois rig
+  // almost exhausts the single 16-bit dynamic index buffer on iPhone.
   const prop={id:'noise-'+id,kind:'noise-prop',label:'Recoger '+label.toLowerCase(),x,y,z,floor,box,form,held:false,flight:null,spent:false};
   world.objects.push(prop);props.push(prop);
  }
+ world.noiseProps=props;
  return props;
 }
 export function grabNoiseProp(prop){
