@@ -1,5 +1,14 @@
 // Original music and rescue effects. start() belongs in a user gesture.
 import type {AmbientKind} from './demo/rescue-ecology';
+// 2D's legacy CommonJS smoke harness loads only .ts modules. Mirror the four
+// 2D cue offsets here (the full nine-cue map belongs to 3D's user-sprite-index.js).
+const RESCUE_AUDIO_SPRITE:Readonly<Record<string,Readonly<{start:number;duration:number}>>>={
+ cat:{start:0,duration:.455125},
+ churu:{start:6.155125,duration:7.008375},
+ 'van-door':{start:27.918333,duration:1.44},
+ 'van-away':{start:29.558333,duration:13}
+};
+
 export type MusicTheme='story'|'garden'|'battle'|'final';
 const MELODIES:Record<MusicTheme,number[]>={
  story:[261.63,329.63,392,523.25,493.88,392,329.63,293.66,349.23,440,523.25,440,392,349.23,329.63,293.66],
@@ -11,9 +20,11 @@ export class Sound {
  ctx?:AudioContext;timer?:number;step=0;lastHit=0;lastAmbient=-100;theme:MusicTheme='story';
  private silent=false;
  private readonly samples=new Map<string,AudioBuffer>();
+ private userSpriteReady=false;
  private readonly voices=new Set<AudioBufferSourceNode>();
  private loading?:AbortController;
- constructor(private readonly sampleUrls:Readonly<Record<string,string>>={}){}
+ constructor(private readonly sampleUrls:Readonly<Record<string,string>>={},
+  private readonly spriteUrl?:string,private readonly spriteFallbackUrl?:string){}
  get muted(){return this.silent;}
  set muted(value:boolean){this.silent=value;if(value)this.stopSamples();}
  private loadSamples(context:AudioContext){
@@ -25,8 +36,33 @@ export class Sound {
    void fetch(url,{signal:loading.signal})
     .then(response=>{if(!response.ok)throw new Error('Audio unavailable');return response.arrayBuffer();})
     .then(bytes=>context.decodeAudioData(bytes))
-    .then(buffer=>{if(!loading.signal.aborted)this.samples.set(kind,buffer);})
+    .then(buffer=>{if(!loading.signal.aborted&&!(this.userSpriteReady&&kind in RESCUE_AUDIO_SPRITE))this.samples.set(kind,buffer);})
     .catch(()=>{}); // The scene can still use its synthesized effect.
+  }
+  if(this.spriteUrl){
+   void (async()=>{
+    let sprite:AudioBuffer|undefined;
+    for(const url of [this.spriteUrl,this.spriteFallbackUrl].filter((value):value is string=>!!value)){
+     if(loading.signal.aborted)break;
+     try{
+      const response=await fetch(url,{signal:loading.signal});
+      if(!response.ok)throw Error('Audio sprite fetch failed: '+response.status);
+      sprite=await context.decodeAudioData(await response.arrayBuffer());
+      break;
+     }catch{} // Retry as MP3 when the current Safari/WebKit cannot decode Opus.
+    }
+    if(!sprite)return;
+     if(loading.signal.aborted)return;
+     this.userSpriteReady=true;
+     for(const [kind,clip] of Object.entries(RESCUE_AUDIO_SPRITE)){
+      if(!clip)continue;
+      const offset=Math.round(clip.start*sprite.sampleRate),frames=Math.floor(clip.duration*sprite.sampleRate);
+      const sample=context.createBuffer(sprite.numberOfChannels,frames,sprite.sampleRate);
+      for(let channel=0;channel<sprite.numberOfChannels;channel++)
+       sample.getChannelData(channel).set(sprite.getChannelData(channel).subarray(offset,offset+frames));
+      this.samples.set(kind,sample);
+     }
+    })().catch(()=>{}); // Previously installed preview recordings remain as fallback.
   }
  }
  playSample(kind:string,volume:number):boolean{

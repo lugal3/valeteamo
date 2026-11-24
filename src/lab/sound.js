@@ -21,7 +21,7 @@ const effectChannel=kind=>{
  if(/^(door|closet|latch|unlock|trying|knock|keys|hatch)/.test(kind))return 'doors';
  if(['wood','stair','tile','grass','dirt','stone','footstep'].includes(kind))return 'steps';
  if(kind==='floor-groan')return 'creaks';
- return ['notification','alert'].includes(kind)?'alerts':'objects';
+ return ['notification','alert','danger-alert'].includes(kind)?'alerts':'objects';
 };
 export class HouseSound {
  constructor(){let saved;try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')}catch{}this.settings={...defaults};for(const key of Object.keys(defaults))if(saved?.[key]!==undefined)this.settings[key]=this.settingValue(key,saved[key]);this.context=null;this.ambientNodes=[];this.musicNodes=new Set();this.musicTimer=null;this.musicStep=0;this.tension=.55;this.paused=false;}
@@ -112,7 +112,7 @@ export class HouseSound {
    return;
   }
   if(!this.rcVoice){
-   const sample=this.recordings?.buffers.get('rc-motor'),gain=ctx.createGain();
+   const sample=this.recordings?.clipBuffer('rc-motor'),gain=ctx.createGain();
    const motor=sample?ctx.createBufferSource():ctx.createOscillator();
    if(sample){motor.buffer=sample;motor.loop=true;motor.playbackRate.value=.8;}
    else motor.type='triangle';
@@ -227,11 +227,27 @@ export class HouseSound {
   if(gain<.0007)return;
   const yaw=listener.yaw||0,dx=origin?origin.x-listener.x:0,dz=origin?origin.z-listener.z:0;
   const stereo=Math.max(-.85,Math.min(.85,(dx*Math.cos(yaw)-dz*Math.sin(yaw))/Math.max(1,distance)));
+  if(kind==='clatter'){
+   // Three staggered percussive glass/ceramic strikes; bounded, self-cleaning WebAudio nodes.
+   const frequencies=[1120,1740,2380],now=ctx.currentTime;
+   for(let i=0;i<frequencies.length;i++){
+    const at=now+i*.043,osc=ctx.createOscillator(),amp=ctx.createGain(),pan=ctx.createStereoPanner();
+    osc.type='triangle';osc.frequency.setValueAtTime(frequencies[i],at);
+    osc.frequency.exponentialRampToValueAtTime(frequencies[i]*.60,at+.135);
+    amp.gain.setValueAtTime(.0001,at);
+    amp.gain.exponentialRampToValueAtTime(Math.max(.0002,gain*(.85-i*.19)),at+.008);
+    amp.gain.exponentialRampToValueAtTime(.0001,at+.18+i*.025);
+    pan.pan.value=stereo;osc.connect(amp);amp.connect(pan);pan.connect(output);
+    osc.start(at);osc.stop(at+.24+i*.025);
+    osc.onended=()=>{osc.disconnect();amp.disconnect();pan.disconnect();};
+   }
+   this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;
+  }
   if(kind==='clock-tick'||kind==='tv-static'||kind==='scratch'){
    playFoley(ctx,output,this.atmosphere.noise,kind,gain*(kind==='clock-tick'?.82:1.7),stereo);
    this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;
   }
-  if(this.recordings?.kind(kind,{gain:gain*1.8,pan:stereo,output})){this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;}
+  if(this.recordings?.kind(kind,{gain:gain*(kind==='danger-alert'?.85:kind==='cat-purr'?.70:1.8),pan:stereo,output})){this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;}
   if(kind==='hatch-close')kind='door-close';
   if(kind==='power-cut')kind='latch';
   if(['door','door-open','door-close','floor-groan','stair','wood','latch'].includes(kind)){

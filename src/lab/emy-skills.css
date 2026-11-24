@@ -1,0 +1,242 @@
+/* Companion interaction UI; isolated from the original Phaser 2D mode. */
+#lab3d .house-emy-wave{
+ position:absolute;z-index:30;transform:translate(-50%,-50%);
+ box-sizing:border-box;border:3px solid rgba(119,255,222,.89);border-radius:50%;
+ box-shadow:0 0 16px rgba(103,255,212,.5),inset 0 0 13px rgba(103,255,212,.21);
+ pointer-events:none;
+}
+#lab3d .house-emy-menu{
+ position:absolute;z-index:72;left:50%;top:50%;transform:translate(-50%,-50%);
+ width:min(320px,86vw);padding:12px;border:1px solid #f5c8e4;border-radius:17px;
+ background:rgba(27,18,36,.97);box-shadow:0 14px 48px rgba(0,0,0,.58);
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;
+ color:#fff3fa;touch-action:manipulation;
+}
+#lab3d .house-emy-menu strong{grid-column:1/-1;text-align:center;font:700 19px system-ui;margin:2px 0 6px}
+#lab3d .house-emy-menu button,
+#lab3d .house-emy-map button,
+#lab3d .house-noise-controls button{
+ min-height:44px;padding:8px;border:1px solid rgba(255,213,233,.55);
+ border-radius:10px;background:#493246;color:#ffeffa;font:600 13px system-ui;cursor:pointer;
+}
+#lab3d .house-emy-menu button:disabled{opacity:.48}
+#lab3d .house-emy-menu button small{display:block;min-height:1em;color:#d8b4d2;font-size:10px}
+#lab3d .house-emy-menu button:last-child{grid-column:1/-1}
+/* Tactical map: each floor is shown large, with numbers on the real
+   coordinates and full names in the adjacent scrollable destination list.
+   Avoid two unreadably tiny side-by-side maps in iPhone landscape. */
+#lab3d .house-emy-map{
+ --emy-ink:#fff7fa;--emy-mint:#85f2ce;--emy-pink:#f1a7d8;
+ position:absolute;z-index:73;
+ inset:max(6px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right))
+       max(6px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));
+ margin:auto;width:min(960px,100%);height:min(620px,calc(100% - 12px));
+ max-height:calc(100dvh - 12px);box-sizing:border-box;overflow:hidden;
+ display:flex;flex-direction:column;gap:7px;
+ padding:12px 14px;background:#171522;border:1px solid #cb9ebd;
+ border-radius:17px;box-shadow:0 18px 64px rgba(0,0,0,.80);
+ color:var(--emy-ink);font-family:system-ui,sans-serif;touch-action:manipulation;
+}
+#lab3d .house-emy-map[hidden]{display:none}
+#lab3d .house-emy-map-header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex:0 0 auto}
+#lab3d .house-emy-map-header>div{display:flex;flex-direction:column;gap:1px;min-width:0}
+#lab3d .house-emy-map-kicker{color:#efb7df;font:800 10px/1.2 system-ui;letter-spacing:.11em}
+#lab3d .house-emy-map-header strong{font:800 20px/1.22 system-ui}
+#lab3d .house-emy-map-header>button{flex:0 0 42px;min-height:38px;background:#39293c;font-size:18px}
+#lab3d .house-emy-floor-switch{
+ display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:0 0 auto;
+}
+#lab3d .house-emy-floor-switch button{
+ min-width:0;min-height:44px;border:2px solid #71536f;border-radius:10px;
+ background:#262634;color:#e1cedc;padding:5px 12px;
+ display:flex;align-items:center;justify-content:space-between;gap:8px;
+ font:800 13px system-ui;letter-spacing:.01em;text-align:left;
+}
+#lab3d .house-emy-floor-switch button small{font:600 10px system-ui;color:#d7b9d0;white-space:nowrap}
+#lab3d .house-emy-floor-switch button[aria-selected="true"]{
+ background:#36544f;color:#f5fff9;border-color:var(--emy-mint);
+ box-shadow:inset 0 -3px 0 #82e8c1;
+}
+#lab3d .house-emy-floor-switch button[aria-selected="true"] small{color:#c1f5e5}
+#lab3d .house-emy-intro{
+ margin:0;flex:0 0 auto;color:#dacfd9;font:500 12px/1.35 system-ui;
+}
+#lab3d .house-emy-map-rooms{min-height:0;flex:1;overflow:hidden}
+#lab3d .house-emy-map-layout{
+ display:grid;grid-template-columns:minmax(0,1.05fr) minmax(215px,.95fr);
+ gap:12px;height:100%;min-height:0;
+}
+#lab3d .house-emy-map-board{
+ display:flex;flex-direction:column;align-items:center;min-width:0;min-height:0;
+ padding:7px 7px 9px;border:1px solid #675d75;border-radius:12px;
+ background:#222131;box-sizing:border-box;overflow:hidden;
+}
+#lab3d .house-emy-map-board-title{
+ width:100%;display:flex;justify-content:space-between;align-items:center;
+ gap:5px;color:#ddd0de;font:600 11px system-ui;margin-bottom:6px;
+}
+#lab3d .house-emy-map-board-title strong{color:#fbcae8;font:800 12px system-ui}
+#lab3d .house-emy-plan{
+ position:relative;flex:1 1 auto;min-height:0;
+ width:auto;height:100%;aspect-ratio:14/12;max-width:100%;max-height:100%;
+ box-sizing:border-box;overflow:hidden;
+ border:3px solid #b8a9bd;border-radius:5px;
+ background:#0f1424;
+ box-shadow:0 1px 12px rgba(0,0,0,.3);
+}
+#lab3d .house-emy-plan .house-emy-room{
+ position:absolute;z-index:1;min-width:0;min-height:0;
+ padding:3px;border:1px solid #d6aac7;border-radius:1px;
+ display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;
+ background:#514052;color:#fff9fd;text-align:center;overflow:hidden;
+ touch-action:manipulation;
+}
+#lab3d .house-emy-plan .house-emy-room.house-emy-corridor{background:#344b5b;border-color:#89b5d1}
+#lab3d .house-emy-plan .house-emy-room.house-emy-stairs{background:#695335;border-color:#f4c77c}
+#lab3d .house-emy-plan .house-emy-room.is-extension{border-style:dashed;opacity:.85}
+#lab3d .house-emy-plan .house-emy-index{
+ display:grid;place-items:center;flex:0 0 auto;min-width:24px;height:24px;
+ padding:0 3px;border-radius:6px;background:#191725;border:1px solid #ffd7ed;
+ font:800 13px/1 system-ui;color:#fff7f8;
+}
+#lab3d .house-emy-plan .house-emy-room-name{
+ display:block;font:700 clamp(9px,1.1vw,12px)/1.1 system-ui;
+ color:#fff8ff;white-space:normal;overflow-wrap:normal;
+}
+#lab3d .house-emy-plan .house-emy-room.is-selected,
+#lab3d .house-emy-plan .house-emy-room:focus-visible{
+ z-index:5!important;border:3px solid #aeffe4;background:#205849;
+ box-shadow:inset 0 0 0 1px #ffffff,0 0 0 1px #bfffe9;
+ outline:none;
+}
+#lab3d .house-emy-plan .house-emy-room.is-locked{opacity:.55;filter:grayscale(.5)}
+#lab3d .house-emy-plan .house-emy-stair-void,
+#lab3d .house-emy-plan .house-emy-stair-flight{
+ position:absolute;pointer-events:none;z-index:2;box-sizing:border-box;
+ display:grid;place-items:center;text-align:center;
+ color:#ffebc6;font:800 10px/1.2 system-ui;letter-spacing:.02em;
+ text-shadow:0 1px 4px #000;
+}
+#lab3d .house-emy-plan .house-emy-stair-void{
+ background:repeating-linear-gradient(45deg,#10131e,#10131e 6px,#26243a 6px,#26243a 12px);
+ border:2px dashed #a38ca0;
+}
+#lab3d .house-emy-plan .house-emy-stair-flight{
+ place-items:start center;padding-top:5px;
+ background:repeating-linear-gradient(0deg,transparent,transparent 8%,rgba(255,231,180,.3) 9%,rgba(255,231,180,.3) 12%);
+ border:1px solid #eec88b;font-size:13px;
+}
+#lab3d .house-emy-plan .house-emy-north,
+#lab3d .house-emy-plan .house-emy-entrance{
+ position:absolute;pointer-events:none;z-index:6;color:#fcebd5;
+ background:#171b2cbf;border:1px solid #7c7c8b;border-radius:4px;
+ padding:2px 5px;font:800 8px/1.2 system-ui;
+}
+#lab3d .house-emy-plan .house-emy-north{top:3px;left:50%;transform:translateX(-50%)}
+#lab3d .house-emy-plan .house-emy-entrance{bottom:3px;left:50%;transform:translateX(-50%);white-space:nowrap}
+#lab3d .house-emy-destination-panel{
+ min-width:0;min-height:0;display:flex;flex-direction:column;
+ border:1px solid #66596b;border-radius:12px;background:#222131;
+ padding:8px;box-sizing:border-box;
+}
+#lab3d .house-emy-destination-head{
+ display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;
+ gap:4px;margin-bottom:6px;color:#f2e1ee;
+}
+#lab3d .house-emy-destination-head strong{font:800 13px system-ui}
+#lab3d .house-emy-destination-head small{font:500 10px system-ui;color:#baacbd}
+#lab3d .house-emy-destination-list{
+ display:flex;flex-direction:column;gap:4px;overflow-y:auto;
+ overscroll-behavior:contain;touch-action:pan-y;min-height:0;
+ padding-right:3px;scrollbar-width:thin;scrollbar-color:#9bc7bd #282431;
+}
+#lab3d .house-emy-destination-list::-webkit-scrollbar{width:7px}
+#lab3d .house-emy-destination-list::-webkit-scrollbar-thumb{background:#9bc7bd;border-radius:8px}
+#lab3d .house-emy-destination-list::-webkit-scrollbar-track{background:#282431;border-radius:8px}
+#lab3d .house-emy-destination-list .house-emy-destination{
+ display:flex;align-items:center;gap:9px;min-height:42px;flex:0 0 auto;
+ padding:6px 9px;background:#373143;border:1px solid #63516c;
+ color:#ffedf7;text-align:left;border-radius:9px;
+}
+#lab3d .house-emy-destination-number{
+ flex:0 0 28px;display:grid;place-items:center;width:28px;height:25px;
+ background:#1d1b27;border-radius:6px;font:800 12px system-ui;
+ color:#f6d7ed;
+}
+#lab3d .house-emy-destination-name{flex:1;min-width:0;font:700 13px/1.15 system-ui}
+#lab3d .house-emy-destination-arrow{font-size:22px;color:#e7b4d5}
+#lab3d .house-emy-destination-list .house-emy-destination.is-selected{
+ background:#205849;border:2px solid #89f7d2;
+}
+#lab3d .house-emy-destination-list .house-emy-destination.is-locked{
+ opacity:.62;
+}
+#lab3d .house-emy-destination-list .house-emy-destination small{
+ flex:0 0 auto;color:#ead0d9;font:600 10px system-ui;
+}
+#lab3d .house-emy-map-footer{
+ display:flex;align-items:center;justify-content:space-between;gap:9px;flex:0 0 auto;
+ min-height:46px;border-top:1px solid #655367;padding-top:7px;
+}
+#lab3d .house-emy-map-footer p{
+ margin:0;flex:1;min-width:0;font:600 12px/1.35 system-ui;color:#ecdaea;
+}
+#lab3d .house-emy-map-footer button{
+ flex:0 0 auto;min-width:165px;min-height:42px;
+ border:2px solid #a1f4d4;background:#28624d;color:#fff;
+ border-radius:9px;font:800 13px system-ui;
+}
+#lab3d .house-emy-map-footer button:disabled{
+ background:#37313d;border-color:#66596b;color:#b6aab6;
+ opacity:.75;cursor:not-allowed;
+}
+@media(max-height:470px){
+ #lab3d .house-emy-map{padding:7px 9px;gap:4px;border-radius:11px}
+ #lab3d .house-emy-map-header strong{font-size:17px}
+ #lab3d .house-emy-map-kicker{font-size:9px}
+ #lab3d .house-emy-map-header>button{min-height:32px;flex-basis:36px}
+ #lab3d .house-emy-floor-switch{gap:5px}
+ #lab3d .house-emy-floor-switch button{min-height:36px;padding:3px 8px;font-size:12px}
+ #lab3d .house-emy-intro{font-size:10px}
+ #lab3d .house-emy-map-layout{gap:8px}
+ #lab3d .house-emy-map-board{padding:4px}
+ #lab3d .house-emy-map-board-title{margin-bottom:2px;font-size:9px}
+ #lab3d .house-emy-map-board-title strong{font-size:10px}
+ #lab3d .house-emy-plan .house-emy-room-name{display:none}
+ #lab3d .house-emy-plan .house-emy-index{height:22px;min-width:22px;font-size:12px}
+ #lab3d .house-emy-destination-panel{padding:5px}
+ #lab3d .house-emy-destination-head{margin-bottom:4px}
+ #lab3d .house-emy-destination-list .house-emy-destination{min-height:34px;padding:4px 8px}
+ #lab3d .house-emy-destination-name{font-size:12px}
+ #lab3d .house-emy-map-footer{min-height:39px;padding-top:4px}
+ #lab3d .house-emy-map-footer p{font-size:11px}
+ #lab3d .house-emy-map-footer button{min-height:35px}
+}
+@media(max-width:620px){
+ #lab3d .house-emy-map{overflow-y:auto;min-height:0}
+ #lab3d .house-emy-map-rooms{overflow-y:auto;flex:1 1 auto}
+ #lab3d .house-emy-map-layout{display:flex;flex-direction:column;min-height:460px;height:auto}
+ #lab3d .house-emy-map-board{flex:0 0 275px;max-height:275px}
+ #lab3d .house-emy-plan .house-emy-room-name{display:block}
+ #lab3d .house-emy-destination-panel{flex:1 1 auto;max-height:250px}
+ #lab3d .house-emy-floor-switch button{flex-direction:column;align-items:flex-start;gap:2px}
+ #lab3d .house-emy-map-footer{position:sticky;bottom:0;background:#171522;flex-wrap:wrap}
+ #lab3d .house-emy-map-footer button{flex:1 0 100%}
+}
+#lab3d .house-noise-controls{
+ position:absolute;z-index:32;left:50%;transform:translateX(-50%);
+ bottom:max(74px,env(safe-area-inset-bottom) + 68px);
+ display:flex;flex-direction:row;flex-wrap:wrap;justify-content:center;gap:6px;
+ width:min(270px,60vw);touch-action:manipulation;
+}
+#lab3d .house-noise-controls strong{
+ flex-basis:100%;text-align:center;font:700 11px system-ui;color:#fff1eb;
+ text-shadow:0 2px 8px #000;
+}
+#lab3d .house-noise-controls button{background:#513b53;border-radius:12px;font-size:12px;min-height:40px;flex:1 1 100px}
+#lab3d .house-emy-menu button:focus-visible,
+#lab3d .house-emy-map button:focus-visible,
+#lab3d .house-noise-controls button:focus-visible{outline:3px solid #fff0ba;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){
+ #lab3d .house-emy-wave{transition:none;animation:none}
+}

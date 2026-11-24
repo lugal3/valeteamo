@@ -6,6 +6,8 @@ import catSound from '../lab/audio/preview-cat.wav';
 import churuSound from '../lab/audio/preview-churu.wav';
 import vanDoorSound from '../lab/audio/preview-van-door.wav';
 import vanAwaySound from '../lab/audio/preview-van-away.wav';
+import userSpriteUrl from '../lab/audio/user-sprite.ogg';
+import userSpriteMP3Url from '../lab/audio/user-sprite.mp3';
 import {toScreen} from '../isometric';
 import {VAN_NIGHT_POSITION} from './abduction-van';
 import type {IsoAdventure,IsoStoryBridge,IsoStoryStage} from '../iso-game';
@@ -48,7 +50,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  const feedingRef=useRef<Feeding|null>(null);
  const lockedRef=useRef(false),enteringRef=useRef(false),nextDialogRef=useRef<()=>void>(()=>{});
  const travelingRef=useRef(false),travelTimers=useRef<number[]>([]);
- const [audio]=useState(()=>new Sound(RESCUE_SAMPLES));
+ const [audio]=useState(()=>new Sound(RESCUE_SAMPLES,userSpriteUrl,userSpriteMP3Url));
  const showFeeding=useCallback((phase:Feeding|null)=>{
   feedingRef.current=phase;lockedRef.current=phase!==null;setFeeding(phase);
  },[]);

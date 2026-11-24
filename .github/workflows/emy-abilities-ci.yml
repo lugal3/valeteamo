@@ -1,0 +1,64 @@
+name: Validar habilidades de Emy (sin desplegar)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/lab/emy-**'
+      - 'src/lab/noise-props.js'
+      - 'src/lab/pursuer.js'
+      - 'src/lab/house.js'
+      - 'tests/emy-abilities-**'
+      - '.github/workflows/emy-abilities-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: emy-abilities-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Pruebas generales
+        run: npm test
+      - name: Pruebas de rendimiento
+        run: npm run test:perf
+      - name: Compilar producción
+        run: npm run build
+      - name: Preparar Chromium y WebKit
+        run: npx playwright install chromium webkit --with-deps
+      - name: Verificar panel LP
+        run: node tests/admin-panel-browser.cjs
+      - name: Emy en Chromium móvil / WebGL1
+        env:
+          EMY_QA_DIR: artifacts/emy-abilities/chromium-mobile
+        run: node tests/emy-abilities-browser.cjs
+      - name: Emy en Chromium escritorio / WebGL1
+        env:
+          EMY_QA_DIR: artifacts/emy-abilities/chromium-desktop
+          EMY_QA_VIEWPORT: desktop
+        run: node tests/emy-abilities-browser.cjs
+      - name: Emy en WebKit móvil (simulación Safari)
+        env:
+          EMY_QA_DIR: artifacts/emy-abilities/webkit-mobile
+          EMY_QA_ENGINE: webkit
+        run: node tests/emy-abilities-browser.cjs
+      - name: Regresión del secuestrador y escondites (modo fluido)
+        env:
+          EMY_THREAT_QA_LOW: '1'
+        run: node tests/house-threat-browser.cjs
+      - name: Evidencias
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emy-abilities-webgl1
+          path: artifacts/emy-abilities/
+          if-no-files-found: ignore

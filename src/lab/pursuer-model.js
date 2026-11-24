@@ -132,6 +132,21 @@ export function pursuerPose(actor,reduced=false){
     y:(SHOULDER-ELBOW)*(1-Math.cos(pitch))-drop,z:-(SHOULDER-ELBOW)*Math.sin(pitch)-.043*jaw};
   }
   pursuerFacePose(joints,actor.captureFace);
+ }else if(actor.mode==='stunned'){
+  // Short, readable impact recoil. This animates existing bones only and
+  // does not change pursuit position, collision capsules or face geometry.
+  const strength=clamp((actor.stunned??0)/2,0,1);
+  const recoil=Math.sin(strength*Math.PI*.8)*.08;
+  joints.chest.pitch=-.21-.13*strength;
+  joints.chest.z=-.055-.06*strength;
+  joints.chest.roll=reduced?0:Math.sin((actor.age??0)*9)*.032*strength;
+  joints.head.pitch=.20+.18*strength;
+  joints.head.z=-recoil;
+  joints.head.roll=reduced?0:Math.sin((actor.age??0)*11)*.06*strength;
+  for(const side of [-1,1]){
+   joints['arm'+side]={py:SHOULDER,pitch:-.45-.2*strength,roll:side*(.20+.08*strength)};
+   joints['forearm'+side]={py:ELBOW,pitch:-.77-.12*strength,roll:side*.13};
+  }
  }else if(actor.mode==='trapped'){
   // Frustrated rhythmic pounding and head turns, retained in low-motion mode.
   const beat=reduced?0:Math.max(0,Math.sin((actor.age||0)*4.2));

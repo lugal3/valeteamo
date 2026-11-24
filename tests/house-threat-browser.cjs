@@ -41,7 +41,13 @@ const {chromium}=require('playwright');
   const errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   const url='http://127.0.0.1:'+server.httpServer.address().port+'/__house-threat';
-  const ready=()=>page.waitForFunction(()=>window.__rescueHouse&&document.querySelector('#lab-canvas')?.width>300);
+  const ready=async()=>{
+   await page.waitForFunction(()=>window.__rescueHouse&&document.querySelector('#lab-canvas')?.width>300);
+   if(process.env.EMY_THREAT_QA_LOW)await page.evaluate(()=>{
+    const field=document.querySelector('#lab-camera-settings [data-setting="quality"]');
+    if(field){field.value='low';field.dispatchEvent(new Event('input',{bubbles:true}));}
+   });
+  };
   const snapshot=()=>page.evaluate(()=>window.__rescueHouse.snapshot());
   const story=()=>page.evaluate(()=>window.__rescueHouse.story());
   const amenities=()=>page.evaluate(()=>window.__rescueHouse.amenities());
