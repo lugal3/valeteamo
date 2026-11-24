@@ -95,11 +95,13 @@ async function run(){
 
   await require('./helpers/fetch-ribbon.cjs')(page);
   assert.equal((await snapshot()).puzzle.note,false,'The study key needs no hall note');
-  await use('landing-cabinet');
+  // Torch is on top of the landing cabinet; this drawer contains no quest item.
+  // The rescue must not require opening an irrelevant drawer first.
   await use('media-flashlight',false);
-  await shot('00-linterna-dentro-del-cajon');
+  await shot('00-linterna-sobre-mueble');
   await use('media-flashlight');
-  assert.deepEqual(new Set((await checkpoint()).picked),new Set(['key','media-flashlight']));
+  assert.deepEqual(new Set((await checkpoint()).picked),new Set(['key','media-flashlight','screwdriver']),
+   'The vent screwdriver collected earlier must survive checkpoint saves too');
   await page.emulateMedia({reducedMotion:'no-preference'});
   await reloadHouse();
   assert.equal((await snapshot()).cinematic,false);
@@ -156,7 +158,18 @@ async function run(){
   for(const key of ['j','j','h','y','h','y','t'])await page.keyboard.press(key);
   await page.locator('[data-piano-mode="recital"]').waitFor();
   assert.notEqual((await checkpoint()).pianoSolved,true,'The red key waits for the performance');
-  await page.locator('[data-piano-mode="reveal"]').waitFor({timeout:50000});
+  // Reveal is a short animation and may be skipped between SwiftShader frames.
+  // Assert the durable puzzle solution instead of a transient CSS mode.
+  await page.waitForFunction(()=>window.__rescueHouse.pianoPuzzle().solved,null,
+   {timeout:90000}).catch(async error=>{
+    console.error('PIANO_QA_DIAGNOSTIC',JSON.stringify(await page.evaluate(()=>({
+     mode:document.querySelector('[data-piano-mode]')?.getAttribute('data-piano-mode'),
+     progress:window.__rescueHouse.pianoPuzzle(),
+     scene:window.__rescueHouse.snapshot(),
+     sound:window.__rescueHouse.story().samples
+    }))));
+    throw error;
+   });
   await page.getByRole('dialog',{name:'Piano antiguo'}).waitFor({state:'hidden'});
   await page.waitForFunction(()=>window.__rescueHouse.pianoPuzzle().compartment===1);
   assert.equal((await checkpoint()).pianoSolved,true);
@@ -191,7 +204,7 @@ async function run(){
 
   const beforeTrial=await read(RESCUE_KEY);
   await openMenu();
-  await page.getByRole('button',{name:'Casa 3D',exact:true}).click();
+  await page.getByRole('button',{name:/^Casa 3D/}).click();
   await page.locator('[data-act=start]').click();
   await waitForHouse();
   await use('note-hall');

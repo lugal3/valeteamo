@@ -21,7 +21,11 @@ const {chromium}=require('playwright');
   await page.getByText('Escenas y mecánicas aisladas',{exact:true}).click();
   await page.getByRole('button',{name:'Espejo',exact:true}).click();
   await page.locator('#lab-canvas').waitFor({timeout:25000});
-  await page.getByRole('button',{name:'Iniciar prueba'}).click();
+  // Starting the embedded house may schedule app navigation; do not wait for
+   // that unrelated document lifecycle. We explicitly wait for game readiness.
+   await page.getByRole('button',{name:'Iniciar prueba'}).click({noWaitAfter:true});
+   await page.waitForFunction(()=>!!window.__rescueHouse?.snapshot?.() &&
+    window.__rescueHouse.snapshot().paused===false,null,{timeout:20000});
   const toggle=page.getByRole('button',{name:'Elegir emote'});
   await toggle.waitFor({state:'visible',timeout:15000});
   const menu=page.locator('#house-emotes');
@@ -45,18 +49,20 @@ const {chromium}=require('playwright');
 
   // When headless Chromium grants pointer lock, M must release it before
   // the interactive HTML emote choices can receive physical mouse clicks.
-  await page.getByLabel('Ajustes de la casa').click();
-  const lock=page.locator('#house-lock-mouse');
-  if(await lock.isVisible()){
-   await lock.click();
-   await page.waitForTimeout(150);
-   if(await page.evaluate(()=>!!document.pointerLockElement)){
+  // Use the supported desktop R shortcut. The settings bar can be
+  // legitimately hidden during pointer lock and non-interactive moments.
+  // The test is about the keyboard/mouse capture flow, not toolbar visibility.
+  if(await page.evaluate(()=>!!document.pointerLockElement)){
+   await page.keyboard.press('Escape');
+   await page.waitForFunction(()=>document.pointerLockElement===null);
+  }
+  await page.keyboard.press('r');
+  if(await page.waitForFunction(()=>!!document.pointerLockElement,null,{timeout:3000}).then(()=>true,()=>false)){
     await page.keyboard.press('m');
     await menu.waitFor({state:'visible'});
     assert.equal(await page.evaluate(()=>document.pointerLockElement),null,
      'opening emote panel MUST release captured desktop mouse');
     await page.locator('#house-emotes [data-act="emote:stop"]').click();
-   }
   }
   assert.deepEqual(errors,[],'no browser errors during mouse/emotes interactions');
   await context.close();

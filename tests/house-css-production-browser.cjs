@@ -51,7 +51,9 @@ const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
       await passBirthdayCountdown(page);
       await page.locator('.playtest-menu[data-admin-panel="lp"]').waitFor();
       await page.locator('#lp-tres-d details').evaluateAll(groups=>groups.forEach(group=>{group.open=true;}));
-      const entry=page.getByRole('button',{name:blocked?'Casa 3D':scene,exact:true});
+      const entry=scene==='Casa 3D'||blocked
+        ?page.getByRole('button',{name:/^Casa 3D(?:\s|·|$)/})
+        :page.getByRole('button',{name:scene,exact:true});
       await entry.click();
       if(blocked){
        const fallback=page.locator('#lab3d .lab-error');

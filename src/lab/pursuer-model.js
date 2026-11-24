@@ -98,8 +98,13 @@ export function pursuerPose(actor,reduced=false){
   const breath=reduced?0:Math.sin(actor.age*2.2);
   joints.chest.pitch+=settled*(.07+breath*.016);
   joints.head.pitch+=settled*(.11+breath*.012);
- }else if(actor.mode==='investigate'&&!reduced){
-  joints.head.yaw+=settled*Math.sin(actor.age*2.8)*.21;
+ }else if(['investigate','trail-search','noise-investigate'].includes(actor.mode)&&!reduced){
+  // During a last-seen search the existing neck/torso mesh scans the nearby
+  // corners. No new geometry or extra WebGL draw calls on mobile.
+  const searching=actor.mode==='trail-search';
+  joints.head.yaw+=settled*Math.sin(actor.age*(searching?2.25:2.8))*(searching?.34:.21);
+  joints.head.pitch+=settled*(searching?.07:.035);
+  joints.chest.yaw+=settled*Math.sin(actor.age*1.15)*(searching?.075:.035);
  }
  for(const {side,cycle,foot} of feet){
   const dy=HIP+hips-ANKLE-foot.lift;

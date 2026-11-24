@@ -1,0 +1,94 @@
+name: ValeTeAmo V2 — auditoría integral (sin publicar)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'docs/VALETEAMO-V2-DEFECT-AUDIT.md'
+      - '.github/workflows/valeteamo-v2-release-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: valeteamo-v2-release-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  automated:
+    name: Código, puzles, colisiones y compilación
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Todas las pruebas de lógica
+        run: npm test
+      - name: Alcance real de objetivos y rutas entre pisos
+        run: node tests/house-space-audit.cjs
+      - name: Movimiento, perseguidor y sótano (rendimiento)
+        run: npm run test:perf
+      - name: Compilar frontend real
+        run: npm run build
+  playthrough:
+    name: Navegador ${{ matrix.scenario }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario:
+          - 2d-story
+          - 3d-checkpoints
+          - rc-rescue
+          - threat-hide
+          - mobile-input
+          - 3d-production
+          - emy-mobile
+          - emy-desktop
+          - emy-webkit
+          - subtle-glows
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Instalar navegador de prueba
+        run: npx playwright install chromium webkit --with-deps
+      - name: Preparar compilación para escenarios de producción
+        if: matrix.scenario == '3d-production'
+        run: npm run build
+      - name: Recorrer escenario
+        env:
+          EMY_QA_DIR: artifacts/v2/${{ matrix.scenario }}
+          EMY_QA_VIEWPORT: ${{ matrix.scenario == 'emy-desktop' && 'desktop' || 'mobile' }}
+          EMY_QA_ENGINE: ${{ matrix.scenario == 'emy-webkit' && 'webkit' || 'chromium' }}
+          V2_GLOW_QA_DIR: artifacts/v2/subtle-glows
+          RC_QA_DIR: artifacts/v2/rc-rescue
+          CHECKPOINT_QA_DIR: artifacts/v2/3d-checkpoints
+        run: |
+          case "${{ matrix.scenario }}" in
+            2d-story) node tests/prologue-browser.cjs ;;
+            3d-checkpoints) node tests/house-checkpoint-browser.cjs ;;
+            rc-rescue) node tests/rc-browser.cjs ;;
+            threat-hide) node tests/house-threat-browser.cjs ;;
+            mobile-input) node tests/house-input-browser.cjs ;;
+            3d-production) node tests/house-css-production-browser.cjs ;;
+            emy-mobile|emy-desktop|emy-webkit) node tests/emy-abilities-browser.cjs ;;
+            subtle-glows) node tests/visual-glow-browser.cjs ;;
+          esac
+      - name: Capturas y evidencias
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vale-v2-${{ matrix.scenario }}
+          path: artifacts/
+          if-no-files-found: ignore

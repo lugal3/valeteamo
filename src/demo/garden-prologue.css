@@ -211,3 +211,32 @@
  .story-prologue .prologue-interact{transition:none}
  .story-prologue .prologue-interact:active{transform:none}
 }
+
+/* V2 phase 08: compact chapter guidance, visually subordinate to navigation. */
+.story-prologue .prologue-act{
+ position:absolute;z-index:6;left:max(10px,env(safe-area-inset-left));
+ top:calc(max(8px,env(safe-area-inset-top)) + 78px);
+ display:flex;align-items:center;gap:7px;max-width:40vw;
+ padding:5px 9px;background:#211f36cb;color:#fff1e7;
+ border:1px solid #f7d6e065;border-radius:8px;pointer-events:none;
+ font:600 10px/1.25 system-ui;
+}
+.story-prologue .prologue-act strong{color:#ffc1d5;white-space:nowrap;letter-spacing:.08em}
+.story-prologue .prologue-act small{font:500 10px/1.25 system-ui;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.story-prologue .prologue-3d-handoff{
+ position:absolute;inset:0;z-index:100;display:flex;flex-direction:column;
+ align-items:center;justify-content:center;gap:9px;text-align:center;
+ background:#080914;color:#fff0e4;pointer-events:auto;
+ animation:prologue-final-fade 650ms ease-in both;
+}
+.story-prologue .prologue-3d-handoff span{font:700 12px/1.4 system-ui;color:#ffc0d8;letter-spacing:.17em}
+.story-prologue .prologue-3d-handoff strong{font:500 clamp(21px,4vw,34px)/1.3 Georgia,serif}
+.story-prologue .prologue-3d-handoff small{font:500 13px/1.4 system-ui;color:#f1d9dd}
+@keyframes prologue-final-fade{from{opacity:0}to{opacity:1}}
+@media(max-height:420px){
+ .story-prologue .prologue-act{top:calc(max(4px,env(safe-area-inset-top)) + 62px);font-size:9px;padding:4px 6px}
+ .story-prologue .prologue-act small{font-size:9px}
+}
+@media(prefers-reduced-motion:reduce){
+ .story-prologue .prologue-3d-handoff{animation:none}
+}

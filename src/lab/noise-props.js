@@ -1,5 +1,6 @@
 // Lightweight, deterministic props. Their small render batch stays separate from the full WebGL1 dynamic scene.
 import {blocked,groundHeight,segmentHitsBox} from './world.js';
+import {impactResponse,surfaceMaterial,throwSpeed} from './noise-materials.js';
 const SPECS=[
  ['glass-living','Vaso',2.45,.995,8.79,0,'glass'],
  ['plate-living','Plato',2.48,.95,9.43,0,'plate'],
@@ -36,10 +37,10 @@ export function holdNoiseProp(prop,camera){
  prop.z=camera.z+forward.z*.72-Math.sin(yaw)*.20;
  Object.assign(prop.box,{x:prop.x,y:prop.y,z:prop.z,roll:.22,pitch:.05});
 }
-export function releaseNoiseProp(prop,camera,throwing=true){
+export function releaseNoiseProp(prop,camera,throwing=true,power=1){
  if(!prop?.held)return false;
  prop.held=false;
- const speed=throwing?7:0,pitch=camera.pitch||0,cp=Math.cos(pitch);
+ const speed=throwing?throwSpeed(power):0,pitch=camera.pitch||0,cp=Math.cos(pitch);
  prop.flight={vx:Math.sin(camera.yaw)*cp*speed,vy:throwing?Math.sin(pitch)*speed+1.5:0,
   vz:Math.cos(camera.yaw)*cp*speed,ttl:2.2};
  return true;
@@ -80,20 +81,28 @@ export function stepNoiseProps(props,dt,world,pursuer,emy){
   const base=groundHeight(prop.x,prop.z,prop.floor,world.hatch?.amount>.92);
   // Swept segment against solid furniture and walls: objects no longer pass
   // through tabletops or barriers simply because the floor is lower.
-  const hitSurface=world.boxes.some(box=>box.solid&&
+  const struck=world.boxes.find(box=>box.solid&&
    Math.abs(box.x-(prev.x+prop.x)*.5)<box.w/2+.6&&
    Math.abs(box.z-(prev.z+prop.z)*.5)<box.d/2+.6&&
    Math.abs(box.y-(prev.y+prop.y)*.5)<box.h/2+.6&&
    segmentHitsBox(prev,prop,box,.035));
+  const hitSurface=Boolean(struck);
   const landed=!Number.isFinite(base)||prop.y<=base+.055||hitSurface||f.ttl<=0||hitEnemy;
   if(landed){
    prop.x=hitSurface?prev.x:prop.x;prop.z=hitSurface?prev.z:prop.z;
    prop.y=hitSurface?prev.y:Number.isFinite(base)?base+.055:prev.y;
    const impactSpeed=Math.hypot(f.vx,f.vy,f.vz);
+   const floorSurface=world.boxes.find(box=>!box.solid&&
+    Math.abs(box.x-prop.x)<box.w/2&&Math.abs(box.z-prop.z)<box.d/2&&
+    Math.abs(box.y-base)<.09&&['carpet','velvet'].includes(box.mat));
+   const surface=hitEnemy?'soft':surfaceMaterial(struck?.mat||floorSurface?.mat||'tile');
+   const response=impactResponse(prop.form,surface,impactSpeed);
    prop.flight=null;prop.spent=true;prop.interactable=false;
    if(hitEnemy)pursuer.stun(2.0);
-   else pursuer?.hearNoise({x:prop.x,y:Number.isFinite(base)?base:prop.floor,z:prop.z},1.3);
-   cues.push({kind:hitEnemy?'stun':'impact',at:{x:prop.x,y:prop.y,z:prop.z},level:Math.min(1.5,.9+impactSpeed*.06)});
+   else pursuer?.hearNoise({x:prop.x,y:Number.isFinite(base)?base:prop.floor,z:prop.z},response.alert);
+   cues.push({kind:hitEnemy?'stun':'impact',
+    at:{x:prop.x,y:prop.y,z:prop.z,material:response.material,surface:response.surface},
+    level:response.level,material:response.material,surface:response.surface,alert:response.alert});
   }
   Object.assign(prop.box,{x:prop.x,y:prop.y,z:prop.z,roll:prop.flight?prop.box.roll+step*9:1.2,pitch:prop.flight?prop.box.pitch+step*8:0});
  }

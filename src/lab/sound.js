@@ -268,17 +268,20 @@ export class HouseSound {
   const yaw=listener.yaw||0,dx=origin?origin.x-listener.x:0,dz=origin?origin.z-listener.z:0;
   const stereo=Math.max(-.85,Math.min(.85,(dx*Math.cos(yaw)-dz*Math.sin(yaw))/Math.max(1,distance)));
   if(kind==='clatter'){
+   const material=origin?.material||'ceramic',surface=origin?.surface||'hard';
+   const timbre=material==='glass'?1.32:material==='metal'?.78:material==='wood'?.55:1;
+   const softness=surface==='soft'?.42:surface==='wood'?.78:1;
    // PROVISIONAL crash for falling glass/ceramic: sharp attack, low impact
    // and two bright rattles. No samples/downloads or unbounded timers.
    // It must be audible through nearby walls, without becoming global.
    const impact=Math.min(.8,.60/(1+.06*distance*distance)*
-    (occluded?.68:1)*(floorMask*.75+.25)*Math.max(0,Math.min(1.5,level)));
+    (occluded?.68:1)*(floorMask*.75+.25)*Math.max(0,Math.min(1.5,level))*softness);
    const now=ctx.currentTime;
    for(const [i,hz] of [180,1250,1810,2560].entries()){
     const at=now+(i===0?0:i*.036),osc=ctx.createOscillator(),amp=ctx.createGain(),pan=ctx.createStereoPanner();
     osc.type=i===0?'triangle':'sine';
-    osc.frequency.setValueAtTime(hz,at);
-    osc.frequency.exponentialRampToValueAtTime(hz*(i===0?.61:.56),at+.14);
+    osc.frequency.setValueAtTime(hz*timbre,at);
+    osc.frequency.exponentialRampToValueAtTime(hz*timbre*(i===0?.61:.56),at+.14);
     amp.gain.setValueAtTime(.0001,at);
     amp.gain.exponentialRampToValueAtTime(Math.max(.0002,impact*(i===0?.8:1-i*.16)),at+.005);
     amp.gain.exponentialRampToValueAtTime(.0001,at+(i===0?.16:.21+i*.025));

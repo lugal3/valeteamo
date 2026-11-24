@@ -7,6 +7,11 @@ import {startLoisReaction,advanceLoisReaction} from './lois-ps2-reactions.js';
 import {KITCHEN_HIDE_APPROACH,KITCHEN_HIDE_SPOT} from './kitchen-hide-layout.js';
 
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
+const turnTowards=(current,target,dt,speed=7)=>{
+ const delta=Math.atan2(Math.sin(target-current),Math.cos(target-current));
+ const eased=delta*Math.min(1,Math.max(0,dt)*speed);
+ return current+clamp(eased,-Math.max(0,dt)*4.8,Math.max(0,dt)*4.8);
+};
 export const LOUIS_UNTIE_SECONDS=3.25;
 // Preserve the already tested basement climb, but once above ground go
 // AROUND the north tip of the rotated bar into the actual hiding lane.
@@ -27,7 +32,7 @@ export const LOUIS_HIDING_SPOT=KITCHEN_HIDE_SPOT;
 export const LOUIS_RESCUE_ROUTE=ROUTE;
 export function createLouisEscape(world){
  const point=ROUTE[0],y=groundHeight(point.x,point.z,-3.55,true);
- return {kind:'louis-companion',id:'louis-escape',label:'Louis rescatado',visualPreset:LOIS_VISUAL_ID,visualVariant:'photo-a',x:point.x,y,z:point.z,yaw:Math.PI,phase:'untying',waypoint:1,age:0,step:0,crouch:.33,concealed:false,interactable:false,walk:0,speed:0,blink:0,visualReaction:null,world};
+ return {kind:'louis-companion',id:'louis-escape',label:'Louis rescatado',visualPreset:LOIS_VISUAL_ID,visualVariant:'photo-a',x:point.x,y,z:point.z,yaw:Math.PI,phase:'untying',waypoint:1,age:0,step:0,crouch:.33,concealed:false,interactable:false,walk:0,speed:0,blink:0,visualReaction:null,untieBeat:0,world};
 }
 export function updateLouisEscape(louis,dt,kitty=null){
  if(!louis||dt<=0)return null;
@@ -38,6 +43,14 @@ export function updateLouisEscape(louis,dt,kitty=null){
  if(louis.phase==='follow')louis.crouch=Math.max(0,louis.crouch-dt*1.6);
  if(louis.phase==='untying'){
   louis.crouch=.33;
+  // Three one-shot, rig-native emotional beats: notice Kitty's hands,
+  // tense as the knot releases, then look up to recognize the rescuer.
+  // Never spawn new meshes or overwrite the approved Photo-A texture.
+  for(const [index,at,type] of [[1,.46,'reach'],[2,1.68,'startle'],[3,2.65,'look-kitty']]){
+   if(louis.untieBeat<index&&louis.age>=at){
+    louis.untieBeat=index;startLoisReaction(louis,type);
+   }
+  }
   if(louis.age>=LOUIS_UNTIE_SECONDS){louis.phase='climb';louis.age=0;louis.crouch=0;startLoisReaction(louis,'look-kitty');return 'untied';}
   return null;
  }
@@ -45,7 +58,11 @@ export function updateLouisEscape(louis,dt,kitty=null){
   const target=ROUTE[louis.waypoint];
   if(!target){
    louis.phase='hide';louis.age=0;louis.crouch=0;
-   louis.x=LOUIS_HIDING_SPOT.x;louis.z=LOUIS_HIDING_SPOT.z;
+   // Last waypoint is the physical hiding spot; only correct sub-centimetre
+   // positional drift to avoid a visible arrival teleport.
+   if(Math.hypot(louis.x-LOUIS_HIDING_SPOT.x,louis.z-LOUIS_HIDING_SPOT.z)<.06){
+    louis.x=LOUIS_HIDING_SPOT.x;louis.z=LOUIS_HIDING_SPOT.z;
+   }
    // Keep walking orientation; turn toward the panel during the crouch,
    // instead of snapping 90 degrees on the arrival frame.
    louis.speed=0;
@@ -67,7 +84,7 @@ export function updateLouisEscape(louis,dt,kitty=null){
   }
   const facing=Math.atan2(dx,dz);
   const difference=Math.atan2(Math.sin(facing-louis.yaw),Math.cos(facing-louis.yaw));
-  louis.yaw+=difference*Math.min(1,dt*8);
+  louis.yaw=turnTowards(louis.yaw,facing,dt,8);
   louis.walk+=moved;louis.speed=moved/Math.max(dt,.0001);
  }else if(louis.phase==='hide'){
   louis.crouch=Math.min(1,louis.age/1.1);
@@ -85,7 +102,7 @@ export function updateLouisEscape(louis,dt,kitty=null){
    const moved=navigate(body,louis.world,dx/d*move,dz/d*move,1.64);
    louis.x=body.x;louis.y=body.y;louis.z=body.z;
    const facing=Math.atan2(dx,dz),delta=Math.atan2(Math.sin(facing-louis.yaw),Math.cos(facing-louis.yaw));
-   louis.yaw+=delta*Math.min(1,dt*8);
+   louis.yaw=turnTowards(louis.yaw,facing,dt,8);
    louis.walk+=moved;louis.speed=moved/Math.max(dt,.0001);
    return null;
   }
@@ -96,7 +113,8 @@ export function updateLouisEscape(louis,dt,kitty=null){
   if(d>.55&&Math.abs(kitty.y-louis.y)<.7){
    const step=Math.min(d-.47,dt*3),body={x:louis.x,y:louis.y,z:louis.z};
    const moved=navigate(body,louis.world,dx/d*step,dz/d*step,1.60);
-   louis.x=body.x;louis.y=body.y;louis.z=body.z;louis.walk+=moved;louis.speed=moved/Math.max(dt,.0001);louis.yaw=Math.atan2(dx,dz);
+   louis.x=body.x;louis.y=body.y;louis.z=body.z;louis.walk+=moved;louis.speed=moved/Math.max(dt,.0001);
+   louis.yaw=turnTowards(louis.yaw,Math.atan2(dx,dz),dt,7);
   }
  }
  return null;

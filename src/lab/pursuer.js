@@ -2,6 +2,7 @@ import {blocked,groundHeight,lineBlocked,HEIGHT,HOUSE} from './world.js';
 import {navigate} from './navigation.js';
 import {indexNavigationColliders} from './navigation-collision.js';
 import {BED_EXIT,RISE_SECONDS} from './pursuer-model.js';
+import {canHearNoise,searchAroundLastSeen,TRAIL_SEARCH_SECONDS} from './pursuer-perception.js';
 
 const CELL=.4,dist=(a,b)=>Math.hypot(a.x-b.x,(a.y-b.y)*2,a.z-b.z);
 const GRID_COLUMNS=35,GRID_ROWS=38;
@@ -14,16 +15,26 @@ const CHASE_SECONDS=5.5,COOLDOWN_SECONDS=5;
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 export class Pursuer{
  constructor(world){this.world=world;this.reset();}
- reset(){this.breakerDelay=15;this.breakerGoal=null;this.intruderSeen=false;this.x=5.8;this.y=0;this.z=11;this.yaw=this.facing=Math.PI;this.mode='dormant';this.awareness=0;this.lost=10;this.witnessed=null;this.lastSeen=null;this.path=[];this.route=0;this.visited=0;this.replan=0;this.walk=this.speed=this.age=this.bedTime=0;this.stepDistance=0;this.caught=false;this.stuck=0;this.task=null;this.modeTime=0;this.quiet=false;this.noiseGoal=null;this.noiseRemaining=0;this.stunned=0;}
+ reset(){this.breakerDelay=15;this.breakerGoal=null;this.intruderSeen=false;this.x=5.8;this.y=0;this.z=11;this.yaw=this.facing=Math.PI;this.mode='dormant';this.awareness=0;this.lost=10;this.witnessed=null;this.lastSeen=null;this.path=[];this.route=0;this.visited=0;this.replan=0;this.walk=this.speed=this.age=this.bedTime=0;this.stepDistance=0;this.caught=false;this.stuck=0;this.task=null;this.modeTime=0;this.quiet=false;this.noiseGoal=null;this.noiseRemaining=0;this.stunned=0;this.trailPoints=[];this.trailIndex=0;this.trailRemaining=0;this.searchPause=0;}
  get active(){return this.mode!=='dormant';}
  hearNoise(position,intensity=1){
   if(!this.active||['dormant','sleeping','lying-down','rising','to-bed','to-entry','trapped','stunned','rc-chase','chase'].includes(this.mode))return false;
   if(!position||![position.x,position.y,position.z].every(Number.isFinite))return false;
   if(this.mode==='investigate'&&this.awareness>=.26)return false;
+  const origin={x:this.x,y:this.y+1.1,z:this.z};
+  const source={x:position.x,y:position.y+.4,z:position.z};
+  // Sound is not an omniscient map ping. Walls and floors reduce range;
+  // loud, purposeful Emy distractions can still be heard across the house.
+  if(!canHearNoise(origin,source,intensity,lineBlocked(this.world.boxes,origin,source)))return false;
   const changed=this.mode!=='noise-investigate'||!this.noiseGoal||dist(this.noiseGoal,position)>.6;
   this.noiseGoal={x:position.x,y:position.y,z:position.z};
   this.noiseRemaining=Math.max(this.noiseRemaining,Math.min(9,3+intensity*2.5));
-  if(changed){this.mode='noise-investigate';this.task=null;this.replan=0;this.path=[];}
+  if(changed){
+   this.mode='noise-investigate';this.task=null;this.replan=0;this.path=[];
+   this.trailPoints=[];this.trailIndex=0;this.trailRemaining=0;
+   // Hearing a sound only generates suspicion, never a confirmed sighting.
+   this.awareness=Math.max(.12,this.awareness);
+  }
   return true;
  }
  stun(seconds=2){
@@ -36,7 +47,25 @@ export class Pursuer{
  sleep(){this.mode='sleeping';this.speed=0;this.task=null;Object.assign(this,BED_EXIT,{facing:BED_EXIT.yaw});}
  wake(){this.mode='rising';this.bedTime=0;}
  resumeSearch(){this.task=null;this.mode='search';this.route=4;this.visited=0;this.clearSight();this.plan(SEARCH_ROUTE[this.route]);}
- clearSight(){this.witnessed=null;this.lastSeen=null;this.awareness=0;this.lost=10;}
+ clearSight(){
+  this.witnessed=null;this.lastSeen=null;this.awareness=0;this.lost=10;
+  this.trailPoints=[];this.trailIndex=0;this.trailRemaining=0;this.searchPause=0;
+ }
+ startTrailSearch(){
+  // Sample only the last *actually seen* coordinate. Never query hidden
+  // Kitty's live position to decide where the secuestrador should search.
+  const goal=this.lastSeen;
+  if(!goal)return false;
+  const hatchOpen=this.world.hatch?.amount>.92;
+  this.trailPoints=searchAroundLastSeen(goal,
+   (x,z,y)=>groundHeight(x,z,y,hatchOpen),
+   (x,y,z)=>!blocked(this.world.boxes,x,y,z,.16,1.72));
+  if(!this.trailPoints.length)return false;
+  this.mode='trail-search';this.trailIndex=0;this.searchPause=0;
+  this.trailRemaining=TRAIL_SEARCH_SECONDS;this.modeTime=TRAIL_SEARCH_SECONDS;
+  this.replan=0;this.path=[];this.task=null;
+  return true;
+ }
  cooldown(){this.clearSight();this.mode='cooldown';this.modeTime=COOLDOWN_SECONDS;this.replan=0;this.noiseGoal=null;this.noiseRemaining=0;}
  settleUpstairs(){this.quiet=true;this.task=null;this.route=3;this.cooldown();}
  checkpoint(){
@@ -119,14 +148,26 @@ export class Pursuer{
    return cues;
   }
   this.modeTime=Math.max(0,this.modeTime-dt);
-  const bait=decoy?.active&&(decoy.noisy||this.canSee(decoy));
+  // Confirmed pursuit of Kitty outranks a new RC lure. An unconfirmed
+  // rustle may still be overridden by the RC or Emy distraction.
+  const kittyVisible=this.canSee(p);
+  const confirmedKitty=kittyVisible&&(
+   this.mode==='chase'||this.awareness>=.85||
+   Math.abs(this.y-p.y)<.65&&Math.hypot(this.x-p.x,this.z-p.z)<1.25);
+  if(confirmedKitty&&this.mode==='rc-chase'){
+   // Spotting Kitty at close range cancels the toy decoy. A sound alone
+   // does not grant knowledge of Kitty's hidden position.
+   this.mode='investigate';this.awareness=Math.max(.75,this.awareness);
+   this.modeTime=3;this.replan=0;this.path=[];this.task=null;
+  }
+  const bait=decoy?.active&&!confirmedKitty&&(decoy.noisy||this.canSee(decoy));
   if(bait){
    if(this.mode!=='rc-chase'){this.mode='rc-chase';this.replan=0;}
    this.lastSeen={x:decoy.x,y:decoy.y,z:decoy.z};this.task=null;this.witnessed=null;
    this.modeTime=6;
   }else if(this.mode==='rc-chase'&&this.modeTime===0)this.cooldown();
-  const inPatrol=['search','patrol-rest','cooldown','investigate','chase','noise-investigate'].includes(this.mode);
-  const inSight=inPatrol&&!this.task&&this.canSee(p);
+  const inPatrol=['search','patrol-rest','cooldown','investigate','chase','noise-investigate','trail-search'].includes(this.mode);
+  const inSight=inPatrol&&!this.task&&kittyVisible;
   if(inSight){
    this.intruderSeen=true;this.breakerGoal=null;
    if(this.mode==='patrol-rest'||this.mode==='cooldown'){this.mode='search';this.replan=0;}
@@ -144,14 +185,34 @@ export class Pursuer{
   if(visible){this.lastSeen={x:p.x,y:p.y,z:p.z};if(p.entering)this.witnessed=p.hideId;}
   const witnessed=!!this.witnessed&&(p.hidden||p.entering)&&this.witnessed===p.hideId;
   if(!p.hidden&&!p.entering)this.witnessed=null;
-  if(['search','noise-investigate'].includes(this.mode)&&(this.awareness>=.26||witnessed)){
+  if((['search','noise-investigate'].includes(this.mode)&&
+    (this.awareness>=.26||witnessed))||
+   (this.mode==='trail-search'&&visible&&this.awareness>=.26)){
    this.mode='investigate';this.modeTime=3;this.replan=0;cues.push('investigate');
   }
   if((this.awareness>=1||witnessed)&&this.mode==='investigate'){
    this.mode='chase';this.modeTime=CHASE_SECONDS;this.replan=0;cues.push('spotted');
   }else if(this.mode==='chase'&&(!visible&&!witnessed&&(this.modeTime===0||this.lost>2))){
-   this.cooldown();cues.push('lost');
-  }else if(this.mode==='investigate'&&this.modeTime===0)this.cooldown();
+   if(!this.startTrailSearch())this.cooldown();
+   cues.push('lost');
+  }else if(this.mode==='investigate'&&this.modeTime===0){
+   if(!visible&&!witnessed&&this.lastSeen&&this.lost<6){
+    if(!this.startTrailSearch())this.cooldown();
+   }else this.cooldown();
+  }
+  if(this.mode==='trail-search'){
+   this.trailRemaining=Math.max(0,this.trailRemaining-dt);
+   if(!this.trailRemaining||this.trailIndex>=this.trailPoints.length)this.cooldown();
+   else if(this.searchPause>0){
+    // The enemy visibly pauses and looks rather than checking five
+    // suspicious points in a single frame. Awareness can still reacquire
+    // a truly visible Kitty earlier in this update.
+    this.searchPause=Math.max(0,this.searchPause-dt);
+    this.age+=dt;this.speed*=Math.exp(-8*dt);
+    this.facing+=Math.sin(this.age*2.2)*dt*.23;
+    return cues;
+   }
+  }
   if(bait&&Math.abs(this.y-decoy.y)<.55&&Math.hypot(this.x-decoy.x,this.z-decoy.z)<.75){this.mode='search';this.lastSeen=null;cues.push('rc-hit');return cues;}
   const contact=witnessed?(p.hideExit||p):p;
   if(this.mode==='chase'&&(witnessed||(visible&&!cues.includes('spotted')))&&Math.abs(this.y-contact.y)<.65&&Math.hypot(this.x-contact.x,this.z-contact.z)<(witnessed?1.1:.92)){
@@ -171,7 +232,11 @@ export class Pursuer{
    }
   }
   this.replan-=dt;
-  const target=this.task||this.breakerGoal||(this.mode==='noise-investigate'?this.noiseGoal:null)||(this.mode==='rc-chase'||this.mode==='investigate'||this.mode==='chase'?witnessed?(p.hideExit||this.lastSeen):this.lastSeen:SEARCH_ROUTE[this.route]);
+  const target=this.task||this.breakerGoal||
+   (this.mode==='noise-investigate'?this.noiseGoal:null)||
+   (this.mode==='trail-search'?this.trailPoints[this.trailIndex]:null)||
+   (['rc-chase','investigate','chase'].includes(this.mode)?
+    witnessed?(p.hideExit||this.lastSeen):this.lastSeen:SEARCH_ROUTE[this.route]);
   if(!target)return cues;
   if(this.replan<=0&&(this.mode==='chase'||this.mode==='rc-chase'||this.mode==='noise-investigate'||!this.path.length||this.stuck>.5||!this.goal||dist(target,this.goal)>.5))this.plan(target);
   for(const door of this.world.objects)if(door.kind==='door'&&door.state!=='open'&&Math.abs(door.y-1.1-this.y)<1.2&&Math.hypot(door.x-this.x,door.z-this.z)<1.6)onDoor(door);
@@ -191,6 +256,12 @@ export class Pursuer{
     }else if(Math.abs(turn)<.09){this.sleep();this.mode='lying-down';this.bedTime=0;}
    }
    else if(this.mode==='to-entry')cues.push('at-entry');
+   else if(this.mode==='trail-search'){
+    this.trailIndex++;this.replan=0;this.path=[];this.searchPause=.72;
+    // No supernatural leap from a checked cupboard to Kitty's new location:
+    // continue through a few safe, locally sampled points only.
+    if(this.trailIndex>=this.trailPoints.length)this.cooldown();
+   }
    else if(this.mode==='search'||this.mode==='cooldown'){
     this.visited++;this.route=(this.route+1)%(this.quiet?QUIET_ROUTE_END:SEARCH_ROUTE.length);
     this.path=[];this.replan=0;
@@ -203,5 +274,5 @@ export class Pursuer{
   this.facing+=Math.atan2(Math.sin(turn),Math.cos(turn))*(1-Math.exp(-12*dt));
   return cues;
  }
- snapshot(){return {...this.checkpoint(),yaw:this.yaw,mode:this.mode,modeTime:this.modeTime,awareness:this.awareness,lost:this.lost,walk:this.walk,speed:this.speed,age:this.age,bedTime:this.bedTime,active:this.active,witnessed:this.witnessed,path:this.path.length,caught:this.caught,stunned:this.stunned};}
+ snapshot(){return {...this.checkpoint(),yaw:this.yaw,mode:this.mode,modeTime:this.modeTime,awareness:this.awareness,lost:this.lost,walk:this.walk,speed:this.speed,age:this.age,bedTime:this.bedTime,active:this.active,witnessed:this.witnessed,path:this.path.length,caught:this.caught,stunned:this.stunned,searching:this.mode==='trail-search',searchStops:this.trailPoints.length-this.trailIndex};}
 }

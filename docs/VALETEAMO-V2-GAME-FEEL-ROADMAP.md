@@ -1,0 +1,214 @@
+# ValeTeAmo V2 — Game Feel & World Polish
+
+**Base:** `main` at `fbd78676715bff090283140d34bf55725b41072a`  
+**Integration branch:** `feature/valeteamo-v2-game-feel-integral`  
+**Release policy:** No merging into `main` and no Firebase production deploy until all phases, regression checks, and user approval. Classic 2D `Corazones` must remain untouched.
+
+## Working agreement
+
+Each numbered phase is a **complete vertical slice** (implementation + animation/UI/audio integration + automated regression + manual/browser evidence). Commit each phase separately to this same branch, update this file, keep existing systems instead of replacing them, and do **not** create a parallel implementation. There is no promise of a background run: phases are implemented in active work sessions. Merge only at the end.
+
+**Non-negotiable:** Preserve the custom WebGL1 house renderer; Phaser 2D, legacy `Corazones`, the intro through the front window, Louis and Emy rigs, RC/signal/noise, world physics, saves/checkpoints, the two existing endings, and mobile-first performance. No forced teleports or invisible geometry hacks.
+
+## Progress
+
+| Phase | Workstream | Status | Main acceptance gate |
+|---|---|---|---|
+| 01 | **Emy + hides / unfair failures** | **DONE — QA passed** | Kitty hides independently of cat arrival; Emy distracts on another floor and waits silently if Kitty stays hidden; no lost life from a cat wait |
+| 02 | **Kitty movement, physics, camera** | **DONE — QA passed** | Grounded acceleration/deceleration, turn/crouch transitions, robust stairs, camera collisions/comfort and mobile input |
+| 03 | **Pursuer perception + fair stealth AI** | **DONE — QA passed** | Separate sight/hearing/suspicion/chase/search states, last-seen positions, visible-door logic and unbiased hide searching |
+| 04 | **Emy's autonomous personality** | IMPLEMENTED — QA pending | Sit, groom, stretch, orient ears to noise, cautious follow, “Quédate aquí”, safe hold, consistent cross-floor routing |
+| 05 | **House environmental life** | IMPLEMENTED — QA pending | Identity of every room, small ambient props, lighting, wind/dust, performant atmosphere without clutter |
+| 06 | **Throwable objects + sound/material physics** | IMPLEMENTED — QA pending | Glass/ceramic/metal/wood/carpet responses, controlled throw strengths, predictable collisions, noise investigation |
+| 07 | **RC controls, camera, and strategy** | IMPLEMENTED — QA pending | Smoother drive and camera; suspension/bumps, legible tablet HUD, horn, combined RC/Emy tactics |
+| 08 | **2D flow, storytelling and 2D→3D transition** | IMPLEMENTED — QA pending | Kawaii day→night pacing, credible meeting/kidnap, no pop-ins, coherent front window, seamless house handoff |
+| 09 | **Louis, puzzles and progression** | IN PROGRESS — QA pending | Natural rescue/companion animations, verified cover and body rig, contextual dialogue, progressive puzzle hints/checkpoints |
+| 10 | **Cinematics, endings and reactive audio** | IN PROGRESS — QA pending | Understandable Emy-rescue and escape/loss cutscenes, synchronized spatial audio, proper camera framing on PC/iPhone |
+| 11 | **HUD, tutorials, accessibility and mobile feel** | IN PROGRESS — QA pending | Clean contextual controls, phone/hotbar, orientation/safe areas, motion/audio/text options |
+| 12 | **Optimization, playthrough QA and release** | IN PROGRESS — CI and manual QA pending | Full automated/manual end-to-end test matrix, capture evidence, compare baselines, PR review, then merge and deploy |
+
+### Phase details & completion criteria
+
+#### 01 — Kitty safety and Emy independence
+- Remove coupling in `house.js/updateHiding` that repeatedly restarts a seven-second grace period when Emy moves.
+- Kitty enters the wardrobe in the existing player animation time even if Emy is downstairs, chasing a decoy, returning, or stuck.
+- When Emy is nearby, keep her optional physical closet animation but never hold Kitty's entrance.
+- While Kitty is hidden, an Emy distraction keeps its **25-second** noise cycle and its pursuer investigation priority. When finished, she stays quietly in place until Kitty emerges rather than walking loudly toward the wardrobe.
+- When Emy is far away and Kitty hides, she waits safely instead of hiking cross-floor to the hiding spot. When Kitty emerges, resume normal pathfinding, no teleport.
+- Tests: far floor, close wardrobe, remote distraction, distraction finishes while hidden, unhide/rejoin, save compatibility.
+
+#### 02 — Movement and camera
+- Smooth speed transitions on stick/keyboard; locomotion and first-person hand timing, crouch and obstacle response.
+- Prevent door-frame and stair clamping/teleport artifacts; smooth camera yaw/pitch and optional reduced bob.
+- Verify touch+mouse+keyboard in the same state machine; maintain predictable turning with consistent FOV and sensitivity.
+- Tests: collisions at stairs, locked door, hidden and camera reset; quality-low performance.
+
+#### 03 — Pursuer AI
+- True suspicion vs investigation vs confirmed line-of-sight chase; start alert on confirmed sighting.
+- Retain last visible location and search locally, not player coordinates through obstacles; respect audio occlusion and floor.
+- Wardrobe searching only if evidence (saw Kitty enter / strong noise), not an automatic penalty; RC and Emy noise precedence explicitly documented.
+- Tests: corner escape, wardrobe unseen/seen, remote sound, distraction, multi-floor patrol.
+
+#### 04 — Emy as companion
+- Additional “Quédate aquí” command; return/release, patience and optional cautious routes.
+- Rig-only behavioral idles (blink, stretch, groom, ear reactions) with a bounded animation budget.
+- Maintain one authority per mode: distract, fetch, hide, hold, follow, rescue; no double-driven transform.
+- Test multiple floor changes, obstructions, story events, reduced motion and saves.
+
+#### 05 — Environmental storytelling
+- Room-specific silhouettes and props (kitchen, study, bath, upper hall, bedroom), sparse reactive detail and safe collision volumes.
+- Animated curtains/clock/lamp flicker/dust within WebGL1 and mobile budgets; distinguish clue props from ambience.
+- Test no occlusion of puzzle interactions and house navigation.
+
+#### 06 — Objects and materials
+- Physical interactions distinguish glass, ceramic, metal, wood and soft surfaces; optional glass break is audiovisual only unless authored cleanup.
+- Pick-up/aim/throw/put-down cues with strength bounded by accessibility controls; deterministic collision and AI noise.
+- Tests: collisions, Emy dodge, pursuer stun and FPS bounds.
+
+#### 07 — RC
+- Smooth camera/controls, horn, light hints and wheel/suspension reactions.
+- Tablet HUD legibility, RC state and recoverability, clear AI distraction feedback; Emy and RC combination without overriding Kitty.
+- Tests: RC basement/stairs, trap, recovery, chase precedence, mobile.
+
+#### 08 — Prologue
+- Strengthen escalation from day to night; character schedules, coherent scream/rescue and van scene.
+- Avoid instant NPC/enemy pop-in; ensure clues, waypoints and front window remain accessible and map-aligned.
+- Test heart→2D, intro, Churu, Louis, van LUNA-07, 2D→3D handoff and classic 2D preservation.
+
+#### 09 — Louis/puzzles
+- Natural fear/idle/cover reactions with clean limbs/ears/neckline; safe under-bar pose and rig geometry budget.
+- Progressive glow hints tied to actual drawer, screwdriver, vents, notes and discovered clues; checkpoint-safe puzzle state.
+- Tests: complete puzzles, hidden model, three rig perspectives and story saves.
+
+#### 10 — Audio/cinematics
+- Distinct clear shots: discovery, Emy rescue, Louis escapes; no actor hidden behind a facade or lens.
+- Spatial footfalls, floors/doors and dynamic but sparse tension; captions and ducking priority.
+- Test both endings and one-time bonus save reload; audio disabled/low-power.
+
+#### 11 — UI/UX
+- Consolidate noisy controls and keep the pink phone/hotbar style; larger touch targets on landscape iPhone.
+- Accessibility: motion-reduction, text sizes, contrast, interaction indicator intensity and audio mix.
+- Test portrait handling, focus, mouse/touch, pause/return and no overlapping layers.
+
+#### 12 — Final QA / release
+- `npm ci`, `npm test`, `npm run test:perf`, `npm run build`, `npm run test:browser` (as available), browser Chromium mobile/desktop and WebKit.
+- Full run beginning in cosmos, entering 2D, finding Louis, kidnapping, front-window 3D, rescuing Louis, RC, both endings, 0→Emy extra life, and all hiding modes.
+- Screenshot/video evidence of key visual sequences and CPU/GPU budget; audit checkpoint compatibility and no changes to classic `Corazones`.
+- On green tests plus final review: merge this PR into `main`, verify Firebase live deployment. Do not declare unexecuted checks successful.
+
+## Current baseline issue (Phase 01)
+
+`house.js/updateHiding` waits on Emy movement while entering wardrobe. Since `catMovedAt` is reset whenever Emy moves by over 8 cm, the player camera can be locked open indefinitely while Emy crosses floors. Fix by removing the **dependency entirely**, not by merely lowering the timeout.
+
+## Phase 01 implementation & verification (completed)
+
+- Removed the player-facing wardrobe wait on Emy travel, without changing hide collision or classic animation timing.
+- Companion's remote `hold` state is silent and transient, allowing an active 25s distraction to finish on a different floor; rejoins when Kitty emerges.
+- `tests/emy-hide-independence.cjs` verifies two-floor hiding, hiding independent of arrival, full distraction, no cat warp, and save/load compatibility.
+- [CI](https://github.com/lugal3/valeteamo/actions/runs/45424926734): green full emy-abilities suite (general + perf + build + Chromium mobile/desktop, WebKit, threat/hide regression). Cosmos E2E browser has a separate pre-existing unresolved failure; track at Phase 08/12.
+
+## Phase 02 code changes
+
+- `src/lab/locomotion-feel.js`: analogue move intent with separate acceleration/braking/reversal, normalized diagonals, smooth sprint/crouch speeds, small touch deadzone, pre-stair speed cap, visual-only floor smoothing and frame-rate-independent crouch height.
+- `src/lab/house.js`: integrate into existing world navigator; keep player collider grounded immediately, separate visual camera floor from collision physics; sync visual floor on intro, save reload and trial teleport; brake quickly after key/touch release; easier touch sprint activation with hysteresis.
+- `src/lab/camera-controls.js`: shortest-path yaw between equivalent ±π positions, preserving desktop pointer settings and existing pitch behavior.
+- `tests/locomotion-feel.cjs`: 30/60/120Hz comparison, diagonal cap, reversal, stopping, sprint blend, touch drift, camera angle seams, crouch and real two-way stair collisions.
+- `tests/emy-abilities-browser.cjs`: PC/mobile keyboard movement, braking, upstairs view alignment, and phone touch joystick + sprint-release regression across browsers.
+- Existing navigation/collision geometry and scripted cinematics are unchanged. No 2D content touched in this phase.
+- **Gate:** complete phase 02 tests passed in [CI](https://github.com/lugal3/valeteamo/actions/runs/45428140571), including unit/perf/build, Chromium mobile/desktop, WebKit and hiding regressions.
+
+## Phase 03 implementation and validation (completed)
+
+- `pursuer-perception.js` defines bounded acoustic hearing with wall/door occlusion and floor separation; noisy 25-second Emy distractions still carry between floors.
+- `pursuer.js` retains only confirmed last-seen coordinates, transitions from chase to a finite seven-second `trail-search`, visits passable nearby points and pauses to inspect corners. Unseen wardrobe hiding is never known by magic; witnessed hiding remains dangerous. Searches stop and resume ordinary patrol.
+- `pursuer.js` handles RC priority without overriding already-confirmed proximity to Kitty and preserves the existing trapped, stunned, rest, bedtime and cut-power story modes.
+- `pursuer-model.js` animates the existing head/torso when investigating without new geometry or WebGL draw calls; reduced-motion mode remains supported.
+- `house.js` HUD separates pursuit, last-seen search, suspected movement and sound-investigation alerts, preserving the first-to-play danger sound when sighting is confirmed.
+- Regression tests in `tests/pursuer-perception.cjs`, `tests/pursuer.cjs`, `tests/emy-abilities-noise.cjs` and pre-existing browser threat regression cover occlusion, cross-floor sound, local search, safe hiding, RC behavior, legacy patrol, movement, Emy and sound.
+- **Final gate:** [CI #45432388808](https://github.com/lugal3/valeteamo/actions/runs/45432388808) **PASS**: `npm test`, `npm run test:perf`, `npm run build`, Chromium mobile, Chromium desktop, WebKit mobile, real threat/hide browser regression and artifact evidence. Cosmic browser E2E is a separate known failing workflow inherited from `main`; track in phase 08/12.
+- **Release:** not merged, not deployed. Continue from phase 04 in the same branch/PR.
+
+## Phase 04 implementation (QA pending)
+
+- Added an explicit `stay` stage separate from automatic quiet `hold`; the cat remains in place across floors, hiding and save/reload, with a `Sígueme` release command.
+- Reused existing sit, groom and stretch poses for deterministic low-overhead idle cycles, with head tracking and reduced-motion handling. No new geometry or engine replacements.
+- The player interacts with Emy in `following` and `stay` states. Distraction/fetch/rescue are not interrupted; object dodge still has priority.
+- New `tests/emy-autonomy.cjs` is included in `npm test`, covering commands, floor separation, hiding, poses, save restore, normal stair follow and distraction conflicts.
+- **Validation not yet claimed:** CI / browser regression must pass before marking this phase DONE; keep branch and PR unmerged.
+
+## Phase 05 implementation (QA pending)
+
+- Installed `src/lab/house-ambient-details.js` with **13 visual-only objects** (four curtain panels, three dust flecks, six room-specific still-life details). No colliders, triggers, or new art textures; no change to story, legacy 2D or room topology.
+- `renderer.js` animates seven small details in the **existing WebGL1 dynamic geometry batch**, with deterministic math, reduced-motion support and no shadow casting; no separate particle system.
+- Added `tests/house-ambience.cjs` to `npm test`: checks identifiers, floors, visual-only flags, limited dynamic budget and shared batching.
+- **QA pending**: verify `npm test`, `test:perf`, `build`, mobile/desktop Chromium and WebKit. Do not mark completed or merge until CI is green.
+
+## Phase 06 — controlled throw, material sound and reaction (QA pending)
+
+- Introduced `noise-materials.js` for bounded, deterministic light/normal throw strength and glass/ceramic/metal/wood impact responses versus soft/wood/metal/hard surfaces.
+- Existing physics, collision checks, Emy evasions, pursuer stun and positional investigation remain authoritative. Each object still emits a single impact with location, material, surface and acoustic intensity; soft surfaces lower the AI alert.
+- Added **Lanzar suave** to the object HUD, without changing the existing G throw or V drop shortcut.
+- The existing WebAudio `clatter` synthesizer varies impact pitch/attenuation from the impact context, with no additional downloads or asset files.
+- Added `tests/noise-materials.cjs` to the complete `npm test` run.
+- **Important phase 05 correction:** an initial GitHub Actions run failed the saturated 16-bit WebGL1 dynamic mesh budget. Decor details were changed to static, preserving navigation/visual accents without consuming dynamic vertex indices. Animated curtains/dust are intentionally deferred until a separate budget-safe solution exists; do not claim their animation as delivered.
+- **Validation:** current commit's CI/browser tests not yet verified. No release or merge.
+
+## Phase 07 implementation — RC driving feel (QA pending)
+
+- Progressive throttle, deceleration and reverse with capped steering interpolation; existing `navigate` remains authoritative for walls, floors, slopes and the basement.
+- RC chase-camera smoothing using shortest-angle interpolation, with a jump/recovery reset and respect for reduced-motion settings. Camera fallback against walls remains in `rcCamera`.
+- Tablet signal text distinguishes connected driving from active decoy. Original horn duration, RC trap, recovery, Emy distraction independence, mobile joystick and G/keyboard controls remain wired as before.
+- Added tests in `tests/rc-game-feel.cjs` to `npm test`, covering throttle response, coasting, reverse, turning, horn, yaw seam, camera reset and stop state.
+- **Not yet verified:** complete test/perf/build and mobile/desktop/WebKit visual QA; release remains blocked. More precise wheel suspension animation and advanced combined Emy/RC tactics have not yet been delivered.
+
+## Phase 08 progress — story presentation and transition (QA pending)
+
+- Existing original Phaser `StoryGame/IsoAdventure` scenes, day/afternoon/dusk/night, real masked-kidnapper van and physically reachable 3D house route are deliberately preserved; no recreation of a second 2D engine.
+- Added `prologue-beats.js`: deterministic, UI-only Act I / interlude / Act II / Act III guidance; every stage belongs to exactly one group. Original save schema and branching remain unchanged.
+- Added compact responsive chapter label to the existing `GardenPrologue` UI, and a 720 ms dark window-to-3D handoff using the current 2D scene before mounting 3D; reduced-motion enters immediately and lifecycle cleanup removes delayed callbacks.
+- Added `tests/prologue-v2-beats.cjs` to `npm test`, covering stage mapping, original Phaser engine, saved stage, reduced-motion handoff and cleanup.
+- **QA pending**: Vite/TypeScript build and browser testing on desktop and iPhone. Additional 2D map/animation polish is still to be completed before Phase 08 can be called finished.
+
+## Phase 09 progress — Louis character and rescue choreography (QA pending)
+
+- Preserve the **existing Photo-A face texture, articulated rig and 3D model**; no visual variant switches, skeletal changes or increased mesh counts.
+- Added three precisely timed, single-use native rig reactions while Kitty unties Louis: reaching toward Kitty, startling at the knot, then looking toward his rescuer. These motions are driven through `lois-ps2-reactions.js` and do not add meshes or affect the camera director.
+- Smoothed Louis' yaw rotation during climb and follow, including ±π angle wrap. Existing collision-aware kitchen-bar routes, crouching, trap, escape and finale remain intact; arrival correction cannot teleport Louis across the room.
+- Added `tests/louis-rescue-feel.cjs` to `npm test` to verify facial beats, full physical escape route, no instantaneous turns or teleport and continued Photo-A use.
+- Fixed **Phase 08 CI compilation failure** TS7016 by adding `src/demo/prologue-beats.d.ts` for the JS chapter indicator imported into a TypeScript React component.
+- **QA pending:** complete build, node tests, perf suite, real desktop/iPhone browser playthrough; additional puzzles polishing is not yet completed. No merge or deployment.
+
+### Phase 09 puzzle guidance addendum
+
+- `housePuzzleHint()` generates state-dependent clues for the bedroom lock and Louis' rescue without changing the authoritative `puzzleEvent` or `canRescue` gates.
+- Blocked interactions now explain the *next clue* instead of always repeating generic directions; key, door and rescued checkpoints remain safe.
+- `tests/house-puzzle-hints.cjs` added to `npm test`.
+
+## Phase 10 progress — finale reactive audio (QA pending)
+
+- Added `src/lab/cinematic-cues.js` with five bounded, deterministic, one-shot events for the real escape ending: distant footsteps/threat, Emy's intervention, cloth collision, escape footsteps and safety notification.
+- Integrated timeline in `house.js` using the existing positional `play()` audio pipeline and opt-in `caption()`. Previous double-play of the 1.7 s Emy cry/cloth effect was removed; callbacks remain paused with the current scene state.
+- The real `poseEscapeAmbush`, final cinematic director, escape path, rescued actors, success gate, life system and persistent puzzle flags are unchanged.
+- Added `tests/cinematic-cues.cjs` to `npm test` for monotonically ordered events, exactly-once playback, large frame leaps, pausing and unchanged cinematic gating.
+- **Phase 09 bug fixed:** latest CI failed `louis-rescue-feel.cjs` because the turn eased too quickly with a large yaw difference; follow/climb turning now also has a 4.8 rad/s angular velocity ceiling.
+- **Validation pending:** GitHub Actions on current head, visual/lip-sync timing PC/iPhone, full gameplay and additional loss/capture cinematics. No merge or deployment.
+
+## Phase 11 progress — contextual HUD and mobile accessibility (QA pending)
+
+- Added `hud-context.js` with short platform-aware RC driving, horn, trap, throwable and threat instructions. These are rendered in existing game HUD overlays, not extra popups or a separate controller.
+- Widened landscape mobile safe-area handling, increased RC touch targets, added high-contrast keyboard focus and hiding enforcement for transient overlays. Reduced-motion options remain authoritative.
+- Threat status now has a meaningful accessibility label while preserving the existing live warning and chase state handling.
+- Added `tests/hud-game-feel.cjs` to `npm test` for platform instructions, trap control, safe areas, screen-reader labels and overlay hiding.
+- **Pending:** full automated build, real-device landscape hit testing, voiceover/keyboard testing, screenshots and existing phase regressions. No merge or release.
+
+### Phase 11 browser regression repair
+
+- The last Phase 10 browser CI failed in `tests/emy-abilities-browser.cjs` at the old assumption that handheld throwable controls contain two buttons. The Phase 06 feature added the third soft-throw action, so the browser test now explicitly checks all three existing actions (normal throw, soft throw, drop). This is a test expectation update, not the removal of any gameplay control.
+
+## Phase 12 — integrated QA rollout (release still blocked)
+
+- Added dedicated **read-only** GitHub workflow `.github/workflows/valeteamo-v2-release-qa.yml`, splitting `npm test` / `test:perf` / `build` from parallel, separately reported 2D story, 3D checkpoint, RC rescue, threat/hide, mobile input, production CSS and Emy Chromium mobile/desktop + WebKit runs. Artifacts are collected per scenario.
+- Strengthened full `prologue-browser.cjs` with Act I/III and real unmount of 2D when 3D takes over; strengthened Emy browser QA with actual throwable instruction visibility.
+- Fixed an observed cosmic CI `emotes-browser.cjs` timeout when Playwright waited for an unrelated navigation after clicking the start button; the test now clicks physically and waits for the real house snapshot to become unpaused.
+- Full release checklist and known risks: `docs/VALETEAMO-V2-RELEASE-AUDIT.md`. All stages 04–11 still need feature-completeness and visual/performance review; static ambience is intentional, RC suspension/combined tactics are not delivered.
+- **Never treat workflow dispatch, test registration or source upload as passing QA.** Merge/deploy require actual all-green results, visual manual approval, and audio permissions review.

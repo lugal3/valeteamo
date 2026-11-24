@@ -138,13 +138,85 @@ const {chromium,webkit}=require('playwright');
   await page.evaluate(item=>window.__rescueHouse.interactWith(item),item);
   let objects=await page.evaluate(()=>window.__rescueHouse.noiseProps());
   assert(objects.find(p=>p.id===item).held,'The glass is held after interacting');
-  assert.equal(await page.locator('#house-noise-controls button').count(),2);
+  // The HUD publishes context help on its next render frame; WebKit software
+  // WebGL may schedule that frame after the synchronous interaction callback.
+  await page.waitForFunction(()=>/Toca Lanzar|G: lanzar/.test(
+   document.querySelector('#house-noise-hint')?.textContent||''),null,{timeout:8000});
+  assert.match(await page.locator('#house-noise-hint').innerText(),/Toca Lanzar|G: lanzar/,
+   'HUD explains throwable controls for the active input device');
+  assert.equal(await page.locator('#house-noise-controls button').count(),3,
+   'Throw, soft throw, and drop must all be present for mobile and desktop');
+  for(const action of ['noise:throw','noise:lob','noise:drop'])
+   assert.equal(await page.locator('#house-noise-controls [data-act="'+action+'"]').count(),1,
+    'Each throwable action remains reachable: '+action);
   await shot(page,'04-objeto-en-mano');
   await page.locator('#house-noise-controls [data-act="noise:throw"]').click();
   objects=await page.evaluate(()=>window.__rescueHouse.noiseProps());
   assert(!objects.find(p=>p.id===item).held,'Released throwable no longer occupies the hand');
   await page.waitForFunction(id=>window.__rescueHouse.noiseProps().find(p=>p.id===id)?.spent,item,{timeout:8000});
   await shot(page,'05-objeto-lanzado');
+  // V2 phase 02: actual keyboard movement (also supported on mobile),
+  // speed and camera continuity, plus a checkpoint teleport across floors.
+  await page.evaluate(()=>window.__rescueHouse.setPose({
+   x:5.95,y:0,z:8.0,yaw:0,pitch:0
+  }));
+  const initial=await page.evaluate(()=>window.__rescueHouse.snapshot());
+  assert.equal(initial.locomotion.cameraGround,0);
+  await page.keyboard.down('w');
+  let moving;
+  try{
+   // Software WebGL1 may render only one frame in 320ms on CI desktop.
+   // Measure actual simulated progress, not a fixed wall-clock wait.
+   await page.waitForFunction(z=>window.__rescueHouse.snapshot().position.z>z+.05,
+    initial.position.z,{timeout:12000});
+   moving=await page.evaluate(()=>window.__rescueHouse.snapshot());
+  }finally{await page.keyboard.up('w');}
+  assert(moving.position.z>initial.position.z+.05,
+   'Keyboard movement advances Kitty in an unobstructed corridor');
+  assert(moving.locomotion.speed>2&&moving.locomotion.speed<=4.28,
+   'Walking retains the bounded, smoothly blended speed model');
+  // Software WebGL can render only one frame in 350 ms. Observe actual
+  // converged input state instead of assuming a fixed wall-clock cadence.
+  await page.waitForFunction(()=>{
+   const v=window.__rescueHouse?.snapshot()?.locomotion;
+   return v&&Math.hypot(v.forward,v.side)<.03;
+  },null,{timeout:8000});
+  const stopped=await page.evaluate(()=>window.__rescueHouse.snapshot());
+  assert(Math.hypot(stopped.locomotion.forward,stopped.locomotion.side)<.03,
+   'After enough rendered frames, releasing controls brakes to rest without drift');
+  if(mobile){
+   // Dispatch a real PointerEvent through the joystick's actual handlers.
+   // The left stick has a deadzone, analog range and a sprint threshold;
+   // verify hysteresis and release state without changing player coordinates.
+   const dragged=await page.evaluate(()=>{
+    const control=document.querySelector('#lab-joystick');
+    const r=control.querySelector('.lab-stick-ring').getBoundingClientRect();
+    const x=r.left+r.width/2,y=r.top+r.height/2;
+    const send=(type,clientX,buttons)=>control.dispatchEvent(new PointerEvent(type,{
+     bubbles:true,cancelable:true,pointerId:713,pointerType:'touch',isPrimary:true,
+     button:0,buttons,clientX,clientY:y
+    }));
+    send('pointerdown',x,1);
+    send('pointermove',x+r.width*.58,1);
+    return window.__rescueHouse.snapshot().controls.joystick;
+   });
+   assert(dragged.x>.8&&dragged.sprint===true,
+    'A purposeful iPhone thumb extension should activate analogue movement and sprint');
+   await page.evaluate(()=>document.querySelector('#lab-joystick').dispatchEvent(
+    new PointerEvent('pointerup',{bubbles:true,pointerId:713,pointerType:'touch',button:0,buttons:0})));
+   const released=await page.evaluate(()=>window.__rescueHouse.snapshot().controls.joystick);
+   assert.equal(released.sprint,false,'Lift finger cancels sprint immediately');
+   assert.equal(released.x,0,'Lift finger cancels joystick translation');
+  }
+  await page.evaluate(()=>window.__rescueHouse.setPose({
+   x:2.3,y:3.15,z:3.85,yaw:0,pitch:0
+  }));
+  const upstairs=await page.evaluate(()=>window.__rescueHouse.snapshot());
+  assert.equal(upstairs.locomotion.cameraGround,3.15,
+   'Changing floor resets visual ground height, not a camera clipping tween');
+  assert(Math.abs(upstairs.view.y-upstairs.position.y-1.63)<.06,
+   'Upstairs view stays above the actual floor at the correct head height');
+  await shot(page,'06-kitty-movimiento-planta-alta');
   await page.evaluate(()=>window.closeHouse());
   assert.equal(await page.locator('#lab3d').count(),0,'All UI cleans up after leaving the house');
   assert.deepEqual(errors,[],'WebGL1 and Emy actions must not throw in a mobile viewport');
