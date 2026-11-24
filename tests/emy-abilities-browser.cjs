@@ -35,7 +35,18 @@ const {chromium}=require('playwright');
   page.on('pageerror',error=>errors.push(error.stack||error.message));
   page.on('console',entry=>{if(entry.type()==='error'&&/shader|webgl/i.test(entry.text()))errors.push(entry.text());});
   await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/__emy-ability-qa');
-  await page.waitForFunction(()=>!!window.__rescueHouse&&document.querySelector('#lab-canvas')?.width>300);
+  try{
+   await page.waitForFunction(()=>!!window.__rescueHouse&&document.querySelector('#lab-canvas')?.width>300,{timeout:14000});
+  }catch(error){
+   const state=await page.evaluate(()=>({
+    title:document.title,body:document.body.innerText.slice(0,1200),
+    canvas:document.querySelector('#lab-canvas')?.width??null,
+    root:document.querySelector('#lab3d')?.innerHTML.slice(0,500)??null,
+    hasHarness:!!window.__rescueHouse,url:location.href
+   }));
+   console.error('EMY_BOOT_DIAGNOSTIC',JSON.stringify({state,errors}));
+   await shot(page,'00-boot-failure');throw error;
+  }
   if(await page.locator('#lab-dialog [data-act="start"]').isVisible())await page.locator('#lab-dialog [data-act="start"]').click();
   await page.waitForFunction(()=>window.__rescueHouse.snapshot().paused===false);
   const skills=()=>page.evaluate(()=>window.__rescueHouse.emySkills());
