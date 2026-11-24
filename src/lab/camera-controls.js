@@ -17,7 +17,13 @@ export function applyLookDelta(target,dx,dy,sensitivity=1,invertX=false){
 }
 export function followLook(current,target,delta,response=18){
  const amount=1-Math.exp(-Math.max(0,Number(response)||18)*clamp(delta,0,.1));
- return {yaw:current.yaw+(target.yaw-current.yaw)*amount,
+ // Shortest angular route: prevents one-frame 360-degree swings when a new
+ // camera target or checkpoint uses the equivalent ±PI representation.
+ // Retain an unbounded yaw otherwise, so desktop pointer rotation stays natural.
+ const difference=target.yaw-current.yaw;
+ const yawDelta=Math.abs(difference)<Math.PI?difference:
+  Math.atan2(Math.sin(difference),Math.cos(difference));
+ return {yaw:current.yaw+yawDelta*amount,
   pitch:clamp(current.pitch+(target.pitch-current.pitch)*amount,-MAX_PITCH,MAX_PITCH)};
 }
 export function readCameraSettings(storage){
