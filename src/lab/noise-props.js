@@ -89,10 +89,11 @@ export function stepNoiseProps(props,dt,world,pursuer,emy){
   if(landed){
    prop.x=hitSurface?prev.x:prop.x;prop.z=hitSurface?prev.z:prop.z;
    prop.y=hitSurface?prev.y:Number.isFinite(base)?base+.055:prev.y;
+   const impactSpeed=Math.hypot(f.vx,f.vy,f.vz);
    prop.flight=null;prop.spent=true;prop.interactable=false;
    if(hitEnemy)pursuer.stun(2.0);
    else pursuer?.hearNoise({x:prop.x,y:Number.isFinite(base)?base:prop.floor,z:prop.z},1.3);
-   cues.push({kind:hitEnemy?'stun':'impact',at:{x:prop.x,y:prop.y,z:prop.z}});
+   cues.push({kind:hitEnemy?'stun':'impact',at:{x:prop.x,y:prop.y,z:prop.z},level:Math.min(1.5,.9+impactSpeed*.06)});
   }
   Object.assign(prop.box,{x:prop.x,y:prop.y,z:prop.z,roll:prop.flight?prop.box.roll+step*9:1.2,pitch:prop.flight?prop.box.pitch+step*8:0});
  }
