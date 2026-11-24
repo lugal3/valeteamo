@@ -20,7 +20,7 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 | 04 | **Emy's autonomous personality** | IMPLEMENTED — QA pending | Sit, groom, stretch, orient ears to noise, cautious follow, “Quédate aquí”, safe hold, consistent cross-floor routing |
 | 05 | **House environmental life** | IMPLEMENTED — QA pending | Identity of every room, small ambient props, lighting, wind/dust, performant atmosphere without clutter |
 | 06 | **Throwable objects + sound/material physics** | IMPLEMENTED — QA pending | Glass/ceramic/metal/wood/carpet responses, controlled throw strengths, predictable collisions, noise investigation |
-| 07 | **RC controls, camera, and strategy** | NOT STARTED | Smoother drive and camera; suspension/bumps, legible tablet HUD, horn, combined RC/Emy tactics |
+| 07 | **RC controls, camera, and strategy** | IMPLEMENTED — QA pending | Smoother drive and camera; suspension/bumps, legible tablet HUD, horn, combined RC/Emy tactics |
 | 08 | **2D flow, storytelling and 2D→3D transition** | NOT STARTED | Kawaii day→night pacing, credible meeting/kidnap, no pop-ins, coherent front window, seamless house handoff |
 | 09 | **Louis, puzzles and progression** | NOT STARTED | Natural rescue/companion animations, verified cover and body rig, contextual dialogue, progressive puzzle hints/checkpoints |
 | 10 | **Cinematics, endings and reactive audio** | NOT STARTED | Understandable Emy-rescue and escape/loss cutscenes, synchronized spatial audio, proper camera framing on PC/iPhone |
@@ -152,3 +152,11 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 - Added `tests/noise-materials.cjs` to the complete `npm test` run.
 - **Important phase 05 correction:** an initial GitHub Actions run failed the saturated 16-bit WebGL1 dynamic mesh budget. Decor details were changed to static, preserving navigation/visual accents without consuming dynamic vertex indices. Animated curtains/dust are intentionally deferred until a separate budget-safe solution exists; do not claim their animation as delivered.
 - **Validation:** current commit's CI/browser tests not yet verified. No release or merge.
+
+## Phase 07 implementation — RC driving feel (QA pending)
+
+- Progressive throttle, deceleration and reverse with capped steering interpolation; existing `navigate` remains authoritative for walls, floors, slopes and the basement.
+- RC chase-camera smoothing using shortest-angle interpolation, with a jump/recovery reset and respect for reduced-motion settings. Camera fallback against walls remains in `rcCamera`.
+- Tablet signal text distinguishes connected driving from active decoy. Original horn duration, RC trap, recovery, Emy distraction independence, mobile joystick and G/keyboard controls remain wired as before.
+- Added tests in `tests/rc-game-feel.cjs` to `npm test`, covering throttle response, coasting, reverse, turning, horn, yaw seam, camera reset and stop state.
+- **Not yet verified:** complete test/perf/build and mobile/desktop/WebKit visual QA; release remains blocked. More precise wheel suspension animation and advanced combined Emy/RC tactics have not yet been delivered.
