@@ -797,14 +797,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   for(const floor of [0,1]){
    const tab=$('house-emy-tab-'+floor);
    tab.setAttribute('aria-selected',String(emyMapFloor===floor));
-   tab.tabIndex=emyMapFloor===floor?0:-1;
+   tab.tabIndex=0; // Both floors remain reachable by keyboard and touch.
   }
   $('house-emy-map-rooms').setAttribute('aria-labelledby','house-emy-tab-'+emyMapFloor);
   const floorName=emyMapFloor===0?'PLANTA BAJA':'PLANTA ALTA';
   $('house-emy-map-rooms').innerHTML=
    '<div class="house-emy-map-layout">'+
     '<section class="house-emy-map-board" aria-label="Vista superior de '+floorName+'">'+
-     '<div class="house-emy-map-board-title"><strong>'+floorName+'</strong><span>Vista desde arriba · Entrada ↓</span></div>'+
+     '<div class="house-emy-map-board-title"><strong>'+floorName+'</strong><span>Vista superior · '+(emyMapFloor?'SUR ↓':'Entrada ↓')+'</span></div>'+
      emyFloorMap(world.rooms,emyMapFloor,options)+
     '</section>'+
     '<section class="house-emy-destination-panel" aria-label="Habitaciones de '+floorName+'">'+
