@@ -145,6 +145,34 @@ const {chromium,webkit}=require('playwright');
   assert(!objects.find(p=>p.id===item).held,'Released throwable no longer occupies the hand');
   await page.waitForFunction(id=>window.__rescueHouse.noiseProps().find(p=>p.id===id)?.spent,item,{timeout:8000});
   await shot(page,'05-objeto-lanzado');
+  // V2 phase 02: actual keyboard movement (also supported on mobile),
+  // speed and camera continuity, plus a checkpoint teleport across floors.
+  await page.evaluate(()=>window.__rescueHouse.setPose({
+   x:5.95,y:0,z:8.0,yaw:0,pitch:0
+  }));
+  const initial=await page.evaluate(()=>window.__rescueHouse.snapshot());
+  assert.equal(initial.locomotion.cameraGround,0);
+  await page.keyboard.down('w');
+  await page.waitForTimeout(320);
+  const moving=await page.evaluate(()=>window.__rescueHouse.snapshot());
+  await page.keyboard.up('w');
+  assert(moving.position.z>initial.position.z+.05,
+   'Keyboard movement advances Kitty in an unobstructed corridor');
+  assert(moving.locomotion.speed>2&&moving.locomotion.speed<=4.28,
+   'Walking retains the bounded, smoothly blended speed model');
+  await page.waitForTimeout(350);
+  const stopped=await page.evaluate(()=>window.__rescueHouse.snapshot());
+  assert(Math.hypot(stopped.locomotion.forward,stopped.locomotion.side)<.03,
+   'Releasing controls quickly brakes to rest without mobile drift');
+  await page.evaluate(()=>window.__rescueHouse.setPose({
+   x:2.3,y:3.15,z:3.85,yaw:0,pitch:0
+  }));
+  const upstairs=await page.evaluate(()=>window.__rescueHouse.snapshot());
+  assert.equal(upstairs.locomotion.cameraGround,3.15,
+   'Changing floor resets visual ground height, not a camera clipping tween');
+  assert(Math.abs(upstairs.view.y-upstairs.position.y-1.63)<.06,
+   'Upstairs view stays above the actual floor at the correct head height');
+  await shot(page,'06-kitty-movimiento-planta-alta');
   await page.evaluate(()=>window.closeHouse());
   assert.equal(await page.locator('#lab3d').count(),0,'All UI cleans up after leaving the house');
   assert.deepEqual(errors,[],'WebGL1 and Emy actions must not throw in a mobile viewport');
