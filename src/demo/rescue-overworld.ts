@@ -31,7 +31,7 @@ export const RESCUE_ROUTE={maxU:82,bridgeStart:10,bridgeEnd:16,
 export const RESCUE_MAP_ORDER:RescueMapId[]=['morning_garden','afternoon_meeting','dusk_search','night_neighborhood'];
 export const STORY_POSITIONS={
  intro:{u:5.4,v:4.65},'feed-cat':{u:17.6,v:5.05},'cat-fed':{u:20.7,v:4.5},
- 'meet-couple':{u:28,v:4.45},defend:{u:28.7,v:4.5},
+ 'meet-couple':{u:28,v:4.45},defend:{u:33.15,v:4.85},
  'talk-louis':{u:29.4,v:4.1},'talk-luis':{u:34.6,v:4.4},
  'walk-together':{u:38.4,v:4.5},disappearance:{u:40.8,v:4.5},
  ribbon:{u:48,v:4.9},petals:{u:53,v:3.8},wheel:{u:59.5,v:4.9},
