@@ -148,8 +148,11 @@
 #lab3d .house-emy-destination-list{
  display:flex;flex-direction:column;gap:4px;overflow-y:auto;
  overscroll-behavior:contain;touch-action:pan-y;min-height:0;
- padding-right:3px;
+ padding-right:3px;scrollbar-width:thin;scrollbar-color:#9bc7bd #282431;
 }
+#lab3d .house-emy-destination-list::-webkit-scrollbar{width:7px}
+#lab3d .house-emy-destination-list::-webkit-scrollbar-thumb{background:#9bc7bd;border-radius:8px}
+#lab3d .house-emy-destination-list::-webkit-scrollbar-track{background:#282431;border-radius:8px}
 #lab3d .house-emy-destination-list .house-emy-destination{
  display:flex;align-items:center;gap:9px;min-height:42px;flex:0 0 auto;
  padding:6px 9px;background:#373143;border:1px solid #63516c;
