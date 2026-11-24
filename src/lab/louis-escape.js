@@ -7,8 +7,11 @@ import {startLoisReaction,advanceLoisReaction} from './lois-ps2-reactions.js';
 import {KITCHEN_HIDE_APPROACH,KITCHEN_HIDE_SPOT} from './kitchen-hide-layout.js';
 
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
-const turnTowards=(current,target,dt,speed=7)=>current+
- Math.atan2(Math.sin(target-current),Math.cos(target-current))*Math.min(1,Math.max(0,dt)*speed);
+const turnTowards=(current,target,dt,speed=7)=>{
+ const delta=Math.atan2(Math.sin(target-current),Math.cos(target-current));
+ const eased=delta*Math.min(1,Math.max(0,dt)*speed);
+ return current+clamp(eased,-Math.max(0,dt)*4.8,Math.max(0,dt)*4.8);
+};
 export const LOUIS_UNTIE_SECONDS=3.25;
 // Preserve the already tested basement climb, but once above ground go
 // AROUND the north tip of the rotated bar into the actual hiding lane.
