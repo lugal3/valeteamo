@@ -7,7 +7,9 @@ export const KITCHEN_BAR=Object.freeze({
  frontX:10.65,backX:11.41,
  northEnd:1.97,southEnd:3.97
 });
-export const KITCHEN_HIDE_SPOT=Object.freeze({x:12.08,y:0,z:2.97,yaw:-Math.PI/2});
+// Provide real leg clearance behind the bar; previously the mesh was only
+// 0.67m beyond its east edge and bent knees intersected the counter panel.
+export const KITCHEN_HIDE_SPOT=Object.freeze({x:12.32,y:0,z:2.97,yaw:-Math.PI/2});
 // Smooth, fully above-floor corridor on the north side of the bar. The
 // kitchen divider is at z=4.4, so routing south is a dead end.
 export const KITCHEN_HIDE_APPROACH=Object.freeze([
@@ -16,7 +18,7 @@ export const KITCHEN_HIDE_APPROACH=Object.freeze([
  {x:10.20,z:1.48},
  {x:11.08,z:1.46},
  {x:11.97,z:1.46},
- {x:12.08,z:1.79},
- {x:12.08,z:2.35},
+ {x:12.32,z:1.79},
+ {x:12.32,z:2.35},
  {x:KITCHEN_HIDE_SPOT.x,z:KITCHEN_HIDE_SPOT.z}
 ].map(p=>Object.freeze(p)));
