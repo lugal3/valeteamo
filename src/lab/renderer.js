@@ -462,7 +462,7 @@ export class HouseRenderer {
   gl.bindBuffer(gl.ARRAY_BUFFER,this.noiseVbo);
   for(let i=0;i<this.noiseProps.length;i++){
    const prop=this.noiseProps[i],box=prop.box;
-   const signature=[box.x,box.y,box.z,box.roll||0,box.pitch||0,box.yaw||0].join(',');
+   const signature=[box.x,box.y,box.z,box.roll||0,box.pitch||0,box.yaw||0,Number(prop.held)].join(',');
    if(signature===this.noiseSignatures[i])continue;
    this.noiseSignatures[i]=signature;
    const {start,end}=this.noiseRanges[i],origin=this.noiseOrigins[i];
@@ -479,6 +479,8 @@ export class HouseRenderer {
     this.noiseVertices[k]=box.x+pos[0];
     this.noiseVertices[k+1]=box.y+pos[1];
     this.noiseVertices[k+2]=box.z+pos[2];
+    // Only the equipped object gets an unlit view-model fill. Keep tile UVs intact.
+    this.noiseVertices[k+12]=this.noiseTemplate[k+12]+(prop.held?96:0);
     for(const offset of [6,13]){
      const norm=rotate(this.noiseTemplate[k+offset],this.noiseTemplate[k+offset+1],this.noiseTemplate[k+offset+2]);
      for(let j=0;j<3;j++)this.noiseVertices[k+offset+j]=norm[j];
