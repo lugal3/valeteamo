@@ -15,6 +15,9 @@ const sprite=fs.readFileSync('src/lab/audio/user-sprite.ogg');
 assert.equal(sprite.subarray(0,4).toString(),'OggS');
 assert(sprite.indexOf(Buffer.from('OpusHead'))>=0);
 assert(sprite.length<80000,'Single network fetch should remain under 80 KB');
+const fallback=fs.readFileSync('src/lab/audio/user-sprite.mp3');
+assert(fallback.length<180000,'MP3 fallback must remain small for older Safari');
+assert(fallback.subarray(0,3).toString()==='ID3'||fallback[0]===0xff,'MP3 fallback must be encoded audio');
 assert.equal(crypto.createHash('sha256').update(sprite).digest('hex'),'5537824e9f1e58f9a00c6747dcb47d8bbdd1e92d77ee030bbbb9b21d46591927');
 const code=fs.readFileSync('src/lab/audio/user-sprite-index.js','utf8');
 for(const cue of ['cat-meow','cat-purr','churu-open','danger-alert','hatch-close','power-cut','rc-motor','van-door','van-away'])
@@ -25,4 +28,4 @@ const house=fs.readFileSync('src/lab/house.js','utf8');
 for(const cue of ["cat-purr","power-cut","danger-alert","hatch-close"])assert(house.includes("'"+cue+"'"),'House event wired: '+cue);
 const sound=fs.readFileSync('src/lab/sound.js','utf8');
 assert(sound.includes("clipBuffer('rc-motor')"),'RC loops sampled sound');
-console.log('PASS user audio: 9 valid compressed Ogg/Opus clips ('+total+' bytes), 1 sprite ('+sprite.length+' bytes), 2D/3D cue wiring');
+console.log('PASS user audio: 9 valid compressed Ogg/Opus clips ('+total+' bytes), 1 sprite ('+sprite.length+' bytes) and Safari MP3 ('+fallback.length+' bytes), 2D/3D cue wiring');
