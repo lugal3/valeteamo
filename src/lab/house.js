@@ -1806,12 +1806,21 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    rc:()=>({mode:rc.mode,elapsed:rc.elapsed,position:{x:rc.x,y:rc.y,z:rc.z,yaw:rc.yaw},noise:rc.noise,crashes:rc.crashes,inventory:!!s.inventory.rc,trap:{...rcTrap},pursuer:{x:pursuer.x,y:pursuer.y,z:pursuer.z,mode:pursuer.mode}}),
    louis:()=>louis?{x:louis.x,y:louis.y,z:louis.z,phase:louis.phase,waypoint:louis.waypoint,age:louis.age,walk:louis.walk,speed:louis.speed,crouch:louis.crouch,reaction:louis.visualReaction?.type??null,cameraPhase:loisShotDirector?.phase??null}:null,
    emy:()=>({x:world.emy.x,y:world.emy.y,z:world.emy.z,phase:world.emy.phase,reaction:world.emy.reaction,hidden:world.emy.hidden,companion:emyCompanion?.stage,ventOpen:world.studyVent.coverAmount===1,entrance:emyShot?.elapsed,trunk:emyCompanion?.stage==='trunk'}),
-   emySkills:()=>({scan:emyAbilities.scan,scanCooldown:emyAbilities.scanCooldown,distractCooldown:emyAbilities.distractCooldown,
+   emySkills:()=>({scanRendered:!!renderer?.lastScanOutline,scan:emyAbilities.scan,scanCooldown:emyAbilities.scanCooldown,distractCooldown:emyAbilities.distractCooldown,
     wave:emyAbilities.wave,menu:emyMenuOpen,mapOpen:!$('house-emy-map').hidden,stage:emyCompanion?.stage,
     distraction:emyCompanion?.distraction?{remaining:emyCompanion.distraction.remaining,arrived:emyCompanion.distraction.arrived,
       goal:{...emyCompanion.distraction.goal}}:null}),
    noiseProps:()=>noiseProps.map(p=>({id:p.id,x:p.x,y:p.y,z:p.z,held:p.held,spent:p.spent,flight:!!p.flight})),
    greyCat:()=>({active:world.greyCat.active,x:world.greyCat.x,z:world.greyCat.z,called:world.greyCat.called}),
+   // DEV-only placement for screenshotting the exact outline behind a wall.
+   placeThreat:(pose)=>{
+    const y=groundHeight(pose.x,pose.z,pose.y??0,world.hatch?.amount>.92);
+    if(!Number.isFinite(y)||Math.abs(y-(pose.y??0))>.12||blocked(world.boxes,pose.x,y,pose.z,.16,1.72))
+     throw Error('Unsafe pursuer test pose');
+    if(!pursuer.active)pursuer.start();
+    Object.assign(pursuer,{x:pose.x,y,z:pose.z,yaw:pose.yaw??0,facing:pose.yaw??0,mode:'search',awareness:0,lost:10,path:[],replan:1});
+    return pursuer.snapshot();
+   },
    // DEV-only route harness for deterministic test setup; not in the production build.
    placeRC:(pose)=>{if(rc.mode!=='driving')throw Error('RC must be deployed first');const y=groundHeight(pose.x,pose.z,pose.y??rc.y,world.hatch?.amount>.92);if(!Number.isFinite(y)||blocked(world.boxes,pose.x,y,pose.z,.155,.38))throw Error('Blocked RC test position');rc.x=pose.x;rc.y=y;rc.z=pose.z;rc.yaw=pose.yaw??rc.yaw;rc.noise=0;syncRCObject(rc);return {x:rc.x,y:rc.y,z:rc.z};},
    intro:()=>cinematic?{elapsed:cinematic.elapsed,...windowIntroState(cinematic.elapsed/WINDOW_SHOT_SECONDS),camera:windowIntroCamera(cinematic.elapsed/WINDOW_SHOT_SECONDS)}:null,
