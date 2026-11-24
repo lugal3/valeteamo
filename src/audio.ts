@@ -1,5 +1,6 @@
 // Original music and rescue effects. start() belongs in a user gesture.
 import type {AmbientKind} from './demo/rescue-ecology';
+import {USER_AUDIO_SPRITE,USER_AUDIO_FOR_2D} from './lab/audio/user-sprite-index.js';
 export type MusicTheme='story'|'garden'|'battle'|'final';
 const MELODIES:Record<MusicTheme,number[]>={
  story:[261.63,329.63,392,523.25,493.88,392,329.63,293.66,349.23,440,523.25,440,392,349.23,329.63,293.66],
@@ -13,7 +14,8 @@ export class Sound {
  private readonly samples=new Map<string,AudioBuffer>();
  private readonly voices=new Set<AudioBufferSourceNode>();
  private loading?:AbortController;
- constructor(private readonly sampleUrls:Readonly<Record<string,string>>={}){}
+ constructor(private readonly sampleUrls:Readonly<Record<string,string>>={},
+  private readonly spriteUrl?:string){}
  get muted(){return this.silent;}
  set muted(value:boolean){this.silent=value;if(value)this.stopSamples();}
  private loadSamples(context:AudioContext){
@@ -27,6 +29,24 @@ export class Sound {
     .then(bytes=>context.decodeAudioData(bytes))
     .then(buffer=>{if(!loading.signal.aborted)this.samples.set(kind,buffer);})
     .catch(()=>{}); // The scene can still use its synthesized effect.
+  }
+  if(this.spriteUrl){
+   void fetch(this.spriteUrl,{signal:loading.signal})
+    .then(response=>{if(!response.ok)throw Error('User audio sprite unavailable');return response.arrayBuffer();})
+    .then(bytes=>context.decodeAudioData(bytes))
+    .then(sprite=>{
+     if(loading.signal.aborted)return;
+     for(const [kind,id] of Object.entries(USER_AUDIO_FOR_2D)){
+      const clip=USER_AUDIO_SPRITE[id];
+      if(!clip)continue;
+      const offset=Math.round(clip.start*sprite.sampleRate),frames=Math.floor(clip.duration*sprite.sampleRate);
+      const sample=context.createBuffer(sprite.numberOfChannels,frames,sprite.sampleRate);
+      for(let channel=0;channel<sprite.numberOfChannels;channel++)
+       sample.getChannelData(channel).set(sprite.getChannelData(channel).subarray(offset,offset+frames));
+      this.samples.set(kind,sample);
+     }
+    })
+    .catch(()=>{}); // Previously installed preview recordings remain as fallback.
   }
  }
  playSample(kind:string,volume:number):boolean{
