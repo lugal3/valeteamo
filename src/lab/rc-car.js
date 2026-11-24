@@ -94,6 +94,18 @@ export function rcCamera(rc,world){
  const distance=Math.hypot(target.x-camera.x,target.z-camera.z);
  return {...camera,yaw:rc.yaw,pitch:Math.atan2(target.y-camera.y,distance)};
 }
+// Camera stabilization is visual only: the world position and collision authority
+// remain in navigate(). Teleports/recoveries reset via a distance threshold.
+export function advanceRCCamera(previous,target,dt,reduced=false){
+ if(!previous||reduced||dt<=0)return {...target};
+ const gap=Math.hypot(target.x-previous.x,target.y-previous.y,target.z-previous.z);
+ if(!Number.isFinite(gap)||gap>2.5)return {...target};
+ const t=1-Math.exp(-Math.min(.1,dt)*12);
+ const deltaYaw=Math.atan2(Math.sin(target.yaw-previous.yaw),Math.cos(target.yaw-previous.yaw));
+ return {x:previous.x+(target.x-previous.x)*t,
+  y:previous.y+(target.y-previous.y)*t,z:previous.z+(target.z-previous.z)*t,
+  yaw:previous.yaw+deltaYaw*t,pitch:previous.pitch+(target.pitch-previous.pitch)*t};
+}
 export function rcDeploymentView(rc,world,player,view,reduced=false){
  if(reduced)return {view,hands:null,tabletLift:1};
  const t=rc.elapsed/RC_DEPLOY_SECONDS;
