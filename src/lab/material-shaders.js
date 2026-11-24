@@ -31,7 +31,7 @@ uniform float uHasShadows;
 uniform vec4 uLamps[${VISIBLE_LAMPS}];
 uniform float uTime;
 uniform float uTVSignal;
-uniform float uMirrorPass,uHeld;
+uniform float uMirrorPass,uHeld,uScanOutline;
 uniform float uAtlasSize,uTileSize,uGutter,uInner;
 float depthAt(vec2 pixel,vec2 corner,float reach){
  vec2 uv=(corner+clamp(pixel,vec2(.5),vec2(${(SHADOW_TILE-.5).toFixed(1)})))/${SHADOW_ATLAS.toFixed(1)};
@@ -106,6 +106,7 @@ float lampLight(vec4 lamp,vec3 world,vec3 normal,vec3 surfaceNormal){
   visibility(floor(lamp.w),projected*.5+.5,depth,${LAMP_REACH.toFixed(1)},max(0.0,dot(surfaceNormal,direction)));
 }
 void main(){
+ if(uScanOutline>.5){gl_FragColor=vec4(.34,1.0,.78,1.0);return;}
  if(uMirrorPass>.5&&vWorld.x<9.8375)discard;
  if(vArt>1.5&&vArt<2.5&&uTVSignal>.5){
   vec2 grid=floor(vUV*vec2(256.0,144.0));
