@@ -1,5 +1,5 @@
 // Lightweight, deterministic noise props. Shares the existing dynamic house geometry.
-import {blocked,groundHeight} from './world.js';
+import {blocked,groundHeight,segmentHitsBox} from './world.js';
 const SPECS=[
  ['glass-living','Vaso',2.45,.995,8.79,0,'glass'],
  ['plate-living','Plato',2.48,.95,9.43,0,'plate'],
@@ -56,20 +56,26 @@ export function stepNoiseProps(props,dt,world,pursuer,emy){
     const floor=groundHeight(nx,nz,emy.y,world.hatch?.amount>.92);
     if(Number.isFinite(floor)&&Math.abs(floor-emy.y)<.25&&!blocked(world.boxes,nx,floor,nz,.20,.62)){
      Object.assign(emy,{x:nx,y:floor,z:nz,yaw:lateral+side*Math.PI/2,reaction:0,dodgeTime:.65});
-     f.dodged=true;cues.push('evade');break;
+     f.dodged=true;cues.push({kind:'evade',at:{x:nx,y:floor,z:nz}});break;
     }
    }
   }
   const base=groundHeight(prop.x,prop.z,prop.floor,world.hatch?.amount>.92);
-  const wall=blocked(world.boxes,prop.x,Number.isFinite(base)?base:prop.floor,prop.z,.08,.2);
-  const landed=!Number.isFinite(base)||prop.y<=base+.055||wall||f.ttl<=0||hitEnemy;
+  // Swept segment against solid furniture and walls: objects no longer pass
+  // through tabletops or barriers simply because the floor is lower.
+  const hitSurface=world.boxes.some(box=>box.solid&&
+   Math.abs(box.x-(prev.x+prop.x)*.5)<box.w/2+.6&&
+   Math.abs(box.z-(prev.z+prop.z)*.5)<box.d/2+.6&&
+   Math.abs(box.y-(prev.y+prop.y)*.5)<box.h/2+.6&&
+   segmentHitsBox(prev,prop,box,.035));
+  const landed=!Number.isFinite(base)||prop.y<=base+.055||hitSurface||f.ttl<=0||hitEnemy;
   if(landed){
-   prop.x=wall?prev.x:prop.x;prop.z=wall?prev.z:prop.z;
-   prop.y=Number.isFinite(base)?base+.055:prev.y;
+   prop.x=hitSurface?prev.x:prop.x;prop.z=hitSurface?prev.z:prop.z;
+   prop.y=hitSurface?prev.y:Number.isFinite(base)?base+.055:prev.y;
    prop.flight=null;prop.spent=true;prop.interactable=false;
    if(hitEnemy)pursuer.stun(2.0);
    else pursuer?.hearNoise({x:prop.x,y:Number.isFinite(base)?base:prop.floor,z:prop.z},1.3);
-   cues.push(hitEnemy?'stun':'impact');
+   cues.push({kind:hitEnemy?'stun':'impact',at:{x:prop.x,y:prop.y,z:prop.z}});
   }
   Object.assign(prop.box,{x:prop.x,y:prop.y,z:prop.z,roll:prop.flight?prop.box.roll+step*9:1.2,pitch:prop.flight?prop.box.pitch+step*8:0});
  }
