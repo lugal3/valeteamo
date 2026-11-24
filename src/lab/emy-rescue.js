@@ -68,7 +68,10 @@ const ease=t=>{t=Math.min(1,Math.max(0,t));return t*t*(3-2*t);};
 // The camera sees Kitty held at the threshold, Emy striking, then all three leaving.
 export function poseEscapeAmbush(shot,cat,enemy,reduced){
  const t=shot.elapsed,start=shot.kitty.from,approach=ease(t/1.05),recoil=ease((t-2.1)/.85);
- Object.assign(enemy,{x:start.x+.12+.6*recoil,y:0,z:start.z-1.65+1.22*approach-.95*recoil,
+ // The 3D entrance/front wall is at z=12. The old pursuer stayed INSIDE
+ // at z≈11 and disappeared behind the opaque wall from the exterior camera.
+ // Stage the encounter just OUTSIDE the front threshold in a readable lane.
+ Object.assign(enemy,{x:start.x+.58+.68*recoil,y:0,z:Math.max(12.37,start.z-.10)+.26*approach-.05*recoil,
   yaw:Math.PI*.08+recoil*1.2,mode:t<2.1?'chase':'trapped',speed:t<1?1.5:0});
  enemy.facing=enemy.yaw;
  if(t<1.45)return false;
