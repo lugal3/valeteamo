@@ -17,7 +17,7 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 | 01 | **Emy + hides / unfair failures** | **DONE — QA passed** | Kitty hides independently of cat arrival; Emy distracts on another floor and waits silently if Kitty stays hidden; no lost life from a cat wait |
 | 02 | **Kitty movement, physics, camera** | **DONE — QA passed** | Grounded acceleration/deceleration, turn/crouch transitions, robust stairs, camera collisions/comfort and mobile input |
 | 03 | **Pursuer perception + fair stealth AI** | **DONE — QA passed** | Separate sight/hearing/suspicion/chase/search states, last-seen positions, visible-door logic and unbiased hide searching |
-| 04 | **Emy's autonomous personality** | NOT STARTED | Sit, groom, stretch, orient ears to noise, cautious follow, “Quédate aquí”, safe hold, consistent cross-floor routing |
+| 04 | **Emy's autonomous personality** | IMPLEMENTED — QA pending | Sit, groom, stretch, orient ears to noise, cautious follow, “Quédate aquí”, safe hold, consistent cross-floor routing |
 | 05 | **House environmental life** | NOT STARTED | Identity of every room, small ambient props, lighting, wind/dust, performant atmosphere without clutter |
 | 06 | **Throwable objects + sound/material physics** | NOT STARTED | Glass/ceramic/metal/wood/carpet responses, controlled throw strengths, predictable collisions, noise investigation |
 | 07 | **RC controls, camera, and strategy** | NOT STARTED | Smoother drive and camera; suspension/bumps, legible tablet HUD, horn, combined RC/Emy tactics |
@@ -127,3 +127,11 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 - Regression tests in `tests/pursuer-perception.cjs`, `tests/pursuer.cjs`, `tests/emy-abilities-noise.cjs` and pre-existing browser threat regression cover occlusion, cross-floor sound, local search, safe hiding, RC behavior, legacy patrol, movement, Emy and sound.
 - **Final gate:** [CI #45432388808](https://github.com/lugal3/valeteamo/actions/runs/45432388808) **PASS**: `npm test`, `npm run test:perf`, `npm run build`, Chromium mobile, Chromium desktop, WebKit mobile, real threat/hide browser regression and artifact evidence. Cosmic browser E2E is a separate known failing workflow inherited from `main`; track in phase 08/12.
 - **Release:** not merged, not deployed. Continue from phase 04 in the same branch/PR.
+
+## Phase 04 implementation (QA pending)
+
+- Added an explicit `stay` stage separate from automatic quiet `hold`; the cat remains in place across floors, hiding and save/reload, with a `Sígueme` release command.
+- Reused existing sit, groom and stretch poses for deterministic low-overhead idle cycles, with head tracking and reduced-motion handling. No new geometry or engine replacements.
+- The player interacts with Emy in `following` and `stay` states. Distraction/fetch/rescue are not interrupted; object dodge still has priority.
+- New `tests/emy-autonomy.cjs` is included in `npm test`, covering commands, floor separation, hiding, poses, save restore, normal stair follow and distraction conflicts.
+- **Validation not yet claimed:** CI / browser regression must pass before marking this phase DONE; keep branch and PR unmerged.
