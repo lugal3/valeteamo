@@ -1887,7 +1887,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(e.isTrusted)unlockSound();
   const button=e.target.closest('[data-act]');
   if(button){e.preventDefault();runAction(button.dataset.act,button);}
-  else if(e.target===canvas&&mouseLocked()&&canLook()&&e.button===0)runAction('interact');
+  // The look surface covers the canvas on PC. Under pointer lock some
+  // browsers still dispatch the primary click to that overlay instead of
+  // the canvas. Both are game-world clicks; HTML controls stay excluded.
+  else if((e.target===canvas||e.target===look)&&mouseLocked()&&canLook()&&e.button===0)
+   runAction('interact');
  },{signal});
  function unlockSound(){
   if(isPaused()||sound.settings.muted||sound.context?.state==='running')return;
