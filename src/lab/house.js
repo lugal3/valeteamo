@@ -36,6 +36,7 @@ import {animateFurniture,updateFurniture,sweepClear} from './furniture-motion.js
 import {BATTERY_SWAP_SECONDS} from './viewmodel.js';
 import {rescueProgress} from './rescue-progress.js';
 import {poseEscapeAmbush,poseEmyLastChance,createRescueObjectives,updateEmySenses} from './emy-rescue.js';
+import {collectCinematicCues} from './cinematic-cues.js';
 import {updateUpstairsEmy,petEmy} from './emy-cat.js';
 import {createEmyAbilities,advanceEmyAbilities,activateEmyScan,roomChoices,roomDestinations,isEmyRoomLocked,emyFloorMap,emyFloorList} from './emy-abilities.js';
 import {installNoiseProps,grabNoiseProp,holdNoiseProp,releaseNoiseProp,stepNoiseProps} from './noise-props.js';
@@ -1181,7 +1182,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   s.cameraGround=reducedMotion.matches?s.y:advanceCameraFloor(s.cameraGround,s.y,dt);
   if(events.phase==='escape'&&!world.objects.find(o=>o.id==='entrada').sealed&&louis?.phase==='follow'&&s.z>12.35&&s.x>4.6&&s.x<7.2){
    const ground=0,walk=2.70;
-   finalCutscene={elapsed:0,
+   finalCutscene={elapsed:0,cues:new Set(),
     kitty:{from:{x:s.x,z:s.z},to:{x:5.56,z:14.05},ground,walk,stand:0},
     louis:{from:{x:clamp(s.x+.36,5.35,6.45),z:s.z-.19},to:{x:6.23,z:13.95},ground,walk,stand:0},
     louisStride:louis.walk};
@@ -1586,13 +1587,19 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     view=rcViewSmoothed;hand=false;torch=true;shotLight=rc.y<0?.23:.08;
   }
   if(finalCutscene){
+   const previousFinale=finalCutscene.elapsed;
    if(!isSuspended())finalCutscene.elapsed+=shotDelta;
+   for(const cue of collectCinematicCues('escape',previousFinale,finalCutscene.elapsed,finalCutscene.cues)){
+    const source=cue.source==='pursuer'?pursuer:cue.source==='emy'?world.emy:
+     cue.source==='kitty'?s:null;
+    play(cue.sound,source,cue.level);
+    caption(cue.caption);
+   }
    // Three deliberate cinematic beats instead of one fixed camera:
    // the pursuer approaches Kitty, Emy leaps in from the side, then they run.
    const time=finalCutscene.elapsed,escapeTime=Math.max(0,time-3.48);
    const t=Math.min(1,escapeTime/4.3),showChase=time>=3.35;
    if(poseEscapeAmbush(finalCutscene,world.emy,pursuer,reducedMotion.matches))renderer.updateVisibility();
-   if(time>=1.7&&!finalCutscene.cried){finalCutscene.cried=true;play('cat',world.emy,1.2);play('cloth',pursuer);}
    actorWalk=wardrobeWalk(escapeTime,finalCutscene.kitty);
    const companion=wardrobeWalk(Math.max(0,escapeTime-.18),finalCutscene.louis);
    if(reducedMotion.matches)actorWalk.stride=0;
