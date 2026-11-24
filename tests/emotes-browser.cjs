@@ -21,7 +21,11 @@ const {chromium}=require('playwright');
   await page.getByText('Escenas y mecánicas aisladas',{exact:true}).click();
   await page.getByRole('button',{name:'Espejo',exact:true}).click();
   await page.locator('#lab-canvas').waitFor({timeout:25000});
-  await page.getByRole('button',{name:'Iniciar prueba'}).click();
+  // Starting the embedded house may schedule app navigation; do not wait for
+   // that unrelated document lifecycle. We explicitly wait for game readiness.
+   await page.getByRole('button',{name:'Iniciar prueba'}).click({noWaitAfter:true});
+   await page.waitForFunction(()=>!!window.__rescueHouse?.snapshot?.() &&
+    window.__rescueHouse.snapshot().paused===false,null,{timeout:20000});
   const toggle=page.getByRole('button',{name:'Elegir emote'});
   await toggle.waitFor({state:'visible',timeout:15000});
   const menu=page.locator('#house-emotes');
