@@ -48,6 +48,8 @@ async function play(){
   assert(realScene.usingOriginalFloor&&realScene.usingOriginalCharacter,
    'rescue must use the original diamond floor and Kitty sprite system');
   assert.equal(await game.getAttribute('data-prologue-stage'),'intro');
+  assert.equal(await game.getAttribute('data-story-act'),'morning',
+   'Act I starts in the original Corazones scene');
   const convo=page.getByRole('dialog',{name:'Conversación'});
   // Phase 2: actual browser rendering and bounded live content in ALL FOUR
   // maps, while preserving the scene's regular gameplay and transition flow.
@@ -334,6 +336,8 @@ async function play(){
   await doorButton.click();
   await finishDialogue();
   await game.locator('xpath=self::*[@data-prologue-stage="window"]').waitFor();
+  assert.equal(await game.getAttribute('data-story-act'),'night',
+   'Window approach is part of Act III, not a new game');
   await houseCard.getByText('Ventana abierta').waitFor({timeout:6000});
   // A second leg of navigation goes WEST toward the actual open 3D window.
   const windowDistance=await page.evaluate(()=>window.__valePrologue.houseRoute().distance);
@@ -345,6 +349,8 @@ async function play(){
   await page.getByRole('button',{name:/Entrar por la ventana/}).click();
   await finishDialogue();
   await page.locator('#lab-canvas').waitFor({state:'visible',timeout:26000});
+  assert.equal(await page.locator('.story-prologue').count(),0,
+   '2D overlay unmounts cleanly when the 3D house takes control');
   await page.locator('.lab-window-intro:not(.lab-hidden)').waitFor({state:'visible',timeout:15000});
   await page.screenshot({path:'artifacts/story-to-house-3d.png'});
   assert.deepEqual(await page.evaluate(keys=>Object.fromEntries(keys.map(key=>[key,localStorage.getItem(key)])),Object.keys(saves)),saves,
