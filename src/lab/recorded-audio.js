@@ -55,7 +55,7 @@ export class RecordedAudio{
   const buffer=clip&&this.sprite?this.sprite:this.buffers.get(id);
   if(this.dead||!buffer||this.ctx.state!=='running'||this.voices.size>=18)return false;
   const source=this.ctx.createBufferSource(),vol=this.ctx.createGain(),stereo=this.ctx.createStereoPanner();source.buffer=buffer;source.playbackRate.value=rate;vol.gain.value=gain;stereo.pan.value=pan;source.connect(vol);vol.connect(stereo);stereo.connect(output);
-  const voice={stop:()=>{source.onended=null;try{source.stop();}catch{}source.disconnect();vol.disconnect();stereo.disconnect();this.voices.delete(voice);}};source.onended=voice.stop;this.voices.add(voice);if(clip&&this.sprite)source.start(0,clip.start,clip.duration);
+  const voice={stop:()=>{source.onended=null;try{source.stop();}catch{}source.disconnect();vol.disconnect();stereo.disconnect();this.voices.delete(voice);}};source.onended=voice.stop;this.voices.add(voice);if(clip&&this.sprite){const trim=Math.max(0,Math.min(clip.leadIn||0,clip.duration-.05));source.start(0,clip.start+trim,clip.duration-trim);}
   else source.start();this.lastPlayed=id;this.played++;return voice;
  }
  kind(kind,options={}){
