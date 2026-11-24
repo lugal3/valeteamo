@@ -245,9 +245,14 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
   if(t>=1){cat.y=0;companion.stage='following';companion.trail=[{...WINDOW_END}];return 'landed';}
   return previous<.3&&t>=.3?'jump':null;
  }
- if(cat.dodgeTime>0){
-  cat.dodgeTime=Math.max(0,cat.dodgeTime-dt);
-  poseEmy(cat,{mode:'jump',walking:false,phase:cat.age,reduced,blend:1-Math.exp(-18*dt)});
+ if(cat.dodge){
+  const dodge=cat.dodge,t=Math.min(1,(dodge.elapsed+=dt)/dodge.duration),u=smooth(t);
+  cat.x=dodge.from.x+(dodge.to.x-dodge.from.x)*u;
+  cat.z=dodge.from.z+(dodge.to.z-dodge.from.z)*u;
+  cat.y=dodge.from.y+(dodge.to.y-dodge.from.y)*u+(reduced?0:.12*Math.sin(Math.PI*u));
+  cat.yaw=dodge.from.yaw+deltaAngle(dodge.from.yaw,dodge.to.yaw)*u;
+  poseEmy(cat,{mode:'jump',walking:t<1,phase:cat.age,reduced,blend:1-Math.exp(-18*dt)});
+  if(t===1){cat.y=dodge.to.y;cat.dodge=null;companion.route=[];companion.chasing=undefined;}
   return null;
  }
  if(companion.stage==='distract'){
