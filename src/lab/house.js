@@ -39,7 +39,7 @@ import {poseEscapeAmbush,poseEmyLastChance,createRescueObjectives,updateEmySense
 import {updateUpstairsEmy,petEmy} from './emy-cat.js';
 import {createEmyAbilities,advanceEmyAbilities,activateEmyScan,roomChoices,roomDestinations,isEmyRoomLocked,emyFloorMap,emyFloorList} from './emy-abilities.js';
 import {installNoiseProps,grabNoiseProp,holdNoiseProp,releaseNoiseProp,stepNoiseProps} from './noise-props.js';
-import {sendEmyDistract,requestRibbonKey,EMY_ENTRANCE_SECONDS,createEmyCompanion,beginEmyEntrance,emyEntranceCamera,sendEmyToTrunk,updateEmyCompanion,snapshotEmyCompanion,restoreEmyCompanion} from './emy-companion.js';
+import {sendEmyDistract,commandEmyStay,releaseEmyStay,requestRibbonKey,EMY_ENTRANCE_SECONDS,createEmyCompanion,beginEmyEntrance,emyEntranceCamera,sendEmyToTrunk,updateEmyCompanion,snapshotEmyCompanion,restoreEmyCompanion} from './emy-companion.js';
 import {createRC,syncRCObject,deployRC,driveRC,beepRC,updateRC,stopRC,crashRC,recoverRC,rcCamera,rcDeploymentView,canTrapPursuer} from './rc-car.js';
 import {createLouisEscape,updateLouisEscape,freeLouis,louisCamera} from './louis-escape.js';
 import {createLoisShotDirector,advanceLoisShot,finishLoisShot} from './lois-ps2-cinematics.js';
@@ -94,6 +94,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  <div class="house-emy-menu" id="house-emy-menu" hidden role="group" aria-label="Acciones de Emy">
   <strong>Emy ♡</strong>
   <button data-act="emy:pet">♡ Acariciar</button>
+  <button id="house-emy-stay" data-act="emy:stay" aria-pressed="false">⌑ Quédate aquí</button>
   <button data-act="emy:scan">◎ Escaneo <small id="house-emy-scan-cd"></small></button>
   <button data-act="emy:map">✿ Distracción <small id="house-emy-distract-cd"></small></button>
   <button data-act="emy:close">Cerrar</button>
@@ -820,7 +821,15 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;resetInput();return;
    }
    if(!emyMenuOpen||!world||!s)return;
-   if(act==='emy:pet'){
+   if(act==='emy:stay'){
+     const staying=emyCompanion?.stage==='stay';
+     const ok=staying?releaseEmyStay(emyCompanion):commandEmyStay(emyCompanion);
+     if(!ok){say('Emy está ocupada con otra tarea.');return;}
+     emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;
+     say(staying?'Emy vuelve a seguir a Kitty.':'Emy se quedará aquí hasta que le indiques que te siga.',3);
+     resetInput();return;
+    }
+    if(act==='emy:pet'){
     emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;
     if(petEmy(world.emy)){play('cat-purr',world.emy,.60);say('Emy ronronea y levanta su patita ♡',3);}
     return;
@@ -1453,7 +1462,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    }else updateUpstairsEmy(world.emy,shotDelta,{player:s,reduced:reducedMotion.matches,
     hidden:world.greyCat.active,blocked:(x,y,z,r,h)=>blocked(world.boxes,x,y,z,r,h)});
    const cat=world.emy,target=world.emyInteraction;
-   Object.assign(target,{x:cat.x,y:cat.y+.38,z:cat.z,interactable:!cat.hidden&&(!emyCompanion||emyCompanion.stage==='following')&&cat.reaction<=0});
+   Object.assign(target,{x:cat.x,y:cat.y+.38,z:cat.z,interactable:!cat.hidden&&(!emyCompanion||['following','stay'].includes(emyCompanion.stage))&&cat.reaction<=0});
+    if(emyCompanion){
+     const stay=$('house-emy-stay');
+     stay.textContent=emyCompanion.stage==='stay'?'↪ Sígueme':'⌑ Quédate aquí';
+     stay.setAttribute('aria-pressed',String(emyCompanion.stage==='stay'));
+     stay.disabled=!['following','stay'].includes(emyCompanion.stage);
+    }
    if(wasHidden!==cat.hidden)renderer.updateVisibility();
   }
 
@@ -2008,9 +2023,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     errors:sound.recordings?.errors.filter(error=>error.startsWith('user-sprite'))||[]}),
    rc:()=>({projection:renderer.lastProjection,mode:rc.mode,elapsed:rc.elapsed,position:{x:rc.x,y:rc.y,z:rc.z,yaw:rc.yaw},noise:rc.noise,crashes:rc.crashes,inventory:!!s.inventory.rc,trap:{...rcTrap},pursuer:{x:pursuer.x,y:pursuer.y,z:pursuer.z,mode:pursuer.mode}}),
    louis:()=>louis?{x:louis.x,y:louis.y,z:louis.z,phase:louis.phase,waypoint:louis.waypoint,age:louis.age,walk:louis.walk,speed:louis.speed,crouch:louis.crouch,reaction:louis.visualReaction?.type??null,cameraPhase:loisShotDirector?.phase??null}:null,
-   emy:()=>({x:world.emy.x,y:world.emy.y,z:world.emy.z,phase:world.emy.phase,reaction:world.emy.reaction,hidden:world.emy.hidden,companion:emyCompanion?.stage,ventOpen:world.studyVent.coverAmount===1,entrance:emyShot?.elapsed,trunk:emyCompanion?.stage==='trunk'}),
+   emy:()=>({x:world.emy.x,y:world.emy.y,z:world.emy.z,phase:world.emy.phase,reaction:world.emy.reaction,hidden:world.emy.hidden,companion:emyCompanion?.stage,stay:emyCompanion?.stage==='stay',ventOpen:world.studyVent.coverAmount===1,entrance:emyShot?.elapsed,trunk:emyCompanion?.stage==='trunk'}),
    emySkills:()=>({scanRendered:!!renderer?.lastScanOutline,scan:emyAbilities.scan,scanCooldown:emyAbilities.scanCooldown,distractCooldown:emyAbilities.distractCooldown,
-    wave:emyAbilities.wave,menu:emyMenuOpen,mapOpen:!$('house-emy-map').hidden,stage:emyCompanion?.stage,
+    wave:emyAbilities.wave,stay:emyCompanion?.stage==='stay',menu:emyMenuOpen,mapOpen:!$('house-emy-map').hidden,stage:emyCompanion?.stage,
     distraction:emyCompanion?.distraction?{remaining:emyCompanion.distraction.remaining,arrived:emyCompanion.distraction.arrived,
       goal:{...emyCompanion.distraction.goal}}:null}),
    noiseProps:()=>noiseProps.map(p=>({id:p.id,x:p.x,y:p.y,z:p.z,held:p.held,spent:p.spent,flight:!!p.flight})),
