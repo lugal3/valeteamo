@@ -892,7 +892,8 @@ export class HouseRenderer {
   gl.uniform3f(this.uniform.uEye,camera.x,camera.y,camera.z);
   gl.uniform3f(this.uniform.uLightEye,light.x,light.y,light.z);
   gl.uniform3fv(this.uniform.uRight,right);gl.uniform3fv(this.uniform.uUp,up);gl.uniform3fv(this.uniform.uForward,forward);
-  const projection=1.30*(motion.captureProjection??1);
+  const projection=(motion.rcView?1.02:1.30)*(motion.captureProjection??1);
+  this.lastProjection=projection;
   gl.uniform2f(this.uniform.uProjection,projection*this.canvas.height/this.canvas.width,projection);
   gl.uniform1f(this.uniform.uNear,motion.grasp ? .032 : .07);gl.uniform1f(this.uniform.uFar,45);
   gl.uniform1f(this.uniform.uFlash,beamPower);gl.uniform1f(this.uniform.uTime,time);
