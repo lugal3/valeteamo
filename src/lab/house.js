@@ -37,6 +37,7 @@ import {BATTERY_SWAP_SECONDS} from './viewmodel.js';
 import {rescueProgress} from './rescue-progress.js';
 import {poseEscapeAmbush,poseEmyLastChance,createRescueObjectives,updateEmySenses} from './emy-rescue.js';
 import {collectCinematicCues} from './cinematic-cues.js';
+import {rcControlHint,throwableHint,threatAccessibility} from './hud-context.js';
 import {updateUpstairsEmy,petEmy} from './emy-cat.js';
 import {createEmyAbilities,advanceEmyAbilities,activateEmyScan,roomChoices,roomDestinations,isEmyRoomLocked,emyFloorMap,emyFloorList} from './emy-abilities.js';
 import {installNoiseProps,grabNoiseProp,holdNoiseProp,releaseNoiseProp,stepNoiseProps} from './noise-props.js';
@@ -118,6 +119,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  </div>
  <div class="house-noise-controls" id="house-noise-controls" hidden role="group" aria-label="Objeto en la mano">
   <strong id="house-noise-held" aria-live="off"></strong>
+  <small id="house-noise-hint" class="house-control-hint"></small>
   <button data-act="noise:throw" aria-keyshortcuts="G">Lanzar <kbd>G</kbd></button>
    <button data-act="noise:lob">Lanzar suave</button>
   <button data-act="noise:drop" aria-keyshortcuts="V">Soltar <kbd>V</kbd></button>
@@ -168,7 +170,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  </div>
  <div class="house-emotes" id="house-emotes" hidden role="group" aria-label="Emotes"><span>En el espejo · moverte cancela</span>${EMOTES.map(e=>`<button data-act="emote:${e.id}">${e.key} · ${e.label}</button>`).join('')}<button data-act="emote:stop">Detener</button></div>
  <div class="house-rc-hud" id="house-rc-hud" hidden role="group" aria-label="Tablet de control RC">
-  <div class="house-rc-display"><strong>Kitty RC</strong><span class="house-rc-keys">W/S acelerar · A/D girar</span><output id="house-rc-status" aria-live="off">Señal conectada</output></div>
+  <div class="house-rc-display"><strong>Kitty RC</strong><span class="house-rc-keys">W/S acelerar · A/D girar</span><output id="house-rc-status" aria-live="off">Señal conectada</output><small id="house-rc-hint" class="house-control-hint"></small></div>
   <div class="house-rc-actions"><button data-act="rc:noise" aria-keyshortcuts="Q" aria-label="Tocar bocina del auto RC para atraer al secuestrador">📣 Bocina <kbd>Q</kbd></button><button data-act="rc:trap" id="rc-trap-button" aria-keyshortcuts="T" hidden>Cerrar escotilla <kbd>T</kbd></button><button data-act="rc:stop" aria-keyshortcuts="X Escape">Guardar <kbd>Esc</kbd></button></div>
  </div>
  <div class="house-rc-caption" id="house-rc-caption" hidden role="status"></div>
@@ -1012,6 +1014,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   root.classList.toggle('lab-flash-off',!s.flashlight);
   $('house-noise-controls').hidden=!heldNoise||isPaused()||phone.open||remoteInUse();
   $('house-noise-held').textContent=heldNoise?'En mano: '+heldNoise.label.replace(/^Recoger\s+/,''):'';
+  if(heldNoise)$('house-noise-hint').textContent=throwableHint(!desktop.matches);
   $('house-light').hidden=equipment!=='flashlight'||!!s.hidden||!!s.lying;
   $('house-use-phone').hidden=!['phone','paper','rc'].includes(equipment)||notePresentation||!!noteLift||(equipment!=='phone'&&(!!s.hidden||!!s.lying));
   $('house-use-phone').setAttribute('aria-label',equipment==='rc'?'Usar auto RC':equipment==='paper'?'Observar nota':'Usar teléfono');
@@ -1073,6 +1076,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(remote){
    const status=rc.noise>0?'📣 Señuelo activo · '+Math.ceil(rc.noise)+' s':'📶 Señal estable · '+Math.round(Math.abs(rc.velocity)*10)/10+' m/s';
    if($('house-rc-status').textContent!==status)$('house-rc-status').textContent=status;
+   const help=rcControlHint(!desktop.matches,rc.noise,canTrapPursuer(pursuer,world.hatch,rcTrap.armed));
+   if($('house-rc-hint').textContent!==help)$('house-rc-hint').textContent=help;
    $('rc-trap-button').hidden=!canTrapPursuer(pursuer,world.hatch,rcTrap.armed);
    interactButton.hidden=true;
   }
@@ -1665,6 +1670,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   danger.hidden=!['arrival','hide','patrol','hunt'].includes(events.phase)&&!(events.phase==='evaded'&&(chasing||investigating));
   if(emyCompanion?.stage==='following'&&!scenario&&['patrol','hunt','evaded'].includes(events.phase)&&!chasing&&!investigating)danger.hidden=true;
   danger.dataset.level=chasing?'chase':investigating?'watch':'search';
+   danger.setAttribute('aria-label',threatAccessibility(danger.dataset.level));
   const arrivalCaption=options.captions!==false&&events.time<CAR_ARRIVAL_SECONDS?'Se acerca un motor':'Alguien intenta entrar';
   const threatText=events.phase==='hide'?'Escóndete · '+Math.ceil(events.remaining)+' s':
    events.phase==='arrival'?arrivalCaption:
