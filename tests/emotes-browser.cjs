@@ -63,7 +63,6 @@ const {chromium}=require('playwright');
     assert.equal(await page.evaluate(()=>document.pointerLockElement),null,
      'opening emote panel MUST release captured desktop mouse');
     await page.locator('#house-emotes [data-act="emote:stop"]').click();
-   }
   }
   assert.deepEqual(errors,[],'no browser errors during mouse/emotes interactions');
   await context.close();
