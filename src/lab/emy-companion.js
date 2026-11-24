@@ -256,12 +256,6 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
   return null;
  }
  if(companion.stage==='fetch')return fetchKey(companion,world,player,dt,reduced);
- if(companion.stage==='stay'){
-  // Explicit hold persists across floor changes and hiding; no movement/noises.
-  companion.route=[];companion.trail=[];
-  companionIdle(companion,dt,{reduced,lookAt:player,quiet:!!(enteringHide||player?.hidden)});
-  return null;
- }
  if(companion.stage==='entrance'){
   const previous=companion.entranceAge/EMY_ENTRANCE_SECONDS;
   companion.entranceAge=Math.min(EMY_ENTRANCE_SECONDS,companion.entranceAge+dt);
@@ -283,6 +277,12 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
   cat.yaw=dodge.from.yaw+deltaAngle(dodge.from.yaw,dodge.to.yaw)*u;
   poseEmy(cat,{mode:'jump',walking:t<1,phase:cat.age,reduced,blend:1-Math.exp(-18*dt)});
   if(t===1){cat.y=dodge.to.y;cat.dodge=null;companion.route=[];companion.chasing=undefined;}
+  return null;
+ }
+ if(companion.stage==='stay'){
+  // Explicit hold persists across floor changes and hiding; no movement/noises.
+  companion.route=[];companion.trail=[];
+  companionIdle(companion,dt,{reduced,lookAt:player,quiet:!!(enteringHide||player?.hidden)});
   return null;
  }
  if(companion.stage==='distract'){
