@@ -1166,7 +1166,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const dz=(Math.cos(s.yaw)*intent.forward-Math.sin(s.yaw)*intent.side)*velocity.speed*dt;
   const body=s.crouched?1.04:1.64;
   const moved=movementLocked?0:navigate(s,world,dx,dz,body);
-  s.cameraGround=advanceCameraFloor(s.cameraGround,s.y,dt);
+  s.cameraGround=reducedMotion.matches?s.y:advanceCameraFloor(s.cameraGround,s.y,dt);
   if(events.phase==='escape'&&!world.objects.find(o=>o.id==='entrada').sealed&&louis?.phase==='follow'&&s.z>12.35&&s.x>4.6&&s.x<7.2){
    const ground=0,walk=2.70;
    finalCutscene={elapsed:0,
@@ -1795,8 +1795,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(releasedPointer(e,stickPointerType)){endStick(e);return;}
   const r=$('lab-stick').parentElement.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
   const dx=e.clientX-cx,dy=e.clientY-cy,dist=Math.hypot(dx,dy);
-  joystick.sprint=stickPointerType==='touch'&&dist>r.width*(joystick.sprint?.53:.61);
-  const radius=Math.max(28,r.width*.45),normalized=Math.min(1,dist/radius),deadzone=.13;
+  // A modest extra pull beyond the thumb's normal radius activates sprint;
+  // hysteresis prevents flicker while steering near the edge on iPhone.
+  joystick.sprint=stickPointerType==='touch'&&dist>r.width*(joystick.sprint?.47:.53);
+  const radius=Math.max(28,r.width*.45),normalized=Math.min(1,dist/radius),deadzone=.11;
   const amount=normalized<=deadzone?0:(normalized-deadzone)/(1-deadzone);
   const curved=amount*amount*(3-2*amount);
   joystick.x=dist<.01?0:dx/dist*curved;joystick.z=dist<.01?0:dy/dist*curved;
@@ -2016,7 +2018,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    placeRC:(pose)=>{if(rc.mode!=='driving')throw Error('RC must be deployed first');const y=groundHeight(pose.x,pose.z,pose.y??rc.y,world.hatch?.amount>.92);if(!Number.isFinite(y)||blocked(world.boxes,pose.x,y,pose.z,.155,.38))throw Error('Blocked RC test position');rc.x=pose.x;rc.y=y;rc.z=pose.z;rc.yaw=pose.yaw??rc.yaw;rc.noise=0;syncRCObject(rc);return {x:rc.x,y:rc.y,z:rc.z};},
    intro:()=>cinematic?{elapsed:cinematic.elapsed,...windowIntroState(cinematic.elapsed/WINDOW_SHOT_SECONDS),camera:windowIntroCamera(cinematic.elapsed/WINDOW_SHOT_SECONDS)}:null,
    atmosphere:()=>({room:sound.atmosphere?.room,outdoor:sound.atmosphere?.outdoor,events:sound.atmosphere?.events,voices:sound.atmosphere?.voices.size,loops:sound.atmosphere?.loops.length,lastEvent:sound.atmosphere?.lastEvent,muted:sound.settings.muted,volume:sound.settings.ambient}),
-   snapshot:()=>({puzzle:{...puzzle},position:{x:s?.x,y:s?.y,z:s?.z},camera:{yaw:s?.yaw,pitch:s?.pitch,targetYaw:lookTarget.yaw,invertX:options.invertX},cinematic:!!cinematic,quality:options.quality,fps,target:focus?.id??null,paused:isPaused(),controls:{look:lookPointer,stick:stickPointer,joystick:{...joystick}},reduceBob:s.reduceBob,flashlight:s.flashlight,notes:s.inventory.notes.length,drawer:(()=>{const o=world.objects.find(o=>o.id==='drawer');return {state:o.state,amount:o.amount,z:o.box.z,key:world.objects.find(o=>o.id==='key').z,contentsAvailable:world.objects.find(o=>o.id==='key').interactable,contentsConcealed:world.objects.find(o=>o.id==='key').concealed}})(),doors:world.objects.filter(o=>o.kind==='door').map(o=>({id:o.id,open:o.open,state:o.state,amount:o.amount,x:o.box.x,z:o.box.z,yaw:o.box.yaw,solid:o.box.solid})),handVisible:renderer.lastShowHand,hidden:!!s.hidden,hideType:s.hidden?.hideType,poseTransition:poseTransition?{entering:poseTransition.entering,elapsed:poseTransition.elapsed}:null,view:cameraOf(s),wardrobeAmount:world.objects.find(o=>o.id==='wardrobe').amount,music:{scheduled:sound.musicStep,voices:sound.musicNodes.size,timer:sound.musicTimer!==null,volume:sound.settings.music},sound:sound.context?.state,mirror:{supported:renderer.mirrorSupported,drawn:renderer.mirrorDrawn,vertices:renderer.kittyVertices?.length/16,uploads:renderer.mirrorUploads},animation:{...animator.snapshot(),rigEvaluations:renderer.characterBinding?.evaluations},geometry:{vertices:renderer.vertexCount,triangles:renderer.triangleCount}}),
+   snapshot:()=>({puzzle:{...puzzle},position:{x:s?.x,y:s?.y,z:s?.z},locomotion:{...velocity,eye:s?.eye,cameraGround:s?.cameraGround,stairs:s?getStairDirection(s):''},camera:{yaw:s?.yaw,pitch:s?.pitch,targetYaw:lookTarget.yaw,invertX:options.invertX},cinematic:!!cinematic,quality:options.quality,fps,target:focus?.id??null,paused:isPaused(),controls:{look:lookPointer,stick:stickPointer,joystick:{...joystick}},reduceBob:s.reduceBob,flashlight:s.flashlight,notes:s.inventory.notes.length,drawer:(()=>{const o=world.objects.find(o=>o.id==='drawer');return {state:o.state,amount:o.amount,z:o.box.z,key:world.objects.find(o=>o.id==='key').z,contentsAvailable:world.objects.find(o=>o.id==='key').interactable,contentsConcealed:world.objects.find(o=>o.id==='key').concealed}})(),doors:world.objects.filter(o=>o.kind==='door').map(o=>({id:o.id,open:o.open,state:o.state,amount:o.amount,x:o.box.x,z:o.box.z,yaw:o.box.yaw,solid:o.box.solid})),handVisible:renderer.lastShowHand,hidden:!!s.hidden,hideType:s.hidden?.hideType,poseTransition:poseTransition?{entering:poseTransition.entering,elapsed:poseTransition.elapsed}:null,view:cameraOf(s),wardrobeAmount:world.objects.find(o=>o.id==='wardrobe').amount,music:{scheduled:sound.musicStep,voices:sound.musicNodes.size,timer:sound.musicTimer!==null,volume:sound.settings.music},sound:sound.context?.state,mirror:{supported:renderer.mirrorSupported,drawn:renderer.mirrorDrawn,vertices:renderer.kittyVertices?.length/16,uploads:renderer.mirrorUploads},animation:{...animator.snapshot(),rigEvaluations:renderer.characterBinding?.evaluations},geometry:{vertices:renderer.vertexCount,triangles:renderer.triangleCount}}),
    setPose:(pose)=>{if(blocked(world.boxes,pose.x,pose.y,pose.z,.2,1.7))throw Error('Blocked test pose');Object.assign(s,pose);s.cameraGround=s.y;resetInput();focus=null;},
    interactWith:async(id,activate=true)=>{
     const o=world.objects.find(o=>o.id===id&&!o.taken);if(!o)throw Error('Not available: '+id);
