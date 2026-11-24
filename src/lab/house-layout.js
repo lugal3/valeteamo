@@ -7,6 +7,7 @@ import {installUpstairsEmy} from './emy-cat.js';
 import {installCabinet,installRefrigerator} from './house-cabinets.js';
 import {installLouisAltar} from './louis-altar.js';
 import {installWallClock} from './wall-clock.js';
+import {installLivingHouseDetails} from './house-ambient-details.js';
 import {STUDY_SIGN} from './artwork.js';
 import {HATCH,floorAroundHatch,installBasement} from './basement.js';
 import {decorateKitchen,installPiano,installKitchenBar,installExtraHides,PIANO_SHEET_ID} from './house-additions.js';
@@ -417,6 +418,8 @@ export function buildHouse(spawn='ground'){
   add('decal-stair-dust',12,.005,7.45,2.3,.01,.12,'stain',false);
   add('decal-bath-drip',9.88,0.6,4.45,.01,.55,.12,'stain',false);
   add('decal-study-dust',.12,.005,1.5,.12,.01,2.8,'stain',false);
+  // V2 ambience uses only decorative non-collision geometry.
+  installLivingHouseDetails(add,HEIGHT);
   const spawns={mirror:{...MIRROR_SPAWN},ground:{x:5.95,y:0,z:10.65,yaw:Math.PI},upstairs:{x:12,y:HEIGHT,z:4.15,yaw:-Math.PI/2,items:{key:1}},sound:{x:2.2,y:0,z:11.0,yaw:Math.PI},interactions:{x:3.3,y:0,z:3.6,yaw:-2.8,items:{key:1,batteries:1}}};
  const lights=installHouseLights(add,obj,HEIGHT);
  const hatch=installBasement(add,obj,lights);
