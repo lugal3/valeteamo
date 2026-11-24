@@ -22,7 +22,7 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 | 06 | **Throwable objects + sound/material physics** | IMPLEMENTED — QA pending | Glass/ceramic/metal/wood/carpet responses, controlled throw strengths, predictable collisions, noise investigation |
 | 07 | **RC controls, camera, and strategy** | IMPLEMENTED — QA pending | Smoother drive and camera; suspension/bumps, legible tablet HUD, horn, combined RC/Emy tactics |
 | 08 | **2D flow, storytelling and 2D→3D transition** | IMPLEMENTED — QA pending | Kawaii day→night pacing, credible meeting/kidnap, no pop-ins, coherent front window, seamless house handoff |
-| 09 | **Louis, puzzles and progression** | NOT STARTED | Natural rescue/companion animations, verified cover and body rig, contextual dialogue, progressive puzzle hints/checkpoints |
+| 09 | **Louis, puzzles and progression** | IN PROGRESS — QA pending | Natural rescue/companion animations, verified cover and body rig, contextual dialogue, progressive puzzle hints/checkpoints |
 | 10 | **Cinematics, endings and reactive audio** | NOT STARTED | Understandable Emy-rescue and escape/loss cutscenes, synchronized spatial audio, proper camera framing on PC/iPhone |
 | 11 | **HUD, tutorials, accessibility and mobile feel** | NOT STARTED | Clean contextual controls, phone/hotbar, orientation/safe areas, motion/audio/text options |
 | 12 | **Optimization, playthrough QA and release** | NOT STARTED | Full automated/manual end-to-end test matrix, capture evidence, compare baselines, PR review, then merge and deploy |
@@ -168,3 +168,12 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 - Added compact responsive chapter label to the existing `GardenPrologue` UI, and a 720 ms dark window-to-3D handoff using the current 2D scene before mounting 3D; reduced-motion enters immediately and lifecycle cleanup removes delayed callbacks.
 - Added `tests/prologue-v2-beats.cjs` to `npm test`, covering stage mapping, original Phaser engine, saved stage, reduced-motion handoff and cleanup.
 - **QA pending**: Vite/TypeScript build and browser testing on desktop and iPhone. Additional 2D map/animation polish is still to be completed before Phase 08 can be called finished.
+
+## Phase 09 progress — Louis character and rescue choreography (QA pending)
+
+- Preserve the **existing Photo-A face texture, articulated rig and 3D model**; no visual variant switches, skeletal changes or increased mesh counts.
+- Added three precisely timed, single-use native rig reactions while Kitty unties Louis: reaching toward Kitty, startling at the knot, then looking toward his rescuer. These motions are driven through `lois-ps2-reactions.js` and do not add meshes or affect the camera director.
+- Smoothed Louis' yaw rotation during climb and follow, including ±π angle wrap. Existing collision-aware kitchen-bar routes, crouching, trap, escape and finale remain intact; arrival correction cannot teleport Louis across the room.
+- Added `tests/louis-rescue-feel.cjs` to `npm test` to verify facial beats, full physical escape route, no instantaneous turns or teleport and continued Photo-A use.
+- Fixed **Phase 08 CI compilation failure** TS7016 by adding `src/demo/prologue-beats.d.ts` for the JS chapter indicator imported into a TypeScript React component.
+- **QA pending:** complete build, node tests, perf suite, real desktop/iPhone browser playthrough; additional puzzles polishing is not yet completed. No merge or deployment.
