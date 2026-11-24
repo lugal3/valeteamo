@@ -8,6 +8,7 @@ on:
       - 'scripts/**'
       - 'package.json'
       - 'package-lock.json'
+      - 'docs/VALETEAMO-V2-DEFECT-AUDIT.md'
       - '.github/workflows/valeteamo-v2-release-qa.yml'
   workflow_dispatch:
 permissions:
