@@ -13,6 +13,7 @@ import {VAN_NIGHT_POSITION} from './abduction-van';
 import type {IsoAdventure,IsoStoryBridge,IsoStoryStage} from '../iso-game';
 import {RESCUE_SCENES,type RescueMapId,type RouteArea} from './rescue-overworld';
 import {valeTexture} from './rescue-intro-art';
+import {prologueProgress,HOUSE_HANDOFF_MS} from './prologue-beats.js';
 import {
  PROLOGUE_START,PROLOGUE_DIALOGUES,PROLOGUE_OBJECTIVES,
  advancePrologue,loadPrologue,savePrologue,resetPrologue,
@@ -42,6 +43,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  const [guide,setGuide]=useState(''),[dusk,setDusk]=useState(0),[area,setArea]=useState<RouteArea>('sendero');
  const [map,setMap]=useState<RescueMapId>('morning_garden');
  const [transition,setTransition]=useState<null|{target:RescueMapId;phase:'out'|'in'}>(null);
+ const [houseHandoff,setHouseHandoff]=useState(false);
  const [portraits,setPortraits]=useState<Record<string,string>>({});
  const [restartKey,setRestartKey]=useState(0);
 
@@ -200,7 +202,11 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
    if(stage==='window'){
     showDialog(PROLOGUE_DIALOGUES.window,()=>{
      if(enteringRef.current)return;
-     enteringRef.current=true;changed('enter');onEnterHouse();
+     enteringRef.current=true;changed('enter');setHouseHandoff(true);
+      // Finish the 2D window transition before mounting the 3D scene.
+      const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if(reduced)onEnterHouse();
+      else travelTimers.current.push(window.setTimeout(onEnterHouse,HOUSE_HANDOFF_MS));
     });
    }
   },
@@ -241,7 +247,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  };
  const restart=()=>{
   for(const timer of travelTimers.current)window.clearTimeout(timer);
-  travelTimers.current=[];travelingRef.current=false;setTransition(null);
+  travelTimers.current=[];travelingRef.current=false;setTransition(null);setHouseHandoff(false);
   if(!test)resetPrologue();
   const next=initial(test,checkpoint);
   phaseRef.current=next;setRun(next);setDialog(null);setLetters(0);
@@ -285,9 +291,11 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
 
  const currentLine=dialog?.lines[dialog.index];
  const portrait=currentLine?portraits[currentLine.speaker.toLowerCase()]:undefined;
+ const chapter=prologueProgress(run.stage);
 
  return <main className="story-prologue" aria-label="Rescate con el motor original de Corazones"
   data-prologue-stage={run.stage} data-rescue-map={map} data-transition={transition?.phase??'none'}
+   data-story-act={chapter.id} data-house-handoff={houseHandoff}
   data-fed-grey-cat={run.fedGreyCat}
   onClickCapture={event=>{
    if(!muted&&event.target instanceof Element&&!event.target.closest('.adventure-wrap')){
@@ -338,13 +346,20 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
     }
    }}/>
   <div className="prologue-night" style={{opacity:dusk}} aria-hidden="true"/>
+   {houseHandoff&&<div className="prologue-3d-handoff" role="status" aria-live="polite">
+     <span>✧ ACTO III ✧</span><strong>La casa de LUNA-07</strong>
+     <small>Kitty entra por la ventana…</small>
+    </div>}
   <div className={'prologue-curtain'+(transition?.phase==='out'?' is-dark':'')}
    data-fade={transition?.phase??'none'} aria-hidden="true"/>
   {transition&&<div className="prologue-curtain-title" role="status">
     <span>✧ {RESCUE_SCENES[transition.target].time} ✧</span>
     <strong>{RESCUE_SCENES[transition.target].label}</strong>
    </div>}
-  <span className="prologue-area" aria-live="polite">
+  <span className="prologue-act" aria-label={`${chapter.label}: ${chapter.title}`}>
+    <strong>{chapter.label}</strong><small>{chapter.title}</small>
+   </span>
+   <span className="prologue-area" aria-live="polite">
    ✿ {RESCUE_SCENES[map].time} · {{
     sendero:'Sendero de los recuerdos',puente:'Río de los pétalos',
     jardin:'Jardín de cerezos',bosque:'Bosque del crepúsculo',
