@@ -136,11 +136,22 @@ function fetchKey(companion,world,player,dt,reduced){
  }
  return cue;
 }
+export function sendEmyDistract(companion,world,goal){
+ if(companion?.stage!=='following'||!goal)return false;
+ const previous={stage:companion.stage,route:companion.route,trail:companion.trail};
+ companion.route=[];companion.trail=[];companion.stuck=0;
+ planRoute(companion,world,goal);
+ if(!companion.route.length&&distance(companion.cat,goal)>.85){
+  Object.assign(companion,previous);return false;
+ }
+ companion.distraction={goal:{...goal},remaining:25,arrived:false,nextNoise:0,nextPlan:0,stuck:0};
+ companion.stage='distract';companion.cat.reaction=0;return true;
+}
 export function snapshotEmyCompanion(companion){
  const {cat,stage}=companion;
  if(stage==='closet-entry')return {stage:'following',x:companion.closetEntry.x,y:cat.y,z:companion.closetEntry.z,yaw:cat.yaw};
  if(stage==='fetch'&&['leap-in','crawl','leap-out'].includes(companion.fetch.phase))return {stage:'following',...companion.fetch.vent.takeoff,yaw:0};
- return {stage:['entrance','fetch'].includes(stage)?'following':stage==='trunk-enter'?'trunk':stage,
+ return {stage:['entrance','fetch','distract'].includes(stage)?'following':stage==='trunk-enter'?'trunk':stage,
   x:cat.x,y:cat.y,z:cat.z,yaw:cat.yaw};
 }
 export function restoreEmyCompanion(companion,saved,storyPhase='explore'){
@@ -182,14 +193,14 @@ function clearPassage(world,from,to){
  }
  return Math.abs(floor-to.y)<.23;
 }
-function moveToward(companion,world,goal,dt,speed){
+function moveToward(companion,world,goal,dt,speed,allowMusic=false){
  const cat=companion.cat,dx=goal.x-cat.x,dz=goal.z-cat.z,d=Math.hypot(dx,dz);
  if(d<.055)return false;
  const turn=deltaAngle(cat.yaw,Math.atan2(dx,dz));
  cat.yaw+=turn*(1-Math.exp(-18*dt));
  const step=Math.min(d,speed*dt*Math.max(.12,Math.cos(turn))),nx=cat.x+dx/d*step,nz=cat.z+dz/d*step;
  const y=groundHeight(nx,nz,cat.y,world.hatch?.amount>.92);
- if(roomAt(nx,nz,y)==='Sala de música')return false;
+ if(!allowMusic&&roomAt(nx,nz,y)==='Sala de música')return false;
  if(!Number.isFinite(y)||Math.abs(y-cat.y)>.30||blocked(world.boxes,nx,y,nz,.14,.62))return false;
  cat.x=nx;cat.y=y;cat.z=nz;
  return true;
@@ -224,6 +235,36 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
   if(previous<contact&&t>=contact)return 'touchdown';
   if(t>=1){cat.y=0;companion.stage='following';companion.trail=[{...WINDOW_END}];return 'landed';}
   return previous<.3&&t>=.3?'jump':null;
+ }
+ if(companion.stage==='distract'){
+  const job=companion.distraction;
+  if(!job){companion.stage='following';return null;}
+  if(!job.arrived){
+   const goal=job.goal;
+   while(companion.route.length&&distance(cat,companion.route[0])<.19&&Math.abs(cat.y-companion.route[0].y)<.28)companion.route.shift();
+   if(companion.route.length)openRouteDoor(companion,world,player,reduced);
+   const point=companion.route[0]||goal;
+   const walking=moveToward(companion,world,point,dt,2.25,true);
+   job.stuck=walking?0:job.stuck+dt;
+   if(job.stuck>.65&&companion.age>job.nextPlan){
+    planRoute(companion,world,goal);job.nextPlan=companion.age+1.0;
+   }
+   poseEmy(cat,{mode:walking?'walk':'idle',walking,phase:cat.age,reduced,blend:1-Math.exp(-12*dt)});
+   if(distance(cat,goal)<.95&&Math.abs(cat.y-goal.y)<.4){
+    job.arrived=true;job.nextNoise=0;companion.route=[];
+   }
+   if(job.stuck>12){companion.stage='following';companion.distraction=null;companion.route=[];return 'distract-failed';}
+   return null;
+  }
+  job.remaining-=dt;job.nextNoise-=dt;
+  cat.yaw+=deltaAngle(cat.yaw,Math.PI*.5)*(1-Math.exp(-dt*4));
+  poseEmy(cat,{mode:'idle',walking:false,phase:cat.age,reduced,blend:1-Math.exp(-9*dt)});
+  if(job.remaining<=0){
+   companion.stage='following';companion.distraction=null;companion.trail=[];companion.route=[];companion.chasing=undefined;
+   return 'distract-done';
+  }
+  if(job.nextNoise<=0){job.nextNoise=1.5;return 'distract-noise';}
+  return null;
  }
  if(companion.altarWait&&companion.stage==='following')player=ALTAR_THRESHOLD;
  const hide=enteringHide||player?.hidden;
