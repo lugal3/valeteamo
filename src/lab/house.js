@@ -34,7 +34,7 @@ import {updateWallClock} from './wall-clock.js';
 import {animateFurniture,updateFurniture,sweepClear} from './furniture-motion.js';
 import {BATTERY_SWAP_SECONDS} from './viewmodel.js';
 import {rescueProgress} from './rescue-progress.js';
-import {poseEscapeAmbush,createRescueObjectives,updateEmySenses} from './emy-rescue.js';
+import {poseEscapeAmbush,poseEmyLastChance,createRescueObjectives,updateEmySenses} from './emy-rescue.js';
 import {updateUpstairsEmy,petEmy} from './emy-cat.js';
 import {createEmyAbilities,advanceEmyAbilities,activateEmyScan,roomChoices,roomDestinations,isEmyRoomLocked,emyFloorMap,emyFloorList} from './emy-abilities.js';
 import {installNoiseProps,grabNoiseProp,holdNoiseProp,releaseNoiseProp,stepNoiseProps} from './noise-props.js';
@@ -337,7 +337,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const p=world.spawn;
   const torchAvailable=!demo||checkpoint!=='ground'||['drawer','lock','rescue'].includes(config.entry);
   equipment=torchAvailable?'flashlight':'empty';
-  s={lives:STARTING_LIVES,x:p.x,z:p.z,y:p.y,yaw:p.yaw,pitch:0,eye:1.63,crouched:false,hidden:null,lying:false,bob:0,
+  s={lives:STARTING_LIVES,emyRescueUsed:false,x:p.x,z:p.z,y:p.y,yaw:p.yaw,pitch:0,eye:1.63,crouched:false,hidden:null,lying:false,bob:0,
     flashlight:torchAvailable&&demo,battery:100,stamina:SPRINT_SECONDS,sprinting:false,exhausted:false,recoveryDelay:0,reduceBob:!options.bob||reducedMotion.matches,inventory:{notes:[],batteries:p.items?.batteries??Number(demo),key:demo?puzzle.key&&!puzzle.door:!!p.items?.key,redKey:false,masterKey:false,torch:torchAvailable,rc:false},distanceSteps:0};
   world.landingTorch=world.objects.find(o=>o.id==='media-flashlight');
   world.landingTorch.taken=torchAvailable;
@@ -1193,38 +1193,83 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function showLives(lives){
   const notice=$('house-lives');
   notice.querySelector('.life-slots').innerHTML=lifeSlots(lives);
-  notice.querySelector('strong').textContent=lives===1?'Te queda una vida':lives===0?'Sin vidas':'Te quedan '+lives+' vidas';
+  notice.querySelector('strong').textContent=lives===1?(s.emyRescueUsed?'¡Última vida! Emy te salvó':'Te queda una vida'):lives===0?'0 vidas · Emy, ¡ayuda!':'Te quedan '+lives+' vidas';
   notice.hidden=false;lifeNoticeLeft=LIFE_NOTICE_SECONDS;
  }
  function beginCapture(){
   if(captureShot)return;
   // Save the debit immediately so reloading during the cinematic cannot undo it.
-  const loss=captureLoss(s.lives,lastSafeCheckpoint,pursuer.witnessed);
-  s.lives=loss.lives;lastSafeCheckpoint=loss.checkpoint;
+  const loss=captureLoss(s.lives,lastSafeCheckpoint,pursuer.witnessed,s.emyRescueUsed);
+  s.lives=loss.lives;s.emyRescueUsed=loss.emyRescueUsed;lastSafeCheckpoint=loss.checkpoint;
   checkpointStore?.save(loss.checkpoint);
   const from=cameraOf(s);
   const hiding=world.objects.find(object=>object.id===(s.hidden?.objectId||poseTransition?.object.id));
   if(hiding?.wardrobeLeaves){poseFurniture(hiding,1);renderer.updateVisibility();}
   captureShot={from,loss,actor:pursuer.snapshot(),elapsed:0,timing:captureTiming(captureCount++),
-   constrain:capturePath(world.boxes,from),lamp:flashlightBeam()};
+   constrain:capturePath(world.boxes,from),lamp:flashlightBeam(),
+   kitty:{x:s.x,y:s.y,z:s.z,yaw:s.yaw},attacker:{...pursuer.snapshot()}};
   phone.close();releaseMouse();resetInput();sound.stopEmote();
   $('house-emotes').hidden=true;
   $('lab-camera-settings').open=false;
   sound.carEngine(null);sound.rcMotor(0);
   $('capture-loss').hidden=true;captureLayer.style.removeProperty('--capture-dark');
   captureLayer.hidden=false;root.classList.add('house-capture-active');
-  captureCaption.textContent=options.captions!==false?'[El secuestrador te agarra]':'';
-  sound.setCaptureQuiet(true);
-  sound.captureCue('capture-grab');
+  captureCaption.textContent=options.captions!==false?(loss.emyRescue?'[Emy escucha el peligro y corre hacia Kitty]':'[El secuestrador te agarra]'):'';
+  sound.setCaptureQuiet(!loss.emyRescue);
+  if(!loss.emyRescue)sound.captureCue('capture-grab');
+  else showLives(0);
+ }
+ function renderEmyLastChance(delta){
+  const shot=captureShot,previous=shot.elapsed;
+  if(captureRunning())shot.elapsed+=delta;
+  if(poseEmyLastChance(shot,world.emy,pursuer,reducedMotion.matches))renderer.updateVisibility();
+  if(previous<.55&&shot.elapsed>=.55){
+   play('cat',null,1.4);
+   if(options.captions!==false)captureCaption.textContent='[¡Emy salta para alejar al secuestrador!]';
+  }
+  if(previous<1.45&&shot.elapsed>=1.45)play('cloth',null,.9);
+  const marker=Math.min(1,Math.max(0,(shot.elapsed-1.55)/.65));
+  captureLayer.style.setProperty('--capture-edge',String(.17+.08*marker));
+  captureLayer.style.setProperty('--capture-dark','0');
+  // Side-on master shot: Kitty, the attacking Emy and the pursuer in-frame.
+  // Check walls and floor; never send the spectator camera into a cabinet.
+  const subject={x:(shot.kitty.x+pursuer.x)/2,y:shot.kitty.y+1.0,z:(shot.kitty.z+pursuer.z)/2};
+  const optionsCamera=[
+   {x:shot.kitty.x+2.4,y:shot.kitty.y+2.05,z:shot.kitty.z+2.5},
+   {x:shot.kitty.x-2.4,y:shot.kitty.y+2.05,z:shot.kitty.z+2.5},
+   {x:shot.kitty.x+2.1,y:shot.kitty.y+2.05,z:shot.kitty.z-2.5},
+   {x:shot.kitty.x-2.1,y:shot.kitty.y+2.05,z:shot.kitty.z-2.5}
+  ];
+  const safe=optionsCamera.find(c=>!blocked(world.boxes,c.x,c.y-.2,c.z,.16,.2)&&
+   !lineBlocked(world.boxes,c,subject));
+  const camera=safe||shot.from,dx=subject.x-camera.x,dz=subject.z-camera.z;
+  const view={...camera,yaw:Math.atan2(dx,dz),pitch:Math.atan2(subject.y-camera.y,Math.max(.1,Math.hypot(dx,dz)))};
+  try{
+   renderer.render(view,0,elapsed+shot.elapsed,false,{
+    reduced:reducedMotion.matches,shotLight:.34,pursuer:pursuer.snapshot(),
+    thirdPerson:{x:shot.kitty.x,y:shot.kitty.y,z:shot.kitty.z,
+     yaw:shot.kitty.yaw,walk:0,speed:0},television});
+  }catch(error){interruptGraphics('Error en el rescate de Emy',String(error.message||error));return;}
+  if(shot.elapsed<3.35)return;
+  const restore=shot.loss.checkpoint,messages=events.messages;
+  captureShot=null;captureLayer.hidden=true;$('capture-loss').hidden=true;
+  root.classList.remove('house-capture-active');
+  sound.setCaptureQuiet(false);
+  reset(restore);events.messages=messages;
+  if(pursuer.active)pursuer.cooldown();
+  saveCheckpoint();showLives(1);
+  say('¡Emy te ha salvado! Te regaló una última oportunidad. Escapa con Louis.',6);
+  last=performance.now();
  }
  function renderCapture(delta){
+  if(captureShot?.loss.emyRescue){renderEmyLastChance(delta);return;}
   const shot=captureShot,previous=shot.elapsed,timing=shot.timing;
   if(captureRunning())shot.elapsed+=delta;
   if(shot.elapsed>=timing.end){
    const {lives,checkpoint:restore}=shot.loss;
    const defeat=$('capture-loss');
    if(defeat.hidden){
-    defeat.querySelector('p').textContent=lives?'Volverás al último punto seguro.':'Volverás al comienzo de la casa.';
+    defeat.querySelector('p').textContent=lives?'Volverás al último punto seguro.':'Final alternativo · esta vez Emy ya no pudo salvarte.';
     defeat.hidden=false;captureLayer.style.setProperty('--capture-dark','1');
     captureCaption.textContent='';
     if(!lives)showLives(0);
@@ -1238,9 +1283,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     if(['patrol','hunt'].includes(events.phase))pursuer.cooldown();
     saveCheckpoint();showLives(lives);
    }else{
-    reset();captureCount=0;
-    if(scenario){ready=false;intro=true;showTrialStart();}
-    else runAction('start');
+    // Genuine second ending; do NOT auto-restart or erase the story decision.
+    events.phase='failed';s.emyRescueUsed=true;
+    checkpointStore?.save(null);
+    showModal('Final 2 · La casa se queda en silencio',
+     '<p>Kitty agotó sus oportunidades. Emy ya la había rescatado una vez, pero esta vez el secuestrador la atrapó.</p><p>Louis sigue esperando. Puedes comenzar de nuevo para cambiar el desenlace.</p>',
+     [['Volver a intentarlo desde el principio','reset'],['Salir','exit']]);
    }
    last=performance.now();
    return;
