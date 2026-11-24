@@ -45,6 +45,7 @@ import {createLoisShotDirector,advanceLoisShot,finishLoisShot} from './lois-ps2-
 import {createHousePuzzle,puzzleEvent,canOpenBedroom,canRescue,PUZZLE_HINTS} from '../demo/house-puzzles.js';
 import './lab.css'; // Required for #lab3d stacking, fixed fullscreen layout, canvas sizing and HUD.
 import './house.css';
+import './emy-skills.css';
 import './capture-shot.css';
 const FLASH_DRAIN=.24,FLASH_LOW=15,SPARE_CHARGE=55;
 const SPRINT_SECONDS=4;
