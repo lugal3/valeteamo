@@ -349,3 +349,18 @@
 @media(prefers-reduced-motion:reduce){
  #lab3d .house-interest{animation:none;opacity:1}
 }
+
+#lab3d .house-screw-glows{position:absolute;inset:0;z-index:9;pointer-events:none}
+#lab3d .house-vent-screw-glow{
+ position:absolute;transform:translate(-50%,-50%);width:24px;height:24px;
+ display:grid;place-items:center;border:2px solid #b9ffe7;border-radius:50%;
+ background:radial-gradient(circle,#d5ffed77,transparent 72%);
+ box-shadow:0 0 10px #9bffdc,0 0 17px #46cfad99;
+ color:#fff7da;font:800 19px Georgia,serif;
+ animation:house-interest-ring .85s ease-in-out infinite alternate;
+}
+#lab3d .house-vent-screw-glow[hidden]{display:none!important}
+#lab3d.house-arrival .house-screw-glows,#lab3d.house-cutaway .house-screw-glows{display:none}
+@media(prefers-reduced-motion:reduce){
+ #lab3d .house-vent-screw-glow{animation:none}
+}
