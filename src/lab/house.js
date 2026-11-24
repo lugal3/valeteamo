@@ -1732,13 +1732,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    const depth=forward*Math.cos(view.pitch)+dy*Math.sin(view.pitch);
    const dist=Math.hypot(dx,dy,dz);
    const hidden=lineBlocked(world.boxes,view,{x:candidate.x,y:candidate.y??0,z:candidate.z},candidate.kind==='door'?'door-'+candidate.id:'');
-   if(depth>.18&&dist<9&&(!hidden||dist<2.1)){
+   if(depth>.18&&dist<6&&!hidden){
     const factor=.65*canvas.clientHeight/depth;
     const px=canvas.clientWidth/2+side*factor,py=canvas.clientHeight/2-(dy*Math.cos(view.pitch)-forward*Math.sin(view.pitch))*factor;
     if(px>=0&&px<=canvas.clientWidth&&py>=0&&py<=canvas.clientHeight){
      sparkle.hidden=false;
      sparkle.style.left=px+'px';sparkle.style.top=py+'px';
-     sparkle.style.setProperty('--interest-scale',String(clamp(1.8/dist,.7,1.4)));
+     sparkle.style.setProperty('--interest-scale',String(clamp(1.35/dist,.65,.95)));
+     sparkle.dataset.focused=String(candidate===focus&&dist<2.4);
      sparkle.querySelector('span').textContent=candidate.id==='screwdriver'?'DESTORNILLADOR':
       candidate.kind==='vent'?'TORNILLOS':candidate.kind==='drawer'?'ABRIR CAJÓN':'INTERACTUAR';
     }else sparkle.hidden=true;
@@ -1748,7 +1749,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   // on the vent mesh, rather than a guessed dot on the wall.
   const screws=world.studyVent.cover.filter(part=>part.box.id.startsWith('vent-cover-screw'));
   const pointScrews=!!s.inventory.screwdriver&&!world.studyVent.unlatched&&
-   !isPaused()&&!phone.open&&Math.abs(s.y)<.7;
+   !isPaused()&&!phone.open&&Math.abs(s.y)<.7&&roomAt(s.x,s.z,s.y)==='Estudio';
   for(const [index,node] of [...root.querySelectorAll('.house-vent-screw-glow')].entries()){
    const screw=screws[index]?.box;
    if(!pointScrews||!screw){node.hidden=true;continue;}
@@ -1757,7 +1758,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    const side=dx*Math.cos(view.yaw)-dz*Math.sin(view.yaw);
    const depth=fwd*Math.cos(view.pitch)+dy*Math.sin(view.pitch);
    const meters=Math.hypot(dx,dy,dz);
-   if(depth<=.15||meters>6.5){node.hidden=true;continue;}
+   if(depth<=.15||meters>3){node.hidden=true;continue;}
    const factor=.65*canvas.clientHeight/depth;
    const px=canvas.clientWidth/2+side*factor;
    const py=canvas.clientHeight/2-(dy*Math.cos(view.pitch)-fwd*Math.sin(view.pitch))*factor;
@@ -1774,9 +1775,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     const depth=forward*Math.cos(view.pitch)+dy*Math.sin(view.pitch);
     if(depth>.15){
      const factor=.65*canvas.clientHeight/depth;
-     const radius=(1.1-emyAbilities.wave)*500;
+     const radius=(1.1-emyAbilities.wave)*160;
      wave.hidden=false;
-     Object.assign(wave.style,{left:(canvas.clientWidth/2+side*factor)+'px',top:(canvas.clientHeight/2-(dy*Math.cos(view.pitch)-forward*Math.sin(view.pitch))*factor)+'px',width:Math.max(12,radius*2)+'px',height:Math.max(12,radius*2)+'px',opacity:String(Math.min(1,emyAbilities.wave/1.1))});
+     Object.assign(wave.style,{left:(canvas.clientWidth/2+side*factor)+'px',top:(canvas.clientHeight/2-(dy*Math.cos(view.pitch)-forward*Math.sin(view.pitch))*factor)+'px',width:Math.max(12,radius*2)+'px',height:Math.max(12,radius*2)+'px',opacity:String(Math.min(.42,emyAbilities.wave/2.3))});
     }else wave.hidden=true;
    }else wave.hidden=true;
    renderer.render(view,torch,elapsed,hand,{rcView:rc?.mode==='driving'&&!!rc,scanOutline:emyAbilities.scan>0&&pursuer.active,bob:s.bob,action:handAction,clickAction,speed:animator.speed,acceleration:animator.acceleration,walkWeight:animator.weight,reduced:s.reduceBob,swayX:handDrift.x,swayY:handDrift.y,introHands,animator,feetY:s.y,crouched:s.crouched,equipment:visualEquipment,keyTurn:keyTurn?.time,noteRaise,batterySwap,tabletLift,equipLift:raisedNote?-.52*(1-noteRaise):reducedMotion.matches?0:-.22*Math.pow(1-Math.min(1,equipmentAge/.3),2),bathDoorAmount:world.objects.find(o=>o.id==='bano').amount,thirdPerson,actorTime,actorWalk,actorPiano,shotLight,pursuer:finalCutscene?{...pursuer.snapshot(),captureReach:Math.min(1,finalCutscene.elapsed/.8)*Math.max(0,Math.min(1,(2.45-finalCutscene.elapsed)/.35)),captureLift:0,captureFace:{jaw:0,bite:0,twitch:0,left:0,right:0,glance:0}}:pursuer.snapshot(),television});
