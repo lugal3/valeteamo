@@ -37,7 +37,14 @@ async function check(){
    assert.equal(first.zoom,Math.min(first.width/800,first.height/450)*1.08,
     'camera retains Corazones zoom with a small bounded follow offset');
    await page.keyboard.down('d');
-   await page.waitForTimeout(950);
+   // Software-backed Phaser can render fewer frames than wall-clock timing suggests.
+   // Keep all displacement, velocity, and footstep assertions, but wait for
+   // actual scene progress rather than a fixed 950 ms.
+   await page.waitForFunction(start=>{
+    const s=window.__valePrologue?.scene();
+    return s&&Math.hypot(s.p.u-start.u,s.p.v-start.v)>.6&&
+     Math.hypot(s.storyVelocity.u,s.storyVelocity.v)>1.2&&s.storyFootprints.length>0;
+   },first.p,{timeout:12000});
    const traveling=await page.evaluate(()=>{
     const s=window.__valePrologue.scene();
     return {p:{...s.p},v:{...s.storyVelocity},look:{...s.storyLookAhead},
@@ -61,7 +68,7 @@ async function check(){
     const s=window.__valePrologue?.scene();
     return s&&Math.hypot(s.storyVelocity.u,s.storyVelocity.v)<.12&&
      Math.abs(s.storyLookAhead.x)<4;
-   },null,{timeout:2200});
+   },null,{timeout:8000});
    const rest=await page.evaluate(()=>{
     const s=window.__valePrologue.scene();
     return {p:{...s.p},v:{...s.storyVelocity},texture:s.player.texture.key,
@@ -81,13 +88,19 @@ async function check(){
     s.left={id:42,x:85,y:305,dx:18,dy:0};
     return p;
    });
-   await page.waitForTimeout(750);
+   await page.waitForFunction(start=>{
+    const s=window.__valePrologue?.scene();
+    return s&&Math.hypot(s.p.u-start.u,s.p.v-start.v)>.1;
+   },start,{timeout:12000});
    const gentle=await page.evaluate(()=>{
     const s=window.__valePrologue.scene();
     const point={...s.p};s.left={id:42,x:85,y:305,dx:45,dy:0};
     return point;
    });
-   await page.waitForTimeout(750);
+   await page.waitForFunction(gentle=>{
+    const s=window.__valePrologue?.scene();
+    return s&&Math.hypot(s.p.u-gentle.u,s.p.v-gentle.v)>.3;
+   },gentle,{timeout:12000});
    const strong=await page.evaluate(()=>{
     const s=window.__valePrologue.scene();
     const point={...s.p};s.left=undefined;
@@ -99,7 +112,7 @@ async function check(){
    await page.waitForFunction(()=>{
     const s=window.__valePrologue?.scene();
     return s&&Math.hypot(s.storyVelocity.u,s.storyVelocity.v)<.15;
-   },null,{timeout:1800});
+   },null,{timeout:8000});
    const state=await page.evaluate(()=>{
     const s=window.__valePrologue.scene();
     return {speed:Math.hypot(s.storyVelocity.u,s.storyVelocity.v),
