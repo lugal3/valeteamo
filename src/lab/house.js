@@ -402,6 +402,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const occluded=source?lineBlocked(world.boxes,loc,source,o?.kind==='door'?'door-'+o.id:''):false;
   sound.effect(name,source,{...loc,yaw:s.yaw},occluded,{level});
   if(name==='cat')caption(o===world.emy||o?.kind==='emy-cat'?'Maullido de Emy':'Maullido junto a la salida');
+  if(name==='cat-purr')caption('Ronroneo de Emy');
   if(name==='floor-groan')caption('Cruje el suelo');
  };
  function toggleFlash(){if(s.hidden||s.lying||batterySwap!==null)return;
@@ -535,7 +536,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    const on=toggleCircuit(o.circuit);play('click',o);
    say(on===null?'Sin corriente · revisa el interruptor general':on?'Luz encendida':'Luz apagada');
   }else if(o.kind==='power-switch'){
-   const on=toggleHousePower(o);play('latch',o);
+   const on=toggleHousePower(o);play(on?'latch':'power-cut',o,.85);
    if(!on){world.television.power.on=false;television.sync(false,false);}
    say(on?'Corriente restablecida':'Corriente cortada');
   }else if(o.kind==='rug'){
@@ -828,7 +829,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(!emyMenuOpen||!world||!s)return;
    if(act==='emy:pet'){
     emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;
-    if(petEmy(world.emy)){play('cat',world.emy,.45);say('Emy ronronea y levanta su patita ♡',3);}
+    if(petEmy(world.emy)){play('cat-purr',world.emy,.60);say('Emy ronronea y levanta su patita ♡',3);}
     return;
    }
    if(act==='emy:scan'){
@@ -1313,7 +1314,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      say('El secuestrador golpeó el auto. Se perdió la señal; lo dejó en otro lugar de la casa ('+Math.round(pos.x)+', '+Math.round(pos.z)+'). Ve a recuperarlo.',7);
     }
     if(signal==='investigate'&&emyCompanion?.stage!=='following')say('Notó movimiento. Busca cobertura.',2.5);
-    if(signal==='spotted'){phone.close();play('alert',pursuer,.6);if(emyCompanion?.stage!=='following')say('Te vio. Gira una esquina para perderlo.',3);}
+    if(signal==='spotted'){phone.close();play('danger-alert',pursuer,.82);if(emyCompanion?.stage!=='following')say('Te vio. Gira una esquina para perderlo.',3);}
     if(signal==='lost'&&emyCompanion?.stage!=='following')say('Te perdió de vista. Puedes seguir con cuidado.',3);
     if(signal==='at-entry'){
      const door=world.objects.find(o=>o.id==='entrada');
