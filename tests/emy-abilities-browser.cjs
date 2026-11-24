@@ -138,6 +138,10 @@ const {chromium,webkit}=require('playwright');
   await page.evaluate(item=>window.__rescueHouse.interactWith(item),item);
   let objects=await page.evaluate(()=>window.__rescueHouse.noiseProps());
   assert(objects.find(p=>p.id===item).held,'The glass is held after interacting');
+  // The HUD publishes context help on its next render frame; WebKit software
+  // WebGL may schedule that frame after the synchronous interaction callback.
+  await page.waitForFunction(()=>/Toca Lanzar|G: lanzar/.test(
+   document.querySelector('#house-noise-hint')?.textContent||''),null,{timeout:8000});
   assert.match(await page.locator('#house-noise-hint').innerText(),/Toca Lanzar|G: lanzar/,
    'HUD explains throwable controls for the active input device');
   assert.equal(await page.locator('#house-noise-controls button').count(),3,
