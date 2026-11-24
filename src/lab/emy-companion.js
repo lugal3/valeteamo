@@ -236,6 +236,11 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
   if(t>=1){cat.y=0;companion.stage='following';companion.trail=[{...WINDOW_END}];return 'landed';}
   return previous<.3&&t>=.3?'jump':null;
  }
+ if(cat.dodgeTime>0){
+  cat.dodgeTime=Math.max(0,cat.dodgeTime-dt);
+  poseEmy(cat,{mode:'jump',walking:false,phase:cat.age,reduced,blend:1-Math.exp(-18*dt)});
+  return null;
+ }
  if(companion.stage==='distract'){
   const job=companion.distraction;
   if(!job){companion.stage='following';return null;}
