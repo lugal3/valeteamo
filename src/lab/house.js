@@ -1372,7 +1372,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     }
     if(signal==='investigate'&&emyCompanion?.stage!=='following')say('Notó movimiento. Busca cobertura.',2.5);
     if(signal==='spotted'&&emyCompanion?.stage!=='following')say('Te vio. Gira una esquina para perderlo.',3);
-    if(signal==='lost'&&emyCompanion?.stage!=='following')say('Te perdió de vista. Puedes seguir con cuidado.',3);
+    if(signal==='lost'&&emyCompanion?.stage!=='following')say('Perdió de vista a Kitty y revisará la última zona. Sigue escondida.',3);
     if(signal==='at-entry'){
      const door=world.objects.find(o=>o.id==='entrada');
      if(!door.sealed&&roomAt(s.x,s.z,s.y)!=='Jardín y vecindario'&&sweepClear(door,door.amount,0,s)){
@@ -1633,12 +1633,22 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   sound.rcMotor(rc?.mode==='driving'&&!isPaused()?rc.velocity:0);
   root.classList.toggle('house-arrival',events.phase==='arrival'||events.phase==='car-preview'||wakeShot()||!!actorWalk);
   root.classList.toggle('house-cutaway',carShot||wakeShot()||!!actorWalk);
-  const chasing=pursuer.mode==='chase',investigating=pursuer.mode==='investigate',resting=pursuer.mode==='patrol-rest';
+  const chasing=pursuer.mode==='chase',
+   investigating=['investigate','trail-search','noise-investigate'].includes(pursuer.mode),
+   resting=pursuer.mode==='patrol-rest';
   danger.hidden=!['arrival','hide','patrol','hunt'].includes(events.phase)&&!(events.phase==='evaded'&&(chasing||investigating));
-  if(emyCompanion?.stage==='following'&&!scenario&&['patrol','hunt','evaded'].includes(events.phase))danger.hidden=true;
+  if(emyCompanion?.stage==='following'&&!scenario&&['patrol','hunt','evaded'].includes(events.phase)&&!chasing&&!investigating)danger.hidden=true;
   danger.dataset.level=chasing?'chase':investigating?'watch':'search';
   const arrivalCaption=options.captions!==false&&events.time<CAR_ARRIVAL_SECONDS?'Se acerca un motor':'Alguien intenta entrar';
-  const threatText=events.phase==='hide'?'Escóndete · '+Math.ceil(events.remaining)+' s':events.phase==='arrival'?arrivalCaption:chasing?'Te persigue · gira una esquina':investigating?'Busca cobertura':resting?'Se detuvo a descansar':pursuer.mode==='cooldown'?'Se aleja · avanza con cuidado':s.hidden?'Sigue patrullando · espera a que se aleje':'Está patrullando';
+  const threatText=events.phase==='hide'?'Escóndete · '+Math.ceil(events.remaining)+' s':
+   events.phase==='arrival'?arrivalCaption:
+   chasing?'Te persigue · rompe la línea de visión':
+   pursuer.mode==='trail-search'?'Busca donde te vio por última vez':
+   pursuer.mode==='noise-investigate'?'Investiga un ruido cercano':
+   investigating?'Sospecha de Kitty · busca cobertura':
+   resting?'Se detuvo a descansar':
+   pursuer.mode==='cooldown'?'Se aleja · avanza con cuidado':
+   s.hidden?'Sigue patrullando · espera a que se aleje':'Está patrullando';
   if(danger.textContent!==threatText)danger.textContent=threatText;
   root.classList.toggle('house-threat',!danger.hidden);
   if(!isSuspended())equipmentAge+=shotDelta;
