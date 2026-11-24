@@ -1,7 +1,5 @@
 name: Validar habilidades de Emy (sin desplegar)
 on:
-  push:
-    branches: [feature/emy-scan-distraccion-objetos]
   pull_request:
     branches: [main]
     paths:
@@ -32,16 +30,26 @@ jobs:
         run: npm run test:perf
       - name: Compilar producción
         run: npm run build
-      - name: Preparar Chromium
-        run: npx playwright install chromium --with-deps
+      - name: Preparar Chromium y WebKit
+        run: npx playwright install chromium webkit --with-deps
       - name: Verificar panel LP
         run: node tests/admin-panel-browser.cjs
       - name: Emy en Chromium móvil / WebGL1
         env:
-          EMY_QA_DIR: artifacts/emy-abilities
+          EMY_QA_DIR: artifacts/emy-abilities/chromium-mobile
+        run: node tests/emy-abilities-browser.cjs
+      - name: Emy en Chromium escritorio / WebGL1
+        env:
+          EMY_QA_DIR: artifacts/emy-abilities/chromium-desktop
+          EMY_QA_VIEWPORT: desktop
         run: node tests/emy-abilities-browser.cjs
       - name: Regresión del secuestrador y escondites
         run: node tests/house-threat-browser.cjs
+      - name: Emy en WebKit móvil (simulación Safari)
+        env:
+          EMY_QA_DIR: artifacts/emy-abilities/webkit-mobile
+          EMY_QA_ENGINE: webkit
+        run: node tests/emy-abilities-browser.cjs
       - name: Evidencias
         if: always()
         uses: actions/upload-artifact@v4
