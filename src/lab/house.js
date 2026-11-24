@@ -443,20 +443,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function updateHiding(dt){
   if(!poseTransition||paused||modal||$('lab-camera-settings').open||isPortrait()||document.hidden||!hasFocus||contextLost)return;
   const transition=poseTransition;
-  if(transition.entering&&transition.object.wardrobeLeaves&&emyCompanion&&['following','closet-entry'].includes(emyCompanion.stage)){
-   transition.catWait=(transition.catWait||0)+dt;
-   // Wait as long as Emy is approaching, even from another floor.
-   const previous=transition.lastCatPosition,cat=world.emy;
-   if(!previous||Math.hypot(cat.x-previous.x,cat.y-previous.y,cat.z-previous.z)>.08){
-    transition.lastCatPosition={x:cat.x,y:cat.y,z:cat.z};transition.catMovedAt=transition.catWait;
-   }
-   if(transition.catWait-transition.catMovedAt<7||emyCompanion.stage==='closet-entry'){
-    poseFurniture(transition.object,Math.min(1,transition.catWait*3));
-    const yaw=Math.atan2(cat.x-transition.from.x,cat.z-transition.from.z);
-    const pitch=Math.atan2(cat.y+.35-transition.from.y,Math.hypot(cat.x-transition.from.x,cat.z-transition.from.z));
-    s.poseCamera={...transition.from,yaw,pitch};return;
-   }
-  }
+  // Kitty's wardrobe animation is authoritative. Emy may be downstairs,
+  // distracting, stuck or joining the closet, but none of those states may
+  // stall the player's entrance or prolong exposure to the pursuer.
   transition.elapsed+=dt;
   if(transition.walk){
    const action=wardrobeWalk(transition.elapsed,transition.walk);
@@ -466,7 +455,6 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    transition.from={...transition.outside,y:s.y+1.63};
    if(!transition.approached){transition.approached=true;play('door-open',transition.object,.65);}
   }
-  if(transition.catWait)transition.entryElapsed=Math.max(transition.entryElapsed,HIDE_SECONDS*.22);
   transition.entryElapsed=Math.min(HIDE_SECONDS,transition.entryElapsed+dt);
   const frame=hidingFrame({...transition,progress:transition.entryElapsed/HIDE_SECONDS,wardrobe:!!transition.object.wardrobeLeaves});
   s.poseCamera=frame.camera;if(transition.object.wardrobeLeaves)poseFurniture(transition.object,frame.doorAmount);
