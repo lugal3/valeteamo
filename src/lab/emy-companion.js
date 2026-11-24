@@ -1,8 +1,9 @@
 import {poseEmy} from './emy-cat.js';
+import {EMY_DISTRACT_SECONDS} from './emy-abilities.js';
 import {animateFurniture} from './furniture-motion.js';
 import {Pursuer} from './pursuer.js';
 import {ALTAR_THRESHOLD} from './emy-rescue.js';
-import {roomAt,blocked,groundHeight} from './world.js';
+import {roomAt,blocked,groundHeight,segmentHitsBox} from './world.js';
 
 export const EMY_ENTRANCE_SECONDS=3.5;
 const WINDOW_START={x:2.2,y:1.17,z:12.48};
@@ -141,10 +142,18 @@ export function sendEmyDistract(companion,world,goal){
  const previous={stage:companion.stage,route:companion.route,trail:companion.trail};
  companion.route=[];companion.trail=[];companion.stuck=0;
  planRoute(companion,world,goal);
- if(!companion.route.length&&distance(companion.cat,goal)>.85){
+ const lockedDoors=world.objects.filter(door=>door.kind==='door'&&(door.locked||door.sealed)&&!door.open);
+ const collidesWithLockedDoor=lockedDoors.some(door=>{
+  const walls=[door.box,...(door.parts||[]).map(part=>part.box)].filter(box=>box?.solid);
+  return companion.route.slice(1).some((node,i)=>{
+   const prior=companion.route[i],from={x:prior.x,y:prior.y+.70,z:prior.z},to={x:node.x,y:node.y+.70,z:node.z};
+   return walls.some(box=>segmentHitsBox(from,to,box,.13));
+  });
+ });
+ if(collidesWithLockedDoor||!companion.route.length&&distance(companion.cat,goal)>.85){
   Object.assign(companion,previous);return false;
  }
- companion.distraction={goal:{...goal},remaining:25,arrived:false,nextNoise:0,nextPlan:0,stuck:0};
+ companion.distraction={goal:{...goal},remaining:EMY_DISTRACT_SECONDS,arrived:false,nextNoise:0,nextPlan:0,stuck:0};
  companion.stage='distract';companion.cat.reaction=0;return true;
 }
 export function snapshotEmyCompanion(companion){
