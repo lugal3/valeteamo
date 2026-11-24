@@ -72,6 +72,8 @@ jobs:
           EMY_QA_VIEWPORT: ${{ matrix.scenario == 'emy-desktop' && 'desktop' || 'mobile' }}
           EMY_QA_ENGINE: ${{ matrix.scenario == 'emy-webkit' && 'webkit' || 'chromium' }}
           V2_GLOW_QA_DIR: artifacts/v2/subtle-glows
+          RC_QA_DIR: artifacts/v2/rc-rescue
+          CHECKPOINT_QA_DIR: artifacts/v2/3d-checkpoints
         run: |
           case "${{ matrix.scenario }}" in
             2d-story) node tests/prologue-browser.cjs ;;
