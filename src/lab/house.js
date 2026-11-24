@@ -1073,7 +1073,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   const announce=deploying||louis&&(['untying','climb','hide'].includes(louis.phase)||(louis.phase==='hidden'&&louis.age<1.6))||!!finalCutscene;
   $('house-rc-caption').hidden=!announce;
-  if(announce)$('house-rc-caption').textContent=finalCutscene?'¡Kitty, cuidado!':louis?.phase==='untying'?'Kitty desata las cuerdas mientras Louis espera en silencio…':louis?.phase==='hidden'?'Louis se agacha tras la barra americana y mira alrededor…':louis&&['climb','hide'].includes(louis.phase)?'Louis sube del sótano y busca refugio tras la barra americana…':rc.elapsed<.53?'Colocando el autito…':'Conectando la tablet…';
+  if(announce)$('house-rc-caption').textContent=finalCutscene?(finalCutscene.elapsed<1.5?'¡El secuestrador descubre a Kitty!':finalCutscene.elapsed<3.3?'¡Emy salta para salvarla!':'¡Corred hacia el jardín!'):louis?.phase==='untying'?'Kitty desata las cuerdas mientras Louis espera en silencio…':louis?.phase==='hidden'?'Louis se agacha tras la barra americana y mira alrededor…':louis&&['climb','hide'].includes(louis.phase)?'Louis sube del sótano y busca refugio tras la barra americana…':rc.elapsed<.53?'Colocando el autito…':'Conectando la tablet…';
   root.classList.toggle('house-rc-deploying',deploying);
   root.classList.toggle('house-rc-driving',remote);
   interactButton.classList.toggle('lab-available',!!target||!!s.hidden||!!s.lying);
@@ -1568,20 +1568,39 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   if(finalCutscene){
    if(!isSuspended())finalCutscene.elapsed+=shotDelta;
-   const escapeTime=Math.max(0,finalCutscene.elapsed-3.15);
-   const t=Math.min(1,escapeTime/4);
+   // Three deliberate cinematic beats instead of one fixed camera:
+   // the pursuer approaches Kitty, Emy leaps in from the side, then they run.
+   const time=finalCutscene.elapsed,escapeTime=Math.max(0,time-3.48);
+   const t=Math.min(1,escapeTime/4.3),showChase=time>=3.35;
    if(poseEscapeAmbush(finalCutscene,world.emy,pursuer,reducedMotion.matches))renderer.updateVisibility();
-   if(finalCutscene.elapsed>=1.7&&!finalCutscene.cried){finalCutscene.cried=true;play('cat',world.emy);play('cloth',pursuer);}
+   if(time>=1.7&&!finalCutscene.cried){finalCutscene.cried=true;play('cat',world.emy,1.2);play('cloth',pursuer);}
    actorWalk=wardrobeWalk(escapeTime,finalCutscene.kitty);
    const companion=wardrobeWalk(Math.max(0,escapeTime-.18),finalCutscene.louis);
    if(reducedMotion.matches)actorWalk.stride=0;
    Object.assign(louis,{x:companion.x,y:0,z:companion.z,yaw:companion.yaw,
     walk:finalCutscene.louisStride+companion.distance,speed:companion.stride*.88});
-   const x=7.24+Math.sin(t*Math.PI)*.42,y=2.14,z=15.93+t*.82;
-   view={x,y,z,yaw:Math.atan2(5.82-x,13.45-z),pitch:-.32};
-   thirdPerson=actorWalk;hand=false;torch=false;shotLight=.36;
-   if(t===1&&events.phase==='ending'){
-    events.phase='safe';showModal('¡Kitty y Louis escaparon!', '<p>Emy hizo que soltara a Kitty. Los tres cruzan el jardín juntos.</p><p>Progreso del rescate · 100%</p>',[[config.onRescue?'Ver final':exitLabel,config.onRescue?'finish':'exit']]);
+   // Keep the camera OUTSIDE the south wall and aim at the actors'
+   // current positions, not at a constant point below the front porch.
+   const attacker=t<.5?pursuer:world.emy;
+   const focus={
+    x:showChase?(actorWalk.x+louis.x+world.emy.x)/3:(finalCutscene.kitty.from.x+attacker.x)/2,
+    y:showChase?1.00:1.23,
+    z:showChase?(actorWalk.z+louis.z+world.emy.z)/3:
+     (finalCutscene.kitty.from.z+attacker.z)/2
+   };
+   const close=time<1.55,attack=time>=1.55&&time<3.35;
+   const x=close?8.10:attack?8.15:7.80-Math.sin(t*Math.PI)*.35;
+   const y=close?2.13:attack?2.29:2.27;
+   const z=close?16.40:attack?15.92:16.65+1.0*t;
+   const dx=focus.x-x,dz=focus.z-z;
+   view={x,y,z,yaw:Math.atan2(dx,dz),
+    pitch:Math.atan2(focus.y-y,Math.max(.1,Math.hypot(dx,dz)))};
+   thirdPerson=actorWalk;hand=false;torch=false;shotLight=.45;
+   if(time>=7.78&&events.phase==='ending'){
+    events.phase='safe';
+    showModal('Final 1 · ¡Kitty y Louis escaparon!',
+     '<p>El secuestrador intenta alcanzar a Kitty, pero Emy salta para detenerlo. Kitty y Louis aprovechan y escapan por el jardín, juntos.</p><p>Rescate completado · 100%</p>',
+     [[config.onRescue?'Ver final':exitLabel,config.onRescue?'finish':'exit']]);
    }
   }
   const carShot=events.phase==='car-preview'||events.phase==='arrival'&&events.time<CAR_ARRIVAL_SECONDS;
