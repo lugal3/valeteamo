@@ -15,7 +15,9 @@ export const HOUSE_3D_REFERENCE={
 export const NIGHT_HOUSE={
  center:{u:78.7,v:9.0},
  door:{u:78.7,v:10.0},
- window:{u:76.85,v:10.05},
+ // This point is on the FRONT wall/porch, not behind the side facade.
+ // The iso projection puts it on the same horizontal baseline as the door.
+ window:{u:77.60,v:11.10},
  gate:{u:74.85,v:8.3},
  yard:{u:76.2,v:10.20},
  porch:{u:78.0,v:10.20},
