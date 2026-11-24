@@ -2,7 +2,7 @@ const assert=require('node:assert/strict');
 (async()=>{
  const {createHouse}=await import('../src/lab/world.js');
  const {Pursuer}=await import('../src/lab/pursuer.js');
- const {createEmyAbilities,activateEmyScan,advanceEmyAbilities,roomChoices,roomDestination,emyFloorMap}=await import('../src/lab/emy-abilities.js');
+ const {createEmyAbilities,activateEmyScan,advanceEmyAbilities,roomChoices,roomDestination,roomDestinations,isEmyRoomLocked,emyFloorMap,emyFloorList}=await import('../src/lab/emy-abilities.js');
  const {installNoiseProps,grabNoiseProp,holdNoiseProp,releaseNoiseProp,stepNoiseProps}=await import('../src/lab/noise-props.js');
  const {createEmyCompanion,sendEmyDistract,snapshotEmyCompanion,updateEmyCompanion}=await import('../src/lab/emy-companion.js');
  const abilities=createEmyAbilities();
@@ -18,11 +18,33 @@ const assert=require('node:assert/strict');
   assert(choices.some(room=>room.label===name),name+' exists in the two-floor command map');
  }
  const lower=emyFloorMap(world.rooms,0),upper=emyFloorMap(world.rooms,1);
+ assert.equal(choices.filter(r=>r.floor===0).length,6,'Six clear ground-floor targets');
+ assert.equal(choices.filter(r=>r.floor===1).length,4,'Four clear upstairs targets');
  assert(lower.includes('emy:room:study')&&upper.includes('emy:room:bedroom'));
  assert(!lower.includes('emy:room:bedroom'));
+ assert(lower.includes('house-emy-stair-flight')&&upper.includes('house-emy-stair-void'),
+  'Stairs and upstairs opening must be represented differently');
+ assert(emyFloorList(world.rooms,0).includes('Recibidor y pasillo'));
+ assert(emyFloorList(world.rooms,1).includes('Sala de música'));
+ assert(isEmyRoomLocked(world,choices.find(r=>r.id==='bedroom')),'Locked story bedroom must not be available yet');
+ for(const room of choices){
+  const candidates=roomDestinations(world,room);
+  assert(candidates.length>0,'Safe destination in '+room.id);
+  const level=room.floor?3.15:0;
+  for(const p of candidates)assert(Math.abs(p.y-level)<.18,'Correct floor for '+room.id);
+  if(room.id==='stairs')assert(candidates.every(p=>p.z>9.9),'Never target the sloped stair treads as the ground floor');
+ }
  const study=choices.find(room=>room.id==='study');
  const target=roomDestination(world,study);
  assert(target&&target.y===0,'Room waypoint should be on a navigable floor');
+ for(const id of ['study','living','kitchen','bath','hall-ground','stairs','reading','music','hall-upper']){
+  const room=choices.find(r=>r.id===id);
+  const cat=createEmyCompanion(world.emy,{waiting:false});
+  const reachable=roomDestinations(world,room).some(point=>sendEmyDistract(cat,world,point));
+  assert(reachable,'Emy must find a route from the entrance to '+id+' on floor '+room.floor);
+  assert.equal(cat.distraction.goal.y,room.floor?3.15:0,'Cross-floor route elevation for '+id);
+ }
+
 
  const props=installNoiseProps(world);
  assert.equal(props.length,6);
