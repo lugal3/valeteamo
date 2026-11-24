@@ -177,3 +177,9 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 - Added `tests/louis-rescue-feel.cjs` to `npm test` to verify facial beats, full physical escape route, no instantaneous turns or teleport and continued Photo-A use.
 - Fixed **Phase 08 CI compilation failure** TS7016 by adding `src/demo/prologue-beats.d.ts` for the JS chapter indicator imported into a TypeScript React component.
 - **QA pending:** complete build, node tests, perf suite, real desktop/iPhone browser playthrough; additional puzzles polishing is not yet completed. No merge or deployment.
+
+### Phase 09 puzzle guidance addendum
+
+- `housePuzzleHint()` generates state-dependent clues for the bedroom lock and Louis' rescue without changing the authoritative `puzzleEvent` or `canRescue` gates.
+- Blocked interactions now explain the *next clue* instead of always repeating generic directions; key, door and rescued checkpoints remain safe.
+- `tests/house-puzzle-hints.cjs` added to `npm test`.
