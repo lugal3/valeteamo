@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
 const path=require('node:path');
-const {chromium}=require('playwright');
+const {chromium,webkit}=require('playwright');
 (async()=>{
  const {createServer}=await import('vite');
  const server=await createServer({
@@ -28,15 +28,20 @@ const {chromium}=require('playwright');
  async function shot(page,name){if(output){await fs.mkdir(output,{recursive:true});await page.screenshot({path:path.join(output,name+'.png')});}}
  try{
   await server.listen();
-  browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
-  const page=await browser.newPage({viewport:{width:844,height:390},isMobile:true,hasTouch:true,reducedMotion:'reduce',deviceScaleFactor:1});
+  const engine=process.env.EMY_QA_ENGINE==='webkit'?webkit:chromium;
+  const mobile=process.env.EMY_QA_VIEWPORT!=='desktop';
+  browser=await engine.launch({headless:true,args:engine===chromium?
+   ['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']:[]});
+  const page=await browser.newPage(mobile?
+   {viewport:{width:844,height:390},isMobile:true,hasTouch:true,reducedMotion:'reduce',deviceScaleFactor:1}:
+   {viewport:{width:1280,height:720},isMobile:false,hasTouch:false,reducedMotion:'reduce',deviceScaleFactor:1});
   page.setDefaultTimeout(35000);
   const errors=[];
   page.on('pageerror',error=>errors.push(error.stack||error.message));
   page.on('console',entry=>{if(entry.type()==='error'&&/shader|webgl/i.test(entry.text()))errors.push(entry.text());});
   await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/__emy-ability-qa');
   try{
-   await page.waitForFunction(()=>!!window.__rescueHouse&&document.querySelector('#lab-canvas')?.width>300,{timeout:14000});
+   await page.waitForFunction(()=>!!window.__rescueHouse&&document.querySelector('#lab-canvas')?.width>300,null,{timeout:14000});
   }catch(error){
    const state=await page.evaluate(()=>({
     title:document.title,body:document.body.innerText.slice(0,1200),
@@ -62,6 +67,14 @@ const {chromium}=require('playwright');
   assert(afterScan.scan>0&&afterScan.scanCooldown>0);
   await page.waitForFunction(()=>!document.querySelector('#house-emy-wave').hidden,{timeout:6000});
   await shot(page,'02-emy-escaneo-onda');
+  // The exact animated 3D model must render behind the opaque bathroom wall,
+  // not a 2D "last-known-position" marker.
+  await page.evaluate(()=>{
+   window.__rescueHouse.placeThreat({x:8.1,y:0,z:6.2,yaw:Math.PI});
+   window.__rescueHouse.setPose({x:6.2,y:0,z:6.2,yaw:Math.PI/2,pitch:0});
+  });
+  await page.waitForFunction(()=>window.__rescueHouse.emySkills().scanRendered,null,{timeout:7000});
+  await shot(page,'02b-contorno-secuestrador-tras-pared');
   await interactEmy();
   await page.locator('#house-emy-menu [data-act="emy:map"]').click();
   const floorPlans=page.locator('#house-emy-map .house-emy-plan');
@@ -88,7 +101,7 @@ const {chromium}=require('playwright');
   await page.evaluate(()=>window.closeHouse());
   assert.equal(await page.locator('#lab3d').count(),0,'All UI cleans up after leaving the house');
   assert.deepEqual(errors,[],'WebGL1 and Emy actions must not throw in a mobile viewport');
-  console.log('PASS Emy browser QA: menu, active scan & wave, both floor plans, distraction command, pick-up, throw, cleanup');
+  console.log('PASS Emy browser QA ('+(mobile?'mobile':'desktop')+', '+(engine===webkit?'WebKit':'Chromium')+'): menu, scan & real 3D outline, 2 floor plans, distraction, throw, cleanup');
   await page.context().close();
  }finally{await browser?.close();await server.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
