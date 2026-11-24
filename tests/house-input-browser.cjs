@@ -60,19 +60,29 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
      const yaw=(await snap()).camera.targetYaw;
      await page.evaluate(()=>{
       window.__v2MouseDeltas=[];
+      window.__v2YawTimeline=[];
       document.addEventListener('mousemove',e=>{
        if(window.__v2MouseDeltas.length<30)window.__v2MouseDeltas.push({
         deltaX:e.movementX,deltaY:e.movementY,locked:!!document.pointerLockElement
        });
       },{capture:true});
+      // Registered after the actual game's mousemove handler. It records
+      // transient yaw changes even when headless Chromium emits matching
+      // positive and negative deltas within a single mouse.move() call.
+      document.addEventListener('mousemove',()=>{
+       if(window.__v2YawTimeline.length<40)
+        window.__v2YawTimeline.push(window.__rescueHouse.snapshot().camera.targetYaw);
+      });
      });
      // Native pointer lock may coalesce a single hop under headless Chromium;
      // send multiple real mouse events before asserting rotation.
      await page.mouse.move(515,250,{steps:5});
      await page.mouse.move(542,261,{steps:5});
-     const movedLook=await page.waitForFunction(yaw=>Math.abs(window.__rescueHouse.snapshot().camera.targetYaw-yaw)>.02,yaw,{timeout:4000}).then(()=>true,()=>false);
+     const movedLook=await page.waitForFunction(yaw=>
+      Math.abs(window.__rescueHouse.snapshot().camera.targetYaw-yaw)>.02||
+      (window.__v2YawTimeline||[]).some(angle=>Math.abs(angle-yaw)>.02),yaw,{timeout:4000}).then(()=>true,()=>false);
      if(!movedLook)console.error('CAPTURED_LOOK_DIAGNOSTIC',JSON.stringify(await page.evaluate(()=>({
-      deltas:window.__v2MouseDeltas,locked:document.pointerLockElement?.id,
+      deltas:window.__v2MouseDeltas,yaws:window.__v2YawTimeline,locked:document.pointerLockElement?.id,
       classes:document.querySelector('#lab3d')?.className,snapshot:window.__rescueHouse.snapshot()
      }))));
      expect('pcCapturedMouseLook',movedLook,{movedLook});
