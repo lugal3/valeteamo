@@ -387,7 +387,7 @@ export class HouseRenderer {
   this.locations={};
   for(const [quality,p] of Object.entries(this.programs)){
    const atrib={},uniform={};for(const key of ['aPos','aCol','aNormal','aUV','aArt','aStyle','aTangent'])atrib[key]=gl.getAttribLocation(p,key);
-   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld','uTV','uTVSignal','uShot','uLoisFace','uFascia','uFasciaReady','uPursuerSkin','uPursuerSkinReady','uPursuerKey'])uniform[key]=gl.getUniformLocation(p,key);
+   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld','uTV','uTVSignal','uShot','uLoisFace','uFascia','uFasciaReady','uPursuerSkin','uPursuerSkinReady','uPursuerKey','uScanOutline'])uniform[key]=gl.getUniformLocation(p,key);
    uniform.uEmyCoat=gl.getUniformLocation(p,'uEmyCoat');
    uniform.uLamps=gl.getUniformLocation(p,'uLamps[0]');
    this.locations[quality]={atrib,uniform};
@@ -704,7 +704,7 @@ export class HouseRenderer {
   poseReflectedKitty(this.actorMesh.vertices,this.actorVertices,subject,{feetY:motion.actorPiano?.instrument.floor??motion.feetY,blink},animator?this.actorBinding:null);reflectMesh(this.actorVertices);
   gl.bindBuffer(gl.ARRAY_BUFFER,this.handVbo);gl.bufferData(gl.ARRAY_BUFFER,this.actorVertices,gl.DYNAMIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.handIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,this.actorMesh.indices,gl.STATIC_DRAW);this.handIndexKind='actor';this.bind(this.handVbo,this.handIbo);gl.drawElements(gl.TRIANGLES,this.actorMesh.indices.length,gl.UNSIGNED_SHORT,0);
  }
- drawPursuer(actor,mirrored=false,reduced=false){
+ drawPursuer(actor,mirrored=false,reduced=false,scale=1){
   const gl=this.gl;
   const name=actor.captureFace?'capture':'patrol';
   this.pursuerMeshes??={};
@@ -727,7 +727,29 @@ export class HouseRenderer {
    ?{count:mesh.indices.length,groups:mesh.groups,vertices:posed}
    :shell;
   posePursuer(mesh.vertices,posed,groups,actor,reduced);
+  if(scale!==1)for(let i=0;i<vertices.length;i+=16){
+   vertices[i]=actor.x+(vertices[i]-actor.x)*scale;
+   vertices[i+1]=actor.y+1.1+(vertices[i+1]-actor.y-1.1)*scale;
+   vertices[i+2]=actor.z+(vertices[i+2]-actor.z)*scale;
+  }
   if(mirrored)reflectMesh(vertices);gl.bindBuffer(gl.ARRAY_BUFFER,this.pursuerVbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.DYNAMIC_DRAW);this.bind(this.pursuerVbo,this.pursuerIbo);gl.drawElements(gl.TRIANGLES,count,gl.UNSIGNED_SHORT,0);
+ }
+ // Stencil-shell pass: a real contour of the pursuer's posed 3D mesh,
+ // rather than an approximate 2D location icon. Ignore depth only for the rim.
+ drawScanOutline(actor,reduced=false){
+  const gl=this.gl;
+  gl.clearStencil(0);gl.stencilMask(0xff);gl.clear(gl.STENCIL_BUFFER_BIT);
+  gl.enable(gl.STENCIL_TEST);gl.disable(gl.DEPTH_TEST);gl.depthMask(false);
+  gl.stencilFunc(gl.ALWAYS,1,0xff);gl.stencilOp(gl.KEEP,gl.KEEP,gl.REPLACE);
+  gl.colorMask(false,false,false,false);
+  this.drawPursuer(actor,false,reduced);
+  gl.colorMask(true,true,true,true);gl.stencilFunc(gl.NOTEQUAL,1,0xff);
+  gl.stencilOp(gl.KEEP,gl.KEEP,gl.KEEP);gl.stencilMask(0);
+  gl.uniform1f(this.uniform.uScanOutline,1);
+  this.drawPursuer(actor,false,reduced,1.065);
+  gl.uniform1f(this.uniform.uScanOutline,0);
+  gl.stencilMask(0xff);gl.disable(gl.STENCIL_TEST);
+  gl.enable(gl.DEPTH_TEST);gl.depthMask(true);
  }
  drawCaptureGrasp(camera,basis,actor,grasp){
   const limbsVisible=grasp.time>=grasp.timing.tear+.18;
@@ -803,6 +825,7 @@ export class HouseRenderer {
   gl.uniform1f(this.uniform.uGutter,isLow?GUTTER:GUTTER_MED);
   gl.uniform1f(this.uniform.uInner,isLow?INNER:INNER_MED);
   gl.uniform1f(this.uniform.uMirrorPass,0);
+  gl.uniform1f(this.uniform.uScanOutline,0);
   gl.uniform1f(this.uniform.uHeld,0);
   gl.uniform1f(this.uniform.uHasShadows,this.shadows.available?1:0);
   gl.uniform4fv(this.uniform.uLamps,this.lampUniforms);
@@ -828,6 +851,7 @@ export class HouseRenderer {
    if(motion.pursuerLight!==undefined)gl.uniform1f(this.uniform.uShot,motion.shotLight??0);
   }
   if(!motion.thirdPerson)this.drawMirror(camera,motion);else this.drawActor(motion.thirdPerson,motion);
+  if(motion.scanOutline&&motion.pursuer?.active)this.drawScanOutline(motion.pursuer,motion.reduced);
   gl.uniform1f(this.uniform.uHeld,1);
   if(motion.introHands)this.drawClimbingHands(motion.introHands);
   if(showHand)this.drawFirstPerson(camera,right,up,forward,time,flash,motion);
