@@ -86,6 +86,9 @@ export function sampleLoisRig(source={},reduced=false){
  angle('spine',0,(hiding?.26:untying?.055:phase==='climb'?.09:0),0);
  angle('chest',reduced?0:Math.sin(t*1.04)*.012,0,reduced?0:Math.sin(t*.45)*.017);
  shift('chest',0,breath,0);
+ // A compact neck duck tucks the photographed head UNDER the 1.10 m
+ // counter while keeping the chest above the pelvis and legs bent naturally.
+ shift('neck',0,-.265*lowCover,0);
  angle('neck',0,0,0);
  angle('head',reduced?0:Math.sin(t*.73)*.008,(untying?-.09:gazePitch*.28)+reaction.headPitch,gazeYaw*.42+reaction.headYaw);
  shift('jaw',0,-jawOpen*.015,jawOpen*.006);
