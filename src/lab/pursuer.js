@@ -19,9 +19,10 @@ export class Pursuer{
  hearNoise(position,intensity=1){
   if(!this.active||['sleeping','lying-down','rising','trapped','stunned','rc-chase','chase'].includes(this.mode))return false;
   if(!position||![position.x,position.y,position.z].every(Number.isFinite))return false;
+  const changed=this.mode!=='noise-investigate'||!this.noiseGoal||dist(this.noiseGoal,position)>.6;
   this.noiseGoal={x:position.x,y:position.y,z:position.z};
   this.noiseRemaining=Math.max(this.noiseRemaining,Math.min(9,3+intensity*2.5));
-  this.mode='noise-investigate';this.task=null;this.replan=0;this.path=[];
+  if(changed){this.mode='noise-investigate';this.task=null;this.replan=0;this.path=[];}
   return true;
  }
  stun(seconds=2){
