@@ -36,7 +36,9 @@ import {BATTERY_SWAP_SECONDS} from './viewmodel.js';
 import {rescueProgress} from './rescue-progress.js';
 import {poseEscapeAmbush,createRescueObjectives,updateEmySenses} from './emy-rescue.js';
 import {updateUpstairsEmy,petEmy} from './emy-cat.js';
-import {requestRibbonKey,EMY_ENTRANCE_SECONDS,createEmyCompanion,beginEmyEntrance,emyEntranceCamera,sendEmyToTrunk,updateEmyCompanion,snapshotEmyCompanion,restoreEmyCompanion} from './emy-companion.js';
+import {createEmyAbilities,advanceEmyAbilities,activateEmyScan,roomChoices,roomDestination,emyFloorMap} from './emy-abilities.js';
+import {installNoiseProps,grabNoiseProp,holdNoiseProp,releaseNoiseProp,stepNoiseProps} from './noise-props.js';
+import {sendEmyDistract,requestRibbonKey,EMY_ENTRANCE_SECONDS,createEmyCompanion,beginEmyEntrance,emyEntranceCamera,sendEmyToTrunk,updateEmyCompanion,snapshotEmyCompanion,restoreEmyCompanion} from './emy-companion.js';
 import {createRC,syncRCObject,deployRC,driveRC,beepRC,updateRC,stopRC,crashRC,recoverRC,rcCamera,rcDeploymentView,canTrapPursuer} from './rc-car.js';
 import {createLouisEscape,updateLouisEscape,freeLouis,louisCamera} from './louis-escape.js';
 import {createLoisShotDirector,advanceLoisShot,finishLoisShot} from './lois-ps2-cinematics.js';
@@ -85,6 +87,24 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    <div class="lab-intro-bottom"></div>
  </div>
  <div class="lab-cross" aria-hidden="true">+</div>
+ <div class="house-emy-wave" id="house-emy-wave" hidden aria-hidden="true"></div>
+ <div class="house-emy-menu" id="house-emy-menu" hidden role="group" aria-label="Acciones de Emy">
+  <strong>Emy ♡</strong>
+  <button data-act="emy:pet">♡ Acariciar</button>
+  <button data-act="emy:scan">◎ Escaneo <small id="house-emy-scan-cd"></small></button>
+  <button data-act="emy:map">✿ Distracción <small id="house-emy-distract-cd"></small></button>
+  <button data-act="emy:close">Cerrar</button>
+ </div>
+ <div class="house-emy-map" id="house-emy-map" hidden role="dialog" aria-modal="true" aria-label="Enviar a Emy a una habitación">
+  <header><strong>¿Adónde enviamos a Emy?</strong><button data-act="emy:close" aria-label="Cerrar mapa">✕</button></header>
+  <nav><button data-act="emy:floor:0" id="house-emy-floor-0">Planta baja</button><button data-act="emy:floor:1" id="house-emy-floor-1">Planta alta</button></nav>
+  <div class="house-emy-map-rooms" id="house-emy-map-rooms"></div>
+  <small>Selecciona una habitación · Emy hará ruido durante unos 25 segundos cuando llegue.</small>
+ </div>
+ <div class="house-noise-controls" id="house-noise-controls" hidden role="group" aria-label="Objeto en la mano">
+  <button data-act="noise:throw" aria-keyshortcuts="G">Lanzar <kbd>G</kbd></button>
+  <button data-act="noise:drop" aria-keyshortcuts="V">Soltar <kbd>V</kbd></button>
+ </div>
  <div id="house-mouse-status" class="house-mouse-status" hidden>Esc o R · Liberar ratón</div>
  <div class="lab-top">
    <details class="lab-camera-settings" id="lab-camera-settings"><summary aria-label="Ajustes de la casa">⚙</summary><div class="lab-camera-panel">
@@ -144,6 +164,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  let safeInput='',activeSafe=null,noteLift=0,noteHold=0,notePresentation=false,capturePhoto=false,piano=null;
  const objectives=createRescueObjectives();
  let rc=null,louis=null,loisShotDirector=null,rcTrap={armed:false,closed:false},finalCutscene=null;
+ let emyAbilities=createEmyAbilities(),emyMenuOpen=false,noiseProps=[],heldNoise=null;
  let resumed=false,lastSafeCheckpoint=null,captureShot=null,captureCount=0,lifeNoticeLeft=0;
  let equipmentBeforeNote='empty',batterySwap=null;
  const canUseHotbar=()=>ready&&!isSuspended()&&!cinematic&&!emyShot&&events.phase!=='arrival'&&events.phase!=='failed'&&events.phase!=='safe'&&rc?.mode!=='driving'&&rc?.mode!=='deploying';
@@ -173,7 +194,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const caption=text=>{if(options.captions!==false)hudMessages.describeSound(text);};
  const isPortrait=()=>window.innerHeight>window.innerWidth;
  const captureRunning=()=>captureShot&&hasFocus&&!document.hidden&&!isPortrait()&&!contextLost;
- const isSuspended=()=>!ready||paused||!!modal||!!captureShot||phone.editing||$('lab-camera-settings').open||isPortrait()||document.hidden||!hasFocus||contextLost;
+ const isSuspended=()=>!ready||paused||emyMenuOpen||!!modal||!!captureShot||phone.editing||$('lab-camera-settings').open||isPortrait()||document.hidden||!hasFocus||contextLost;
  const wakeShot=()=>events.phase==='lockdown'&&pursuer?.mode==='rising';
  const isPaused=()=>isSuspended()||!!cinematic||!!emyShot||!!poseTransition||events.phase==='car-preview'||wakeShot();
  const flashlightBeam=()=>s.flashlight&&batterySwap===null&&equipment==='flashlight'&&!s.hidden&&!s.lying&&!animator.performing&&!phone.open&&events.phase!=='arrival';
@@ -271,13 +292,16 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   lifeNoticeLeft=0;$('house-lives').hidden=true;
   television.sync(false,false);notePresentation=false;
   louis=null;loisShotDirector=null;rcTrap={armed:false,closed:false};finalCutscene=null;
+  emyMenuOpen=false;emyAbilities=createEmyAbilities();heldNoise=null;
+  $('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;$('house-emy-wave').hidden=true;$('house-noise-controls').hidden=true;
   releaseMouse();events.reset();mirrorSafe.reset();hudMessages.reset();phone.close();encounterCheckpoint=null;danger.hidden=true;
    root.querySelector('[data-act=emotes]').setAttribute('aria-expanded','false');
   batterySwap=null;equipmentBeforeNote='empty';
   animator.reset();sound.stopEmote();floorSounds.reset();if(phone.editing)void phone.layoutAction('done');$('house-emotes').hidden=true;cinematic=null;emyShot=null;poseTransition=null;paused=false;lastInteraction=-Infinity;handAction=0;clickAction=0;noteLift=0;noteHold=0;capturePhoto=false;
   sound.setTension(.55);
   root.classList.remove('lab-intro-active');$('lab-window-intro').classList.add('lab-hidden');$('lab-camera-settings').open=false;
-  world=createHouse(checkpoint);puzzle=createHousePuzzle(scenario?.puzzleEntry??config.entry);pursuer=new Pursuer(world);sound.setThreat(false);
+  world=createHouse(checkpoint);noiseProps=installNoiseProps(world);
+  puzzle=createHousePuzzle(scenario?.puzzleEntry??config.entry);pursuer=new Pursuer(world);sound.setThreat(false);
   emyCompanion=demo&&checkpoint==='ground'?createEmyCompanion(world.emy,{waiting:!scenario}):null;
   world.objects.find(o=>o.id==='emy-vent').interactable=!!emyCompanion&&!puzzle.key;
   if(emyCompanion){
@@ -483,8 +507,17 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    return;
   }
   if(o.kind==='emy-cat'){
-   if(Math.hypot(s.x-o.x,s.z-o.z)>1.45){say('Acércate un poco para acariciar a Emy');return;}
-   if(petEmy(world.emy)){play('cat',o,.45);say('Emy ronronea y levanta su patita ♡',3);}
+   if(Math.hypot(s.x-o.x,s.z-o.z)>1.45||Math.abs(s.y-world.emy.y)>1.5){say('Acércate un poco a Emy');return;}
+   emyMenuOpen=true;releaseMouse();resetInput();$('house-emy-menu').hidden=false;
+   $('house-emy-map').hidden=true;
+   $('house-emy-scan-cd').textContent=emyAbilities.scanCooldown>0?'('+Math.ceil(emyAbilities.scanCooldown)+' s)':'';
+   $('house-emy-distract-cd').textContent=emyAbilities.distractCooldown>0?'('+Math.ceil(emyAbilities.distractCooldown)+' s)':'';
+   $('house-emy-menu').querySelector('button')?.focus({preventScroll:true});
+   return;
+  }else if(o.kind==='noise-prop'){
+   if(heldNoise){say('Ya llevas un objeto en la mano. Lánzalo o suéltalo.');return;}
+   if(grabNoiseProp(o)){heldNoise=o;play('pickup',o);say(o.label.replace('Recoger','Recogiste')+'. Pulsa G para lanzar o V para soltar.',3);}
+   return;
   }else if(o.kind==='light-switch'){
    const on=toggleCircuit(o.circuit);play('click',o);
    say(on===null?'Sin corriente · revisa el interruptor general':on?'Luz encendida':'Luz apagada');
