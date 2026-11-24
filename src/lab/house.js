@@ -1337,9 +1337,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    advanceEmyAbilities(emyAbilities,shotDelta);
    if(heldNoise)holdNoiseProp(heldNoise,cameraOf(s));
    for(const noiseCue of stepNoiseProps(noiseProps,shotDelta,world,pursuer,world.emy)){
-    if(noiseCue==='stun'){play('alert',pursuer,.85);say('¡Impacto! El secuestrador quedó aturdido unos segundos.',3);}
-    else if(noiseCue==='evade'){play('cat',world.emy,.6);say('¡Emy esquivó el objeto!',2.5);}
-    else if(noiseCue==='impact'){play('clatter',null,.9);caption('Un objeto cayó e hizo ruido.');}
+    if(noiseCue.kind==='stun'){play('alert',pursuer,.85);say('¡Impacto! El secuestrador quedó aturdido unos segundos.',3);}
+    else if(noiseCue.kind==='evade'){play('cat',world.emy,.6);say('¡Emy esquivó el objeto!',2.5);}
+    else if(noiseCue.kind==='impact'){play('clatter',noiseCue.at,.9);caption('Un objeto cayó e hizo ruido.');}
    }
   }
   updateBatterySwap(shotDelta);
