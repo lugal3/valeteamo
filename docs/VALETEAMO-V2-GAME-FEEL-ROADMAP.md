@@ -14,8 +14,8 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 
 | Phase | Workstream | Status | Main acceptance gate |
 |---|---|---|---|
-| 01 | **Emy + hides / unfair failures** | **IN PROGRESS** | Kitty hides independently of cat arrival; Emy distracts on another floor and waits silently if Kitty stays hidden; no lost life from a cat wait |
-| 02 | **Kitty movement, physics, camera** | NOT STARTED | Grounded acceleration/deceleration, turn/crouch transitions, robust stairs, camera collisions/comfort and mobile input |
+| 01 | **Emy + hides / unfair failures** | **DONE — QA passed** | Kitty hides independently of cat arrival; Emy distracts on another floor and waits silently if Kitty stays hidden; no lost life from a cat wait |
+| 02 | **Kitty movement, physics, camera** | **IMPLEMENTED — browser QA pending** | Grounded acceleration/deceleration, turn/crouch transitions, robust stairs, camera collisions/comfort and mobile input |
 | 03 | **Pursuer perception + fair stealth AI** | NOT STARTED | Separate sight/hearing/suspicion/chase/search states, last-seen positions, visible-door logic and unbiased hide searching |
 | 04 | **Emy's autonomous personality** | NOT STARTED | Sit, groom, stretch, orient ears to noise, cautious follow, “Quédate aquí”, safe hold, consistent cross-floor routing |
 | 05 | **House environmental life** | NOT STARTED | Identity of every room, small ambient props, lighting, wind/dust, performant atmosphere without clutter |
@@ -99,3 +99,20 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 ## Current baseline issue (Phase 01)
 
 `house.js/updateHiding` waits on Emy movement while entering wardrobe. Since `catMovedAt` is reset whenever Emy moves by over 8 cm, the player camera can be locked open indefinitely while Emy crosses floors. Fix by removing the **dependency entirely**, not by merely lowering the timeout.
+
+## Phase 01 implementation & verification (completed)
+
+- Removed the player-facing wardrobe wait on Emy travel, without changing hide collision or classic animation timing.
+- Companion's remote `hold` state is silent and transient, allowing an active 25s distraction to finish on a different floor; rejoins when Kitty emerges.
+- `tests/emy-hide-independence.cjs` verifies two-floor hiding, hiding independent of arrival, full distraction, no cat warp, and save/load compatibility.
+- [CI](https://github.com/lugal3/valeteamo/actions/runs/45424926734): green full emy-abilities suite (general + perf + build + Chromium mobile/desktop, WebKit, threat/hide regression). Cosmos E2E browser has a separate pre-existing unresolved failure; track at Phase 08/12.
+
+## Phase 02 code changes
+
+- `src/lab/locomotion-feel.js`: analogue move intent with separate acceleration/braking/reversal, normalized diagonals, smooth sprint/crouch speeds, small touch deadzone, pre-stair speed cap, visual-only floor smoothing and frame-rate-independent crouch height.
+- `src/lab/house.js`: integrate into existing world navigator; keep player collider grounded immediately, separate visual camera floor from collision physics; sync visual floor on intro, save reload and trial teleport; brake quickly after key/touch release; easier touch sprint activation with hysteresis.
+- `src/lab/camera-controls.js`: shortest-path yaw between equivalent ±π positions, preserving desktop pointer settings and existing pitch behavior.
+- `tests/locomotion-feel.cjs`: 30/60/120Hz comparison, diagonal cap, reversal, stopping, sprint blend, touch drift, camera angle seams, crouch and real two-way stair collisions.
+- `tests/emy-abilities-browser.cjs`: PC/mobile keyboard movement, braking, upstairs view alignment, and phone touch joystick + sprint-release regression across browsers.
+- Existing navigation/collision geometry and scripted cinematics are unchanged. No 2D content touched in this phase.
+- **Gate:** baseline unit/perf/build passed in [CI](https://github.com/lugal3/valeteamo/actions/runs/45427579689); final browser extension under [CI](https://github.com/lugal3/valeteamo/actions/runs/45428020726), not yet confirmed green. Do not label the phase fully validated until this finishes.
