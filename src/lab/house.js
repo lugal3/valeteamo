@@ -808,7 +808,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      emyFloorMap(world.rooms,emyMapFloor,options)+
     '</section>'+
     '<section class="house-emy-destination-panel" aria-label="Habitaciones de '+floorName+'">'+
-     '<div class="house-emy-destination-head"><strong>Habitaciones y zonas</strong><small>Toca el nombre o el número</small></div>'+
+     '<div class="house-emy-destination-head"><strong>Habitaciones y zonas</strong><small>Toca o desliza la lista ↓</small></div>'+
      '<div class="house-emy-destination-list">'+emyFloorList(world.rooms,emyMapFloor,options)+'</div>'+
     '</section>'+
    '</div>';
