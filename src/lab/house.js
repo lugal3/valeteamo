@@ -778,6 +778,57 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   catch{field.hidden=false;field.select();status.textContent='Copia los valores seleccionados.';}
  }
  function runAction(act,node){
+  if(act.startsWith('emy:')){
+   if(act==='emy:close'){
+    emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;resetInput();return;
+   }
+   if(!emyMenuOpen||!world||!s)return;
+   if(act==='emy:pet'){
+    emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;
+    if(petEmy(world.emy)){play('cat',world.emy,.45);say('Emy ronronea y levanta su patita ♡',3);}
+    return;
+   }
+   if(act==='emy:scan'){
+    if(emyAbilities.scanCooldown>0){say('Emy necesita descansar '+Math.ceil(emyAbilities.scanCooldown)+' s.');return;}
+    emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;
+    if(activateEmyScan(emyAbilities)){
+     play('cat',world.emy,.9);
+     say(pursuer.active?'Escaneo activo · sigue la silueta luminosa del secuestrador.':'Emy maúlla, pero todavía no hay amenazas activas.',4);
+    }return;
+   }
+   if(act==='emy:map'){
+    if(emyAbilities.distractCooldown>0){say('Emy necesita descansar '+Math.ceil(emyAbilities.distractCooldown)+' s.');return;}
+    $('house-emy-menu').hidden=true;$('house-emy-map').hidden=false;
+    runAction('emy:floor:0');return;
+   }
+   if(act.startsWith('emy:floor:')){
+    const floor=Number(act.slice('emy:floor:'.length));
+    if(floor!==0&&floor!==1)return;
+    $('house-emy-map-rooms').innerHTML=emyFloorMap(world.rooms,floor);
+    for(const n of [0,1])$('house-emy-floor-'+n).setAttribute('aria-pressed',String(n===floor));
+    return;
+   }
+   if(act.startsWith('emy:room:')){
+    const room=roomChoices(world.rooms).find(r=>r.id===act.slice('emy:room:'.length));
+    const target=roomDestination(world,room);
+    if(!target){say('Emy no encuentra un lugar seguro en esa habitación.');return;}
+    if(!sendEmyDistract(emyCompanion,world,target)){
+     say('Emy no logra encontrar un camino libre. Prueba otra habitación.',4);return;
+    }
+    emyAbilities.distractCooldown=55;
+    emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;
+    play('cat',world.emy,.6);say('Emy va hacia '+room.label+'. Cuando llegue hará ruido durante 25 segundos.',5);
+    resetInput();return;
+   }
+   return;
+  }
+  if(act.startsWith('noise:')){
+   if(!heldNoise||isPaused())return;
+   const prop=heldNoise,throwing=act==='noise:throw';
+   if(act!=='noise:throw'&&act!=='noise:drop')return;
+   releaseNoiseProp(prop,cameraOf(s),throwing);heldNoise=null;
+   play('cloth',prop,.5);say(throwing?'¡Objeto lanzado!':'Objeto soltado',2);return;
+  }
   if((events.phase==='safe'||events.phase==='failed')&&!['retry-arrival','exit','reset','finish'].includes(act))return;
   if(act==='retry-arrival'){
    if(scenario?.events==='wake'){ready=false;intro=true;reset();showTrialStart();return;}
@@ -890,6 +941,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    }
   }
   root.classList.toggle('lab-flash-off',!s.flashlight);
+  $('house-noise-controls').hidden=!heldNoise||isPaused()||phone.open||remoteInUse();
   $('house-light').hidden=equipment!=='flashlight'||!!s.hidden||!!s.lying;
   $('house-use-phone').hidden=!['phone','paper','rc'].includes(equipment)||notePresentation||!!noteLift||(equipment!=='phone'&&(!!s.hidden||!!s.lying));
   $('house-use-phone').setAttribute('aria-label',equipment==='rc'?'Usar auto RC':equipment==='paper'?'Observar nota':'Usar teléfono');
@@ -937,7 +989,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const catAction=emyShot||vent.unlatched&&vent.coverAmount<1||['leap-in','crawl','leap-out'].includes(emyCompanion?.fetch?.phase);
   root.classList.toggle('house-emy-action',!!catAction&&!isSuspended()&&!phone.open);
   root.querySelector('.lab-cross').classList.toggle('lab-target',!!target);
-  let action=interactionLabel(target);
+  let action=target?.kind==='emy-cat'?'Acciones de Emy':target?.kind==='noise-prop'?'Recoger objeto':interactionLabel(target);
   if(poseTransition)action=poseTransition.entering?'Entrando…':'Saliendo…';
   if(target?.motion||hatchMoving)action=target.state==='opening'||hatchMoving&&target.open?'Abriendo…':'Cerrando…';
   const actionLabel=interactButton.querySelector('small');
@@ -1260,6 +1312,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     updateEmySenses(emyCompanion,s,world,pursuer,objectives.active,shotDelta,flashlightBeam());
     const cue=updateEmyCompanion(emyCompanion,emyShot&&reducedMotion.matches?shotDelta*3:shotDelta,{world,player:s,enteringHide,reduced:reducedMotion.matches,finale:world.greyCat.active});
     if(cue==='scratch')play('scratch',world.emy,.8);
+    if(cue==='distract-noise'){
+     play('cat',world.emy,.95);caption('Emy está maullando para distraer al secuestrador');
+     pursuer.hearNoise({x:world.emy.x,y:world.emy.y,z:world.emy.z},1.5);
+    }
+    if(cue==='distract-done')say('Emy terminó de distraerlo y vuelve contigo.',4);
+    if(cue==='distract-failed'){emyAbilities.distractCooldown=Math.min(5,emyAbilities.distractCooldown);say('Emy no logró llegar. Puedes intentarlo de nuevo.',4);}
     if(cue==='delivered'){
      world.objects.find(o=>o.id==='key').taken=true;
      puzzle={...puzzle,key:true};s.inventory.key=true;equip('key',false,true);handAction=1;
@@ -1280,6 +1338,15 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(wasHidden!==cat.hidden)renderer.updateVisibility();
   }
 
+  if(!isPaused()){
+   advanceEmyAbilities(emyAbilities,shotDelta);
+   if(heldNoise)holdNoiseProp(heldNoise,cameraOf(s));
+   for(const noiseCue of stepNoiseProps(noiseProps,shotDelta,world,pursuer,world.emy)){
+    if(noiseCue==='stun'){play('alert',pursuer,.85);say('¡Impacto! El secuestrador quedó aturdido unos segundos.',3);}
+    else if(noiseCue==='evade'){play('cat',world.emy,.6);say('¡Emy esquivó el objeto!',2.5);}
+    else if(noiseCue==='impact'){play('clatter',null,.9);caption('Un objeto cayó e hizo ruido.');}
+   }
+  }
   updateBatterySwap(shotDelta);
   let view=cameraOf(s),hand=!s.hidden&&!s.lying&&!poseTransition&&!animator.performing&&!phone.open,torch=flashlightBeam(),introHands=null,distance=0;
   if(mouseLocked()&&!canLook())releaseMouse();
@@ -1474,7 +1541,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const outdoor=s.y<-.12?0:view.x<0||view.x>HOUSE.width||view.z<0||view.z>HOUSE.depth?1:Math.max(0,1-Math.min(view.x,HOUSE.width-view.x,view.z,HOUSE.depth-view.z)/1.5)*.22;
   sound.locate({room:roomAt(view.x,view.z,s.y),outdoor,hidden:!!s.hidden,powered:housePowered(world.lights.power)});
   try{
-   renderer.render(view,torch,elapsed,hand,{bob:s.bob,action:handAction,clickAction,speed:animator.speed,acceleration:animator.acceleration,walkWeight:animator.weight,reduced:s.reduceBob,swayX:handDrift.x,swayY:handDrift.y,introHands,animator,feetY:s.y,crouched:s.crouched,equipment:visualEquipment,keyTurn:keyTurn?.time,noteRaise,batterySwap,tabletLift,equipLift:raisedNote?-.52*(1-noteRaise):reducedMotion.matches?0:-.22*Math.pow(1-Math.min(1,equipmentAge/.3),2),bathDoorAmount:world.objects.find(o=>o.id==='bano').amount,thirdPerson,actorTime,actorWalk,actorPiano,shotLight,pursuer:finalCutscene?{...pursuer.snapshot(),captureReach:Math.min(1,finalCutscene.elapsed/.8)*Math.max(0,Math.min(1,(2.45-finalCutscene.elapsed)/.35)),captureLift:0,captureFace:{jaw:0,bite:0,twitch:0,left:0,right:0,glance:0}}:pursuer.snapshot(),television});
+   renderer.render(view,torch,elapsed,hand,{scanOutline:emyAbilities.scan>0&&pursuer.active,bob:s.bob,action:handAction,clickAction,speed:animator.speed,acceleration:animator.acceleration,walkWeight:animator.weight,reduced:s.reduceBob,swayX:handDrift.x,swayY:handDrift.y,introHands,animator,feetY:s.y,crouched:s.crouched,equipment:visualEquipment,keyTurn:keyTurn?.time,noteRaise,batterySwap,tabletLift,equipLift:raisedNote?-.52*(1-noteRaise):reducedMotion.matches?0:-.22*Math.pow(1-Math.min(1,equipmentAge/.3),2),bathDoorAmount:world.objects.find(o=>o.id==='bano').amount,thirdPerson,actorTime,actorWalk,actorPiano,shotLight,pursuer:finalCutscene?{...pursuer.snapshot(),captureReach:Math.min(1,finalCutscene.elapsed/.8)*Math.max(0,Math.min(1,(2.45-finalCutscene.elapsed)/.35)),captureLift:0,captureFace:{jaw:0,bite:0,twitch:0,left:0,right:0,glance:0}}:pursuer.snapshot(),television});
    if(capturePhoto){capturePhoto=false;if(phone.open&&phone.app==='camera')phone.takePhoto(canvas);}
    phone.updateCamera(canvas,now);
   }catch(e){interruptGraphics('Error de renderizado',String(e.message||e));return;}
@@ -1659,10 +1726,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const key=movementKey(e);if(!isPaused()&&key&&(!e.repeat||keys.has(key)))keys.add(key);
   if(e.repeat)return;
   if(e.key==='Escape'){
+   if(emyMenuOpen){e.preventDefault();runAction('emy:close');return;}
    if(!$('house-emotes').hidden){$('house-emotes').hidden=true;root.querySelector('[data-act=emotes]').setAttribute('aria-expanded','false');resetInput();return;}
    if($('lab-camera-settings').open){$('lab-camera-settings').open=false;resetInput();return;}
    if(modal){if(intro||contextLost)return;paused=false;modalClose();}else togglePause();return;
   }
+  if(e.key==='g'||e.key==='G')runAction('noise:throw');
+  if(e.key==='v'||e.key==='V')runAction('noise:drop');
   if(e.key==='e'||e.key==='E')runAction('interact');
   if(e.key==='f'||e.key==='F')runAction('flash');
   if(e.key==='c'||e.key==='C')runAction('crouch');
