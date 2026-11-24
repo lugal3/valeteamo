@@ -210,14 +210,14 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   };
   const marker=(symbol:string,p:IsoPoint)=>{
    const xy=toScreen(p),isHouse=this.storyMap==='night_neighborhood';
-   if(isHouse){
-    const ring=this.add.ellipse(xy.x,xy.y,77,31,0xffe2ba,.26)
-     .setDepth(xy.y+3);
-    ring.setStrokeStyle(3,0xffe0b9,.96);
-    this.storyObjects.push(ring);
-    if(!this.reducedMotion)this.tweens.add({targets:ring,alpha:.42,
-     scaleX:1.15,scaleY:1.15,duration:1050,yoyo:true,repeat:-1});
-   }
+   // Same turquoise expanding contour for every important 2D clue.
+   // This is an overlay, never an invisible collider or teleport trigger.
+   const ring=this.add.ellipse(xy.x,xy.y,isHouse?77:52,isHouse?31:22,
+    isHouse?0xffe2ba:0xa4ffdc,.26).setDepth(xy.y+3);
+   ring.setStrokeStyle(isHouse?3:2,isHouse?0xffe0b9:0xa6ffdf,.96);
+   this.storyObjects.push(ring);
+   if(!this.reducedMotion)this.tweens.add({targets:ring,alpha:.55,
+    scaleX:1.17,scaleY:1.17,duration:950,yoyo:true,repeat:-1});
    const label=this.add.text(xy.x,xy.y-(isHouse?25:16),symbol,{
     fontFamily:'Georgia',fontSize:isHouse?'34px':'26px',color:'#fff4cf',
     stroke:'#764f78',strokeThickness:4
@@ -226,6 +226,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   };
   this.storyTarget={...STORY_POSITIONS[stage]};
   if(stage==='intro'){
+   marker('✧',CHURU_POSITION);
    const xy=toScreen(CHURU_POSITION);
    const tube=this.add.image(xy.x,xy.y-4,CHURU_TEXTURE).setOrigin(.5,.85)
     .setAngle(22).setDepth(xy.y+1);
@@ -233,6 +234,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    this.storyObjects.push(cloth,tube);
   }
   if(stage==='feed-cat'||(stage==='cat-fed'&&this.storyMap==='morning_garden')){
+   if(stage==='feed-cat')marker('♡',GREY_CAT_POSITION);
    this.storyCatPoint=stage==='cat-fed'?previousCat:{...GREY_CAT_POSITION};
    const xy=toScreen(this.storyCatPoint);
    this.storyCat=this.add.image(xy.x,xy.y,greyCatTexture('idle',0)).setOrigin(.5,.9)
@@ -299,6 +301,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(['ribbon','petals','wheel'].includes(stage)){
    marker(stage==='ribbon'?'✧':stage==='petals'?'✿':'⌁',this.storyTarget);
   }
+  if(['meet-couple','talk-louis'].includes(stage))marker('✧',this.storyTarget);
   if(stage==='door'||stage==='window')marker(stage==='door'?'⚿':'✧',this.storyTarget);
   const dark=darknessAt(this.p.u,stage,this.storyMap);
   if(Math.abs(dark-this.storyDusk)>.01){this.storyDusk=dark;this.story.dusk(dark);}
