@@ -15,7 +15,7 @@ const CHASE_SECONDS=5.5,COOLDOWN_SECONDS=5;
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 export class Pursuer{
  constructor(world){this.world=world;this.reset();}
- reset(){this.breakerDelay=15;this.breakerGoal=null;this.intruderSeen=false;this.x=5.8;this.y=0;this.z=11;this.yaw=this.facing=Math.PI;this.mode='dormant';this.awareness=0;this.lost=10;this.witnessed=null;this.lastSeen=null;this.path=[];this.route=0;this.visited=0;this.replan=0;this.walk=this.speed=this.age=this.bedTime=0;this.stepDistance=0;this.caught=false;this.stuck=0;this.task=null;this.modeTime=0;this.quiet=false;this.noiseGoal=null;this.noiseRemaining=0;this.stunned=0;this.trailPoints=[];this.trailIndex=0;this.trailRemaining=0;}
+ reset(){this.breakerDelay=15;this.breakerGoal=null;this.intruderSeen=false;this.x=5.8;this.y=0;this.z=11;this.yaw=this.facing=Math.PI;this.mode='dormant';this.awareness=0;this.lost=10;this.witnessed=null;this.lastSeen=null;this.path=[];this.route=0;this.visited=0;this.replan=0;this.walk=this.speed=this.age=this.bedTime=0;this.stepDistance=0;this.caught=false;this.stuck=0;this.task=null;this.modeTime=0;this.quiet=false;this.noiseGoal=null;this.noiseRemaining=0;this.stunned=0;this.trailPoints=[];this.trailIndex=0;this.trailRemaining=0;this.searchPause=0;}
  get active(){return this.mode!=='dormant';}
  hearNoise(position,intensity=1){
   if(!this.active||['dormant','sleeping','lying-down','rising','to-bed','to-entry','trapped','stunned','rc-chase','chase'].includes(this.mode))return false;
@@ -49,7 +49,7 @@ export class Pursuer{
  resumeSearch(){this.task=null;this.mode='search';this.route=4;this.visited=0;this.clearSight();this.plan(SEARCH_ROUTE[this.route]);}
  clearSight(){
   this.witnessed=null;this.lastSeen=null;this.awareness=0;this.lost=10;
-  this.trailPoints=[];this.trailIndex=0;this.trailRemaining=0;
+  this.trailPoints=[];this.trailIndex=0;this.trailRemaining=0;this.searchPause=0;
  }
  startTrailSearch(){
   // Sample only the last *actually seen* coordinate. Never query hidden
@@ -61,7 +61,7 @@ export class Pursuer{
    (x,z,y)=>groundHeight(x,z,y,hatchOpen),
    (x,y,z)=>!blocked(this.world.boxes,x,y,z,.16,1.72));
   if(!this.trailPoints.length)return false;
-  this.mode='trail-search';this.trailIndex=0;
+  this.mode='trail-search';this.trailIndex=0;this.searchPause=0;
   this.trailRemaining=TRAIL_SEARCH_SECONDS;this.modeTime=TRAIL_SEARCH_SECONDS;
   this.replan=0;this.path=[];this.task=null;
   return true;
@@ -203,6 +203,15 @@ export class Pursuer{
   if(this.mode==='trail-search'){
    this.trailRemaining=Math.max(0,this.trailRemaining-dt);
    if(!this.trailRemaining||this.trailIndex>=this.trailPoints.length)this.cooldown();
+   else if(this.searchPause>0){
+    // The enemy visibly pauses and looks rather than checking five
+    // suspicious points in a single frame. Awareness can still reacquire
+    // a truly visible Kitty earlier in this update.
+    this.searchPause=Math.max(0,this.searchPause-dt);
+    this.age+=dt;this.speed*=Math.exp(-8*dt);
+    this.facing+=Math.sin(this.age*2.2)*dt*.23;
+    return cues;
+   }
   }
   if(bait&&Math.abs(this.y-decoy.y)<.55&&Math.hypot(this.x-decoy.x,this.z-decoy.z)<.75){this.mode='search';this.lastSeen=null;cues.push('rc-hit');return cues;}
   const contact=witnessed?(p.hideExit||p):p;
@@ -248,7 +257,7 @@ export class Pursuer{
    }
    else if(this.mode==='to-entry')cues.push('at-entry');
    else if(this.mode==='trail-search'){
-    this.trailIndex++;this.replan=0;this.path=[];
+    this.trailIndex++;this.replan=0;this.path=[];this.searchPause=.72;
     // No supernatural leap from a checked cupboard to Kitty's new location:
     // continue through a few safe, locally sampled points only.
     if(this.trailIndex>=this.trailPoints.length)this.cooldown();
