@@ -158,7 +158,18 @@ async function run(){
   for(const key of ['j','j','h','y','h','y','t'])await page.keyboard.press(key);
   await page.locator('[data-piano-mode="recital"]').waitFor();
   assert.notEqual((await checkpoint()).pianoSolved,true,'The red key waits for the performance');
-  await page.locator('[data-piano-mode="reveal"]').waitFor({timeout:50000});
+  // Reveal is a short animation and may be skipped between SwiftShader frames.
+  // Assert the durable puzzle solution instead of a transient CSS mode.
+  await page.waitForFunction(()=>window.__rescueHouse.pianoPuzzle().solved,null,
+   {timeout:90000}).catch(async error=>{
+    console.error('PIANO_QA_DIAGNOSTIC',JSON.stringify(await page.evaluate(()=>({
+     mode:document.querySelector('[data-piano-mode]')?.getAttribute('data-piano-mode'),
+     progress:window.__rescueHouse.pianoPuzzle(),
+     scene:window.__rescueHouse.snapshot(),
+     sound:window.__rescueHouse.story().samples
+    }))));
+    throw error;
+   });
   await page.getByRole('dialog',{name:'Piano antiguo'}).waitFor({state:'hidden'});
   await page.waitForFunction(()=>window.__rescueHouse.pianoPuzzle().compartment===1);
   assert.equal((await checkpoint()).pianoSolved,true);
