@@ -25,7 +25,9 @@ for(const cue of ['cat-meow','cat-purr','churu-open','danger-alert','hatch-close
 const ts=fs.readFileSync('src/audio.ts','utf8');
 for(const cue of ["cat","churu","van-door","van-away"])assert(ts.includes(cue+':')||ts.includes("'"+cue+"':"),'2D cue: '+cue);
 const house=fs.readFileSync('src/lab/house.js','utf8');
-for(const cue of ["cat-purr","power-cut","danger-alert","hatch-close"])assert(house.includes("'"+cue+"'"),'House event wired: '+cue);
+for(const cue of ["cat-purr","power-cut","hatch-close"])assert(house.includes("'"+cue+"'"),'House event wired: '+cue);
+assert(house.includes('sound.playDangerAlert()')||house.includes("play('danger-alert'"),
+ 'House must play the provided danger recording on confirmed discovery');
 const sound=fs.readFileSync('src/lab/sound.js','utf8');
 assert(sound.includes("clipBuffer('rc-motor')"),'RC loops sampled sound');
 console.log('PASS user audio: 9 valid compressed Ogg/Opus clips ('+total+' bytes), 1 sprite ('+sprite.length+' bytes) and Safari MP3 ('+fallback.length+' bytes), 2D/3D cue wiring');
