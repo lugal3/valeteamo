@@ -637,7 +637,14 @@ export class HouseRenderer {
      box.z=source.z+offset[2];
      if(sway)box.yaw=(box.baseYaw||0)+sway;
     }
-   } else if(box.ambient==='captive-breath'){
+   } else if(box.ambient==='curtain-sway'){
+     const origin=this.dynamicOrigins[i],phase=box.ambientPhase||0;
+     box.yaw=origin[3]+(reduced?0:(box.ambientAmplitude||.02)*Math.sin(time*.74+phase));
+    } else if(box.ambient==='floating-dust'){
+     const origin=this.dynamicOrigins[i],phase=box.ambientPhase||0;
+     box.y=origin[1]+(reduced?0:(box.ambientAmplitude||.04)*Math.sin(time*.58+phase));
+     box.x=origin[0]+(reduced?0:.025*Math.cos(time*.43+phase));
+    } else if(box.ambient==='captive-breath'){
     box.y=this.dynamicOrigins[i][1]+(reduced||motion.feetY>-.3?0:Math.sin(time*2.3)*.010);
    }
    const at=i*6,bx=box.x,by=box.y,bz=box.z,byaw=box.yaw||0,roll=box.roll||0,pitch=box.pitch||0;
