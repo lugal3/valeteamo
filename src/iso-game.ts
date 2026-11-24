@@ -659,7 +659,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    if(distance<5&&!this.storyTargetCuePlayed){
     this.storyTargetCuePlayed=true;
     this.story.guide('¡Auxilio! — Alguien pide ayuda tras los cerezos. ¡Acércate!');
-    this.audio.tone(540,.21,.047,'triangle');
+    this.audio.storyHelpCry();
    }
    if(distance<2.2){
     this.storyWalkTriggered=true;
