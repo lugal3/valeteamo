@@ -1,5 +1,6 @@
 import {USER_AUDIO_SPRITE} from './audio/user-sprite-index.js';
 const spriteURL=new URL('./audio/user-sprite.ogg',import.meta.url).href;
+const spriteMP3URL=new URL('./audio/user-sprite.mp3',import.meta.url).href;
 const ids=['door-open','door-close','closet-close','unlock','trying-door','notification','light','wood-1','wood-2','wood-3','stair-1','stair-2','stair-3','ambient','tension','alert'];
 const emoteURLs=import.meta.glob('./audio/emote-*.{mp3,ogg,wav}',{eager:true,query:'?url',import:'default'});
 export const SAMPLE_URLS=Object.fromEntries([
@@ -20,12 +21,21 @@ export class RecordedAudio{
       const data=await this.ctx.decodeAudioData(await r.arrayBuffer());if(!this.dead)this.buffers.set(id,data);
     }catch(e){if(!this.dead)this.errors.push(id+': '+e.message);}
    }),
-   (async()=>{try{
-    const response=await fetch(spriteURL,{signal:this.abort.signal});
-    if(!response.ok)throw Error('HTTP '+response.status);
-    const data=await this.ctx.decodeAudioData(await response.arrayBuffer());
-    if(!this.dead)this.sprite=data;
-   }catch(e){if(!this.dead)this.errors.push('user-sprite: '+e.message);}})()
+   (async()=>{
+    let failure=null;
+    // Opus/Ogg is smaller; MP3 preserves support for older iOS/Safari.
+    for(const url of [spriteURL,spriteMP3URL]){
+     if(this.dead||this.abort.signal.aborted)break;
+     try{
+      const response=await fetch(url,{signal:this.abort.signal});
+      if(!response.ok)throw Error('HTTP '+response.status);
+      const data=await this.ctx.decodeAudioData(await response.arrayBuffer());
+      if(!this.dead){this.sprite=data;this.spriteCodec=url===spriteURL?'opus':'mp3';}
+      failure=null;break;
+     }catch(e){failure=e;}
+    }
+    if(failure&&!this.dead)this.errors.push('user-sprite: '+failure.message);
+   })()
   ]);
  }
  clipBuffer(id){
