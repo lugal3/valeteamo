@@ -20,6 +20,7 @@ export class Sound {
  ctx?:AudioContext;timer?:number;step=0;lastHit=0;lastAmbient=-100;theme:MusicTheme='story';
  private silent=false;
  private readonly samples=new Map<string,AudioBuffer>();
+ private userSpriteReady=false;
  private readonly voices=new Set<AudioBufferSourceNode>();
  private loading?:AbortController;
  constructor(private readonly sampleUrls:Readonly<Record<string,string>>={},
@@ -35,7 +36,7 @@ export class Sound {
    void fetch(url,{signal:loading.signal})
     .then(response=>{if(!response.ok)throw new Error('Audio unavailable');return response.arrayBuffer();})
     .then(bytes=>context.decodeAudioData(bytes))
-    .then(buffer=>{if(!loading.signal.aborted)this.samples.set(kind,buffer);})
+    .then(buffer=>{if(!loading.signal.aborted&&!(this.userSpriteReady&&kind in RESCUE_AUDIO_SPRITE))this.samples.set(kind,buffer);})
     .catch(()=>{}); // The scene can still use its synthesized effect.
   }
   if(this.spriteUrl){
@@ -44,6 +45,7 @@ export class Sound {
     .then(bytes=>context.decodeAudioData(bytes))
     .then(sprite=>{
      if(loading.signal.aborted)return;
+     this.userSpriteReady=true;
      for(const [kind,clip] of Object.entries(RESCUE_AUDIO_SPRITE)){
       if(!clip)continue;
       const offset=Math.round(clip.start*sprite.sampleRate),frames=Math.floor(clip.duration*sprite.sampleRate);
