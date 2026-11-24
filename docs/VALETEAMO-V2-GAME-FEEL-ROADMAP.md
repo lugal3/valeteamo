@@ -23,7 +23,7 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 | 07 | **RC controls, camera, and strategy** | IMPLEMENTED — QA pending | Smoother drive and camera; suspension/bumps, legible tablet HUD, horn, combined RC/Emy tactics |
 | 08 | **2D flow, storytelling and 2D→3D transition** | IMPLEMENTED — QA pending | Kawaii day→night pacing, credible meeting/kidnap, no pop-ins, coherent front window, seamless house handoff |
 | 09 | **Louis, puzzles and progression** | IN PROGRESS — QA pending | Natural rescue/companion animations, verified cover and body rig, contextual dialogue, progressive puzzle hints/checkpoints |
-| 10 | **Cinematics, endings and reactive audio** | NOT STARTED | Understandable Emy-rescue and escape/loss cutscenes, synchronized spatial audio, proper camera framing on PC/iPhone |
+| 10 | **Cinematics, endings and reactive audio** | IN PROGRESS — QA pending | Understandable Emy-rescue and escape/loss cutscenes, synchronized spatial audio, proper camera framing on PC/iPhone |
 | 11 | **HUD, tutorials, accessibility and mobile feel** | NOT STARTED | Clean contextual controls, phone/hotbar, orientation/safe areas, motion/audio/text options |
 | 12 | **Optimization, playthrough QA and release** | NOT STARTED | Full automated/manual end-to-end test matrix, capture evidence, compare baselines, PR review, then merge and deploy |
 
@@ -183,3 +183,12 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 - `housePuzzleHint()` generates state-dependent clues for the bedroom lock and Louis' rescue without changing the authoritative `puzzleEvent` or `canRescue` gates.
 - Blocked interactions now explain the *next clue* instead of always repeating generic directions; key, door and rescued checkpoints remain safe.
 - `tests/house-puzzle-hints.cjs` added to `npm test`.
+
+## Phase 10 progress — finale reactive audio (QA pending)
+
+- Added `src/lab/cinematic-cues.js` with five bounded, deterministic, one-shot events for the real escape ending: distant footsteps/threat, Emy's intervention, cloth collision, escape footsteps and safety notification.
+- Integrated timeline in `house.js` using the existing positional `play()` audio pipeline and opt-in `caption()`. Previous double-play of the 1.7 s Emy cry/cloth effect was removed; callbacks remain paused with the current scene state.
+- The real `poseEscapeAmbush`, final cinematic director, escape path, rescued actors, success gate, life system and persistent puzzle flags are unchanged.
+- Added `tests/cinematic-cues.cjs` to `npm test` for monotonically ordered events, exactly-once playback, large frame leaps, pausing and unchanged cinematic gating.
+- **Phase 09 bug fixed:** latest CI failed `louis-rescue-feel.cjs` because the turn eased too quickly with a large yaw difference; follow/climb turning now also has a 4.8 rad/s angular velocity ceiling.
+- **Validation pending:** GitHub Actions on current head, visual/lip-sync timing PC/iPhone, full gameplay and additional loss/capture cinematics. No merge or deployment.
