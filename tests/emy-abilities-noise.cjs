@@ -26,6 +26,7 @@ const assert=require('node:assert/strict');
 
  const props=installNoiseProps(world);
  assert.equal(props.length,6);
+ assert(props.every(p=>!world.boxes.includes(p.box)), 'noise objects use a separate WebGL1 batch, never the saturated main dynamic buffer');
  const glass=props[0];
  assert(grabNoiseProp(glass));assert(!grabNoiseProp(null));
  holdNoiseProp(glass,{x:5,y:1.6,z:8,yaw:0,pitch:0});
@@ -58,5 +59,17 @@ const assert=require('node:assert/strict');
   assert.equal(companion.stage,'distract');
   assert.equal(snapshotEmyCompanion(companion).stage,'following');
  }
+ // A nearby distraction runs for 25 seconds, emits repeated noise and restores follow mode.
+ const closeWorld=createHouse(),closeCat=createEmyCompanion(closeWorld.emy,{waiting:false});
+ const closeGoal={x:closeCat.cat.x+.04,y:0,z:closeCat.cat.z+.04};
+ assert(sendEmyDistract(closeCat,closeWorld,closeGoal));
+ let rings=0,finished=false;
+ for(let i=0;i<1650;i++){
+  const cue=(await import('../src/lab/emy-companion.js')).updateEmyCompanion(closeCat,1/60,{world:closeWorld,player:{x:5.1,y:0,z:10.65}});
+  if(cue==='distract-noise')rings++;
+  if(cue==='distract-done'){finished=true;break;}
+ }
+ assert(finished&&rings>=13,'Emy must distract for roughly 25 s and return to follow');
+ assert.equal(closeCat.stage,'following');
  console.log('PASS Emy abilities: scan cooldown, floor-map rooms, throwable-noise, pursuer stun and distract checkpoint');
 })().catch(error=>{console.error(error);process.exitCode=1;});
