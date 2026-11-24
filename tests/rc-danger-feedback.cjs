@@ -17,6 +17,9 @@ const fs=require('node:fs');
  // Test the real recorded cue path with a mocked browser audio graph. It must
  // be loud, central, immediate, independent of the pursuer's distance,
  // and must lower the music for the first 1.35 seconds of the chase.
+ const {USER_AUDIO_SPRITE}=await import('../src/lab/audio/user-sprite-index.js');
+ assert(USER_AUDIO_SPRITE['danger-alert'].leadIn>=.25&&USER_AUDIO_SPRITE['danger-alert'].leadIn<.35,
+  'Danger recording skips its nearly silent first frames for immediate audible onset');
  const sound=new HouseSound(),schedule=[],played=[];
  const bus=name=>({gain:{
   cancelScheduledValues(at){schedule.push({name,kind:'cancel',at});},
