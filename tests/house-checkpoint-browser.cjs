@@ -95,7 +95,8 @@ async function run(){
 
   await require('./helpers/fetch-ribbon.cjs')(page);
   assert.equal((await snapshot()).puzzle.note,false,'The study key needs no hall note');
-  await use('landing-cabinet');
+  // Torch is on top of the landing cabinet; this drawer contains no quest item.
+  // The rescue must not require opening an irrelevant drawer first.
   await use('media-flashlight',false);
   await shot('00-linterna-dentro-del-cajon');
   await use('media-flashlight');
