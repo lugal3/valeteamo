@@ -22,7 +22,8 @@ import {HouseRenderer,pickupGeometry} from './renderer.js';
 import {HouseSound,MIX_CHANNELS,mixLimit} from './sound.js';
 import {applyLookDelta,followLook,readCameraSettings,writeCameraSettings,DEFAULT_CAMERA_SETTINGS,SENSITIVITY_MIN,SENSITIVITY_MAX,SENSITIVITY_STEP} from './camera-controls.js';
 import {WINDOW_SHOT_SECONDS,WINDOW_LANDING,windowIntroCamera,windowIntroState,shouldPlayWindowIntro} from './window-intro.js';
-import {navigate,smoothAxis,getStairDirection} from './navigation.js';
+import {navigate,getStairDirection} from './navigation.js';
+import {KITTY_SPEED,advanceMoveIntent,advanceMoveSpeed,advanceCameraFloor,advanceEye,isOnStairs} from './locomotion-feel.js';
 import {interactionTarget} from './interactions.js';
 import {circuitPowered,housePowered,toggleCircuit,toggleHousePower,updatePowerLever} from './house-lights.js';
 import {inHatch,poseHatch,poseHatchRug} from './basement.js';
@@ -57,7 +58,7 @@ function cameraOf(s){
  if(s.poseCamera)return s.poseCamera;
  if(s.hidden){const o=s.hidden;return {x:o.x,y:o.y,z:o.z,yaw:s.yaw,pitch:s.pitch};}
  const eye=s.lying?1.02:s.eye;
- return {x:s.x,y:s.y+eye+(!s.crouched&&!s.lying&&!s.reduceBob?Math.sin(s.bob)*.024*(s.walkWeight||0):0),z:s.z,yaw:s.yaw,pitch:s.pitch};
+ return {x:s.x,y:(s.cameraGround??s.y)+eye+(!s.crouched&&!s.lying&&!s.reduceBob?Math.sin(s.bob)*.024*(s.walkWeight||0):0),z:s.z,yaw:s.yaw,pitch:s.pitch};
 }
 function closestObject(world,state,previous=null){
  if(state.hidden||state.lying||state.poseCamera)return null;
@@ -197,7 +198,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  let lookTarget={yaw:Math.PI,pitch:0},cinematic=null,poseTransition=null,handAction=0,clickAction=0,lastInteraction=-Infinity,audioPreview=false;
  const handDrift={x:0,y:0,vx:0,vy:0};
  const motionMedia=window.matchMedia('(prefers-reduced-motion: reduce)');
- const keys=new Set(),joystick={x:0,z:0,sprint:false},velocity={forward:0,side:0};
+ const keys=new Set(),joystick={x:0,z:0,sprint:false},velocity={forward:0,side:0,speed:KITTY_SPEED.walk};
  const cameraSettings=(()=>{try{return readCameraSettings(window.localStorage)}catch{return {...DEFAULT_CAMERA_SETTINGS}}})();
  const options={...cameraSettings,bob:cameraSettings.bob??!motionMedia.matches,quality:'medium'};
  const reducedMotion={get matches(){return motionMedia.matches||options.motion===true;}};
@@ -232,7 +233,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function releaseCapture(element,pointer){try{if(pointer!==null&&element?.hasPointerCapture(pointer))element.releasePointerCapture(pointer);}catch{}}
  function capture(element,pointer){try{element.setPointerCapture?.(pointer);}catch{}}
  function resetInput(){
-  keys.clear();joystick.x=joystick.z=0;joystick.sprint=false;velocity.forward=velocity.side=0;
+  keys.clear();joystick.x=joystick.z=0;joystick.sprint=false;velocity.forward=velocity.side=0;velocity.speed=KITTY_SPEED.walk;
   const pairs=[[$('lab-look'),lookPointer],[$('lab-joystick'),stickPointer]];
   lookPointer=stickPointer=null;lookPointerType=stickPointerType=null;
   for(const [element,pointer] of pairs)releaseCapture(element,pointer);
@@ -337,7 +338,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const p=world.spawn;
   const torchAvailable=!demo||checkpoint!=='ground'||['drawer','lock','rescue'].includes(config.entry);
   equipment=torchAvailable?'flashlight':'empty';
-  s={lives:STARTING_LIVES,emyRescueUsed:false,x:p.x,z:p.z,y:p.y,yaw:p.yaw,pitch:0,eye:1.63,crouched:false,hidden:null,lying:false,bob:0,
+  s={lives:STARTING_LIVES,emyRescueUsed:false,x:p.x,z:p.z,y:p.y,cameraGround:p.y,yaw:p.yaw,pitch:0,eye:1.63,crouched:false,hidden:null,lying:false,bob:0,
     flashlight:torchAvailable&&demo,battery:100,stamina:SPRINT_SECONDS,sprinting:false,exhausted:false,recoveryDelay:0,reduceBob:!options.bob||reducedMotion.matches,inventory:{notes:[],batteries:p.items?.batteries??Number(demo),key:demo?puzzle.key&&!puzzle.door:!!p.items?.key,redKey:false,masterKey:false,torch:torchAvailable,rc:false},distanceSteps:0};
   world.landingTorch=world.objects.find(o=>o.id==='media-flashlight');
   world.landingTorch.taken=torchAvailable;
@@ -1144,17 +1145,22 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(s.hidden||s.lying||phone.open||events.phase==='arrival'||events.phase==='safe'||events.phase==='failed'){forward=side=0;}
   const length=Math.hypot(forward,side);if(length>1){forward/=length;side/=length;}
   if(stickPointer===null)drawStick(side,-forward);
-  velocity.forward=smoothAxis(velocity.forward,forward,dt,12);
-  velocity.side=smoothAxis(velocity.side,side,dt,12);
+  // Movement intent is analogue and frame-rate independent. The room geometry,
+  // stairs and collision checks still run through the original swept navigator.
+  const movementLocked=!!(s.hidden||s.lying||phone.open||events.phase==='arrival'||events.phase==='safe'||events.phase==='failed');
+  const intent=movementLocked?{forward:0,side:0}:advanceMoveIntent(velocity,forward,side,dt);
+  velocity.forward=intent.forward;velocity.side=intent.side;
   const wantsSprint=joystick.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight');
   if(!wantsSprint)s.exhausted=false;
-  const steepSteps=s.y<-.025&&inHatch(s.x,s.z);
+  const steepSteps=isOnStairs(s,getStairDirection,inHatch);
   const sprint=wantsSprint&&length>.08&&!steepSteps&&!s.crouched&&!s.exhausted&&s.stamina>0;
-  const speed=s.crouched?1.05:steepSteps?1.68:sprint?4.28:2.60;
-  const dx=(Math.sin(s.yaw)*velocity.forward+Math.cos(s.yaw)*velocity.side)*speed*dt;
-  const dz=(Math.cos(s.yaw)*velocity.forward-Math.sin(s.yaw)*velocity.side)*speed*dt;
+  const targetSpeed=s.crouched?KITTY_SPEED.crouch:steepSteps?KITTY_SPEED.stairs:sprint?KITTY_SPEED.run:KITTY_SPEED.walk;
+  velocity.speed=advanceMoveSpeed(velocity.speed,targetSpeed,dt);
+  const dx=(Math.sin(s.yaw)*intent.forward+Math.cos(s.yaw)*intent.side)*velocity.speed*dt;
+  const dz=(Math.cos(s.yaw)*intent.forward-Math.sin(s.yaw)*intent.side)*velocity.speed*dt;
   const body=s.crouched?1.04:1.64;
-  const moved=navigate(s,world,dx,dz,body);
+  const moved=movementLocked?0:navigate(s,world,dx,dz,body);
+  s.cameraGround=advanceCameraFloor(s.cameraGround,s.y,dt);
   if(events.phase==='escape'&&!world.objects.find(o=>o.id==='entrada').sealed&&louis?.phase==='follow'&&s.z>12.35&&s.x>4.6&&s.x<7.2){
    const ground=0,walk=2.70;
    finalCutscene={elapsed:0,
@@ -1173,7 +1179,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    s.recoveryDelay=Math.max(0,s.recoveryDelay-dt);
    if(!s.recoveryDelay)s.stamina=Math.min(SPRINT_SECONDS,s.stamina+dt*.9);
   }
-  s.eye+=( (s.crouched?1.03:1.63)-s.eye)*Math.min(1,dt*9);
+  s.eye=advanceEye(s.eye,s.crouched,dt);
   if(moved>.0001)s.bob+=moved*(s.crouched?5:8);
   for(const cue of floorSounds.advance(dt,s,moved))play(cue.kind,cue.origin?{...cue.origin,y:cue.origin.y+.25}:null,cue.level);
  }
