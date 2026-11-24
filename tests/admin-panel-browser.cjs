@@ -22,7 +22,8 @@ async function main(){
   await panel.waitFor();
   assert.equal(await page.locator('.story-cover').count(),0,'LP must not land on the pink story cover');
   assert.deepEqual(await page.locator('.playtest-section-heading h2').allTextContents(),['Universo','2D','3D']);
-  assert.equal(await page.locator('.playtest-grid:not(.playtest-grid-advanced) > .playtest-card').count(),11);
+  assert.equal(await page.locator('.playtest-grid:not(.playtest-grid-advanced) > .playtest-card').count(),19,
+   'all 19 current primary entries remain visible across Universe, 2D and 3D');
   assert.equal(await page.locator('.playtest-advanced').count(),5);
   assert.equal(await page.locator('canvas').count(),0,'no Phaser or 3D canvas should mount on the menu');
   const background=await panel.evaluate(node=>getComputedStyle(node).backgroundColor);
