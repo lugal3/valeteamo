@@ -63,6 +63,16 @@
  image-rendering: pixelated;
 }
 .kitty-life.empty, .kitty-life.lost { opacity: .24; filter: grayscale(1); }
+.kitty-life.zero-slot {
+ position:relative;border:1px dashed #f0b8d5;border-radius:7px;
+ background-color:#443444;outline:1px solid #34223a;
+}
+.kitty-life.zero-slot::after {
+ content:"0";position:absolute;inset:0;display:grid;place-items:center;
+ color:#fff6fa;text-shadow:0 1px 4px #1b0c1a;font:900 19px system-ui;
+}
+.kitty-life.zero-slot.empty{opacity:.55}
+.kitty-life.zero-slot.lost{opacity:.95;filter:none;background-color:#8a4567}
 .kitty-life.lost { animation: kitty-life-lost .85s ease-out both; }
 @keyframes kitty-life-lost {
  0%, 18% { opacity: 1; filter: none; transform: none; }
