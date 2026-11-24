@@ -103,6 +103,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   <small>Selecciona una habitación · Emy hará ruido durante unos 25 segundos cuando llegue.</small>
  </div>
  <div class="house-noise-controls" id="house-noise-controls" hidden role="group" aria-label="Objeto en la mano">
+  <strong id="house-noise-held" aria-live="off"></strong>
   <button data-act="noise:throw" aria-keyshortcuts="G">Lanzar <kbd>G</kbd></button>
   <button data-act="noise:drop" aria-keyshortcuts="V">Soltar <kbd>V</kbd></button>
  </div>
@@ -938,6 +939,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   root.classList.toggle('lab-flash-off',!s.flashlight);
   $('house-noise-controls').hidden=!heldNoise||isPaused()||phone.open||remoteInUse();
+  $('house-noise-held').textContent=heldNoise?'En mano: '+heldNoise.label.replace(/^Recoger\s+/,''):'';
   $('house-light').hidden=equipment!=='flashlight'||!!s.hidden||!!s.lying;
   $('house-use-phone').hidden=!['phone','paper','rc'].includes(equipment)||notePresentation||!!noteLift||(equipment!=='phone'&&(!!s.hidden||!!s.lying));
   $('house-use-phone').setAttribute('aria-label',equipment==='rc'?'Usar auto RC':equipment==='paper'?'Observar nota':'Usar teléfono');
