@@ -54,6 +54,11 @@ const {chromium,webkit}=require('playwright');
   }
   if(await page.locator('#lab-dialog [data-act="start"]').isVisible())await page.locator('#lab-dialog [data-act="start"]').click();
   await page.waitForFunction(()=>window.__rescueHouse.snapshot().paused===false);
+  await page.waitForFunction(()=>window.__rescueHouse?.userAudio?.().ready,null,{timeout:20000});
+  const userAudio=await page.evaluate(()=>window.__rescueHouse.userAudio());
+  assert(userAudio.duration>40,'The real nine-effect user audio sprite must decode in the browser');
+  assert(['opus','mp3'].includes(userAudio.codec),'Browser must select Opus or compatible MP3');
+  assert.deepEqual(userAudio.errors,[],'Fallback must not report unresolved user audio errors');
   const skills=()=>page.evaluate(()=>window.__rescueHouse.emySkills());
   const interactEmy=()=>page.evaluate(()=>window.__rescueHouse.interactWith('emy-upstairs'));
   await interactEmy();
