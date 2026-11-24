@@ -232,15 +232,6 @@
 #lab3d .house-emy-menu button:focus-visible,
 #lab3d .house-emy-map button:focus-visible,
 #lab3d .house-noise-controls button:focus-visible{outline:3px solid #fff0ba;outline-offset:2px}
-@media(max-height:440px){
- #lab3d .house-emy-map{padding:8px 13px}
- #lab3d .house-emy-map header strong{font-size:13px}
- #lab3d .house-emy-map .house-emy-intro{font-size:10px;margin:2px 0}
- #lab3d .house-emy-two-floors{gap:7px}
- #lab3d .house-emy-plan{max-height:calc(100vh - 127px);aspect-ratio:14/10.7}
- #lab3d .house-emy-plan .house-emy-room{font-size:clamp(7px,1.1vw,10px)}
- #lab3d .house-emy-map>small{padding-top:3px;font-size:9px}
-}
 @media(prefers-reduced-motion:reduce){
  #lab3d .house-emy-wave{transition:none;animation:none}
 }
