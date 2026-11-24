@@ -72,6 +72,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const animator=new CharacterAnimator();
  const root=document.createElement('div');root.id='lab3d';root.innerHTML=`
  <canvas id="lab-canvas" aria-label="Escenario tridimensional interactivo de la casa"></canvas>
+ <div id="house-interest" class="house-interest" aria-hidden="true" hidden><i>✧</i><span>OBJETIVO</span></div>
  <div id="torch-outline" class="torch-silhouette" hidden><svg viewBox="0 0 40 20" aria-hidden="true"><path d="M3 6h10l7-4h6v16h-6l-7-4H3z" fill="none" stroke="#c4f3ff" stroke-width="2" transform="rotate(-20 16 10)"/></svg></div>
  <div class="lab-vignette" aria-hidden="true"></div>
  <div id="lab-capture" hidden>
@@ -1608,6 +1609,32 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     }
    }
   }
+  // A projected glow points at the real interaction object. In the study,
+  // the objective graph goes DRAWER → SCREWDRIVER → FOUR VENT SCREWS.
+  // Never make an inaccessible object look clickable: respect taken and
+  // concealed states, camera facing and visibility through closed doors.
+  const sparkle=$('house-interest');
+  const candidate=!isPaused()&&!phone.open&&!cinematic&&!finalCutscene?
+   (focus?.interactable&&!focus.taken&&!focus.concealed?focus:objectives.active?.target):null;
+  if(candidate&&candidate.interactable!==false&&!candidate.taken&&!candidate.concealed&&
+   Math.abs((candidate.floor??candidate.y??0)-s.y)<2.3){
+   const dx=candidate.x-view.x,dy=(candidate.y??s.y)+.16-view.y,dz=candidate.z-view.z;
+   const forward=dx*Math.sin(view.yaw)+dz*Math.cos(view.yaw),side=dx*Math.cos(view.yaw)-dz*Math.sin(view.yaw);
+   const depth=forward*Math.cos(view.pitch)+dy*Math.sin(view.pitch);
+   const dist=Math.hypot(dx,dy,dz);
+   const hidden=lineBlocked(world.boxes,view,{x:candidate.x,y:candidate.y??0,z:candidate.z},candidate.kind==='door'?'door-'+candidate.id:'');
+   if(depth>.18&&dist<9&&(!hidden||dist<2.1)){
+    const factor=.65*canvas.clientHeight/depth;
+    const px=canvas.clientWidth/2+side*factor,py=canvas.clientHeight/2-(dy*Math.cos(view.pitch)-forward*Math.sin(view.pitch))*factor;
+    if(px>=0&&px<=canvas.clientWidth&&py>=0&&py<=canvas.clientHeight){
+     sparkle.hidden=false;
+     sparkle.style.left=px+'px';sparkle.style.top=py+'px';
+     sparkle.style.setProperty('--interest-scale',String(clamp(1.8/dist,.7,1.4)));
+     sparkle.querySelector('span').textContent=candidate.id==='screwdriver'?'DESTORNILLADOR':
+      candidate.kind==='vent'?'TORNILLOS':candidate.kind==='drawer'?'ABRIR CAJÓN':'INTERACTUAR';
+    }else sparkle.hidden=true;
+   }else sparkle.hidden=true;
+  }else sparkle.hidden=true;
   const outdoor=s.y<-.12?0:view.x<0||view.x>HOUSE.width||view.z<0||view.z>HOUSE.depth?1:Math.max(0,1-Math.min(view.x,HOUSE.width-view.x,view.z,HOUSE.depth-view.z)/1.5)*.22;
   sound.locate({room:roomAt(view.x,view.z,s.y),outdoor,hidden:!!s.hidden,powered:housePowered(world.lights.power)});
   try{
