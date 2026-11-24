@@ -13,7 +13,7 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
    res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
     <body><button id="launch">Probar RC</button><script type="module">
     import {launchHouse} from "/src/lab/house.js";
-    const checkpoint={version:1,stage:"basement",pianoSolved:true,picked:["key","media-flashlight","piano-sheet"]};
+    const checkpoint={version:1,stage:"basement",pianoSolved:true,picked:["key","media-flashlight","piano-sheet","red-key"]};
     document.querySelector("#launch").onclick=()=>window.stopHouse=launchHouse(()=>{},"ground",{
       demo:true,checkpointStore:{checkpoint,save:()=>{}},onRescue:()=>window.endingVisited=true
     });
@@ -41,7 +41,12 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   const shot=async name=>{if(!process.env.RC_QA_NO_SHOTS)await page.screenshot({path:path.join(folder,name+'.png')});};
 
   console.log('RC browser: collectible, pink tablet, third-person camera and controls');
-  await use('cocina');await use('red-key');await use('hatch-rug');
+  // The red key now comes from the already-solved piano compartment.
+   // This RC-focused checkpoint starts after that puzzle; the separate
+   // checkpoint/piano test verifies earning it through real gameplay.
+   assert(await page.locator('[data-equip="red-key"]').isVisible(),
+    'Piano checkpoint must retain the previously earned red key');
+   await use('cocina');await use('hatch-rug');
   await page.waitForFunction(()=>window.__rescueHouse.amenities().rug===1);
   await use('basement-hatch');
   await page.waitForFunction(()=>window.__rescueHouse.amenities().hatch===1);
