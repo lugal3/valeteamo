@@ -138,7 +138,11 @@ const {chromium,webkit}=require('playwright');
   await page.evaluate(item=>window.__rescueHouse.interactWith(item),item);
   let objects=await page.evaluate(()=>window.__rescueHouse.noiseProps());
   assert(objects.find(p=>p.id===item).held,'The glass is held after interacting');
-  assert.equal(await page.locator('#house-noise-controls button').count(),2);
+  assert.equal(await page.locator('#house-noise-controls button').count(),3,
+   'Throw, soft throw, and drop must all be present for mobile and desktop');
+  for(const action of ['noise:throw','noise:lob','noise:drop'])
+   assert.equal(await page.locator('#house-noise-controls [data-act="'+action+'"]').count(),1,
+    'Each throwable action remains reachable: '+action);
   await shot(page,'04-objeto-en-mano');
   await page.locator('#house-noise-controls [data-act="noise:throw"]').click();
   objects=await page.evaluate(()=>window.__rescueHouse.noiseProps());
