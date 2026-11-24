@@ -42,7 +42,7 @@ const assert=require('node:assert/strict');
  other.flight={vx:0,vy:0,vz:0,ttl:1};
  Object.assign(other,{x:pursuer.x,y:pursuer.y+1.0,z:pursuer.z});
  let cues=stepNoiseProps([other],.016,world,pursuer,null);
- assert(cues.includes('stun'));assert.equal(pursuer.mode,'stunned');
+ assert(cues.some(cue=>cue.kind==='stun'));assert.equal(pursuer.mode,'stunned');
  pursuer.update(.5,{x:2,y:0,z:2,hidden:true});
  assert(pursuer.stunned>0);
  for(let i=0;i<4;i++)pursuer.update(.5,{x:2,y:0,z:2,hidden:true});
