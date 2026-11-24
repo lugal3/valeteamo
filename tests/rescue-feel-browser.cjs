@@ -97,10 +97,11 @@ async function check(){
     const point={...s.p};s.left={id:42,x:85,y:305,dx:45,dy:0};
     return point;
    });
-   await page.waitForFunction(gentle=>{
+   await page.waitForFunction(({gentle,minimum})=>{
     const s=window.__valePrologue?.scene();
-    return s&&Math.hypot(s.p.u-gentle.u,s.p.v-gentle.v)>.3;
-   },gentle,{timeout:12000});
+    return s&&Math.hypot(s.p.u-gentle.u,s.p.v-gentle.v)>minimum;
+   },{gentle,minimum:Math.max(.3,Math.hypot(gentle.u-start.u,gentle.v-start.v)*1.55)},
+   {timeout:12000});
    const strong=await page.evaluate(()=>{
     const s=window.__valePrologue.scene();
     const point={...s.p};s.left=undefined;
