@@ -160,10 +160,15 @@ const {chromium,webkit}=require('playwright');
    'Keyboard movement advances Kitty in an unobstructed corridor');
   assert(moving.locomotion.speed>2&&moving.locomotion.speed<=4.28,
    'Walking retains the bounded, smoothly blended speed model');
-  await page.waitForTimeout(350);
+  // Software WebGL can render only one frame in 350 ms. Observe actual
+  // converged input state instead of assuming a fixed wall-clock cadence.
+  await page.waitForFunction(()=>{
+   const v=window.__rescueHouse?.snapshot()?.locomotion;
+   return v&&Math.hypot(v.forward,v.side)<.03;
+  },null,{timeout:8000});
   const stopped=await page.evaluate(()=>window.__rescueHouse.snapshot());
   assert(Math.hypot(stopped.locomotion.forward,stopped.locomotion.side)<.03,
-   'Releasing controls quickly brakes to rest without mobile drift');
+   'After enough rendered frames, releasing controls brakes to rest without drift');
   if(mobile){
    // Dispatch a real PointerEvent through the joystick's actual handlers.
    // The left stick has a deadzone, analog range and a sprint threshold;
