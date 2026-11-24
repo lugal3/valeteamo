@@ -47,18 +47,29 @@ export function stepNoiseProps(props,dt,world,pursuer,emy){
   f.vy-=9.8*step;prop.x+=f.vx*step;prop.y+=f.vy*step;prop.z+=f.vz*step;
   const hitEnemy=pursuer?.active&&Math.abs(pursuer.x-prop.x)<.5&&Math.abs(pursuer.z-prop.z)<.5&&
    prop.y>pursuer.y+.2&&prop.y<pursuer.y+2;
-  const evadeCat=emy&&!emy.hidden&&Math.abs(emy.x-prop.x)<.32&&Math.abs(emy.z-prop.z)<.32&&Math.abs(emy.y+.30-prop.y)<.55;
-  if(evadeCat){emy.yaw+=Math.PI*.35;emy.reaction=0;cues.push('evade');}
+  const nearCat=emy&&!emy.hidden&&!f.dodged&&Math.abs(emy.x-prop.x)<.48&&Math.abs(emy.z-prop.z)<.48&&Math.abs(emy.y+.35-prop.y)<.60;
+  if(nearCat){
+   // Real sideways dodge to an unblocked spot; projectile keeps flying.
+   const lateral=Math.atan2(f.vx,f.vz)+Math.PI/2;
+   for(const side of [1,-1]){
+    const nx=emy.x+Math.sin(lateral)*side*.62,nz=emy.z+Math.cos(lateral)*side*.62;
+    const floor=groundHeight(nx,nz,emy.y,world.hatch?.amount>.92);
+    if(Number.isFinite(floor)&&Math.abs(floor-emy.y)<.25&&!blocked(world.boxes,nx,floor,nz,.20,.62)){
+     Object.assign(emy,{x:nx,y:floor,z:nz,yaw:lateral+side*Math.PI/2,reaction:0,dodgeTime:.65});
+     f.dodged=true;cues.push('evade');break;
+    }
+   }
+  }
   const base=groundHeight(prop.x,prop.z,prop.floor,world.hatch?.amount>.92);
   const wall=blocked(world.boxes,prop.x,Number.isFinite(base)?base:prop.floor,prop.z,.08,.2);
-  const landed=!Number.isFinite(base)||prop.y<=base+.055||wall||f.ttl<=0||hitEnemy||evadeCat;
+  const landed=!Number.isFinite(base)||prop.y<=base+.055||wall||f.ttl<=0||hitEnemy;
   if(landed){
    prop.x=wall?prev.x:prop.x;prop.z=wall?prev.z:prop.z;
    prop.y=Number.isFinite(base)?base+.055:prev.y;
    prop.flight=null;prop.spent=true;prop.interactable=false;
    if(hitEnemy)pursuer.stun(2.0);
-   else pursuer?.hearNoise({x:prop.x,y:Number.isFinite(base)?base:prop.floor,z:prop.z},hitEnemy?3:1.3);
-   cues.push(hitEnemy?'stun':evadeCat?'evade':'impact');
+   else pursuer?.hearNoise({x:prop.x,y:Number.isFinite(base)?base:prop.floor,z:prop.z},1.3);
+   cues.push(hitEnemy?'stun':'impact');
   }
   Object.assign(prop.box,{x:prop.x,y:prop.y,z:prop.z,roll:prop.flight?prop.box.roll+step*9:1.2,pitch:prop.flight?prop.box.pitch+step*8:0});
  }
