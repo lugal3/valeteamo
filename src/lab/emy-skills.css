@@ -1,8 +1,8 @@
 /* Companion interaction UI; isolated from the original Phaser 2D mode. */
 #lab3d .house-emy-wave{
  position:absolute;z-index:30;transform:translate(-50%,-50%);
- box-sizing:border-box;border:3px solid rgba(119,255,222,.89);border-radius:50%;
- box-shadow:0 0 16px rgba(103,255,212,.5),inset 0 0 13px rgba(103,255,212,.21);
+ box-sizing:border-box;border:1px solid rgba(166,237,214,.42);border-radius:50%;
+ box-shadow:0 0 4px rgba(103,218,184,.18);
  pointer-events:none;
 }
 #lab3d .house-emy-menu{
