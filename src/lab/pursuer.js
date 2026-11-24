@@ -151,7 +151,15 @@ export class Pursuer{
   // Confirmed pursuit of Kitty outranks a new RC lure. An unconfirmed
   // rustle may still be overridden by the RC or Emy distraction.
   const kittyVisible=this.canSee(p);
-  const confirmedKitty=(this.mode==='chase'||this.mode==='investigate'&&this.awareness>=.85)&&kittyVisible;
+  const confirmedKitty=kittyVisible&&(
+   this.mode==='chase'||this.awareness>=.85||
+   Math.abs(this.y-p.y)<.65&&Math.hypot(this.x-p.x,this.z-p.z)<1.25);
+  if(confirmedKitty&&this.mode==='rc-chase'){
+   // Spotting Kitty at close range cancels the toy decoy. A sound alone
+   // does not grant knowledge of Kitty's hidden position.
+   this.mode='investigate';this.awareness=Math.max(.75,this.awareness);
+   this.modeTime=3;this.replan=0;this.path=[];this.task=null;
+  }
   const bait=decoy?.active&&!confirmedKitty&&(decoy.noisy||this.canSee(decoy));
   if(bait){
    if(this.mode!=='rc-chase'){this.mode='rc-chase';this.replan=0;}
