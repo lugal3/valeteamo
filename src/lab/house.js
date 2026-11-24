@@ -247,6 +247,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   // Keep Emy's skinned meshes in the dynamic buffer while she waits outside
   // or hides, so the window jump and shared hide can reveal her without a rebuild.
   renderer.rebuild([...world.boxes.filter(box=>!box.hiddenGeometry||box.emySpec),...pickupGeometry(world.objects)]);
+  renderer.setNoiseProps(noiseProps);
   renderer.updateVisibility();
  }
  function saveCheckpoint(){
