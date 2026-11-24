@@ -15,8 +15,8 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 | Phase | Workstream | Status | Main acceptance gate |
 |---|---|---|---|
 | 01 | **Emy + hides / unfair failures** | **DONE — QA passed** | Kitty hides independently of cat arrival; Emy distracts on another floor and waits silently if Kitty stays hidden; no lost life from a cat wait |
-| 02 | **Kitty movement, physics, camera** | **IMPLEMENTED — browser QA pending** | Grounded acceleration/deceleration, turn/crouch transitions, robust stairs, camera collisions/comfort and mobile input |
-| 03 | **Pursuer perception + fair stealth AI** | NOT STARTED | Separate sight/hearing/suspicion/chase/search states, last-seen positions, visible-door logic and unbiased hide searching |
+| 02 | **Kitty movement, physics, camera** | **DONE — QA passed** | Grounded acceleration/deceleration, turn/crouch transitions, robust stairs, camera collisions/comfort and mobile input |
+| 03 | **Pursuer perception + fair stealth AI** | **DONE — QA passed** | Separate sight/hearing/suspicion/chase/search states, last-seen positions, visible-door logic and unbiased hide searching |
 | 04 | **Emy's autonomous personality** | NOT STARTED | Sit, groom, stretch, orient ears to noise, cautious follow, “Quédate aquí”, safe hold, consistent cross-floor routing |
 | 05 | **House environmental life** | NOT STARTED | Identity of every room, small ambient props, lighting, wind/dust, performant atmosphere without clutter |
 | 06 | **Throwable objects + sound/material physics** | NOT STARTED | Glass/ceramic/metal/wood/carpet responses, controlled throw strengths, predictable collisions, noise investigation |
@@ -115,4 +115,15 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 - `tests/locomotion-feel.cjs`: 30/60/120Hz comparison, diagonal cap, reversal, stopping, sprint blend, touch drift, camera angle seams, crouch and real two-way stair collisions.
 - `tests/emy-abilities-browser.cjs`: PC/mobile keyboard movement, braking, upstairs view alignment, and phone touch joystick + sprint-release regression across browsers.
 - Existing navigation/collision geometry and scripted cinematics are unchanged. No 2D content touched in this phase.
-- **Gate:** baseline unit/perf/build passed in [CI](https://github.com/lugal3/valeteamo/actions/runs/45427579689); final browser extension under [CI](https://github.com/lugal3/valeteamo/actions/runs/45428020726), not yet confirmed green. Do not label the phase fully validated until this finishes.
+- **Gate:** complete phase 02 tests passed in [CI](https://github.com/lugal3/valeteamo/actions/runs/45428140571), including unit/perf/build, Chromium mobile/desktop, WebKit and hiding regressions.
+
+## Phase 03 implementation and validation (completed)
+
+- `pursuer-perception.js` defines bounded acoustic hearing with wall/door occlusion and floor separation; noisy 25-second Emy distractions still carry between floors.
+- `pursuer.js` retains only confirmed last-seen coordinates, transitions from chase to a finite seven-second `trail-search`, visits passable nearby points and pauses to inspect corners. Unseen wardrobe hiding is never known by magic; witnessed hiding remains dangerous. Searches stop and resume ordinary patrol.
+- `pursuer.js` handles RC priority without overriding already-confirmed proximity to Kitty and preserves the existing trapped, stunned, rest, bedtime and cut-power story modes.
+- `pursuer-model.js` animates the existing head/torso when investigating without new geometry or WebGL draw calls; reduced-motion mode remains supported.
+- `house.js` HUD separates pursuit, last-seen search, suspected movement and sound-investigation alerts, preserving the first-to-play danger sound when sighting is confirmed.
+- Regression tests in `tests/pursuer-perception.cjs`, `tests/pursuer.cjs`, `tests/emy-abilities-noise.cjs` and pre-existing browser threat regression cover occlusion, cross-floor sound, local search, safe hiding, RC behavior, legacy patrol, movement, Emy and sound.
+- **Final gate:** [CI #45432388808](https://github.com/lugal3/valeteamo/actions/runs/45432388808) **PASS**: `npm test`, `npm run test:perf`, `npm run build`, Chromium mobile, Chromium desktop, WebKit mobile, real threat/hide browser regression and artifact evidence. Cosmic browser E2E is a separate known failing workflow inherited from `main`; track in phase 08/12.
+- **Release:** not merged, not deployed. Continue from phase 04 in the same branch/PR.
