@@ -61,6 +61,45 @@ export class HouseSound {
  stopMusic(){if(this.musicTimer!==null){window.clearInterval(this.musicTimer);this.musicTimer=null;}for(const voice of this.musicNodes){try{voice.osc.stop();voice.osc.disconnect();voice.filter.disconnect();voice.gain.disconnect();}catch{}}this.musicNodes.clear();}
  setTension(value){this.tension=Math.max(0,Math.min(1,value));}
  setThreat(value){if(this.threat===!!value)return;this.threat=!!value;if(!this.paused)this.recordings?.setMood(this.threat?'tension':'ambient');}
+ // First and loudest cue on confirmed visual discovery. Unlike regular foley,
+ // this is NON-positional: walls, floors and camera distance cannot bury it.
+ // Keep the existing master/effects/alerts/mute controls and output limiter.
+ playDangerAlert(){
+  const ctx=this.context;
+  if(!ctx||this.paused||ctx.state!=='running'||this.settings.muted||!this.settings.alerts)return false;
+  const now=ctx.currentTime;
+  if(this.dangerLastAt!==undefined&&now-this.dangerLastAt<1.5)return false;
+  this.dangerLastAt=now;
+  const duck=[
+   [this.musicBus,this.recordings?.buffers.has('ambient')?0:this.settings.music],
+   [this.recordedMusicBus,this.settings.music],
+   [this.recordedAmbientBus,this.settings.ambient]
+  ];
+  for(const [bus,normal] of duck){
+   if(!bus)continue;
+   bus.gain.cancelScheduledValues(now);
+   bus.gain.setTargetAtTime(normal*.12,now,.018);
+   bus.gain.setTargetAtTime(normal,now+1.35,.20);
+  }
+  // Strong, centred recording, independent of the pursuer's spatial distance.
+  const voice=this.recordings?.kind('danger-alert',{gain:2.15,pan:0,output:this.channels.alerts});
+  if(!voice){
+   // Temporary immediate signal if the sound asset is still downloading.
+   for(const [hz,delay] of [[540,0],[760,.11]]){
+    const osc=ctx.createOscillator(),vol=ctx.createGain(),start=now+delay;
+    osc.type='sawtooth';osc.frequency.setValueAtTime(hz,start);
+    osc.frequency.exponentialRampToValueAtTime(hz*.73,start+.28);
+    vol.gain.setValueAtTime(.0001,start);
+    vol.gain.exponentialRampToValueAtTime(.36,start+.014);
+    vol.gain.exponentialRampToValueAtTime(.0001,start+.40);
+    osc.connect(vol);vol.connect(this.channels.alerts);
+    osc.onended=()=>{osc.disconnect();vol.disconnect();};
+    osc.start(start);osc.stop(start+.41);
+   }
+  }
+  this.lastEffect='danger-alert';this.effectCount=(this.effectCount||0)+1;
+  return true;
+ }
  applySettings(){
   const now=this.context.currentTime,volume=key=>this.settings.muted?0:this.settings[key];
   this.master.gain.setTargetAtTime(volume('master')*.45,now,.025);
@@ -218,6 +257,7 @@ export class HouseSound {
  }
  // Simple location-dependent stereo and attenuation, including room/floor obstruction.
  effect(kind,origin,listener,occluded=false,{level=1}={}){
+  if(kind==='danger-alert'){this.playDangerAlert();return;}
   const ctx=this.context;if(!ctx||this.paused||ctx.state!=='running'||this.settings.muted)return;
   const output=this.channels[effectChannel(kind)];
   const distance=origin?Math.hypot(origin.x-listener.x,origin.y-listener.y,origin.z-listener.z):0;
@@ -228,18 +268,48 @@ export class HouseSound {
   const yaw=listener.yaw||0,dx=origin?origin.x-listener.x:0,dz=origin?origin.z-listener.z:0;
   const stereo=Math.max(-.85,Math.min(.85,(dx*Math.cos(yaw)-dz*Math.sin(yaw))/Math.max(1,distance)));
   if(kind==='clatter'){
-   // Three staggered percussive glass/ceramic strikes; bounded, self-cleaning WebAudio nodes.
-   const frequencies=[1120,1740,2380],now=ctx.currentTime;
-   for(let i=0;i<frequencies.length;i++){
-    const at=now+i*.043,osc=ctx.createOscillator(),amp=ctx.createGain(),pan=ctx.createStereoPanner();
-    osc.type='triangle';osc.frequency.setValueAtTime(frequencies[i],at);
-    osc.frequency.exponentialRampToValueAtTime(frequencies[i]*.60,at+.135);
+   // PROVISIONAL crash for falling glass/ceramic: sharp attack, low impact
+   // and two bright rattles. No samples/downloads or unbounded timers.
+   // It must be audible through nearby walls, without becoming global.
+   const impact=Math.min(.8,.60/(1+.06*distance*distance)*
+    (occluded?.68:1)*(floorMask*.75+.25)*Math.max(0,Math.min(1.5,level)));
+   const now=ctx.currentTime;
+   for(const [i,hz] of [180,1250,1810,2560].entries()){
+    const at=now+(i===0?0:i*.036),osc=ctx.createOscillator(),amp=ctx.createGain(),pan=ctx.createStereoPanner();
+    osc.type=i===0?'triangle':'sine';
+    osc.frequency.setValueAtTime(hz,at);
+    osc.frequency.exponentialRampToValueAtTime(hz*(i===0?.61:.56),at+.14);
     amp.gain.setValueAtTime(.0001,at);
-    amp.gain.exponentialRampToValueAtTime(Math.max(.0002,gain*(.85-i*.19)),at+.008);
-    amp.gain.exponentialRampToValueAtTime(.0001,at+.18+i*.025);
+    amp.gain.exponentialRampToValueAtTime(Math.max(.0002,impact*(i===0?.8:1-i*.16)),at+.005);
+    amp.gain.exponentialRampToValueAtTime(.0001,at+(i===0?.16:.21+i*.025));
     pan.pan.value=stereo;osc.connect(amp);amp.connect(pan);pan.connect(output);
-    osc.start(at);osc.stop(at+.24+i*.025);
     osc.onended=()=>{osc.disconnect();amp.disconnect();pan.disconnect();};
+    osc.start(at);osc.stop(at+.30);
+   }
+   this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;
+  }
+  if(kind==='rc-horn'){
+   // PROVISIONAL toy-car horn replaces the old barely audible dual beep.
+   // Two close, slightly detuned tones form a short honk with a soft tail.
+   const now=ctx.currentTime,level=Math.min(.85,gain*2.3);
+   const mix=ctx.createGain(),filter=ctx.createBiquadFilter(),pan=ctx.createStereoPanner();
+   filter.type='lowpass';filter.frequency.value=1600;pan.pan.value=stereo;
+   mix.gain.setValueAtTime(.0001,now);
+   mix.gain.exponentialRampToValueAtTime(Math.max(.0002,level),now+.026);
+   mix.gain.setValueAtTime(Math.max(.0002,level),now+.30);
+   mix.gain.exponentialRampToValueAtTime(.0001,now+.58);
+   mix.connect(filter);filter.connect(pan);pan.connect(output);
+   let ended=0;
+   for(const hz of [355,446]){
+    const oscillator=ctx.createOscillator(),part=ctx.createGain();
+    oscillator.type='sawtooth';oscillator.frequency.setValueAtTime(hz,now);
+    oscillator.frequency.linearRampToValueAtTime(hz*.98,now+.35);
+    part.gain.value=.45;oscillator.connect(part);part.connect(mix);
+    oscillator.onended=()=>{
+     oscillator.disconnect();part.disconnect();
+     if(++ended===2){mix.disconnect();filter.disconnect();pan.disconnect();}
+    };
+    oscillator.start(now);oscillator.stop(now+.61);
    }
    this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;
   }
