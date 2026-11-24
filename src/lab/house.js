@@ -1305,9 +1305,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     ?{active:true,noisy:rc.noise>0,x:rc.x,y:rc.y,z:rc.z,crouched:true,flashlight:false,hidden:false}:null;
    const hiding=s.hidden?world.objects.find(o=>o.id===s.hidden.objectId):poseTransition?.object;
    const previousMode=pursuer.mode;
-   const pursuitSignals=pursuer.update(Math.min(.055,delta),{x:s.x,y:s.y,z:s.z,crouched:s.crouched,flashlight:flashlightBeam(),dark:!housePowered(power),hidden:!!s.hidden&&!poseTransition,entering:!!poseTransition?.entering,hideId:hiding?.id,hideExit:hiding?{x:poseTransition?.outside.x??s.hidden?.returnX??hiding.returnX,y:s.y,z:poseTransition?.outside.z??s.hidden?.returnZ??hiding.returnZ}:null},door=>{if(door.id!=='entrada'&&!door.sealed&&!door.locked&&!door.motion&&sweepClear(door,door.amount,1,pursuer)){const result=animateFurniture(door,true,{player:s,reducedMotion:reducedMotion.matches});if(result.started)play('door-open',door);}},decoy);
+   const deferredDoorSounds=[];
+   const pursuitSignals=pursuer.update(Math.min(.055,delta),{x:s.x,y:s.y,z:s.z,crouched:s.crouched,flashlight:flashlightBeam(),dark:!housePowered(power),hidden:!!s.hidden&&!poseTransition,entering:!!poseTransition?.entering,hideId:hiding?.id,hideExit:hiding?{x:poseTransition?.outside.x??s.hidden?.returnX??hiding.returnX,y:s.y,z:poseTransition?.outside.z??s.hidden?.returnZ??hiding.returnZ}:null},door=>{if(door.id!=='entrada'&&!door.sealed&&!door.locked&&!door.motion&&sweepClear(door,door.amount,1,pursuer)){const result=animateFurniture(door,true,{player:s,reducedMotion:reducedMotion.matches});if(result.started)deferredDoorSounds.push(door);}},decoy);
    // Priority: start the loud chase warning BEFORE any footstep, door, UI or capture cue.
    if(pursuitSignals.includes('spotted')){sound.playDangerAlert();phone.close();}
+   for(const door of deferredDoorSounds)play('door-open',door);
    for(const signal of pursuitSignals){
     if(signal==='cut-power'&&power.on){toggleHousePower(world.lights.meter);play('power-cut',world.lights.meter);saveCheckpoint();}
     if(signal==='caught'&&['evaded','rc-setup'].includes(events.phase)){events.phase='failed';beginCapture();return;}
