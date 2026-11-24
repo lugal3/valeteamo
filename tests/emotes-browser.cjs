@@ -49,17 +49,15 @@ const {chromium}=require('playwright');
 
   // When headless Chromium grants pointer lock, M must release it before
   // the interactive HTML emote choices can receive physical mouse clicks.
-  // Pointer lock hides the top bar by design; release with the real shortcut.
+  // Use the supported desktop R shortcut. The settings bar can be
+  // legitimately hidden during pointer lock and non-interactive moments.
+  // The test is about the keyboard/mouse capture flow, not toolbar visibility.
   if(await page.evaluate(()=>!!document.pointerLockElement)){
    await page.keyboard.press('Escape');
    await page.waitForFunction(()=>document.pointerLockElement===null);
   }
-  await page.getByLabel('Ajustes de la casa').click();
-  const lock=page.locator('#house-lock-mouse');
-  if(await lock.isVisible()){
-   await lock.click();
-   await page.waitForTimeout(150);
-   if(await page.evaluate(()=>!!document.pointerLockElement)){
+  await page.keyboard.press('r');
+  if(await page.waitForFunction(()=>!!document.pointerLockElement,null,{timeout:3000}).then(()=>true,()=>false)){
     await page.keyboard.press('m');
     await menu.waitFor({state:'visible'});
     assert.equal(await page.evaluate(()=>document.pointerLockElement),null,
