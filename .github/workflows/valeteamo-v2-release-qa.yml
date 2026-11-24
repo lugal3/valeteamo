@@ -53,6 +53,7 @@ jobs:
           - emy-mobile
           - emy-desktop
           - emy-webkit
+          - subtle-glows
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -70,6 +71,7 @@ jobs:
           EMY_QA_DIR: artifacts/v2/${{ matrix.scenario }}
           EMY_QA_VIEWPORT: ${{ matrix.scenario == 'emy-desktop' && 'desktop' || 'mobile' }}
           EMY_QA_ENGINE: ${{ matrix.scenario == 'emy-webkit' && 'webkit' || 'chromium' }}
+          V2_GLOW_QA_DIR: artifacts/v2/subtle-glows
         run: |
           case "${{ matrix.scenario }}" in
             2d-story) node tests/prologue-browser.cjs ;;
@@ -79,6 +81,7 @@ jobs:
             mobile-input) node tests/house-input-browser.cjs ;;
             3d-production) node tests/house-css-production-browser.cjs ;;
             emy-mobile|emy-desktop|emy-webkit) node tests/emy-abilities-browser.cjs ;;
+            subtle-glows) node tests/visual-glow-browser.cjs ;;
           esac
       - name: Capturas y evidencias
         if: always()
