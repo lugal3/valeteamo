@@ -2084,7 +2084,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
       const a=i*Math.PI*2/32,x=o.x+Math.cos(a)*radius,z=o.z+Math.sin(a)*radius;
       if(o.kind==='hatch'&&inHatch(x,z,.14))continue;
      if(blocked(world.boxes,x,y,z,.2,s.crouched?1.05:1.7))continue;
-      s.x=x;s.y=y;s.z=z;s.yaw=Math.atan2(o.x-x,o.z-z);
+      // Use the candidate floor for the QA raycast, even after a basement teleport.
+      // A stale cameraGround made obtainable items look blocked by invisible walls.
+      s.x=x;s.y=y;s.z=z;s.cameraGround=y;s.yaw=Math.atan2(o.x-x,o.z-z);
       s.pitch=Math.atan2(o.y-(y+s.eye),Math.hypot(o.x-x,o.z-z));
       if(closestObject(world,s,null)?.id===o.id){
        if(['door','drawer','safe','cupboard'].includes(o.kind)&&!sweepClear(o,o.amount||0,o.open?0:1,s))continue;
