@@ -1,17 +1,17 @@
 // Lightweight, deterministic noise props. Shares the existing dynamic house geometry.
 import {blocked,groundHeight} from './world.js';
 const SPECS=[
- ['glass-living','Vaso',1.52,.96,8.98,0,'glass'],
- ['plate-living','Plato',2.55,.96,9.0,0,'plate'],
- ['glass-kitchen','Vaso',9.22,1.00,2.30,0,'glass'],
- ['plate-kitchen','Plato',9.72,1.00,2.75,0,'plate'],
- ['cup-study','Taza',3.16,.87,2.15,0,'cup'],
- ['cup-reading','Taza',1.69,4.13,7.98,3.15,'cup']
+ ['glass-living','Vaso',2.45,.995,8.79,0,'glass'],
+ ['plate-living','Plato',2.48,.95,9.43,0,'plate'],
+ ['glass-kitchen','Vaso',13.60,1.10,2.64,0,'glass'],
+ ['plate-kitchen','Plato',10.97,1.13,3.66,0,'plate'],
+ ['cup-study','Taza',3.10,.965,4.14,0,'cup'],
+ ['cup-reading','Taza',2.15,4.13,7.92,3.15,'cup']
 ];
 export function installNoiseProps(world){
  const props=[];
  for(const [id,label,x,y,z,floor,form] of SPECS){
-  const size=form==='plate'?[.25,.027,.25]:form==='glass'?[.105,.18,.105]:[.13,.12,.13];
+  const size=form==='plate'?[.22,.027,.22]:form==='glass'?[.105,.18,.105]:[.13,.12,.13];
   const box={id:'noise-'+id,x,y,z,w:size[0],h:size[1],d:size[2],mat:form==='glass'?'glass':'cream',solid:false,dynamic:true,
    shape:form==='plate'?'round':'lathe',segments:12,color:form==='glass'?[.70,.87,.93]:[.94,.86,.79]};
   world.boxes.push(box);
