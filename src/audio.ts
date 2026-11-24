@@ -1,6 +1,14 @@
 // Original music and rescue effects. start() belongs in a user gesture.
 import type {AmbientKind} from './demo/rescue-ecology';
-import {USER_AUDIO_SPRITE,USER_AUDIO_FOR_2D} from './lab/audio/user-sprite-index.js';
+// 2D's legacy CommonJS smoke harness loads only .ts modules. Mirror the four
+// 2D cue offsets here (the full nine-cue map belongs to 3D's user-sprite-index.js).
+const RESCUE_AUDIO_SPRITE:Readonly<Record<string,Readonly<{start:number;duration:number}>>>={
+ cat:{start:0,duration:.455125},
+ churu:{start:6.155125,duration:7.008375},
+ 'van-door':{start:27.918333,duration:1.44},
+ 'van-away':{start:29.558333,duration:13}
+};
+
 export type MusicTheme='story'|'garden'|'battle'|'final';
 const MELODIES:Record<MusicTheme,number[]>={
  story:[261.63,329.63,392,523.25,493.88,392,329.63,293.66,349.23,440,523.25,440,392,349.23,329.63,293.66],
@@ -36,8 +44,7 @@ export class Sound {
     .then(bytes=>context.decodeAudioData(bytes))
     .then(sprite=>{
      if(loading.signal.aborted)return;
-     for(const [kind,id] of Object.entries(USER_AUDIO_FOR_2D)){
-      const clip=USER_AUDIO_SPRITE[id];
+     for(const [kind,clip] of Object.entries(RESCUE_AUDIO_SPRITE)){
       if(!clip)continue;
       const offset=Math.round(clip.start*sprite.sampleRate),frames=Math.floor(clip.duration*sprite.sampleRate);
       const sample=context.createBuffer(sprite.numberOfChannels,frames,sprite.sampleRate);
