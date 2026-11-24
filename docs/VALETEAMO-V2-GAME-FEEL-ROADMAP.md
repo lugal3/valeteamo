@@ -21,7 +21,7 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 | 05 | **House environmental life** | IMPLEMENTED — QA pending | Identity of every room, small ambient props, lighting, wind/dust, performant atmosphere without clutter |
 | 06 | **Throwable objects + sound/material physics** | IMPLEMENTED — QA pending | Glass/ceramic/metal/wood/carpet responses, controlled throw strengths, predictable collisions, noise investigation |
 | 07 | **RC controls, camera, and strategy** | IMPLEMENTED — QA pending | Smoother drive and camera; suspension/bumps, legible tablet HUD, horn, combined RC/Emy tactics |
-| 08 | **2D flow, storytelling and 2D→3D transition** | NOT STARTED | Kawaii day→night pacing, credible meeting/kidnap, no pop-ins, coherent front window, seamless house handoff |
+| 08 | **2D flow, storytelling and 2D→3D transition** | IMPLEMENTED — QA pending | Kawaii day→night pacing, credible meeting/kidnap, no pop-ins, coherent front window, seamless house handoff |
 | 09 | **Louis, puzzles and progression** | NOT STARTED | Natural rescue/companion animations, verified cover and body rig, contextual dialogue, progressive puzzle hints/checkpoints |
 | 10 | **Cinematics, endings and reactive audio** | NOT STARTED | Understandable Emy-rescue and escape/loss cutscenes, synchronized spatial audio, proper camera framing on PC/iPhone |
 | 11 | **HUD, tutorials, accessibility and mobile feel** | NOT STARTED | Clean contextual controls, phone/hotbar, orientation/safe areas, motion/audio/text options |
@@ -160,3 +160,11 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 - Tablet signal text distinguishes connected driving from active decoy. Original horn duration, RC trap, recovery, Emy distraction independence, mobile joystick and G/keyboard controls remain wired as before.
 - Added tests in `tests/rc-game-feel.cjs` to `npm test`, covering throttle response, coasting, reverse, turning, horn, yaw seam, camera reset and stop state.
 - **Not yet verified:** complete test/perf/build and mobile/desktop/WebKit visual QA; release remains blocked. More precise wheel suspension animation and advanced combined Emy/RC tactics have not yet been delivered.
+
+## Phase 08 progress — story presentation and transition (QA pending)
+
+- Existing original Phaser `StoryGame/IsoAdventure` scenes, day/afternoon/dusk/night, real masked-kidnapper van and physically reachable 3D house route are deliberately preserved; no recreation of a second 2D engine.
+- Added `prologue-beats.js`: deterministic, UI-only Act I / interlude / Act II / Act III guidance; every stage belongs to exactly one group. Original save schema and branching remain unchanged.
+- Added compact responsive chapter label to the existing `GardenPrologue` UI, and a 720 ms dark window-to-3D handoff using the current 2D scene before mounting 3D; reduced-motion enters immediately and lifecycle cleanup removes delayed callbacks.
+- Added `tests/prologue-v2-beats.cjs` to `npm test`, covering stage mapping, original Phaser engine, saved stage, reduced-motion handoff and cleanup.
+- **QA pending**: Vite/TypeScript build and browser testing on desktop and iPhone. Additional 2D map/animation polish is still to be completed before Phase 08 can be called finished.
