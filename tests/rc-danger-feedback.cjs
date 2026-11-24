@@ -2,7 +2,13 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 (async()=>{
- const {HouseSound}=await import('../src/lab/sound.js');
+ // HouseSound imports Vite's import.meta.glob audio assets; load it through
+ // the same Vite transform used by the actual game, not through bare Node ESM.
+ const {createServer}=await import('vite');
+ const vite=await createServer({configFile:false,logLevel:'silent',server:{middlewareMode:true}});
+ let HouseSound;
+ try{({HouseSound}=await vite.ssrLoadModule('/src/lab/sound.js'));}
+ finally{await vite.close();}
  const {createRC,beepRC,updateRC,rcCamera,RC_PROJECTION,RC_CAMERA_DISTANCE}=await import('../src/lab/rc-car.js');
  const {createHouse}=await import('../src/lab/world.js');
  const {Pursuer}=await import('../src/lab/pursuer.js');
