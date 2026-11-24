@@ -53,7 +53,7 @@ export function stepNoiseProps(props,dt,world,pursuer,emy){
   f.vy-=9.8*step;prop.x+=f.vx*step;prop.y+=f.vy*step;prop.z+=f.vz*step;
   const hitEnemy=pursuer?.active&&Math.abs(pursuer.x-prop.x)<.5&&Math.abs(pursuer.z-prop.z)<.5&&
    prop.y>pursuer.y+.2&&prop.y<pursuer.y+2;
-  const nearCat=emy&&!emy.hidden&&!f.dodged&&Math.abs(emy.x-prop.x)<.48&&Math.abs(emy.z-prop.z)<.48&&Math.abs(emy.y+.35-prop.y)<.60;
+  const nearCat=emy&&!emy.hidden&&!emy.dodge&&!f.dodged&&Math.abs(emy.x-prop.x)<.48&&Math.abs(emy.z-prop.z)<.48&&Math.abs(emy.y+.35-prop.y)<.60;
   if(nearCat){
    // Real sideways dodge to an unblocked spot; projectile keeps flying.
    const lateral=Math.atan2(f.vx,f.vz)+Math.PI/2;
@@ -61,7 +61,18 @@ export function stepNoiseProps(props,dt,world,pursuer,emy){
     const nx=emy.x+Math.sin(lateral)*side*.62,nz=emy.z+Math.cos(lateral)*side*.62;
     const floor=groundHeight(nx,nz,emy.y,world.hatch?.amount>.92);
     if(Number.isFinite(floor)&&Math.abs(floor-emy.y)<.25&&!blocked(world.boxes,nx,floor,nz,.20,.62)){
-     Object.assign(emy,{x:nx,y:floor,z:nz,yaw:lateral+side*Math.PI/2,reaction:0,dodgeTime:.65});
+     // A safe endpoint is not sufficient: sample the whole sidestep to
+     // avoid slipping through a cabinet corner or interior partition.
+     let clear=true;
+     for(let i=1;i<=7;i++){
+      const t=i/7,x=emy.x+(nx-emy.x)*t,z=emy.z+(nz-emy.z)*t;
+      const h=groundHeight(x,z,emy.y,world.hatch?.amount>.92);
+      if(!Number.isFinite(h)||Math.abs(h-emy.y)>.25||blocked(world.boxes,x,h,z,.20,.62)){clear=false;break;}
+     }
+     if(!clear)continue;
+     emy.dodge={from:{x:emy.x,y:emy.y,z:emy.z,yaw:emy.yaw},
+      to:{x:nx,y:floor,z:nz,yaw:lateral+side*Math.PI/2},elapsed:0,duration:.44};
+     emy.reaction=0;
      f.dodged=true;cues.push({kind:'evade',at:{x:nx,y:floor,z:nz}});break;
     }
    }
