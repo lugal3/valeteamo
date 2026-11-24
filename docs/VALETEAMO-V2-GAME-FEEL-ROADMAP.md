@@ -200,3 +200,7 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 - Threat status now has a meaningful accessibility label while preserving the existing live warning and chase state handling.
 - Added `tests/hud-game-feel.cjs` to `npm test` for platform instructions, trap control, safe areas, screen-reader labels and overlay hiding.
 - **Pending:** full automated build, real-device landscape hit testing, voiceover/keyboard testing, screenshots and existing phase regressions. No merge or release.
+
+### Phase 11 browser regression repair
+
+- The last Phase 10 browser CI failed in `tests/emy-abilities-browser.cjs` at the old assumption that handheld throwable controls contain two buttons. The Phase 06 feature added the third soft-throw action, so the browser test now explicitly checks all three existing actions (normal throw, soft throw, drop). This is a test expectation update, not the removal of any gameplay control.
