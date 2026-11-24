@@ -123,24 +123,24 @@ export function emyFloorMap(rooms,floor,{selectedId='',lockedIds=[]}={}){
  const tiles=choices.flatMap(room=>{
   const number=String(++index).padStart(2,'0'),selected=selectedId===room.id,blocked=locked.has(room.id);
   return room.segments.map((rect,part)=>'<button type="button" class="house-emy-room house-emy-'+room.kind+
-   (selected?' is-selected':'')+(blocked?' is-locked':'')+
+   (selected?' is-selected':'')+(blocked?' is-locked':'')+(part?' is-extension':'')+
    '" data-act="emy:room:'+room.id+'" data-zone="'+room.id+'" data-floor="'+floor+
    '" aria-label="Seleccionar '+escapeHTML(room.label)+', planta '+level+
    (blocked?', puerta bloqueada':'')+'" aria-pressed="'+selected+'"'+
    (blocked?' disabled':'')+' style="'+boxStyle(rect)+'">'+
-   '<span class="house-emy-index">'+number+'</span>'+
-   (part===0?'<span class="house-emy-room-name">'+escapeHTML(room.short)+'</span>':'')+
+   (part===0?'<span class="house-emy-index">'+number+'</span>'+
+   '<span class="house-emy-room-name">'+escapeHTML(room.short)+'</span>':'')+
    '</button>');
  }).join('');
  const voidRect=rectangle(STAIR.wellX,HOUSE.width,STAIR.zTop,STAIR.wellZ);
  const run=rectangle(STAIR.xMin,STAIR.xMax,STAIR.zTop,STAIR.zBottom);
  const stairVisual=floor?
   '<div class="house-emy-stair-void" aria-hidden="true" style="'+boxStyle(voidRect)+'">Hueco<br>escalera ↕</div>':
-  '<div class="house-emy-stair-flight" aria-hidden="true" style="'+boxStyle(run)+'">↑ Subir</div>';
+  '<div class="house-emy-stair-flight" aria-hidden="true" style="'+boxStyle(run)+'">↑</div>';
  return '<div class="house-emy-plan" role="group" aria-label="Plano real de la planta '+level+'">'+
   '<div class="house-emy-north" aria-hidden="true">NORTE ↑</div>'+
   tiles+stairVisual+
-  '<div class="house-emy-entrance" aria-hidden="true">↓ '+(floor?'Balcón / entrada inferior':'ENTRADA')+'</div>'+
+  '<div class="house-emy-entrance" aria-hidden="true">↓ '+(floor?'SUR':'ENTRADA')+'</div>'+
   '</div>';
 }
 export function emyFloorList(rooms,floor,{selectedId='',lockedIds=[]}={}){
