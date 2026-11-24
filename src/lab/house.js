@@ -72,7 +72,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const animator=new CharacterAnimator();
  const root=document.createElement('div');root.id='lab3d';root.innerHTML=`
  <canvas id="lab-canvas" aria-label="Escenario tridimensional interactivo de la casa"></canvas>
- <div id="house-interest" class="house-interest" aria-hidden="true" hidden><i>✧</i><span>OBJETIVO</span></div>
+ <div id="house-interest" class="house-interest" aria-hidden="true" hidden><i>✧</i><span>OBJETIVO</span></div>\n <div class="house-screw-glows" aria-hidden="true"><i class="house-vent-screw-glow" data-screw="0" hidden>✧</i><i class="house-vent-screw-glow" data-screw="1" hidden>✧</i><i class="house-vent-screw-glow" data-screw="2" hidden>✧</i><i class="house-vent-screw-glow" data-screw="3" hidden>✧</i></div>
  <div id="torch-outline" class="torch-silhouette" hidden><svg viewBox="0 0 40 20" aria-hidden="true"><path d="M3 6h10l7-4h6v16h-6l-7-4H3z" fill="none" stroke="#c4f3ff" stroke-width="2" transform="rotate(-20 16 10)"/></svg></div>
  <div class="lab-vignette" aria-hidden="true"></div>
  <div id="lab-capture" hidden>
@@ -1702,6 +1702,26 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     }else sparkle.hidden=true;
    }else sparkle.hidden=true;
   }else sparkle.hidden=true;
+  // After finding the screwdriver, highlight all four ACTUAL brass screws
+  // on the vent mesh, rather than a guessed dot on the wall.
+  const screws=world.studyVent.cover.filter(part=>part.box.id.startsWith('vent-cover-screw'));
+  const pointScrews=!!s.inventory.screwdriver&&!world.studyVent.unlatched&&
+   !isPaused()&&!phone.open&&Math.abs(s.y)<.7;
+  for(const [index,node] of [...root.querySelectorAll('.house-vent-screw-glow')].entries()){
+   const screw=screws[index]?.box;
+   if(!pointScrews||!screw){node.hidden=true;continue;}
+   const dx=screw.x-view.x,dy=screw.y-view.y,dz=screw.z-view.z;
+   const fwd=dx*Math.sin(view.yaw)+dz*Math.cos(view.yaw);
+   const side=dx*Math.cos(view.yaw)-dz*Math.sin(view.yaw);
+   const depth=fwd*Math.cos(view.pitch)+dy*Math.sin(view.pitch);
+   const meters=Math.hypot(dx,dy,dz);
+   if(depth<=.15||meters>6.5){node.hidden=true;continue;}
+   const factor=.65*canvas.clientHeight/depth;
+   const px=canvas.clientWidth/2+side*factor;
+   const py=canvas.clientHeight/2-(dy*Math.cos(view.pitch)-fwd*Math.sin(view.pitch))*factor;
+   node.hidden=px<0||px>canvas.clientWidth||py<0||py>canvas.clientHeight;
+   if(!node.hidden){node.style.left=px+'px';node.style.top=py+'px';}
+  }
   const outdoor=s.y<-.12?0:view.x<0||view.x>HOUSE.width||view.z<0||view.z>HOUSE.depth?1:Math.max(0,1-Math.min(view.x,HOUSE.width-view.x,view.z,HOUSE.depth-view.z)/1.5)*.22;
   sound.locate({room:roomAt(view.x,view.z,s.y),outdoor,hidden:!!s.hidden,powered:housePowered(world.lights.power)});
   try{
