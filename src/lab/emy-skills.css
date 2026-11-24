@@ -93,6 +93,7 @@
 }
 #lab3d .house-emy-plan .house-emy-room.house-emy-corridor{background:#344b5b;border-color:#89b5d1}
 #lab3d .house-emy-plan .house-emy-room.house-emy-stairs{background:#695335;border-color:#f4c77c}
+#lab3d .house-emy-plan .house-emy-room.is-extension{border-style:dashed;opacity:.85}
 #lab3d .house-emy-plan .house-emy-index{
  display:grid;place-items:center;flex:0 0 auto;min-width:24px;height:24px;
  padding:0 3px;border-radius:6px;background:#191725;border:1px solid #ffd7ed;
@@ -121,8 +122,9 @@
  border:2px dashed #a38ca0;
 }
 #lab3d .house-emy-plan .house-emy-stair-flight{
+ place-items:start center;padding-top:5px;
  background:repeating-linear-gradient(0deg,transparent,transparent 8%,rgba(255,231,180,.3) 9%,rgba(255,231,180,.3) 12%);
- border:1px solid #eec88b;
+ border:1px solid #eec88b;font-size:13px;
 }
 #lab3d .house-emy-plan .house-emy-north,
 #lab3d .house-emy-plan .house-emy-entrance{
