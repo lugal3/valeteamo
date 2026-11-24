@@ -31,8 +31,8 @@ export const RESCUE_ROUTE={maxU:82,bridgeStart:10,bridgeEnd:16,
 export const RESCUE_MAP_ORDER:RescueMapId[]=['morning_garden','afternoon_meeting','dusk_search','night_neighborhood'];
 export const STORY_POSITIONS={
  intro:{u:5.4,v:4.65},'feed-cat':{u:17.6,v:5.05},'cat-fed':{u:20.7,v:4.5},
- 'meet-couple':{u:28,v:4.45},defend:{u:28.7,v:4.5},
- 'talk-louis':{u:29.4,v:4.1},'talk-luis':{u:34.6,v:4.4},
+ 'meet-couple':{u:28,v:4.45},defend:{u:33.15,v:4.85},
+ 'talk-louis':{u:34.45,v:4.1},'talk-luis':{u:35.75,v:4.4},
  'walk-together':{u:38.4,v:4.5},disappearance:{u:40.8,v:4.5},
  ribbon:{u:48,v:4.9},petals:{u:53,v:3.8},wheel:{u:59.5,v:4.9},
  door:NIGHT_HOUSE.door,window:NIGHT_HOUSE.window,house:NIGHT_HOUSE.window
@@ -276,7 +276,73 @@ function sign(scene:Phaser.Scene,u:number,v:number,title:string){
  scene.add.text(p.x,p.y-41,title,{fontFamily:'monospace',fontSize:'10px',
   fontStyle:'bold',color:'#735c6f'}).setOrigin(.5).setDepth(p.y+1);
 }
+// The real 3D entrance is on the SOUTH/front wall (z=12), with a ground
+// window at x=2.2 and a door at x=5.9. Draw the playable house FRONT-ON,
+// not as an angled box whose roof and side walls cover the interaction pads.
+// All proportions and the two-storey rhythm derive from HOUSE_3D_REFERENCE.
+// Crucially the door/window centers share the same projected ground baseline.
+function frontalRescueHouse(scene:Phaser.Scene){
+ const ground=toScreen(NIGHT_HOUSE.door),width=340;
+ const left=ground.x-width*(HOUSE_3D_REFERENCE.frontDoorX/HOUSE_3D_REFERENCE.width);
+ const top=ground.y-203,right=left+width,base=ground.y-8;
+ const g=scene.add.graphics().setDepth(ground.y-125);
+ const px=(realX:number)=>left+width*realX/HOUSE_3D_REFERENCE.width;
+ // Dark foundation, sturdy level outlines, readable two-storey windows.
+ g.fillStyle(0x5c5065,.9).fillRect(left-8,base-1,width+16,9);
+ g.fillStyle(0xc6b6c9).fillRect(left,top,width,base-top);
+ g.fillStyle(0xe9cdd2).fillRect(left+7,top+10,width-14,base-top-16);
+ g.fillStyle(0x9c869d).fillRect(left,base-90,width,7);
+ g.fillStyle(0xb6a0b2).fillRect(left-6,top-4,width+12,8);
+ // Simple low-poly gable roof, not a rotated 3D box hiding the front window.
+ poly(g,0x58435e,[[left-19,top+2],[left+width*.5,top-62],
+  [right+19,top+2],[right+12,top+26],[left-12,top+26]]);
+ poly(g,0x826682,[[left+width*.5,top-62],[right+19,top+2],
+  [left+width*.5,top-6]]);
+ g.lineStyle(4,0xefc5d5).lineBetween(left-19,top+3,left+width*.5,top-61);
+ g.lineBetween(left+width*.5,top-61,right+19,top+3);
+ // Soft brickwork: low contrast so the actual entrances are the focal point.
+ for(let row=0;row<7;row++)for(let col=0;col<8;col++){
+  const x=left+12+col*40+(row%2)*15,y=top+34+row*19;
+  if(x>right-12||y>base-5)continue;
+  g.lineStyle(1,0xffffff,.12).lineBetween(x,y,x+18,y);
+ }
+ const pane=(cx:number,cy:number,open=false)=>{
+  g.fillStyle(0x756375).fillRect(cx-19,cy-27,38,56);
+  g.fillStyle(open?0x332b49:0xbfc7bc).fillRect(cx-14,cy-22,28,45);
+  if(open){
+   // Open sash on left: Kitty enters from the FRONT patio.
+   g.fillStyle(0xf3c8d7).fillRect(cx-18,cy-22,5,46);
+   g.fillStyle(0xffe9a9,.18).fillRect(cx-11,cy-19,20,39);
+  }else{
+   g.fillStyle(0xe2e7da).fillRect(cx-1,cy-22,3,46);
+   g.fillRect(cx-14,cy-1,29,3);
+  }
+  g.fillStyle(0xf1d5df).fillRect(cx-23,cy+28,46,5);
+ };
+ // Match the upstairs bedroom / landing / music windows in house-layout.js.
+ for(const x of [2.2,6.1,12.1])pane(px(x),top+62,false);
+ const windowX=px(HOUSE_3D_REFERENCE.openWindowX);
+ pane(windowX,base-54,true);
+ // A gentle cyan doorway hint marks a WINDOW rather than a hidden side wall.
+ g.lineStyle(3,0xa9f9db,.92).strokeRect(windowX-21,base-83,42,59);
+ const doorX=px(HOUSE_3D_REFERENCE.frontDoorX);
+ g.fillStyle(0x765367).fillRect(doorX-27,base-84,54,81);
+ g.fillStyle(0x342c43).fillRect(doorX-21,base-78,42,74);
+ g.fillStyle(0xdfb79b).fillRect(doorX+12,base-40,5,5);
+ g.fillStyle(0xc3adbd).fillRect(doorX-31,base-3,64,7);
+ for(const lampX of [doorX-43,doorX+43]){
+  g.fillStyle(0xfce5bb,.52).fillCircle(lampX,base-76,12);
+  g.fillStyle(0xf5d4a0).fillRect(lampX-5,base-82,10,13);
+ }
+ // Exterior visual hint only; selected interaction and blocking remain
+ // controlled by existing, tested Phaser pathfinding in night-house-layout.
+ scene.add.text(left+width*.77,top+22,'CASA 14 ♡',{
+  fontFamily:'monospace',fontSize:'13px',fontStyle:'bold',
+  color:'#fff6e9',stroke:'#4b3a53',strokeThickness:4
+ }).setOrigin(.5).setDepth(ground.y-110);
+}
 function house(scene:Phaser.Scene,u:number,v:number,main:boolean){
+ if(main){frontalRescueHouse(scene);return;}
  const p=toScreen({u,v}),x=p.x,y=p.y;
  // A building must never paint OVER Kitty or the front-porch hotspot.
  // Decorative house layers are behind play-space; a collision footprint

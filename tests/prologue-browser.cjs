@@ -189,7 +189,15 @@ async function play(){
   await page.screenshot({path:'artifacts/story-afternoon-map.png'});
   await step('meet-couple',0,/Saludar a Luis y Vale/);
   await game.locator('xpath=self::*[@data-prologue-stage="defend"]').waitFor({timeout:10000});
-  assert(await page.evaluate(()=>window.__valePrologue.scene().storyLouis?.visible),'Louis is present during the defense');
+  assert.equal(await page.evaluate(()=>window.__valePrologue.scene().enemies.length),0,
+   'Shadows must not materialize before Kitty hears and approaches the scream');
+  assert.equal(await page.evaluate(()=>!!window.__valePrologue.scene().storyLouis),false,
+   'Kitty does not meet Louis until she has walked toward the distress call');
+  await page.screenshot({path:'artifacts/story-unknown-voice-before-rescue.png'});
+  await page.evaluate(()=>window.__valePrologue.teleport(0));
+  await page.waitForFunction(()=>window.__valePrologue.scene().storyLouis?.visible&&
+   window.__valePrologue.scene().enemies.length===3,null,{timeout:4000});
+  await page.screenshot({path:'artifacts/story-louis-helped-after-distress-call.png'});
   // Original Corazones controls: WASD for movement, arrows for hearts.
   await page.keyboard.down('ArrowRight');
   await page.waitForTimeout(360);

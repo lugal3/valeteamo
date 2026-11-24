@@ -17,6 +17,8 @@ const {chromium}=require('playwright');
   await page.getByRole('button',{name:'Administración'}).click();
   await page.getByLabel('Código de acceso').fill('LP');
   await page.getByRole('dialog',{name:'Administración'}).getByRole('button',{name:'Entrar'}).click();
+  // The LP panel groups the mirror scene inside its closed advanced section.
+  await page.getByText('Escenas y mecánicas aisladas',{exact:true}).click();
   await page.getByRole('button',{name:'Espejo',exact:true}).click();
   await page.locator('#lab-canvas').waitFor({timeout:25000});
   await page.getByRole('button',{name:'Iniciar prueba'}).click();

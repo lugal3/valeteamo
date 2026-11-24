@@ -93,7 +93,10 @@ module.exports=async()=>{
  assert(!poseEscapeAmbush(shot,cat.cat,hunter,false));
  shot.elapsed=2.2;assert(poseEscapeAmbush(shot,cat.cat,hunter,false));assert(cat.cat.y>.6);
  shot.elapsed=6.8;poseEscapeAmbush(shot,cat.cat,hunter,false);
- assert.equal(cat.cat.y,0);assert(cat.cat.z>14&&hunter.z<12);
+ assert.equal(cat.cat.y,0);
+ assert(cat.cat.z>14&&hunter.z>=12.25,
+  'Emy runs past Kitty; attacker remains visible OUTSIDE the front wall during cinematic');
+ assert(hunter.x>shot.kitty.from.x+.95,'Emy must physically deflect attacker sideways');
  // The route must remain ordered even when the safe is revisited or notes are skipped.
  const steps=[
   ['dormitorio',()=>state.puzzle.door=true],

@@ -75,17 +75,18 @@ for(let i=1;i<stages.length;i++){
   'separate scenes retain forward narrative progression');
 }
 assert(world.STORY_POSITIONS.window.u<world.STORY_POSITIONS.door.u,
- 'Kitty must turn BACK along the facade for the separate side window, not keep following a line');
+ 'Kitty must return WEST along the front/south facade to the accessible window');
 const toPixel=p=>({x:400+(p.u-p.v)*41,y:68+(p.u+p.v)*20});
-const footprint=toPixel({u:78.7,v:9.0});
-const frontDoor={x:footprint.x-225*.58+225*5.9/14,y:footprint.y-5};
+const width=340,reference=toPixel(world.STORY_POSITIONS.door);
+const frontLeft=reference.x-width*5.9/14;
+const frontDoor={x:frontLeft+width*5.9/14,y:reference.y};
 const portalDoor=toPixel(world.STORY_POSITIONS.door);
-assert(Math.hypot(portalDoor.x-frontDoor.x,portalDoor.y-frontDoor.y)<35,
- 'locked door target is physically at the correct 3D facade entrance');
-const westWindow={x:footprint.x-225*.44,y:footprint.y-161*.27+105*.16};
+assert(Math.hypot(portalDoor.x-frontDoor.x,portalDoor.y-frontDoor.y)<2,
+ 'locked door aligns with south/front 3D facade entrance');
+const westWindow={x:frontLeft+width*2.2/14,y:reference.y};
 const portalWindow=toPixel(world.STORY_POSITIONS.window);
-assert(Math.hypot(portalWindow.x-westWindow.x,portalWindow.y-westWindow.y)<32,
- 'window target is physically located at the actual south-west 3D intro window');
+assert(Math.hypot(portalWindow.x-westWindow.x,portalWindow.y-westWindow.y)<2,
+ 'window target aligns with front south-west 3D opening, not the rear wall');
 assert.equal(world.darknessAt(5,'intro','morning_garden'),0);
 assert(world.darknessAt(32,'defend','afternoon_meeting')>0);
 assert(world.darknessAt(44,'disappearance','afternoon_meeting')>=.28);

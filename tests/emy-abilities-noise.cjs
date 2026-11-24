@@ -129,5 +129,26 @@ const assert=require('node:assert/strict');
  for(let i=0;i<35;i++)updateEmyCompanion(dodgeCat,1/60,{world:dodgeWorld,player:start});
  assert(!dodgeCat.cat.dodge,'Dodge animation finishes cleanly');
  assert(Math.hypot(dodgeCat.cat.x-start.x,dodgeCat.cat.z-start.z)>.4,'Emy moves aside physically');
- console.log('PASS Emy abilities: scan cooldown, floor-map rooms, throwable-noise, pursuer stun and distract checkpoint');
+ // Two endings and Emy's one-use intervention must animate the REAL cat
+ // and the REAL pursued actor, not a nonphysical overlay or frozen sprite.
+ const {poseEmyLastChance,poseEscapeAmbush}=await import('../src/lab/emy-rescue.js');
+ const finaleWorld=createHouse(),rescueCat=finaleWorld.emy;
+ const foe={x:6.15,y:0,z:12.38,yaw:Math.PI,mode:'chase',speed:1.4,active:true};
+ const shot={elapsed:.20,kitty:{x:5.65,y:0,z:12.8,yaw:Math.PI},attacker:{...foe}};
+ rescueCat.hidden=true;
+ for(const {box} of rescueCat.parts)box.hiddenGeometry=true;
+ assert(!poseEmyLastChance(shot,rescueCat,foe,true),'Emy stays hidden during the first threat beat');
+ assert(rescueCat.hidden,'No teleport or premature rescue reveal');
+ shot.elapsed=.85;
+ assert(poseEmyLastChance(shot,rescueCat,foe,true),'The cat becomes visible when she launches herself');
+ assert(!rescueCat.hidden&&rescueCat.parts.every(part=>!part.box.hiddenGeometry));
+ const previous={x:rescueCat.x,z:rescueCat.z};
+ shot.elapsed=2.1;poseEmyLastChance(shot,rescueCat,foe,true);
+ assert.equal(foe.mode,'stunned','A rescue physically knocks the pursuer back');
+ assert(Math.hypot(rescueCat.x-previous.x,rescueCat.z-previous.z)>.05,'Emy must move during her jump');
+ const escapeShot={elapsed:0,kitty:{from:{x:5.65,z:12.8}}};
+ poseEscapeAmbush(escapeShot,rescueCat,foe,true);
+ assert(foe.z>=12.35,'Cinematic pursuer must stay OUTSIDE the opaque front house wall');
+ console.log('PASS Emy abilities: scan cooldown, room map, thrown objects, cat rescue and finale staging');
+
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -38,7 +38,10 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
  // Photo-A wears a single continuous navy T-shirt shell; the previous
  // separately rendered shirt panel was still drawn over the chest in WebGL,
  // making a conspicuous floating rectangle. Keep that panel ONLY for PS2-B.
- add('torso',0,1.11,-.015,photoMode?.490:.468,.56,.305,'dark',jacket,
+ // Define the chest/shoulder contour on the original continuous shirt
+ // surface, not with new overlay meshes that overflow the 16-bit WebGL1
+ // buffer shared with Emy and the other house actors.
+ add('torso',0,1.11,-.015,photoMode?.504:.468,.565,.326,'dark',jacket,
   photoMode?{shape:'lois-tee-torso',segments:12,rings:4,rigGroup:'body'}:{...box,rigGroup:'body'});
  if(!photoMode)
   add('shirt',0,1.12,.140,.248,.445,.025,'cream',shirt,{...box,rigGroup:'body'});
@@ -84,8 +87,11 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
  // Ears are set at the jaw hinge, partially embedded in the skin, rather
  // than hovering as large circular discs in side/profile views.
  for(const side of [-1,1]){
-  add('ear-'+side,side*.184,1.610,-.018,.046,.084,.064,'paper',
-   photoMode?[.81,.57,.49]:skin,
+  // Ears were buried INSIDE the wider Photo-A head (half-width ~.20 m).
+  // Keep their matte geometry, but project a narrow rounded helix on each
+  // profile so the silhouette reads correctly without stretching face UVs.
+  add('ear-'+side,side*.226,1.605,-.016,.075,.114,.071,'paper',
+   photoMode?[.82,.63,.55]:skin,
    {shape:'round',segments:desktop?14:10,rings:desktop?8:6,rigGroup:'head'});
   if(!photoMode){add('ear-shadow-'+side,side*.197,1.603,.023,.011,.042,.013,'paper',[.69,.46,.40],
    {...tiny,rigGroup:'head'});

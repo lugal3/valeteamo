@@ -210,14 +210,14 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   };
   const marker=(symbol:string,p:IsoPoint)=>{
    const xy=toScreen(p),isHouse=this.storyMap==='night_neighborhood';
-   if(isHouse){
-    const ring=this.add.ellipse(xy.x,xy.y,77,31,0xffe2ba,.26)
-     .setDepth(xy.y+3);
-    ring.setStrokeStyle(3,0xffe0b9,.96);
-    this.storyObjects.push(ring);
-    if(!this.reducedMotion)this.tweens.add({targets:ring,alpha:.42,
-     scaleX:1.15,scaleY:1.15,duration:1050,yoyo:true,repeat:-1});
-   }
+   // Same turquoise expanding contour for every important 2D clue.
+   // This is an overlay, never an invisible collider or teleport trigger.
+   const ring=this.add.ellipse(xy.x,xy.y,isHouse?77:52,isHouse?31:22,
+    isHouse?0xffe2ba:0xa4ffdc,.26).setDepth(xy.y+3);
+   ring.setStrokeStyle(isHouse?3:2,isHouse?0xffe0b9:0xa6ffdf,.96);
+   this.storyObjects.push(ring);
+   if(!this.reducedMotion)this.tweens.add({targets:ring,alpha:.55,
+    scaleX:1.17,scaleY:1.17,duration:950,yoyo:true,repeat:-1});
    const label=this.add.text(xy.x,xy.y-(isHouse?25:16),symbol,{
     fontFamily:'Georgia',fontSize:isHouse?'34px':'26px',color:'#fff4cf',
     stroke:'#764f78',strokeThickness:4
@@ -226,6 +226,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   };
   this.storyTarget={...STORY_POSITIONS[stage]};
   if(stage==='intro'){
+   marker('✧',CHURU_POSITION);
    const xy=toScreen(CHURU_POSITION);
    const tube=this.add.image(xy.x,xy.y-4,CHURU_TEXTURE).setOrigin(.5,.85)
     .setAngle(22).setDepth(xy.y+1);
@@ -233,6 +234,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    this.storyObjects.push(cloth,tube);
   }
   if(stage==='feed-cat'||(stage==='cat-fed'&&this.storyMap==='morning_garden')){
+   if(stage==='feed-cat')marker('♡',GREY_CAT_POSITION);
    this.storyCatPoint=stage==='cat-fed'?previousCat:{...GREY_CAT_POSITION};
    const xy=toScreen(this.storyCatPoint);
    this.storyCat=this.add.image(xy.x,xy.y,greyCatTexture('idle',0)).setOrigin(.5,.9)
@@ -243,9 +245,9 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    this.storyObjects.push(this.storyChuru);
   }
   if(stage==='defend'){
-   this.storyLouis=actor('louis',{u:30.1,v:4.85});
-   for(const p of [{u:30.4,v:2.9},{u:32.1,v:5.9},{u:33.4,v:4.0}])this.spawnEnemy(p,false);
-   this.story.guide('Las sombras se acercan. ¡Apunta con las flechas, el mouse o el joystick derecho!');
+   // Kitty does NOT know Louis yet. She follows an audible cry through the
+   // orchard; the boy and his attackers are revealed only after approaching.
+   this.story.guide('¡Un grito al fondo del jardín! Sigue el camino hacia la voz…');
   }
   if(stage==='talk-louis'){
    // Louis approaches from the spot where Kitty protected him.
@@ -299,6 +301,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(['ribbon','petals','wheel'].includes(stage)){
    marker(stage==='ribbon'?'✧':stage==='petals'?'✿':'⌁',this.storyTarget);
   }
+  if(['meet-couple','talk-louis'].includes(stage))marker('✧',this.storyTarget);
   if(stage==='door'||stage==='window')marker(stage==='door'?'⚿':'✧',this.storyTarget);
   const dark=darknessAt(this.p.u,stage,this.storyMap);
   if(Math.abs(dark-this.storyDusk)>.01){this.storyDusk=dark;this.story.dusk(dark);}
@@ -650,6 +653,26 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const dusk=darknessAt(this.p.u,stage,this.storyMap);
   if(Math.abs(dusk-this.storyDusk)>.018){
    this.storyDusk=dusk;this.story.dusk(dusk);
+  }
+  if(stage==='defend'&&!this.storyWalkTriggered){
+   const distance=isoDistance(this.p,this.storyTarget);
+   if(distance<5&&!this.storyTargetCuePlayed){
+    this.storyTargetCuePlayed=true;
+    this.story.guide('¡Auxilio! — Alguien pide ayuda tras los cerezos. ¡Acércate!');
+    this.audio.storyHelpCry();
+   }
+   if(distance<2.2){
+    this.storyWalkTriggered=true;
+    const louisAt=toScreen({u:34.75,v:4.90});
+    this.storyLouis=this.add.image(louisAt.x,louisAt.y,'chibi-louis-down-0')
+     .setOrigin(.5,.9).setScale(1.3).setDepth(louisAt.y);
+    this.storyObjects.push(this.storyLouis);
+    this.showStoryBubble('louis','fear');
+    for(const p of [{u:34.1,v:3.1},{u:35.6,v:5.75},{u:36.05,v:4.0}])
+     this.spawnEnemy(p,false);
+    this.audio.tone(460,.29,.055,'sawtooth');
+    this.story.guide('¡Las sombras acorralaron a un desconocido! Defiéndelo con corazones.');
+   }
   }
   if(stage==='intro'){
    const step=this.p.u>=9?2:this.p.u>=3?1:0;
@@ -1091,7 +1114,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   for(const e of this.enemies)if(this.clock>e.next-450){const p=toScreen(e.p);g.lineStyle(2,0xbd6994,.8);g.strokeCircle(p.x,p.y-12,e.boss?27:18);}for(const stick of [this.left,this.right])if(stick){const camera=this.cameras.main,p=camera.getWorldPoint(stick.x,stick.y),z=camera.zoom,n=Math.max(1,Math.hypot(stick.dx,stick.dy)/24);g.lineStyle(2/z,0x715a73,.28);g.strokeCircle(p.x,p.y,32/z);g.fillStyle(0x866779,.25);g.fillCircle(p.x+stick.dx/n/z,p.y+stick.dy/n/z,11/z);}
   if(this.story){
    this.updateStoryActors(dt);
-   if(this.storyStage==='defend' && !this.storyVictoryEmitted && this.enemies.length===0){
+   if(this.storyStage==='defend' && this.storyWalkTriggered && !this.storyVictoryEmitted && this.enemies.length===0){
     this.storyVictoryEmitted=true;this.story.victory();
    }
   }else if(this.collected>=this.total){this.wonAt=this.clock||1;this.clearInput();this.audio.tone(1046,.25,.035);}

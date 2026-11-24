@@ -75,15 +75,20 @@ export function sampleLoisRig(source={},reduced=false){
  const angles=Object.create(null),shifts=Object.create(null);
  const angle=(name,roll=0,pitch=0,yaw=0)=>{angles[name]={yaw,pitch,roll};};
  const shift=(name,x=0,y=0,z=0)=>{shifts[name]=[x,y,z];};
- shift('root',0,-.18*crouch+(isMoving&&!reduced?Math.abs(step)*.007:0),0);
+ shift('root',0,-.25*crouch+(isMoving&&!reduced?Math.abs(step)*.007:0),0);
  shift('pelvis',0,0,crouch*.065);
- angle('pelvis',0,crouch*.13);
+ angle('pelvis',0,crouch*.30);
  // Lower the upper-body skeletal branch; unlike a global mesh offset, the
  // hips and ankles are retained, giving a crouch instead of a teleport.
- shift('spine',0,-.72*lowCover,0);
+ // Split the fold between pelvis, knees and torso; the former 72cm spine
+ // slide folded the entire chest through the lap when Louis squatted.
+ shift('spine',0,-.38*lowCover,0);
  angle('spine',0,(hiding?.26:untying?.055:phase==='climb'?.09:0),0);
  angle('chest',reduced?0:Math.sin(t*1.04)*.012,0,reduced?0:Math.sin(t*.45)*.017);
  shift('chest',0,breath,0);
+ // A compact neck duck tucks the photographed head UNDER the 1.10 m
+ // counter while keeping the chest above the pelvis and legs bent naturally.
+ shift('neck',0,-.265*lowCover,0);
  angle('neck',0,0,0);
  angle('head',reduced?0:Math.sin(t*.73)*.008,(untying?-.09:gazePitch*.28)+reaction.headPitch,gazeYaw*.42+reaction.headYaw);
  shift('jaw',0,-jawOpen*.015,jawOpen*.006);
@@ -97,10 +102,10 @@ export function sampleLoisRig(source={},reduced=false){
   angle(name+'Shoulder',side*.025,reach,side*(hiding?.19:untying?.13:.02));
   angle(name+'Elbow',0,untying?-.41:hiding?-.31:.12+lift*.09,0);
   angle(name+'Wrist',0,untying?-.13:hiding?.14:0,side*.055);
-  angle(name+'Hip',0,hiding?-.37:untying?-.22:legPhase*.33,0);
-  angle(name+'Knee',0,hiding?.71:untying?.34:lift*.41,0);
-  angle(name+'Ankle',0,hiding?-.22:untying?-.12:-legPhase*.18-lift*.17,0);
-  if(crouch)shift(name+'Hip',0,crouch*.055,crouch*.045);
+  angle(name+'Hip',0,hiding?-.72:untying?-.22:legPhase*.33,0);
+  angle(name+'Knee',0,hiding?1.16:untying?.34:lift*.41,0);
+  angle(name+'Ankle',0,hiding?-.49:untying?-.12:-legPhase*.18-lift*.17,0);
+  if(crouch)shift(name+'Hip',0,crouch*.09,crouch*.16);
  }
  const bones=Object.create(null);
  for(const bone of boneDefs){

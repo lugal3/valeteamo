@@ -5,7 +5,8 @@ import {roomAt} from './world.js';
 
 // Scene references and completion predicates are editable in route order.
 export const RESCUE_ROUTE=[
- ['Busca el destornillador en el cajón del estudio','drawer',c=>c.s.inventory.screwdriver||c.world.studyVent.unlatched||c.puzzle.key],
+ ['Abre el cajón del escritorio para buscar una herramienta','drawer',c=>c.world.objects.find(o=>o.id==='drawer')?.open||c.s.inventory.screwdriver||c.world.studyVent.unlatched||c.puzzle.key],
+ ['Recoge el destornillador que aparece dentro del cajón','screwdriver',c=>c.s.inventory.screwdriver||c.world.studyVent.unlatched||c.puzzle.key],
  ['Retira la tapa del conducto del estudio','emy-vent',c=>c.world.studyVent.unlatched||c.puzzle.key],
  ['Envía a Emy a buscar la llave del dormitorio','emy-vent',c=>c.puzzle.key],
  ['Abre el dormitorio','dormitorio',c=>c.puzzle.door],
@@ -67,7 +68,10 @@ const ease=t=>{t=Math.min(1,Math.max(0,t));return t*t*(3-2*t);};
 // The camera sees Kitty held at the threshold, Emy striking, then all three leaving.
 export function poseEscapeAmbush(shot,cat,enemy,reduced){
  const t=shot.elapsed,start=shot.kitty.from,approach=ease(t/1.05),recoil=ease((t-2.1)/.85);
- Object.assign(enemy,{x:start.x+.12+.6*recoil,y:0,z:start.z-1.65+1.22*approach-.95*recoil,
+ // The 3D entrance/front wall is at z=12. The old pursuer stayed INSIDE
+ // at z≈11 and disappeared behind the opaque wall from the exterior camera.
+ // Stage the encounter just OUTSIDE the front threshold in a readable lane.
+ Object.assign(enemy,{x:start.x+.58+.68*recoil,y:0,z:Math.max(12.37,start.z-.10)+.26*approach-.05*recoil,
   yaw:Math.PI*.08+recoil*1.2,mode:t<2.1?'chase':'trapped',speed:t<1?1.5:0});
  enemy.facing=enemy.yaw;
  if(t<1.45)return false;
@@ -79,4 +83,33 @@ export function poseEscapeAmbush(shot,cat,enemy,reduced){
   y:land===1?0:Math.sin(leap*Math.PI)*.36+.94*leap*(1-land),yaw:Math.PI*.53*(1-land)});
  poseEmy(cat,{mode:land<1?'jump':run>0?'walk':'idle',walking:run>0&&run<1,phase:t,reduced});
  return appeared;
+}
+
+// An emergency rescue happens exactly ONCE when the fourth life marker
+// reaches zero. Emy leaps in from the side instead of teleporting Kitty or
+// swapping the existing pursuer mesh. This is a 3D pose on the SAME Emy rig.
+export function poseEmyLastChance(shot,cat,enemy,reduced=false){
+ const t=Math.max(0,shot.elapsed),home=shot.kitty,threat=shot.attacker;
+ const appear=t>=.55,leap=ease((t-.55)/.78),retreat=ease((t-1.40)/.72);
+ if(!appear)return false;
+ const wasHidden=cat.hidden;
+ cat.hidden=false;
+ for(const {box} of cat.parts)box.hiddenGeometry=false;
+ const sideX=home.x-.92,sideZ=home.z+.58;
+ const strikeX=threat.x-.16,strikeZ=threat.z+.13;
+ Object.assign(cat,{
+  x:sideX+(strikeX-sideX)*leap-.20*retreat,
+  z:sideZ+(strikeZ-sideZ)*leap+.56*retreat,
+  y:home.y+(leap<1?Math.sin(Math.PI*leap)*.40:0),
+  yaw:Math.atan2(threat.x-sideX,threat.z-sideZ),
+  reaction:t<1.45?1:0
+ });
+ enemy.x=threat.x+(threat.x-home.x)*.55*retreat;
+ enemy.y=threat.y;
+ enemy.z=threat.z+(threat.z-home.z)*.55*retreat;
+ enemy.facing=enemy.yaw=threat.yaw??0;
+ enemy.speed=0;
+ if(t>=1.4)enemy.mode='stunned';
+ poseEmy(cat,{mode:t<1.45?'jump':'idle',walking:false,phase:t,reduced});
+ return wasHidden;
 }

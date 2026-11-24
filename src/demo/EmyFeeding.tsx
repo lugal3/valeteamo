@@ -30,7 +30,11 @@ export function EmyFeeding({audio,onComplete,onCancel}:{audio:Sound;onComplete:(
    const s=live.current;
    if(!document.hidden&&!s.done){
     setClock(now);setBlink(now%4200>4010);
-    const next=advanceEmyFeeding(s.progress,dt,s.holding,s.tip.x,s.tip.y);
+    // Never display 100% while the completion state is still 99.6%.
+    // A player releasing the treat at the displayed 100% would leave the
+    // Churu dialog stuck forever. Snap the final half-percent to done.
+    const raw=advanceEmyFeeding(s.progress,dt,s.holding,s.tip.x,s.tip.y);
+    const next=raw>=99.5?100:raw;
     if(next!==s.progress){
      s.progress=next;setProgress(next);
      if(now-s.lastSound>550){audio.tone(410+next*2,.07,.012,'sine');s.lastSound=now;}

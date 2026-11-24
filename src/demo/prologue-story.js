@@ -81,36 +81,37 @@ export function resetPrologue(){
 // These are intentionally concise so the player can reach/test scenes quickly.
 export const PROLOGUE_DIALOGUES={
  couple:[
-  {speaker:'Vale',text:'Hola, Kitty. Luis y yo vimos a Louis cerca de los cerezos.'},
-  {speaker:'Luis',text:'Se oyeron ruidos en el jardín. Iremos por el sendero. ¡Ten cuidado!'}
+  {speaker:'Vale',text:'¡Kitty! Oímos un grito detrás de los cerezos. Hay alguien pidiendo auxilio.'},
+  {speaker:'Luis',text:'Vamos a buscar ayuda al pueblo. Tú puedes seguir el camino iluminado, pero ve con cuidado.'}
  ],
  victory:[
-  {speaker:'Louis',text:'Gracias por ayudarme. Creo que alguien nos sigue.'}
+  {speaker:'Louis',text:'¡Gracias! Soy Louis. Venía de ensayar para mi último concierto y me perdí por este sendero.'},
+  {speaker:'Kitty',text:'Soy Kitty. No te conocía, pero vi que esas sombras te rodeaban. Te acompaño hasta un lugar seguro.'}
  ],
  luis:[
   {speaker:'Luis',text:'Voy a revisar el camino. Cuídate, Kitty.'},
   {speaker:'Kitty',text:'Cuídate. Louis y yo seguimos hacia el claro.'}
  ],
  warning:[
-  {speaker:'Louis',text:'Kitty… ¿escuchas ese motor?'}
+  {speaker:'Louis',text:'Kitty, ¿ves esa furgoneta? Lleva siguiéndonos desde el camino del concierto…'}
  ],
  abducted:[
-  {speaker:'Kitty',text:'¡Se llevaron a Louis en esa furgoneta! Tenía una media luna y decía LUNA-07.'}
+  {speaker:'Kitty',text:'¡No! Dos personas con máscaras lo subieron a la fuerza. Vi una media luna y la matrícula LUNA-07.'}
  ],
  ribbon:[
-  {speaker:'Kitty',text:'La pulsera de Louis… Debió caer cuando lo subieron a la furgoneta.'}
+  {speaker:'Kitty',text:'Una pulsera como la que llevaba Louis. Se le cayó cuando trató de soltarse.'}
  ],
  petals:[
-  {speaker:'Kitty',text:'Los pétalos siguen por este sendero. Quizás dejaron un rastro.'}
+  {speaker:'Kitty',text:'Entre los pétalos hay marcas recientes. Es el camino que siguió la furgoneta.'}
  ],
  wheel:[
-  {speaker:'Kitty',text:'Estas ruedas son de la furgoneta. La carretera lleva a las casas.'}
+  {speaker:'Kitty',text:'Huellas de ruedas en el barro… conducen a las casas. Tengo que buscar la matrícula.'}
  ],
  locked:[
-  {speaker:'Kitty',text:'La puerta está cerrada. ¿Habrá otra forma de entrar?'}
+  {speaker:'Kitty',text:'Es la misma furgoneta, LUNA-07. La puerta frontal está cerrada; tal vez haya una ventana abierta.'}
  ],
  window:[
-  {speaker:'Kitty',text:'Una ventana abierta… entraré por aquí. Louis, voy a encontrarte.'}
+  {speaker:'Kitty',text:'La ventana del frente está entreabierta. Entraré sin hacer ruido. Louis, voy por ti.'}
  ]
 };
 export const PROLOGUE_OBJECTIVES={
@@ -118,15 +119,15 @@ export const PROLOGUE_OBJECTIVES={
  'feed-cat':'Lleva el Churu en la mano y alimenta a Emy al cruzar el puente',
  'cat-fed':'Continúa por el sendero hacia el jardín',
  'meet-couple':'Saluda a Luis y Vale entre los cerezos',
- defend:'Protege a Louis: derrota a las sombras con corazones',
- 'talk-louis':'Habla con Louis entre los cerezos',
+ defend:'Sigue el grito por los cerezos y ayuda al desconocido',
+ 'talk-louis':'Conoce al chico al que acabas de rescatar',
  'talk-luis':'Sigue el camino hasta Luis, tu novio',
- 'walk-together':'Acompaña a Louis hasta el claro del bosque',
+ 'walk-together':'Acompaña a Louis hacia la salida del jardín',
  disappearance:'¡Una furgoneta acaba de llevarse a Louis!',
  ribbon:'Busca la pulsera de Louis',
  petals:'Sigue los pétalos brillantes',
  wheel:'Sigue las huellas de ruedas hasta la furgoneta',
- door:'Comprueba la puerta principal',
- window:'Encuentra la ventana abierta',
+ door:'Busca la furgoneta LUNA-07 y comprueba la entrada frontal',
+ window:'Entra por la ventana abierta del FRENTE de la casa',
  house:'Explora la casa en 3D'
 };

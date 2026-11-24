@@ -29,7 +29,7 @@ export function captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTr
  const phase=events.phase==='hide'&&s.hidden?'patrol':events.phase;
  const pursuit=['patrol','hunt','evaded','rc-setup'].includes(phase)?{phase,actor:pursuer?.active?pursuer.checkpoint():null}:null;
  return {
-  version:VERSION,stage,ventOpen:world.studyVent.unlatched,lives:checkpointLives(s.lives),intruderSeen:!!pursuer?.intruderSeen,powered:world.lights.power.on,drawer:puzzle.drawer,
+  version:VERSION,stage,ventOpen:world.studyVent.unlatched,lives:checkpointLives(s.lives),emyRescueUsed:!!s.emyRescueUsed,intruderSeen:!!pursuer?.intruderSeen,powered:world.lights.power.on,drawer:puzzle.drawer,
   picked:world.objects.filter(object=>PICKUPS.has(object.kind)&&object.taken).map(object=>object.id),
   rugAside:world.hatchRug.aside,hatchUnlocked:!world.hatch.locked,hatchOpen:world.hatch.open,
   mirrorRevealed:mirrorSafe.revealed,safeOpened:mirrorSafe.opened,pianoSolved:world.piano.solved,
@@ -43,6 +43,7 @@ export function captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTr
 export function restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,rc,rcTrap,pursuer}){
  if(![1,VERSION].includes(saved?.version)||!STAGES.includes(saved.stage)||!Array.isArray(saved.picked))return null;
  s.lives=checkpointLives(saved.lives);
+ s.emyRescueUsed=saved.emyRescueUsed===true;
  const stage=saved.stage;
  const bedroomUnlocked=stage!=='explore';
  const resting=stage==='rest';
