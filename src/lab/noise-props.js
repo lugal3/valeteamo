@@ -28,16 +28,20 @@ export function grabNoiseProp(prop){
 }
 export function holdNoiseProp(prop,camera){
  if(!prop?.held)return;
- prop.x=camera.x+Math.sin(camera.yaw)*.52+Math.cos(camera.yaw)*.16;
- prop.y=camera.y-.32;
- prop.z=camera.z+Math.cos(camera.yaw)*.52-Math.sin(camera.yaw)*.16;
+ const yaw=camera.yaw||0,pitch=camera.pitch||0,cp=Math.cos(pitch);
+ const forward={x:Math.sin(yaw)*cp,y:Math.sin(pitch),z:Math.cos(yaw)*cp};
+ // The prop follows the gaze but stays offset to Kitty's right hand.
+ prop.x=camera.x+forward.x*.72+Math.cos(yaw)*.20;
+ prop.y=camera.y+forward.y*.72-.22;
+ prop.z=camera.z+forward.z*.72-Math.sin(yaw)*.20;
  Object.assign(prop.box,{x:prop.x,y:prop.y,z:prop.z,roll:.22,pitch:.05});
 }
 export function releaseNoiseProp(prop,camera,throwing=true){
  if(!prop?.held)return false;
  prop.held=false;
- const speed=throwing?7:1.2;
- prop.flight={vx:Math.sin(camera.yaw)*speed,vy:throwing?2.4:0,vz:Math.cos(camera.yaw)*speed,ttl:2.2};
+ const speed=throwing?7:0,pitch=camera.pitch||0,cp=Math.cos(pitch);
+ prop.flight={vx:Math.sin(camera.yaw)*cp*speed,vy:throwing?Math.sin(pitch)*speed+1.5:0,
+  vz:Math.cos(camera.yaw)*cp*speed,ttl:2.2};
  return true;
 }
 export function stepNoiseProps(props,dt,world,pursuer,emy){
