@@ -913,7 +913,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(act==='rc:noise'){
    if(beepRC(rc)){
     if(events.phase==='rc-setup'&&!pursuer.active)pursuer.start();
-    play('rc-horn',rc,1.25);
+    // The player hears the horn via the RC tablet even when Kitty is far away;
+    // the pursuer still follows the actual RC coordinates from beepRC().
+    play('rc-horn',null,1.10);
     say('¡Bocina RC! El secuestrador puede oírla y venir a investigar.',3);
    }return;
   }
