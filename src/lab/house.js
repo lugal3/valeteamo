@@ -118,6 +118,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  <div class="house-noise-controls" id="house-noise-controls" hidden role="group" aria-label="Objeto en la mano">
   <strong id="house-noise-held" aria-live="off"></strong>
   <button data-act="noise:throw" aria-keyshortcuts="G">Lanzar <kbd>G</kbd></button>
+   <button data-act="noise:lob">Lanzar suave</button>
   <button data-act="noise:drop" aria-keyshortcuts="V">Soltar <kbd>V</kbd></button>
  </div>
  <div id="house-mouse-status" class="house-mouse-status" hidden>Esc o R · Liberar ratón</div>
@@ -887,9 +888,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   if(act.startsWith('noise:')){
    if(!heldNoise||isPaused())return;
-   const prop=heldNoise,throwing=act==='noise:throw';
-   if(act!=='noise:throw'&&act!=='noise:drop')return;
-   releaseNoiseProp(prop,cameraOf(s),throwing);heldNoise=null;
+   const prop=heldNoise,throwing=act==='noise:throw'||act==='noise:lob';
+   if(act!=='noise:throw'&&act!=='noise:lob'&&act!=='noise:drop')return;
+   releaseNoiseProp(prop,cameraOf(s),throwing,act==='noise:lob'?.55:1);heldNoise=null;
    play('cloth',prop,.5);say(throwing?'¡Objeto lanzado!':'Objeto soltado',2);return;
   }
   if((events.phase==='safe'||events.phase==='failed')&&!['retry-arrival','exit','reset','finish'].includes(act))return;
