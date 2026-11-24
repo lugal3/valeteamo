@@ -4,6 +4,9 @@ import {inHatch} from './basement.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export const RC_SPEED=3.4;
+// Wider view ONLY while the RC tablet is in driving mode (the house stays unchanged).
+export const RC_PROJECTION=1.02;
+export const RC_CAMERA_DISTANCE=2.05;
 export const RC_DEPLOY_SECONDS=1;
 export const RC_NOISE_SECONDS=8;
 export const RC_RECOVERY_SPOTS=Object.freeze([
@@ -69,10 +72,10 @@ export function recoverRC(rc){
 export function rcCamera(rc,world){
  const forward={x:Math.sin(rc.yaw),z:Math.cos(rc.yaw)};
  const target={x:rc.x,y:rc.y+.18,z:rc.z};
- const ideal={x:rc.x-forward.x*1.55,y:rc.y+.91,z:rc.z-forward.z*1.55};
+ const ideal={x:rc.x-forward.x*RC_CAMERA_DISTANCE,y:rc.y+1.05,z:rc.z-forward.z*RC_CAMERA_DISTANCE};
  // Avoid placing the chase camera behind a solid wall when going down stairs.
  const occluded=lineBlocked(world.boxes,ideal,target);
- const camera=occluded?{x:rc.x-forward.x*.52,y:rc.y+.53,z:rc.z-forward.z*.52}:ideal;
+ const camera=occluded?{x:rc.x-forward.x*.62,y:rc.y+.62,z:rc.z-forward.z*.62}:ideal;
  const distance=Math.hypot(target.x-camera.x,target.z-camera.z);
  return {...camera,yaw:rc.yaw,pitch:Math.atan2(target.y-camera.y,distance)};
 }
