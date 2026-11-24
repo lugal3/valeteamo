@@ -272,7 +272,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function finishWindowIntro(){
   poseFurniture(world.entryWindow,1);sound.setTension(.55);
   cinematic=null;root.classList.remove('lab-intro-active');$('lab-window-intro').classList.add('lab-hidden');
-  Object.assign(s,WINDOW_LANDING);s.eye=WINDOW_LANDING.eye;s.bob=0;
+  Object.assign(s,WINDOW_LANDING);s.cameraGround=s.y;s.eye=WINDOW_LANDING.eye;s.bob=0;
   resetInput();
   if(ready&&!isPaused())sound.resume();
   saveCheckpoint();
@@ -381,6 +381,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    const starts={2:[5.74,HEIGHT,2.4,-Math.PI/2],4:[2.78,HEIGHT,1.76,1.85],5:[2.78,HEIGHT,1.76,1.85],6:[6.9,HEIGHT,10.4,-Math.PI/2],7:[6.9,HEIGHT,10.4,-Math.PI/2],9:[7.86,-3.55,12.26,.65],11:[5.9,0,10.9,0],12:[5.9,0,11.4,0]};
    if(starts[seed]){const [x,y,z,yaw]=starts[seed];if(!blocked(world.boxes,x,y,z,.2,1.69))Object.assign(s,{x,y,z,yaw,pitch:0});}
   }
+  // Restored checkpoints and isolated trial teleports must never smooth the
+  // camera up from the old floor through a ceiling.
+  s.cameraGround=s.y;
   if(emyCompanion){
    if(restored){
     const legacyExplored=!saved?.emy&&(saved.stage!=='explore'||saved.drawer||saved.picked?.length);
@@ -1156,6 +1159,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const sprint=wantsSprint&&length>.08&&!steepSteps&&!s.crouched&&!s.exhausted&&s.stamina>0;
   const targetSpeed=s.crouched?KITTY_SPEED.crouch:steepSteps?KITTY_SPEED.stairs:sprint?KITTY_SPEED.run:KITTY_SPEED.walk;
   velocity.speed=advanceMoveSpeed(velocity.speed,targetSpeed,dt);
+  // Entering stairs or a crawlspace is safety-critical: clamp immediately.
+  // Leaving them can accelerate smoothly without a dangerous speed burst.
+  if(steepSteps||s.crouched)velocity.speed=Math.min(velocity.speed,targetSpeed);
   const dx=(Math.sin(s.yaw)*intent.forward+Math.cos(s.yaw)*intent.side)*velocity.speed*dt;
   const dz=(Math.cos(s.yaw)*intent.forward-Math.sin(s.yaw)*intent.side)*velocity.speed*dt;
   const body=s.crouched?1.04:1.64;
@@ -2011,7 +2017,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    intro:()=>cinematic?{elapsed:cinematic.elapsed,...windowIntroState(cinematic.elapsed/WINDOW_SHOT_SECONDS),camera:windowIntroCamera(cinematic.elapsed/WINDOW_SHOT_SECONDS)}:null,
    atmosphere:()=>({room:sound.atmosphere?.room,outdoor:sound.atmosphere?.outdoor,events:sound.atmosphere?.events,voices:sound.atmosphere?.voices.size,loops:sound.atmosphere?.loops.length,lastEvent:sound.atmosphere?.lastEvent,muted:sound.settings.muted,volume:sound.settings.ambient}),
    snapshot:()=>({puzzle:{...puzzle},position:{x:s?.x,y:s?.y,z:s?.z},camera:{yaw:s?.yaw,pitch:s?.pitch,targetYaw:lookTarget.yaw,invertX:options.invertX},cinematic:!!cinematic,quality:options.quality,fps,target:focus?.id??null,paused:isPaused(),controls:{look:lookPointer,stick:stickPointer,joystick:{...joystick}},reduceBob:s.reduceBob,flashlight:s.flashlight,notes:s.inventory.notes.length,drawer:(()=>{const o=world.objects.find(o=>o.id==='drawer');return {state:o.state,amount:o.amount,z:o.box.z,key:world.objects.find(o=>o.id==='key').z,contentsAvailable:world.objects.find(o=>o.id==='key').interactable,contentsConcealed:world.objects.find(o=>o.id==='key').concealed}})(),doors:world.objects.filter(o=>o.kind==='door').map(o=>({id:o.id,open:o.open,state:o.state,amount:o.amount,x:o.box.x,z:o.box.z,yaw:o.box.yaw,solid:o.box.solid})),handVisible:renderer.lastShowHand,hidden:!!s.hidden,hideType:s.hidden?.hideType,poseTransition:poseTransition?{entering:poseTransition.entering,elapsed:poseTransition.elapsed}:null,view:cameraOf(s),wardrobeAmount:world.objects.find(o=>o.id==='wardrobe').amount,music:{scheduled:sound.musicStep,voices:sound.musicNodes.size,timer:sound.musicTimer!==null,volume:sound.settings.music},sound:sound.context?.state,mirror:{supported:renderer.mirrorSupported,drawn:renderer.mirrorDrawn,vertices:renderer.kittyVertices?.length/16,uploads:renderer.mirrorUploads},animation:{...animator.snapshot(),rigEvaluations:renderer.characterBinding?.evaluations},geometry:{vertices:renderer.vertexCount,triangles:renderer.triangleCount}}),
-   setPose:(pose)=>{if(blocked(world.boxes,pose.x,pose.y,pose.z,.2,1.7))throw Error('Blocked test pose');Object.assign(s,pose);resetInput();focus=null;},
+   setPose:(pose)=>{if(blocked(world.boxes,pose.x,pose.y,pose.z,.2,1.7))throw Error('Blocked test pose');Object.assign(s,pose);s.cameraGround=s.y;resetInput();focus=null;},
    interactWith:async(id,activate=true)=>{
     const o=world.objects.find(o=>o.id===id&&!o.taken);if(!o)throw Error('Not available: '+id);
     const crouched=activate?!!o.requiresCrouch:s.crouched;
