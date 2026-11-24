@@ -857,6 +857,7 @@ export class HouseRenderer {
  }
  render(camera,flash,time,showHand=false,motion={}){
   this.lastShowHand=showHand;
+  this.lastScanOutline=!!motion.scanOutline&&!!motion.pursuer?.active;
   const beamPower=typeof flash==='number'?flash:Number(Boolean(flash));
   this.resize(!!motion.grasp);const gl=this.gl,quality=this.quality==='low'?'low':'medium';
   if(this.materialQuality!==quality){
