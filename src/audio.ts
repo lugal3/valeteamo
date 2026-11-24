@@ -100,6 +100,31 @@ export class Sound {
  resume(){try{if(this.ctx?.state==='suspended')void this.ctx.resume().catch(()=>{});}catch{}}
  suspend(){this.stopSamples();try{if(this.ctx?.state==='running')void this.ctx.suspend().catch(()=>{});}catch{}}
  tone(f=440,d=.1,v=.05,type:OscillatorType='sine'){try{if(!this.ctx||this.muted||this.ctx.state!=='running')return;const o=this.ctx.createOscillator(),g=this.ctx.createGain(),start=this.ctx.currentTime;o.type=type;o.frequency.value=f;g.gain.setValueAtTime(.001,start);g.gain.linearRampToValueAtTime(v,start+Math.min(.012,d/4));g.gain.exponentialRampToValueAtTime(.001,start+d);o.connect(g);g.connect(this.ctx.destination);o.start();o.stop(start+d);}catch{}}
+ // Short, original voice-like distress call. This plays ONLY after Kitty
+ // walks toward the orchard, before Louis/attackers become visible.
+ // Two swept voiced formants, no asset download, 0.7s lifetime.
+ storyHelpCry(){
+  const ctx=this.ctx;
+  if(!ctx||this.muted||ctx.state!=='running')return false;
+  const at=ctx.currentTime;
+  for(const [base,peak,formant,volume] of [
+   [235,390,850,.13],[467,615,1490,.060]
+  ]){
+   const osc=ctx.createOscillator(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();
+   osc.type='sawtooth';osc.frequency.setValueAtTime(base,at);
+   osc.frequency.exponentialRampToValueAtTime(peak,at+.20);
+   osc.frequency.exponentialRampToValueAtTime(base*.92,at+.61);
+   filter.type='bandpass';filter.frequency.value=formant;filter.Q.value=.65;
+   gain.gain.setValueAtTime(.0001,at);
+   gain.gain.exponentialRampToValueAtTime(volume,at+.075);
+   gain.gain.setTargetAtTime(volume*.72,at+.20,.08);
+   gain.gain.exponentialRampToValueAtTime(.0001,at+.70);
+   osc.connect(filter);filter.connect(gain);gain.connect(ctx.destination);
+   osc.onended=()=>{osc.disconnect();filter.disconnect();gain.disconnect();};
+   osc.start(at);osc.stop(at+.72);
+  }
+  return true;
+ }
  // Organic, quiet location-specific ambience. Original oscillators only; no
  // sound files, external fetches, timers or audio-playback in render frames.
  // Calls come ONLY from the rescue world, never the classic Corazones mode.
