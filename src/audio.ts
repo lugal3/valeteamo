@@ -24,7 +24,7 @@ export class Sound {
  private readonly voices=new Set<AudioBufferSourceNode>();
  private loading?:AbortController;
  constructor(private readonly sampleUrls:Readonly<Record<string,string>>={},
-  private readonly spriteUrl?:string){}
+  private readonly spriteUrl?:string,private readonly spriteFallbackUrl?:string){}
  get muted(){return this.silent;}
  set muted(value:boolean){this.silent=value;if(value)this.stopSamples();}
  private loadSamples(context:AudioContext){
@@ -40,10 +40,18 @@ export class Sound {
     .catch(()=>{}); // The scene can still use its synthesized effect.
   }
   if(this.spriteUrl){
-   void fetch(this.spriteUrl,{signal:loading.signal})
-    .then(response=>{if(!response.ok)throw Error('User audio sprite unavailable');return response.arrayBuffer();})
-    .then(bytes=>context.decodeAudioData(bytes))
-    .then(sprite=>{
+   void (async()=>{
+    let sprite:AudioBuffer|undefined;
+    for(const url of [this.spriteUrl,this.spriteFallbackUrl].filter((value):value is string=>!!value)){
+     if(loading.signal.aborted)break;
+     try{
+      const response=await fetch(url,{signal:loading.signal});
+      if(!response.ok)throw Error('Audio sprite fetch failed: '+response.status);
+      sprite=await context.decodeAudioData(await response.arrayBuffer());
+      break;
+     }catch{} // Retry as MP3 when the current Safari/WebKit cannot decode Opus.
+    }
+    if(!sprite)return;
      if(loading.signal.aborted)return;
      this.userSpriteReady=true;
      for(const [kind,clip] of Object.entries(RESCUE_AUDIO_SPRITE)){
@@ -54,8 +62,7 @@ export class Sound {
        sample.getChannelData(channel).set(sprite.getChannelData(channel).subarray(offset,offset+frames));
       this.samples.set(kind,sample);
      }
-    })
-    .catch(()=>{}); // Previously installed preview recordings remain as fallback.
+    })().catch(()=>{}); // Previously installed preview recordings remain as fallback.
   }
  }
  playSample(kind:string,volume:number):boolean{
