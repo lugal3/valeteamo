@@ -321,3 +321,31 @@
 #lab3d.house-emy-action :is(.lab-cross,.lab-focus) {visibility:hidden}
 
 #lab3d:not(.house-keyboard) .house-hotbar button small {display:none;}
+
+/* Guided interest cues use screen projection of the REAL interactive entities
+   rather than invented waypoints. Subtle 3D-style contour and star pulse. */
+#lab3d .house-interest{
+ position:absolute;z-index:8;transform:translate(-50%,-50%) scale(var(--interest-scale,1));
+ pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:1px;
+ width:64px;height:64px;justify-content:center;
+ border:2px solid #a6ffdc;border-radius:50%;
+ color:#e8fff4;text-shadow:0 0 9px #2bffbd,0 0 3px #0f3d34;
+ box-shadow:inset 0 0 19px #30ffb75a,0 0 6px #a0ffdf,0 0 23px #55eac380;
+ background:radial-gradient(circle,#4bffc021 0%,#4bffc00b 50%,transparent 72%);
+ animation:house-interest-ring 1.55s ease-in-out infinite alternate;
+}
+#lab3d .house-interest[hidden]{display:none!important}
+#lab3d .house-interest i{font:normal 800 25px Georgia,serif}
+#lab3d .house-interest span{
+ position:absolute;top:calc(100% + 5px);white-space:nowrap;
+ font:800 10px/1.2 system-ui;letter-spacing:.035em;
+ padding:3px 7px;border-radius:6px;background:#1c3a35e8;
+}
+@keyframes house-interest-ring{
+ from{opacity:.65;filter:brightness(.95)}
+ to{opacity:1;filter:brightness(1.7)}
+}
+#lab3d.house-arrival .house-interest,#lab3d.house-cutaway .house-interest{display:none}
+@media(prefers-reduced-motion:reduce){
+ #lab3d .house-interest{animation:none;opacity:1}
+}
