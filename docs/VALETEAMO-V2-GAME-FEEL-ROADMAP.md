@@ -18,7 +18,7 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 | 02 | **Kitty movement, physics, camera** | **DONE — QA passed** | Grounded acceleration/deceleration, turn/crouch transitions, robust stairs, camera collisions/comfort and mobile input |
 | 03 | **Pursuer perception + fair stealth AI** | **DONE — QA passed** | Separate sight/hearing/suspicion/chase/search states, last-seen positions, visible-door logic and unbiased hide searching |
 | 04 | **Emy's autonomous personality** | IMPLEMENTED — QA pending | Sit, groom, stretch, orient ears to noise, cautious follow, “Quédate aquí”, safe hold, consistent cross-floor routing |
-| 05 | **House environmental life** | NOT STARTED | Identity of every room, small ambient props, lighting, wind/dust, performant atmosphere without clutter |
+| 05 | **House environmental life** | IMPLEMENTED — QA pending | Identity of every room, small ambient props, lighting, wind/dust, performant atmosphere without clutter |
 | 06 | **Throwable objects + sound/material physics** | NOT STARTED | Glass/ceramic/metal/wood/carpet responses, controlled throw strengths, predictable collisions, noise investigation |
 | 07 | **RC controls, camera, and strategy** | NOT STARTED | Smoother drive and camera; suspension/bumps, legible tablet HUD, horn, combined RC/Emy tactics |
 | 08 | **2D flow, storytelling and 2D→3D transition** | NOT STARTED | Kawaii day→night pacing, credible meeting/kidnap, no pop-ins, coherent front window, seamless house handoff |
@@ -135,3 +135,10 @@ Each numbered phase is a **complete vertical slice** (implementation + animation
 - The player interacts with Emy in `following` and `stay` states. Distraction/fetch/rescue are not interrupted; object dodge still has priority.
 - New `tests/emy-autonomy.cjs` is included in `npm test`, covering commands, floor separation, hiding, poses, save restore, normal stair follow and distraction conflicts.
 - **Validation not yet claimed:** CI / browser regression must pass before marking this phase DONE; keep branch and PR unmerged.
+
+## Phase 05 implementation (QA pending)
+
+- Installed `src/lab/house-ambient-details.js` with **13 visual-only objects** (four curtain panels, three dust flecks, six room-specific still-life details). No colliders, triggers, or new art textures; no change to story, legacy 2D or room topology.
+- `renderer.js` animates seven small details in the **existing WebGL1 dynamic geometry batch**, with deterministic math, reduced-motion support and no shadow casting; no separate particle system.
+- Added `tests/house-ambience.cjs` to `npm test`: checks identifiers, floors, visual-only flags, limited dynamic budget and shared batching.
+- **QA pending**: verify `npm test`, `test:perf`, `build`, mobile/desktop Chromium and WebKit. Do not mark completed or merge until CI is green.
