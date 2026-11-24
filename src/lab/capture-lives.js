@@ -23,7 +23,7 @@ export function lifeSlots(lives){
  return Array.from({length:STARTING_LIVES+1},(_,index)=>{
   const isZero=index===STARTING_LIVES;
   const state=isZero?(lives===0?'lost':'empty'):
-   index<lives?'full':index===lives?'lost':'empty';
+   index<lives?'full':index===lives&&lives>0?'lost':'empty';
   return '<span class="kitty-life '+state+(isZero?' zero-slot':'')+
    '" aria-hidden="true"></span>';
  }).join('');
