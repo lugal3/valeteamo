@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
  const {Pursuer}=await import('../src/lab/pursuer.js');
  const {createEmyAbilities,activateEmyScan,advanceEmyAbilities,roomChoices,roomDestination,emyFloorMap}=await import('../src/lab/emy-abilities.js');
  const {installNoiseProps,grabNoiseProp,holdNoiseProp,releaseNoiseProp,stepNoiseProps}=await import('../src/lab/noise-props.js');
- const {createEmyCompanion,sendEmyDistract,snapshotEmyCompanion}=await import('../src/lab/emy-companion.js');
+ const {createEmyCompanion,sendEmyDistract,snapshotEmyCompanion,updateEmyCompanion}=await import('../src/lab/emy-companion.js');
  const abilities=createEmyAbilities();
  assert(activateEmyScan(abilities));assert.equal(abilities.scan,6);assert(!activateEmyScan(abilities));
  advanceEmyAbilities(abilities,1/60);assert(abilities.scan<6&&abilities.wave<1.1);
@@ -65,7 +65,7 @@ const assert=require('node:assert/strict');
  assert(sendEmyDistract(closeCat,closeWorld,closeGoal));
  let rings=0,finished=false;
  for(let i=0;i<1650;i++){
-  const cue=(await import('../src/lab/emy-companion.js')).updateEmyCompanion(closeCat,1/60,{world:closeWorld,player:{x:5.1,y:0,z:10.65}});
+  const cue=updateEmyCompanion(closeCat,1/60,{world:closeWorld,player:{x:5.1,y:0,z:10.65}});
   if(cue==='distract-noise')rings++;
   if(cue==='distract-done'){finished=true;break;}
  }
