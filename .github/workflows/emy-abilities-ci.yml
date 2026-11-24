@@ -12,6 +12,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: emy-abilities-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -43,13 +46,15 @@ jobs:
           EMY_QA_DIR: artifacts/emy-abilities/chromium-desktop
           EMY_QA_VIEWPORT: desktop
         run: node tests/emy-abilities-browser.cjs
-      - name: Regresión del secuestrador y escondites
-        run: node tests/house-threat-browser.cjs
       - name: Emy en WebKit móvil (simulación Safari)
         env:
           EMY_QA_DIR: artifacts/emy-abilities/webkit-mobile
           EMY_QA_ENGINE: webkit
         run: node tests/emy-abilities-browser.cjs
+      - name: Regresión del secuestrador y escondites (modo fluido)
+        env:
+          EMY_THREAT_QA_LOW: '1'
+        run: node tests/house-threat-browser.cjs
       - name: Evidencias
         if: always()
         uses: actions/upload-artifact@v4
