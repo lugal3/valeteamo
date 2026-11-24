@@ -14,8 +14,21 @@ const CHASE_SECONDS=5.5,COOLDOWN_SECONDS=5;
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 export class Pursuer{
  constructor(world){this.world=world;this.reset();}
- reset(){this.breakerDelay=15;this.breakerGoal=null;this.intruderSeen=false;this.x=5.8;this.y=0;this.z=11;this.yaw=this.facing=Math.PI;this.mode='dormant';this.awareness=0;this.lost=10;this.witnessed=null;this.lastSeen=null;this.path=[];this.route=0;this.visited=0;this.replan=0;this.walk=this.speed=this.age=this.bedTime=0;this.stepDistance=0;this.caught=false;this.stuck=0;this.task=null;this.modeTime=0;this.quiet=false;}
+ reset(){this.breakerDelay=15;this.breakerGoal=null;this.intruderSeen=false;this.x=5.8;this.y=0;this.z=11;this.yaw=this.facing=Math.PI;this.mode='dormant';this.awareness=0;this.lost=10;this.witnessed=null;this.lastSeen=null;this.path=[];this.route=0;this.visited=0;this.replan=0;this.walk=this.speed=this.age=this.bedTime=0;this.stepDistance=0;this.caught=false;this.stuck=0;this.task=null;this.modeTime=0;this.quiet=false;this.noiseGoal=null;this.noiseRemaining=0;this.stunned=0;}
  get active(){return this.mode!=='dormant';}
+ hearNoise(position,intensity=1){
+  if(!this.active||['sleeping','lying-down','rising','trapped','stunned','rc-chase','chase'].includes(this.mode))return false;
+  if(!position||![position.x,position.y,position.z].every(Number.isFinite))return false;
+  this.noiseGoal={x:position.x,y:position.y,z:position.z};
+  this.noiseRemaining=Math.max(this.noiseRemaining,Math.min(9,3+intensity*2.5));
+  this.mode='noise-investigate';this.task=null;this.replan=0;this.path=[];
+  return true;
+ }
+ stun(seconds=2){
+  if(!this.active||this.mode==='trapped')return false;
+  this.stunned=Math.max(.5,Math.min(3,seconds));this.mode='stunned';this.path=[];this.speed=0;this.noiseGoal=null;this.noiseRemaining=0;
+  return true;
+ }
  start(){this.reset();this.mode='search';this.plan(SEARCH_ROUTE[0]);}
  goToBed(){this.mode='to-bed';this.task=BED_EXIT;this.plan(this.task);}
  sleep(){this.mode='sleeping';this.speed=0;this.task=null;Object.assign(this,BED_EXIT,{facing:BED_EXIT.yaw});}
@@ -92,6 +105,8 @@ export class Pursuer{
  update(dt,p,onDoor=()=>{},decoy=null){
   const cues=[];if(!this.active||dt<=0)return cues;
   if(this.mode==='trapped'){this.age+=dt;this.speed=0;return cues;}
+  if(this.mode==='stunned'){this.stunned=Math.max(0,this.stunned-dt);this.age+=dt;this.speed=0;if(!this.stunned)this.cooldown();return cues;}
+  if(this.mode==='noise-investigate'){this.noiseRemaining=Math.max(0,this.noiseRemaining-dt);if(!this.noiseRemaining){this.noiseGoal=null;this.cooldown();}}
   if(this.mode==='sleeping'){this.age+=dt;return cues;}
   if(this.mode==='lying-down'||this.mode==='rising'){
    this.bedTime=Math.min(RISE_SECONDS,this.bedTime+dt);this.age+=dt;
@@ -108,7 +123,7 @@ export class Pursuer{
    this.lastSeen={x:decoy.x,y:decoy.y,z:decoy.z};this.task=null;this.witnessed=null;
    this.modeTime=6;
   }else if(this.mode==='rc-chase'&&this.modeTime===0)this.cooldown();
-  const inPatrol=['search','patrol-rest','cooldown','investigate','chase'].includes(this.mode);
+  const inPatrol=['search','patrol-rest','cooldown','investigate','chase','noise-investigate'].includes(this.mode);
   const inSight=inPatrol&&!this.task&&this.canSee(p);
   if(inSight){
    this.intruderSeen=true;this.breakerGoal=null;
@@ -127,7 +142,7 @@ export class Pursuer{
   if(visible){this.lastSeen={x:p.x,y:p.y,z:p.z};if(p.entering)this.witnessed=p.hideId;}
   const witnessed=!!this.witnessed&&(p.hidden||p.entering)&&this.witnessed===p.hideId;
   if(!p.hidden&&!p.entering)this.witnessed=null;
-  if(this.mode==='search'&&(this.awareness>=.26||witnessed)){
+  if(['search','noise-investigate'].includes(this.mode)&&(this.awareness>=.26||witnessed)){
    this.mode='investigate';this.modeTime=3;this.replan=0;cues.push('investigate');
   }
   if((this.awareness>=1||witnessed)&&this.mode==='investigate'){
@@ -154,9 +169,9 @@ export class Pursuer{
    }
   }
   this.replan-=dt;
-  const target=this.task||this.breakerGoal||(this.mode==='rc-chase'||this.mode==='investigate'||this.mode==='chase'?witnessed?(p.hideExit||this.lastSeen):this.lastSeen:SEARCH_ROUTE[this.route]);
+  const target=this.task||this.breakerGoal||(this.mode==='noise-investigate'?this.noiseGoal:null)||(this.mode==='rc-chase'||this.mode==='investigate'||this.mode==='chase'?witnessed?(p.hideExit||this.lastSeen):this.lastSeen:SEARCH_ROUTE[this.route]);
   if(!target)return cues;
-  if(this.replan<=0&&(this.mode==='chase'||this.mode==='rc-chase'||!this.path.length||this.stuck>.5||!this.goal||dist(target,this.goal)>.5))this.plan(target);
+  if(this.replan<=0&&(this.mode==='chase'||this.mode==='rc-chase'||this.mode==='noise-investigate'||!this.path.length||this.stuck>.5||!this.goal||dist(target,this.goal)>.5))this.plan(target);
   for(const door of this.world.objects)if(door.kind==='door'&&door.state!=='open'&&Math.abs(door.y-1.1-this.y)<1.2&&Math.hypot(door.x-this.x,door.z-this.z)<1.6)onDoor(door);
   let moved=0;
   const next=this.path[0];if(next){const dx=next.x-this.x,dz=next.z-this.z,d=Math.hypot(dx,dz);if(d<.07){this.path.shift();}else{
