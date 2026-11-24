@@ -204,7 +204,7 @@ async function run(){
 
   const beforeTrial=await read(RESCUE_KEY);
   await openMenu();
-  await page.getByRole('button',{name:'Casa 3D',exact:true}).click();
+  await page.getByRole('button',{name:/^Casa 3D(?:\\s|·|$)/}).click();
   await page.locator('[data-act=start]').click();
   await waitForHouse();
   await use('note-hall');
