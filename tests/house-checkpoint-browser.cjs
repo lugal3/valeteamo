@@ -98,9 +98,10 @@ async function run(){
   // Torch is on top of the landing cabinet; this drawer contains no quest item.
   // The rescue must not require opening an irrelevant drawer first.
   await use('media-flashlight',false);
-  await shot('00-linterna-dentro-del-cajon');
+  await shot('00-linterna-sobre-mueble');
   await use('media-flashlight');
-  assert.deepEqual(new Set((await checkpoint()).picked),new Set(['key','media-flashlight']));
+  assert.deepEqual(new Set((await checkpoint()).picked),new Set(['key','media-flashlight','screwdriver']),
+   'The vent screwdriver collected earlier must survive checkpoint saves too');
   await page.emulateMedia({reducedMotion:'no-preference'});
   await reloadHouse();
   assert.equal((await snapshot()).cinematic,false);
