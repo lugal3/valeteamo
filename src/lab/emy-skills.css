@@ -59,10 +59,16 @@
  background:#a35285;border-color:#fff;outline:2px solid #ffe9f6;outline-offset:-2px;
 }
 #lab3d .house-noise-controls{
- position:absolute;z-index:32;bottom:max(90px,env(safe-area-inset-bottom) + 77px);right:max(11px,env(safe-area-inset-right));
- display:flex;flex-direction:column;gap:6px;max-width:120px;
+ position:absolute;z-index:32;left:50%;transform:translateX(-50%);
+ bottom:max(74px,env(safe-area-inset-bottom) + 68px);
+ display:flex;flex-direction:row;flex-wrap:wrap;justify-content:center;gap:6px;
+ width:min(270px,60vw);touch-action:manipulation;
 }
-#lab3d .house-noise-controls button{background:#513b53;border-radius:12px;font-size:12px;min-height:40px}
+#lab3d .house-noise-controls strong{
+ flex-basis:100%;text-align:center;font:700 11px system-ui;color:#fff1eb;
+ text-shadow:0 2px 8px #000;
+}
+#lab3d .house-noise-controls button{background:#513b53;border-radius:12px;font-size:12px;min-height:40px;flex:1 1 100px}
 #lab3d .house-emy-menu button:focus-visible,
 #lab3d .house-emy-map button:focus-visible,
 #lab3d .house-noise-controls button:focus-visible{outline:3px solid #fff0ba;outline-offset:2px}
