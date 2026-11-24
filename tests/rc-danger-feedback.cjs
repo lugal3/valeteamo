@@ -48,7 +48,7 @@ const fs=require('node:fs');
  assert(sound.playDangerAlert(),'A new encounter can replay the warning');
  sound.settings.muted=true;
  sound.context.currentTime=14;
- assert(!sound.playDangerAlert(),'Respect the player's mute setting');
+ assert(!sound.playDangerAlert(),"Respect the player\'s mute setting");
  sound.settings.muted=false;
  sound.context.currentTime=16;
  sound.effect('danger-alert',{x:100,y:6,z:100},{x:0,y:0,z:0,yaw:0},true);
