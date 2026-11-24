@@ -104,6 +104,7 @@ const {chromium,webkit}=require('playwright');
   await page.locator('#house-emy-map .house-emy-destination-list [data-act="emy:room:reading"]').click();
   assert.match(await page.locator('#house-emy-map-status').innerText(),/Sala de lectura.*planta alta/i);
   assert.equal(await page.locator('#house-emy-map-send').isEnabled(),true);
+  await shot(page,'03d-emy-destino-planta-alta');
   await page.locator('#house-emy-map-send').click();
   const command=await skills();
   assert.equal(command.stage,'distract','Selecting a room and confirming commands Emy navigation');
