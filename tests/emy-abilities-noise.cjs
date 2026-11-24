@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');
 (async()=>{
- const {createHouse}=await import('../src/lab/world.js');
+ const {createHouse,setDoor}=await import('../src/lab/world.js');
  const {Pursuer}=await import('../src/lab/pursuer.js');
  const {createEmyAbilities,activateEmyScan,advanceEmyAbilities,roomChoices,roomDestination,roomDestinations,isEmyRoomLocked,emyFloorMap,emyFloorList}=await import('../src/lab/emy-abilities.js');
  const {installNoiseProps,grabNoiseProp,holdNoiseProp,releaseNoiseProp,stepNoiseProps}=await import('../src/lab/noise-props.js');
@@ -46,6 +46,28 @@ const assert=require('node:assert/strict');
  }
 
 
+ // The command's route must be physically traversable BOTH ways, not only
+ // accepted by the path planner. Open ordinary doors as the game would while
+ // walking; leave the story-locked bedroom closed.
+ const walkWorld=createHouse();
+ for(const door of walkWorld.objects.filter(o=>o.kind==='door'&&!o.locked))setDoor(door,true);
+ const walker=createEmyCompanion(walkWorld.emy,{waiting:false});
+ for(const [id,expectedFloor] of [['reading',3.15],['kitchen',0]]){
+  const zone=roomChoices(walkWorld.rooms).find(r=>r.id===id);
+  const accepted=roomDestinations(walkWorld,zone).some(point=>sendEmyDistract(walker,walkWorld,point));
+  assert(accepted,'Route should start towards '+id);
+  let arrived=false,intermediate=false;
+  for(let frame=0;frame<2400;frame++){
+   const cue=updateEmyCompanion(walker,1/30,{world:walkWorld,player:{x:5.9,y:0,z:10.65},reduced:true});
+   if(walker.cat.y>1.0&&walker.cat.y<2.6)intermediate=true;
+   if(walker.distraction?.arrived){arrived=true;break;}
+   if(cue==='distract-failed')break;
+  }
+  assert(arrived,'Emy must physically arrive in '+id+' across the stairs');
+  assert(intermediate,'Emy must traverse the sloped stairway rather than teleport');
+  assert(Math.abs(walker.cat.y-expectedFloor)<.4,'Emy must finish on the requested floor of '+id);
+  walker.stage='following';walker.distraction=null;walker.route=[];walker.trail=[];
+ }
  const props=installNoiseProps(world);
  assert.equal(props.length,6);
  assert(props.every(p=>!world.boxes.includes(p.box)), 'noise objects use a separate WebGL1 batch, never the saturated main dynamic buffer');
