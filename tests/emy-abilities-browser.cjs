@@ -85,6 +85,24 @@ const {chromium,webkit}=require('playwright');
    'Study must be selectable on the map and from a full-name destination list');
   assert.equal(await page.locator('#house-emy-map [data-act="emy:room:bedroom"]').count(),0);
   await shot(page,'03-emy-planta-baja');
+  const details=await page.evaluate(()=>{
+   const modal=document.querySelector('#house-emy-map'),map=modal.querySelector('.house-emy-plan'),
+    list=modal.querySelector('.house-emy-destination-list'),
+    footer=modal.querySelector('.house-emy-map-footer'),
+    first=list.querySelector('button');
+   return {mapWidth:map.getBoundingClientRect().width,mapHeight:map.getBoundingClientRect().height,
+    listWidth:list.getBoundingClientRect().width,roomFont:parseFloat(getComputedStyle(first.querySelector('.house-emy-destination-name')).fontSize),
+    footerBottom:footer.getBoundingClientRect().bottom,viewportHeight:innerHeight};
+  });
+  assert(details.mapWidth>=200&&details.mapHeight>=150,
+   'Map must remain large enough to tap on a landscape mobile viewport: '+JSON.stringify(details));
+  assert(details.listWidth>=190&&details.roomFont>=12&&details.footerBottom<=details.viewportHeight+1,
+   'Room names and confirmation must remain legible and on-screen: '+JSON.stringify(details));
+  const stairs=page.locator('#house-emy-map .house-emy-destination-list [data-act="emy:room:stairs"]');
+  await stairs.scrollIntoViewIfNeeded();
+  await stairs.click();
+  assert.match(await page.locator('#house-emy-map-status').innerText(),/Vestíbulo de la escalera/);
+  await shot(page,'03a-emy-escalera-seleccionada');
   await page.locator('#house-emy-map .house-emy-destination-list [data-act="emy:room:study"]').click();
   assert.equal(await page.locator('#house-emy-map-send').isEnabled(),true);
   assert.match(await page.locator('#house-emy-map-status').innerText(),/Estudio.*planta baja/i);
