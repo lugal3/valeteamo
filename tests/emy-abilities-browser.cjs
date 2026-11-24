@@ -163,9 +163,14 @@ const {chromium,webkit}=require('playwright');
   const initial=await page.evaluate(()=>window.__rescueHouse.snapshot());
   assert.equal(initial.locomotion.cameraGround,0);
   await page.keyboard.down('w');
-  await page.waitForTimeout(320);
-  const moving=await page.evaluate(()=>window.__rescueHouse.snapshot());
-  await page.keyboard.up('w');
+  let moving;
+  try{
+   // Software WebGL1 may render only one frame in 320ms on CI desktop.
+   // Measure actual simulated progress, not a fixed wall-clock wait.
+   await page.waitForFunction(z=>window.__rescueHouse.snapshot().position.z>z+.05,
+    initial.position.z,{timeout:12000});
+   moving=await page.evaluate(()=>window.__rescueHouse.snapshot());
+  }finally{await page.keyboard.up('w');}
   assert(moving.position.z>initial.position.z+.05,
    'Keyboard movement advances Kitty in an unobstructed corridor');
   assert(moving.locomotion.speed>2&&moving.locomotion.speed<=4.28,
