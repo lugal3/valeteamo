@@ -164,6 +164,30 @@ const {chromium,webkit}=require('playwright');
   const stopped=await page.evaluate(()=>window.__rescueHouse.snapshot());
   assert(Math.hypot(stopped.locomotion.forward,stopped.locomotion.side)<.03,
    'Releasing controls quickly brakes to rest without mobile drift');
+  if(mobile){
+   // Dispatch a real PointerEvent through the joystick's actual handlers.
+   // The left stick has a deadzone, analog range and a sprint threshold;
+   // verify hysteresis and release state without changing player coordinates.
+   const dragged=await page.evaluate(()=>{
+    const control=document.querySelector('#lab-joystick');
+    const r=control.querySelector('.lab-stick-ring').getBoundingClientRect();
+    const x=r.left+r.width/2,y=r.top+r.height/2;
+    const send=(type,clientX,buttons)=>control.dispatchEvent(new PointerEvent(type,{
+     bubbles:true,cancelable:true,pointerId:713,pointerType:'touch',isPrimary:true,
+     button:0,buttons,clientX,clientY:y
+    }));
+    send('pointerdown',x,1);
+    send('pointermove',x+r.width*.58,1);
+    return window.__rescueHouse.snapshot().controls.joystick;
+   });
+   assert(dragged.x>.8&&dragged.sprint===true,
+    'A purposeful iPhone thumb extension should activate analogue movement and sprint');
+   await page.evaluate(()=>document.querySelector('#lab-joystick').dispatchEvent(
+    new PointerEvent('pointerup',{bubbles:true,pointerId:713,pointerType:'touch',button:0,buttons:0})));
+   const released=await page.evaluate(()=>window.__rescueHouse.snapshot().controls.joystick);
+   assert.equal(released.sprint,false,'Lift finger cancels sprint immediately');
+   assert.equal(released.x,0,'Lift finger cancels joystick translation');
+  }
   await page.evaluate(()=>window.__rescueHouse.setPose({
    x:2.3,y:3.15,z:3.85,yaw:0,pitch:0
   }));
