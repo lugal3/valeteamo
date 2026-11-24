@@ -29,6 +29,8 @@ jobs:
       - run: npm ci
       - name: Todas las pruebas de lógica
         run: npm test
+      - name: Alcance real de objetivos y rutas entre pisos
+        run: node tests/house-space-audit.cjs
       - name: Movimiento, perseguidor y sótano (rendimiento)
         run: npm run test:perf
       - name: Compilar frontend real
