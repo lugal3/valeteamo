@@ -39,7 +39,8 @@ const fs=require('node:fs');
  }
  assert(climbed&&emy.cat.y>=3.05,'Emy must use actual stairway to rejoin Kitty upstairs');
 
- // Scenario 3: distracting downstairs is independent of Kitty hiding upstairs.
+ // Scenario 3: Kitty hides again while Emy is distracting downstairs.
+ kitty.hidden=wardrobe;
  // During the entire 25s noise period, Emy must not cancel her command.
  const second=createHouse(),decoy=createEmyCompanion(second.emy,{waiting:false});
  const goal={x:decoy.cat.x+.045,y:0,z:decoy.cat.z+.045};
