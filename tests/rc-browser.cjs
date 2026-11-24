@@ -140,9 +140,11 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   assert.equal((await rc()).trap.armed,true,'Kitchen hatch trap is armed');
 
   console.log('RC browser: lure active pursuer into basement and activate trap');
-  // Kitty must clear the kitchen doorway before the pursuer can swing it open.
-  // In the real game the player can step aside; the test deliberately verifies this.
-  await page.evaluate(()=>window.__rescueHouse.setPose({x:6.1,y:0,z:8.7,yaw:Math.PI,pitch:0}));
+  // Kitty must take cover while operating the tablet. The old QA position
+  // (6.1,0,8.7) was directly on the intruder's hallway route and got her
+  // caught while still using the RC; that tested an unsafe strategy, not the
+  // hatch lure. The physical study is outside the kitchen/hallway chase lane.
+  await page.evaluate(()=>window.__rescueHouse.setPose({x:3.3,y:0,z:3.6,yaw:-2.8,pitch:0}));
   // Picking up and parking the kit already selects RC; pressing its slot again would toggle it off.
   await page.locator('#house-use-phone').click();
   await page.waitForFunction(()=>window.__rescueHouse.rc().mode==='driving');
