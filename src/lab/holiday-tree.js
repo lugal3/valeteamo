@@ -7,7 +7,7 @@ const TAU=Math.PI*2;
 export function installHolidayTree(add,floor){
  const {x,z}=HOLIDAY_TREE;
  const piece=(id,px,y,pz,w,h,d,mat,solid=false,extra={})=>add('holiday-'+id,x+px,floor+y,z+pz,w,h,d,mat,solid,extra);
- piece('pot',0,.15,0,.43,.30,.43,'wood',true,{shape:'round',segments:8,rings:3,color:[.64,.39,.39]});
+ piece('pot',0,.15,0,.43,.30,.43,'wood',true,{shape:'round',smooth:true,segments:8,rings:3,color:[.64,.39,.39]});
  // Three low-poly flared tiers. Their bounding collision is confined to the tree.
  for(let i=0;i<3;i++){
   const bottom=.30+i*.47,top=bottom+.86,r=.53-i*.125,triangles=[];
@@ -20,7 +20,7 @@ export function installHolidayTree(add,floor){
   piece('tier-'+i,0,(bottom+top)/2,0,r*2,top-bottom,r*2,'foliage',true,{triangles,color:greens[i],facetTint:.09});
   for(let n=0;n<5;n++){
    const a=TAU*(n/5+i*.12),rad=r*.83;
-   piece('bauble-'+i+'-'+n,Math.cos(a)*rad,bottom+.25,Math.sin(a)*rad,.102,.102,.102,'pink',false,{shape:'round',segments:6,rings:3,color:colors[(n+i)%colors.length]});
+   piece('bauble-'+i+'-'+n,Math.cos(a)*rad,bottom+.25,Math.sin(a)*rad,.102,.102,.102,'pink',false,{shape:'round',smooth:true,segments:6,rings:3,color:colors[(n+i)%colors.length]});
   }
   // Two subtle strings of gold ribbon and little pastel emissive bulbs.
   if(i<2)piece('garland-'+i,0,bottom+.15,0,r*1.76,.035,r*1.76,'brass',false,{shape:'torus',majorRadius:r*.88,tubeRadius:.014,segments:10,tubeSegments:3,color:[.91,.72,.39]});
@@ -44,6 +44,6 @@ export function installHolidayTree(add,floor){
   piece('gift-'+i,dx,h/2,dz,w,h,d,'paper',false,{color});
   piece('gift-ribbon-x-'+i,dx,h+.005,dz,w+.008,.014,.042,'pink',false,{color:ribbon});
   piece('gift-ribbon-z-'+i,dx,h+.007,dz,.042,.014,d+.008,'pink',false,{color:ribbon});
-  for(const side of [-1,1])piece('gift-bow-'+i+'-'+side,dx+side*.052,h+.045,dz,.10,.057,.062,'pink',false,{shape:'round',segments:5,rings:3,color:ribbon,roll:side*.35});
+  for(const side of [-1,1])piece('gift-bow-'+i+'-'+side,dx+side*.052,h+.045,dz,.10,.057,.062,'pink',false,{shape:'round',smooth:true,segments:5,rings:3,color:ribbon,roll:side*.35});
  }
 }
