@@ -66,6 +66,8 @@ const {chromium,webkit}=require('playwright');
   assert.equal(await page.locator('#house-emy-menu [data-act="emy:pet"]').count(),1,'Petting action still exists');
   assert.equal(await page.locator('#house-emy-menu [data-act="emy:scan"]').count(),1);
   assert.equal(await page.locator('#house-emy-menu [data-act="emy:map"]').count(),1);
+  assert.equal(await page.locator('#house-emy-menu .emy-card').count(),4);
+  assert.equal(await page.locator('#house-emy-menu .emy-close').count(),1);
   await shot(page,'01-emy-acciones');
   await page.locator('#house-emy-menu [data-act="emy:scan"]').click();
   const afterScan=await skills();
@@ -81,13 +83,29 @@ const {chromium,webkit}=require('playwright');
   await page.waitForFunction(()=>window.__rescueHouse.emySkills().scanRendered,null,{timeout:7000});
   await shot(page,'02b-contorno-secuestrador-tras-pared');
   await interactEmy();
+  assert(await page.locator('#house-emy-menu [data-act="emy:scan"]').isDisabled(),'Scan cooldown disables the real action');
   await page.locator('#house-emy-menu [data-act="emy:map"]').click();
   const floorPlans=page.locator('#house-emy-map .house-emy-plan');
-  assert.equal(await page.locator('#house-emy-map [role="tab"]').count(),2,'Both floors must always have explicit tabs');
+  assert.equal(await page.locator('#house-emy-map [role="tab"]').count(),3,'Exterior and both floors have explicit tabs');
+  assert.equal(await page.locator('#house-emy-map [role="tab"][aria-selected="true"]').getAttribute('id'),'house-emy-tab--1');
+  const miniature=page.locator('#house-emy-miniature svg');
+  assert.match(await miniature.getAttribute('aria-label'),/Exterior/);
+  await shot(page,'03-emy-exterior');
+  const original=await miniature.innerHTML();
+  await page.locator('[data-act="emy:view:right"]').click();
+  assert.notEqual(await miniature.innerHTML(),original,'Real projected geometry changes when rotated');
+  await page.locator('[data-act="emy:view:plus"]').click();
+  await page.locator('[data-act="emy:view:reset"]').click();
+  assert.equal(await miniature.innerHTML(),original,'Reset restores original geometry');
+  await page.locator('#house-emy-map [data-act="emy:floor:0"]').click();
   assert.equal(await floorPlans.count(),1,'Use a large readable floor plan instead of two tiny plans');
   assert.equal(await page.locator('#house-emy-map .house-emy-destination-list button').count(),6);
-  assert.equal(await page.locator('#house-emy-map [data-act="emy:room:study"]').count(),2,
-   'Study must be selectable on the map and from a full-name destination list');
+  assert.equal(await page.locator('#house-emy-miniature polygon[data-act="emy:room:study"]').count(),1,
+   'Study must be selectable on the projected floor surface');
+  assert.equal(await page.locator('#house-emy-map .house-emy-destination-list [data-act="emy:room:study"]').count(),1);
+  assert.equal(await page.locator('#house-emy-miniature [data-marker="kitty"]').count(),1);
+  assert.equal(await page.locator('#house-emy-miniature [data-marker="emy"]').count(),1);
+  if((await skills()).scan>0)assert.equal(await page.locator('#house-emy-miniature [data-marker="threat"]').count(),1);
   assert.equal(await page.locator('#house-emy-map [data-act="emy:room:bedroom"]').count(),0);
   await shot(page,'03-emy-planta-baja');
   const details=await page.evaluate(()=>{
@@ -117,7 +135,8 @@ const {chromium,webkit}=require('playwright');
   assert.equal(await page.locator('#house-emy-map [role="tab"][aria-selected="true"]').getAttribute('id'),'house-emy-tab-1');
   assert.equal(await page.locator('#house-emy-map .house-emy-destination-list button').count(),4);
   assert.equal(await page.locator('#house-emy-map [data-act="emy:room:study"]').count(),0);
-  assert.equal(await page.locator('#house-emy-map [data-act="emy:room:bedroom"]').count(),2);
+  assert.equal(await page.locator('#house-emy-miniature polygon[data-act="emy:room:bedroom"]').count(),0,'Locked bedroom is not clickable on the miniature');
+  assert.equal(await page.locator('#house-emy-map .house-emy-destination-list [data-act="emy:room:bedroom"]').count(),1);
   assert.equal(await page.locator('#house-emy-map .house-emy-stair-void').count(),1,
    'The upper level must distinguish the open stairwell from walkable rooms');
   assert.equal(await page.locator('#house-emy-map .house-emy-destination-list [data-act="emy:room:bedroom"]').isDisabled(),true,
