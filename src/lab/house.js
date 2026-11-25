@@ -506,12 +506,16 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    button.disabled=left>0;badge.hidden=left<=0;badge.textContent=left>0?Math.ceil(left)+' s':'';
   }
   const staying=emyCompanion?.stage==='stay',stay=$('house-emy-stay');
+  if(emyCompanion?.stage!=='following'){
+   const distract=$('house-emy-distract-cd');distract.closest('button').disabled=true;
+   distract.hidden=false;distract.textContent=staying?'Sígueme primero':'No disponible';
+  }
   $('house-emy-stay-title').textContent=staying?'Sígueme':'Quédate aquí';
   $('house-emy-stay-copy').textContent=staying?'Vuelve a acompañar a Kitty':'Emy esperará en este lugar';
   stay.setAttribute('aria-pressed',String(staying));stay.disabled=!['following','stay'].includes(emyCompanion?.stage);
  }
  function closeEmyMenu(){
-  emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;
+  emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;clearMiniatureInput();
   resetInput();if(!isSuspended())sound.resume();
  }
  function interact(){
@@ -806,12 +810,18 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  function drawEmyMiniature(){
   const host=$('house-emy-miniature');if(!host||$('house-emy-map').hidden)return;
-  const lockedIds=roomChoices(world.rooms).filter(r=>isEmyRoomLocked(world,r)).map(r=>r.id);
+  const lockedIds=Object.keys(mapUnavailable);
   const markers=miniatureMarkers({x:s.x,y:s.y,z:s.z},{x:world.emy.x,y:world.emy.y,z:world.emy.z,hidden:world.emy.hidden},
    pursuer,emyAbilities.scan>0&&pursuer.active&&renderer.lastScanOutline);
   host.innerHTML=miniatureSVG(world,miniatureView,{floor:emyMapFloor,selectedId:emyMapSelected,lockedIds,markers});
  }
- const mapPointers=new Map();let mapDragged=false,mapSuppressUntil=0;
+ const mapPointers=new Map();let mapDragged=false,mapSuppressUntil=0,mapRedraw=0,mapUnavailable={},mapRejected={};
+ function scheduleMiniature(){if(!mapRedraw)mapRedraw=requestAnimationFrame(()=>{mapRedraw=0;drawEmyMiniature();});}
+ function clearMiniatureInput(){
+  const ids=[...mapPointers.keys()];mapPointers.clear();
+  for(const id of ids)releaseCapture(mapPanel,id);
+  if(mapRedraw)cancelAnimationFrame(mapRedraw);mapRedraw=0;mapDragged=false;
+ }
  const mapPanel=$('house-emy-map');
  mapPanel.addEventListener('pointerdown',e=>{
   if(!e.target.closest('#house-emy-miniature')||e.button!==0)return;
@@ -827,7 +837,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const other=[...mapPointers.entries()].find(([id])=>id!==e.pointerId)?.[1];
   miniatureView=other?changeMiniatureView(miniatureView,{zoom:Math.hypot(e.clientX-other.x,e.clientY-other.y)/Math.max(1,Math.hypot(p.x-other.x,p.y-other.y))}):
    changeMiniatureView(miniatureView,{yaw:dx*.009,pitch:-dy*.007});
-  p.x=e.clientX;p.y=e.clientY;drawEmyMiniature();e.preventDefault();
+  p.x=e.clientX;p.y=e.clientY;scheduleMiniature();e.preventDefault();
  },{signal});
  for(const type of ['pointerup','pointercancel','lostpointercapture'])mapPanel.addEventListener(type,e=>{
   if(!mapPointers.has(e.pointerId))return;mapPointers.delete(e.pointerId);
@@ -839,8 +849,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  },{signal,passive:false});
  function renderEmyMap(){
   const all=roomChoices(world.rooms),selected=all.find(r=>r.id===emyMapSelected)||null;
-  const lockedIds=all.filter(r=>isEmyRoomLocked(world,r)).map(r=>r.id);
-  const options={selectedId:emyMapSelected,lockedIds};
+  mapUnavailable={...mapRejected};
+  for(const r of all.filter(r=>r.floor===emyMapFloor)){
+   if(isEmyRoomLocked(world,r))mapUnavailable[r.id]='🔒 Puerta cerrada';
+   else if(!roomDestinations(world,r).length)mapUnavailable[r.id]='Sin espacio libre';
+  }
+  const lockedIds=Object.keys(mapUnavailable);
+  const options={selectedId:emyMapSelected,lockedIds,disabledReasons:mapUnavailable};
   for(const floor of [-1,0,1]){
    const tab=$('house-emy-tab-'+floor);
    tab.setAttribute('aria-selected',String(emyMapFloor===floor));
@@ -863,9 +878,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     '</section>'+
    '</div>';
   drawEmyMiniature();
-  $('house-emy-map-send').disabled=!selected||isEmyRoomLocked(world,selected)||!roomDestinations(world,selected).length;
+  $('house-emy-map-send').disabled=!selected||!!mapUnavailable[selected.id];
   $('house-emy-map-status').textContent=selected?
-   (isEmyRoomLocked(world,selected)?'🔒 '+selected.label+': abre primero la puerta.':
+   (mapUnavailable[selected.id]?selected.label+': '+mapUnavailable[selected.id]+'.':
     'Destino: '+selected.label+' · '+(selected.floor?'planta alta':'planta baja')+
     ' · Emy '+(world.emy.y>HEIGHT*.52===Boolean(selected.floor)?'irá caminando':'usará las escaleras')+
     ' y hará ruido durante 25 s.'):
@@ -900,7 +915,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    }
    if(act==='emy:map'){
     if(emyAbilities.distractCooldown>0){say('Emy necesita descansar '+Math.ceil(emyAbilities.distractCooldown)+' s.');return;}
-    emyMapFloor=-1;miniatureView=defaultMiniatureView();mapPointers.clear();mapSuppressUntil=0;
+    if(emyCompanion?.stage!=='following'){say('Indica primero a Emy que te siga.');return;}
+    emyMapFloor=-1;miniatureView=defaultMiniatureView();clearMiniatureInput();mapRejected={};mapSuppressUntil=0;
     emyMapSelected='';
     $('house-emy-menu').hidden=true;$('house-emy-map').hidden=false;
     renderEmyMap();
@@ -908,7 +924,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     return;
    }
    if(act==='emy:map:back'){
-    $('house-emy-map').hidden=true;$('house-emy-menu').hidden=false;mapPointers.clear();refreshEmyMenu();
+    $('house-emy-map').hidden=true;$('house-emy-menu').hidden=false;clearMiniatureInput();refreshEmyMenu();
     $('house-emy-menu').querySelector('[data-act="emy:map"]').focus({preventScroll:true});return;
    }
    if(act.startsWith('emy:view:')){
@@ -916,7 +932,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     miniatureView=delta?changeMiniatureView(miniatureView,delta):defaultMiniatureView();drawEmyMiniature();return;
    }
    if(['emy:floor:-1','emy:floor:0','emy:floor:1'].includes(act)){
-    emyMapFloor=Number(act.slice(10));emyMapSelected='';mapPointers.clear();
+    emyMapFloor=Number(act.slice(10));emyMapSelected='';clearMiniatureInput();
     renderEmyMap();
     $('house-emy-tab-'+emyMapFloor).focus({preventScroll:true});
     return;
@@ -924,20 +940,21 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(act.startsWith('emy:room:')){
     const id=act.slice('emy:room:'.length);
     const room=roomChoices(world.rooms).find(r=>r.id===id&&r.floor===emyMapFloor);
-    if(!room||isEmyRoomLocked(world,room)||performance.now()<mapSuppressUntil&&node?.closest('#house-emy-miniature'))return;
+    if(!room||mapUnavailable[room.id]||performance.now()<mapSuppressUntil&&node?.closest('#house-emy-miniature'))return;
     emyMapSelected=room.id;renderEmyMap();
     $('house-emy-map-send').focus({preventScroll:true});
     return;
    }
    if(act==='emy:send'){
     const room=roomChoices(world.rooms).find(r=>r.id===emyMapSelected);
-    if(!room||isEmyRoomLocked(world,room)||emyAbilities.distractCooldown>0)return;
+    if(!room||mapUnavailable[room.id]||isEmyRoomLocked(world,room)||emyAbilities.distractCooldown>0)return;
     const targets=roomDestinations(world,room);
     if(!targets.length){
      $('house-emy-map-status').textContent='No hay espacio libre en '+room.label+'. Elige otro lugar.';
      return;
     }
     if(!targets.some(goal=>sendEmyDistract(emyCompanion,world,goal))){
+     mapRejected[room.id]='Ruta bloqueada';emyMapSelected='';renderEmyMap();
      $('house-emy-map-status').textContent='Emy no puede llegar a '+room.label+' con las puertas actuales. Abre el paso o elige otro destino.';
      return;
     }
@@ -2186,6 +2203,6 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    }
   };
  }
- function stop(){if(!active)return;active=false;releaseMouse();cancelAnimationFrame(raf);controller.abort();television.destroy();phone.destroy();sound.destroy();renderer?.destroy();if(window.__rescueHouse)delete window.__rescueHouse;root.remove();}
+ function stop(){if(!active)return;active=false;clearMiniatureInput();releaseMouse();cancelAnimationFrame(raf);controller.abort();television.destroy();phone.destroy();sound.destroy();renderer?.destroy();if(window.__rescueHouse)delete window.__rescueHouse;root.remove();}
  return stop;
 }
