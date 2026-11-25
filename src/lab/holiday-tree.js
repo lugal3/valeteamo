@@ -1,6 +1,6 @@
 // Kawaii holiday decoration for the music/altar room. All meshes use the existing
 // world batch; no texture, point light, per-frame geometry or external asset.
-export const HOLIDAY_TREE=Object.freeze({x:11.28,z:2.28,radius:.53,height:2.24});
+export const HOLIDAY_TREE=Object.freeze({x:12.60,z:2.27,radius:.53,height:2.30});
 const greens=[[.32,.56,.42],[.40,.65,.48],[.49,.71,.54]];
 const colors=[[.95,.50,.68],[.98,.82,.63],[.93,.84,.88],[.83,.30,.42]];
 const TAU=Math.PI*2;
