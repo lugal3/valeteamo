@@ -6,8 +6,8 @@ export function rcControlHint(touch=false,noise=0,trapReady=false){
   'W/S: acelerar y retroceder · A/D: girar · Q: bocina · Esc: guardar';
 }
 export function throwableHint(touch=false){
- return touch?'Apunta moviendo la cámara · Toca Lanzar, Suave o Soltar':
-  'Apunta con el ratón · G: lanzar · V: soltar · Suave: botón';
+ return touch?'Apunta moviendo la cámara · Toca Lanzar':
+  'Apunta con el ratón · E o G: lanzar';
 }
 export function threatAccessibility(mode='search'){
  if(mode==='chase')return 'Peligro inmediato: busca cobertura y rompe la línea de visión';
