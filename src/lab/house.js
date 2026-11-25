@@ -39,7 +39,7 @@ import {poseEscapeAmbush,poseEmyLastChance,createRescueObjectives,updateEmySense
 import {collectCinematicCues} from './cinematic-cues.js';
 import {rcControlHint,throwableHint,threatAccessibility,hopOffset,HOP_COOLDOWN} from './hud-context.js';
 import {updateUpstairsEmy,petEmy} from './emy-cat.js';
-import {createEmyAbilities,advanceEmyAbilities,activateEmyScan,roomChoices,roomDestinations,isEmyRoomLocked,emyFloorMap,emyFloorList} from './emy-abilities.js';
+import {createEmyAbilities,advanceEmyAbilities,activateEmyScan,createEmyNameCue,advanceEmyNameCue,roomChoices,roomDestinations,isEmyRoomLocked,emyFloorMap,emyFloorList} from './emy-abilities.js';
 import {installNoiseProps,grabNoiseProp,holdNoiseProp,releaseNoiseProp,stepNoiseProps} from './noise-props.js';
 import {sendEmyDistract,commandEmyStay,releaseEmyStay,requestRibbonKey,EMY_ENTRANCE_SECONDS,createEmyCompanion,beginEmyEntrance,emyEntranceCamera,sendEmyToTrunk,updateEmyCompanion,snapshotEmyCompanion,restoreEmyCompanion} from './emy-companion.js';
 import {createRC,syncRCObject,deployRC,driveRC,beepRC,updateRC,stopRC,crashRC,recoverRC,rcCamera,advanceRCCamera,rcDeploymentView,canTrapPursuer} from './rc-car.js';
@@ -93,13 +93,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  </div>
  <div class="lab-cross" aria-hidden="true">+</div>
  <div class="house-emy-wave" id="house-emy-wave" hidden aria-hidden="true"></div>
- <div class="house-emy-menu" id="house-emy-menu" hidden role="group" aria-label="Acciones de Emy">
-  <strong>Emy ♡</strong>
-  <button data-act="emy:pet">♡ Acariciar</button>
-  <button id="house-emy-stay" data-act="emy:stay" aria-pressed="false">⌑ Quédate aquí</button>
-  <button data-act="emy:scan">◎ Escaneo <small id="house-emy-scan-cd"></small></button>
-  <button data-act="emy:map">✿ Distracción <small id="house-emy-distract-cd"></small></button>
-  <button data-act="emy:close">Cerrar</button>
+ <div id="house-emy-name" class="house-emy-name" aria-hidden="true" hidden>Emy ♡</div>
+ <div class="house-emy-menu" id="house-emy-menu" hidden role="dialog" aria-modal="true" aria-label="Acciones de Emy">
+  <header><strong>Emy ♡</strong><span>Tu pequeña compañera</span><button data-act="emy:close" class="emy-close" aria-label="Cerrar acciones de Emy">✕</button></header>
+  <button class="emy-card pet" data-act="emy:pet"><i aria-hidden="true">♡</i><b>Acariciar</b><span>Dale un poquito de cariño ♡</span></button>
+  <button class="emy-card stay" id="house-emy-stay" data-act="emy:stay" aria-pressed="false"><i aria-hidden="true">⌂</i><b id="house-emy-stay-title">Quédate aquí</b><span id="house-emy-stay-copy">Emy esperará en este lugar</span></button>
+  <button class="emy-card scan" data-act="emy:scan"><i aria-hidden="true">◎</i><b>Escaneo</b><span>Detecta amenazas cercanas</span><small id="house-emy-scan-cd" hidden></small></button>
+  <button class="emy-card distract" data-act="emy:map"><i aria-hidden="true">♧</i><b>Distracción</b><span>Envía a Emy a hacer ruido</span><small id="house-emy-distract-cd" hidden></small></button>
  </div>
  <div class="house-emy-map" id="house-emy-map" hidden role="dialog" aria-modal="true" aria-label="Mapa de distracción de Emy">
   <header class="house-emy-map-header">
@@ -178,7 +178,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  let safeInput='',activeSafe=null,noteLift=0,noteHold=0,notePresentation=false,capturePhoto=false,piano=null;
  const objectives=createRescueObjectives();
  let rc=null,louis=null,loisShotDirector=null,rcTrap={armed:false,closed:false},finalCutscene=null;
- let emyAbilities=createEmyAbilities(),emyMenuOpen=false,emyMapFloor=0,emyMapSelected='',noiseProps=[],heldNoise=null;
+ let emyAbilities=createEmyAbilities(),emyNameCue=createEmyNameCue(),emyMenuOpen=false,emyMapFloor=0,emyMapSelected='',noiseProps=[],heldNoise=null;
  let resumed=false,lastSafeCheckpoint=null,captureShot=null,captureCount=0,lifeNoticeLeft=0;
  let equipmentBeforeNote='empty',batterySwap=null;
  const canUseHotbar=()=>ready&&!isSuspended()&&!cinematic&&!emyShot&&events.phase!=='arrival'&&events.phase!=='failed'&&events.phase!=='safe'&&rc?.mode!=='driving'&&rc?.mode!=='deploying';
@@ -311,7 +311,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   lifeNoticeLeft=0;$('house-lives').hidden=true;
   television.sync(false,false);notePresentation=false;
   louis=null;loisShotDirector=null;rcTrap={armed:false,closed:false};finalCutscene=null;
-  emyMenuOpen=false;emyAbilities=createEmyAbilities();heldNoise=null;hopAge=HOP_COOLDOWN;
+  emyMenuOpen=false;emyAbilities=createEmyAbilities();emyNameCue=createEmyNameCue();$('house-emy-name').hidden=true;heldNoise=null;hopAge=HOP_COOLDOWN;
   $('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;$('house-emy-wave').hidden=true;
   releaseMouse();events.reset();mirrorSafe.reset();hudMessages.reset();phone.close();encounterCheckpoint=null;danger.hidden=true;
    root.querySelector('[data-act=emotes]').setAttribute('aria-expanded','false');
@@ -498,6 +498,20 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(target.id==='entrada'&&target.sealed&&events.phase==='escape'&&bag.masterKey)return 'master-key';
   if(target.kind==='piano'&&world.pianoSheet.taken&&!target.scorePlaced)return 'paper';
  }
+ function refreshEmyMenu(){
+  for(const [act,id,left] of [['emy:scan','house-emy-scan-cd',emyAbilities.scanCooldown],['emy:map','house-emy-distract-cd',emyAbilities.distractCooldown]]){
+   const badge=$(id),button=badge.closest('button');
+   button.disabled=left>0;badge.hidden=left<=0;badge.textContent=left>0?Math.ceil(left)+' s':'';
+  }
+  const staying=emyCompanion?.stage==='stay',stay=$('house-emy-stay');
+  $('house-emy-stay-title').textContent=staying?'Sígueme':'Quédate aquí';
+  $('house-emy-stay-copy').textContent=staying?'Vuelve a acompañar a Kitty':'Emy esperará en este lugar';
+  stay.setAttribute('aria-pressed',String(staying));stay.disabled=!['following','stay'].includes(emyCompanion?.stage);
+ }
+ function closeEmyMenu(){
+  emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;
+  resetInput();if(!isSuspended())sound.resume();
+ }
  function interact(){
   // Throw is a distinct action from pickup: do not swallow an intentional
   // press of the newly enabled action button during the pickup debounce.
@@ -522,11 +536,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   if(o.kind==='emy-cat'){
    if(Math.hypot(s.x-o.x,s.z-o.z)>1.45||Math.abs(s.y-world.emy.y)>1.5){say('Acércate un poco a Emy');return;}
-   emyMenuOpen=true;releaseMouse();resetInput();$('house-emy-menu').hidden=false;
-   $('house-emy-map').hidden=true;
-   $('house-emy-scan-cd').textContent=emyAbilities.scanCooldown>0?'('+Math.ceil(emyAbilities.scanCooldown)+' s)':'';
-   $('house-emy-distract-cd').textContent=emyAbilities.distractCooldown>0?'('+Math.ceil(emyAbilities.distractCooldown)+' s)':'';
-   $('house-emy-menu').querySelector('button')?.focus({preventScroll:true});
+   emyMenuOpen=true;releaseMouse();resetInput();sound.pause();$('house-emy-menu').hidden=false;
+   $('house-emy-map').hidden=true;$('house-emy-name').hidden=true;refreshEmyMenu();
+   $('house-emy-menu').querySelector('button[data-act="emy:pet"]')?.focus({preventScroll:true});
    return;
   }else if(o.kind==='noise-prop'){
    if(grabNoiseProp(o)){heldNoise=o;play('pickup',o);say(o.label.replace('Recoger','Recogiste')+'. '+throwableHint(!desktop.matches),3);}
@@ -823,25 +835,25 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function runAction(act,node){
   if(act.startsWith('emy:')){
    if(act==='emy:close'){
-    emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;resetInput();return;
+    closeEmyMenu();return;
    }
    if(!emyMenuOpen||!world||!s)return;
    if(act==='emy:stay'){
      const staying=emyCompanion?.stage==='stay';
      const ok=staying?releaseEmyStay(emyCompanion):commandEmyStay(emyCompanion);
      if(!ok){say('Emy está ocupada con otra tarea.');return;}
-     emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;
+     closeEmyMenu();
      say(staying?'Emy vuelve a seguir a Kitty.':'Emy se quedará aquí hasta que le indiques que te siga.',3);
      resetInput();return;
     }
     if(act==='emy:pet'){
-    emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;
+    closeEmyMenu();
     if(petEmy(world.emy)){play('cat-purr',world.emy,.60);say('Emy ronronea y levanta su patita ♡',3);}
     return;
    }
    if(act==='emy:scan'){
     if(emyAbilities.scanCooldown>0){say('Emy necesita descansar '+Math.ceil(emyAbilities.scanCooldown)+' s.');return;}
-    emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;
+    closeEmyMenu();
     if(activateEmyScan(emyAbilities)){
      play('cat',world.emy,.9);
      say(pursuer.active?'Escaneo activo · sigue la silueta luminosa del secuestrador.':'Emy maúlla, pero todavía no hay amenazas activas.',4);
@@ -883,13 +895,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      return;
     }
     emyAbilities.distractCooldown=55;
-    emyMapSelected='';emyMenuOpen=false;
-    $('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;
+    emyMapSelected='';closeEmyMenu();
     play('cat',world.emy,.6);say('Emy va hacia '+room.label+' (planta '+(room.floor?'alta':'baja')+'). Hará ruido durante 25 segundos al llegar.',5);
     resetInput();return;
    }
    return;
   }
+  if(emyMenuOpen&&act!=='exit')return;
   if(act.startsWith('noise:')){
    if(act!=='noise:throw'||!heldNoise||!canLook()||finalCutscene||s.hidden||s.lying)return;
    const prop=heldNoise;
@@ -1477,12 +1489,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     hidden:world.greyCat.active,blocked:(x,y,z,r,h)=>blocked(world.boxes,x,y,z,r,h)});
    const cat=world.emy,target=world.emyInteraction;
    Object.assign(target,{x:cat.x,y:cat.y+.38,z:cat.z,interactable:!cat.hidden&&(!emyCompanion||['following','stay'].includes(emyCompanion.stage))&&cat.reaction<=0});
-    if(emyCompanion){
-     const stay=$('house-emy-stay');
-     stay.textContent=emyCompanion.stage==='stay'?'↪ Sígueme':'⌑ Quédate aquí';
-     stay.setAttribute('aria-pressed',String(emyCompanion.stage==='stay'));
-     stay.disabled=!['following','stay'].includes(emyCompanion.stage);
-    }
+    // Refresh only on opening; game time is paused during the dialog.
    if(wasHidden!==cat.hidden)renderer.updateVisibility();
   }
 
@@ -1729,10 +1736,22 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   // the objective graph goes DRAWER → SCREWDRIVER → FOUR VENT SCREWS.
   // Never make an inaccessible object look clickable: respect taken and
   // concealed states, camera facing and visibility through closed doors.
+  const nameTag=$('house-emy-name'),catTarget=world.emyInteraction;
+  const lookingAtEmy=catTarget?.interactable&&closestObject(world,s,null)===catTarget&&Math.hypot(s.x-catTarget.x,s.z-catTarget.z)<=1.45;
+  const showName=advanceEmyNameCue(emyNameCue,shotDelta,!!lookingAtEmy,!isPaused()&&!phone.open&&!heldNoise&&!finalCutscene&&!remoteInUse());
+  nameTag.hidden=true;
+  if(showName){
+   const dx=catTarget.x-view.x,dy=catTarget.y+.28-view.y,dz=catTarget.z-view.z;
+   const fwd=dx*Math.sin(view.yaw)+dz*Math.cos(view.yaw),side=dx*Math.cos(view.yaw)-dz*Math.sin(view.yaw);
+   const depth=fwd*Math.cos(view.pitch)+dy*Math.sin(view.pitch);
+   if(depth>.15){const scale=.65*canvas.clientHeight/depth,px=canvas.clientWidth/2+side*scale,py=canvas.clientHeight/2-(dy*Math.cos(view.pitch)-fwd*Math.sin(view.pitch))*scale;
+    if(px>0&&px<canvas.clientWidth&&py>0&&py<canvas.clientHeight){nameTag.hidden=false;nameTag.style.left=px+'px';nameTag.style.top=py+'px';}
+   }
+  }
   const sparkle=$('house-interest');
   const candidate=!isPaused()&&!phone.open&&!cinematic&&!finalCutscene?
    (focus?.interactable&&!focus.taken&&!focus.concealed?focus:objectives.active?.target):null;
-  if(candidate&&candidate.interactable!==false&&!candidate.taken&&!candidate.concealed&&
+  if(candidate&&candidate.kind!=='emy-cat'&&candidate.interactable!==false&&!candidate.taken&&!candidate.concealed&&
    Math.abs((candidate.floor??candidate.y??0)-s.y)<2.3){
    const dx=candidate.x-view.x,dy=(candidate.y??s.y)+.16-view.y,dz=candidate.z-view.z;
    const forward=dx*Math.sin(view.yaw)+dz*Math.cos(view.yaw),side=dx*Math.cos(view.yaw)-dz*Math.sin(view.yaw);
@@ -1946,6 +1965,15 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   root.classList.add('house-keyboard');
   if(e.isTrusted&&!e.repeat)unlockSound();
   const focused=e.target?.tagName;
+  if(emyMenuOpen){
+   if(e.key==='Escape'){e.preventDefault();closeEmyMenu();}
+   else if(e.key==='Tab'){
+    const panel=$('house-emy-map').hidden?$('house-emy-menu'):$('house-emy-map');
+    const items=[...panel.querySelectorAll('button:not(:disabled),[tabindex="0"]')].filter(el=>el.getClientRects().length);
+    if(items.length&&(!panel.contains(document.activeElement)||(!e.shiftKey&&document.activeElement===items.at(-1))||(e.shiftKey&&document.activeElement===items[0]))){e.preventDefault();(e.shiftKey?items.at(-1):items[0]).focus();}
+   }
+   return;
+  }
   if(e.key==='Escape'&&mouseLocked()){e.preventDefault();releaseMouse();return;}
   if(e.key==='Escape'&&rc?.mode==='driving'&&!isPaused()){e.preventDefault();runAction('rc:stop');return;}
   if(phone.editing){if(e.key==='Escape'){e.preventDefault();void phone.layoutAction('done');}else if(e.key==='Tab'){const panel=phone.host.querySelector(phone.preview?'.hud-preview-tools':'.hud-editor'),items=[...panel.querySelectorAll('button,input,select')];if(!panel.contains(document.activeElement)||(!e.shiftKey&&document.activeElement===items.at(-1))||(e.shiftKey&&document.activeElement===items[0])){e.preventDefault();(e.shiftKey?items.at(-1):items[0]).focus();}}return;}
