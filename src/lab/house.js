@@ -39,7 +39,8 @@ import {poseEscapeAmbush,poseEmyLastChance,createRescueObjectives,updateEmySense
 import {collectCinematicCues} from './cinematic-cues.js';
 import {rcControlHint,throwableHint,threatAccessibility,hopOffset,HOP_COOLDOWN} from './hud-context.js';
 import {updateUpstairsEmy,petEmy} from './emy-cat.js';
-import {createEmyAbilities,advanceEmyAbilities,activateEmyScan,createEmyNameCue,advanceEmyNameCue,roomChoices,roomDestinations,isEmyRoomLocked,emyFloorMap,emyFloorList} from './emy-abilities.js';
+import {createEmyAbilities,advanceEmyAbilities,activateEmyScan,createEmyNameCue,advanceEmyNameCue,roomChoices,roomDestinations,isEmyRoomLocked,emyFloorList} from './emy-abilities.js';
+import {defaultMiniatureView,changeMiniatureView,miniatureSVG,miniatureMarkers} from './emy-miniature.js';
 import {installNoiseProps,grabNoiseProp,holdNoiseProp,releaseNoiseProp,stepNoiseProps} from './noise-props.js';
 import {sendEmyDistract,commandEmyStay,releaseEmyStay,requestRibbonKey,EMY_ENTRANCE_SECONDS,createEmyCompanion,beginEmyEntrance,emyEntranceCamera,sendEmyToTrunk,updateEmyCompanion,snapshotEmyCompanion,restoreEmyCompanion} from './emy-companion.js';
 import {createRC,syncRCObject,deployRC,driveRC,beepRC,updateRC,stopRC,crashRC,recoverRC,rcCamera,advanceRCCamera,rcDeploymentView,canTrapPursuer} from './rc-car.js';
@@ -104,13 +105,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  <div class="house-emy-map" id="house-emy-map" hidden role="dialog" aria-modal="true" aria-label="Mapa de distracción de Emy">
   <header class="house-emy-map-header">
    <div><span class="house-emy-map-kicker">EMY · PLAN DE DISTRACCIÓN</span><strong>Elige dónde hacer ruido</strong></div>
-   <button data-act="emy:close" aria-label="Cerrar plano de la casa">✕</button>
+   <div class="emy-map-nav"><button data-act="emy:map:back" aria-label="Volver a acciones de Emy">←</button><button data-act="emy:close" aria-label="Cerrar plano de la casa">✕</button></div>
   </header>
-  <div class="house-emy-floor-switch" role="tablist" aria-label="Seleccionar planta de la casa">
-   <button id="house-emy-tab-0" role="tab" aria-controls="house-emy-map-rooms" aria-selected="true" data-act="emy:floor:0">01 · PLANTA BAJA <small>6 lugares</small></button>
+  <div class="house-emy-floor-switch" role="tablist" aria-label="Seleccionar vista de la casa">
+   <button id="house-emy-tab--1" role="tab" aria-controls="house-emy-map-rooms" aria-selected="true" data-act="emy:floor:-1">Exterior</button>
+   <button id="house-emy-tab-0" role="tab" aria-controls="house-emy-map-rooms" aria-selected="false" data-act="emy:floor:0">01 · PLANTA BAJA <small>6 lugares</small></button>
    <button id="house-emy-tab-1" role="tab" aria-controls="house-emy-map-rooms" aria-selected="false" data-act="emy:floor:1">02 · PLANTA ALTA <small>4 lugares</small></button>
   </div>
-  <p class="house-emy-intro">① Elige el piso &nbsp; ② Toca una habitación del plano o su nombre &nbsp; ③ Confirma</p>
+  <p class="house-emy-intro">Arrastra para girar e inclinar · Pellizca o usa +/− · Elige un piso y una habitación</p>
   <div class="house-emy-map-rooms" id="house-emy-map-rooms" role="tabpanel" aria-labelledby="house-emy-tab-0"></div>
   <footer class="house-emy-map-footer">
    <p id="house-emy-map-status" role="status" aria-live="polite">Selecciona una habitación para enviar a Emy.</p>
@@ -178,7 +180,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  let safeInput='',activeSafe=null,noteLift=0,noteHold=0,notePresentation=false,capturePhoto=false,piano=null;
  const objectives=createRescueObjectives();
  let rc=null,louis=null,loisShotDirector=null,rcTrap={armed:false,closed:false},finalCutscene=null;
- let emyAbilities=createEmyAbilities(),emyNameCue=createEmyNameCue(),emyMenuOpen=false,emyMapFloor=0,emyMapSelected='',noiseProps=[],heldNoise=null;
+ let emyAbilities=createEmyAbilities(),emyNameCue=createEmyNameCue(),emyMenuOpen=false,emyMapFloor=-1,emyMapSelected='',miniatureView=defaultMiniatureView(),noiseProps=[],heldNoise=null;
  let resumed=false,lastSafeCheckpoint=null,captureShot=null,captureCount=0,lifeNoticeLeft=0;
  let equipmentBeforeNote='empty',batterySwap=null;
  const canUseHotbar=()=>ready&&!isSuspended()&&!cinematic&&!emyShot&&events.phase!=='arrival'&&events.phase!=='failed'&&events.phase!=='safe'&&rc?.mode!=='driving'&&rc?.mode!=='deploying';
@@ -802,35 +804,72 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   try{await navigator.clipboard.writeText(field.value);field.hidden=true;status.textContent='Mezcla copiada.';}
   catch{field.hidden=false;field.select();status.textContent='Copia los valores seleccionados.';}
  }
+ function drawEmyMiniature(){
+  const host=$('house-emy-miniature');if(!host||$('house-emy-map').hidden)return;
+  const lockedIds=roomChoices(world.rooms).filter(r=>isEmyRoomLocked(world,r)).map(r=>r.id);
+  const markers=miniatureMarkers({x:s.x,y:s.y,z:s.z},{x:world.emy.x,y:world.emy.y,z:world.emy.z,hidden:world.emy.hidden},
+   pursuer,emyAbilities.scan>0&&pursuer.active&&renderer.lastScanOutline);
+  host.innerHTML=miniatureSVG(world,miniatureView,{floor:emyMapFloor,selectedId:emyMapSelected,lockedIds,markers});
+ }
+ const mapPointers=new Map();let mapDragged=false,mapSuppressUntil=0;
+ const mapPanel=$('house-emy-map');
+ mapPanel.addEventListener('pointerdown',e=>{
+  if(!e.target.closest('#house-emy-miniature')||e.button!==0)return;
+  if(!mapPointers.size)mapDragged=false;
+  mapPointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY});
+  if(mapPointers.size>1){mapDragged=true;for(const id of mapPointers.keys())capture(mapPanel,id);}
+ },{signal});
+ mapPanel.addEventListener('pointermove',e=>{
+  const p=mapPointers.get(e.pointerId);if(!p)return;
+  const dx=e.clientX-p.x,dy=e.clientY-p.y;
+  if(!mapDragged&&Math.hypot(e.clientX-p.startX,e.clientY-p.startY)<5)return;
+  mapDragged=true;capture(mapPanel,e.pointerId);
+  const other=[...mapPointers.entries()].find(([id])=>id!==e.pointerId)?.[1];
+  miniatureView=other?changeMiniatureView(miniatureView,{zoom:Math.hypot(e.clientX-other.x,e.clientY-other.y)/Math.max(1,Math.hypot(p.x-other.x,p.y-other.y))}):
+   changeMiniatureView(miniatureView,{yaw:dx*.009,pitch:-dy*.007});
+  p.x=e.clientX;p.y=e.clientY;drawEmyMiniature();e.preventDefault();
+ },{signal});
+ for(const type of ['pointerup','pointercancel','lostpointercapture'])mapPanel.addEventListener(type,e=>{
+  if(!mapPointers.has(e.pointerId))return;mapPointers.delete(e.pointerId);
+  if(mapDragged)mapSuppressUntil=performance.now()+320;
+ },{signal});
+ mapPanel.addEventListener('wheel',e=>{
+  if(!e.target.closest('#house-emy-miniature'))return;
+  e.preventDefault();miniatureView=changeMiniatureView(miniatureView,{zoom:Math.exp(-e.deltaY*.0015)});drawEmyMiniature();
+ },{signal,passive:false});
  function renderEmyMap(){
   const all=roomChoices(world.rooms),selected=all.find(r=>r.id===emyMapSelected)||null;
   const lockedIds=all.filter(r=>isEmyRoomLocked(world,r)).map(r=>r.id);
   const options={selectedId:emyMapSelected,lockedIds};
-  for(const floor of [0,1]){
+  for(const floor of [-1,0,1]){
    const tab=$('house-emy-tab-'+floor);
    tab.setAttribute('aria-selected',String(emyMapFloor===floor));
    tab.tabIndex=0; // Both floors remain reachable by keyboard and touch.
   }
   $('house-emy-map-rooms').setAttribute('aria-labelledby','house-emy-tab-'+emyMapFloor);
-  const floorName=emyMapFloor===0?'PLANTA BAJA':'PLANTA ALTA';
+  const floorName=emyMapFloor<0?'EXTERIOR':emyMapFloor===0?'PLANTA BAJA':'PLANTA ALTA';
   $('house-emy-map-rooms').innerHTML=
    '<div class="house-emy-map-layout">'+
     '<section class="house-emy-map-board" aria-label="Vista superior de '+floorName+'">'+
-     '<div class="house-emy-map-board-title"><strong>'+floorName+'</strong><span>Vista superior · '+(emyMapFloor?'SUR ↓':'Entrada ↓')+'</span></div>'+
-     emyFloorMap(world.rooms,emyMapFloor,options)+
+     '<div class="house-emy-map-board-title"><strong>'+floorName+'</strong><span>Miniatura 3D</span></div>'+
+     '<div id="house-emy-miniature" class="house-emy-plan mini-3d"></div>'+
+     '<div class="mini-tools" role="group" aria-label="Control de la miniatura">'+
+     [['left','↶','Girar izquierda'],['right','↷','Girar derecha'],['up','↑','Inclinar arriba'],['down','↓','Inclinar abajo'],['plus','+','Acercar'],['minus','−','Alejar'],['reset','⌂','Restablecer vista']].map(([id,label,desc])=>'<button data-act="emy:view:'+id+'" aria-label="'+desc+'">'+label+'</button>').join('')+'</div>'+
     '</section>'+
     '<section class="house-emy-destination-panel" aria-label="Habitaciones de '+floorName+'">'+
      '<div class="house-emy-destination-head"><strong>Habitaciones y zonas</strong><small>Toca o desliza la lista ↓</small></div>'+
-     '<div class="house-emy-destination-list">'+emyFloorList(world.rooms,emyMapFloor,options)+'</div>'+
+     (emyMapFloor<0?'<div class="mini-exterior-copy"><b>La casa de Kitty</b><p>Gira la miniatura para explorar el exterior. Selecciona planta baja o alta para retirar la cubierta y elegir dónde enviar a Emy.</p><p>● Kitty &nbsp; ◆ Emy</p></div>':
+      '<div class="house-emy-destination-list">'+emyFloorList(world.rooms,emyMapFloor,options)+'</div>')+
     '</section>'+
    '</div>';
-  $('house-emy-map-send').disabled=!selected||isEmyRoomLocked(world,selected);
+  drawEmyMiniature();
+  $('house-emy-map-send').disabled=!selected||isEmyRoomLocked(world,selected)||!roomDestinations(world,selected).length;
   $('house-emy-map-status').textContent=selected?
    (isEmyRoomLocked(world,selected)?'🔒 '+selected.label+': abre primero la puerta.':
     'Destino: '+selected.label+' · '+(selected.floor?'planta alta':'planta baja')+
     ' · Emy '+(world.emy.y>HEIGHT*.52===Boolean(selected.floor)?'irá caminando':'usará las escaleras')+
     ' y hará ruido durante 25 s.'):
-   'Selecciona una habitación en este piso. También puedes cambiar de planta arriba.';
+   emyMapFloor<0?'Elige una planta para abrir la casa.':'Selecciona una habitación en este piso.';
  }
  function runAction(act,node){
   if(act.startsWith('emy:')){
@@ -861,15 +900,23 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    }
    if(act==='emy:map'){
     if(emyAbilities.distractCooldown>0){say('Emy necesita descansar '+Math.ceil(emyAbilities.distractCooldown)+' s.');return;}
-    emyMapFloor=s.y>HEIGHT*.52?1:0;
+    emyMapFloor=-1;miniatureView=defaultMiniatureView();mapPointers.clear();mapSuppressUntil=0;
     emyMapSelected='';
     $('house-emy-menu').hidden=true;$('house-emy-map').hidden=false;
     renderEmyMap();
     $('house-emy-tab-'+emyMapFloor).focus({preventScroll:true});
     return;
    }
-   if(act==='emy:floor:0'||act==='emy:floor:1'){
-    emyMapFloor=Number(act.at(-1));emyMapSelected='';
+   if(act==='emy:map:back'){
+    $('house-emy-map').hidden=true;$('house-emy-menu').hidden=false;mapPointers.clear();refreshEmyMenu();
+    $('house-emy-menu').querySelector('[data-act="emy:map"]').focus({preventScroll:true});return;
+   }
+   if(act.startsWith('emy:view:')){
+    const delta={left:{yaw:-.3},right:{yaw:.3},up:{pitch:.15},down:{pitch:-.15},plus:{zoom:1.13},minus:{zoom:1/1.13}}[act.slice(9)];
+    miniatureView=delta?changeMiniatureView(miniatureView,delta):defaultMiniatureView();drawEmyMiniature();return;
+   }
+   if(['emy:floor:-1','emy:floor:0','emy:floor:1'].includes(act)){
+    emyMapFloor=Number(act.slice(10));emyMapSelected='';mapPointers.clear();
     renderEmyMap();
     $('house-emy-tab-'+emyMapFloor).focus({preventScroll:true});
     return;
@@ -877,7 +924,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(act.startsWith('emy:room:')){
     const id=act.slice('emy:room:'.length);
     const room=roomChoices(world.rooms).find(r=>r.id===id&&r.floor===emyMapFloor);
-    if(!room||isEmyRoomLocked(world,room))return;
+    if(!room||isEmyRoomLocked(world,room)||performance.now()<mapSuppressUntil&&node?.closest('#house-emy-miniature'))return;
     emyMapSelected=room.id;renderEmyMap();
     $('house-emy-map-send').focus({preventScroll:true});
     return;
@@ -1471,7 +1518,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      pursuer.hearNoise({x:world.emy.x,y:world.emy.y,z:world.emy.z},1.5);
     }
     if(cue==='distract-done')say('Emy terminó de distraerlo y vuelve contigo.',4);
-    if(cue==='distract-failed'){emyAbilities.distractCooldown=Math.min(5,emyAbilities.distractCooldown);say('Emy no logró llegar. Puedes intentarlo de nuevo.',4);}
+    if(cue==='distract-failed'){emyAbilities.distractCooldown=0;say('Emy no logró llegar. Puedes intentarlo de nuevo.',4);}
     if(cue==='delivered'){
      world.objects.find(o=>o.id==='key').taken=true;
      puzzle={...puzzle,key:true};s.inventory.key=true;equip('key',false,true);handAction=1;
@@ -1737,7 +1784,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   // Never make an inaccessible object look clickable: respect taken and
   // concealed states, camera facing and visibility through closed doors.
   const nameTag=$('house-emy-name'),catTarget=world.emyInteraction;
-  const lookingAtEmy=catTarget?.interactable&&closestObject(world,s,null)===catTarget&&Math.hypot(s.x-catTarget.x,s.z-catTarget.z)<=1.45;
+  const lookingAtEmy=catTarget?.interactable&&Math.hypot(s.x-catTarget.x,s.z-catTarget.z)<=1.45&&closestObject(world,s,null)===catTarget;
   const showName=advanceEmyNameCue(emyNameCue,shotDelta,!!lookingAtEmy,!isPaused()&&!phone.open&&!heldNoise&&!finalCutscene&&!remoteInUse());
   nameTag.hidden=true;
   if(showName){
