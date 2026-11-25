@@ -1,7 +1,7 @@
 // ValeTeAmo V2 phase 11: contextual control instructions and visual safety.
 const assert=require('node:assert/strict'),fs=require('node:fs');
 (async()=>{
- const {rcControlHint,throwableHint,threatAccessibility}=await import('../src/lab/hud-context.js');
+ const {rcControlHint,throwableHint,threatAccessibility,hopOffset,HOP_DURATION,HOP_COOLDOWN}=await import('../src/lab/hud-context.js');
  assert(rcControlHint(false).includes('W/S')&&rcControlHint(false).includes('Q:'));
  assert(rcControlHint(true).includes('Joystick')&&!rcControlHint(true).includes('W/S'));
  assert(rcControlHint(false,5).includes('Señuelo activo'));
@@ -10,6 +10,12 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  assert(throwableHint(true).includes('Toca'));
  assert(throwableHint(false).includes('E o G: lanzar')&&!throwableHint(false).includes('V:'));
  assert(!throwableHint(true).includes('Suave'));
+ assert.equal(hopOffset(0),0);
+ assert.equal(hopOffset(HOP_DURATION),0);
+ assert.equal(hopOffset(HOP_COOLDOWN),0);
+ assert(Math.abs(hopOffset(HOP_DURATION/2)-.12)<1e-9);
+ assert(hopOffset(HOP_DURATION/2,true)<hopOffset(HOP_DURATION/2));
+ assert(HOP_COOLDOWN>HOP_DURATION);
  assert(threatAccessibility('chase').includes('Peligro'));
  assert(threatAccessibility('watch').includes('investigando'));
  assert(threatAccessibility('search').includes('Sin persecución'));
@@ -23,6 +29,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  assert(!house.includes('data-act="noise:lob"')&&!house.includes('data-act="noise:drop"'));
  assert(house.includes("if(heldNoise){runAction('noise:throw');return;}"));
  assert(house.includes('interactButton.disabled=!canInteract'));
+ assert(house.includes('id="lab-hop"'));
+ assert(house.includes('view={...view,y:view.y+hopOffset'));
+ assert(css.includes('#lab3d #lab-hop{grid-area:2/3}'));
  assert(css.includes('env(safe-area-inset-right)')&&css.includes('env(safe-area-inset-bottom)'));
  assert(css.includes('min-height:48px')&&css.includes('focus-visible'));
  assert(css.includes('prefers-reduced-motion:reduce'));
