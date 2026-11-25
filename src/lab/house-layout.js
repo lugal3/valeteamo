@@ -6,6 +6,7 @@ import {installGreyCat} from './grey-cat.js';
 import {installUpstairsEmy} from './emy-cat.js';
 import {installCabinet,installRefrigerator} from './house-cabinets.js';
 import {installLouisAltar} from './louis-altar.js';
+import {installHolidayTree} from './holiday-tree.js';
 import {installWallClock} from './wall-clock.js';
 import {installLivingHouseDetails} from './house-ambient-details.js';
 import {STUDY_SIGN} from './artwork.js';
@@ -234,7 +235,7 @@ export function buildHouse(spawn='ground'){
  for(const box of boxes.slice(studyStart))box.z+=deskOffset;
  for(const item of [drawer,key,drawer.origin,drawer.contents[0].origin,...drawer.parts.map(part=>part.origin)])item.z+=deskOffset;
  const driver=screwdriverModel((id,x,y,z,w,h,d,mat,extra)=>add('working-driver-'+id,0,-100,0,w,h,d,mat,false,{...extra,dynamic:true,offset:[x,y,z]}));
- const tool=obj('screwdriver','screwdriver','Destornillador',key.x,.70,key.z-.12,{dynamic:true,concealed:true,interactable:false});
+ const tool=obj('screwdriver','screwdriver','Destornillador',drawer.origin.x,.70,2.61+deskOffset,{dynamic:true,concealed:true,interactable:false});
  add('emy-vent-back',VENT_X,VENT_BASE+.31,-1.49,.84,.62,.04,'dark',false);
  for(const side of [-1,1]){
   add('emy-duct-side-'+side,VENT_X+side*.41,VENT_BASE+.31,-.69,.05,.59,1.61,'torchmetal',false);
@@ -373,14 +374,17 @@ export function buildHouse(spawn='ground'){
  add('guitar-body',10.92,HEIGHT+1.13,.20,.35,.48,.10,'wood',false,{shape:'round'});add('guitar-neck',10.92,HEIGHT+1.6,.20,.055,.65,.08,'wood',false);
  obj('guitar','inspect','Guitarra de la sala',10.92,HEIGHT+1.39,.32,{text:'Una cuerda está rota. En la caja quedó un adhesivo de One Direction.'});
  installLouisAltar(add,obj,HEIGHT);
+ installHolidayTree(add,HEIGHT);
  frame('archive',12.45,HEIGHT+1.71,2.86,'north',13,{width:1.36,height:.745,label:'Afiche de archivo',text:'Un afiche de campaña viejo, guardado junto a los recortes de la casa.'});
  chair('reading-chair',.67,HEIGHT,7.55,-Math.PI/2);table('reading-table',1.50,HEIGHT,7.92,.72,.62);lamp('reading-light',1.50,HEIGHT+.92,7.92);shelf('reading-books',.19,HEIGHT,9.8,-Math.PI/2);plant('reading-plant',4.02,HEIGHT,5.33);frame('reading',3.75,HEIGHT+1.9,11.83,'north',2);
  obj('reading-books','inspect','Biblioteca de la planta alta',.47,HEIGHT+1.16,9.8,{text:'Los anuarios tienen los lomos gastados. Entre ellos hay entradas de conciertos archivadas por fecha.'});
  installCabinet(add,obj,{id:'reading-cabinet',label:'Cajón de la sala de lectura',x:2.05,y:HEIGHT,z:5.12,w:1.28,d:.60,
   items:[{id:'reading-battery',kind:'battery',label:'Pila de la sala de lectura',dx:.27}]});
- installCabinet(add,obj,{id:'landing-cabinet',label:'Cajón del descansillo',x:6.76,y:HEIGHT,z:3.08,w:.97,d:.60,
-  items:[]});
- obj('media-flashlight','flashlight','Linterna',6.76,HEIGHT+.90,3.19,{dynamic:true});
+ // Keep the existing pickup ID, drawer and save compatibility. The cabinet
+ // is now against the east side of the central landing, clear of the stairs.
+ const landingCabinet={x:6.91,z:4.05};
+ installCabinet(add,obj,{id:'landing-cabinet',label:'Cajón del descansillo',...landingCabinet,y:HEIGHT,w:.97,d:.60,items:[]});
+ obj('media-flashlight','flashlight','Linterna',landingCabinet.x,HEIGHT+.90,landingCabinet.z+.06,{dynamic:true});
  add('reading-rug',1.92,HEIGHT+.012,8.0,2.9,.024,4,'carpet',false,{ao:.88});add('upper-bench',4.95,HEIGHT+.43,11.65,1.15,.18,.48,'velvet');for(const x of [4.55,5.35])add('bench-leg-'+x,x,HEIGHT+.20,11.65,.08,.4,.35,'wood');plant('landing-plant',8.3,HEIGHT,11.54);frame('landing',8.0,HEIGHT+1.85,11.83,'north',0);
  const piano=installPiano(add,obj,{x:4.84,z:10.40,floor:HEIGHT});
  const pianoSheet=objects.find(item=>item.id===PIANO_SHEET_ID);
