@@ -29,7 +29,7 @@ uniform float uFlash,uOcclude;
 uniform float uShot,uFasciaReady,uPursuerSkinReady;
 uniform float uHasShadows;
 uniform vec4 uLamps[${VISIBLE_LAMPS}];
-uniform float uTime;
+uniform float uTime,uHolidayMotion;
 uniform float uTVSignal;
 uniform float uMirrorPass,uHeld,uScanOutline;
 uniform float uAtlasSize,uTileSize,uGutter,uInner;
@@ -362,6 +362,12 @@ void main(){
  }
  color=color*lighting/(1.0+.24*lighting)+vec3(1.0,.91,.79)*shine;
  if(vStyle>31.5)color=mix(color,vColor*(.55+material.r*.40),.82);
+ // Styles 48–63 are reserved for the little static holiday bulbs. Slow,
+ // low-contrast emission modulation; no shadow or point-light allocation.
+ if(vStyle>47.5&&vStyle<63.5){
+  float pulse=.94+uHolidayMotion*.07*sin(uTime*.75+vWorld.x*1.7+vWorld.y*2.1+vWorld.z);
+  color*=pulse;
+ }
  float fog=clamp((vDistance-6.0)/25.0,0.0,.32);
  color=mix(color,vec3(.024,.030,.054),fog);
  gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);
