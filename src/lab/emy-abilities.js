@@ -91,7 +91,7 @@ export function roomChoices(rooms){
 export function isEmyRoomLocked(world,choice){
  const id=DOORS[choice?.id];
  const door=id&&world.objects.find(o=>o.id===id&&o.kind==='door');
- return !!door?.locked&&!door.open;
+ return !!door&&(door.locked||door.sealed)&&!door.open;
 }
 function walkable(world,choice,point){
  const level=choice.floor?HEIGHT:0;
@@ -157,16 +157,16 @@ export function emyFloorMap(rooms,floor,{selectedId='',lockedIds=[]}={}){
   '<div class="house-emy-entrance" aria-hidden="true">↓ '+(floor?'SUR':'ENTRADA')+'</div>'+
   '</div>';
 }
-export function emyFloorList(rooms,floor,{selectedId='',lockedIds=[]}={}){
+export function emyFloorList(rooms,floor,{selectedId='',lockedIds=[],disabledReasons={}}={}){
  const choices=roomChoices(rooms).filter(r=>r.floor===floor),locked=new Set(lockedIds);
  return choices.map((room,index)=>{
-  const selected=selectedId===room.id,blocked=locked.has(room.id);
+  const selected=selectedId===room.id,blocked=locked.has(room.id),reason=disabledReasons[room.id]||'Puerta cerrada';
   return '<button type="button" class="house-emy-destination'+(selected?' is-selected':'')+
    (blocked?' is-locked':'')+'" data-act="emy:room:'+room.id+'" data-zone="'+room.id+
    '" aria-pressed="'+selected+'"'+(blocked?' disabled':'')+'>'+
    '<span class="house-emy-destination-number">'+String(index+1).padStart(2,'0')+'</span>'+
    '<span class="house-emy-destination-name">'+escapeHTML(room.label)+'</span>'+
-   (blocked?'<small>🔒 Cerrada</small>':'<span class="house-emy-destination-arrow" aria-hidden="true">›</span>')+
+   (blocked?'<small>'+escapeHTML(reason)+'</small>':'<span class="house-emy-destination-arrow" aria-hidden="true">›</span>')+
    '</button>';
  }).join('');
 }
