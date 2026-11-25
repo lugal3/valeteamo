@@ -497,9 +497,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(target.kind==='piano'&&world.pianoSheet.taken&&!target.scorePlaced)return 'paper';
  }
  function interact(){
+  // Throw is a distinct action from pickup: do not swallow an intentional
+  // press of the newly enabled action button during the pickup debounce.
+  if(heldNoise&&!s.hidden&&!s.lying){runAction('noise:throw');return;}
   const now=performance.now();if(now-lastInteraction<260)return;lastInteraction=now;handAction=1;
   if(s.hidden||s.lying){exitPose();return;}
-  if(heldNoise){runAction('noise:throw');return;}
   const o=closestObject(world,s,focus);if(!o){say('Acércate a un objeto y míralo para interactuar');return;}
   const tool=toolFor(o);
   if(tool&&tool!==equipment)equip(tool);
@@ -890,7 +892,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(act!=='noise:throw'||!heldNoise||!canLook()||finalCutscene||s.hidden||s.lying)return;
    const prop=heldNoise;
    if(!releaseNoiseProp(prop,cameraOf(s),true,1))return;
-   heldNoise=null;
+   heldNoise=null;lastInteraction=performance.now();handAction=1;
    play('cloth',prop,.5);say('¡Objeto lanzado!',2);return;
   }
   if((events.phase==='safe'||events.phase==='failed')&&!['retry-arrival','exit','reset','finish'].includes(act))return;
