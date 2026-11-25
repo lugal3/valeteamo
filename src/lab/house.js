@@ -146,9 +146,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
        <small class="mixer-status" role="status"></small>
      </details>
      <button data-act="reset">${scenario?'Reiniciar prueba':'Reiniciar casa'}</button>
-     <button data-act="hud">Editar controles / hotbar</button>
+     <button data-act="bag">Inventario · pilas y notas</button>
+      <button data-act="hud">Editar controles / hotbar</button>
      ${!config.trial?'':'<details><summary>Diagnóstico</summary><div id="lab-metrics"></div></details>'}
-     <details class="lab-settings-note"><summary>Controles</summary><p>WASD para caminar, Mayús para correr y C para agacharte. Arrastra para mirar o pulsa R para capturar el ratón. E interactúa, F usa el objeto equipado, I abre la mochila y Esc libera el ratón o pausa.</p><p>En pantalla táctil, mueve el joystick izquierdo y arrastra a la derecha para mirar. Puedes hacer ambos gestos a la vez.</p></details>
+     <details class="lab-settings-note"><summary>Controles</summary><p>WASD para caminar, Mayús para correr y C para agacharte. Arrastra para mirar o pulsa R para capturar el ratón. E interactúa, F usa el objeto equipado, I abre el inventario (también disponible en Ajustes) y Esc libera el ratón o pausa.</p><p>En pantalla táctil, mueve el joystick izquierdo y arrastra a la derecha para mirar. Puedes hacer ambos gestos a la vez.</p></details>
    </div></details>
  </div>
  <div class="lab-focus" id="lab-focus" role="status" aria-live="polite"></div>
@@ -163,7 +164,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  <div class="lab-buttons">
   <button data-act="interact" id="lab-interact" aria-keyshortcuts="E" hidden><kbd aria-hidden="true">E</kbd><small>Usar</small></button>
   <button data-act="emotes" aria-label="Elegir emote" aria-controls="house-emotes" aria-expanded="false" hidden>☺<small>Emotes</small></button>
-  <button data-act="bag">▣<small>Mochila</small></button>
+  
   <button data-act="flash" id="house-light">☼<small>Luz</small></button>
   <button data-act="phone" class="phone-expand" id="house-use-phone" aria-label="Usar teléfono" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></svg><small>Usar</small></button>
   <button data-act="crouch" id="lab-crouch" aria-label="Agacharse" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2"/><path d="m13 8-3 4 5 2-2 3h5m-8-5-4 5M7 21h10m-7-12-3 2"/></svg><small>Agachar</small></button>
@@ -956,7 +957,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(act==='recharge'){recharge();return;}
   if(act.startsWith('safe:')){safeAction(act.slice(5));return;}
   if(act==='read'){const note=s.inventory.notes.find(n=>n.id===node.dataset.id);if(note?.id==='mirror-note')showMirrorNote('bag');else if(note)showNote(note,'bag');return;}
-  if(act==='bag'){if(rc?.mode==='driving')return;bag();return;}
+  if(act==='bag'){if(rc?.mode==='driving'||rc?.mode==='deploying')return;$('lab-camera-settings').open=false;bag();return;}
   if(act==='reset'){
    phone.close();
    if(scenario){ready=false;intro=true;}
