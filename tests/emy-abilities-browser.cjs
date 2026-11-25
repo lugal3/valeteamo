@@ -156,6 +156,20 @@ const {chromium,webkit}=require('playwright');
   }));
   const initial=await page.evaluate(()=>window.__rescueHouse.snapshot());
   assert.equal(initial.locomotion.cameraGround,0);
+  // A hop changes only the rendered camera, never the collision body or floor.
+  const hopButton=page.locator('#lab-hop');
+  await page.waitForFunction(()=>!document.querySelector('#lab-hop').disabled,null,{timeout:8000});
+  if(mobile)await hopButton.tap();
+  else {
+   await page.evaluate(()=>document.activeElement?.blur());
+   await page.keyboard.press('Space');
+  }
+  await page.waitForFunction(()=>window.__rescueHouse.snapshot().hop.age<.62,null,{timeout:8000});
+  await page.waitForFunction(()=>window.__rescueHouse.snapshot().hop.age>=.62,null,{timeout:8000});
+  const landed=await page.evaluate(()=>window.__rescueHouse.snapshot());
+  assert.deepEqual(landed.position,initial.position,'Hop must not move the collision body');
+  assert.equal(landed.hop.offset,0,'Camera settles after the hop');
+  assert.equal(landed.locomotion.cameraGround,0);
   await page.keyboard.down('w');
   let moving;
   try{
