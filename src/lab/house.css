@@ -87,7 +87,9 @@
 #lab3d #lab-crouch{grid-area:3/3}
 #lab3d .lab-buttons [data-act=bag]{grid-area:3/1}
 #lab3d #house-use-phone,#lab3d #house-light{grid-area:3/2}
-#lab3d .lab-buttons [data-act=emotes]{grid-area:2/3}
+#lab3d .lab-buttons [data-act=emotes]{grid-area:2/2}
+#lab3d #lab-hop{grid-area:2/3}
+#lab3d #lab-hop:disabled{opacity:.45;pointer-events:none}
 #lab3d #lab-interact{grid-area:1/1/2/4}
 
 /* A physical phone silhouette, with the live house visible around it. */
