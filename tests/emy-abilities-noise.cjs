@@ -24,6 +24,27 @@ const assert=require('node:assert/strict');
  assert(activateEmyScan(abilities));
 
  const world=createHouse();
+ const {defaultMiniatureView,changeMiniatureView,miniatureProject,miniatureSVG,miniatureMarkers}=await import('../src/lab/emy-miniature.js');
+ const view=defaultMiniatureView(),turned=changeMiniatureView(view,{yaw:.5,pitch:.1,zoom:1.1});
+ assert.notDeepEqual(miniatureProject([0,0,0],view),miniatureProject([0,0,0],turned));
+ assert.equal(changeMiniatureView(view,{zoom:99,pitch:99}).zoom,1.65);
+ assert.equal(changeMiniatureView(view,{zoom:0,pitch:-99}).pitch,.28);
+ const exterior=miniatureSVG(world,view),rotated=miniatureSVG(world,turned);
+ assert(exterior.includes('Exterior tridimensional')&&exterior.includes('<polygon'));
+ assert.notEqual(exterior,rotated);
+ assert(!exterior.includes('data-act="emy:room:'));
+ const fakeThreat={active:true,x:7.9,y:0,z:5.1};
+ const hiddenMarkers=miniatureMarkers({x:5.9,y:0,z:8},{x:5.1,y:0,z:8,hidden:false},fakeThreat,false);
+ const visibleMarkers=miniatureMarkers({x:5.9,y:0,z:8},{x:5.1,y:0,z:8,hidden:false},fakeThreat,true);
+ assert(hiddenMarkers.every(m=>m.id!=='threat'),'No threat coordinates in unscanned markers');
+ const lowerMini=miniatureSVG(world,view,{floor:0,markers:hiddenMarkers});
+ const scanMini=miniatureSVG(world,view,{floor:0,markers:visibleMarkers});
+ assert(lowerMini.includes('data-marker="kitty"')&&lowerMini.includes('data-marker="emy"'));
+ assert(!lowerMini.includes('data-marker="threat"')&&scanMini.includes('data-marker="threat"'));
+ assert(lowerMini.includes('data-act="emy:room:study"')&&!lowerMini.includes('data-act="emy:room:bedroom"'));
+ const upperMini=miniatureSVG(world,view,{floor:1,lockedIds:['bedroom'],markers:visibleMarkers});
+ assert(upperMini.includes('house-emy-stair-void')&&!upperMini.includes('data-act="emy:room:bedroom"')&&!upperMini.includes('data-marker="threat"'));
+ assert(emyFloorList(world.rooms,0,{lockedIds:['study'],disabledReasons:{study:'Ruta bloqueada'}}).includes('Ruta bloqueada'));
  const choices=roomChoices(world.rooms);
  for(const name of ['Estudio','Sala de estar','Cocina y comedor','Baño','Dormitorio','Sala de lectura','Sala de música','Recibidor y pasillo','Distribuidor y descansillo']){
   assert(choices.some(room=>room.label===name),name+' exists in the two-floor command map');
