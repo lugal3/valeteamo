@@ -117,13 +117,6 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    <button id="house-emy-map-send" data-act="emy:send" disabled>Enviar a Emy <span aria-hidden="true">➜</span></button>
   </footer>
  </div>
- <div class="house-noise-controls" id="house-noise-controls" hidden role="group" aria-label="Objeto en la mano">
-  <strong id="house-noise-held" aria-live="off"></strong>
-  <small id="house-noise-hint" class="house-control-hint"></small>
-  <button data-act="noise:throw" aria-keyshortcuts="G">Lanzar <kbd>G</kbd></button>
-   <button data-act="noise:lob">Lanzar suave</button>
-  <button data-act="noise:drop" aria-keyshortcuts="V">Soltar <kbd>V</kbd></button>
- </div>
  <div id="house-mouse-status" class="house-mouse-status" hidden>Esc o R · Liberar ratón</div>
  <div class="lab-top">
    <details class="lab-camera-settings" id="lab-camera-settings"><summary aria-label="Ajustes de la casa">⚙</summary><div class="lab-camera-panel">
@@ -162,7 +155,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  <div class="lab-joystick" id="lab-joystick" aria-label="Joystick izquierdo, arrastrar para caminar"><div class="lab-stick-ring"><div id="lab-stick" class="lab-stick-thumb">♡</div></div></div>
  <div class="lab-look" id="lab-look" aria-label="Arrastrar para mirar"></div>
  <div class="lab-buttons">
-  <button data-act="interact" id="lab-interact" aria-keyshortcuts="E" hidden><kbd aria-hidden="true">E</kbd><small>Usar</small></button>
+  <button data-act="interact" id="lab-interact" aria-keyshortcuts="E" hidden disabled><kbd aria-hidden="true">E</kbd><small>Interactuar</small></button>
   <button data-act="emotes" aria-label="Elegir emote" aria-controls="house-emotes" aria-expanded="false" hidden>☺<small>Emotes</small></button>
   
   <button data-act="flash" id="house-light">☼<small>Luz</small></button>
@@ -315,7 +308,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   television.sync(false,false);notePresentation=false;
   louis=null;loisShotDirector=null;rcTrap={armed:false,closed:false};finalCutscene=null;
   emyMenuOpen=false;emyAbilities=createEmyAbilities();heldNoise=null;
-  $('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;$('house-emy-wave').hidden=true;$('house-noise-controls').hidden=true;
+  $('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;$('house-emy-wave').hidden=true;
   releaseMouse();events.reset();mirrorSafe.reset();hudMessages.reset();phone.close();encounterCheckpoint=null;danger.hidden=true;
    root.querySelector('[data-act=emotes]').setAttribute('aria-expanded','false');
   batterySwap=null;equipmentBeforeNote='empty';
@@ -504,6 +497,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function interact(){
   const now=performance.now();if(now-lastInteraction<260)return;lastInteraction=now;handAction=1;
   if(s.hidden||s.lying){exitPose();return;}
+  if(heldNoise){runAction('noise:throw');return;}
   const o=closestObject(world,s,focus);if(!o){say('Acércate a un objeto y míralo para interactuar');return;}
   const tool=toolFor(o);
   if(tool&&tool!==equipment)equip(tool);
@@ -529,8 +523,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    $('house-emy-menu').querySelector('button')?.focus({preventScroll:true});
    return;
   }else if(o.kind==='noise-prop'){
-   if(heldNoise){say('Ya llevas un objeto en la mano. Lánzalo o suéltalo.');return;}
-   if(grabNoiseProp(o)){heldNoise=o;play('pickup',o);say(o.label.replace('Recoger','Recogiste')+'. Pulsa G para lanzar o V para soltar.',3);}
+   if(grabNoiseProp(o)){heldNoise=o;play('pickup',o);say(o.label.replace('Recoger','Recogiste')+'. '+throwableHint(!desktop.matches),3);}
    return;
   }else if(o.kind==='light-switch'){
    const on=toggleCircuit(o.circuit);play('click',o);
@@ -892,11 +885,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    return;
   }
   if(act.startsWith('noise:')){
-   if(!heldNoise||isPaused())return;
-   const prop=heldNoise,throwing=act==='noise:throw'||act==='noise:lob';
-   if(act!=='noise:throw'&&act!=='noise:lob'&&act!=='noise:drop')return;
-   releaseNoiseProp(prop,cameraOf(s),throwing,act==='noise:lob'?.55:1);heldNoise=null;
-   play('cloth',prop,.5);say(throwing?'¡Objeto lanzado!':'Objeto soltado',2);return;
+   if(act!=='noise:throw'||!heldNoise||!canLook()||finalCutscene||s.hidden||s.lying)return;
+   const prop=heldNoise;
+   if(!releaseNoiseProp(prop,cameraOf(s),true,1))return;
+   heldNoise=null;
+   play('cloth',prop,.5);say('¡Objeto lanzado!',2);return;
   }
   if((events.phase==='safe'||events.phase==='failed')&&!['retry-arrival','exit','reset','finish'].includes(act))return;
   if(act==='retry-arrival'){
@@ -994,14 +987,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(emote&&animator.startEmote(id)){sound.emote(id,emote.duration);resetInput();}
    return;
   }
-  if(act==='interact'){cancelEmote();interact();}
+  if(act==='interact'&&!phone.open&&!finalCutscene){cancelEmote();interact();}
   if(act==='crouch')crouch();
   if(act==='flash'||act==='phone')useEquipment();
  }
  function updateControls(){
   const target=closestObject(world,s,focus);focus=target;
   phone.nav.hidden=!!cinematic||!!captureShot||!!finalCutscene||wakeShot()||!!poseTransition||events.phase==='arrival'||events.phase==='car-preview';
-  if(!isPaused()&&!phone.open&&!s.hidden&&!remoteInUse()&&events.phase!=='arrival'){
+  if(!heldNoise&&!isPaused()&&!phone.open&&!s.hidden&&!remoteInUse()&&events.phase!=='arrival'){
    const tool=toolFor(target);
    if(tool&&previousToolTarget!==target&&equipment!==tool)equip(tool,false,true);
    previousToolTarget=tool?target:null;
@@ -1013,9 +1006,6 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    }
   }
   root.classList.toggle('lab-flash-off',!s.flashlight);
-  $('house-noise-controls').hidden=!heldNoise||isPaused()||phone.open||remoteInUse();
-  $('house-noise-held').textContent=heldNoise?'En mano: '+heldNoise.label.replace(/^Recoger\s+/,''):'';
-  if(heldNoise)$('house-noise-hint').textContent=throwableHint(!desktop.matches);
   $('house-light').hidden=equipment!=='flashlight'||!!s.hidden||!!s.lying;
   $('house-use-phone').hidden=!['phone','paper','rc'].includes(equipment)||notePresentation||!!noteLift||(equipment!=='phone'&&(!!s.hidden||!!s.lying));
   $('house-use-phone').setAttribute('aria-label',equipment==='rc'?'Usar auto RC':equipment==='paper'?'Observar nota':'Usar teléfono');
@@ -1055,20 +1045,22 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   root.classList.toggle('house-sprinting',s.sprinting&&!stamina.hidden);
   const interactButton=$('lab-interact');
-  const canInteract=!!(target||s.hidden||s.lying||poseTransition)&&!isSuspended()&&!cinematic&&!phone.open&&!remoteInUse();
-  interactButton.hidden=!canInteract||!!emyShot;
+  const showAction=!isSuspended()&&!cinematic&&!emyShot&&!phone.open&&!remoteInUse()&&!finalCutscene&&!wakeShot()&&!['arrival','car-preview','safe','failed'].includes(events.phase);
+  const throwing=!!heldNoise&&!s.hidden&&!s.lying;
   const hatchMoving=target?.kind==='hatch'&&target.amount!==Number(target.open);
-  interactButton.disabled=!!target?.motion||hatchMoving||!!poseTransition;
+  const canInteract=showAction&&!poseTransition&&(throwing||s.hidden||s.lying||!!target&&!target.motion&&!hatchMoving);
+  interactButton.hidden=!showAction;
+  interactButton.disabled=!canInteract;
   const vent=world.studyVent;
   const catAction=emyShot||vent.unlatched&&vent.coverAmount<1||['leap-in','crawl','leap-out'].includes(emyCompanion?.fetch?.phase);
   root.classList.toggle('house-emy-action',!!catAction&&!isSuspended()&&!phone.open);
-  root.querySelector('.lab-cross').classList.toggle('lab-target',!!target);
-  let action=target?.kind==='emy-cat'?'Acciones de Emy':target?.kind==='noise-prop'?'Recoger objeto':interactionLabel(target);
+  root.querySelector('.lab-cross').classList.toggle('lab-target',canInteract);
+  let action=throwing?'Lanzar':s.hidden||s.lying?interactionLabel(null):target?.kind==='emy-cat'?'Acciones de Emy':target?.kind==='noise-prop'?'Recoger objeto':interactionLabel(target);
   if(poseTransition)action=poseTransition.entering?'Entrando…':'Saliendo…';
-  if(target?.motion||hatchMoving)action=target.state==='opening'||hatchMoving&&target.open?'Abriendo…':'Cerrando…';
+  else if(!throwing&&!s.hidden&&!s.lying&&(target?.motion||hatchMoving))action=target.state==='opening'||hatchMoving&&target.open?'Abriendo…':'Cerrando…';
   const actionLabel=interactButton.querySelector('small');
   if(actionLabel.textContent!==action)actionLabel.textContent=action;
-  const focusLabel=canInteract&&mouseLocked()?(interactButton.disabled?action:'E o clic · '+action):'';
+  const focusLabel='';
   if($('lab-focus').textContent!==focusLabel)$('lab-focus').textContent=focusLabel;
   const remote=rc?.mode==='driving';
   const deploying=rc?.mode==='deploying';
@@ -1087,7 +1079,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(announce)$('house-rc-caption').textContent=finalCutscene?(finalCutscene.elapsed<1.5?'¡El secuestrador descubre a Kitty!':finalCutscene.elapsed<3.3?'¡Emy salta para salvarla!':'¡Corred hacia el jardín!'):louis?.phase==='untying'?'Kitty desata las cuerdas mientras Louis espera en silencio…':louis?.phase==='hidden'?'Louis se agacha tras la barra americana y mira alrededor…':louis&&['climb','hide'].includes(louis.phase)?'Louis sube del sótano y busca refugio tras la barra americana…':rc.elapsed<.53?'Colocando el autito…':'Conectando la tablet…';
   root.classList.toggle('house-rc-deploying',deploying);
   root.classList.toggle('house-rc-driving',remote);
-  interactButton.classList.toggle('lab-available',!!target||!!s.hidden||!!s.lying);
+  interactButton.classList.toggle('lab-available',canInteract);
   $('lab-crouch').classList.toggle('lab-available',s.crouched);
   $('lab-crouch').setAttribute('aria-pressed',String(s.crouched));$('lab-crouch').setAttribute('aria-label',s.crouched?'Levantarse':'Agacharse');$('lab-crouch').querySelector('small').textContent=s.crouched?'Levantar':'Agachar';
   if(config.trial&&$('lab-camera-settings').open)$('lab-metrics').textContent=`${fps} FPS · ${ctxRoom(s)} · altura ${s.y.toFixed(1)} m · rumbo ${Math.round((s.yaw*180/Math.PI%360+360)%360)}°`;
@@ -1095,7 +1087,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function interactionLabel(target){
   if(s.hidden)return 'Salir del escondite';
   if(s.lying)return 'Levantarse';
-  if(!target)return 'Usar';
+  if(!target)return 'Interactuar';
   if(target===world.pianoSheet)return 'Recoger partitura';
   switch(target.kind){
    case 'door':return target.id==='entrada'&&target.sealed&&events.phase==='escape'?'Abrir con llave maestra':target.open?'Cerrar puerta':'Abrir puerta';
@@ -1978,7 +1970,6 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(modal){if(intro||contextLost)return;paused=false;modalClose();}else togglePause();return;
   }
   if(e.key==='g'||e.key==='G')runAction('noise:throw');
-  if(e.key==='v'||e.key==='V')runAction('noise:drop');
   if(e.key==='e'||e.key==='E')runAction('interact');
   if(e.key==='f'||e.key==='F')runAction('flash');
   if(e.key==='c'||e.key==='C')runAction('crouch');
