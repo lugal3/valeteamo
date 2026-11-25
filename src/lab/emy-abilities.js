@@ -9,6 +9,20 @@ export const EMY_DISTRACT_COOLDOWN=55;
 const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
 const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+// The name tag is a one-second, edge-triggered cue, never a persistent HUD.
+export function createEmyNameCue(){return {left:0,cooldown:0,looking:false};}
+export function advanceEmyNameCue(state,dt,looking,active=true){
+ const step=active?clamp(Number.isFinite(dt)?dt:0,0,.1):0;
+ state.left=Math.max(0,state.left-step);
+ state.cooldown=Math.max(0,state.cooldown-step);
+ if(!active){state.left=0;return false;}
+ if(!looking)state.left=0;
+ if(looking&&!state.looking&&state.cooldown===0){
+  state.left=1;state.cooldown=180;
+ }
+ state.looking=!!looking;
+ return state.left>0&&looking;
+}
 export function createEmyAbilities(){return {scan:0,scanCooldown:0,distractCooldown:0,wave:0};}
 export function advanceEmyAbilities(state,dt){
  const step=clamp(Number.isFinite(dt)?dt:0,0,.1);
