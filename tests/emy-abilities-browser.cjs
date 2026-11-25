@@ -138,19 +138,13 @@ const {chromium,webkit}=require('playwright');
   await page.evaluate(item=>window.__rescueHouse.interactWith(item),item);
   let objects=await page.evaluate(()=>window.__rescueHouse.noiseProps());
   assert(objects.find(p=>p.id===item).held,'The glass is held after interacting');
-  // The HUD publishes context help on its next render frame; WebKit software
-  // WebGL may schedule that frame after the synchronous interaction callback.
-  await page.waitForFunction(()=>/Toca Lanzar|G: lanzar/.test(
-   document.querySelector('#house-noise-hint')?.textContent||''),null,{timeout:8000});
-  assert.match(await page.locator('#house-noise-hint').innerText(),/Toca Lanzar|G: lanzar/,
-   'HUD explains throwable controls for the active input device');
-  assert.equal(await page.locator('#house-noise-controls button').count(),3,
-   'Throw, soft throw, and drop must all be present for mobile and desktop');
-  for(const action of ['noise:throw','noise:lob','noise:drop'])
-   assert.equal(await page.locator('#house-noise-controls [data-act="'+action+'"]').count(),1,
-    'Each throwable action remains reachable: '+action);
+  // V3: the permanent action button is the only throwable control.
+  const actionButton=page.locator('#lab-interact');
+  await page.waitForFunction(()=>document.querySelector('#lab-interact small')?.textContent==='Lanzar',null,{timeout:8000});
+  assert(await actionButton.isVisible()&&await actionButton.isEnabled());
+  assert.equal(await page.locator('#house-noise-controls').count(),0);
   await shot(page,'04-objeto-en-mano');
-  await page.locator('#house-noise-controls [data-act="noise:throw"]').click();
+  await actionButton.click();
   objects=await page.evaluate(()=>window.__rescueHouse.noiseProps());
   assert(!objects.find(p=>p.id===item).held,'Released throwable no longer occupies the hand');
   await page.waitForFunction(id=>window.__rescueHouse.noiseProps().find(p=>p.id===id)?.spent,item,{timeout:8000});
