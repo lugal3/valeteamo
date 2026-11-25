@@ -217,7 +217,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const desktop=window.matchMedia('(any-hover: hover) and (any-pointer: fine)');
  const remoteInUse=()=>['driving','deploying'].includes(rc?.mode);
  const canLook=()=>!isPaused()&&!phone.open&&events.phase!=='arrival'&&!remoteInUse();
- const canHop=()=>canLook()&&!finalCutscene&&!s.hidden&&!s.lying&&!s.crouched&&!animator.performing&&$('house-emotes').hidden&&getStairDirection(s)!=='Escaleras'&&!blocked(world.boxes,s.x,s.y,s.z,.2,1.83)&&!['safe','failed'].includes(events.phase);
+ const canHop=()=>canLook()&&!finalCutscene&&!loisShotDirector&&!s.hidden&&!s.lying&&!s.crouched&&!animator.performing&&$('house-emotes').hidden&&
+  !['safe','failed','rc-rescue','ending'].includes(events.phase)&&!isOnStairs(s,getStairDirection,inHatch)&&
+  !(world.hatch.open&&inHatch(s.x,s.z,.14))&&!blocked(world.boxes,s.x,s.y,s.z,.2,1.83);
  const mouseLocked=()=>document.pointerLockElement===canvas;
  function releaseMouse(){if(mouseLocked())document.exitPointerLock();}
  function lockMouse(){
@@ -1427,8 +1429,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(now-lastPaint<limit-2)return;
   const shotDelta=Math.min(.1,Math.max(0,(now-last)/1000||0)),dt=Math.min(.055,shotDelta);last=now;lastPaint=now;
   if(!s||!renderer)return;
-  if(!canHop())hopAge=HOP_COOLDOWN;
-  else hopAge=Math.min(HOP_COOLDOWN,hopAge+shotDelta);
+  if(hopAge<HOP_COOLDOWN){
+   hopAge=canHop()?Math.min(HOP_COOLDOWN,hopAge+shotDelta):HOP_COOLDOWN;
+  }
   updateHiding(dt);
   if(lifeNoticeLeft>0&&!captureShot){
    if(!isSuspended())lifeNoticeLeft=Math.max(0,lifeNoticeLeft-shotDelta);
@@ -1663,7 +1666,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    view={...camera,yaw:Math.atan2(dx,dz),pitch:Math.atan2(s.y+1.01-camera.y,Math.hypot(dx,dz))};torch=false;shotLight=.15;
   }
   // Render-only hop: the collision body, focus, AI and save coordinates are unchanged.
-  if(!thirdPerson&&!carShot&&canHop()&&hopAge<HOP_COOLDOWN)view={...view,y:view.y+hopOffset(hopAge,reducedMotion.matches)};
+  if(hopAge<HOP_COOLDOWN&&!thirdPerson&&!carShot&&canHop())view={...view,y:view.y+hopOffset(hopAge,reducedMotion.matches)};
   sound.carEngine(carShot&&!isSuspended()?world.car.progress:null);
   sound.rcMotor(rc?.mode==='driving'&&!isPaused()?rc.velocity:0);
   root.classList.toggle('house-arrival',events.phase==='arrival'||events.phase==='car-preview'||wakeShot()||!!actorWalk);
@@ -1947,7 +1950,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(e.key==='Escape'&&rc?.mode==='driving'&&!isPaused()){e.preventDefault();runAction('rc:stop');return;}
   if(phone.editing){if(e.key==='Escape'){e.preventDefault();void phone.layoutAction('done');}else if(e.key==='Tab'){const panel=phone.host.querySelector(phone.preview?'.hud-preview-tools':'.hud-editor'),items=[...panel.querySelectorAll('button,input,select')];if(!panel.contains(document.activeElement)||(!e.shiftKey&&document.activeElement===items.at(-1))||(e.shiftKey&&document.activeElement===items[0])){e.preventDefault();(e.shiftKey?items.at(-1):items[0]).focus();}}return;}
   if(['INPUT','SELECT','TEXTAREA'].includes(focused)&&e.key!=='Escape')return;
-  if(e.key===' '&&['BUTTON','SUMMARY','A'].includes(focused))return;
+  // Preserve Space activation for keyboard-focused controls and dialogs, but
+  // a pointer-clicked gameplay button must not steal the jump key.
+  if(e.key===' '&&['BUTTON','SUMMARY','A'].includes(focused)&&
+   (!e.target.closest('.lab-buttons')||e.target.matches(':focus-visible')))return;
   if(piano&&e.key!=='Tab'){
    const note=PIANO_KEYS.indexOf(e.key.toLowerCase());
    if(note!==-1){e.preventDefault();if(!e.repeat)playPiano(note);return;}
