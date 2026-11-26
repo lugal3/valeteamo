@@ -1,17 +1,30 @@
-// Kawaii holiday decoration for the music/altar room. All meshes use the existing
+// Kawaii holiday decoration in the north-east corner of the upstairs hall. All meshes use the existing
 // world batch; no texture, point light, per-frame geometry or external asset.
-export const HOLIDAY_TREE=Object.freeze({x:12.60,z:2.27,radius:.53,height:2.30});
+// Option A: outside the music room, between the bedroom and music partitions.
+// Local +Z faces diagonally southwest, out into the open corridor.
+export const HOLIDAY_TREE=Object.freeze({x:6.75,z:.875,yaw:Math.PI/4,radius:.53,height:2.30});
+export const HOLIDAY_GIFT_OFFSET=Object.freeze({x:-.25,z:.65});
+export const HOLIDAY_SWITCH_OFFSET=Object.freeze({x:.15,z:.83});
+export function holidayTreePoint(dx,dz){
+ const {x,z,yaw}=HOLIDAY_TREE,c=Math.cos(yaw),s=Math.sin(yaw);
+ return {x:x+dx*c-dz*s,z:z+dx*s+dz*c};
+}
 const greens=[[.32,.56,.42],[.40,.65,.48],[.49,.71,.54]];
 const colors=[[.95,.50,.68],[.98,.82,.63],[.93,.84,.88],[.83,.30,.42]];
 const TAU=Math.PI*2;
 export function installHolidayTree(add,floor,holiday=null){
- const {x,z}=HOLIDAY_TREE;
- const piece=(id,px,y,pz,w,h,d,mat,solid=false,extra={})=>add('holiday-'+id,x+px,floor+y,z+pz,w,h,d,mat,solid,extra);
+ const {x,z,yaw}=HOLIDAY_TREE;
+ const piece=(id,px,y,pz,w,h,d,mat,solid=false,extra={})=>{
+  const at=holidayTreePoint(px,pz);
+  // The conical tiers retain axis-aligned collision bounds. Their geometry
+  // is symmetric and the ring vertices themselves are already rotated.
+  return add('holiday-'+id,at.x,floor+y,at.z,w,h,d,mat,solid,{yaw:id.startsWith('tier-')?0:yaw,...extra});
+ };
  piece('pot',0,.15,0,.43,.30,.43,'wood',true,{shape:'round',smooth:true,segments:8,rings:3,color:[.64,.39,.39]});
  // Three low-poly flared tiers. Their bounding collision is confined to the tree.
  for(let i=0;i<3;i++){
   const bottom=.30+i*.47,top=bottom+.86,r=.53-i*.125,triangles=[];
-  const ring=(n,h,rad)=>[x+Math.cos(n*TAU/8)*rad,floor+h,z+Math.sin(n*TAU/8)*rad];
+  const ring=(n,h,rad)=>[x+Math.cos(n*TAU/8+yaw)*rad,floor+h,z+Math.sin(n*TAU/8+yaw)*rad];
   for(let n=0;n<8;n++){
    const a=ring(n,bottom,r*.94),b=ring(n+1,bottom,r*.94),c=ring(n,bottom+.10,r),d=ring(n+1,bottom+.10,r);
    const peak=[x,floor+top,z],base=[x,floor+bottom,z];
@@ -39,12 +52,12 @@ export function installHolidayTree(add,floor,holiday=null){
  for(let i=0;i<10;i++){const a=pts[i],b=pts[(i+1)%10];tris.push([[...a,z-.025],[...b,z-.025],[...a,z+.025]],[[...a,z+.025],[...b,z-.025],[...b,z+.025]]);}
  piece('star',0,starY,0,.36,.36,.05,'brass',false,{triangles:tris,holidayBulb:true,dynamic:false,holidayPower:holiday?.tree,color:[1,.79,.36]});
  // A few hand-wrapped gifts, all tucked under the foliage rather than in the path.
- for(const [i,dx,dz,w,h,d] of [[0,-.64,.33,.27,.22,.24],[1,.28,.25,.25,.28,.21],[2,.05,-.30,.29,.18,.24]]){
+ for(const [i,dx,dz,w,h,d] of [[0,HOLIDAY_GIFT_OFFSET.x,HOLIDAY_GIFT_OFFSET.z,.27,.22,.24],[1,.28,.25,.25,.28,.21],[2,.05,-.30,.29,.18,.24]]){
   const color=colors[i],ribbon=colors[(i+1)%4];
   piece('gift-'+i,dx,h/2,dz,w,h,d,'paper',false,{color});
   const lid=piece('gift-lid-'+i,dx,h+.012,dz,w+.014,.034,d+.014,'paper',false,{color,dynamic:i===0&&!!holiday,castShadow:false});
-  if(i===0&&holiday)holiday.gift.parts.push({box:lid,y:lid.y,z:lid.z});
-  const lidPart=(id,x,y,z,w,h,d,extra={})=>{const b=piece(id,x,y,z,w,h,d,'pink',false,{color:ribbon,dynamic:i===0&&!!holiday,castShadow:false,...extra});if(i===0&&holiday)holiday.gift.parts.push({box:b,y:b.y,z:b.z});};
+  if(i===0&&holiday)holiday.gift.parts.push({box:lid,x:lid.x,y:lid.y,z:lid.z,roll:lid.roll||0});
+  const lidPart=(id,x,y,z,w,h,d,extra={})=>{const b=piece(id,x,y,z,w,h,d,'pink',false,{color:ribbon,dynamic:i===0&&!!holiday,castShadow:false,...extra});if(i===0&&holiday)holiday.gift.parts.push({box:b,x:b.x,y:b.y,z:b.z,roll:b.roll||0});};
   lidPart('gift-ribbon-x-'+i,dx,h+.034,dz,w+.008,.014,.042);
   lidPart('gift-ribbon-z-'+i,dx,h+.036,dz,.042,.014,d+.008);
   for(const side of [-1,1])lidPart('gift-bow-'+i+'-'+side,dx+side*.052,h+.073,dz,.10,.057,.062,{shape:'round',smooth:true,segments:5,rings:3,roll:side*.35});
