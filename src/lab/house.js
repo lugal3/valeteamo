@@ -137,6 +137,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      <label>Velocidad de giro <input data-setting="sensitivity" aria-label="Sensibilidad de giro" type="range" min="${SENSITIVITY_MIN}" max="${SENSITIVITY_MAX}" step="${SENSITIVITY_STEP}" value="${DEFAULT_CAMERA_SETTINGS.sensitivity}"></label>
      <label class="lab-invert-label"><input data-setting="invertX" type="checkbox"> Invertir giro horizontal</label>
      <label>Calidad de imagen <select data-setting="quality" aria-label="Calidad gráfica"><option value="medium">Detalles (auto)</option><option value="low">Modo fluido</option></select></label>
+     <label class="lab-preference"><input data-setting="showFPS" type="checkbox"> Mostrar FPS durante el juego</label>
      <label class="lab-preference"><input data-setting="bob" type="checkbox" checked> Balanceo al caminar</label>
      <label class="lab-preference"><input data-setting="motion" type="checkbox"> Reducir movimiento</label>
      <label class="lab-preference"><input data-setting="captions" type="checkbox" checked> Subtítulos de sonidos</label>
@@ -160,6 +161,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      <details class="lab-settings-note"><summary>Controles</summary><p>WASD para caminar, Mayús para correr y C para agacharte y Espacio para saltar. Arrastra para mirar o pulsa R para capturar el ratón. E interactúa, F usa el objeto equipado, I abre el inventario (también disponible en Ajustes) y Esc libera el ratón o pausa.</p><p>En pantalla táctil, mueve el joystick izquierdo y arrastra a la derecha para mirar. Puedes hacer ambos gestos a la vez.</p></details>
    </div></details>
  </div>
+ <output id="house-fps" class="house-fps" hidden aria-live="off" aria-label="Fotogramas por segundo"></output>
  ${config.trial?'<output id="house-perf" class="house-perf" hidden aria-live="off"></output>':''}
  <div class="lab-focus" id="lab-focus" role="status" aria-live="polite"></div>
  <div class="house-messages" id="house-messages" hidden>
@@ -330,7 +332,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   Object.assign(target,{x:cat.x,y:cat.y+.38,z:cat.z,interactable:!cat.hidden&&(!emyCompanion||['following','stay','distract','distract-recover'].includes(emyCompanion.stage))&&cat.reaction<=0});
  }
  function reset(saved){
-  perfSampler.reset();perfAt=0;
+  perfSampler.reset();perfAt=0;clearFPS();
   const seed=!saved&&scenario?.milestone;
   if(seed)saved=trialCheckpoint(seed);
   previousToolTarget=null;autoUseTarget=null;keyTurn=null;
@@ -1422,7 +1424,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   for(const cue of floorSounds.advance(dt,s,moved))play(cue.kind,cue.origin?{...cue.origin,y:cue.origin.y+.25}:null,cue.level);
  }
  let statsAt=performance.now(),frameCount=0,slowSeconds=0;
- const perfSampler=createFrameSampler();let perfEnabled=false,perfAt=0,idleWarm=null;
+ const perfSampler=createFrameSampler(),fpsSampler=createFrameSampler(60);let perfEnabled=false,perfAt=0,idleWarm=null,fpsAt=0,fpsWasActive=false;
+ const fpsNode=$('house-fps');
+ function clearFPS(){fpsSampler.reset();fpsAt=0;fpsWasActive=false;fpsNode.hidden=true;fpsNode.textContent='';}
  const perfReport=()=>({...perfSampler.report(),quality:options.quality,room:ctxRoom(s),vertices:renderer.vertexCount,triangles:renderer.triangleCount,shadowPasses:renderer.shadowPasses??0,reflectionUploads:renderer.reflectedUploads??0});
  function warmPursuer(){
   if(!demo||config.trial||!renderer||idleWarm!==null||typeof window.requestIdleCallback!=='function')return;
@@ -1657,6 +1661,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const shotDelta=Math.min(.1,Math.max(0,(now-last)/1000||0)),dt=Math.min(.055,shotDelta);last=now;lastPaint=now;
   if(!s||!renderer)return;
   const measuring=perfEnabled&&!isSuspended()&&!captureShot;
+  const showFPS=options.showFPS===true&&!isPaused()&&!phone.open&&(!finalCutscene||finalCutscene.playable);
+  if(!showFPS&&fpsWasActive)clearFPS();
   const cpuStart=measuring?performance.now():0;
   if(perfEnabled&&!measuring)perfSampler.pause();
   if(!isSuspended()&&!pursuer.caught)warmPursuer();
@@ -2112,6 +2118,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    }
   }
   updateControls();
+  if(showFPS){
+   fpsWasActive=true;fpsSampler.record(now,0);
+   if(now-fpsAt>=1000){fpsAt=now;const m=fpsSampler.report();if(m.samples){fpsNode.textContent=Math.round(m.fps)+' FPS';fpsNode.hidden=false;}else{fpsNode.textContent='— FPS';fpsNode.hidden=false;}}
+  }
   if(measuring){perfSampler.record(now,performance.now()-cpuStart);if(now-perfAt>=1000){perfAt=now;const m=perfReport();$('house-perf').textContent=m.samples?`${m.fps.toFixed(1)} FPS · 1% ${m.low1.toFixed(1)} · p95 ${m.p95.toFixed(1)} ms\nCPU p95 ${m.cpuP95.toFixed(1)} ms · >50 ms ${m.hitches} · sombras ${m.shadowPasses}\n${m.quality} · ${m.room} · ${m.samples} frames`:'Midiendo…';}}
  }
  function interruptGraphics(title,message){
@@ -2214,6 +2224,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  syncMotion();
  root.addEventListener('input',e=>{
   const field=e.target,key=field.dataset.setting;if(!key)return;
+  if(key==='showFPS'){options.showFPS=field.checked;saveCamera();clearFPS();return;}
   if(key==='perf'&&config.trial){perfEnabled=field.checked;perfSampler.reset();perfAt=0;$('house-perf').hidden=!perfEnabled;$('house-perf').textContent='Midiendo…';return;}
   if(key==='quality'){options.quality=field.value;renderer.quality=field.value;root.querySelectorAll('[data-setting="quality"]').forEach(el=>{if(el!==field)el.value=field.value;});}
   if(key==='sensitivity'){options.sensitivity=Number(field.value);root.querySelectorAll('[data-setting="sensitivity"]').forEach(el=>{if(el!==field)el.value=field.value;});saveCamera();}
@@ -2319,7 +2330,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    rebuild();contextLost=false;paused=false;modalClose();
    if(captureShot){captureLayer.hidden=false;resumeHouseAudio();}
    if(!ready)startHouse();
-   last=statsAt=performance.now();lastPaint=0;frameCount=0;
+   last=statsAt=performance.now();lastPaint=0;frameCount=0;clearFPS();perfSampler.pause();
    raf=requestAnimationFrame(frame);
    if(ready)say('Gráficos recuperados');
   }catch(e){interruptGraphics('Error de renderizado',String(e.message||e));}
@@ -2344,6 +2355,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   root.querySelector('[data-setting="threatText"]').checked=options.threatText===true;
   root.querySelector('[data-setting="haptics"]').checked=options.haptics!==false;
   root.querySelector('[data-setting="immersive"]').checked=options.immersive!==false;
+  root.querySelector('[data-setting="showFPS"]').checked=options.showFPS===true;
   root.querySelector('[data-setting="difficulty"]').value=options.difficulty;
   root.querySelector('[data-setting="adaptive"]').checked=options.adaptive;
   root.querySelectorAll('[data-setting="quality"]').forEach(el=>el.value=options.quality);
