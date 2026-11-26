@@ -98,9 +98,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  <div class="house-emy-menu" id="house-emy-menu" hidden role="dialog" aria-modal="true" aria-label="Acciones de Emy">
   <header><strong>Emy ♡</strong><span>Tu pequeña compañera</span><button data-act="emy:close" class="emy-close" aria-label="Cerrar acciones de Emy">✕</button></header>
   <button class="emy-card pet" data-act="emy:pet"><i aria-hidden="true">♡</i><b>Acariciar</b><span>Dale un poquito de cariño ♡</span></button>
-  <button class="emy-card stay" id="house-emy-stay" data-act="emy:stay" aria-pressed="false"><i aria-hidden="true">⌂</i><b id="house-emy-stay-title">Quédate aquí</b><span id="house-emy-stay-copy">Emy esperará en este lugar</span></button>
+  <button class="emy-card stay" id="house-emy-stay" data-act="emy:stay" aria-pressed="false"><i id="house-emy-stay-icon" aria-hidden="true">Ⅱ</i><b id="house-emy-stay-title">Quédate aquí</b><span id="house-emy-stay-copy">Emy esperará en este lugar</span></button>
   <button class="emy-card scan" data-act="emy:scan"><i aria-hidden="true">◎</i><b>Escaneo</b><span>Detecta amenazas cercanas</span><small id="house-emy-scan-cd" hidden></small></button>
-  <button class="emy-card distract" data-act="emy:map"><i aria-hidden="true">♧</i><b>Distracción</b><span>Envía a Emy a hacer ruido</span><small id="house-emy-distract-cd" hidden></small></button>
+  <button class="emy-card distract" data-act="emy:map"><i aria-hidden="true">♫</i><b>Distracción</b><span>Envía a Emy a hacer ruido</span><small id="house-emy-distract-cd" hidden></small></button>
  </div>
  <div class="house-emy-map" id="house-emy-map" hidden role="dialog" aria-modal="true" aria-label="Mapa de distracción de Emy">
   <header class="house-emy-map-header">
@@ -511,6 +511,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    const distract=$('house-emy-distract-cd');distract.closest('button').disabled=true;
    distract.hidden=false;distract.textContent=staying?'Sígueme primero':'No disponible';
   }
+  $('house-emy-stay-icon').textContent=staying?'↪':'Ⅱ';
   $('house-emy-stay-title').textContent=staying?'Sígueme':'Quédate aquí';
   $('house-emy-stay-copy').textContent=staying?'Vuelve a acompañar a Kitty':'Emy esperará en este lugar';
   stay.setAttribute('aria-pressed',String(staying));stay.disabled=!['following','stay'].includes(emyCompanion?.stage);
