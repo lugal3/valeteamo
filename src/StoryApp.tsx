@@ -77,7 +77,7 @@ export function StoryApp({ClassicApp,initialRoute}:{ClassicApp:ComponentType;ini
    resetPrologue();resetRescue();openDemo('garden',false);
   }}/></Suspense>;
  if(screen==='rescue')return <Suspense fallback={<main className="playtest-loading" role="status">Preparando el rescate 2D…</main>}><RescueDemo key={demoEntry+(demoTrial?'-trial':'-story')} entry={demoEntry} test={demoTrial} onExit={()=>{setScreen(demoTrial?'tests':'cover');if(!demoTrial)unlockAudio();}}/></Suspense>;
- if(screen==='tests')return houseTrial?<PlaytestHouse id={houseTrial} onExit={closeHouseTrial}/>:<PlaytestMenu
+ if(screen==='tests')return houseTrial?<PlaytestHouse key={houseTrial} id={houseTrial} onExit={closeHouseTrial}/>:<PlaytestMenu
   onExit={()=>{unlockAudio();setScreen('cover');}}
   onSelect={id=>{
    switch(id){
