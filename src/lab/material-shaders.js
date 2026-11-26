@@ -383,6 +383,14 @@ void main(){
   nearTree*=smoothstep(0.0,.14,world.y-${HEIGHT.toFixed(2)})*(1.0-smoothstep(2.85,3.0,world.z));
   ambient+=vec3(.34,.25,.20)*nearTree;
  }
+ // Candle spill is a small local diffuse term in the existing pass. It
+ // cannot cross the music-room walls or floor and adds no shadow source.
+ if(uAltarPulse>.01&&world.y>3.15&&world.y<5.6&&world.x>10.8&&world.x<13.9&&world.z>0.0&&world.z<2.85){
+  vec3 offset=world-vec3(12.27,4.1,.51);
+  float reach=1.0-smoothstep(.28,1.55,length(offset*vec3(1.0,.85,1.0)));
+  float pulse=.96+.04*uHolidayMotion*sin(uTime*7.2);
+  ambient+=vec3(.27,.125,.058)*reach*pulse*uAltarPulse;
+ }
  vec3 lighting=(ambient+uShot*vec3(.75,.83,1.0))*facing+vec3(.94,.97,1.0)*(beam+motes*.50)+vec3(1.0,.82,.60)*warmth;
  // Retro character artwork carries a subtle baked fill light. Without it the
  // skin nearly disappears in shadow while the separate eyes remain bright.
