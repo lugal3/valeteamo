@@ -79,6 +79,43 @@ function stepOffset(actor,z){
 }
 
 export function pursuerPose(actor,reduced=false){
+ // Only the porch cinematic uses this overlay. Blend back to the exact
+ // live actor pose before handoff; normal chase and capture stay unchanged.
+ if(Number.isFinite(actor.finalePose)){
+  const weight=clamp(actor.finalePose,0,1),hit=clamp(actor.finaleImpact||0,0,1);
+  const baseActor={...actor,finalePose:undefined,finaleImpact:undefined,captureFace:undefined,captureReach:0};
+  const base=pursuerPose(baseActor,reduced);
+  if(weight<=0)return base;
+  const performance=pursuerPose({...baseActor,captureFace:actor.captureFace,captureReach:Math.max(.001,actor.captureReach||0)},reduced);
+  performance.chest.pitch-=.31*hit;
+  performance.chest.roll=(performance.chest.roll||0)-.13*hit;
+  performance.chest.z-=.08*hit;
+  performance.head.pitch-=.26*hit;
+  performance.head.roll=(performance.head.roll||0)+.18*hit;
+  // One shoulder throws back first; the other reaches toward the impact.
+  for(const side of [-1,1]){
+   const arm=performance['arm'+side],forearm=performance['forearm'+side];
+   const delta=side===-1?.54:-.32;
+   const pitch=arm.pitch+delta*hit;
+   arm.pitch=pitch;arm.roll=(arm.roll||0)+side*.21*hit;
+   forearm.pitch=pitch-.26*(actor.captureReach||0)-.32*hit;
+   forearm.y=arm.y+(SHOULDER-ELBOW)*(1-Math.cos(pitch));
+   forearm.z=arm.z-(SHOULDER-ELBOW)*Math.sin(pitch);
+  }
+  const result={...base};
+  for(const [name,pose] of Object.entries(performance)){
+   const original=base[name];
+   if(!original){result[name]=pose;continue;}
+   const blended={...original};
+   for(const key of new Set([...Object.keys(original),...Object.keys(pose)])){
+    const neutral=key==='scale'?1:0,from=original[key]??neutral,to=pose[key]??neutral;
+    blended[key]=from+(to-from)*weight;
+   }
+   result[name]=blended;
+  }
+  return result;
+ }
+
  const amount=clamp((actor.speed??0)/1.42,0,1)*(reduced?.68:1);
  const phase=(actor.walk/STRIDE)%1,step=phase*TAU;
  const sway=Math.sin(step)*.037*amount;
