@@ -14,6 +14,7 @@ concurrency:
 
 jobs:
   verificar-y-publicar:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Descargar código
@@ -27,8 +28,16 @@ jobs:
         run: npm ci
       - name: Ejecutar pruebas
         run: npm test
-      - name: Compilar web
+      - name: Ejecutar pruebas de rendimiento
+        run: npm run test:perf
+      - name: Instalar FFmpeg para distribución sin pérdida
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Compilar web optimizada
+        env:
+          VALE_REQUIRE_FLAC: '1'
         run: npm run build
+      - name: Verificar recursos comprimidos antes de publicar
+        run: node scripts/assert-flac-dist.mjs dist
       - name: Publicar en Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
