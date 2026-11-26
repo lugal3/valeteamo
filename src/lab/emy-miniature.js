@@ -24,6 +24,25 @@ function polygon(face,project){
  const pts=face.p.map(project),attrs=face.id?' data-zone="'+esc(face.id)+'" data-act="emy:room:'+esc(face.id)+'" aria-label="'+esc(face.label)+'"':'';
  return {points:pts,depth:pts.reduce((sum,p)=>sum+p.depth,0)/pts.length,html:'<polygon points="'+pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ')+'" fill="'+face.fill+'" stroke="'+(face.stroke||'#30253e')+'" stroke-width="'+(face.width||.85)+'"'+attrs+(face.klass?' class="'+face.klass+'"':'')+' />'};
 }
+// Keep real positions as anchor dots. Nearby actors receive compact, separated
+// symbols connected to those anchors; the legend carries their full names.
+export function layoutMiniaturePins(markers,project,level){
+ const placed=[];
+ for(const m of markers){
+  const anchor=project([m.x,level+.12,m.z]);
+  let badge=anchor;
+  if(placed.some(p=>Math.hypot(p.badge.x-anchor.x,p.badge.y-anchor.y)<23)){
+   outer:for(const r of [24,36,48,60]){
+    for(const angle of [-Math.PI/2,0,Math.PI,Math.PI/2,-Math.PI/4,Math.PI/4,Math.PI*3/4,-Math.PI*3/4]){
+     const candidate={x:anchor.x+Math.cos(angle)*r,y:anchor.y+Math.sin(angle)*r};
+     if(placed.every(p=>Math.hypot(p.badge.x-candidate.x,p.badge.y-candidate.y)>=23)){badge=candidate;break outer;}
+    }
+   }
+  }
+  placed.push({marker:m,anchor,badge});
+ }
+ return placed;
+}
 // The actual world, including real stair opening and walls, is the sole layout source.
 export function miniatureSVG(world,view,{floor=-1,selectedId='',lockedIds=[],markers=[]}={}){
  const faces=[],labels=[],locked=new Set(lockedIds),project=p=>miniatureProject(p,view,floor);
@@ -82,8 +101,13 @@ export function miniatureSVG(world,view,{floor=-1,selectedId='',lockedIds=[],mar
  }
  const margin=23,viewBox=Number.isFinite(left)?[left-margin,top-margin,right-left+2*margin,bottom-top+2*margin].map(v=>v.toFixed(2)).join(' '):'0 0 520 342';
  const text=labels.map(o=>{const p=project(o.p);return '<text x="'+p.x.toFixed(1)+'" y="'+p.y.toFixed(1)+'" class="mini-label'+(o.locked?' is-locked':'')+'"'+(!o.locked?' data-act="emy:room:'+esc(o.id)+'"':'')+'>'+esc(o.label)+(o.locked?' 🔒':'')+'</text>';}).join('');
- const pins=floor<0?'':markers.filter(m=>Number.isFinite(m.x)&&Number.isFinite(m.y)&&Number.isFinite(m.z)&&m.x>=0&&m.x<=HOUSE.width&&m.z>=0&&m.z<=HOUSE.depth&&m.y>=-.18&&m.y<=HEIGHT+.6&&(m.y>=HEIGHT*.5?1:0)===floor).map(m=>{
-  const p=project([m.x,level+.12,m.z]);return '<g class="mini-pin" data-marker="'+esc(m.id)+'" transform="translate('+p.x.toFixed(1)+' '+p.y.toFixed(1)+')"><circle r="8" fill="'+m.color+'" stroke="#fff" stroke-width="1.5"/><text y="-12">'+esc(m.label)+'</text></g>';
+ const visibleMarkers=floor<0?[]:markers.filter(m=>Number.isFinite(m.x)&&Number.isFinite(m.y)&&Number.isFinite(m.z)&&m.x>=0&&m.x<=HOUSE.width&&m.z>=0&&m.z<=HOUSE.depth&&m.y>=-.18&&m.y<=HEIGHT+.6&&(m.y>=HEIGHT*.5?1:0)===floor);
+ const n=v=>v.toFixed(1);
+ const pins=layoutMiniaturePins(visibleMarkers,project,level).map(({marker:m,anchor,badge})=>{
+  const moved=anchor!==badge,symbol=m.id==='kitty'?'K':m.id==='emy'?'E':'!';
+  return '<g class="mini-pin" data-marker="'+esc(m.id)+'" aria-label="'+esc(m.label)+'"><title>'+esc(m.label)+'</title>'+
+   (moved?'<line x1="'+n(anchor.x)+'" y1="'+n(anchor.y)+'" x2="'+n(badge.x)+'" y2="'+n(badge.y)+'" stroke="#fff3e9" stroke-width="1.5"/><circle cx="'+n(anchor.x)+'" cy="'+n(anchor.y)+'" r="3" fill="'+esc(m.color)+'"/>':'')+
+   '<g transform="translate('+n(badge.x)+' '+n(badge.y)+')"><circle r="10" fill="'+esc(m.color)+'" stroke="#fff" stroke-width="1.5"/><text class="mini-symbol" y="0">'+symbol+'</text></g></g>';
  }).join('');
  return '<svg viewBox="'+viewBox+'" role="img" aria-label="'+(floor<0?'Exterior tridimensional de la casa':'Casa en corte, planta '+(floor?'alta':'baja'))+'" xmlns="http://www.w3.org/2000/svg">'+sorted.map(o=>o.html).join('')+text+pins+'</svg>';
 }
