@@ -16,7 +16,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  assert.equal(collectCinematicCues('escape',8,0,play).length,0,'never rewind sound on scene reset');
  const skipped=collectCinematicCues('escape',0,10,new Set());
  assert.equal(skipped.length,ESCAPE_FINALE_CUES.length,'large frame jump must not miss events');
- const {FINALE_BEATS,finaleStage,finaleThreat,finaleWeather}=await import('../src/lab/escape-finale.js');
+ const {FINALE_BEATS,finaleStage,finaleThreat,finaleWeather,finaleEmyGoal}=await import('../src/lab/escape-finale.js');
  const {createHouse,blocked,lineBlocked}=await import('../src/lab/world.js');
  const {poseEscapeAmbush}=await import('../src/lab/emy-rescue.js');
  const world=createHouse();
@@ -60,6 +60,51 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   const ending=finaleStage(shot,enemy,false);
   assert(Math.abs(Math.sin(ending.view.yaw))<.001&&Math.cos(ending.view.yaw)>.99,'Handoff faces garden');
   assert(ending.view.z<17.7,'Cinematic alone cannot cross finish line');
+ }
+ // V3.2: evaluate the same rig and cat model used by the renderer.
+ const {sampleLoisReaction}=await import('../src/lab/lois-ps2-reactions.js');
+ const {sampleLoisRig}=await import('../src/lab/lois-ps2-rig.js');
+ const actor={phase:'follow',age:0,speed:0,crouch:0,walk:0};
+ const at=(age,reduced=false)=>sampleLoisReaction({...actor,visualReaction:{type:'finale-captive',age,duration:FINALE_BEATS.run}},reduced);
+ assert(at(1.70).brace>.9&&at(1.70).resist>.9,'Louis visibly braces and resists during the hold');
+ assert(at(2.25).recoil>.9,'Impact creates a distinct recoil');
+ assert(at(2.95).recover>.9,'Louis regains his balance before running');
+ for(const reduced of [false,true]){
+  for(const t of [0,.68,1.7,2.25,2.95,3.78]){
+   const reaction=at(t,reduced);
+   assert(Object.values(reaction).filter(v=>typeof v==='number').every(Number.isFinite));
+   const rig=sampleLoisRig({...actor,visualReaction:{type:'finale-captive',age:t,duration:FINALE_BEATS.run}},reduced);
+   assert(Object.values(rig.bones).every(b=>[...b.rotation,...b.translation].every(Number.isFinite)));
+  }
+  const held=sampleLoisRig({...actor,visualReaction:{type:'finale-captive',age:1.7,duration:FINALE_BEATS.run}},reduced);
+  const neutral=sampleLoisRig(actor,reduced);
+  assert.notDeepEqual(held.bones.leftShoulder.rotation,neutral.bones.leftShoulder.rotation);
+  assert.notDeepEqual(held.bones.leftShoulder.rotation,held.bones.rightShoulder.rotation,'Asymmetric arm performance');
+  for(const k of ['brace','resist','recoil','recover','pulse'])assert.equal(Math.abs(at(FINALE_BEATS.run,reduced)[k]),0,'No residual pose at playable handoff');
+ }
+ for(const startX of [4.7,5.95,7.1]){
+  const shot={elapsed:0,kitty:{from:{x:startX,z:12.42}},camera:{x:startX,y:1.63,z:12.42,yaw:0,pitch:0},louisStride:0};
+  const enemy={x:startX+.58,y:0,z:12.45,yaw:0};
+  const cat=world.emy;cat.hidden=true;
+  let prior=null,appeared=0;
+  const sample=t=>{
+   shot.elapsed=t;
+   if(poseEscapeAmbush(shot,cat,enemy,false))appeared++;
+   assert([cat.x,cat.y,cat.z,cat.yaw].every(Number.isFinite));
+   if(!cat.hidden){
+    assert(cat.y>=0,'Emy never sinks under the garden');
+    if(prior)assert(Math.hypot(cat.x-prior.x,cat.y-prior.y,cat.z-prior.z)<.35,'No root teleport at 30 Hz');
+    prior={x:cat.x,y:cat.y,z:cat.z};
+   }
+  };
+  for(let i=0;i<=113;i++)sample(i/30);
+  sample(FINALE_BEATS.run);
+  assert.equal(appeared,1,'Emy emerges only once');
+  assert(Math.abs(cat.y)<.001&&Math.abs(cat.x-5.38)<.001&&Math.abs(cat.z-17.05)<.001,'Physical landing and continuous escape handoff');
+  assert.equal(finaleStage(shot,enemy).louis.visualReaction,null,'Release authored pose at handoff');
+  const guiding=finaleEmyGoal({x:startX,z:16.4}),rejoin=finaleEmyGoal({x:startX,z:17.7});
+  assert(!guiding.rejoin&&rejoin.rejoin);
+  assert(Math.hypot(rejoin.x-startX,rejoin.z-17.7)<1,'Return beside Kitty at sunrise');
  }
  const threat=finaleThreat({mode:'chase'},1.65,false);
  assert(threat.captureReach>.5&&threat.captureFace.left>0&&threat.captureFace.jaw>0,'Visible rig-native transformation during the grab');
