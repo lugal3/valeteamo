@@ -29,21 +29,21 @@ export function openRescueHouseSave(){
   function write(record){
    try{
     // A newer checkpoint, a reset or the ending in another tab takes precedence.
-    if(storage.getItem(RESCUE_SAVE_KEY)!==raw)return;
+    if(storage.getItem(RESCUE_SAVE_KEY)!==raw)return false;
     const next=JSON.stringify(record);
-    if(next===raw)return;
+    if(next===raw)return false;
     storage.setItem(RESCUE_SAVE_KEY,next);
-    raw=next;
-   }catch{}
+    raw=next;return true;
+   }catch{return false;}
   }
   return {
    checkpoint:JSON.parse(raw).houseCheckpoint,
    save(checkpoint){
     const record=JSON.parse(raw);
-    if(record.rescued===true)return;
+    if(record.rescued===true)return false;
     if(checkpoint===null)delete record.houseCheckpoint;
     else record.houseCheckpoint=checkpoint;
-    write(record);
+    return write(record);
    },
    finish(){write(advanceRescue(parseRescue(raw),'rescue'));}
   };

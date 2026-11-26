@@ -109,22 +109,47 @@ export function poseEscapeAmbush(shot,cat,enemy,reduced){
  Object.assign(enemy,{x:start.x+.58+.68*recoil,y:0,z:Math.max(12.37,start.z-.10)+.26*approach-.05*recoil,
   yaw:Math.PI*.08+recoil*1.2,mode:t<2.1?'chase':'trapped',speed:t<1?1.5:0});
  enemy.facing=enemy.yaw;
- if(t<1.45)return false;
+ // Emy enters the exterior lane before the warning. Her existing four-paw
+ // rig compresses before takeoff, extends at the impact and absorbs landing.
+ if(t<.95)return false;
  const appeared=cat.hidden;
+ shot.emyAgeBase??=Number.isFinite(cat.age)?cat.age:0;
+ cat.age=shot.emyAgeBase+t;cat.darkEyes=false;
  cat.hidden=false;for(const {box} of cat.parts)box.hiddenGeometry=false;
- const leap=ease((t-1.45)/.88),land=ease((t-2.33)/.64),run=ease((t-3.1)/3.3);
- Object.assign(cat,{x:start.x-1.25+1.4*leap+.28*land+.15*run,
-  z:start.z-.15-.23*leap+.54*land+2.1*run,
-  y:land===1?0:Math.sin(leap*Math.PI)*.36+.94*leap*(1-land),yaw:Math.PI*.53*(1-land)});
- // After landing, Emy sprints past Kitty and is already visible ahead
- // at the playable handoff, rather than starting behind the camera.
- if(shot.camera&&t>=2.97){
-  const lead=ease((t-2.97)/.81);
-  cat.x+=(5.38-cat.x)*lead;
-  cat.z+=(17.05-cat.z)*lead;
-  cat.y=0;cat.yaw=0;
- }
- poseEmy(cat,{mode:land<1?'jump':run>0||shot.camera&&t>=2.97?'walk':'idle',walking:run>0&&run<1||!!shot.camera&&t>=2.97,phase:t,reduced});
+ if(appeared){cat.footContacts=null;cat.lastFootRoot=null;}
+ const turn=(a,b,v)=>a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*v;
+ const mix=(a,b,v)=>a+(b-a)*v;
+ const from={x:start.x-1.25,z:start.z+.18};
+ const takeoff={x:start.x-.68,z:start.z+.16};
+ const strike={x:start.x+.43,z:Math.max(12.37,start.z-.10)+.47};
+ const landing={x:start.x+.18,z:start.z+.92};
+ const lead={x:5.38,z:17.05};
+ const approachCat=ease((t-.95)/.38);
+ const flight=Math.max(0,Math.min(1,(t-1.45)/1.28));
+ // A strike has incoming momentum and a rebound, not a mid-air stop.
+ const u=Math.max(0,Math.min(1,(t-1.45)/.63)),d=Math.max(0,Math.min(1,(t-2.08)/.65));
+ const up=.35*u+.65*u*u,down=d*(2-d);
+ const run=ease((t-2.84)/.94);
+ const prep=ease((t-1.23)/.22)*(1-ease((t-1.45)/.14));
+ const absorb=ease((t-2.65)/.10)*(1-ease((t-2.75)/.18));
+ const face=Math.atan2(strike.x-takeoff.x,strike.z-takeoff.z);
+ const retreatFace=Math.atan2(landing.x-strike.x,landing.z-strike.z);
+ const leadFace=Math.atan2(lead.x-landing.x,lead.z-landing.z);
+ const x=t<1.45?mix(from.x,takeoff.x,approachCat):t<2.08?mix(takeoff.x,strike.x,up):mix(strike.x,landing.x,down);
+ const z=t<1.45?mix(from.z,takeoff.z,approachCat):t<2.08?mix(takeoff.z,strike.z,up):mix(strike.z,landing.z,down);
+ // Ballistic rise and fall: gravity accelerates the descent instead of
+ // easing to a hover just before touching the ground. The paws absorb it.
+ const height=3.84*flight*(1-flight);
+ const yaw=t<2.08?face:t<2.73?turn(face,retreatFace,ease(d)):turn(retreatFace,leadFace,ease((t-2.73)/.17));
+ Object.assign(cat,{x:mix(x,lead.x,run),z:mix(z,lead.z,run),y:height,
+  yaw:turn(yaw,0,ease((t-3.56)/.22)),alarm:ease((t-1.10)/.25)*(1-ease((t-2.44)/.40)),
+  earFlatten:ease((t-1.10)/.25)*(1-ease((t-2.44)/.40)),
+  earTurn:reduced?0:.24*ease((t-.95)/.22)*(1-ease((t-1.32)/.20))});
+ const walking=t<1.33||t>2.84&&t<3.78,airborne=t>1.45&&t<2.73;
+ poseEmy(cat,{mode:walking?'walk':'idle',walking,phase:t,reduced,
+  headYaw:reduced?0:.18*ease((t-.95)/.24)*(1-ease((t-1.32)/.22))-.16*ease((t-3.02)/.23)*(1-ease((t-3.45)/.33)),
+  leap:{compression:Math.max(prep,absorb),flight,airborne,strike:ease((t-1.83)/.22)*(1-ease((t-2.10)/.24))}});
+
  return appeared;
 }
 

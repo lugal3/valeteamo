@@ -155,6 +155,67 @@ const {chromium,webkit}=require('playwright');
    await page.locator('[data-act="emy:view:reset"]').click();
    assert.equal(await miniature.innerHTML(),original);
   }
+  if(mobile){
+   const host=page.locator('#house-emy-miniature'),r=await host.boundingBox();
+   assert.equal(await host.evaluate(el=>getComputedStyle(el).touchAction),'none','Map opts out of native gestures without blocking room-list scroll');
+   const cx=Math.round(r.x+r.width/2),cy=Math.round(r.y+r.height/2),delta=Math.round(Math.min(42,r.width*.16));
+   const view=async()=> (await skills()).miniatureView;
+   const baseline=await view();
+   if(engine===chromium){
+    // CDP delivers genuine multi-touch input, with the browser's implicit
+    // capture, pointer-capture transfer and native click synthesis.
+    const session=await page.context().newCDPSession(page);
+    const point=(id,x,y)=>({id,x,y,radiusX:3,radiusY:3});
+    const send=(type,touchPoints)=>session.send('Input.dispatchTouchEvent',{type,touchPoints});
+    try{
+     await send('touchStart',[point(1,cx-delta,cy)]);
+     await send('touchStart',[point(1,cx-delta,cy),point(2,cx+delta,cy)]);
+     for(const factor of [1.15,1.30,1.45]){
+      await send('touchMove',[point(1,cx-delta*factor,cy),point(2,cx+delta*factor,cy)]);
+      await page.waitForTimeout(55);
+     }
+     assert((await view()).zoom>baseline.zoom*1.2,'Native two-finger spread zooms in');
+     for(const factor of [1.2,.9,.7]){
+      await send('touchMove',[point(1,cx-delta*factor,cy),point(2,cx+delta*factor,cy)]);
+      await page.waitForTimeout(55);
+     }
+     assert((await view()).zoom<baseline.zoom*.95,'Native pinch zooms out during same gesture');
+     await send('touchEnd',[]);
+     await page.waitForFunction(()=>window.__rescueHouse.emySkills().mapPointers===0);
+     await send('touchStart',[point(3,cx,cy)]);
+     for(const d of [12,24,36])await send('touchMove',[point(3,cx+d,cy-d*.35)]);
+     await send('touchEnd',[]);
+    }finally{await session.detach();}
+   }else{
+    // Playwright WebKit has no CDP multitouch API. Drive its real DOM
+    // pointer handlers and emulate the capture loss from the old SVG child.
+    const dispatch=async(type,id,x,y,oldChild=false)=>page.evaluate(({type,id,x,y,oldChild})=>{
+     const host=document.querySelector('#house-emy-miniature');
+     const target=oldChild?host.querySelector('polygon')||host:host;
+     target.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerType:'touch',pointerId:id,button:0,buttons:type==='pointerup'?0:1,clientX:x,clientY:y}));
+    },{type,id,x,y,oldChild});
+    await dispatch('pointerdown',61,cx-delta,cy,true);
+    await dispatch('pointerdown',62,cx+delta,cy,true);
+    await dispatch('lostpointercapture',61,cx-delta,cy,true);
+    await dispatch('lostpointercapture',62,cx+delta,cy,true);
+    await dispatch('pointermove',61,cx-delta*1.4,cy);
+    await dispatch('pointermove',62,cx+delta*1.4,cy);
+    assert((await view()).zoom>baseline.zoom*1.2,'WebKit spread survives SVG child capture loss');
+    await dispatch('pointermove',61,cx-delta*.7,cy);
+    await dispatch('pointermove',62,cx+delta*.7,cy);
+    assert((await view()).zoom<baseline.zoom*.95,'WebKit pinch reverses smoothly');
+    await dispatch('pointerup',62,cx+delta*.7,cy);
+    await dispatch('pointermove',61,cx-delta*.7+36,cy-12);
+    await dispatch('pointerup',61,cx-delta*.7+36,cy-12);
+   }
+   const turned=await view();
+   assert(Math.abs(turned.yaw-baseline.yaw)>.12&&Math.abs(turned.pitch-baseline.pitch)>.03,'Single-finger drag orbits and tilts');
+   assert.equal((await skills()).mapPointers,0,'All gesture pointers released');
+   assert.equal((await skills()).preview,null,'Gestures never preview or send Emy');
+   await page.locator('[data-act="emy:view:reset"]').click();
+   assert.deepEqual(await view(),baseline,'Accessible reset restores original view');
+   console.log('PASS Emy mobile map: pinch in/out, orbit and pointer cleanup ('+ (engine===chromium?'native Chromium touch':'WebKit pointer events') +')');
+  }
   await page.emulateMedia({reducedMotion:'no-preference'});
   await page.locator('#house-emy-map [data-act="emy:floor:0"]').click();
   assert.equal(await page.locator('.mini-roof-lift').count(),1,'Actual roof is animated with normal motion');
@@ -193,6 +254,23 @@ const {chromium,webkit}=require('playwright');
   if(mobile&&details.viewportHeight>=375&&details.viewportWidth>=761)assert(details.controlHeight>=44,'Touch rail retains 44px hit targets');
   assert(details.listWidth>=190&&details.roomFont>=12&&details.footerBottom<=details.viewportHeight+1,
    'Room names and confirmation must remain legible and on-screen: '+JSON.stringify(details));
+  if(mobile){
+   // A real short tap on a selectable polygon still previews the room.
+   // Pick an actual visible hit point rather than the polygon's bounding center,
+   // which can fall behind another depth-sorted face.
+   const target=await page.evaluate(()=>{
+    const el=document.querySelector('#house-emy-miniature polygon[data-act="emy:room:study"]'),r=el.getBoundingClientRect();
+    for(let y=r.top+2;y<r.bottom-1;y+=3)for(let x=r.left+2;x<r.right-1;x+=3){
+     if(document.elementFromPoint(x,y)===el)return {x,y};
+    }
+    return null;
+   });
+   assert(target,'Study has a real touchable polygon');
+   await page.touchscreen.tap(target.x,target.y);
+   await page.waitForFunction(()=>!!window.__rescueHouse.emySkills().preview,null,{timeout:5000,polling:100});
+   assert.match(await page.locator('#house-emy-map-status').innerText(),/Estudio/i);
+   assert.equal((await skills()).stage,'following','Tap previews without sending');
+  }
   const stairs=page.locator('#house-emy-map .house-emy-destination-list [data-act="emy:room:stairs"]');
   await stairs.scrollIntoViewIfNeeded();
   await stairs.click();

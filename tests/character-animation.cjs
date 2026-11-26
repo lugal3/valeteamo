@@ -25,6 +25,24 @@ const near=(a,b,message,tol=1e-5)=>assert(Math.abs(a-b)<tol,message+': '+a+' vs 
  const rates=[];for(const hz of [30,60]){const a=new CharacterAnimator();for(let i=0;i<hz;i++)a.advance(1/hz,{distance:1/hz});rates.push(a.snapshot());}near(rates[0].distance,rates[1].distance,'Frame-independent stride');near(rates[0].weight,rates[1].weight,'Frame-independent blend');
  for(const t of [0,.2,.5,.8,1])assert([...sampleWindowEntry(t,createPose())].every(Number.isFinite));
  assert([...sampleWindowEntry(0,createPose())].every(v=>v===0));assert([...sampleWindowEntry(1,createPose())].every(v=>v===0));assert.equal(windowEntryHands(.4).length,2);
+ // The authored climb must visibly lose height, regain it with more force,
+ // and absorb landing. Check the actual rig, not only the phase labels.
+ const climbJoints=t=>{evaluateRig(binding,sampleWindowEntry(t,createPose()));return Object.fromEntries(['root','leftFoot','rightFoot','leftHand','rightHand'].map(n=>[n,jointPosition(binding,n)]));};
+ const firstPush=climbJoints(.39),slip=climbJoints(.46),secondPush=climbJoints(.65),landing=climbJoints(.87);
+ assert(firstPush.root[1]-slip.root[1]>.14,'The failed climb actually loses height');
+ assert(secondPush.root[1]-firstPush.root[1]>.18,'The second push gains visibly more height');
+ assert(climbJoints(.37).leftFoot[1]-climbJoints(.37).rightFoot[1]>.08,'The first foot leads');
+ assert(climbJoints(.71).rightFoot[1]>climbJoints(.71).leftFoot[1],'The other foot follows over the sill');
+ assert(landing.root[1]<-.05,'The knees absorb landing');
+ let previousClimb=null;
+ for(let frame=0;frame<=1200;frame++){
+  const pose=sampleWindowEntry(frame/1200,createPose());assert(pose.every(Number.isFinite));
+  evaluateRig(binding,pose);
+  const points=['leftHand','rightHand','leftFoot','rightFoot'].map(n=>jointPosition(binding,n));
+  assert(points.flat().every(Number.isFinite));
+  if(previousClimb)for(let i=0;i<points.length;i++)assert(Math.hypot(...points[i].map((v,k)=>v-previousClimb[i][k]))<.035,'No limb teleport between sampled poses');
+  previousClimb=points;
+ }
  const {sampleHop,hopPose}=await import('../src/lab/animations/hop.js');
  const {HOP_DURATION,HOP_COOLDOWN}=await import('../src/lab/hud-context.js');
  const air=hopPose(HOP_DURATION*.5);assert(air.lift>.1&&air.tuck>.03);

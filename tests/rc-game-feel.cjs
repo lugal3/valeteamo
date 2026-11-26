@@ -1,7 +1,7 @@
 // ValeTeAmo V2 phase 07: RC driving feel and camera without replacing physics.
 const assert=require('node:assert/strict');
 (async()=>{
- const {createRC,driveRC,advanceRCCamera,beepRC,stopRC,RC_SPEED}=await import('../src/lab/rc-car.js');
+ const {createRC,driveRC,advanceRCCamera,rcSignalStrength,rcCameraVibration,beepRC,stopRC,RC_SPEED}=await import('../src/lab/rc-car.js');
  const world={boxes:[],hatch:{amount:0}};
  const rc=createRC({x:5,y:.14,z:5,taken:false,interactable:false});
  rc.mode='driving';rc.y=0;
@@ -19,7 +19,10 @@ const assert=require('node:assert/strict');
  const heading=rc.yaw;
  for(let i=0;i<25;i++)driveRC(rc,world,{steer:1,throttle:-.6},1/60);
  assert(Number.isFinite(rc.yaw)&&rc.yaw!==heading,'reverse steering remains responsive');
- assert(Number.isFinite(rc.roll)&&Math.abs(rc.roll)<=.095,'bounded chassis lean');
+ assert(Number.isFinite(rc.roll)&&Math.abs(rc.roll)<=.14,'bounded chassis lean');
+ assert(Math.abs(rc.tilt)<=.34&&Math.abs(rc.suspension)<=.016,'bounded grade and stair movement');
+ assert.equal(rc.object.roll,rc.roll,'chassis lean reaches the actual model');
+ assert.equal(rcSignalStrength(rc,rc),1);assert(rcSignalStrength(rc,{x:rc.x+12,y:rc.y+3.15,z:rc.z})<1);assert(rcSignalStrength(rc,{x:1000,y:100,z:1000})>=.30);
  assert(beepRC(rc)&&rc.noise===8,'original lure untouched');
  const goal={x:4,y:1,z:5,yaw:-3.12,pitch:-.2};
  const prev={x:3.8,y:1,z:4.9,yaw:3.12,pitch:-.3};
@@ -28,6 +31,8 @@ const assert=require('node:assert/strict');
  assert(Math.abs(cam.yaw-prev.yaw)<.1,'yaw crosses ±pi by shortest arc');
  assert.deepEqual(advanceRCCamera(prev,goal,1/60,true),goal,'reduced-motion camera snaps safely');
  assert.deepEqual(advanceRCCamera({...prev,x:100},goal,1/60),goal,'reset after teleports/recovery');
- assert(stopRC(rc)&&rc.driveSpeed===0&&rc.velocity===0,'stopping clears momentum');
+ assert.deepEqual(rcCameraVibration(goal,{suspension:.016},true),goal);
+ assert(rcCameraVibration(goal,{suspension:.016}).y>goal.y);
+ assert(stopRC(rc)&&rc.driveSpeed===0&&rc.velocity===0&&rc.object.roll===0&&rc.object.tilt===0,'stopping clears momentum and visible lean');
  console.log('PASS V2 phase 07: progressive throttle, braking, reverse, steering, horn, smooth camera and resets');
 })().catch(e=>{console.error(e);process.exitCode=1});

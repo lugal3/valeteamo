@@ -27,7 +27,7 @@ export function captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTr
  if(events.phase==='evaded'||events.phase==='rc-rescue')stage='basement';
  if(events.phase==='rc-setup')stage='rc-setup';
  if(rcTrap.closed)stage='escape';
- const phase=events.phase==='hide'&&s.hidden?'patrol':events.phase;
+ const phase=events.phase;
  const pursuit=['patrol','hunt','evaded','rc-setup'].includes(phase)?{phase,actor:pursuer?.active?pursuer.checkpoint():null}:null;
  return {
   version:VERSION,stage,plushes:world.holiday?collectedPlushes(world.holiday):[],treeLights:world.holiday?.tree.on!==false,ventOpen:world.studyVent.unlatched,lives:checkpointLives(s.lives),emyRescueUsed:!!s.emyRescueUsed,intruderSeen:!!pursuer?.intruderSeen,powered:world.lights.power.on,drawer:puzzle.drawer,
@@ -37,7 +37,7 @@ export function captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTr
   battery:Math.ceil(s.battery),spares:s.inventory.batteries+Number(batterySwap!==null),
   rcOwned:s.inventory.rc||rc.mode==='disabled',trapArmed:rcTrap.armed,
   exitUnlocked:rcTrap.closed?!world.objects.find(item=>item.id==='entrada').sealed:undefined,
-  pursuit,hide:s.hidden?.objectId,emy
+  pursuit,hide:events.phase==='hide'?undefined:s.hidden?.objectId,emy
  };
 }
 

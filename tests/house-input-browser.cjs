@@ -15,6 +15,29 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   browser=await (safari?webkit:chromium).launch({headless:true,args:safari?[]:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   for(const mobile of safari?[true]:observe?[false]:[false,true]){
    const context=await browser.newContext({viewport:mobile?{width:844,height:390}:{width:960,height:540},hasTouch:mobile,isMobile:mobile}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.emulateMedia({reducedMotion:'reduce'});await page.goto(`http://127.0.0.1:${port}/__input`);await page.click('#launch');await page.click('[data-act=start]');
+   if(!observe&&!historical){
+    const stable=await page.evaluate(async()=>{
+     const {PhoneUI}=await import('/src/lab/phone-ui.js');
+     const root=document.createElement('div');root.style.cssText='position:absolute;width:640px;height:360px';document.body.append(root);
+     const phone=new PhoneUI(root,()=>{},()=>{});
+     try{
+      const events={messages:[],replyAt:null,read(){}};
+      phone.update(events,0);phone.show();
+      const selector='button[data-home-page="1"]',dot=()=>phone.host.querySelector(selector),first=dot();
+      const badge=()=>phone.host.querySelectorAll('.phone-app-icon.messages i').length;
+      events.messages.push({from:'Luis',text:'Prueba de notificación'});events.replyAt=1;phone.update(events,0);
+      const afterMessage=first===dot()&&first.isConnected,unread=badge()>0;
+      phone.photoCount++;phone.score++;events.replyAt=null;phone.update(events,0);
+      const afterBackground=first===dot()&&first.isConnected;
+      events.messages.length=0;phone.update(events,0);
+      const afterRead=first===dot()&&badge()===0;
+      first.click();
+      return {afterMessage,unread,afterBackground,afterRead,changedPage:phone.homePage===1&&!!phone.host.querySelector('[data-app=manual]')};
+     }finally{phone.destroy();root.remove();}
+    });
+    assert(Object.values(stable).every(Boolean),'Phone controls must survive notifications and background changes '+JSON.stringify(stable));
+    console.log('PASS stable phone home DOM and unread badges: '+JSON.stringify(stable));
+   }
    const snap=()=>page.evaluate(()=>window.__rescueHouse.snapshot()),pose=()=>page.evaluate(()=>window.__rescueHouse.setPose({x:6,y:0,z:8,yaw:0,pitch:0}));await pose();const ring=await page.locator('.lab-stick-ring').boundingBox(),cx=ring.x+ring.width/2,cy=ring.y+ring.height/2;
    const advanceGame=async seconds=>{
     const end=(await snap()).animation.time+seconds;
@@ -112,6 +135,49 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     await page.waitForTimeout(300);
     await aim('drawer');await shot('movil-interaccion');await page.locator('#lab-interact').tap();
     await page.waitForFunction(()=>window.__rescueHouse.snapshot().drawer.state==='open');
+   }
+   if(!observe&&!historical){
+    // Exercise the new viewer from a real collected note, with the gameplay
+    // paused and the original puzzle state unchanged.
+    if(!(await snap()).notes){await page.evaluate(()=>window.__rescueHouse.interactWith('note-hall'));await page.locator('#lab-dialog [data-act=close]').click();}
+    await page.keyboard.press('i');
+    await page.locator('[data-act=read][data-id=note-hall]').click();
+    const canvas=page.locator('.inspect-preview');await canvas.waitFor();
+    const inspection=()=>page.evaluate(()=>window.__rescueHouse.inspection());
+    const original=await inspection(),before=await snap();
+    assert(original.triangles>0&&before.paused);
+    await page.waitForFunction(()=>{const c=document.querySelector('.inspect-preview');return c&&c.width>10&&c.getContext('2d').getImageData(0,0,c.width,c.height).data.some((v,i)=>i%4===3&&v>0);});
+    const b=await canvas.boundingBox(),x=b.x+b.width/2,y=b.y+b.height/2;
+    if(mobile&&!safari){
+     const session=await context.newCDPSession(page);
+     await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:x-18,y,id:1},{x:x+18,y,id:2}]});
+     await session.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x-36,y,id:1},{x:x+36,y,id:2}]});
+     await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+     await session.detach();
+     await page.waitForFunction(()=>window.__rescueHouse.inspection().zoom>1.15);
+    }else if(!mobile){
+     await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+45,y+15,{steps:4});await page.mouse.up();
+     assert(Math.abs((await inspection()).yaw-original.yaw)>.2);
+     await page.mouse.wheel(0,-180);
+     await page.waitForFunction(()=>window.__rescueHouse.inspection().zoom>1.1);
+    }else{
+     await canvas.dispatchEvent('pointerdown',{pointerId:21,pointerType:'touch',button:0,clientX:x-15,clientY:y});
+     await canvas.dispatchEvent('pointerdown',{pointerId:22,pointerType:'touch',button:0,clientX:x+15,clientY:y});
+     await canvas.dispatchEvent('pointermove',{pointerId:22,pointerType:'touch',clientX:x+40,clientY:y});
+     await canvas.dispatchEvent('pointerup',{pointerId:21,pointerType:'touch'});
+     await canvas.dispatchEvent('pointerup',{pointerId:22,pointerType:'touch'});
+     assert((await inspection()).zoom>1.1);
+    }
+    await page.waitForFunction(()=>window.__rescueHouse.inspection().pointers===0);
+    assert.deepEqual((await snap()).position,before.position);
+    assert.deepEqual((await snap()).puzzle,before.puzzle);
+    await shot((mobile?'movil':'pc')+'-inspeccion-objeto');
+    await page.locator('[data-inspect=reset]').click();assert.deepEqual(await inspection(),original);
+    await page.locator('#lab-dialog [data-act=bag]').click();
+    assert.equal(await inspection(),null);
+    await page.locator('#lab-dialog [data-act=close]').click();
+    assert.equal(await page.locator('.inspect-preview').count(),0);
+    console.log('PASS object inspection: original mesh pixels, rotate/zoom, no movement or puzzle mutation and cleanup');
    }
    if(!observe){
     await togglePhoneSettings(page);

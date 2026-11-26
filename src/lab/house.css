@@ -518,3 +518,51 @@
 /* Opt-in FPS label: safe-area aware, no layout shifts or touch interception. */
 #lab3d .house-fps{position:absolute;top:max(10px,calc(var(--house-safe-top) + 5px));right:max(12px,calc(var(--house-safe-right) + 8px));z-index:26;pointer-events:none;white-space:nowrap;padding:4px 7px;border-radius:5px;background:#13121bb3;color:#e6f6ea;font:600 11px/1.2 system-ui;font-variant-numeric:tabular-nums}
 #lab3d .house-fps[hidden],#lab3d.house-phone-open .house-fps,#lab3d.house-hud-editing .house-fps,#lab3d.house-finale-shot .house-fps{display:none}
+
+/* Small, non-blocking confirmation of an actual persistent checkpoint. */
+#lab3d .house-save-notice[hidden],#lab3d .house-hide-peek[hidden]{display:none!important}
+#lab3d .house-save-notice{position:absolute;z-index:38;top:calc(max(10px,var(--house-safe-top,0px)) + 42px);left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid #d4b5c97a;border-radius:20px;background:#292233b8;color:#f3e6ee;font:500 11px system-ui;pointer-events:none}
+#lab3d .house-save-notice svg{width:23px;height:23px;fill:#e9b9d2;animation:save-paw 1.1s ease-in-out infinite}
+@keyframes save-paw{0%,100%{transform:rotate(-8deg) scale(.93);opacity:.68}50%{transform:rotate(5deg) scale(1.05);opacity:1}}
+#lab3d .house-hide-peek{position:absolute;z-index:30;right:0;bottom:calc(100% + 8px);display:flex;align-items:center;gap:6px;min-height:43px;padding:8px 11px;border:1px solid #d9c2cb96;border-radius:12px;background:#292331d9;color:#f5eaf1;font:600 11px system-ui;touch-action:none;user-select:none}
+#lab3d .house-hide-peek svg{width:24px;height:24px}
+#lab3d .house-hide-peek[aria-pressed=true]{background:#735464e8;border-color:#e6b6cc}
+@media(any-hover:none){#lab3d .house-hide-peek kbd{display:none}}
+@media(prefers-reduced-motion:reduce){#lab3d .house-save-notice svg{animation:none}}
+#lab3d.house-motion-reduced .house-save-notice svg{animation:none}
+
+#lab3d .house-rc-static[hidden]{display:none!important}
+#lab3d .house-rc-static{position:absolute;inset:0;z-index:75;display:grid;place-items:center;pointer-events:none;background:rgba(19,24,31,.42);color:#fff5eb;overflow:hidden}
+#lab3d .house-rc-static i{position:absolute;inset:0;background:repeating-linear-gradient(0deg,#bacbd63d 0 1px,transparent 1px 6px);opacity:.48;animation:rc-interference .85s ease-out both}
+#lab3d .house-rc-static strong{z-index:1;padding:9px 15px;border:1px solid #f0b3af;border-radius:5px;background:#2b1e28dc;color:#ffdad0;font:700 11px monospace;letter-spacing:.12em}
+@keyframes rc-interference{from{transform:translateY(-8px);opacity:.8}to{transform:translateY(8px);opacity:.12}}
+@media(prefers-reduced-motion:reduce){#lab3d .house-rc-static i{animation:none}}
+#lab3d.house-motion-reduced .house-rc-static i{animation:none}
+
+/* Real pickup mesh viewer; small paused dialog, no additional WebGL context. */
+#lab3d .house-inspection-dialog .lab-paper{width:min(630px,84vw);padding:12px 16px;background:#352e40;color:#fff3f4;border:1px solid #aa889f;box-shadow:0 12px 45px #0008}
+#lab3d .house-inspection-dialog .lab-paper-mark{display:none}
+#lab3d .house-inspection-dialog .lab-paper h2{font-size:clamp(17px,2.6vw,23px);margin:0 0 8px}
+#lab3d .house-inspection-dialog .lab-paper-body{overflow:auto}
+#lab3d .inspect-layout{display:flex;align-items:center;gap:12px}
+#lab3d .inspect-object{flex:1;min-width:0;display:grid;gap:5px}
+#lab3d .inspect-preview{display:block;width:100%;height:min(32dvh,190px);min-height:90px;border:1px solid #d4b4cf55;border-radius:7px;box-sizing:border-box;touch-action:none;cursor:grab;background:radial-gradient(ellipse at center,#6a5b7350,transparent 74%),linear-gradient(90deg,#eed9ee0a 1px,transparent 1px),linear-gradient(#eed9ee0a 1px,transparent 1px);background-size:auto,16px 16px,16px 16px}
+#lab3d .inspect-preview:active{cursor:grabbing}
+#lab3d .inspect-toolbar{display:flex;justify-content:center;gap:6px}
+#lab3d .inspect-toolbar button{min-height:34px;min-width:42px;padding:4px 11px;border:1px solid #c4a9c4;border-radius:6px;background:#45384e;color:#fff1f4;font:600 12px system-ui}
+#lab3d .inspect-hint{margin:0;text-align:center;font:11px/1.3 system-ui;color:#ead0e3}
+#lab3d .inspect-reading{flex:1;min-width:0;max-height:32dvh;overflow:auto}
+#lab3d .inspect-reading .house-note-sheet{margin:0;padding:12px 12px 12px 26px;font-size:clamp(13px,2.2vw,16px);line-height:1.5}
+#lab3d .house-inspection-dialog .lab-paper-actions{margin-top:7px}
+#lab3d .house-inspection-dialog .lab-paper-actions button{min-height:36px}
+@media(max-height:420px){#lab3d .house-inspection-dialog .lab-paper{padding:9px 12px}#lab3d .inspect-preview{height:29dvh}#lab3d .inspect-toolbar button{min-height:32px}}
+@media(max-width:480px) and (orientation:portrait){#lab3d .inspect-layout{flex-direction:column;align-items:stretch}}
+
+#lab3d .house-recovery-veil[hidden]{display:none!important}
+#lab3d .house-recovery-veil{position:absolute;inset:0;z-index:77;background:#100d17;pointer-events:none}
+@media(prefers-reduced-motion:reduce){#lab3d .house-recovery-veil{display:none!important}}
+
+/* Anchor above the whole action grid (including custom HUD placement), never over Exit. */
+#lab3d .lab-buttons .house-hide-peek{position:absolute;right:0;bottom:calc(100% + 8px);display:flex;flex-direction:row;justify-content:center;gap:6px;min-width:max-content;min-height:44px;padding:8px 11px;font:600 11px system-ui;border-radius:12px;touch-action:none}
+#lab3d .lab-buttons .house-hide-peek[hidden]{display:none!important}
+#lab3d .lab-buttons .house-hide-peek svg{width:22px;height:22px}

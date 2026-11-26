@@ -12,6 +12,7 @@ import {climbingHandPieces} from './first-person.js';
 import {samplePianoPose} from './piano-recital.js';
 import {drawViewModel} from './viewmodel.js';
 import {pursuerPieces,posePursuer} from './pursuer-model.js';
+import {pursuerShadowPieces,shadowRelevant,shadowNeedsUpdate} from './pursuer-shadow.js';
 import {CAPTURE_FABRIC,pursuerInterior} from './pursuer-face.js';
 import {createPursuerTexture} from './pursuer-texture.js';
 import {captureBasis} from './capture-shot.js';
@@ -647,12 +648,15 @@ export class HouseRenderer {
     const sway=(box.id.includes('bow-left')||box.id.includes('bow-right'))?Math.sin(time*4.2)*swayAmp:0;
     if(source.kind==='rc-car'||source.master||source.carried){
      const angle=-(source.yaw||0),c=Math.cos(angle),s=Math.sin(angle);
-     const tilt=source.tilt||0,cp=Math.cos(tilt),sp=Math.sin(tilt),depth=offset[1]*sp+offset[2]*cp;
-     box.x=source.x+offset[0]*c-depth*s;
-     box.y=source.concealed?-100:source.y+offset[1]*cp-offset[2]*sp;
-     box.z=source.z+offset[0]*s+depth*c;
+     const tilt=source.kind==='rc-car'&&reduced?0:(source.tilt||0),cp=Math.cos(tilt),sp=Math.sin(tilt);
+     const roll=source.kind==='rc-car'&&!reduced?(source.roll||0):0,cr=Math.cos(roll),sr=Math.sin(roll);
+     const lx=offset[0]*cr-offset[1]*sr,ly=offset[0]*sr+offset[1]*cr,depth=ly*sp+offset[2]*cp;
+     box.x=source.x+lx*c-depth*s;
+     box.y=source.concealed?-100:source.y+ly*cp-offset[2]*sp+(source.kind==='rc-car'&&!reduced?(source.suspension||0):0);
+     box.z=source.z+lx*s+depth*c;
      box.yaw=angle+(box.baseYaw??0);
-     if(source.master||source.carried)box.pitch=tilt;
+     if(source.kind==='rc-car'){box.pitch=tilt;box.roll=roll;}
+     else if(source.master||source.carried)box.pitch=tilt;
     }else{
      box.x=source.x+offset[0];
      box.y=source.concealed?-100:source.y+offset[1]+bob;
@@ -702,6 +706,28 @@ export class HouseRenderer {
    }
   }
   flushRig();
+ }
+ updatePursuerShadow(actor,time,reduced){
+  if(!this.shadows.available)return;
+  const previous=this.pursuerShadowPose;
+  if(!shadowNeedsUpdate(previous,actor,time,this.quality==='low'))return;
+  this.lightPose='';
+  for(const lamp of this.fixtures)if(shadowRelevant(lamp,previous)||shadowRelevant(lamp,actor?.active?actor:null))this.dirtyLampShadows.add(lamp);
+  if(!actor?.active){this.pursuerShadowPose=null;if(this.pursuerShadowCaster)this.pursuerShadowCaster.count=0;return;}
+  const gl=this.gl;
+  if(!this.pursuerShadowCaster){
+   const mesh=geometry(pursuerShadowPieces());
+   this.pursuerShadowCaster={vertices:gl.createBuffer(),indices:gl.createBuffer(),count:0,mesh,posed:new Float32Array(mesh.vertices.length)};
+   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.pursuerShadowCaster.indices);
+   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,mesh.indices,gl.STATIC_DRAW);
+   this.shadowMeshes.push(this.pursuerShadowCaster);
+  }
+  const caster=this.pursuerShadowCaster;
+  posePursuer(caster.mesh.vertices,caster.posed,caster.mesh.groups,actor,reduced);
+  gl.bindBuffer(gl.ARRAY_BUFFER,caster.vertices);
+  gl.bufferData(gl.ARRAY_BUFFER,caster.posed,gl.DYNAMIC_DRAW);
+  caster.count=caster.mesh.indices.length;
+  this.pursuerShadowPose={x:actor.x,y:actor.y,z:actor.z,yaw:actor.facing??actor.yaw,walk:actor.walk||0,bedTime:actor.bedTime||0,mode:actor.mode,time};
  }
  updateShadows(camera,flash,light,basis){
   const lamps=nearbyLights(this.fixtures,camera);
@@ -914,6 +940,7 @@ export class HouseRenderer {
   const basis=captureBasis(camera),{right,up,forward}=basis;
   // Keep the light source inside the player's collision radius near walls.
   const light={x:camera.x+right[0]*.12+forward[0]*.06,y:camera.y+forward[1]*.06-.12,z:camera.z+right[2]*.12+forward[2]*.06};
+  this.updatePursuerShadow(motion.pursuer,time,motion.reduced);
   this.updateShadows(camera,flash,light,{right,up,forward});
   this.program=this.programs[quality];Object.assign(this,this.locations[quality]);gl.useProgram(this.program);
   gl.uniform1i(this.uniform.uAtlas,0);gl.uniform1i(this.uniform.uLightDepth,1);gl.uniform1i(this.uniform.uMaterials,2);gl.uniform1i(this.uniform.uLoisFace,4);
@@ -974,7 +1001,7 @@ export class HouseRenderer {
   const gl=this.gl;
   this.loisFaceTexture.destroy();this.pursuerTexture.destroy();this.emyCoatTexture.destroy();this.disposeArtwork();this.shadows.destroy();
   for(const buffer of [...this.mirrorBuffers,...this.shadowMeshes.map(mesh=>mesh.indices),
-   this.vbo,this.ibo,this.dynamicVbo,this.dynamicIbo,this.noiseVbo,this.noiseIbo,this.handVbo,this.handIbo,this.pursuerVbo,this.pursuerIbo,this.tentacleVbo,this.tentacleIbo]){
+   this.pursuerShadowCaster?.vertices,this.vbo,this.ibo,this.dynamicVbo,this.dynamicIbo,this.noiseVbo,this.noiseIbo,this.handVbo,this.handIbo,this.pursuerVbo,this.pursuerIbo,this.tentacleVbo,this.tentacleIbo]){
    if(buffer)gl.deleteBuffer(buffer);
   }
   for(const texture of [this.texture,this.tvTexture,...this.materialTextures])gl.deleteTexture(texture);

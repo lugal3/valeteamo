@@ -44,7 +44,19 @@ const {chromium}=require('playwright');
   await menu.waitFor({state:'visible',timeout:6000});
   assert.equal(await toggle.getAttribute('aria-expanded'),'true','the real mouse click opens menu');
   fs.mkdirSync('artifacts',{recursive:true});
-  await page.screenshot({path:'artifacts/desktop-emotes-open.png'});
+  // A software-WebGL compositor can time out on screenshots even when
+  // the menu is visible and interactive. Retain visual evidence if possible,
+  // but never let an optional artifact prevent the remaining real clicks.
+  try{
+   await page.screenshot({path:'artifacts/desktop-emotes-open.png',timeout:15000});
+  }catch(error){
+   if(error.name!=='TimeoutError')throw error;
+   console.warn('EMOTES_SCREENSHOT_TIMEOUT: interaction checks continue; PNG evidence unavailable.');
+   fs.writeFileSync('artifacts/desktop-emotes-open-dom.json',JSON.stringify({
+    visible:await menu.isVisible(),expanded:await toggle.getAttribute('aria-expanded'),
+    menuText:await menu.innerText(),reason:error.message
+   },null,2));
+  }
   await page.locator('#house-emotes [data-act="emote:stop"]').click();
   assert.equal(await menu.isVisible(),false,'menu closes on desktop menu-button click');
   assert.equal(await toggle.getAttribute('aria-expanded'),'false');

@@ -40,3 +40,27 @@ export function hidingFrame({from,inside,outside,progress,entering=true,wardrobe
  if(t<.72)return {camera:mix(from,forward,(t-.22)/.5),doorAmount:1};
  return {camera:mix(forward,outside,(t-.72)/.28),doorAmount:1-smooth((t-.72)/.28)};
 }
+
+// A bounded camera-only lean within the original refuge. Never moves the
+// collision body, opens a door or changes the AI's hidden/witnessed flags.
+export function hidePeekSupported(hidden){return ['wardrobe','underbed'].includes(hidden?.hideType);}
+export function hideLookBounds(hidden,peeking=false){
+ return hidden?.hideType==='wardrobe'?{yaw:peeking?.65:.28,pitch:peeking?.28:.14}:
+  {yaw:peeking&&hidden?.hideType==='underbed'?1.12:.6,pitch:peeking?.25:.14};
+}
+export function advanceHidePeek(amount,held,dt,reduced=false){
+ const target=held?1:0;
+ if(reduced)return target;
+ return Math.max(0,Math.min(1,amount+(target-amount)*(1-Math.exp(-Math.max(0,Math.min(.1,dt))*11))));
+}
+export function hiddenCamera(hidden,yaw,pitch,peek=0,breath=0,reduced=false){
+ const amount=hidePeekSupported(hidden)?Math.max(0,Math.min(1,peek)):0,range=hideLookBounds(hidden,amount>.1);
+ const angle=Math.atan2(Math.sin(yaw-hidden.yaw),Math.cos(yaw-hidden.yaw));
+ const facing=hidden.yaw+Math.max(-range.yaw,Math.min(range.yaw,angle));
+ const lean=hidden.hideType==='wardrobe'?.24:.27;
+ const lateral=Math.max(-.10,Math.min(.10,angle*.14))*amount;
+ return {x:hidden.x+Math.sin(hidden.yaw)*lean*amount+Math.cos(hidden.yaw)*lateral,
+ y:hidden.y+(hidden.hideType==='wardrobe'?.035:.025)*amount+(reduced?0:Math.sin(breath)*.009),
+ z:hidden.z+Math.cos(hidden.yaw)*lean*amount-Math.sin(hidden.yaw)*lateral,
+ yaw:facing,pitch:Math.max(-range.pitch,Math.min(range.pitch,pitch))};
+}

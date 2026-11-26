@@ -76,7 +76,7 @@ const ORIGINAL_GLOW=`
   // gifts rather than staring down at the switch. Inspect real rendered pixels.
   const treeView=async()=>{
    await page.evaluate(()=>{
-    const x=10.2,z=1.65,y=3.15,dx=12.60-x,dz=2.27-z;
+    const x=5.65,z=2.8,y=3.15,dx=6.75-x,dz=.875-z;
     window.__rescueHouse.setPose({x,y,z,yaw:Math.atan2(dx,dz),pitch:Math.atan2(1.13-1.63,Math.hypot(dx,dz))});
    });
    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));

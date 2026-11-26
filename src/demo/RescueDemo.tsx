@@ -54,7 +54,7 @@ export function RescueDemo({onExit,entry='garden',test=false}:{onExit:()=>void;e
       entry==='lock'||entry==='rescue'?'upstairs':'ground';
     const checkpointStore=test?undefined:openRescueHouseSave();
     teardown=launchHouse(onExit,checkpoint,{
-     demo:true,trial:test&&entry!=='garden',entry,
+     demo:true,trial:test&&entry!=='garden',fieldTutorials:!test,entry,
      checkpointStore,
      onRescue:()=>{checkpointStore?.finish();setMode('end');}
     });

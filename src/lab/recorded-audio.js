@@ -26,7 +26,10 @@ import sample21 from './audio/upright-4.wav';
 import sample22 from './audio/upright-7.wav';
 import sample23 from './audio/upright-12.wav';
 const emoteURLs=import.meta.glob('./audio/emote-*.{mp3,ogg,wav}',{eager:true,query:'?url',import:'default'});
+// Optional raw recordings: Vite includes only assets that actually exist.
+const polishURLs=import.meta.glob('./audio/{kitty-breath-calm,kitty-breath-fear,house-creak,floor-groan,rc-wheel-wood,rc-wheel-tile,rc-signal-loss,rc-damage,inspect-cloth}.wav',{eager:true,query:'?url',import:'default'});
 export const SAMPLE_URLS=Object.fromEntries([
+ ...Object.entries(polishURLs).map(([path,url])=>[path.split('/').at(-1).replace(/\.[^.]+$/,''),url]),
  ...Object.entries(emoteURLs).map(([path,url])=>[path.split('/').at(-1).replace(/\.[^.]+$/,''),url]),
  ['door-open',sample0],
  ['door-close',sample1],

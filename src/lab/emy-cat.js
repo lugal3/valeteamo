@@ -71,7 +71,7 @@ export function emyLandmarks(mode='idle',phase=0,walking=false,reduced=false,tra
  }
  return {body,head,headRot,legs,sit,sleep,stretch,groom,crouch,alert};
 }
-export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.age,activityAge=null,headYaw=0,blend=1,leap}={}){
+export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.age,activityAge=null,headYaw=0,blend=1,leap,reunion=0}={}){
  const previous=cat.lastFootRoot;
  const moved=previous?Math.hypot(cat.x-previous.x,cat.z-previous.z):0;
  cat.walkTravel=(cat.walkTravel||0)+(walking?moved:0);
@@ -86,7 +86,7 @@ export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.a
   for(const key of Object.keys(l.legs))for(const part of ['hip','knee','paw'])l.legs[key][part]=lerp(neutral.legs[key][part],l.legs[key][part],amount);
  }
  if(leap){
-  const {compression,flight,airborne}=leap;
+  const {compression,flight,airborne,strike=0}=leap;
   l.body[1]-=.105*compression;l.head[1]-=.13*compression;
   l.headRot[0]+=.18*compression;
   for(const [name,leg] of Object.entries(l.legs)){
@@ -97,6 +97,12 @@ export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.a
     leg.paw[1]+=(front?.13:.18)*tuck;
     leg.paw[2]+=(front?.18:-.08)*tuck;
     leg.knee[1]+=.065*tuck;
+    // The near front paw leads the strike; the other supports the body.
+    // Optional channel is zero for the existing companion vent jumps.
+    if(front&&strike>0){const lead=name.endsWith('-1')?1:.62;
+     leg.paw[2]+=.14*strike*lead;leg.paw[1]+=.045*strike*lead;
+     leg.knee[2]+=.06*strike*lead;
+    }
    }
   }
  }
@@ -115,6 +121,9 @@ export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.a
   }
   blend=1;
  }else cat.footContacts=null;
+ // A continuous relief gesture without switching meshes or sit presets.
+ const relief=Math.min(1,Math.max(0,reunion));
+ if(relief){l.head[1]+=.045*relief;l.headRot[0]-=.12*relief;l.headRot[2]+=.09*relief;}
  const fear=cat.alarm||0;
  l.head[1]+=.035*fear;l.head[2]-=.060*fear;
  l.body[1]+=.075*fear;

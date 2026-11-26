@@ -7,6 +7,34 @@ Lista de búsqueda para reemplazar sonidos provisionales y cubrir interacciones 
 - **Generado** significa que Web Audio crea tonos, ruido, música o el efecto en ejecución. Hay que conectar el archivo nuevo al evento en el código.
 - **Ampliación** significa que el evento es silencioso o comparte un efecto genérico. Añadir un sonido dedicado requiere su propio disparo o una variante del evento actual.
 
+## Prioridad 1 — nuevos sonidos del pulido V3.2
+
+Buscar primero estos recursos. No sustituir las puertas de madera actuales. Mantener los originales, autor, enlace y licencia; los nombres de destino permiten conexión sin recodificar el audio.
+
+| Recurso | Nombre de destino | Búsqueda | Criterio |
+| --- | --- | --- | --- |
+| Respiración tranquila de Kitty | `kitty-breath-calm.wav` | `quiet soft breathing close mic seamless` | Natural, tenue, sin voz ni música; bucle limpio. |
+| Respiración nerviosa de Kitty | `kitty-breath-fear.wav` | `nervous quiet breathing close mic` | Contenida, no jadeo exagerado; bucle limpio. |
+| Crujido lejano de madera | `house-creak.wav` | `old wooden house settling creak` | Crujido real con cola corta. |
+| Tabla bajo presión | `floor-groan.wav` | `wood floorboard pressure creak isolated` | Una toma corta; candidatos Freesound 594491, 717230, 717231 por revisar. |
+| Ruedas RC sobre madera | `rc-wheel-wood.wav` | `small plastic rubber wheels rolling wooden floor` | Bucle sin motor ni música. |
+| Ruedas RC sobre baldosa | `rc-wheel-tile.wav` | `toy car wheels rolling tile floor` | Bucle discreto. |
+| Interferencia tablet RC | `rc-signal-loss.wav` | `short radio static signal lost digital` | Breve, no estridente. |
+| Golpe del RC | `rc-damage.wav` | `small plastic toy car bump impact` | Un golpe seco. |
+| Manipulación de objeto (P2 opcional) | `inspect-cloth.wav` | `soft hand cloth handling object foley` | Muy corta; opcional si el efecto actual basta. |
+
+### Selecciones anteriores (conservar, no descargar de nuevo si ya están integradas)
+
+- Candy Wrapper: https://freesound.org/people/G.M_Isaac/sounds/860166/ → `churu_open.wav`.
+- Cat Meow: https://freesound.org/people/qubodup/sounds/813119/ → `cat_meow.wav`; Meow & Purr: https://freesound.org/people/ultradust/sounds/167165/ → `cat_purr.wav`.
+- Furgoneta puerta: https://freesound.org/people/tim.kahn/sounds/184896/ → `van_door_close.wav`; partida: https://freesound.org/people/Robinhood76/sounds/135192/ → `van_drive_away.wav`.
+- Apagón: https://freesound.org/people/colorsCrimsonTears/sounds/532291/ → `power_cut.wav`.
+- Motor RC: https://freesound.org/people/JeroenWals/sounds/592496/ → `rc_motor_loop.wav`.
+- Escotilla: https://freesound.org/people/kyles/sounds/406197/ → `hatch_close.wav`.
+- Alerta elegida: https://www.youtube.com/watch?v=9dlq3FnhAPI (3–5 s aprox.) → `danger_alert.wav`. Conservar el recurso existente y verificar permiso/licencia antes de distribuirlo.
+
+El resto del catálogo original se mantiene íntegro abajo; no se altera su orden ni sus prioridades.
+
 ## 1. Los siete WAV provisionales
 
 Se guardan en `src/lab/audio/`. Los cortes se hicieron desde las preescuchas públicas de las fichas, con licencia CC0. [Autores, enlaces y cortes originales](AUDIO-PRUEBA-RESCATE.md).

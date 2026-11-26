@@ -1,6 +1,7 @@
 import {deviceTime,formatPhoneTime} from './device-time.js';
 
 const paths={
+ manual:'<path d="M12 5Q7 2 2 4v16q6-2 10 2 4-4 10-2V4q-5-2-10 1v17M5 9l4 1m-4 3 4 1m6-4 4-1m-4 5 4-1"/>',
  music:'<path d="M10 18V5l10-2v13M10 9l10-2"/><ellipse cx="6.5" cy="18.5" rx="3.5" ry="2.5" fill="currentColor"/><ellipse cx="16.5" cy="16.5" rx="3.5" ry="2.5" fill="currentColor"/>',
  journal:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M4 8h16M8 12h8M8 16h6"/>',
  weather:'<circle cx="9" cy="8" r="4" fill="#ffdf86" stroke="none"/><path d="M5 19a4 4 0 0 1 0-8 5 5 0 0 1 9-2 5 5 0 1 1 2 10z" fill="white" stroke="none"/>',
@@ -28,7 +29,7 @@ export const gallerySprites=[
 const escape=text=>String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const PHONE_PAGES=Object.freeze([
  [['photos','Fotos'],['maps','Mapas'],['journal','Diario'],['progress','Progreso'],['clock','Reloj'],['snake','Snake'],['calendar','Calendario'],['contacts','Contactos']],
- [['weather','Tiempo'],['calculator','Calculadora'],['heart','Recuerdos']]
+ [['weather','Tiempo'],['calculator','Calculadora'],['heart','Recuerdos'],['manual','Manual']]
 ]);
 const appButton=([id,label],unread)=>`<button data-app="${id}" aria-label="${label}"><span class="phone-app-icon ${id}">${phoneIcon(id)}${id==='messages'&&unread?'<i aria-label="Mensaje sin leer"></i>':''}</span><span>${label}</span></button>`;
 export function phoneHome(unread,page=0){
