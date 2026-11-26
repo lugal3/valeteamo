@@ -113,6 +113,49 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
     await aim('drawer');await shot('movil-interaccion');await page.locator('#lab-interact').tap();
     await page.waitForFunction(()=>window.__rescueHouse.snapshot().drawer.state==='open');
    }
+   if(!observe&&!historical){
+    // Exercise the new viewer from a real collected note, with the gameplay
+    // paused and the original puzzle state unchanged.
+    if(!(await snap()).notes){await page.evaluate(()=>window.__rescueHouse.interactWith('note-hall'));await page.locator('#lab-dialog [data-act=close]').click();}
+    await page.keyboard.press('i');
+    await page.locator('[data-act=read][data-id=note-hall]').click();
+    const canvas=page.locator('.inspect-preview');await canvas.waitFor();
+    const inspection=()=>page.evaluate(()=>window.__rescueHouse.inspection());
+    const original=await inspection(),before=await snap();
+    assert(original.triangles>0&&before.paused);
+    await page.waitForFunction(()=>{const c=document.querySelector('.inspect-preview');return c&&c.width>10&&c.getContext('2d').getImageData(0,0,c.width,c.height).data.some((v,i)=>i%4===3&&v>0);});
+    const b=await canvas.boundingBox(),x=b.x+b.width/2,y=b.y+b.height/2;
+    if(mobile&&!safari){
+     const session=await context.newCDPSession(page);
+     await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:x-18,y,id:1},{x:x+18,y,id:2}]});
+     await session.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x-36,y,id:1},{x:x+36,y,id:2}]});
+     await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+     await session.detach();
+     await page.waitForFunction(()=>window.__rescueHouse.inspection().zoom>1.15);
+    }else if(!mobile){
+     await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+45,y+15,{steps:4});await page.mouse.up();
+     assert(Math.abs((await inspection()).yaw-original.yaw)>.2);
+     await page.mouse.wheel(0,-180);
+     await page.waitForFunction(()=>window.__rescueHouse.inspection().zoom>1.1);
+    }else{
+     await canvas.dispatchEvent('pointerdown',{pointerId:21,pointerType:'touch',button:0,clientX:x-15,clientY:y});
+     await canvas.dispatchEvent('pointerdown',{pointerId:22,pointerType:'touch',button:0,clientX:x+15,clientY:y});
+     await canvas.dispatchEvent('pointermove',{pointerId:22,pointerType:'touch',clientX:x+40,clientY:y});
+     await canvas.dispatchEvent('pointerup',{pointerId:21,pointerType:'touch'});
+     await canvas.dispatchEvent('pointerup',{pointerId:22,pointerType:'touch'});
+     assert((await inspection()).zoom>1.1);
+    }
+    await page.waitForFunction(()=>window.__rescueHouse.inspection().pointers===0);
+    assert.deepEqual((await snap()).position,before.position);
+    assert.deepEqual((await snap()).puzzle,before.puzzle);
+    await shot((mobile?'movil':'pc')+'-inspeccion-objeto');
+    await page.locator('[data-inspect=reset]').click();assert.deepEqual(await inspection(),original);
+    await page.locator('#lab-dialog [data-act=bag]').click();
+    assert.equal(await inspection(),null);
+    await page.locator('#lab-dialog [data-act=close]').click();
+    assert.equal(await page.locator('.inspect-preview').count(),0);
+    console.log('PASS object inspection: original mesh pixels, rotate/zoom, no movement or puzzle mutation and cleanup');
+   }
    if(!observe){
     await togglePhoneSettings(page);
     await page.getByLabel('Reducir movimiento',{exact:true}).check();
