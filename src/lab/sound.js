@@ -20,7 +20,7 @@ const captureLevels={'capture-bite':.60,'capture-swallow':.40,'capture-snare':.3
 const effectChannel=kind=>{
  if(/^(door|closet|latch|unlock|trying|knock|keys|hatch)/.test(kind))return 'doors';
  if(['wood','stair','tile','grass','dirt','stone','footstep'].includes(kind))return 'steps';
- if(kind==='floor-groan')return 'creaks';
+ if(kind==='floor-groan'||kind==='house-creak')return 'creaks';
  return ['notification','alert','danger-alert'].includes(kind)?'alerts':'objects';
 };
 export class HouseSound {
@@ -353,6 +353,9 @@ export class HouseSound {
    this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;
   }
   if(this.recordings?.kind(kind,{gain:gain*(kind==='danger-alert'?.85:kind==='cat-purr'?.70:1.8),pan:stereo,output})){this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;}
+  // Do not substitute artificial pitched tones for missing breathing recordings.
+  if(kind==='kitty-breath-calm'||kind==='kitty-breath-fear'||kind==='rc-wheel-wood'||kind==='rc-wheel-tile'||kind==='rc-signal-loss'||kind==='inspect-cloth')return;
+  if(kind==='house-creak')kind='floor-groan';
   if(kind==='hatch-close')kind='door-close';
   if(kind==='power-cut')kind='latch';
   if(['door','door-open','door-close','floor-groan','stair','wood','latch'].includes(kind)){
