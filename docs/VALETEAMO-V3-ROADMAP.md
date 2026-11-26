@@ -21,3 +21,18 @@ Rama: `feature/v3-hud-interaccion-hop`. Base: `f1ba942264d3f98bc501bd144886ae76f
 - El salto es exclusivamente visual: no altera las coordenadas físicas, guardados, IA ni detección. La miniatura usa la posición real del mundo mientras está pausado; no muestra un perseguidor no escaneado.
 - El 2D, los identificadores de objetos, el formato de guardado y los destinos de producción no deben cambiar.
 - Mantener el PR en borrador hasta la revisión final; ni merge ni deploy automáticos.
+
+
+## Segunda pasada de calidad — antes de la fase 5 definitiva
+
+Base de evidencia: commit `aca535007ff95d09b4273509929301035c9a49c9` y [auditoría integral](https://github.com/lugal3/valeteamo/actions/runs/45716910531). Código, puzles, colisiones, compilación, controles móviles, historia 2D, RC, guardados, producción 3D, escondites y Emy escritorio pasaron. Emy móvil y WebKit fallaron por una miniatura de solo 130,5 px de altura en 844 × 390. Los artifacts reales de móvil, escritorio y checkpoints fueron descargados e inspeccionados. También mostraban las tarjetas de Emy en tres filas, botones de navegación apilados, borde derecho recortado y guirnaldas parcialmente ocultas.
+
+### Correcciones efectuadas
+
+- **F1:** el lanzamiento sigue siendo único. La mano ocupada impide equipar y usar un segundo objeto, y suspende el haz de la linterna sin perder la selección ni el inventario. El menú de inventario reemplaza al teléfono en lugar de apilar diálogos. El salto cancelado no se reactiva ni salta su cooldown.
+- **F2:** cuadrícula 2 × 2 real, X correctamente anclada, iconos de pausa/sonido, etiqueta con entrada/salida suave y sin reinicio de animación por fotograma, cooldown durante juego activo, restauración de foco y cierre seguro ante pérdida de contexto.
+- **F3:** mapa limitado a la zona segura, controles de 44 px en paisaje de 390 px, navegación horizontal, proyección ajustada a los límites reales, zoom independiente del encuadre, colores compartidos e iconos de habitación, marcadores en escaleras, caché de destinos mientras la casa está pausada, conservación del desplazamiento y cancelación de punteros. Validación de objetivos finitos y sobre suelo real, rechazo de trayectos que cruzan puertas bloqueadas y llegada con último tramo libre de paredes.
+- **F4:** guirnaldas y luces desplazadas hacia la superficie del follaje; referencia real de la linterna restaurada, marcador discreto limitado por alcance y línea de visión. Geometría indexada y IDs de puzle conservados.
+- **Pruebas añadidas:** interrupción del salto, ocupación de manos, nombre de Emy y cooldown, ajuste de cámara/zoom, ausencia de amenazas sin escaneo, llegada bloqueada por pared, cuadrícula y límites del mapa, arrastre de ratón y captura de la etiqueta.
+
+Los resultados de los commits intermedios no certifican el código nuevo. Antes de dar la fase 5 por cerrada, revisar los workflows del último commit y las nuevas capturas; no fusionar ni desplegar mientras haya fallos o evidencia insuficiente. El último commit de código y pruebas de esta pasada es `2cafc78f93fc356fdd3fa0f92ff43867372926bd` (posterior a la captura original). Las capturas de referencia son del commit anterior, no constituyen prueba visual de las correcciones.
