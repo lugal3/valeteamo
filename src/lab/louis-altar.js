@@ -1,5 +1,25 @@
 export const PRESIDENT_NAME='Friedrich Weiss';
 
+// Room atmosphere is local, bounded, and independent of puzzle progression.
+export function createAltarVisit(){return {near:false,inside:false,recorded:false,fearCue:false,recordCooldown:0,pulse:0};}
+export function advanceAltarVisit(state,{inside=false,near=false,afraid=false,dt=0}={}){
+ const step=Math.max(0,Math.min(.1,Number(dt)||0));
+ const entered=inside&&!state.inside;
+ const left=!inside&&state.inside;
+ state.recordCooldown=Math.max(0,state.recordCooldown-step);
+ if(!near){state.fearCue=false;state.recorded=false;}
+ const warn=near&&afraid&&!state.fearCue;
+ if(warn)state.fearCue=true;
+ state.inside=inside;state.near=near;
+ const target=inside?1:near?.35:0;
+ state.pulse+=(target-state.pulse)*(1-Math.exp(-step*3));
+ return {entered,left,warn};
+}
+export function activateAltarRecord(state){
+ if(!state.inside||state.recordCooldown>0)return false;
+ state.recorded=true;state.recordCooldown=4.6;return true;
+}
+
 export function installLouisAltar(add,obj,floor){
  const x=12.27,z=.44,ink=[.29,.12,.15],wax=[.46,.16,.18];
  add('louis-altar-plinth',x,floor+.36,z,1.62,.72,.63,'wood',true,{color:[.31,.20,.22]});
@@ -35,5 +55,8 @@ export function installLouisAltar(add,obj,floor){
  obj('altar-mechon','inspect','Sobre sellado · L. T.',packetX,floor+.851,packetZ+.09,{text:'«Mechón — L. T.». Dentro hay unas hebras oscuras y una fecha tachada. Alguien escribió al reverso: «Ahora siempre vas a tener que volver».'});
  obj('altar-registro','inspect','Registro de Louis',x-.56,floor+1.96,.26,{text:'31/01/2020 — Walls. 11/11/2022 — Faith in the Future. Debajo de las fechas de lanzamiento, alguien llenó la hoja con la misma frase: «Escucharlo no basta».'});
  obj('louis-altar','inspect','Altar de Louis',x,floor+1.42,.84,{text:'El rostro de Louis Tomlinson está en el centro. Los hilos unen entradas de conciertos con recortes en los que alguien anotó a qué hora llegó y con quién salió. En cada papel se repite la misma frase: «Canta solo para mí».'});
+ // Reuse the existing pinned cards: no additional geometry or collision.
+ obj('altar-ticket','inspect','Entrada doblada',x+.60,floor+1.44,.26,{text:'La entrada está tan gastada que apenas se distingue el asiento. Al dorso: «Una canción más. Después, nadie podrá interrumpirnos». No parece una entrada guardada por cariño.'});
+ obj('altar-house-sketch','inspect','Recorte marcado',x+.53,floor+1.94,.26,{text:'Un recorte con el dibujo de una puerta, un piano y una escalera. Hay un círculo alrededor de la habitación de abajo. Al margen alguien escribió «No abrir hasta que esté todo preparado».'});
  obj('president-dossier','note','Dossier de la presidencia',x+.45,floor+.862,z+.23,{text:`${PRESIDENT_NAME}, presidente alemán. Entre sus discursos hay listas de conciertos de Louis, todas marcadas a mano. La última hoja lleva un dibujo de esta casa y una cruz sobre el dormitorio.`});
 }
