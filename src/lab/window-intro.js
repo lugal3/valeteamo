@@ -30,7 +30,7 @@ export function windowIntroCamera(progress){
 export function windowIntroState(progress){
  const t=clamp01(progress);
  return {windowAmount:easeInOut((t-.14)/.24),phase:t<.18?'approach':t<.36?'open':t<.43?'climb':t<.53?'slip':t<.62?'recover':t<.75?'climb':t<.86?'land':'settle',
-  hands:windowEntryHands(t)};
+  hands:windowEntryHands(t,windowIntroCamera(t))};
 }
 export function shouldPlayWindowIntro({demo=false,checkpoint='ground',reducedMotion=false}={}){
  return !!demo&&checkpoint==='ground'&&!reducedMotion;
