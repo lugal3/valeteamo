@@ -250,7 +250,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(kind==='master-key'&&!inventory.masterKey||kind==='screwdriver'&&(!inventory.screwdriver||world.studyVent.unlatched)||kind==='rc'&&!inventory.rc||kind==='flashlight'&&!inventory.torch||kind==='key'&&!inventory.key||kind==='red-key'&&!inventory.redKey||kind==='paper'&&!inventory.notes.length&&!inventory.pendingNote)return;
   const next=toggle&&equipment===kind?'empty':kind;
   if(next===equipment)return;
-  cancelEmote();previousEquipment=automatic||reducedMotion.matches?null:equipment;equipment=next;equipmentAge=0;phone.equip(notePresentation?'empty':equipment);if(!automatic)resetInput();
+  cancelEmote();previousEquipment=automatic||reducedMotion.matches?null:equipment;equipment=next;equipmentAge=0;phone.equip(notePresentation?'empty':equipment);syncEquipmentControls();if(!automatic)resetInput();
  }
  function releaseCapture(element,pointer){try{if(pointer!==null&&element?.hasPointerCapture(pointer))element.releasePointerCapture(pointer);}catch{}}
  function capture(element,pointer){try{element.setPointerCapture?.(pointer);}catch{}}
@@ -1175,6 +1175,21 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(act==='hop'&&canHop()&&hopAge>=HOP_COOLDOWN){hopAge=0;hopCancelled=false;}
   if(act==='flash'||act==='phone')useEquipment();
  }
+ // Keep the button and its text node stable while the renderer runs.
+ // Avoid invalidating pointer hit targets and layout on every animation frame.
+ function syncEquipmentControls(){
+  const light=$('house-light'),use=$('house-use-phone');
+  const lightHidden=!!heldNoise||equipment!=='flashlight'||!!s.hidden||!!s.lying;
+  const useHidden=!!heldNoise||!['phone','paper','rc'].includes(equipment)||notePresentation||!!noteLift||(equipment!=='phone'&&(!!s.hidden||!!s.lying));
+  const label=equipment==='rc'?'Usar auto RC':equipment==='paper'?'Observar nota':'Usar teléfono';
+  const caption=equipment==='paper'?'Observar':'Usar';
+  root.classList.toggle('lab-flash-off',!s.flashlight||!!heldNoise);
+  if(light.hidden!==lightHidden)light.hidden=lightHidden;
+  if(use.hidden!==useHidden)use.hidden=useHidden;
+  if(use.getAttribute('aria-label')!==label)use.setAttribute('aria-label',label);
+  const text=use.querySelector('small');
+  if(text.textContent!==caption)text.textContent=caption;
+ }
  function updateControls(){
   const target=closestObject(world,s,focus);focus=target;
   phone.nav.hidden=!!cinematic||!!captureShot||!!finalCutscene||wakeShot()||!!poseTransition||events.phase==='arrival'||events.phase==='car-preview';
@@ -1191,11 +1206,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   root.classList.toggle('house-carrying-noise',!!heldNoise);
   for(const button of phone.visibleSlots())if(button.disabled!==!!heldNoise)button.disabled=!!heldNoise;
-  root.classList.toggle('lab-flash-off',!s.flashlight||!!heldNoise);
-  $('house-light').hidden=!!heldNoise||equipment!=='flashlight'||!!s.hidden||!!s.lying;
-  $('house-use-phone').hidden=!!heldNoise||!['phone','paper','rc'].includes(equipment)||notePresentation||!!noteLift||(equipment!=='phone'&&(!!s.hidden||!!s.lying));
-  $('house-use-phone').setAttribute('aria-label',equipment==='rc'?'Usar auto RC':equipment==='paper'?'Observar nota':'Usar teléfono');
-  $('house-use-phone').querySelector('small').textContent=equipment==='paper'?'Observar':'Usar';
+  syncEquipmentControls();
   const canEmote=!heldNoise&&inBathroom()&&!notePresentation&&!noteLift;
   root.querySelector('[data-act=emotes]').hidden=!canEmote;
   if(!canEmote){$('house-emotes').hidden=true;
@@ -2071,6 +2082,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function interruptGraphics(title,message){
   contextLost=true;cancelAnimationFrame(raf);raf=0;
   if(emyMenuOpen)closeEmyMenu();
+  phone.close();resetInput();
   captureLayer.hidden=true;
   renderer?.destroy({keepCanvas:true});
   showModal(title,`<p>${escapeHTML(message)}</p>`,[[exitLabel,'exit']]);
