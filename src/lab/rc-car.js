@@ -19,7 +19,7 @@ export const RC_RECOVERY_SPOTS=Object.freeze([
  {x:2.72,y:0,z:8.14}
 ]);
 export function createRC(object){
- return {object,mode:'packed',x:object.x,y:object.y-.14,z:object.z,yaw:Math.PI,elapsed:0,noise:0,beeps:0,crashes:0,velocity:0,driveSpeed:0,steerAngle:0,roll:0};
+ return {object,mode:'packed',x:object.x,y:object.y-.14,z:object.z,yaw:Math.PI,elapsed:0,noise:0,beeps:0,crashes:0,velocity:0,driveSpeed:0,steerAngle:0,roll:0,tilt:0,suspension:0,travel:0,signal:1};
 }
 export function deployRC(rc,player,world){
  if(!['packed','parked'].includes(rc.mode))return false;
@@ -29,11 +29,11 @@ export function deployRC(rc,player,world){
   if(!Number.isFinite(y)||Math.abs(y-player.y)>.30||blocked(world.boxes,x,y,z,.22,.30))return false;
   Object.assign(rc,{x,z,y,yaw:player.yaw});
  }
- rc.mode='deploying';rc.elapsed=0;rc.driveSpeed=0;rc.steerAngle=0;rc.roll=0;rc.object.taken=false;rc.object.interactable=false;
+ rc.mode='deploying';rc.elapsed=0;rc.driveSpeed=0;rc.steerAngle=0;rc.roll=0;rc.tilt=0;rc.suspension=0;rc.travel=0;rc.signal=1;rc.object.taken=false;rc.object.interactable=false;
  syncRCObject(rc);return true;
 }
 export function syncRCObject(rc){
- Object.assign(rc.object,{x:rc.x,y:rc.y+.14,z:rc.z,yaw:rc.yaw,mode:rc.mode});
+ Object.assign(rc.object,{x:rc.x,y:rc.y+.14,z:rc.z,yaw:rc.yaw,mode:rc.mode,roll:rc.roll||0,tilt:rc.tilt||0,suspension:rc.suspension||0});
 }
 export function driveRC(rc,world,input,dt){
  if(rc.mode!=='driving'||dt<=0)return 0;
@@ -50,12 +50,20 @@ export function driveRC(rc,world,input,dt){
  const pace=Math.min(1,Math.abs(rc.driveSpeed)/.75);
  rc.yaw+=rc.steerAngle*step*2.65*pace*(rc.driveSpeed<0?-1:1);
  const speed=rc.driveSpeed,dx=Math.sin(rc.yaw)*speed*step,dz=Math.cos(rc.yaw)*speed*step;
- const before={x:rc.x,z:rc.z},car={x:rc.x,y:rc.y,z:rc.z};
+ const before={x:rc.x,y:rc.y,z:rc.z},car={x:rc.x,y:rc.y,z:rc.z};
  const distance=navigate(car,world,dx,dz,.38);
  Object.assign(rc,{x:car.x,y:car.y,z:car.z});
  rc.velocity=distance/Math.max(step,.001);
  if(distance<Math.abs(speed*step)*.12&&Math.abs(speed)>.3)rc.driveSpeed*=.26;
- rc.roll=clamp(-rc.steerAngle*rc.velocity*.018,-.095,.095);
+ const blend=1-Math.exp(-11*step);
+ const targetRoll=clamp(-rc.steerAngle*rc.velocity*.045,-.14,.14);
+ const targetTilt=clamp(-Math.atan2(rc.y-before.y,Math.max(.03,distance))*Math.sign(speed||1),-.34,.34);
+ rc.roll=(rc.roll||0)+(targetRoll-(rc.roll||0))*blend;
+ rc.tilt=(rc.tilt||0)+(targetTilt-(rc.tilt||0))*blend;
+ rc.travel=(rc.travel||0)+distance;
+ const stair=distance>.002&&Math.abs(rc.y-before.y)>.002;
+ const targetBump=stair?Math.sin(rc.travel*28)*.016:0;
+ rc.suspension=(rc.suspension||0)+(targetBump-(rc.suspension||0))*blend;
  syncRCObject(rc);
  return Math.hypot(rc.x-before.x,rc.z-before.z);
 }
@@ -68,11 +76,11 @@ export function updateRC(rc,dt){
  rc.noise=Math.max(0,rc.noise-dt);
 }
 export function stopRC(rc){
- if(rc.mode==='driving'||rc.mode==='deploying'){rc.mode='parked';rc.noise=0;rc.velocity=0;rc.driveSpeed=0;rc.roll=0;return true;}
+ if(rc.mode==='driving'||rc.mode==='deploying'){rc.mode='parked';rc.noise=0;rc.velocity=0;rc.driveSpeed=0;rc.roll=0;rc.tilt=0;rc.suspension=0;syncRCObject(rc);return true;}
  return false;
 }
 export function crashRC(rc,world){
- rc.crashes++;rc.mode='disabled';rc.noise=0;rc.velocity=0;rc.driveSpeed=0;rc.roll=0;
+ rc.crashes++;rc.mode='disabled';rc.noise=0;rc.velocity=0;rc.driveSpeed=0;rc.roll=0;rc.tilt=0;rc.suspension=0;rc.signal=0;
  const choices=RC_RECOVERY_SPOTS.slice(rc.crashes%RC_RECOVERY_SPOTS.length).concat(RC_RECOVERY_SPOTS.slice(0,rc.crashes%RC_RECOVERY_SPOTS.length));
  const pos=choices.find(p=>!blocked(world.boxes,p.x,p.y,p.z,.20,.4))||RC_RECOVERY_SPOTS[0];
  Object.assign(rc,{x:pos.x,y:pos.y,z:pos.z,yaw:0});
@@ -81,7 +89,7 @@ export function crashRC(rc,world){
 }
 export function recoverRC(rc){
  if(rc.mode!=='disabled'&&rc.mode!=='parked')return false;
- rc.mode='packed';rc.object.taken=true;rc.object.interactable=false;rc.noise=0;rc.driveSpeed=0;rc.roll=0;
+ rc.mode='packed';rc.object.taken=true;rc.object.interactable=false;rc.noise=0;rc.driveSpeed=0;rc.roll=0;rc.tilt=0;rc.suspension=0;rc.signal=1;
  return true;
 }
 export function rcCamera(rc,world){
@@ -165,4 +173,15 @@ export function rcCarModel(piece,kit=false){
   for(const x of [-.12,.12])add('touch-pad-'+x,x,.13,-.595,.068,.07,.004,'pink',cream);
  }
  return parts;
+}
+
+// UI telemetry, not a new range restriction. Basement and floors attenuate
+// the displayed signal, but the controls and rescue route remain usable.
+export function rcSignalStrength(rc,player){
+ if(rc.mode==='disabled')return 0;
+ const distance=Math.hypot(rc.x-player.x,rc.z-player.z),floors=Math.abs(rc.y-player.y);
+ return clamp(1-distance/45-floors*.047,.30,1);
+}
+export function rcCameraVibration(view,rc,reduced=false){
+ return reduced?view:{...view,y:view.y+(rc.suspension||0)*.85,pitch:view.pitch+(rc.suspension||0)*.35};
 }
