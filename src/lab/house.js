@@ -1584,7 +1584,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     if(options.threatText===true)say('¡El mensaje lo despertó!',3);
    }
    if(cue==='hunt'){pursuer.resumeSearch();saveCheckpoint();}
-   if(cue==='evaded'){pursuer.settleUpstairs();sound.setThreat(false);sound.sequence('notification');saveCheckpoint();say('Se alejó. Ya puedes examinar la nota del dormitorio con calma.',5);}
+   if(cue==='evaded'){pursuer.settleUpstairs();sound.setThreat(false);sound.sequence('notification');saveCheckpoint();if(options.threatText===true)say('Se alejó. Ya puedes examinar la nota del dormitorio con calma.',5);}
    if(cue==='failed'&&pursuer.caught){beginCapture();return;}
    if(cue==='safe'||cue==='failed'){phone.close();resetInput();play('alert',pursuer,.55);showModal(cue==='safe'?'Estás a salvo':'Te descubrieron',cue==='safe'?'<p>Te quedas en silencio.</p>':'<p>El perseguidor te alcanzó o vio dónde te escondías.</p><p>Retomas desde el último momento seguro con la llave y las pistas.</p>',cue==='safe'?[[exitLabel,'exit']]:[['Reintentar','retry-arrival'],['Salir','exit']]);}
   }
@@ -2004,6 +2004,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const mirrorCue=mirrorSafe.advance(shotDelta,{active:!isPaused()&&!phone.open,mirror:readingMirror&&noteLift>=.95});
   if(mirrorCue==='hint')say(MIRROR_HINT,6);
   if(mirrorCue==='revealed'){
+   haptics.pulse('puzzle');
    noteHold=4;
    const note=s.inventory.pendingNote;
    if(note){
