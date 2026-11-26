@@ -47,6 +47,19 @@ async function run(){
    }else await page.screenshot({path:filename});
   };
 
+  // Physical mouse input at an independently verified hit-tested button.
+  // Avoid Playwright waiting for multiple stable animation frames on a
+  // deliberately throttled five-FPS trial preview.
+  const clickTrialButton=async locator=>{
+   await locator.waitFor({state:'visible'});
+   await locator.scrollIntoViewIfNeeded();
+   const point=await locator.evaluate(el=>{
+    const r=el.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2;
+    if(el.disabled||!el.contains(document.elementFromPoint(x,y)))throw Error('Trial button is not actually clickable');
+    return {x,y};
+   });
+   await page.mouse.click(point.x,point.y);
+  };
   const openMenu=async()=>{
    await page.goto(url,{waitUntil:'domcontentloaded'});
    await passBirthdayCountdown(page);
@@ -92,7 +105,7 @@ async function run(){
    try{
     // This is a React state transition, not a document navigation. Wait for
     // the real start card below instead of Playwright's unrelated navigation.
-    await card.click({noWaitAfter:true});
+    await clickTrialButton(card);
     await page.locator('#lab-dialog [data-act="start"]').or(page.locator('#lab3d .lab-error')).or(page.getByRole('alert').filter({hasText:'No se pudo abrir esta prueba'})).waitFor({timeout:60000});
     const bootError=await page.locator('#lab3d .lab-error').count();
     if(bootError)throw Error(await page.locator('#lab3d .lab-error').innerText());
@@ -125,7 +138,7 @@ async function run(){
    }
    const exit=page.locator('#lab-dialog [data-act="exit"]');
    await exit.waitFor({state:'visible'});
-   await exit.click({noWaitAfter:true});
+   await clickTrialButton(exit);
    await page.waitForFunction(()=>!window.__rescueHouse&&!document.querySelector('#lab3d'));
    await page.locator('.playtest-menu[data-admin-panel="lp"]').waitFor();
    console.log('PASS LP '+id+' — '+cat.companion);
