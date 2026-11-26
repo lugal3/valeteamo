@@ -46,6 +46,7 @@ function rcHeldPieces(tabletOnly=false){
  ];
 }
 export function viewModelPieces(kind='flashlight', flash=true){
+ if(kind==='hop-hands')return [...placePieces(grippingPaw(),{x:-.29,y:-.46,z:.86,scale:.67,prefix:'hop-left-'}),...placePieces(grippingPaw(),{x:.29,y:-.46,z:.86,scale:.67,prefix:'hop-right-'})];
  if(kind==='rc'||kind==='rc-tablet')return placePieces(rcHeldPieces(kind==='rc-tablet'),{...noteGrip,scale:.84,prefix:'view-rc-'});
  if(kind==='screwdriver'){
   const tool=screwdriverModel((id,x,y,z,w,h,d,mat,extra)=>chibiPiece(id,x,-.025+y,.115-z,w,h,d,extra.color??[.65,.65,.62],{...extra,mat}));
