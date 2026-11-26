@@ -6,8 +6,9 @@ const tones=[[.87,.30,.45],[.58,.53,.84],[.94,.66,.76]];
 export function installHolidayCollectibles(add,obj,floor,power){
  const tree={on:true,supply:power},gift={age:0,opening:false,opened:false,parts:[]};
  const plushes=PLUSH_IDS.map((id,i)=>{
-  const [x,y,z]=[[12.30,floor+.17,2.53],[10.96,.20,6.15],[12.55,floor+.97,.72]][i];
+  const [x,y,z]=[[11.96,floor+.18,2.60],[10.96,.20,6.15],[12.55,floor+.97,.72]][i];
   const item=obj(id,i===0?'gift':'collectible',i===0?'Abrir regalo':PLUSH_NAMES[i],x,y,z,{index:i,taken:false});
+  if(i===0)return item;
   const part=(name,dx,dy,dz,w,h,d,color,extra={})=>add(id+'-'+name,x+dx,y+dy,z+dz,w,h,d,'glove',false,{dynamic:true,source:item,castShadow:false,color,shape:'round',segments:8,rings:4,...extra});
   const white=[.99,.92,.89],ink=[.13,.085,.10];
   const parts=[part('body',0,-.035,0,.19,.19,.13,tones[i]),part('head',0,.095,0,.27,.20,.16,white),
@@ -17,11 +18,10 @@ export function installHolidayCollectibles(add,obj,floor,power){
    part('paw-l',-.09,-.05,.04,.069,.08,.07,white),part('paw-r',.09,-.05,.04,.069,.08,.07,white),
    part('foot-l',-.058,-.13,.04,.082,.07,.092,white),part('foot-r',.058,-.13,.04,.082,.07,.092,white)];
   // The first keepsake is represented by its wrapped box, not a visible plush.
-  if(i===0){for(const p of parts)p.hiddenGeometry=true;item.parts=[];}
-  else item.parts=parts;
+  item.parts=parts;
   return item;
  });
- obj('holiday-tree-switch','holiday-switch','Luces del árbol',12.19,floor+1.04,2.58,{tree});
+ obj('holiday-tree-switch','holiday-switch','Luces del árbol',12.01,floor+1.04,2.43,{tree});
  return {tree,gift,plushes};
 }
 export function holidayPowered(holiday){return !!(holiday?.tree.on&&holiday.tree.supply.on);}
