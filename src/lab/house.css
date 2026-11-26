@@ -447,3 +447,27 @@
 @media(prefers-reduced-motion:reduce){#lab3d .phone-shell{transition:none}#lab3d.phone-photo-taken .phone-camera-view::after{animation:none;opacity:.12}}
 #lab3d.house-motion-reduced .phone-shell{transition:none}
 #lab3d.house-motion-reduced.phone-photo-taken .phone-camera-view::after{animation:none;opacity:.12}
+
+
+/* Kitty V3.4 — clear object-specific controls and quiet HUD.
+   Visual transitions do not affect the real hit targets. */
+#lab3d #lab-interact:not([hidden]){display:flex;align-items:center;justify-content:center;gap:6px;padding:6px 8px}
+#lab3d .house-action-icon{width:22px;height:22px;display:grid;place-items:center;flex:0 0 22px;color:#ffe7f2}
+#lab3d .house-action-icon svg{width:100%;height:100%}
+#lab3d #lab-interact small{flex:0 1 auto;min-width:0}
+#lab3d #lab-interact[data-icon=cat]:not(:disabled){background:linear-gradient(135deg,#70568c,#995d91);border-color:#e7b7ee}
+#lab3d #lab-interact[data-icon=throw]:not(:disabled){background:linear-gradient(135deg,#985e65,#704964);border-color:#f0b5c7}
+#lab3d #lab-interact[data-icon=rescue]:not(:disabled){border-color:#ffe0ae}
+#lab3d .house-hotbar button{transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease,opacity .18s ease}
+#lab3d .house-hotbar button[aria-pressed=true]{background:linear-gradient(155deg,#f4b4ce55,#865b9e66);border-color:#ffdef0;box-shadow:inset 0 0 0 1px #e7a6c6,0 0 8px #f4b5cf38}
+#lab3d .house-hotbar button[aria-pressed=true] svg{color:#fff4e8}
+#lab3d .house-hotbar button:active span{transform:scale(.92)}
+#lab3d.house-immersive:not(.house-hud-editing) .house-hotbar{background:rgba(31,23,36,calc(var(--hud-opacity,.55)*.74));border-color:#ecb7cf50;box-shadow:none}
+#lab3d.house-immersive:not(.house-action-ready) #lab-interact:not([hidden]):disabled{opacity:.24}
+#lab3d.house-immersive:not(.house-action-ready) .lab-cross:not(.lab-target){opacity:.40}
+#lab3d.house-immersive .lab-buttons button:not(:disabled):not(#lab-interact){box-shadow:none}
+#lab3d.house-immersive .lab-joystick{opacity:.64}
+#lab3d.house-immersive .lab-joystick:active{opacity:1}
+@media(max-height:420px){#lab3d #lab-interact:not([hidden]){gap:4px;padding:5px 6px}#lab3d .house-action-icon{width:19px;height:19px;flex-basis:19px}}
+@media(prefers-reduced-motion:reduce){#lab3d .house-hotbar button{transition:none}}
+#lab3d.house-motion-reduced .house-hotbar button{transition:none}
