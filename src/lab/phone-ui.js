@@ -85,16 +85,32 @@ export class PhoneUI{
   if(action==='reset'){this.layout={...DEFAULT_HUD};try{writeHUD(window.localStorage,this.layout);}catch{}this.syncEditor();}
   if(action==='copy'){const text=JSON.stringify({...this.layout,viewport:[this.root.clientWidth,this.root.clientHeight],rect:this.rect});try{await navigator.clipboard.writeText(text);this.host.querySelector('.hud-copy-status').textContent='Ajuste copiado. Puedes pegarlo junto a tu captura.';}catch{this.host.querySelector('.hud-copy-status').textContent=text;}}
  }
- equip(kind){for(const b of this.nav.querySelectorAll('[data-equip]'))b.setAttribute('aria-pressed',String(b.dataset.equip===kind));if(kind!=='phone')this.close();}
+ motionAllowed(){return !this.root.classList.contains('house-motion-reduced')&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches;}
+ equip(kind){
+  const changed=this.selectedEquipment!==kind;this.selectedEquipment=kind;
+  for(const b of this.nav.querySelectorAll('[data-equip]')){
+   const selected=b.dataset.equip===kind;
+   if(b.getAttribute('aria-pressed')!==String(selected))b.setAttribute('aria-pressed',String(selected));
+   if(changed&&selected&&this.motionAllowed()&&b.animate){b.querySelector('span')?.animate([{transform:'translateY(4px) scale(.87)',opacity:.65},{transform:'translateY(-2px) scale(1.08)',opacity:1},{transform:'translateY(0) scale(1)',opacity:1}],{duration:260,easing:'ease-out'});}
+  }
+  if(kind!=='phone')this.close();
+ }
  visibleSlots(){return [...this.nav.querySelectorAll('[data-equip]:not([hidden])')];}
  setInventory(inventory){
   const available={'master-key':inventory.masterKey,screwdriver:inventory.screwdriver,flashlight:inventory.torch,phone:true,key:inventory.key,'red-key':inventory.redKey,paper:!!inventory.pendingNote||inventory.notes.length>0,rc:!!inventory.rc};
+  const old=new Map(this.visibleSlots().map(button=>[button,button.getBoundingClientRect()]));
   for(const button of this.nav.querySelectorAll('[data-equip]'))button.hidden=!available[button.dataset.equip];
   const papers=this.nav.querySelector('[data-equip=paper]');
   const label=inventory.notes.at(-1)?.id==='piano-sheet'&&!inventory.pendingNote?'Partitura':'Notas';
   papers.setAttribute('aria-label',label);
   this.visibleSlots().forEach((button,i)=>{button.querySelector('small').textContent=String(i+1);button.title=button.getAttribute('aria-label');});
   this.applyLayout();
+  if(this.motionAllowed()&&this.nav.isConnected)for(const button of this.visibleSlots()){
+   const before=old.get(button),after=button.getBoundingClientRect();
+   if(!after.width||!button.animate)continue;
+   if(!before?.width)button.animate([{opacity:0,transform:'scale(.78)'},{opacity:1,transform:'scale(1)'}],{duration:210,easing:'ease-out'});
+   else {const x=before.left-after.left,y=before.top-after.top;if(Math.hypot(x,y)>2)button.animate([{transform:'translate('+x+'px,'+y+'px)'},{transform:'translate(0,0)'}],{duration:230,easing:'ease-out'});}
+  }
  }
  show(app='home'){
   if(!this.canUse()||this.editing||this.open)return;
