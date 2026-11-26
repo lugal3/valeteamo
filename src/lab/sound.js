@@ -5,7 +5,7 @@ import {spookyFoley} from './spooky-foley.js';
 import {buildCaptureScream} from './capture-scream.js';
 import {RecordedAudio} from './recorded-audio.js';
 import {playEmoteRhythm} from './emote-audio.js';
-const pianoReference=new URL('./audio/piano-reference.wav',import.meta.url).href;
+import pianoReference from './audio/piano-reference.wav';
 const PIANO_ROOTS=[0,4,7,12];
 const KEY='valeteamo-lab-sound-v1';
 export const MIX_CHANNELS=[
