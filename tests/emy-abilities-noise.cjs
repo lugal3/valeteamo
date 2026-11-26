@@ -27,7 +27,7 @@ const assert=require('node:assert/strict');
  assert(activateEmyScan(abilities));
 
  const world=createHouse();
- const {defaultMiniatureView,changeMiniatureView,miniatureProject,miniatureSVG,miniatureMarkers}=await import('../src/lab/emy-miniature.js');
+ const {defaultMiniatureView,changeMiniatureView,miniatureProject,miniatureSVG,miniatureMarkers,layoutMiniaturePins}=await import('../src/lab/emy-miniature.js');
  const view=defaultMiniatureView(),turned=changeMiniatureView(view,{yaw:.5,pitch:.1,zoom:1.1});
  assert.notDeepEqual(miniatureProject([0,0,0],view),miniatureProject([0,0,0],turned));
  assert.equal(changeMiniatureView(view,{zoom:99,pitch:99}).zoom,1.65);
@@ -44,6 +44,15 @@ const assert=require('node:assert/strict');
  const hiddenMarkers=miniatureMarkers({x:5.9,y:0,z:8},{x:5.1,y:0,z:8,hidden:false},fakeThreat,false);
  const visibleMarkers=miniatureMarkers({x:5.9,y:0,z:8},{x:5.1,y:0,z:8,hidden:false},fakeThreat,true);
  assert(hiddenMarkers.every(m=>m.id!=='threat'),'No threat coordinates in unscanned markers');
+ const clustered=visibleMarkers.map(m=>({...m,x:5.9,z:8}));
+ const pins=layoutMiniaturePins(clustered,p=>miniatureProject(p,view,0),0);
+ assert.equal(pins.length,3);
+ for(let i=0;i<pins.length;i++){
+  assert.deepEqual(pins[i].anchor,miniatureProject([clustered[i].x,.12,clustered[i].z],view,0),'Actual marker coordinates never move');
+  for(let j=0;j<i;j++)assert(Math.hypot(pins[i].badge.x-pins[j].badge.x,pins[i].badge.y-pins[j].badge.y)>=23,'Clustered badges remain legible');
+ }
+ assert(miniatureSVG(world,view,{floor:0,markers:clustered}).includes('<line x1='));
+
  const lowerMini=miniatureSVG(world,view,{floor:0,markers:hiddenMarkers});
  const scanMini=miniatureSVG(world,view,{floor:0,markers:visibleMarkers});
  assert(lowerMini.includes('data-marker="kitty"')&&lowerMini.includes('data-marker="emy"'));
