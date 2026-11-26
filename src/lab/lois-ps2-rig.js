@@ -50,6 +50,7 @@ export function loisBoneForPart(id){
 export function sampleLoisRig(source={},reduced=false){
  const visual=sampleLoisVisual(source,reduced);
  const reaction=sampleLoisReaction(source,reduced);
+ const brace=reaction.brace||0,resist=reaction.resist||0,recoil=reaction.recoil||0,recover=reaction.recover||0,pulse=reaction.pulse||0;
  const phase=visual.phase;
  const t=visual.elapsed,crouch=clamp(source.crouch,0,1);
  const speed=clamp(source.speed,0,4);
@@ -83,8 +84,8 @@ export function sampleLoisRig(source={},reduced=false){
  // Split the fold between pelvis, knees and torso; the former 72cm spine
  // slide folded the entire chest through the lap when Louis squatted.
  shift('spine',0,-.38*lowCover,0);
- angle('spine',0,(hiding?.26:untying?.055:phase==='climb'?.09:0),0);
- angle('chest',reduced?0:Math.sin(t*1.04)*.012,0,reduced?0:Math.sin(t*.45)*.017);
+ angle('spine',-.07*resist+.035*pulse,(hiding?.26:untying?.055:phase==='climb'?.09:0)+.13*brace-.21*recoil+.05*recover,0);
+ angle('chest',(reduced?0:Math.sin(t*1.04)*.012)+.09*resist+.035*pulse,-.12*recoil,(reduced?0:Math.sin(t*.45)*.017)+.12*resist);
  shift('chest',0,breath,0);
  // A compact neck duck tucks the photographed head UNDER the 1.10 m
  // counter while keeping the chest above the pelvis and legs bent naturally.
@@ -99,12 +100,13 @@ export function sampleLoisRig(source={},reduced=false){
   ['left',-1,liftedLeft,step],['right',1,liftedRight,-step]
  ]){
   const reach=(untying?-.49:hiding?-.64:-(legPhase*.36))-reaction.reach*.24;
-  angle(name+'Shoulder',side*.025,reach,side*(hiding?.19:untying?.13:.02));
-  angle(name+'Elbow',0,untying?-.41:hiding?-.31:.12+lift*.09,0);
-  angle(name+'Wrist',0,untying?-.13:hiding?.14:0,side*.055);
-  angle(name+'Hip',0,hiding?-.72:untying?-.22:legPhase*.33,0);
-  angle(name+'Knee',0,hiding?1.16:untying?.34:lift*.41,0);
-  angle(name+'Ankle',0,hiding?-.49:untying?-.12:-legPhase*.18-lift*.17,0);
+  const near=side===-1?1:.72;
+  angle(name+'Shoulder',side*(.025+.20*brace+.12*recoil),reach-near*(.68*brace+.34*resist)+.10*side*pulse-.25*recover,side*(hiding?.19:untying?.13:.02)+side*.24*resist);
+  angle(name+'Elbow',0,(untying?-.41:hiding?-.31:.12+lift*.09)-near*(.82*brace+.28*resist)-.22*recoil-.22*recover,0);
+  angle(name+'Wrist',0,(untying?-.13:hiding?.14:0)-.14*resist+.08*side*pulse,side*(.055+.12*brace));
+  angle(name+'Hip',0,(hiding?-.72:untying?-.22:legPhase*.33)-.22*brace+.12*side*recoil,0);
+  angle(name+'Knee',0,(hiding?1.16:untying?.34:lift*.41)+.34*brace+.12*recoil,0);
+  angle(name+'Ankle',0,(hiding?-.49:untying?-.12:-legPhase*.18-lift*.17)-.12*brace,0);
   if(crouch)shift(name+'Hip',0,crouch*.09,crouch*.16);
  }
  const bones=Object.create(null);
