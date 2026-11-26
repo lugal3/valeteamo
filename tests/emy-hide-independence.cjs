@@ -3,9 +3,11 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 (async()=>{
- const {createHouse,blocked,lineBlocked}=await import('../src/lab/world.js');
+ const {createHouse,blocked,lineBlocked,groundHeight,setDoor}=await import('../src/lab/world.js');
+ const {poseHatch}=await import('../src/lab/basement.js');
+ const {updateFurniture}=await import('../src/lab/furniture-motion.js');
  const {createEmyCompanion,sendEmyDistract,updateEmyCompanion,snapshotEmyCompanion,
-  restoreEmyCompanion,findEmyRefuge}=await import('../src/lab/emy-companion.js');
+  restoreEmyCompanion,findEmyRefuge,emyGroundHeight,sendEmyToTrunk,FOLLOW_RESUME}=await import('../src/lab/emy-companion.js');
  const world=createHouse();
  const wardrobe={objectId:'wardrobe',returnX:2.3,returnZ:3.85};
  const kitty={x:2.3,y:3.15,z:3.85,hidden:wardrobe};
@@ -92,6 +94,78 @@ const fs=require('node:fs');
  assert(Math.hypot(shelter.cat.x-refuge.x,shelter.cat.z-refuge.z)<.16,'Reach selected local refuge');
  assert.equal(shelter.cat.visualMode,'crouch');
  assert.equal(shelter.cat.hidden,false);
+ // Real geometry: the low nook has 1.08m clearance. The old human-sized
+ // graph selected an inaccessible nearest node above it. Emy must emerge
+ // from the actual west opening and reunite without a floor-height snap.
+ const nookWorld=createHouse();
+ for(const door of nookWorld.objects.filter(o=>o.kind==='door'&&!o.locked&&!o.sealed))setDoor(door,true);
+ const nookCat=createEmyCompanion(nookWorld.emy,{waiting:false});
+ const nookStart={x:11.72,y:0,z:6.82,yaw:-Math.PI/2};
+ assert(!blocked(nookWorld.boxes,nookStart.x,0,nookStart.z,.16,.62),'Valid cat position in the real stair nook');
+ assert(blocked(nookWorld.boxes,nookStart.x,0,nookStart.z,.16,1.72),'A human-sized graph cannot use this low refuge');
+ Object.assign(nookCat.cat,nookStart);
+ const nookHide={objectId:'understairs',returnX:10.38,returnZ:6.82};
+ const nookKitty={x:10.38,y:0,z:6.82,hidden:nookHide};
+ for(let i=0;i<120;i++){
+  updateEmyCompanion(nookCat,1/30,{world:nookWorld,player:nookKitty,reduced:true});
+  assert.equal(nookCat.stage,'hold');assert.equal(nookCat.cat.y,0);
+ }
+ nookKitty.hidden=null;Object.assign(nookKitty,{x:6.0,z:8.1});
+ let emerged=false;
+ for(let i=0;i<2400;i++){
+  const before={x:nookCat.cat.x,y:nookCat.cat.y,z:nookCat.cat.z};
+  updateEmyCompanion(nookCat,1/30,{world:nookWorld,player:nookKitty,reduced:true});
+  updateFurniture(nookWorld.objects,1/30,nookKitty);
+  assert(Math.hypot(nookCat.cat.x-before.x,nookCat.cat.z-before.z)<=.15,'Bounded continuous movement out of nook');
+  assert.equal(nookCat.cat.y,0,'Do not climb onto the stair ramp from the nook');
+  assert(!blocked(nookWorld.boxes,nookCat.cat.x,0,nookCat.cat.z,.16,.62));
+  if(Math.hypot(nookCat.cat.x-nookKitty.x,nookCat.cat.z-nookKitty.z)<=FOLLOW_RESUME+.1){emerged=true;break;}
+ }
+ assert(emerged,'Emy must escape the real stair nook and return to Kitty');
+ assert.equal(nookCat.stage,'following');
+
+ // Opening the hatch supersedes a stay or active distraction. Even when
+ // Kitty is underground, Emy has to walk to the study trunk, not descend.
+ const basementWorld=createHouse();
+ for(const door of basementWorld.objects.filter(o=>o.kind==='door'&&!o.locked&&!o.sealed))setDoor(door,true);
+ const basementCat=createEmyCompanion(basementWorld.emy,{waiting:false});
+ Object.assign(basementCat.cat,{x:8.55,y:0,z:2.2,yaw:0});
+ assert(sendEmyDistract(basementCat,basementWorld,{x:8.55,y:0,z:2.2}));
+ basementWorld.hatch.locked=false;basementWorld.hatch.open=true;poseHatch(basementWorld.hatch,1);
+ const underground={x:8.55,y:groundHeight(8.55,6.3,-2,true),z:6.3,hidden:null};
+ assert(Number.isNaN(emyGroundHeight(8.55,2.9,0,true)),'An above-ground Emy cannot enter the opened trapdoor');
+ let trunk=false;
+ for(let i=0;i<2400;i++){
+  const cue=updateEmyCompanion(basementCat,1/30,{world:basementWorld,player:underground,reduced:true,distractCooldown:35});
+  updateFurniture(basementWorld.objects,1/30,underground);
+  assert(basementCat.cat.y>=-.01,'No accidental basement descent during withdrawal');
+  assert.equal(basementCat.distraction,null,'Withdrawal clears active orders');
+  if(cue==='trunk'){trunk=true;break;}
+ }
+ assert(trunk&&basementCat.cat.hidden,'Retire into the actual trunk even when Kitty descends immediately');
+ Object.assign(underground,{x:8.55,y:0,z:2.2});
+ for(let i=0;i<120;i++)updateEmyCompanion(basementCat,1/30,{world:basementWorld,player:underground,reduced:true});
+ assert.equal(basementCat.stage,'trunk','Returning from the basement must not revive a retired companion');
+ assert(basementCat.cat.hidden);
+ assert(!sendEmyToTrunk(basementCat),'Repeated story trigger does not restart withdrawal');
+
+ // A legacy underground cat can physically leave via the same slope.
+ const oldWorld=createHouse();oldWorld.hatch.open=true;oldWorld.hatch.locked=false;poseHatch(oldWorld.hatch,1);
+ for(const door of oldWorld.objects.filter(o=>o.kind==='door'&&!o.locked&&!o.sealed))setDoor(door,true);
+ const oldCat=createEmyCompanion(oldWorld.emy,{waiting:false});
+ const oldY=groundHeight(8.55,4.5,-2,true);
+ Object.assign(oldCat.cat,{x:8.55,y:oldY,z:4.5,yaw:Math.PI});
+ let climbedOut=false;
+ for(let i=0;i<2400;i++){
+  const before={x:oldCat.cat.x,y:oldCat.cat.y,z:oldCat.cat.z};
+  updateEmyCompanion(oldCat,1/30,{world:oldWorld,player:underground,reduced:true});
+  updateFurniture(oldWorld.objects,1/30,underground);
+  if(oldCat.stage==='trunk-enter'||oldCat.stage==='trunk'){climbedOut=true;break;}
+  assert(Math.abs(oldCat.cat.y-before.y)<.18,'No vertical teleport on hatch stairs');
+  if(oldCat.cat.y>=-.01)climbedOut=true;
+ }
+ assert(climbedOut,'Legacy underground Emy can leave along the real tunnel slope');
+
  // Kitty's player animation in house.js has no seven-second cat dependency.
  const house=fs.readFileSync('src/lab/house.js','utf8');
  const section=house.slice(house.indexOf(' function updateHiding(dt){'),house.indexOf(' function exitPose(){'));
