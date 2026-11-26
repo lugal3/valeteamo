@@ -20,11 +20,28 @@ export function finaleStage(shot,enemy,reduced=false,emy=null){
  const y=mix(origin.y,1.63,backing)-(reduced?0:.035*impact);
  const struggle=ease((t-b.grab)/.25)*(1-ease((t-b.release)/.28));
  const sway=reduced?0:Math.sin((t-b.grab)*12)*.045*struggle;
- const captive={x:mix(enemy.x-.05+sway,start.x-.25,release),
-  z:mix(enemy.z+.44,start.z+1.4,release)};
- const louis={x:mix(captive.x,exit.x+.42,run),y:0,z:mix(captive.z,exit.z-.42,run),
-  yaw:turn(-.28*struggle+.20*release*(1-run),0,run),crouch:.22*(1-release)*ease(t/.68)+.09*struggle,speed:run>0&&run<1?2.15:release>0&&release<1?.65*Math.sin(Math.PI*release):0,
-  walk:shot.louisStride+release*.8+run*2.8,
+ // The captive stops following the attacker's root at impact, rather
+ // than sliding sideways with the recoil. Use a separately planted pose.
+ const detach=ease((t-2.08)/.28),heldX=start.x+.53,heldZ=Math.max(12.37,start.z-.10)+.70;
+ const hold={x:mix(enemy.x-.05+sway,heldX+sway,detach),z:mix(enemy.z+.44,heldZ,detach)};
+ const captive={x:mix(hold.x,start.x-.25,release),z:mix(hold.z,start.z+1.4,release)};
+ // A nearby real follower can enter the hold from his own position. Distant
+ // checkpoint companions retain the existing off-camera staging fallback.
+ const entry=shot.louis?.from,approach=ease(t/.86);
+ const from=entry&&entry.z>=12.16&&Math.abs(entry.x-start.x)<=1.5&&Math.abs(entry.z-start.z)<=1.5&&Math.abs(entry.y??0)<.2?entry:null;
+ const lx=from?mix(from.x,captive.x,approach):captive.x,lz=from?mix(from.z,captive.z,approach):captive.z;
+ const distance=from?Math.hypot(heldX-from.x,heldZ-from.z):0;
+ const escapeDistance=Math.hypot(start.x-.25-heldX,start.z+1.4-heldZ);
+ const walkIn=from&&t<.86?distance*30*(t/.86)**2*(1-t/.86)**2/.86:0;
+ const rt=clamp((t-b.release)/.68);
+ const walkOut=escapeDistance*30*rt**2*(1-rt)**2/.68;
+ const face=-.28*struggle+.20*release*(1-run);
+ const louis={x:mix(lx,exit.x+.42,run),y:0,z:mix(lz,exit.z-.42,run),
+  yaw:turn(from?turn(from.yaw??0,face,approach):face,0,run),
+  crouch:mix(from?.crouch??0,.22,approach)*(1-release)+.09*struggle,
+  speed:run>0&&run<1?2.15:Math.min(3,walkIn+walkOut),
+  walk:shot.louisStride+distance*approach+release*escapeDistance+run*2.8,
+  age:(shot.louisAge??0)+t,
   visualReaction:t<b.run?{type:'finale-captive',age:t,duration:b.run}:null};
  const target={x:(enemy.x+louis.x)*.5,y:1.32,z:(enemy.z+louis.z)*.5};
  // Let the framing acknowledge Emy's approach and leap without losing
