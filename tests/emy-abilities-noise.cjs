@@ -16,6 +16,9 @@ const assert=require('node:assert/strict');
  assert(advanceEmyNameCue(tag,.1,true),'New look after 180 seconds triggers');
  assert(!advanceEmyNameCue(tag,.1,true,false),'No name during a modal');
  assert(!advanceEmyNameCue(tag,.1,true),'A modal does not re-arm a cue');
+ const beforeSuppression=tag.cooldown;
+ assert(!advanceEmyNameCue(tag,.1,false,true,false),'Occupied hand suppresses the label');
+ assert(tag.cooldown<beforeSuppression&&tag.looking,'Suppression counts play time but does not invent a look-away');
  const abilities=createEmyAbilities();
  assert(activateEmyScan(abilities));assert.equal(abilities.scan,6);assert(!activateEmyScan(abilities));
  advanceEmyAbilities(abilities,1/60);assert(abilities.scan<6&&abilities.wave<1.1);
@@ -33,6 +36,10 @@ const assert=require('node:assert/strict');
  assert(exterior.includes('Exterior tridimensional')&&exterior.includes('<polygon'));
  assert.notEqual(exterior,rotated);
  assert(!exterior.includes('data-act="emy:room:'));
+ const boxOf=svg=>svg.match(/viewBox="([^"]+)"/)[1].split(' ').map(Number);
+ const zoomed=miniatureSVG(world,changeMiniatureView(view,{zoom:1.25}));
+ assert.deepEqual(boxOf(exterior),boxOf(zoomed),'Fit the default projection without cancelling the player zoom');
+ assert(boxOf(exterior).every(Number.isFinite));
  const fakeThreat={active:true,x:7.9,y:0,z:5.1};
  const hiddenMarkers=miniatureMarkers({x:5.9,y:0,z:8},{x:5.1,y:0,z:8,hidden:false},fakeThreat,false);
  const visibleMarkers=miniatureMarkers({x:5.9,y:0,z:8},{x:5.1,y:0,z:8,hidden:false},fakeThreat,true);
@@ -45,6 +52,9 @@ const assert=require('node:assert/strict');
  const upperMini=miniatureSVG(world,view,{floor:1,lockedIds:['bedroom'],markers:visibleMarkers});
  assert(upperMini.includes('house-emy-stair-void')&&!upperMini.includes('data-act="emy:room:bedroom"')&&!upperMini.includes('data-marker="threat"'));
  assert(emyFloorList(world.rooms,0,{lockedIds:['study'],disabledReasons:{study:'Ruta bloqueada'}}).includes('Ruta bloqueada'));
+ assert(emyFloorList(world.rooms,0).includes('house-emy-destination-icon'));
+ const stairPin={id:'kitty',label:'Kitty',color:'#fff',x:12,y:1.2,z:7.8};
+ assert(miniatureSVG(world,view,{floor:0,markers:[stairPin]}).includes('data-marker="kitty"'),'Stair traversal has a real horizontal marker');
  const choices=roomChoices(world.rooms);
  for(const name of ['Estudio','Sala de estar','Cocina y comedor','Baño','Dormitorio','Sala de lectura','Sala de música','Recibidor y pasillo','Distribuidor y descansillo']){
   assert(choices.some(room=>room.label===name),name+' exists in the two-floor command map');
@@ -100,6 +110,16 @@ const assert=require('node:assert/strict');
   assert(Math.abs(walker.cat.y-expectedFloor)<.4,'Emy must finish on the requested floor of '+id);
   walker.stage='following';walker.distraction=null;walker.route=[];walker.trail=[];
  }
+ // Verify that the near-wall arrival tolerance cannot start a distraction
+ // through a partition, and a malformed/airborne destination costs nothing.
+ const wallWorld=createHouse(),wallCat=createEmyCompanion(wallWorld.emy,{waiting:false});
+ Object.assign(wallCat.cat,{x:4.72,y:0,z:3.6});
+ assert(!sendEmyDistract(wallCat,wallWorld,{x:NaN,y:0,z:1}));
+ assert(!sendEmyDistract(wallCat,wallWorld,{x:5,y:1,z:3.6}));
+ assert.equal(wallCat.stage,'following');
+ wallCat.stage='distract';wallCat.route=[];wallCat.distraction={goal:{x:4.17,y:0,z:3.6},remaining:25,arrived:false,nextNoise:0,nextPlan:Infinity,stuck:0};
+ const blockedCue=updateEmyCompanion(wallCat,.016,{world:wallWorld,player:{x:5.9,y:0,z:10.65},reduced:true});
+ assert.equal(blockedCue,null);assert(!wallCat.distraction.arrived,'No false arrival through study wall');
  const props=installNoiseProps(world);
  assert.equal(props.length,6);
  assert(props.every(p=>!world.boxes.includes(p.box)), 'noise objects use a separate WebGL1 batch, never the saturated main dynamic buffer');
