@@ -109,6 +109,23 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  const threat=finaleThreat({mode:'chase'},1.65,false);
  assert(threat.captureReach>.5&&threat.captureFace.left>0&&threat.captureFace.jaw>0,'Visible rig-native transformation during the grab');
  assert(finaleThreat({mode:'chase'},3.78,true).captureReach<.01,'Grasp released before control returns');
+ const {pursuerPose}=await import('../src/lab/pursuer-model.js');
+ const live={x:6,y:0,z:12.6,yaw:0,walk:0,speed:0,age:3.78,mode:'trapped'};
+ for(const reduced of [false,true]){
+  for(let i=0;i<=378;i++){
+   const t=i/100,pose=pursuerPose(finaleThreat({...live,mode:t<2.1?'chase':'trapped'},t,reduced),reduced);
+   assert(Object.values(pose).every(j=>Object.values(j).every(Number.isFinite)),'Every transformed joint including eyes is finite at '+t);
+  }
+  const before=pursuerPose(finaleThreat(live,2.07,reduced),reduced);
+  const hit=pursuerPose(finaleThreat(live,2.23,reduced),reduced);
+  assert(hit.chest.pitch<before.chest.pitch-.15,'Distinct chest recoil after contact');
+  assert(hit['arm-1'].pitch-hit['arm1'].pitch>.35,'Asymmetric shoulder reaction');
+  assert.deepEqual(pursuerPose(finaleThreat(live,FINALE_BEATS.run,reduced),reduced),pursuerPose(live,reduced),'No residual cinematic pose on gameplay handoff');
+ }
+ assert.equal(finaleThreat(live,3.78).captureReach,0,'No phantom grip');
+ const left=finaleEmyGoal({x:5.899,z:18}),right=finaleEmyGoal({x:5.901,z:18});
+ assert(Math.abs(left.x-right.x)<.01,'No side-switch teleport at the center of garden');
+
  const house=fs.readFileSync('src/lab/house.js','utf8');
  assert(house.includes("collectCinematicCues('escape',previousFinale,finalCutscene.elapsed,finalCutscene.cues)"));
  assert(house.includes("finalCutscene={elapsed:0,cues:new Set()"));
