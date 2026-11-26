@@ -199,17 +199,19 @@ function fetchKey(companion,world,player,dt,reduced){
  }
  return cue;
 }
-export function sendEmyDistract(companion,world,goal){
- if(companion?.stage!=='following'||world.hatch?.open||!goal||![goal.x,goal.y,goal.z].every(Number.isFinite)||goal.y<-.01)return false;
+// Preview and execution share the same validation and A* route. Only the
+// planner cache may be populated while the player studies the map.
+export function previewEmyDistract(companion,world,goal){
+ if(companion?.stage!=='following'||world.hatch?.open||!goal||![goal.x,goal.y,goal.z].every(Number.isFinite)||goal.y<-.01)return null;
  const ground=emyGroundHeight(goal.x,goal.z,goal.y,world.hatch?.amount>.92);
- if(!Number.isFinite(ground)||Math.abs(ground-goal.y)>.18||blocked(world.boxes,goal.x,ground,goal.z,.20,.62))return false;
- const previous={stage:companion.stage,route:companion.route,trail:companion.trail,stuck:companion.stuck,routeTarget:companion.routeTarget,nextPlanAt:companion.nextPlanAt};
- companion.route=[];companion.trail=[];companion.stuck=0;
- planRoute(companion,world,goal);
+ if(!Number.isFinite(ground)||Math.abs(ground-goal.y)>.18||blocked(world.boxes,goal.x,ground,goal.z,.20,.62))return null;
+ const draft={...companion,route:[],trail:[],stuck:0};
+ planRoute(draft,world,goal);
+ // Cache only the reusable graph, not the companion's live task or route.
+ companion.planner=draft.planner;companion.nookPlanner=draft.nookPlanner;
  const lockedDoors=world.objects.filter(door=>door.kind==='door'&&(door.locked||door.sealed)&&!door.open);
- // Include the initial/final legs as well as the graph edges. The planner's
- // nearest nodes need not be on the same side of a locked door as the cat.
- const waypoints=[companion.cat,...companion.route,goal];
+ const origin={x:companion.cat.x,y:companion.cat.y,z:companion.cat.z};
+ const waypoints=[origin,...draft.route,{...goal}];
  const collidesWithLockedDoor=lockedDoors.some(door=>{
   const walls=[door.box,...(door.parts||[]).map(part=>part.box)].filter(box=>box?.solid);
   return waypoints.slice(1).some((node,i)=>{
@@ -217,10 +219,16 @@ export function sendEmyDistract(companion,world,goal){
    return walls.some(box=>segmentHitsBox(from,to,box,.13));
   });
  });
- if(collidesWithLockedDoor||!companion.route.length&&(distance(companion.cat,goal)>.85||!clearPassage(world,companion.cat,goal))){
-  Object.assign(companion,previous);return false;
- }
- companion.distraction={goal:{...goal},remaining:EMY_DISTRACT_SECONDS,arrived:false,nextNoise:0,nextPlan:0,stuck:0};
+ if(collidesWithLockedDoor||!draft.route.length&&(distance(companion.cat,goal)>.85||!clearPassage(world,companion.cat,goal)))return null;
+ const metres=waypoints.slice(1).reduce((sum,p,i)=>sum+Math.hypot(p.x-waypoints[i].x,p.y-waypoints[i].y,p.z-waypoints[i].z),0);
+ return {goal:{...goal},route:draft.route,waypoints,seconds:Math.max(1,Math.ceil(metres/2.0)),metres};
+}
+export function sendEmyDistract(companion,world,goal){
+ const plan=previewEmyDistract(companion,world,goal);
+ if(!plan)return false;
+ clearNavigation(companion);
+ companion.route=plan.route;companion.routeTarget={...plan.goal};companion.nextPlanAt=companion.age+1.1;
+ companion.distraction={goal:{...plan.goal},remaining:EMY_DISTRACT_SECONDS,arrived:false,nextNoise:0,nextPlan:0,stuck:0};
  companion.stage='distract';companion.cat.reaction=0;return true;
 }
 export function snapshotEmyCompanion(companion){
