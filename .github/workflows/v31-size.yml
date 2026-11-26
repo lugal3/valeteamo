@@ -62,6 +62,8 @@ jobs:
       - name: Exact model parity
         run: node tests/emy-surface-parity.cjs baseline-v3/src/lab/emy-surface.js | tee model-parity.txt
         shell: bash
+      - name: Install lossless conversion tools
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Convert and verify PCM
         run: python3 scripts/audit-lossless-audio.py src/lab/audio audio-audit
       - run: npx playwright install --with-deps chromium webkit
