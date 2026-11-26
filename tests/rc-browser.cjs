@@ -185,10 +185,20 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   await page.keyboard.down('w');
   try{await page.waitForFunction(()=>['ending','safe'].includes(window.__rescueHouse.story().phase),null,{timeout:15000});}
   finally{await page.keyboard.up('w');}
+  await page.waitForFunction(()=>{const f=window.__rescueHouse.finale();return f&&f.elapsed>=1.32;},null,{timeout:20000});
+  await shot('06a-primera-persona-rescate');
+  await page.waitForFunction(()=>window.__rescueHouse.finale()?.playable,null,{timeout:30000});
   await page.waitForFunction(()=>window.__rescueHouse.emy().z>14.1,null,{timeout:30000});
   await shot('06b-gata-guia-al-jardin');
+  const beforeRun=await page.evaluate(()=>window.__rescueHouse.snapshot().position);
+  assert.equal((await story()).phase,'ending','Ending cannot complete while Kitty stands still');
+  assert(beforeRun.z<17.7,'Cinematic leaves the player before the garden finish line');
+  await page.keyboard.down('w');
+  try{
+   await page.waitForFunction(()=>window.__rescueHouse.snapshot().position.z>=17.7,null,{timeout:30000});
+  }finally{await page.keyboard.up('w');}
   await page.getByRole('dialog',{name:/Kitty y Louis escaparon/}).waitFor({timeout:30000});
-  assert((await louis()).z>13.8,'Louis walks into the garden during the closing shot');
+  assert((await louis()).z>15.4,'Louis physically follows the player into the garden');
   await shot('07-final-cinematic');
   assert.equal((await story()).phase,'safe');
   assert.deepEqual(errors,[],'No page errors through complete RC finale');
