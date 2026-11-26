@@ -203,6 +203,7 @@ function fetchKey(companion,world,player,dt,reduced){
 // planner cache may be populated while the player studies the map.
 export function previewEmyDistract(companion,world,goal){
  if(companion?.stage!=='following'||world.hatch?.open||!goal||![goal.x,goal.y,goal.z].every(Number.isFinite)||goal.y<-.01)return null;
+ if(roomAt(goal.x,goal.z,goal.y)==='Sala de música')return null;
  const ground=emyGroundHeight(goal.x,goal.z,goal.y,world.hatch?.amount>.92);
  if(!Number.isFinite(ground)||Math.abs(ground-goal.y)>.18||blocked(world.boxes,goal.x,ground,goal.z,.20,.62))return null;
  const draft={...companion,route:[],trail:[],stuck:0};
@@ -219,7 +220,7 @@ export function previewEmyDistract(companion,world,goal){
    return walls.some(box=>segmentHitsBox(from,to,box,.13));
   });
  });
- if(collidesWithLockedDoor||!draft.route.length&&(distance(companion.cat,goal)>.85||!clearPassage(world,companion.cat,goal)))return null;
+ if(waypoints.slice(1).some(node=>roomAt(node.x,node.z,node.y)==='Sala de música')||collidesWithLockedDoor||!draft.route.length&&(distance(companion.cat,goal)>.85||!clearPassage(world,companion.cat,goal)))return null;
  const metres=waypoints.slice(1).reduce((sum,p,i)=>sum+Math.hypot(p.x-waypoints[i].x,p.y-waypoints[i].y,p.z-waypoints[i].z),0);
  return {goal:{...goal},route:draft.route,waypoints,seconds:Math.max(1,Math.ceil(metres/2.0)),metres};
 }
@@ -309,7 +310,7 @@ function clearPassage(world,from,to){
  }
  return Math.abs(floor-to.y)<.23;
 }
-function moveToward(companion,world,goal,dt,speed,allowMusic=false){
+function moveToward(companion,world,goal,dt,speed){
  const cat=companion.cat,dx=goal.x-cat.x,dz=goal.z-cat.z,d=Math.hypot(dx,dz);
  if(d<.055)return false;
  const turn=deltaAngle(cat.yaw,Math.atan2(dx,dz));
@@ -318,7 +319,7 @@ function moveToward(companion,world,goal,dt,speed,allowMusic=false){
  let moved=false;
  for(let i=0;i<pieces;i++){
   const nx=cat.x+dx/d*step/pieces,nz=cat.z+dz/d*step/pieces,y=emyGroundHeight(nx,nz,cat.y,world.hatch?.amount>.92);
-  if(!allowMusic&&roomAt(cat.x,cat.z,cat.y)!=='Sala de música'&&roomAt(nx,nz,y)==='Sala de música')break;
+  if(roomAt(cat.x,cat.z,cat.y)!=='Sala de música'&&roomAt(nx,nz,y)==='Sala de música')break;
   if(!Number.isFinite(y)||Math.abs(y-cat.y)>.12||blocked(world.boxes,nx,y,nz,.16,.62))break;
   cat.x=nx;cat.y=y;cat.z=nz;moved=true;
  }
@@ -420,7 +421,7 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
    while(companion.route.length&&distance(cat,companion.route[0])<.19&&Math.abs(cat.y-companion.route[0].y)<.28)companion.route.shift();
    if(companion.route.length)openRouteDoor(companion,world,player,reduced);
    const point=companion.route[0]||goal;
-   const walking=moveToward(companion,world,point,dt,2.25,true);
+   const walking=moveToward(companion,world,point,dt,2.25);
    job.stuck=walking?0:job.stuck+dt;
    if(job.stuck>.65&&companion.age>job.nextPlan){
     planRoute(companion,world,goal);job.nextPlan=companion.age+1.0;
@@ -601,7 +602,7 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
   }
   companion.stage='hiding';companion.hiddenAt=hide.objectId;setVisibility(companion,true);return 'hid';
  }
- if(companion.altarWait&&following&&!walking){cat.yaw+=deltaAngle(cat.yaw,Math.PI)*(1-Math.exp(-4*dt));}
+ if(companion.altarWait&&following&&!walking){cat.yaw+=deltaAngle(cat.yaw,Math.atan2(12.27-cat.x,.44-cat.z))*(1-Math.exp(-4*dt));}
  if(cat.reaction>0&&player){
   const facing=Math.atan2(player.x-cat.x,player.z-cat.z);
   cat.yaw+=deltaAngle(cat.yaw,facing)*(1-Math.exp(-6*dt));
