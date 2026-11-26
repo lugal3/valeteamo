@@ -27,6 +27,7 @@ import {CAR_ARRIVAL_SECONDS,arrivalCarCamera,poseArrivalCar} from './arrival-car
 import {BED_EXIT} from './pursuer-model.js';
 import {createHouse,HEIGHT,HOUSE,blocked,groundHeight,lineBlocked,setDoor,setDrawer,poseFurniture,roomAt} from './world.js';
 import {HouseRenderer,pickupGeometry} from './renderer.js';
+import {inspectionMesh,inspectionHTML,mountInspection} from './object-inspection.js';
 import {HouseSound,MIX_CHANNELS,mixLimit} from './sound.js';
 import {applyLookDelta,followLook,readCameraSettings,writeCameraSettings,DEFAULT_CAMERA_SETTINGS,SENSITIVITY_MIN,SENSITIVITY_MAX,SENSITIVITY_STEP} from './camera-controls.js';
 import {WINDOW_SHOT_SECONDS,WINDOW_LANDING,windowIntroCamera,windowIntroState,windowIntroLighting,shouldPlayWindowIntro} from './window-intro.js';
@@ -197,6 +198,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const events=new HouseEvents({pursuit:config.entry!=='rescue',twoActs:true,arrivalLead:CAR_ARRIVAL_SECONDS}),floorSounds=new FloorSounds();let pursuer=null,equipment='flashlight',equipmentAge=1,encounterCheckpoint=null,thirdView=null;
  const mirrorSafe=new MirrorSafePuzzle(),television=new HouseTelevision();
  let previousToolTarget=null,autoUseTarget=null,keyTurn=null;
+ let inspection=null;
  let safeInput='',activeSafe=null,noteLift=0,noteHold=0,notePresentation=false,capturePhoto=false,piano=null,phoneTurn=0;
  const objectives=createRescueObjectives();
  const tutorialEnabled=demo&&config.fieldTutorials===true&&!config.trial&&checkpoint==='ground';
@@ -293,9 +295,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   piano.close();piano=null;s.poseCamera=null;
   dialog.classList.remove('house-piano-dialog');
  }
- const modalClose=()=>{closePiano();modal='';activeSafe=null;safeInput='';dialog.classList.add('lab-hidden');dialog.innerHTML='';resetInput();if(!isSuspended())sound.resume();};
+ function closeInspection(){inspection?.dispose();inspection=null;dialog.classList.remove('house-inspection-dialog');}
+ const modalClose=()=>{closeInspection();closePiano();modal='';activeSafe=null;safeInput='';dialog.classList.add('lab-hidden');dialog.innerHTML='';resetInput();if(!isSuspended())sound.resume();};
  function showModal(title,body,actions=[['Cerrar','close']]){
-  closePiano();
+  closeInspection();closePiano();
   modal=title;dialog.classList.remove('lab-hidden');
   $('house-messages').hidden=true;
   dialog.innerHTML=`<section class="lab-paper" role="dialog" aria-modal="true" aria-label="${escapeHTML(title)}"><div class="lab-paper-mark">✿ ♡ ✿</div><h2>${escapeHTML(title)}</h2><div class="lab-paper-body">${body}</div><div class="lab-paper-actions">${actions.map(([label,act])=>`<button data-act="${escapeHTML(act)}">${escapeHTML(label)}</button>`).join('')}</div></section>`;
@@ -354,7 +357,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   Object.assign(target,{x:cat.x,y:cat.y+.38,z:cat.z,interactable:!cat.hidden&&(!emyCompanion||['following','stay','distract','distract-recover'].includes(emyCompanion.stage))&&cat.reaction<=0});
  }
  function reset(saved){
-  saveNoticeLeft=0;saveNotice.hidden=true;endPeek();rcStaticLeft=0;pursuerCreakLeft=3.6;rcStatic.hidden=true;peekButton.hidden=true;manual.clear();manual.restore(saved?.tutorials,!!saved);pendingTutorial=null;countdown.hidden=true;for(const node of guides)node.hidden=true;
+  closeInspection();saveNoticeLeft=0;saveNotice.hidden=true;endPeek();rcStaticLeft=0;pursuerCreakLeft=3.6;rcStatic.hidden=true;peekButton.hidden=true;manual.clear();manual.restore(saved?.tutorials,!!saved);pendingTutorial=null;countdown.hidden=true;for(const node of guides)node.hidden=true;
   perfSampler.reset();perfAt=0;clearFPS();altarVisit=createAltarVisit();
   const seed=!saved&&scenario?.milestone;
   if(seed)saved=trialCheckpoint(seed);
@@ -786,8 +789,25 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   if(CHECKPOINT_INTERACTIONS.has(o.kind))saveCheckpoint();
  }
+ function ownedInspectionObjects(){
+  const inv=s.inventory;
+  return world.objects.filter(o=>o.kind==='key'?(o.master?inv.masterKey:o.red?inv.redKey:inv.key):
+   o.kind==='battery'?inv.batteries>0&&o.taken&&o===world.objects.find(v=>v.kind==='battery'&&v.taken):
+   o.kind==='flashlight'?inv.torch:o.kind==='screwdriver'?inv.screwdriver:o.kind==='rc-car'?inv.rc&&rc.mode==='packed':false);
+ }
+ function openInspection(object,body='',back='bag'){
+  if(!object||events.phase==='hide'||captureShot||finalCutscene)return;
+  const mesh=inspectionMesh(object);
+  if(!mesh){showModal(object.label,body,[[back==='bag'?'Volver a la mochila':'Cerrar',back]]);return;}
+  if(!isPaused())play('inspect-cloth',null,.4);
+  showModal(object.label,'<div class="inspect-layout">'+inspectionHTML(!desktop.matches)+(body?'<div class="inspect-reading">'+body+'</div>':'')+'</div>',[[back==='bag'?'Volver a la mochila':'Cerrar',back]]);
+  dialog.classList.add('house-inspection-dialog');
+  inspection=mountInspection(dialog,mesh);
+ }
  function showNote(note,back='close'){
-  showModal(note.label,`<p class="house-note-sheet">${escapeHTML(note.text)}</p>`,[[back==='bag'?'Volver a la mochila':'Cerrar',back]]);
+  const original=world.objects.find(o=>o.id===note.id);
+  if(original?.mirrored){showMirrorNote(back);return;}
+  openInspection({...original,id:note.id,kind:'note',label:note.label},`<p class="house-note-sheet">${escapeHTML(note.text)}</p>`,back);
  }
  function placePianoScore(){
   const {piano:instrument,pianoSheet}=world;
@@ -843,10 +863,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  function bag(){
   const notes=s.inventory.notes.map(n=>`<button class="lab-note" data-act="read" data-id="${escapeHTML(n.id)}">✉ ${escapeHTML(n.label)} ↗</button>`).join('')||'<p>Aún no hay notas guardadas.</p>';
+  const inspectItems=ownedInspectionObjects().map(o=>`<button class="lab-note" data-act="inspect-item" data-id="${escapeHTML(o.id)}">Examinar · ${escapeHTML(o.label)}</button>`).join('');
   const actions=[['Cerrar mochila','close']];
   const charge=Math.ceil(s.battery);
   if(!heldNoise&&charge<100&&s.inventory.batteries>0)actions.unshift(['Usar pila (hasta +'+SPARE_CHARGE+'%)','recharge']);
-  showModal('Mi mochila',`<p><b>Recuerdos:</b> ${collectedPlushes(world.holiday).length} de 3 peluches</p><p><b>Auto RC:</b> ${s.inventory.rc?'Auto y tablet listos':'Sin recoger'}</p><p><b>⚿ Llave:</b> ${s.inventory.key?'Llave con lazo · abre el dormitorio':'Sin llave con lazo'}</p>${s.inventory.masterKey?'<p><b>Llave maestra</b> · Abre la puerta principal</p>':''}<p><b>Linterna:</b> ${charge}% · <b>Pilas de repuesto:</b> ${s.inventory.batteries}</p><div class="lab-note-list">${notes}</div>`,actions);
+  showModal('Mi mochila',`<p><b>Recuerdos:</b> ${collectedPlushes(world.holiday).length} de 3 peluches</p><p><b>Auto RC:</b> ${s.inventory.rc?'Auto y tablet listos':'Sin recoger'}</p><p><b>⚿ Llave:</b> ${s.inventory.key?'Llave con lazo · abre el dormitorio':'Sin llave con lazo'}</p>${s.inventory.masterKey?'<p><b>Llave maestra</b> · Abre la puerta principal</p>':''}<p><b>Linterna:</b> ${charge}% · <b>Pilas de repuesto:</b> ${s.inventory.batteries}</p><div class="lab-note-list">${notes}${inspectItems}</div>`,actions);
  }
  function startBatterySwap(){
   if(heldNoise){say('Lanza primero el objeto que llevas.');return false;}
@@ -1195,6 +1216,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    try{screen.orientation?.lock?.('landscape').catch(()=>{});}catch{}return;}
   if(act==='recharge'){recharge();return;}
   if(act.startsWith('safe:')){safeAction(act.slice(5));return;}
+  if(act==='inspect-item'){if(modal==='Mi mochila'){const object=ownedInspectionObjects().find(o=>o.id===node?.dataset.id);if(object)openInspection(object);}return;}
   if(act==='read'){const note=s.inventory.notes.find(n=>n.id===node.dataset.id);if(note?.id==='mirror-note')showMirrorNote('bag');else if(note)showNote(note,'bag');return;}
   if(act==='bag'){
    if(events.phase==='hide')return;
@@ -2492,6 +2514,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  // non-blocked player poses without altering the production build or saved game.
  if(import.meta.env.DEV&&demo){
   window.__rescueHouse={
+   inspection:()=>inspection?.snapshot()??null,
    arrival:()=>({car:world.car.progress,wardrobe:poseTransition?.walk?wardrobeWalk(poseTransition.elapsed,poseTransition.walk):null,rising:wakeShot()}),
    mirrorPuzzle:()=>({...mirrorSafe.snapshot(),noteLift,safe:(()=>{const o=world.objects.find(o=>o.id==='mirror-safe');return {amount:o.amount,state:o.state};})()}),
    pianoPuzzle:()=>({picked:world.pianoSheet.taken,placed:world.piano.scorePlaced,solved:world.piano.solved,
@@ -2584,7 +2607,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(idleWarm!==null&&typeof window.cancelIdleCallback==='function')window.cancelIdleCallback(idleWarm);
   // A GPU/audio teardown must never strand the LP React route. Each resource
   // is independent; detach the root even if a browser rejects one disposal.
-  for(const dispose of [()=>haptics.stop(),clearMiniatureInput,releaseMouse,()=>cancelAnimationFrame(raf),()=>controller.abort(),()=>television.destroy(),()=>phone.destroy(),()=>sound.destroy(),()=>renderer?.destroy()]){
+  for(const dispose of [()=>haptics.stop(),closeInspection,clearMiniatureInput,releaseMouse,()=>cancelAnimationFrame(raf),()=>controller.abort(),()=>television.destroy(),()=>phone.destroy(),()=>sound.destroy(),()=>renderer?.destroy()]){
    try{dispose();}catch(error){console.warn('House cleanup:',error);}
   }
   if(window.__rescueHouse)delete window.__rescueHouse;root.remove();
