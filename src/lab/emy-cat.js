@@ -41,11 +41,13 @@ function stridePhase(travel,front,side){
  return (travel/strideLength+(side===1?.5:0)+(front?.75:0))%1;
 }
 export function emyLandmarks(mode='idle',phase=0,walking=false,reduced=false,travel=phase*.55){
- const sit=['sit','groom','purr'].includes(mode),sleep=mode==='sleep',stretch=mode==='stretch',groom=mode==='groom',jump=mode==='jump';
+ const sit=['sit','groom','purr'].includes(mode),sleep=mode==='sleep',stretch=mode==='stretch',groom=mode==='groom',jump=mode==='jump',crouch=mode==='crouch',alert=mode==='alert';
  const motion=reduced?0:Math.sin(phase*8),bob=walking?Math.abs(motion)*.006:0;
- const body=sleep?[0,.17,-.12]:stretch?[0,.30,-.13]:sit?[0,.32,-.14]:[0,.31+bob,-.12];
- const head=sleep?[.13,.205,.12]:stretch?[0,.245,.35]:sit?[0,.585,.14]:[0,.52+bob,.26];
- const headRot=sleep?[.10,-.75,-.35]:stretch?[.22,0,0]:groom?[.48+motion*.06,-.28,-.16]:mode==='purr'?[-.16,0,.17]:[0,0,0];
+ const breath=reduced?0:Math.sin(phase*2.25)*.004;
+ const body=sleep?[0,.17+breath,-.12]:crouch?[0,.215,-.12]:stretch?[0,.30,-.13]:sit?[0,.32+breath,-.14]:[0,.31+bob+breath,-.12];
+ const head=sleep?[.13,.205+breath,.12]:crouch?[0,.33,.26]:stretch?[0,.245,.35]:sit?[0,.585,.14]:[0,.52+bob,.26];
+ const lick=reduced?0:.5+.5*Math.sin(phase*6.4),wash=reduced?0:.5+.5*Math.sin(phase*2.1);
+ const headRot=sleep?[.10,-.75,-.35]:crouch?[.10,0,0]:alert?[-.12,0,0]:stretch?[.22+motion*.024,0,0]:groom?[.35+.24*lick,-.20-.20*wash,-.13-.12*wash]:mode==='purr'?[-.16,0,.17]:[0,0,0];
  const legs={};
  for(const front of [true,false])for(const side of [-1,1]){
   const key=(front?'front':'hind')+side;
@@ -61,19 +63,28 @@ export function emyLandmarks(mode='idle',phase=0,walking=false,reduced=false,tra
   if(stretch){hip=[side*.10,front?.20:.37,front?.21:-.34];paw=[side*.12,.030,front?.48:-.43];}
   if(jump){hip=[side*.10,front?.37:.30,front?.12:-.30];paw=[side*.12,front?.18:.16,front?.42:-.22];}
   if(sleep){hip=[side*.08,.14,front?.07:-.28];paw=[side*.09,.030,front?.25:-.08];}
-  if(groom&&front&&side===-1)paw=[-.065,.46+motion*.012,.29];
+  if(crouch){hip=[side*.10,front?.24:.22,front?.11:-.28];paw=[side*.12,.030,front?.25:-.32];}
+  if(groom&&front&&side===-1)paw=[-.065-.045*wash,.40+.14*wash,.24+.07*lick];
   if(mode==='purr'&&front&&side===1)paw=[.125,.13+Math.max(0,motion)*.015,.28];
   const knee=lerp(hip,paw,.5);knee[2]+=(front?-.035:.07);if(sit&&!front){knee[1]=.105;knee[2]=-.33;}
   legs[key]={hip,knee,paw};
  }
- return {body,head,headRot,legs,sit,sleep,stretch,groom};
+ return {body,head,headRot,legs,sit,sleep,stretch,groom,crouch,alert};
 }
-export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.age,headYaw=0,blend=1,leap}={}){
+export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.age,activityAge=null,headYaw=0,blend=1,leap}={}){
  const previous=cat.lastFootRoot;
  const moved=previous?Math.hypot(cat.x-previous.x,cat.z-previous.z):0;
  cat.walkTravel=(cat.walkTravel||0)+(walking?moved:0);
  cat.lastFootRoot={x:cat.x,z:cat.z};
  const l=emyLandmarks(mode,phase,walking,reduced,cat.walkTravel);
+ // Stretch begins and ends with a planted neutral stance, rather than a
+ // sudden slide of all four paws. Other tasks keep their authored poses.
+ if(mode==='stretch'&&activityAge!==null){
+  const t=activityAge-15,amount=Math.min(1,Math.max(0,t/.72),Math.max(0,(3-t)/.65));
+  const neutral=emyLandmarks('idle',phase,false,reduced,cat.walkTravel);
+  for(const key of ['body','head','headRot'])l[key]=lerp(neutral[key],l[key],amount);
+  for(const key of Object.keys(l.legs))for(const part of ['hip','knee','paw'])l.legs[key][part]=lerp(neutral.legs[key][part],l.legs[key][part],amount);
+ }
  if(leap){
   const {compression,flight,airborne}=leap;
   l.body[1]-=.105*compression;l.head[1]-=.13*compression;
@@ -105,19 +116,20 @@ export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.a
   blend=1;
  }else cat.footContacts=null;
  const fear=cat.alarm||0;
- l.head[1]+=.044*fear;l.head[2]-=.035*fear;
- l.body[1]+=.055*fear;
+ l.head[1]+=.035*fear;l.head[2]-=.060*fear;
+ l.body[1]+=.075*fear;
+ if(fear>.01&&!l.sleep){for(const leg of Object.values(l.legs)){leg.hip[1]+=.035*fear;leg.knee[1]+=.018*fear;}}
  const headRotation=[l.headRot[0]-.14*fear,l.headRot[1]+headYaw,l.headRot[2]];
  const blink=l.sleep||cat.age%4.6>4.42||(mode==='purr'&&Math.sin(phase*2.8)>.15),eyes=blink?.035:mode==='purr'?.65:1+.43*fear;
  const root=p=>{const v=rotateEmy(p,0,cat.yaw,0);return [cat.x+v[0],cat.y+v[1],cat.z+v[2]];};
  for(const part of cat.parts){
   const {box,joint,base}=part;let p=[...base],rot=[0,0,box.emySpec.roll||0],scale=[1,1,1];
-  const turn=cat.earTurn||0,alarm=cat.alarm||0;
-  if(part.id==='head'&&box.earTurn!==turn){box.earTurn=turn;box.emyRevision=(box.emyRevision||0)+1;}
+  const turn=Math.round((cat.earTurn||0)*50)/50,alarm=Math.round((cat.alarm||0)*40)/40,flatten=Math.round((cat.earFlatten||0)*40)/40;
+  if(part.id==='head'&&(box.earTurn!==turn||box.earFlatten!==flatten)){box.earTurn=turn;box.earFlatten=flatten;box.emyRevision=(box.emyRevision||0)+1;}
   if(joint==='eye'&&box.emissive!==!!cat.darkEyes){box.emissive=!!cat.darkEyes;box.emyRevision=(box.emyRevision||0)+1;}
   if(joint==='skin'){
    if(box.bristle!==alarm){box.bristle=alarm;box.emyRevision=(box.emyRevision||0)+1;}
-   scale=[1+.27*alarm,1+.18*alarm,1];
+   scale=[1+.32*alarm,1+.22*alarm,1+.035*alarm];
    p=[0,0,0];
    const next=emySkinFrames(l,rotateEmy),old=box.emySkinFrames;
    if(!old||next.some((f,i)=>f.some((v,k)=>Math.abs(v-old[i][k])>1e-6))){
@@ -126,10 +138,10 @@ export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.a
    }
   }else if(['head','eye','lid','tongue'].includes(joint)){
    p=rotateEmy(base,...headRotation).map((v,i)=>v+l.head[i]);rot=[...headRotation];rot[2]+=box.emySpec.roll||0;
-   if(part.id.startsWith('concha'))rot[1]+=turn;
+   if(part.id.startsWith('concha')){rot[1]+=turn;rot[0]+=.35*flatten;rot[2]+=(base[0]<0?1:-1)*.18*flatten;}
    if(joint==='eye')scale=blink?[.001,.001,.001]:[1,eyes,1];
    if(joint==='lid')scale=blink?[1,1,1]:[.001,.001,.001];
-   if(joint==='tongue')scale=l.groom?[1,.65+.35*Math.sin(phase*11),1]:[.01,.01,.01];
+   if(joint==='tongue')scale=l.groom&&Math.sin(phase*6.4)>.10?[1,.65+.35*Math.sin(phase*6.4),1]:[.01,.01,.01];
   }else if(joint==='body-fur'){
    const local=base.map((v,i)=>v-[0,.31,-.12][i]);const pitch=l.sleep?.12:l.stretch?.25:l.sit?-.65:0;
    p=rotateEmy(local,pitch,0,0).map((v,i)=>v+l.body[i]);rot[0]=pitch;
@@ -146,11 +158,12 @@ export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.a
    if(l.sleep)scale=[.9,.65,.9];
   }else if(joint==='tail'){
    p=[0,0,0];
-   const key=mode+':'+(['sleep','sit','groom'].includes(mode)||reduced?0:Math.floor(phase*30));
+   const tailMode=alarm>.28?'alert':mode;
+   const key=tailMode+':'+(['sleep','crouch'].includes(tailMode)||reduced?0:Math.floor(phase*12))+':'+alarm;
    if(box.emyTailMode!==mode){box.emyTailMode=mode;box.emyTailBlend=1;}
    if(key!==box.emyTailKey||box.emyTailBlend>.002){
    box.emyTailKey=key;box.emyTailBlend*=1-blend;box.emyTailRevision=(box.emyTailRevision||0)+1;
-   const next=emyTailSurface(mode,reduced?0:phase,box.emySpec.fibres),old=box.emyTailMesh;
+   const next=emyTailSurface(tailMode,reduced?0:phase,box.emySpec.fibres,alarm),old=box.emyTailMesh;
    if(old&&blend<1){for(let i=0;i<next.vertices.length;i+=16){for(let k=0;k<3;k++)next.vertices[i+k]=old.vertices[i+k]+(next.vertices[i+k]-old.vertices[i+k])*blend;}}
    box.emyTailMesh=next;
    }
