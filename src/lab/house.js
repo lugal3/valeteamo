@@ -716,6 +716,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   else if(o.id==='record-player'){
    if(roomAt(s.x,s.z,s.y)!=='Sala de música')return;
+   if(!altarVisit.inside)advanceAltarVisit(altarVisit,{inside:true,near:true,dt:0});
    if(activateAltarRecord(altarVisit)){
     play('altar-record',o,1.1);caption('La aguja raspa el vinilo. Una melodía desafinada se repite.');
     say('La misma parte, una y otra vez…',4);
@@ -1746,7 +1747,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    const inside=roomAt(s.x,s.z,s.y)==='Sala de música';
    const near=inside||(Math.abs(s.y-3.15)<.45&&Math.hypot(s.x-9,s.z-3.6)<1.65);
    const altarCue=advanceAltarVisit(altarVisit,{inside,near,afraid:!!emyCompanion?.altarFear&&!world.emy.hidden,dt:shotDelta});
-   if(altarCue.warn){play('cat',world.emy,.52);caption('Emy se eriza y retrocede ante la sala de música');say('Emy no quiere entrar. Te esperará fuera.',4);}
+   if(altarCue.warn){play('cat',world.emy,.52);caption('Emy se eriza ante la sala de música');say('Emy no quiere entrar. Te esperará fuera.',4);}
   }
   updateBatterySwap(shotDelta);
   let view=cameraOf(s),hand=!s.hidden&&!s.lying&&!poseTransition&&!animator.performing&&(!phone.open||phone.canWalk),torch=flashlightBeam(),introHands=null,distance=0;
