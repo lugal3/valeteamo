@@ -121,9 +121,27 @@ export class PhoneUI{
  }
  get canWalk(){return this.open&&!['settings','snake'].includes(this.app);}
  syncAppMode(){this.root.classList.toggle('house-phone-walk',this.canWalk);this.host.querySelector('.phone-screen').setAttribute('aria-modal',String(!this.canWalk));this.root.classList.toggle('house-phone-camera',this.open&&this.app==='camera');this.onAppChange(this.open?this.app:null);}
- setApp(app){this.app=app;this.selectedPhoto=null;if(app==='snake')this.resetSnake();this.last='';this.syncAppMode();if(this.events)this.update(this.events,0);}
+ setApp(app){
+  const shell=this.host.querySelector('.phone-shell'),turn=this.open&&(this.app==='camera')!==(app==='camera');
+  if(turn)this.rotation?.cancel();
+  const before=turn?shell.getBoundingClientRect():null;
+  this.app=app;this.selectedPhoto=null;if(app==='snake')this.resetSnake();this.last='';this.syncAppMode();if(this.events)this.update(this.events,0);
+  if(!before?.width||!shell.animate||this.root.classList.contains('house-motion-reduced')||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const after=shell.getBoundingClientRect(),angle=app==='camera'?-90:90;
+  if(!after.width||!after.height)return;
+  // Final layout is immediately the correct orientation; rotate the actual
+  // chassis around its center, with a small uniform scale during the turn to
+  // keep its corners inside the viewport. Never interpolate width and height.
+  const dx=before.left+before.width/2-after.left-after.width/2,dy=before.top+before.height/2-after.top-after.height/2;
+  const clearance=Math.min(1,(window.innerHeight-16)/Math.hypot(after.width,after.height));
+  this.rotation=shell.animate([
+   {transform:'translate('+dx+'px,'+dy+'px) rotate('+angle+'deg)'},
+   {transform:'translate('+dx*.5+'px,'+dy*.5+'px) rotate('+angle*.5+'deg) scale('+clearance+')',offset:.5},
+   {transform:'translate(0,0) rotate(0deg)'}
+  ],{duration:320,easing:'cubic-bezier(.22,.7,.3,1)'});
+ }
  changePage(page){this.homePage=Math.max(0,Math.min(PHONE_PAGES.length-1,page));this.last='';if(this.events)this.update(this.events,0);}
- close(){if(this.settings){this.settings.open=false;this.settings.hidden=true;}const wasOpen=this.open;this.open=false;this.root.classList.remove('house-phone-open');if(wasOpen)this.syncAppMode();this.host.querySelector('.phone-screen').hidden=true;if(wasOpen&&this.previousFocus?.isConnected)this.previousFocus.focus({preventScroll:true});if(wasOpen)this.onPresentationChange();}
+ close(){this.rotation?.cancel();if(this.settings){this.settings.open=false;this.settings.hidden=true;}const wasOpen=this.open;this.open=false;this.root.classList.remove('house-phone-open');if(wasOpen)this.syncAppMode();this.host.querySelector('.phone-screen').hidden=true;if(wasOpen&&this.previousFocus?.isConnected)this.previousFocus.focus({preventScroll:true});if(wasOpen)this.onPresentationChange();}
  resetSnake(){this.snake=[[4,6],[3,6],[2,6]];this.food=[9,6];this.direction=[1,0];this.pending=[1,0];this.clock=0;this.score=0;this.dead=false;}
  turn(index){const d=[[0,-1],[1,0],[0,1],[-1,0]][index];if(d[0]!==-this.direction[0]||d[1]!==-this.direction[1])this.pending=d;}
  key(key){const n={ArrowUp:0,w:0,ArrowRight:1,d:1,ArrowDown:2,s:2,ArrowLeft:3,a:3}[key];if(this.open&&this.app==='snake'&&n!==undefined)this.turn(n);}
