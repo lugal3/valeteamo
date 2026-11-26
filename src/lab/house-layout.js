@@ -55,6 +55,13 @@ export function buildHouse(spawn='ground'){
     const x=axis==='x'?coordinate:gap.center,z=axis==='z'?coordinate:gap.center,vertical=axis==='x';
     for(const side of [-1,1])add(id+'-frame-'+low+'-'+side,x+(vertical?0:side*gap.width/2),floor+sill+height/2,z+(vertical?side*gap.width/2:0),vertical?.14:.08,height,vertical?.08:.14,'wood',false);
     for(const top of [0,height])add(id+'-rail-'+low+'-'+top,x,floor+sill+top,z,vertical?.14:gap.width+.1,.08,vertical?gap.width+.1:.14,'wood',false);
+    // A single non-solid, non-shadow-casting rain plane per opening,
+    // behind the boards. The fragment shader discards everything except
+    // narrow streaks; the view through the window remains unobstructed.
+    add(id+'-rain-pane-'+low,x+(vertical?(coordinate===0?-.015:.015):0),
+     floor+sill+height/2,z+(vertical?0:(coordinate===0?-.015:.015)),
+     vertical?.002:gap.width-.10,height-.10,vertical?gap.width-.10:.002,
+     'glass',false,{weatherPane:true});
     if(!gap.intro){
      add(id+'-cross-'+low,x,floor+sill+height/2,z,vertical?.12:.055,height,vertical?.055:.12,'cream',false);
      const out=coordinate===0?-1:1;
