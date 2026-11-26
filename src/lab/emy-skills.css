@@ -372,10 +372,12 @@
 #lab3d .mini-route-motion{stroke:#fff8d9;stroke-width:2.9;stroke-dasharray:2 8;animation:emy-route-travel 1.2s linear infinite}
 #lab3d .mini-route-goal{fill:#407d66;stroke:#fcffe9;stroke-width:2}
 @keyframes emy-route-travel{to{stroke-dashoffset:-20}}
+#lab3d .mini-facade-fade{animation:emy-facade-fade .55s .12s ease-in-out both}
 #lab3d .mini-roof-lift{animation:emy-roof-lift .66s cubic-bezier(.25,.7,.25,1) both;transform-origin:center}
 #lab3d .mini-upper-lift{animation:emy-upper-lift .68s .16s cubic-bezier(.25,.7,.25,1) both;transform-origin:center}
-@keyframes emy-roof-lift{0%{transform:translateY(62px);opacity:.94}25%{opacity:.9}100%{transform:translateY(-125px);opacity:0}}
-@keyframes emy-upper-lift{0%{transform:translateY(50px);opacity:1}100%{transform:translateY(-120px);opacity:0}}
+@keyframes emy-roof-lift{0%{transform:translateY(0);opacity:1}25%{opacity:1}100%{transform:translateY(-125px);opacity:0}}
+@keyframes emy-facade-fade{from{opacity:1}to{opacity:0}}
+@keyframes emy-upper-lift{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-120px);opacity:0}}
 #lab3d .mini-readonly-room{padding:8px 10px;background:#383143;border:1px solid #63516c;border-radius:8px;color:#ffedf7;font:600 12px system-ui}
 #lab3d .house-emy-map[data-mode="browse"] .house-emy-map-footer{justify-content:center}
 #lab3d .house-emy-map[data-mode="browse"] .house-emy-map-footer p{text-align:center}
