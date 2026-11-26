@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
  const {Pursuer}=await import('../src/lab/pursuer.js');
  const {createEmyAbilities,activateEmyScan,advanceEmyAbilities,createEmyNameCue,advanceEmyNameCue,roomChoices,roomDestination,roomDestinations,isEmyRoomLocked,emyFloorMap,emyFloorList}=await import('../src/lab/emy-abilities.js');
  const {installNoiseProps,grabNoiseProp,holdNoiseProp,releaseNoiseProp,stepNoiseProps}=await import('../src/lab/noise-props.js');
- const {createEmyCompanion,sendEmyDistract,snapshotEmyCompanion,updateEmyCompanion}=await import('../src/lab/emy-companion.js');
+ const {createEmyCompanion,previewEmyDistract,sendEmyDistract,snapshotEmyCompanion,updateEmyCompanion}=await import('../src/lab/emy-companion.js');
  const tag=createEmyNameCue();
  assert(advanceEmyNameCue(tag,0,true),'First visible interaction shows name');
  for(let i=0;i<12;i++)advanceEmyNameCue(tag,.1,true);
@@ -27,7 +27,7 @@ const assert=require('node:assert/strict');
  assert(activateEmyScan(abilities));
 
  const world=createHouse();
- const {defaultMiniatureView,changeMiniatureView,miniatureProject,miniatureSVG,miniatureMarkers,layoutMiniaturePins}=await import('../src/lab/emy-miniature.js');
+ const {defaultMiniatureView,changeMiniatureView,miniatureProject,miniatureSVG,miniatureMarkers,layoutMiniaturePins,miniatureRouteSegments,miniatureFurniture}=await import('../src/lab/emy-miniature.js');
  const view=defaultMiniatureView(),turned=changeMiniatureView(view,{yaw:.5,pitch:.1,zoom:1.1});
  assert.notDeepEqual(miniatureProject([0,0,0],view),miniatureProject([0,0,0],turned));
  assert.equal(changeMiniatureView(view,{zoom:99,pitch:99}).zoom,1.65);
@@ -64,6 +64,30 @@ const assert=require('node:assert/strict');
  assert(emyFloorList(world.rooms,0).includes('house-emy-destination-icon'));
  const stairPin={id:'kitty',label:'Kitty',color:'#fff',x:12,y:1.2,z:7.8};
  assert(miniatureSVG(world,view,{floor:0,markers:[stairPin]}).includes('data-marker="kitty"'),'Stair traversal has a real horizontal marker');
+ // Furniture is sourced from the actual house rather than decorative
+ // approximations at arbitrary positions.
+ assert(miniatureFurniture(world,0).some(b=>b.id==='sofa'));
+ assert(miniatureFurniture(world,1).some(b=>b.id==='upper-bed'));
+ assert(lowerMini.includes('data-furniture="sofa"'));
+ assert(upperMini.includes('data-furniture="upper-bed"'));
+ assert(upperMini.includes('data-door="dormitorio" data-door-state="locked"'));
+ assert(miniatureSVG(world,view,{floor:0,reveal:true}).includes('mini-roof-lift'));
+ assert(miniatureSVG(world,view,{floor:0,reveal:true}).includes('mini-upper-lift'));
+ assert(!lowerMini.includes('mini-cover-reveal'),'No repeated roof animation while rotating');
+ const previewWorld=createHouse(),previewCat=createEmyCompanion(previewWorld.emy,{waiting:false});
+ const previewRoom=roomChoices(previewWorld.rooms).find(r=>r.id==='reading');
+ const beforePreview=snapshotEmyCompanion(previewCat);
+ const plan=roomDestinations(previewWorld,previewRoom).map(p=>previewEmyDistract(previewCat,previewWorld,p)).find(Boolean);
+ assert(plan&&plan.seconds>0&&plan.metres>0);
+ assert.deepEqual(snapshotEmyCompanion(previewCat),beforePreview,'Preview cannot issue a command or move Emy');
+ assert.equal(previewCat.distraction,undefined);
+ assert(miniatureRouteSegments(plan.waypoints,0).length>0&&miniatureRouteSegments(plan.waypoints,1).length>0);
+ assert(miniatureSVG(previewWorld,view,{floor:0,route:plan}).includes('data-route-floor="0"'));
+ assert(miniatureSVG(previewWorld,view,{floor:1,route:plan}).includes('mini-route-goal'));
+ assert(sendEmyDistract(previewCat,previewWorld,plan.goal));
+ assert.deepEqual(previewCat.route,plan.route,'Confirmed route equals the preview at the same world state');
+ const browse=miniatureSVG(world,view,{floor:0,markers:visibleMarkers,route:plan,readOnly:true});
+ assert(!browse.includes('data-marker="threat"')&&!browse.includes('data-act="emy:room:')&&!browse.includes('mini-route-track'),'Phone map has no threat or command path');
  const choices=roomChoices(world.rooms);
  for(const name of ['Estudio','Sala de estar','Cocina y comedor','Baño','Dormitorio','Sala de lectura','Sala de música','Recibidor y pasillo','Distribuidor y descansillo']){
   assert(choices.some(room=>room.label===name),name+' exists in the two-floor command map');
