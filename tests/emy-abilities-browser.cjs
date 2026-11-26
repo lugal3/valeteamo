@@ -246,9 +246,15 @@ const {chromium,webkit}=require('playwright');
   try{await page.waitForFunction(z=>window.__rescueHouse.snapshot().position.z>z+.07,phoneStart.z,{timeout:12000});}
   finally{await page.keyboard.up('w');}
   assert(await page.locator('.phone-screen').isVisible(),'Movement must not close the device');
+  const portrait=await page.locator('.phone-shell').boundingBox();
+  assert(portrait.height>portrait.width,'Home is portrait');
   await page.locator('.phone-screen [data-app="camera"]').click();
   const shell=await page.locator('.phone-shell').boundingBox();
   assert(shell.width>shell.height,'Camera opens as a landscape device');
+  assert(Math.abs(shell.width-portrait.height)<2&&Math.abs(shell.height-portrait.width)<2,'Same chassis must rotate without changing aspect ratio: '+JSON.stringify({portrait,shell}));
+  assert(shell.x>=0&&shell.y>=0&&shell.x+shell.width<= (await page.evaluate(()=>innerWidth))+1&&shell.y+shell.height<=(await page.evaluate(()=>innerHeight))+1,'Landscape device stays inside the viewport');
+  const cameraControls=await page.locator('.phone-camera-actions').evaluate(rail=>[...rail.querySelectorAll('button')].map(button=>{const r=button.getBoundingClientRect(),p=rail.closest('.phone-shell').getBoundingClientRect();return {inside:r.left>=p.left&&r.right<=p.right&&r.top>=p.top&&r.bottom<=p.bottom,width:r.width,height:r.height};}));
+  assert(cameraControls.every(c=>c.inside&&c.width>=28&&c.height>=28),'All photo controls are reachable: '+JSON.stringify(cameraControls));
   assert(await page.locator('[data-photo="flash"]').getAttribute('aria-pressed')==='true');
   await page.waitForFunction(()=>{const c=document.querySelector('.phone-camera-view canvas');if(!c)return false;return c.getContext('2d').getImageData(0,0,c.width,c.height).data.some((v,i)=>i%4!==3&&v>0);});
   await shot(page,'03i-iphone-camara-horizontal');
@@ -260,6 +266,8 @@ const {chromium,webkit}=require('playwright');
   await page.locator('[data-photo="take"]').click();
   await page.waitForFunction(prior=>document.querySelector('.phone-camera-actions img')?.getAttribute('src')!==prior,firstPhoto);
   await page.locator('.phone-camera-actions [data-app="photos"]').click();
+  const restored=await page.locator('.phone-shell').boundingBox();
+  assert(Math.abs(restored.width-portrait.width)<2&&Math.abs(restored.height-portrait.height)<2,'Photos restores the original portrait chassis');
   await page.waitForFunction(()=>{const i=document.querySelector('[data-photo-index="0"] img');return i?.naturalWidth>0&&Math.abs(i.naturalWidth/i.naturalHeight-16/9)<.02;});
   await shot(page,'03j-iphone-galeria');
   await page.locator('.phone-home-indicator').click();
