@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');
 (async()=>{
  const w=await import('../src/lab/world.js');
- const {windowIntroCamera,windowIntroState,WINDOW_LANDING,shouldPlayWindowIntro,easeInOut}=await import('../src/lab/window-intro.js');
+ const {windowIntroCamera,windowIntroState,WINDOW_LANDING,shouldPlayWindowIntro,easeInOut,windowIntroLighting}=await import('../src/lab/window-intro.js');
  const before=windowIntroCamera(0),after=windowIntroCamera(1);
  assert(before.z>10.8,'Starts outdoors');
  assert(after.z<w.HOUSE.depth,'Ends indoors');
@@ -9,6 +9,12 @@ const assert=require('node:assert/strict');
  assert(Math.abs(after.y-(WINDOW_LANDING.y+WINDOW_LANDING.eye))<.001);
  assert(Math.abs(after.pitch-WINDOW_LANDING.pitch)<.0001,'No pitch snap when the shot hands control back');
  assert.equal(easeInOut(0),0);assert.equal(easeInOut(1),1);
+ assert.equal(windowIntroLighting(0),0);assert.equal(windowIntroLighting(1),0);
+ assert(windowIntroLighting(.42)>.095,'The sill receives a subtle cinematic fill');
+ for(let i=0;i<1000;i++){
+  const a=windowIntroLighting(i/1000),b=windowIntroLighting((i+1)/1000);
+  assert(a>=0&&a<=.100001&&Math.abs(a-b)<.001,'No exposure jump at frame '+i);
+ }
  assert(shouldPlayWindowIntro({demo:true,checkpoint:'ground'}));
  assert(shouldPlayWindowIntro({demo:true,checkpoint:'ground',trial:true}),'The first Casa 3D checkpoint also presents the window entrance');
  assert(!shouldPlayWindowIntro({demo:true,checkpoint:'ground',reducedMotion:true}));
