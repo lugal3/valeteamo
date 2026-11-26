@@ -28,7 +28,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   }
   assert.deepEqual(ids,WINDOW_ENTRY_CUES.map(c=>c.id),'Same sound sequence at '+hz+' Hz');
  }
- const {FINALE_BEATS,finaleStage,finaleThreat,finaleWeather,finaleEmyGoal}=await import('../src/lab/escape-finale.js');
+ const {FINALE_BEATS,finaleStage,finaleThreat,finaleWeather,finaleEmyGoal,finaleLighting}=await import('../src/lab/escape-finale.js');
  const {createHouse,blocked,lineBlocked}=await import('../src/lab/world.js');
  const {poseEscapeAmbush}=await import('../src/lab/emy-rescue.js');
  const world=createHouse();
@@ -40,6 +40,24 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
 
  assert(panes.length>=10&&panes.length<=24,'Bounded actual window surfaces: '+panes.length);
  assert(panes.every(p=>!p.solid&&!p.castShadow&&Math.min(p.w,p.d)<=.002),'Weather does not block movement or cast shadows');
+ const {captureBasis}=await import('../src/lab/capture-shot.js');
+ const basis=captureBasis({yaw:Math.PI,pitch:-.21});
+ const normal=basis.forward.map((v,i)=>-.61*v-.40*basis.right[i]+.74*basis.up[i]);
+ assert.equal(finaleLighting(0,false,basis).room,0);
+ assert.deepEqual(finaleLighting(0,false,basis).key,normal);
+ const peak=finaleLighting(1.65,false,basis),last=finaleLighting(FINALE_BEATS.run,false,basis);
+ assert(peak.pursuer>peak.room&&peak.room>.22&&peak.projection<1);
+ assert.equal(finaleLighting(1.65,true,basis).projection,1);
+ assert.deepEqual(last.key,normal,'No directional light jump at gameplay handoff');
+ assert.equal(last.room,.22);assert.equal(last.pursuer,.22);assert.equal(last.projection,1);
+ for(let i=0;i<=378;i++){
+  const t=i/100,a=finaleLighting(t,false,basis),b=finaleLighting(t+.01,false,basis);
+  assert([a.room,a.pursuer,a.projection,...a.key].every(Number.isFinite));
+  assert(a.room>=0&&a.room<=.34&&a.pursuer>=0&&a.pursuer<=.62);
+  assert(Math.abs(a.pursuer-b.pursuer)<.012,'No exposure flash at '+t);
+  assert(Math.hypot(...a.key.map((v,k)=>v-b.key[k]))<.04,'Continuous direction');
+ }
+ assert(Math.abs(finaleWeather({elapsed:FINALE_BEATS.run,playable:false},{z:14.65}).dawn-finaleWeather({playable:true},{z:14.65}).dawn)<1e-8);
  const night=finaleWeather(null,{z:20}),threshold=finaleWeather({playable:false},{z:20});
  assert.deepEqual(night,threshold,'No premature dawn while the cutscene plays');
  const early=finaleWeather({playable:true},{z:14.65}),late=finaleWeather({playable:true},{z:17.7});
@@ -59,7 +77,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   assert.equal(opening.view.z,12.42);
   for(const t of [FINALE_BEATS.turnEnd,1.72,2.25,2.80,FINALE_BEATS.run]){
    shot.elapsed=t;poseEscapeAmbush(shot,world.emy,enemy,false);
-   const stage=finaleStage(shot,enemy,false),camera=stage.view;
+   const stage=finaleStage(shot,enemy,false,world.emy),camera=stage.view;
    assert(camera.z>12.35&&!blocked(world.boxes,camera.x,0,camera.z,.18,1.7),'Camera remains on physical exterior path');
    assert(Object.values(camera).every(Number.isFinite),'Finite first-person view');
    if(t<FINALE_BEATS.lookOut){
@@ -123,6 +141,10 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  for(const reduced of [false,true]){
   const shot={elapsed:0,kitty:{from:{x:5.95,z:12.42}}},cat={x:0,y:0,z:0,yaw:0,age:0,parts:[],hidden:true},enemy={};
   const sample=t=>{shot.elapsed=t;poseEscapeAmbush(shot,cat,enemy,reduced);return cat.y;};
+  sample(.96);const initialAge=cat.age;sample(1.24);
+  assert(Math.abs(cat.age-initialAge-.28)<1e-9,'Blink clock advances with the cinematic');
+  assert(reduced?cat.earTurn===0:cat.earTurn>.15,'Ear anticipation respects reduced motion');
+  assert.equal(cat.darkEyes,false,'No indoor glowing eyes outdoors');
   assert.equal(sample(1.45),0);
   const h1=sample(1.61),h2=sample(1.77),h3=sample(1.93),h4=sample(2.09);
   assert(h2-h1>h3-h2&&h3-h2>h4-h3&&h4>.95,'Decelerates to the apex');
