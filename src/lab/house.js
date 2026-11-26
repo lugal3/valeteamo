@@ -1054,7 +1054,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    world.objects.find(o=>o.id==='entrada').sealed=false;for(const box of world.boxes)if(box.id.startsWith('entry-padlock'))box.hiddenGeometry=true;
    world.entryWindow.latch.hiddenGeometry=true;poseFurniture(world.entryWindow,1);rebuild();sound.setThreat(true);resetInput();return;
   }
-  if(act==='exit'){stop();onExit();return;}
+  if(act==='exit'){try{stop();}finally{onExit();}return;}
   if(act==='finish'){config.onRescue?.();return;}
   if(act.startsWith('rc:')&&(rc?.mode!=='driving'||isPaused()))return;
   if(act==='rc:stop'){
@@ -2296,6 +2296,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    }
   };
  }
- function stop(){if(!active)return;active=false;clearMiniatureInput();releaseMouse();cancelAnimationFrame(raf);controller.abort();television.destroy();phone.destroy();sound.destroy();renderer?.destroy();if(window.__rescueHouse)delete window.__rescueHouse;root.remove();}
+ function stop(){
+  if(!active)return;active=false;
+  // A GPU/audio teardown must never strand the LP React route. Each resource
+  // is independent; detach the root even if a browser rejects one disposal.
+  for(const dispose of [clearMiniatureInput,releaseMouse,()=>cancelAnimationFrame(raf),()=>controller.abort(),()=>television.destroy(),()=>phone.destroy(),()=>sound.destroy(),()=>renderer?.destroy()]){
+   try{dispose();}catch(error){console.warn('House cleanup:',error);}
+  }
+  if(window.__rescueHouse)delete window.__rescueHouse;root.remove();
+ }
  return stop;
 }
