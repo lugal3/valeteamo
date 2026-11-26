@@ -406,7 +406,7 @@ export class HouseSound {
   if(!this.phoneMusicWanted||this.phoneMusicTimer!=null||!this.context||this.paused)return;
   const ctx=this.context,notes=[72,76,79,76,74,77,81,77,71,74,79,74,72,76,79,84];let next=ctx.currentTime+.03,index=0;
   const tick=()=>{if(this.context!==ctx||ctx.state!=='running'||this.paused)return;while(next<ctx.currentTime+.15){
-   const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';osc.frequency.value=440*Math.pow(2,(notes[index++%notes.length]-69)/12);gain.gain.setValueAtTime(.0001,next);gain.gain.exponentialRampToValueAtTime(.18,next+.012);gain.gain.exponentialRampToValueAtTime(.0001,next+.31);osc.connect(gain);gain.connect(this.musicBus);osc.start(next);osc.stop(next+.33);(this.phoneMusicVoices??=new Set()).add(osc);osc.onended=()=>{osc.disconnect();gain.disconnect();this.phoneMusicVoices?.delete(osc);};next+=.30;
+   const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';osc.frequency.value=440*Math.pow(2,(notes[index++%notes.length]-69)/12);gain.gain.setValueAtTime(.0001,next);gain.gain.exponentialRampToValueAtTime(.18,next+.012);gain.gain.exponentialRampToValueAtTime(.0001,next+.31);osc.connect(gain);gain.connect(this.recordedMusicBus||this.musicBus);osc.start(next);osc.stop(next+.33);(this.phoneMusicVoices??=new Set()).add(osc);osc.onended=()=>{osc.disconnect();gain.disconnect();this.phoneMusicVoices?.delete(osc);};next+=.30;
   }};
   tick();this.phoneMusicTimer=window.setInterval(tick,75);
  }
