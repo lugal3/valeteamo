@@ -292,16 +292,20 @@ function moveToward(companion,world,goal,dt,speed,allowMusic=false){
 // No invisible relocation and no navigation toward Kitty's hiding spot.
 export function findEmyRefuge(world,cat,player,threat){
  const origin={x:cat.x,y:cat.y,z:cat.z},eye={x:cat.x,y:cat.y+1.55,z:cat.z};
+ // Restrict repeated collision checks to the local search radius, allowing
+ // for rotated furniture. No full navigation rebuild when Kitty hides.
+ const localBoxes=world.boxes.filter(b=>b.solid&&Math.abs(b.y-cat.y)<b.h/2+1.8&&Math.hypot(b.x-cat.x,b.z-cat.z)<3.2+Math.hypot(b.w,b.d)/2);
+ const localWorld={...world,boxes:localBoxes};
  const danger=threat?.active&&Math.abs(threat.y-cat.y)<1.4?{x:threat.x,y:threat.y+1.5,z:threat.z}:eye;
  const hidden=player?.hidden,avoid=hidden?{x:hidden.returnX??player.x,z:hidden.returnZ??player.z}:player;
  let best=null,score=-Infinity;
  for(const radius of [.65,1.05,1.45,1.85,2.25])for(let i=0;i<12;i++){
   const angle=i*Math.PI/6,x=cat.x+Math.sin(angle)*radius,z=cat.z+Math.cos(angle)*radius;
   const y=groundHeight(x,z,cat.y,world.hatch?.amount>.92),point={x,y,z};
-  if(!Number.isFinite(y)||Math.abs(y-cat.y)>.1||roomAt(x,z,y)!==roomAt(cat.x,cat.z,cat.y)||roomAt(x,z,y)==='Sala de música'||blocked(world.boxes,x,y,z,.24,.72)||!clearPassage(world,origin,point))continue;
+  if(!Number.isFinite(y)||Math.abs(y-cat.y)>.1||roomAt(x,z,y)!==roomAt(cat.x,cat.z,cat.y)||roomAt(x,z,y)==='Sala de música'||blocked(localBoxes,x,y,z,.24,.72)||!clearPassage(localWorld,origin,point))continue;
   if(avoid&&Math.abs(player.y-y)<.45&&distance(point,avoid)<Math.min(1.75,distance(origin,avoid)))continue;
   if(!lineBlocked(world.boxes,danger,{x,y:y+.32,z}))continue;
-  const cover=world.boxes.some(b=>b.solid&&!b.walkSurface&&b.h>.3&&b.y+b.h/2>y+.3&&b.y-b.h/2<y+.65&&Math.hypot(Math.max(0,Math.abs(x-b.x)-b.w/2),Math.max(0,Math.abs(z-b.z)-b.d/2))<.65);
+  const cover=localBoxes.some(b=>b.solid&&!b.walkSurface&&b.h>.07&&b.y+b.h/2>y+.3&&b.y-b.h/2<y+.95&&Math.hypot(Math.max(0,Math.abs(x-b.x)-b.w/2),Math.max(0,Math.abs(z-b.z)-b.d/2))<.65);
   if(!cover)continue;
   const rank=-radius+(threat?.active?Math.min(3,distance(point,threat))*.18:0);
   if(rank>score){score=rank;best=point;}
