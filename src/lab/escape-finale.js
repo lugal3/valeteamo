@@ -41,11 +41,11 @@ export function finaleThreat(actor,elapsed,reduced=false){
  const relax=ease((elapsed-2.70)/.65);
  // Keep the capture mesh during the recoil/morph transition but drive a
  // dedicated skeletal impact rather than the previous perpetual grab.
- return {...actor,captureReach:reach,captureLift:.12*reach+(reduced?0:.025*Math.sin(elapsed*11)*reach),finaleImpact:recoil,finalePose:1-relax,
+ return {...actor,captureReach:reach,captureLift:.12*reach+(reduced?0:.025*Math.sin(elapsed*11)*reach),finaleImpact:recoil,finalePose:ease(elapsed/.35)*(1-relax),
   captureFace:{left:.44*face,right:.32*face,upper:.19*face,jaw:.34*face,bite:0,
    twitch:reduced?0:Math.sin(elapsed*17)*face*.35,glance:0,gaze:0,clamp:0,
    pressure:.18*face,strain:.28*face,blink:0,rupture:0},
-  mode:elapsed>=2.08?'stunned':actor.mode,stunned:2*recoil};
+  mode:actor.mode};
 }
 
 // Until the safe garden, Emy guides the escape. At sunrise she doubles back
