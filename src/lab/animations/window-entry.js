@@ -2,15 +2,22 @@ import {setJoint} from '../character-rig.js';
 import {curve,ease,feet} from './pose-tools.js';
 const clamp=t=>Math.max(0,Math.min(1,Number(t)||0));
 // Normalized choreography shared by the body, camera and contact cues.
-// Camera integration follows separately; keep the active hand path unchanged
-// until it can be checked against the physical sill and opening.
+// Grip anchors remain stationary during the failed push and recovery.
 export const WINDOW_BEATS=Object.freeze({
  approach:0,reach:.12,grip:.27,firstPush:.36,slip:.45,
  recovery:.53,secondPush:.61,straddle:.70,descent:.80,contact:.87,settle:1
 });
 export function windowEntryHands(progress){
- const t=clamp(progress),reach=ease((t-.12)/.14),release=ease((t-.62)/.12);
- return t>.12&&t<.74?[{x:1.73,y:.78+reach*.22,z:12.3-reach*.18+release*.2},{x:2.68,y:.76+reach*.24,z:12.3-reach*.18+release*.2}]:null;
+ const t=clamp(progress);
+ if(t<=.12||t>=.88)return null;
+ const hand=(side,start,release)=>{
+  if(t<=start||t>=release+.10)return null;
+  const reach=ease((t-start)/.14),leave=ease((t-release)/.10);
+  const strain=curve([[0,0],[.34,0],[.45,1],[.54,.35],[.65,.75],[.74,0],[1,0]],t);
+  return {x:2.205+side*(.475-.045*leave),y:.76+.24*reach-.15*leave,
+   z:12.3-.18*reach-.20*leave,curl:reach*(1-leave)*(.60+.35*strain),flex:.12*strain};
+ };
+ return [hand(-1,.12,.73),hand(1,.16,.78)];
 }
 // Pose offsets are in actor space, not gameplay coordinates. Author the
 // weight transfer independently of the wrists so the limbs do not all
