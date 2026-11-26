@@ -67,7 +67,7 @@ export function finaleEmyGoal(player){
 // Existing shader uniforms only: no extra lights, passes or draw calls.
 export function finaleLighting(elapsed,reduced=false,basis=null){
  const t=Math.max(0,elapsed||0),reveal=ease((t-.36)/.96),exit=ease((t-2.62)/1.16);
- const focus=reveal*(1-exit);
+ const focus=t>=FINALE_BEATS.run?0:clamp(reveal*(1-exit));
  const base=.22*ease(t/.36),directed=[-.40,.80,.42];
  // Match the shader's default camera-relative key at both ends. No light
  // direction jump when the renderer stops using the cinematic override.
