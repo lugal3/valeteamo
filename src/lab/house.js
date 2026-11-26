@@ -602,7 +602,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     renderer.updateVisibility();play('latch',o);
    }
    o.open=!o.open;
-   if(o.open&&emyCompanion&&!emyCompanion.stage.startsWith('trunk'))sendEmyToTrunk(emyCompanion);
+   if(o.open&&emyCompanion&&!emyCompanion.stage.startsWith('trunk')&&sendEmyToTrunk(emyCompanion))caption('Emy busca refugio en el estudio mientras Kitty baja.');
    if(reducedMotion.matches)poseHatch(o,Number(o.open));
    play(o.open?'door-open':'door-close',o,.85);
   }else if(o.kind==='tap'){
@@ -952,7 +952,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     if(act==='emy:pet'){
     if(emyCompanion&& !['following','stay'].includes(emyCompanion.stage))return;
     closeEmyMenu();
-    if(petEmy(world.emy)){play('cat-purr',world.emy,.60);say('Emy ronronea y levanta su patita ♡',3);}
+    if(world.emy.alarm>.55){say('Emy está alerta. Busca un lugar tranquilo primero.');return;}
+    if(petEmy(world.emy)){resetInput();play('cat-purr',world.emy,.60);say('Emy ronronea y levanta su patita ♡',3);}
     return;
    }
    if(act==='emy:scan'){
@@ -1656,10 +1657,19 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    torch=flashlightBeam();
   }
   const pet=world.emy;
-  if(pet.reaction>0&&!pet.hidden&&!s.hidden&&!poseTransition&&!phone.open&&!emyShot&&!isSuspended()&&Math.hypot(s.x-pet.x,s.z-pet.z)<1.5){
+  if(pet.reaction>0&&(distance>.012||s.sprinting||pursuer.mode==='chase'||pet.alarm>.55||s.hidden||remoteInUse()))pet.reaction=0;
+  if(pet.reaction>0&&!pet.hidden&&!s.hidden&&!poseTransition&&!phone.open&&!emyShot&&!isSuspended()&&Math.abs(s.y-pet.y)<.45&&Math.hypot(s.x-pet.x,s.z-pet.z)<1.5){
    const age=3.4-pet.reaction;
    const reach=Math.min(1,age/.34,pet.reaction/.34);
    const stroke=(1-Math.cos(age*Math.PI*2))*.5;
+   // Render-only crouch and gentle downward glance. Movement, collision,
+   // pursuer perception and the saved player pose remain unchanged.
+   if(!reducedMotion.matches){
+    const lowered=view.y-.44*reach,dx=pet.x-view.x,dz=pet.z-view.z;
+    const aim=Math.atan2(pet.y+.48-lowered,Math.max(.25,Math.hypot(dx,dz)));
+    const yaw=Math.atan2(dx,dz),turn=Math.atan2(Math.sin(yaw-view.yaw),Math.cos(yaw-view.yaw));
+    view={...view,y:lowered,yaw:view.yaw+turn*.32*reach,pitch:view.pitch+(aim-view.pitch)*.42*reach};
+   }
    const startX=view.x+.18*Math.cos(view.yaw),startZ=view.z-.18*Math.sin(view.yaw);
    const contact=pet.landmarks.head;
    const along=contact[2]+.08-stroke*.15;
@@ -1668,7 +1678,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     z:startZ+(pet.z+Math.cos(pet.yaw)*along-startZ)*reach,flex:-.25,curl:.18}];
    hand=false;
   }
-  if(intro&&demo&&checkpoint==='ground'){view=windowIntroCamera(0);hand=false;torch=false;}
+  if(intro&&demo&&checkpoint==='ground'&&!scenario){view=windowIntroCamera(0);hand=false;torch=false;}
   if(!isPaused())placePianoScore();
   const instrument=world.piano;
   if(instrument.solved&&instrument.compartmentAmount<1&&!paused)
