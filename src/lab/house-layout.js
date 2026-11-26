@@ -7,6 +7,7 @@ import {installUpstairsEmy} from './emy-cat.js';
 import {installCabinet,installRefrigerator} from './house-cabinets.js';
 import {installLouisAltar} from './louis-altar.js';
 import {installHolidayTree} from './holiday-tree.js';
+import {installHolidayCollectibles} from './holiday-collectibles.js';
 import {installWallClock} from './wall-clock.js';
 import {installLivingHouseDetails} from './house-ambient-details.js';
 import {STUDY_SIGN} from './artwork.js';
@@ -374,7 +375,8 @@ export function buildHouse(spawn='ground'){
  add('guitar-body',10.92,HEIGHT+1.13,.20,.35,.48,.10,'wood',false,{shape:'round'});add('guitar-neck',10.92,HEIGHT+1.6,.20,.055,.65,.08,'wood',false);
  obj('guitar','inspect','Guitarra de la sala',10.92,HEIGHT+1.39,.32,{text:'Una cuerda está rota. En la caja quedó un adhesivo de One Direction.'});
  installLouisAltar(add,obj,HEIGHT);
- installHolidayTree(add,HEIGHT);
+ const holiday=installHolidayCollectibles(add,obj,HEIGHT,lights.power);
+ installHolidayTree(add,HEIGHT,holiday);
  frame('archive',12.45,HEIGHT+1.71,2.86,'north',13,{width:1.36,height:.745,label:'Afiche de archivo',text:'Un afiche de campaña viejo, guardado junto a los recortes de la casa.'});
  chair('reading-chair',.67,HEIGHT,7.55,-Math.PI/2);table('reading-table',1.50,HEIGHT,7.92,.72,.62);lamp('reading-light',1.50,HEIGHT+.92,7.92);shelf('reading-books',.19,HEIGHT,9.8,-Math.PI/2);plant('reading-plant',4.02,HEIGHT,5.33);frame('reading',3.75,HEIGHT+1.9,11.83,'north',2);
  obj('reading-books','inspect','Biblioteca de la planta alta',.47,HEIGHT+1.16,9.8,{text:'Los anuarios tienen los lomos gastados. Entre ellos hay entradas de conciertos archivadas por fecha.'});
@@ -428,5 +430,5 @@ export function buildHouse(spawn='ground'){
  const lights=installHouseLights(add,obj,HEIGHT);
  const hatch=installBasement(add,obj,lights);
  hatchRug.hatch=hatch;
- return {boxes,objects,studyVent,landingTorch,lights,television,clock,hatch,hatchRug,entryWindow,car,greyCat,emy,emyInteraction,piano,pianoSheet,spawn:spawns[spawn]||spawns.ground,spawns,rooms:ROOMS,bounds:WORLD_BOUNDS,stair:STAIR,house:HOUSE};
+ return {boxes,objects,holiday,studyVent,landingTorch,lights,television,clock,hatch,hatchRug,entryWindow,car,greyCat,emy,emyInteraction,piano,pianoSheet,spawn:spawns[spawn]||spawns.ground,spawns,rooms:ROOMS,bounds:WORLD_BOUNDS,stair:STAIR,house:HOUSE};
 }
