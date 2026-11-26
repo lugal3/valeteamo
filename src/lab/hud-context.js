@@ -21,3 +21,10 @@ export function hopOffset(age,reduced=false){
  if(!Number.isFinite(age)||age<=0||age>=HOP_DURATION)return 0;
  return (reduced?.025:.12)*Math.sin(Math.PI*age/HOP_DURATION)**2;
 }
+
+// Cancellation stops the camera movement, but cannot skip the refractory period.
+// Advancing a paused frame with dt=0 never rearms the jump.
+export function advanceHop(age,cancelled,dt,allowed){
+ const step=Number.isFinite(dt)?Math.max(0,Math.min(.1,dt)):0;
+ return {age:Math.min(HOP_COOLDOWN,age+step),cancelled:cancelled||!allowed};
+}
