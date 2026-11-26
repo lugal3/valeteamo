@@ -7,7 +7,7 @@ const fs=require('node:fs');
  const {poseHatch}=await import('../src/lab/basement.js');
  const {updateFurniture}=await import('../src/lab/furniture-motion.js');
  const {createEmyCompanion,sendEmyDistract,updateEmyCompanion,snapshotEmyCompanion,
-  restoreEmyCompanion,findEmyRefuge,emyGroundHeight,sendEmyToTrunk,FOLLOW_RESUME}=await import('../src/lab/emy-companion.js');
+  restoreEmyCompanion,findEmyRefuge,emyGroundHeight,sendEmyToTrunk,emyOccupiesHatch,FOLLOW_RESUME}=await import('../src/lab/emy-companion.js');
  const world=createHouse();
  // Kitty can only hide in this bedroom after the story key unlocks it.
  const bedroom=world.objects.find(o=>o.id==='dormitorio');bedroom.locked=false;setDoor(bedroom,true);
@@ -151,6 +151,22 @@ const fs=require('node:fs');
  assert(basementCat.cat.hidden);
  assert(!sendEmyToTrunk(basementCat),'Repeated story trigger does not restart withdrawal');
 
+ // If Emy happened to be standing on the closed lid, keep its surface
+ // present until her physical story route takes her outside the footprint.
+ const lidWorld=createHouse(),lidCat=createEmyCompanion(lidWorld.emy,{waiting:false});
+ for(const door of lidWorld.objects.filter(o=>o.kind==='door'&&!o.locked&&!o.sealed))setDoor(door,true);
+ Object.assign(lidCat.cat,{x:8.55,y:0,z:3.34,yaw:Math.PI});
+ assert(emyOccupiesHatch(lidCat));
+ lidWorld.hatch.locked=false;lidWorld.hatch.open=true;
+ let clearedLid=false;
+ for(let i=0;i<1200;i++){
+  updateEmyCompanion(lidCat,1/30,{world:lidWorld,player:underground,reduced:true});
+  updateFurniture(lidWorld.objects,1/30,underground);
+  if(!emyOccupiesHatch(lidCat)){poseHatch(lidWorld.hatch,1);clearedLid=true;break;}
+  assert.equal(lidCat.cat.y,0,'Lid supports Emy until she walks off');
+ }
+ assert(clearedLid,'Emy leaves the closed lid under her own power');
+ assert.equal(lidWorld.hatch.amount,1);
  // A legacy underground cat can physically leave via the same slope.
  const oldWorld=createHouse();oldWorld.hatch.open=true;oldWorld.hatch.locked=false;poseHatch(oldWorld.hatch,1);
  for(const door of oldWorld.objects.filter(o=>o.kind==='door'&&!o.locked&&!o.sealed))setDoor(door,true);
