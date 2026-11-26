@@ -15,13 +15,14 @@ export function miniatureProject(p,view,floor=-1){
  return {x:260+u*k,y:171+(v*sp-y*cp)*k,depth:v*cp+y*sp};
 }
 const quad=(x0,x1,z0,z1,y)=>[[x0,y,z0],[x1,y,z0],[x1,y,z1],[x0,y,z1]];
-function cuboid(x,y,z,w,h,d,colors,faces,klass=''){
- const a=quad(x-w/2,x+w/2,z-d/2,z+d/2,y-h/2),b=quad(x-w/2,x+w/2,z-d/2,z+d/2,y+h/2);
- faces.push({p:b,fill:colors[0],klass});
- for(let i=0;i<4;i++)faces.push({p:[a[i],a[(i+1)%4],b[(i+1)%4],b[i]],fill:colors[1+i%2]||colors[1],klass});
+function cuboid(x,y,z,w,h,d,colors,faces,klass='',yaw=0,meta={}){
+ const rotate=p=>{const dx=p[0]-x,dz=p[2]-z;return [x+dx*Math.cos(yaw)+dz*Math.sin(yaw),p[1],z-dx*Math.sin(yaw)+dz*Math.cos(yaw)];};
+ const a=quad(x-w/2,x+w/2,z-d/2,z+d/2,y-h/2).map(rotate),b=quad(x-w/2,x+w/2,z-d/2,z+d/2,y+h/2).map(rotate);
+ faces.push({p:b,fill:colors[0],klass,...meta});
+ for(let i=0;i<4;i++)faces.push({p:[a[i],a[(i+1)%4],b[(i+1)%4],b[i]],fill:colors[1+i%2]||colors[1],klass,...meta});
 }
 function polygon(face,project){
- const pts=face.p.map(project),attrs=face.id?' data-zone="'+esc(face.id)+'" data-act="emy:room:'+esc(face.id)+'" aria-label="'+esc(face.label)+'"':'';
+ const pts=face.p.map(project),attrs=(face.id?' data-zone="'+esc(face.id)+'" data-act="emy:room:'+esc(face.id)+'" aria-label="'+esc(face.label)+'"':'')+(face.prop?' data-furniture="'+esc(face.prop)+'"':'')+(face.door?' data-door="'+esc(face.door)+'" data-door-state="'+esc(face.doorState)+'"':'');
  return {points:pts,depth:pts.reduce((sum,p)=>sum+p.depth,0)/pts.length,html:'<polygon points="'+pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ')+'" fill="'+face.fill+'" stroke="'+(face.stroke||'#30253e')+'" stroke-width="'+(face.width||.85)+'"'+attrs+(face.klass?' class="'+face.klass+'"':'')+' />'};
 }
 // Keep real positions as anchor dots. Nearby actors receive compact, separated
@@ -43,8 +44,51 @@ export function layoutMiniaturePins(markers,project,level){
  }
  return placed;
 }
+// Read real model boxes, rather than inventing room furniture at unrelated
+// positions. A compact whitelist excludes actors, particles and tiny bolts.
+const FURNITURE=/^(sofa(?:-|$)|coffee-table|tv-(?:table|frame|screen)|study-(?:desk|chair|shelf)|desk-back|trunk|bed(?:-|$)|mattress|blanket|pillow|bedside|wardrobe-(?:back|side|top|bottom|stile|rail)|bedroom-writing-table|reading-(?:chair|table|books|cabinet)|music-(?:console|chair|books)|piano|landing-cabinet|media-cabinet|kitchen-(?:counter|drawer)|oven|sink$|fridge|refrigerator|(?:dining|dinner|kitchen-table|kitchen-chair)|(?:bar|island|american|counter-bar)|toilet|basin(?:-cabinet)?$|basin-cabinet|shower|bath-cabinet|bath-tub|stair-nook-crate|upper-bench|holiday-tree|christmas-tree)/;
+const palettes={wood:['#bfa18a','#91725f','#a68670'],velvet:['#e5b5c9','#ac789b','#c58fae'],pink:['#f5cbd9','#bc8ca6','#dda9c3'],cream:['#eee4d6','#b8b2b2','#d8cfc7'],glass:['#a6d5df','#709cae','#88b9c8'],dark:['#645c72','#494255','#554c60'],torchmetal:['#b4b8c3','#737986','#9298a6'],stone:['#cdd7d5','#8b9c9d','#adb9b9'],carpet:['#b9a5c5','#8b789d','#a08ab1'],foliage:['#9cbaa1','#5b846d','#759c7e'],paper:['#e8cfad','#af9174','#ccb18f']};
+export function miniatureFurniture(world,floor){
+ const level=floor*HEIGHT;
+ return world.boxes.filter(b=>!b.hiddenGeometry&&FURNITURE.test(b.id)&&b.y-b.h/2>=level-.08&&b.y+b.h/2<=level+HEIGHT+.06&&b.w>=.09&&b.d>=.045&&b.h>=.035&&b.x>=0&&b.x<=HOUSE.width&&b.z>=0&&b.z<=HOUSE.depth&&!/leg-|book-|knob|pull|handle|bolt|band|hinge|key-|drain|bow-|pillow-r/.test(b.id)).slice(0,135);
+}
+function roofFaces(world){
+ const roof=world.boxes.find(b=>b.id==='roof'),faces=[];
+ if(!roof)return faces;
+ const x0=roof.x-roof.w/2,x1=roof.x+roof.w/2,z0=roof.z-roof.d/2,z1=roof.z+roof.d/2,y=roof.y-roof.h/2,top=roof.y+roof.h/2;
+ faces.push({p:[[x0,y,z0],[roof.x,top,z0],[roof.x,top,z1],[x0,y,z1]],fill:'#827399'});
+ faces.push({p:[[x1,y,z0],[roof.x,top,z0],[roof.x,top,z1],[x1,y,z1]],fill:'#ab91b5'});
+ for(const z of [z0,z1])faces.push({p:[[x0,y,z],[roof.x,top,z],[x1,y,z]],fill:'#e3c5d1'});
+ return faces;
+}
+// The path uses real 3D coordinates, including the stair slope. Clip each
+// segment at the floor boundary, not by dropping entire cross-floor edges.
+export function miniatureRouteSegments(waypoints,floor){
+ const out=[],boundary=HEIGHT*.5;
+ const visible=p=>floor===0?p.y<boundary:p.y>=boundary;
+ for(let i=1;i<(waypoints?.length||0);i++){
+  let a=waypoints[i-1],b=waypoints[i];
+  if(![a.x,a.y,a.z,b.x,b.y,b.z].every(Number.isFinite)||a.y<-.01||b.y<-.01)continue;
+  if(!visible(a)&&!visible(b))continue;
+  if(visible(a)!==visible(b)){
+   const t=(boundary-a.y)/(b.y-a.y),cross={x:a.x+(b.x-a.x)*t,y:boundary,z:a.z+(b.z-a.z)*t};
+   if(visible(a))b=cross;else a=cross;
+  }
+  out.push([a,b]);
+ }
+ return out;
+}
+function routeSVG(route,floor,project){
+ const segments=miniatureRouteSegments(route?.waypoints,floor);
+ if(!segments.length)return '';
+ const pos=p=>project([p.x,p.y+.11,p.z]),n=v=>v.toFixed(1);
+ const d=segments.map(([a,b])=>{const p=pos(a),q=pos(b);return 'M'+n(p.x)+' '+n(p.y)+'L'+n(q.x)+' '+n(q.y);}).join(' ');
+ const goal=route.goal,goalHere=(goal.y>=HEIGHT*.5?1:0)===floor,g=pos(goal);
+ return '<g class="mini-route" data-route-floor="'+floor+'" aria-label="Ruta prevista de Emy"><path class="mini-route-shadow" d="'+d+'"/><path class="mini-route-track" d="'+d+'"/><path class="mini-route-motion" d="'+d+'"/>'+
+ (goalHere?'<circle class="mini-route-goal" cx="'+n(g.x)+'" cy="'+n(g.y)+'" r="6"/><circle cx="'+n(g.x)+'" cy="'+n(g.y)+'" r="2.5" fill="#fff"/>':'')+'</g>';
+}
 // The actual world, including real stair opening and walls, is the sole layout source.
-export function miniatureSVG(world,view,{floor=-1,selectedId='',lockedIds=[],markers=[]}={}){
+export function miniatureSVG(world,view,{floor=-1,selectedId='',lockedIds=[],markers=[],route=null,readOnly=false,reveal=false}={}){
  const faces=[],labels=[],locked=new Set(lockedIds),project=p=>miniatureProject(p,view,floor);
  const level=Math.max(0,floor)*HEIGHT;
  if(floor<0){
@@ -60,36 +104,38 @@ export function miniatureSVG(world,view,{floor=-1,selectedId='',lockedIds=[],mar
     cuboid(b.x,b.y,b.z,b.w,b.h,b.d,b.id==='door-entrada'?['#bb937f','#805d53','#a27a68']:['#bbd8df','#7793a4','#91afbc'],faces);
    }
   }
-  // Roof dimensions are read from the real gable mesh.
-  const roof=world.boxes.find(b=>b.id==='roof');
-  if(roof){
-   const x0=roof.x-roof.w/2,x1=roof.x+roof.w/2,z0=roof.z-roof.d/2,z1=roof.z+roof.d/2,y=roof.y-roof.h/2,top=roof.y+roof.h/2;
-   faces.push({p:[[x0,y,z0],[roof.x,top,z0],[roof.x,top,z1],[x0,y,z1]],fill:'#827399'});
-   faces.push({p:[[x1,y,z0],[roof.x,top,z0],[roof.x,top,z1],[x1,y,z1]],fill:'#ab91b5'});
-   for(const z of [z0,z1])faces.push({p:[[x0,y,z],[roof.x,top,z],[x1,y,z]],fill:'#e3c5d1'});
-  }
+  faces.push(...roofFaces(world));
  }else{
   const choices=roomChoices(world.rooms).filter(r=>r.floor===floor);
   for(const room of choices){
    for(const r of room.segments){
     const isLocked=locked.has(room.id),selected=room.id===selectedId;
-    faces.push({p:quad(r.x0,r.x1,r.z0,r.z1,level+.035),fill:isLocked?'#65576d':selected?'#8de7c2':EMY_ROOM_COLORS[room.id]||'#c2bacb',stroke:selected?'#ecfff4':'#544761',width:selected?2:1,id:isLocked?null:room.id,label:room.label,klass:'mini-room'+(isLocked?' is-locked':'')});
+    faces.push({p:quad(r.x0,r.x1,r.z0,r.z1,level+.035),fill:isLocked?'#65576d':selected?'#8de7c2':EMY_ROOM_COLORS[room.id]||'#c2bacb',stroke:selected?'#ecfff4':'#544761',width:selected?2:1,id:isLocked||readOnly?null:room.id,label:room.label,klass:'mini-room'+(isLocked?' is-locked':'')});
    }
    const r=room.segments[0];
    labels.push({p:[(r.x0+r.x1)/2,level+.07,(r.z0+r.z1)/2],label:room.short,id:room.id,locked:locked.has(room.id)});
   }
   // Low cutaway walls follow the actual partition box positions and real door gaps.
-  const prefix=/^(west-|east-|north-|south-|music-west|music-south|kitchen-divider|bath-divider|stairwell-side)/;
+  const prefix=/^(west-|east-|north-|south-|music-west|music-south|kitchen-divider|bath-divider|stairwell-side|west-room-divider|central-|hall-)/;
   for(const b of world.boxes){
    if(!prefix.test(b.id)||!b.solid||b.y-b.h/2>level+.15||b.y+b.h/2<level+.35||b.h<1.8)continue;
    cuboid(b.x,level+.24,b.z,b.w,.48,b.d,['#eee1ed','#97859f','#b9a7bd'],faces,'mini-wall');
   }
-  if(floor===0){
-   for(let i=0;i<10;i++){
-    const z=STAIR.zBottom-(i+.5)*(STAIR.zBottom-STAIR.zTop)/10;
-    cuboid(STAIR.centerX,level+.10+i*.025,z,STAIR.xMax-STAIR.xMin,.17,(STAIR.zBottom-STAIR.zTop)/10-.025,['#bca07e','#92785f','#a58a6c'],faces,'mini-wall');
-   }
-  }else faces.push({p:quad(STAIR.wellX,HOUSE.width,STAIR.zTop,STAIR.wellZ,level+.01),fill:'#242336',stroke:'#a58ba6',klass:'house-emy-stair-void'});
+  if(floor===1)faces.push({p:quad(STAIR.wellX,HOUSE.width,STAIR.zTop,STAIR.wellZ,level-.065),fill:'#242336',stroke:'#a58ba6',klass:'house-emy-stair-void'});
+  // The actual stair treads are represented on both levels, with the
+  // upper portion visible in the open stairwell.
+  for(const b of world.boxes.filter(b=>/^step-\d+$/.test(b.id)&&(floor===0?b.y<HEIGHT*.5+.20:b.y>=HEIGHT*.5-.20)))
+   cuboid(b.x,b.y,b.z,b.w,b.h,b.d,['#c9b098','#947963','#b2947a'],faces,'mini-wall');
+  for(const b of miniatureFurniture(world,floor)){
+   const base=palettes[b.mat||b.material]||(/piano|tv-/.test(b.id)?palettes.dark:/bed|sofa/.test(b.id)?palettes.pink:palettes.wood);
+   cuboid(b.x,b.y,b.z,b.w,b.h,b.d,base,faces,'mini-furniture',b.yaw||0,{prop:b.id,stroke:'#514354',width:.48});
+  }
+  // Door leaves use their LIVE positions and yaw, not a generic doorway.
+  for(const door of world.objects.filter(o=>o.kind==='door'&&o.box&&Math.abs(o.y-1.1-level)<.4)){
+   const b=door.box,state=(door.locked||door.sealed)&&!door.open?'locked':door.open?'open':'closed';
+   const colors=state==='locked'?['#e6a4ae','#ad6c7c','#c98798']:state==='open'?['#b6ddc8','#6a9f8c','#95c4aa']:['#d7ba9a','#a48768','#bda182'];
+   cuboid(b.x,level+.29,b.z,b.w,.58,b.d,colors,faces,'mini-door',b.yaw||0,{door:door.id,doorState:state,stroke:'#685065',width:1});
+  }
  }
  const sorted=faces.map(f=>polygon(f,project)).sort((a,b)=>a.depth-b.depth);
  // Fit the unzoomed geometry, not a fixed oversized SVG canvas. The user
@@ -100,8 +146,8 @@ export function miniatureSVG(world,view,{floor=-1,selectedId='',lockedIds=[],mar
   left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);
  }
  const margin=23,viewBox=Number.isFinite(left)?[left-margin,top-margin,right-left+2*margin,bottom-top+2*margin].map(v=>v.toFixed(2)).join(' '):'0 0 520 342';
- const text=labels.map(o=>{const p=project(o.p);return '<text x="'+p.x.toFixed(1)+'" y="'+p.y.toFixed(1)+'" class="mini-label'+(o.locked?' is-locked':'')+'"'+(!o.locked?' data-act="emy:room:'+esc(o.id)+'"':'')+'>'+esc(o.label)+(o.locked?' 🔒':'')+'</text>';}).join('');
- const visibleMarkers=floor<0?[]:markers.filter(m=>Number.isFinite(m.x)&&Number.isFinite(m.y)&&Number.isFinite(m.z)&&m.x>=0&&m.x<=HOUSE.width&&m.z>=0&&m.z<=HOUSE.depth&&m.y>=-.18&&m.y<=HEIGHT+.6&&(m.y>=HEIGHT*.5?1:0)===floor);
+ const text=labels.map(o=>{const p=project(o.p);return '<text x="'+p.x.toFixed(1)+'" y="'+p.y.toFixed(1)+'" class="mini-label'+(o.locked?' is-locked':'')+'"'+(!o.locked&&!readOnly?' data-act="emy:room:'+esc(o.id)+'"':'')+'>'+esc(o.label)+(o.locked?' 🔒':'')+'</text>';}).join('');
+ const visibleMarkers=floor<0?[]:markers.filter(m=>(!readOnly||m.id!=='threat')&&Number.isFinite(m.x)&&Number.isFinite(m.y)&&Number.isFinite(m.z)&&m.x>=0&&m.x<=HOUSE.width&&m.z>=0&&m.z<=HOUSE.depth&&m.y>=-.18&&m.y<=HEIGHT+.6&&(m.y>=HEIGHT*.5?1:0)===floor);
  const n=v=>v.toFixed(1);
  const pins=layoutMiniaturePins(visibleMarkers,project,level).map(({marker:m,anchor,badge})=>{
   const moved=anchor!==badge,symbol=m.id==='kitty'?'K':m.id==='emy'?'E':'!';
@@ -109,7 +155,21 @@ export function miniatureSVG(world,view,{floor=-1,selectedId='',lockedIds=[],mar
    (moved?'<line x1="'+n(anchor.x)+'" y1="'+n(anchor.y)+'" x2="'+n(badge.x)+'" y2="'+n(badge.y)+'" stroke="#fff3e9" stroke-width="1.5"/><circle cx="'+n(anchor.x)+'" cy="'+n(anchor.y)+'" r="3" fill="'+esc(m.color)+'"/>':'')+
    '<g transform="translate('+n(badge.x)+' '+n(badge.y)+')"><circle r="10" fill="'+esc(m.color)+'" stroke="#fff" stroke-width="1.5"/><text class="mini-symbol" y="0">'+symbol+'</text></g></g>';
  }).join('');
- return '<svg viewBox="'+viewBox+'" role="img" aria-label="'+(floor<0?'Exterior tridimensional de la casa':'Casa en corte, planta '+(floor?'alta':'baja'))+'" xmlns="http://www.w3.org/2000/svg">'+sorted.map(o=>o.html).join('')+text+pins+'</svg>';
+ // For floor entry, lift a real projected roof and (on the ground floor)
+ // upper shell away in separate layers. CSS runs once on floor changes,
+ // leaving rotation and zoom free of animation work or a second GL context.
+ let cover='';
+ if(reveal&&floor>=0){
+  const upper=[];
+  if(floor===0){
+   for(const b of world.boxes.filter(b=>/^(west|east|north|south)-3\.15-/.test(b.id)&&b.solid&&b.h>.4))
+    cuboid(b.x,b.y,b.z,b.w,b.h,b.d,['#edd8df','#ad91a5','#c8adbc'],upper);
+   cuboid(HOUSE.width/2,HEIGHT-.08,HOUSE.depth/2,HOUSE.width,.16,HOUSE.depth,['#d9c4d0','#a08b9d','#b7a0b1'],upper);
+  }
+  const layer=(name,items)=>'<g class="'+name+'" aria-hidden="true">'+items.map(f=>polygon(f,project)).sort((a,b)=>a.depth-b.depth).map(f=>f.html).join('')+'</g>';
+  cover='<g class="mini-cover-reveal" pointer-events="none">'+layer('mini-upper-lift',upper)+layer('mini-roof-lift',roofFaces(world))+'</g>';
+ }
+ return '<svg viewBox="'+viewBox+'" role="img" aria-label="'+(floor<0?'Exterior tridimensional de la casa':'Casa en corte, planta '+(floor?'alta':'baja'))+'" xmlns="http://www.w3.org/2000/svg">'+sorted.map(o=>o.html).join('')+(floor>=0&&!readOnly?routeSVG(route,floor,project):'')+text+pins+cover+'</svg>';
 }
 export function miniatureMarkers(player,cat,threat,scanVisible){
  const out=[{id:'kitty',label:'Kitty',color:'#f3a2c6',...player}];
