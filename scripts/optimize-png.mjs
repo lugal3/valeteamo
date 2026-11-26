@@ -52,7 +52,9 @@ async function main(root){
  async function walk(dir){
   for(const e of await readdir(dir,{withFileTypes:true})){
    const file=join(dir,e.name);
-   if(e.isDirectory()){await walk(file);continue;}
+   // Vite's hashed assets must retain their original content hash. Only
+   // repack copied public files (comics, sprites, icons, etc.).
+   if(e.isDirectory()){if(dir===root&&e.name==='assets')continue;await walk(file);continue;}
    if(!e.isFile()||!e.name.toLowerCase().endsWith('.png'))continue;
    const original=await readFile(file);let smaller;
    try{smaller=repackPNG(original);}catch(error){rows.push({path:relative(root,file),status:'kept',reason:String(error),before:original.length,after:original.length});continue;}
