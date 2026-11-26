@@ -26,7 +26,7 @@ export function installHolidayTree(add,floor,holiday=null){
   if(i<2)piece('garland-'+i,0,bottom+.15,0,r*1.92,.035,r*1.92,'brass',false,{shape:'torus',majorRadius:r*.96,tubeRadius:.014,segments:10,tubeSegments:3,color:[.91,.72,.39]});
   for(let n=0;n<4;n++){
    const a=TAU*(n/4+i*.19+.1),rad=r*.97;
-   piece('bulb-'+i+'-'+n,Math.cos(a)*rad,bottom+.16,Math.sin(a)*rad,.049,.049,.049,'torchglass',false,{holidayBulb:true,dynamic:!!holiday,holidayPower:holiday?.tree,color:colors[(n+2*i)%4]});
+   piece('bulb-'+i+'-'+n,Math.cos(a)*rad,bottom+.16,Math.sin(a)*rad,.049,.049,.049,'torchglass',false,{holidayBulb:true,dynamic:false,holidayPower:holiday?.tree,color:colors[(n+2*i)%4]});
   }
  }
  // A small extruded star, readable from either side.
@@ -37,7 +37,7 @@ export function installHolidayTree(add,floor,holiday=null){
   for(let i=0;i<10;i++){const a=[...pts[i],c[2]],b=[...pts[(i+1)%10],c[2]];tris.push(side===1?[c,a,b]:[c,b,a]);}
  }
  for(let i=0;i<10;i++){const a=pts[i],b=pts[(i+1)%10];tris.push([[...a,z-.025],[...b,z-.025],[...a,z+.025]],[[...a,z+.025],[...b,z-.025],[...b,z+.025]]);}
- piece('star',0,starY,0,.36,.36,.05,'brass',false,{triangles:tris,holidayBulb:true,dynamic:!!holiday,holidayPower:holiday?.tree,color:[1,.79,.36]});
+ piece('star',0,starY,0,.36,.36,.05,'brass',false,{triangles:tris,holidayBulb:true,dynamic:false,holidayPower:holiday?.tree,color:[1,.79,.36]});
  // A few hand-wrapped gifts, all tucked under the foliage rather than in the path.
  for(const [i,dx,dz,w,h,d] of [[0,-.64,.33,.27,.22,.24],[1,.28,.25,.25,.28,.21],[2,.05,-.30,.29,.18,.24]]){
   const color=colors[i],ribbon=colors[(i+1)%4];
