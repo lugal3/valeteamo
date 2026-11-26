@@ -1747,7 +1747,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    const inside=roomAt(s.x,s.z,s.y)==='Sala de música';
    const near=inside||(Math.abs(s.y-3.15)<.45&&Math.hypot(s.x-9,s.z-3.6)<1.65);
    const altarCue=advanceAltarVisit(altarVisit,{inside,near,afraid:!!emyCompanion?.altarFear&&!world.emy.hidden,dt:shotDelta});
-   if(altarCue.warn){play('cat',world.emy,.52);caption('Emy se eriza ante la sala de música');say('Emy no quiere entrar. Te esperará fuera.',4);}
+   if(altarCue.warn){play('altar-hiss',world.emy,.65);caption('Emy se eriza ante la sala de música');say('Emy no quiere entrar. Te esperará fuera.',4);}
   }
   updateBatterySwap(shotDelta);
   let view=cameraOf(s),hand=!s.hidden&&!s.lying&&!poseTransition&&!animator.performing&&(!phone.open||phone.canWalk),torch=flashlightBeam(),introHands=null,distance=0;
@@ -2418,10 +2418,17 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    },
    // End a synthetic scan fixture before unrelated phone and input scenarios.
    // Production threat handling remains unchanged; this hook is DEV-only.
+   // DEV-only fixture: place Emy at a verified outside floor point to test
+   // her actual following, alarm, pose and room-boundary behavior.
+   placeEmyAtThreshold:()=>{
+    const pose={x:9,y:HEIGHT,z:3.6,yaw:Math.PI};
+    if(!emyCompanion||blocked(world.boxes,pose.x,pose.y,pose.z,.16,.62))throw Error('Unsafe Emy threshold fixture');
+    restoreEmyCompanion(emyCompanion,{stage:'following',...pose},events.phase);
+   },
    clearThreatFixture:()=>{pursuer.reset();sound.setThreat(false);return pursuer.snapshot();},
    // DEV-only route harness for deterministic test setup; not in the production build.
    placeRC:(pose)=>{if(rc.mode!=='driving')throw Error('RC must be deployed first');const y=groundHeight(pose.x,pose.z,pose.y??rc.y,world.hatch?.amount>.92);if(!Number.isFinite(y)||blocked(world.boxes,pose.x,y,pose.z,.155,.38))throw Error('Blocked RC test position');rc.x=pose.x;rc.y=y;rc.z=pose.z;rc.yaw=pose.yaw??rc.yaw;rc.noise=0;syncRCObject(rc);return {x:rc.x,y:rc.y,z:rc.z};},
-   altar:()=>({...altarVisit,waiting:!!emyCompanion?.altarWait,fear:!!emyCompanion?.altarFear}),
+   altar:()=>({...altarVisit,waiting:!!emyCompanion?.altarWait,fear:!!emyCompanion?.altarFear,bristle:world.emy.parts.find(p=>p.id==='coat')?.box.bristle??0,earFlatten:world.emy.earFlatten??0}),
    scanFrame:()=>renderer?.scanFrame??null,
    performance:()=>perfReport(),
    finale:()=>finalCutscene?{elapsed:finalCutscene.elapsed,playable:finalCutscene.playable,runAge:finalCutscene.runAge,stage:finalCutscene.playable?'run':finalCutscene.stage,weather:finaleWeather(finalCutscene,s),view:finalCutscene.lastView}:null,
