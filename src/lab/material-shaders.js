@@ -31,7 +31,7 @@ uniform float uShot,uFasciaReady,uPursuerSkinReady;
 uniform float uHasShadows;
 uniform vec4 uLamps[${VISIBLE_LAMPS}];
 uniform float uTime,uHolidayMotion,uHolidayPower;
-uniform float uTVSignal;
+uniform float uTVSignal,uRain,uDawn;
 uniform float uMirrorPass,uHeld,uScanOutline;
 uniform float uAtlasSize,uTileSize,uGutter,uInner;
 float depthAt(vec2 pixel,vec2 corner,float reach){
@@ -109,6 +109,17 @@ float lampLight(vec4 lamp,vec3 world,vec3 normal,vec3 surfaceNormal){
 void main(){
  if(uScanOutline>.5){gl_FragColor=uScanOutline>1.5?vec4(.19,.82,.67,.28):vec4(.66,1.0,.88,.96);return;}
  if(uMirrorPass>.5&&vWorld.x<9.8375)discard;
+ // Window-local procedural streaks: no texture lookup, emitter or new pass.
+ if(vStyle>111.5&&vStyle<112.5){
+  if(uRain<.01||abs(vNormal.y)>.5)discard;
+  float horizontal=abs(vNormal.x)>.5?vWorld.z:vWorld.x;
+  float column=horizontal*23.0+vWorld.y*.9;
+  float seed=surfaceHash(vec2(floor(column),floor(vWorld.y*2.0)));
+  float phase=fract(vWorld.y*2.0+seed+uTime*uHolidayMotion*(1.4+seed));
+  float streak=(1.0-smoothstep(.018,.085,abs(fract(column)-.5)))*smoothstep(.60,.75,phase)*(1.0-smoothstep(.94,1.0,phase));
+  if(seed>uRain||streak<.32)discard;
+  gl_FragColor=vec4(mix(vec3(.085,.12,.17),vec3(.28,.36,.42),streak*uRain),1.0);return;
+ }
  if(vArt>1.5&&vArt<2.5&&uTVSignal>.5){
   vec2 grid=floor(vUV*vec2(256.0,144.0));
   float grain=fract(sin(dot(grid,vec2(3.4,7.3)))*419.3);
@@ -189,7 +200,8 @@ void main(){
    float glint=1.0-smoothstep(.025,.10,length((eye-vec2(-.27,.34))*vec2(1.0,1.35)));
    shine=glint*.48+pow(max(0.0,dot(surfaceNormal,normalize(key+viewDir))),80.0)*.20;
   }
-  float exposure=clamp(.30+beam+.78*warmth+uShot,.30,1.4);
+  float exterior=smoothstep(.08,.7,max(max(-vWorld.x,vWorld.x-14.0),max(-vWorld.z,vWorld.z-12.0)));
+  float exposure=clamp(.30+beam+.78*warmth+uShot+exterior*uDawn*.55,.30,1.4);
   vec3 light=vec3(.71+.30*wrap)*exposure;
   gl_FragColor=vec4(clamp(color*light+vec3(.80,.87,.86)*shine*exposure,0.0,1.0),1.0);return;
  }
@@ -357,6 +369,9 @@ void main(){
  float boardMask=smoothstep(.08,.14,abs(localY-1.435))*smoothstep(.08,.14,abs(localY-1.87));
  float spill=windowZ*sillMask*boardMask*(1.0-smoothstep(.10,1.1,world.x))*step(0.0,world.x)*step(0.0,world.y);
  ambient+=vec3(.025,.040,.066)*spill;
+ // Dawn only reaches outdoor surfaces, not basement or rooms.
+ float outdoors=smoothstep(.10,.65,boundary)*step(-.04,world.y);
+ ambient+=outdoors*uDawn*vec3(.54,.43,.35);
  ambient=mix(ambient,vec3(.056,.048,.047),smoothstep(.18,1.1,-world.y));
  // Local, power-gated warmth around the small Christmas tree. Restrict it
  // to the upstairs music room: no leak through its south wall or the floor.
@@ -400,6 +415,6 @@ void main(){
   color=mix(color,mix(vColor,vec3(1.0,.94,.86),.22)*pulse,.94);
  }
  float fog=clamp((vDistance-6.0)/25.0,0.0,.32);
- color=mix(color,vec3(.024,.030,.054),fog);
+ color=mix(color,mix(vec3(.024,.030,.054),vec3(.42,.35,.39),outdoors*uDawn),fog);
  gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);
 }`;
