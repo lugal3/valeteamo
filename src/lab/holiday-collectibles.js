@@ -6,8 +6,8 @@ const tones=[[.87,.30,.45],[.58,.53,.84],[.94,.66,.76]];
 export function installHolidayCollectibles(add,obj,floor,power){
  const tree={on:true,supply:power},gift={age:0,opening:false,opened:false,parts:[]};
  const plushes=PLUSH_IDS.map((id,i)=>{
-  const [x,y,z]=[[11.96,floor+.18,2.60],[10.96,.20,6.15],[12.55,floor+.97,.72]][i];
-  const item=obj(id,i===0?'gift':'collectible',i===0?'Abrir regalo':PLUSH_NAMES[i],x,y,z,{index:i,taken:false});
+  const [x,y,z]=[[11.96,floor+.18,2.60],[10.96,.20,6.85],[12.55,floor+.97,.72]][i];
+  const item=obj(id,i===0?'gift':'collectible',i===0?'Abrir regalo':PLUSH_NAMES[i],x,y,z,{index:i,taken:false,requiresCrouch:i===1});
   if(i===0)return item;
   const part=(name,dx,dy,dz,w,h,d,color,extra={})=>add(id+'-'+name,x+dx,y+dy,z+dz,w,h,d,'glove',false,{dynamic:true,source:item,sourceOffset:[dx,dy,dz],castShadow:false,color,shape:'round',segments:6,rings:3,...extra});
   const white=[.99,.92,.89],ink=[.13,.085,.10];
