@@ -79,8 +79,13 @@ async function run(){
   await openMenu();
   const trialCases=[...Array.from({length:12},(_,i)=>['hito-'+(i+1),i<7]),
    ...['mirror','drawer','safe','mirror-note','bedroom','arrival','wardrobe','wake','battery','power','piano','basement','television'].map(id=>[id,true]),['car',false]];
-  for(const [id,visible] of trialCases){
+  for(const [index,[id,visible]] of trialCases.entries()){
+   // Still exercise repeated real mount/exit cycles, but avoid accumulating
+   // 26 full software-rendered WebGL scenes in one document on CI.
+   // Each six-trial batch starts through the actual LP entrance again.
+   if(index>0&&index%6===0)await openMenu();
    const card=page.locator('button[aria-labelledby="trial-'+id+'"]');
+   await card.waitFor({state:'attached'});
    if(!await card.isVisible())await card.evaluate(el=>{el.closest('details').open=true;});
    console.log('LP trial: '+id);
    await card.scrollIntoViewIfNeeded();
