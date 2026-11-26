@@ -83,6 +83,8 @@ const {chromium}=require('playwright');
   });
   const tucked=await snapshot();
   const peek=page.locator('.house-hide-peek');await peek.waitFor();
+  const peekRect=await peek.boundingBox(),exitRect=await page.locator('#lab-interact').boundingBox();
+  assert(peekRect&&exitRect&&peekRect.y>=0&&peekRect.y+peekRect.height<=exitRect.y-3,'Asomarse must remain visible above Exit without overlap');
   await page.keyboard.down('v');
   try{await page.waitForFunction(()=>window.__rescueHouse.snapshot().hidePeek>.9);const lean=await snapshot();assert.deepEqual(lean.position,tucked.position);assert.equal(lean.hideType,'underbed');assert(Math.hypot(lean.view.x-tucked.view.x,lean.view.z-tucked.view.z)>.15);}finally{await page.keyboard.up('v');}
   await page.waitForFunction(()=>window.__rescueHouse.snapshot().hidePeek<.02);
