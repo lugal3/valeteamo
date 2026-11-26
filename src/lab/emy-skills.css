@@ -351,3 +351,12 @@
 #lab3d .house-emy-destination-icon{flex:none;width:17px;text-align:center;font:15px/1 system-ui;color:#e9c6dd}
 #lab3d .house-emy-destination-list .house-emy-destination-name{overflow-wrap:anywhere}
 @media(max-width:700px){#lab3d .house-emy-destination-list .house-emy-destination{gap:5px}#lab3d .house-emy-destination-icon{width:15px;font-size:13px}}
+
+/* Compact actor markers keep the real floor locations legible even when
+   Kitty, Emy and a scanned threat are standing in the same corridor. */
+#lab3d .mini-3d .mini-pin .mini-symbol{font:800 13px/1 system-ui;fill:#241b30;stroke:none;dominant-baseline:central;text-anchor:middle}
+#lab3d #house-emy-mini-legend{display:flex;align-items:center;gap:7px;flex-wrap:wrap;line-height:1.2}
+#lab3d .mini-legend-item{display:inline-flex;align-items:center;gap:3px;white-space:nowrap;font:600 10px system-ui}
+#lab3d .mini-legend-item b{display:grid;place-items:center;width:13px;height:13px;border-radius:50%;color:#241b30;background:#f3a2c6;font:800 9px system-ui}
+#lab3d .mini-legend-item.emy b{background:#c6a5ff}
+#lab3d .mini-legend-item.threat b{background:#f08079}
