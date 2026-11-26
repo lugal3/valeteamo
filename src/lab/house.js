@@ -1,4 +1,4 @@
-import {trialCheckpoint} from './trial-checkpoint.js';
+import {trialCheckpoint,trialStartPose,trialEmyStage} from './trial-checkpoint.js';
 import {removeVentCover,advanceVentCover,poseVentCover} from './study-vent.js';
 import {HouseEvents} from './story-events.js';
 import {HouseMessages} from './hud-messages.js';
@@ -389,15 +389,15 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   resumed=!!restored;
   if(restored)({louis,equipment,encounterCheckpoint}=restored);
   if(seed){
-   const starts={2:[5.74,HEIGHT,2.4,-Math.PI/2],4:[2.78,HEIGHT,1.76,1.85],5:[2.78,HEIGHT,1.76,1.85],6:[6.9,HEIGHT,10.4,-Math.PI/2],7:[6.9,HEIGHT,10.4,-Math.PI/2],9:[7.86,-3.55,12.26,.65],11:[5.9,0,10.9,0],12:[5.9,0,11.4,0]};
-   if(starts[seed]){const [x,y,z,yaw]=starts[seed];if(!blocked(world.boxes,x,y,z,.2,1.69))Object.assign(s,{x,y,z,yaw,pitch:0});}
+   const start=trialStartPose(seed);
+   if(start&&!blocked(world.boxes,start.x,start.y,start.z,.2,1.69))Object.assign(s,start);
   }
   // Restored checkpoints and isolated trial teleports must never smooth the
   // camera up from the old floor through a ceiling.
   s.cameraGround=s.y;
   if(emyCompanion){
    if(scenario&&(seed||!restored)){
-    const stage=scenario.emy??(scenario.milestone>=8?'trunk':scenario.events==='car'?'waiting':'following');
+    const stage=scenario.emy??(scenario.events==='car'?'waiting':trialEmyStage(scenario.milestone));
     // Place Emy AFTER restoring the player's milestone and final spawn pose.
     // The hatch-opening withdrawal and finale are not bypassed.
     if(!initializeTrialEmy(emyCompanion,world,s,stage)){
