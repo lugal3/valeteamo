@@ -126,7 +126,9 @@ export function poseEscapeAmbush(shot,cat,enemy,reduced){
  const lead={x:5.38,z:17.05};
  const approachCat=ease((t-.95)/.38);
  const flight=Math.max(0,Math.min(1,(t-1.45)/1.28));
- const up=ease((t-1.45)/.63),down=ease((t-2.08)/.65);
+ // A strike has incoming momentum and a rebound, not a mid-air stop.
+ const u=Math.max(0,Math.min(1,(t-1.45)/.63)),d=Math.max(0,Math.min(1,(t-2.08)/.65));
+ const up=.35*u+.65*u*u,down=d*(2-d);
  const run=ease((t-2.84)/.94);
  const prep=ease((t-1.23)/.22)*(1-ease((t-1.45)/.14));
  const absorb=ease((t-2.65)/.10)*(1-ease((t-2.75)/.18));
@@ -138,7 +140,7 @@ export function poseEscapeAmbush(shot,cat,enemy,reduced){
  // Ballistic rise and fall: gravity accelerates the descent instead of
  // easing to a hover just before touching the ground. The paws absorb it.
  const height=3.84*flight*(1-flight);
- const yaw=t<2.08?face:t<2.73?turn(face,retreatFace,down):turn(retreatFace,leadFace,ease((t-2.73)/.17));
+ const yaw=t<2.08?face:t<2.73?turn(face,retreatFace,ease(d)):turn(retreatFace,leadFace,ease((t-2.73)/.17));
  Object.assign(cat,{x:mix(x,lead.x,run),z:mix(z,lead.z,run),y:height,
   yaw:turn(yaw,0,ease((t-3.56)/.22)),alarm:ease((t-1.10)/.25)*(1-ease((t-2.44)/.40)),
   earFlatten:ease((t-1.10)/.25)*(1-ease((t-2.44)/.40)),
