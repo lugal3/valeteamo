@@ -182,12 +182,11 @@ async function run(){
   assert.deepEqual(new Set((await checkpoint()).picked),new Set(['key','media-flashlight','screwdriver']),
    'The vent screwdriver collected earlier must survive checkpoint saves too');
   if(SHOTS){
-   // Capture the actual new room decor from a legal pose with its real ceiling lamp.
-   await use('switch-musica');
-   await page.evaluate(()=>window.__rescueHouse.setPose({x:11.2,y:3.15,z:1.20,yaw:Math.atan2(1.40,1.07),pitch:-.15}));
-   await page.waitForFunction(()=>window.__rescueHouse.snapshot().position.x===11.2);
+   // Capture the relocated Christmas tree from the open upstairs corridor.
+   await page.evaluate(()=>window.__rescueHouse.setPose({x:5.65,y:3.15,z:2.8,yaw:Math.atan2(1.10,-1.925),pitch:-.12}));
+   await page.waitForFunction(()=>window.__rescueHouse.snapshot().position.x===5.65);
    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
-   await shot('00b-arbol-navideno-sala-musica');
+   await shot('00b-arbol-navideno-pasillo-esquina-a');
   }
   await page.emulateMedia({reducedMotion:'no-preference'});
   await reloadHouse();
