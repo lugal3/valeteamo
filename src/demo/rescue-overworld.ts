@@ -691,6 +691,36 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
     color:'#ffe7fa',stroke:'#4b3853',strokeThickness:3})
    .setOrigin(.5).setDepth(toScreen(NIGHT_HOUSE.window).y+18);
  }
+ // Shared trail vocabulary at both ends of every chapter. The road keeps
+ // going beyond the playable edge rather than ending against a flat void.
+ // Decorative geometry only; existing portal coordinates and collision stay.
+ const seam=scene.add.graphics().setDepth(.35);
+ const links=[...(map==='morning_garden'?[]:[{u:cfg.minU+.35,v:cfg.spawn.v,dir:-1}]),
+  ...(cfg.exit?[{u:cfg.exit.u,v:cfg.exit.v,dir:1}]:[])];
+ for(const link of links){
+  for(let i=0;i<8;i++){
+   const u=link.u+link.dir*i*.56,v=link.v,point=toScreen({u,v});
+   const fade=1-i/9;
+   const color=map==='morning_garden'?0xf4e4c5:map==='afternoon_meeting'?0xe5caaa:
+    map==='dusk_search'?0xbcb1b4:0x989ba6;
+   seam.fillStyle(color,.85*fade).fillEllipse(point.x,point.y,76,36);
+   for(const side of [-1,1]){
+    const edge=toScreen({u,v:v+side*1.25});
+    seam.fillStyle(map==='night_neighborhood'?0x9b9a9d:0xc4b6a1,.65*fade)
+     .fillEllipse(edge.x,edge.y,11,6);
+   }
+  }
+  // Repeated paired posts and pink ribbons form recognizable landmarks.
+  for(const side of [-1,1]){
+   const point=toScreen({u:link.u-link.dir*.75,v:link.v+side*2.35});
+   const post=scene.add.graphics().setDepth(point.y);
+   post.fillStyle(0x5c5362,.19).fillEllipse(point.x,point.y,24,8);
+   post.fillStyle(0x987b78).fillRect(point.x-3,point.y-33,6,33);
+   post.fillStyle(0xf0d9bf).fillRect(point.x-5,point.y-36,10,5);
+   post.fillStyle(0xce819f).fillRect(point.x-6,point.y-25,12,5);
+   post.fillStyle(0xe8a9b7).fillTriangle(point.x+3,point.y-22,point.x+14,point.y-17,point.x+5,point.y-12);
+  }
+ }
  // A spatially legible exit: pearly luminous boundary leading to another map.
  if(cfg.exit){
   sign(scene,cfg.exit.u-1.1,cfg.exit.v-2.9,'➜');
@@ -770,7 +800,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    }
   }
   if(cfg.exit){
-   const p=toScreen(cfg.exit),pulse=.45+Math.sin(visualT*2.1)*.16;
+   const p=toScreen(cfg.exit),pulse=.36+Math.sin(visualT*2.1)*.10;
    portalGlow.fillStyle(0xfff6d8,.10+pulse*.15).fillEllipse(p.x,p.y-3,105,40);
    portalGlow.lineStyle(2,0xfff2c8,.33+pulse*.34).strokeEllipse(p.x,p.y-3,88,30);
    portalGlow.fillStyle(0xffeed7,.65).fillCircle(p.x,p.y-26+Math.sin(visualT*1.8)*5,3.2);
