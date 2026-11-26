@@ -386,3 +386,10 @@
 }
 #lab3d.house-motion-reduced .mini-route-motion{animation:none}
 #lab3d.house-motion-reduced .mini-cover-reveal{display:none}
+
+/* A soft camera-space pulse, without flashing the screen. */
+#lab3d .house-emy-wave{border:1px solid #b4f6e5a8;box-shadow:0 0 10px #6ad9b750,inset 0 0 9px #a7f2da38;background:radial-gradient(circle,transparent 48%,#9feacb12 68%,#aef6df1f 94%,transparent 100%)}
+#lab3d .house-emy-wave::before,#lab3d .house-emy-wave::after{content:'';position:absolute;border-radius:50%;pointer-events:none}
+#lab3d .house-emy-wave::before{inset:14%;border:1px solid #c4ffeb68}
+#lab3d .house-emy-wave::after{inset:27%;border:1px dashed #befbe94c}
+#lab3d .house-emy-map #house-emy-map-send[hidden]{display:none}
