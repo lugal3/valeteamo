@@ -14,14 +14,14 @@ Buscar primero estos recursos. No sustituir las puertas de madera actuales. Mant
 | Recurso | Nombre de destino | Búsqueda | Criterio |
 | --- | --- | --- | --- |
 | Respiración tranquila de Kitty | `kitty-breath-calm.wav` | `quiet soft breathing close mic seamless` | Natural, tenue, sin voz ni música; bucle limpio. |
-| Respiración nerviosa de Kitty | `kitty-breath-tense.wav` | `nervous quiet breathing close mic` | Contenida, no jadeo exagerado; bucle limpio. |
+| Respiración nerviosa de Kitty | `kitty-breath-fear.wav` | `nervous quiet breathing close mic` | Contenida, no jadeo exagerado; bucle limpio. |
 | Crujido lejano de madera | `house-creak.wav` | `old wooden house settling creak` | Crujido real con cola corta. |
 | Tabla bajo presión | `floor-groan.wav` | `wood floorboard pressure creak isolated` | Una toma corta; candidatos Freesound 594491, 717230, 717231 por revisar. |
 | Ruedas RC sobre madera | `rc-wheel-wood.wav` | `small plastic rubber wheels rolling wooden floor` | Bucle sin motor ni música. |
 | Ruedas RC sobre baldosa | `rc-wheel-tile.wav` | `toy car wheels rolling tile floor` | Bucle discreto. |
 | Interferencia tablet RC | `rc-signal-loss.wav` | `short radio static signal lost digital` | Breve, no estridente. |
-| Golpe del RC | `rc-impact.wav` | `small plastic toy car bump impact` | Un golpe seco. |
-| Manipulación de objeto | `inspect-cloth.wav` | `soft hand cloth handling object foley` | Muy corta; opcional si el efecto actual basta. |
+| Golpe del RC | `rc-damage.wav` | `small plastic toy car bump impact` | Un golpe seco. |
+| Manipulación de objeto (P2 opcional) | `inspect-cloth.wav` | `soft hand cloth handling object foley` | Muy corta; opcional si el efecto actual basta. |
 
 ### Selecciones anteriores (conservar, no descargar de nuevo si ya están integradas)
 
