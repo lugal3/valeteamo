@@ -2,6 +2,8 @@ import {trialCheckpoint,trialStartPose,trialEmyStage} from './trial-checkpoint.j
 import {removeVentCover,advanceVentCover,poseVentCover} from './study-vent.js';
 import {HouseEvents} from './story-events.js';
 import {HouseMessages} from './hud-messages.js';
+import {interactionIcon,feedbackIcon,createHaptics} from './hud-feedback.js';
+import {hopPose} from './animations/hop.js';
 import {captureHouseCheckpoint,restoreHouseCheckpoint} from './house-checkpoint.js';
 import {PhoneUI} from './phone-ui.js';
 import {FloorSounds} from './floor-sounds.js';
@@ -37,7 +39,7 @@ import {BATTERY_SWAP_SECONDS} from './viewmodel.js';
 import {rescueProgress} from './rescue-progress.js';
 import {poseEscapeAmbush,poseEmyLastChance,createRescueObjectives,updateEmySenses} from './emy-rescue.js';
 import {collectCinematicCues} from './cinematic-cues.js';
-import {rcControlHint,throwableHint,threatAccessibility,hopOffset,HOP_COOLDOWN,advanceHop} from './hud-context.js';
+import {rcControlHint,throwableHint,threatAccessibility,hopOffset,HOP_DURATION,HOP_COOLDOWN,advanceHop} from './hud-context.js';
 import {updateUpstairsEmy,petEmy} from './emy-cat.js';
 import {createEmyAbilities,advanceEmyAbilities,activateEmyScan,createEmyNameCue,advanceEmyNameCue,roomChoices,roomDestinations,isEmyRoomLocked,emyFloorList} from './emy-abilities.js';
 import {defaultMiniatureView,changeMiniatureView,miniatureSVG,miniatureMarkers} from './emy-miniature.js';
@@ -135,6 +137,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      <label class="lab-preference"><input data-setting="captions" type="checkbox" checked> Subtítulos de sonidos</label>
      <label class="lab-preference"><input data-setting="hints" type="checkbox"> Mostrar instrucciones de objetivo</label>
      <label class="lab-preference"><input data-setting="threatText" type="checkbox"> Mostrar avisos del perseguidor</label>
+     <label class="lab-preference"><input data-setting="haptics" type="checkbox" checked> Vibración (si el dispositivo la admite)</label>
+     <label class="lab-preference"><input data-setting="immersive" type="checkbox" checked> HUD discreto</label>
      <details class="house-mixer"><summary>Mezclador de sonido</summary>
        <label class="lab-preference"><input data-setting="mute" type="checkbox"> Silenciar la casa</label>
        ${MIX_CHANNELS.map(([key,label,preview])=>`<div class="mixer-row"><label><span>${label} <output data-level="${key}"></output></span><input data-setting="${key}" type="range" min="0" max="${mixLimit(key)}" step=".01" aria-label="${label}"></label><button data-act="audio:${preview||key}" aria-label="Probar ${label}">▶</button></div>`).join('')}
@@ -159,7 +163,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  <div class="lab-joystick" id="lab-joystick" aria-label="Joystick izquierdo, arrastrar para caminar"><div class="lab-stick-ring"><div id="lab-stick" class="lab-stick-thumb">♡</div></div></div>
  <div class="lab-look" id="lab-look" aria-label="Arrastrar para mirar"></div>
  <div class="lab-buttons">
-  <button data-act="interact" id="lab-interact" aria-keyshortcuts="E" hidden disabled><kbd aria-hidden="true">E</kbd><small>Interactuar</small></button>
+  <button data-act="interact" id="lab-interact" aria-keyshortcuts="E" hidden disabled><span class="house-action-icon" aria-hidden="true">${feedbackIcon("examine")}</span><kbd aria-hidden="true">E</kbd><small>Interactuar</small></button>
   <button data-act="emotes" aria-label="Elegir emote" aria-controls="house-emotes" aria-expanded="false" hidden>☺<small>Emotes</small></button>
   
   <button data-act="flash" id="house-light">☼<small>Luz</small></button>
@@ -197,7 +201,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const hudMessages=new HouseMessages(root);
  phone.onPresentationChange=()=>hudMessages.layout(phone.rect,phone.open);
  const controller=new AbortController(),signal=controller.signal;
- let rcViewSmoothed=null,hopAge=HOP_COOLDOWN,hopCancelled=false;
+ let rcViewSmoothed=null,hopAge=HOP_COOLDOWN,hopCancelled=false,previousEquipment=null,lastHapticThreat=false,lastHapticPhase='';
  let renderer,world,emyCompanion=null,emyShot=null,bathCircuit,puzzle=createHousePuzzle(config.entry),sound=new HouseSound(),s,raf=0,last=0,lastPaint=0,fps=0,elapsed=0,lookPointer=null,stickPointer=null;
  let active=true,ready=false,hasFocus=true,focus=null,lookLast={x:0,y:0},paused=false,modal='',intro=true,contextLost=false,stickPointerType=null,lookPointerType=null;
  let lookTarget={yaw:Math.PI,pitch:0},cinematic=null,poseTransition=null,handAction=0,clickAction=0,lastInteraction=-Infinity,audioPreview=false;
@@ -207,6 +211,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const cameraSettings=(()=>{try{return readCameraSettings(window.localStorage)}catch{return {...DEFAULT_CAMERA_SETTINGS}}})();
  const options={...cameraSettings,bob:cameraSettings.bob??!motionMedia.matches,quality:'medium'};
  const reducedMotion={get matches(){return motionMedia.matches||options.motion===true;}};
+ const haptics=createHaptics({vibrate:pattern=>navigator.vibrate?.(pattern)??false,now:()=>performance.now(),enabled:()=>options.haptics!==false&&!document.hidden&&hasFocus});
  const saveCamera=()=>{try{writeCameraSettings(window.localStorage,options)}catch{}};
  const points={ground:'Planta baja',upstairs:'Planta alta',sound:'Iluminación / sonido',interactions:'Interacciones',mirror:'Espejo del baño'};
  const say=(text,seconds=2.4)=>hudMessages.say(text,seconds);
@@ -237,7 +242,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const inventory=s.inventory;
   if(notePresentation&&kind!=='flashlight')return;
   if(kind==='master-key'&&!inventory.masterKey||kind==='screwdriver'&&(!inventory.screwdriver||world.studyVent.unlatched)||kind==='rc'&&!inventory.rc||kind==='flashlight'&&!inventory.torch||kind==='key'&&!inventory.key||kind==='red-key'&&!inventory.redKey||kind==='paper'&&!inventory.notes.length&&!inventory.pendingNote)return;
-  cancelEmote();equipment=toggle&&equipment===kind?'empty':kind;equipmentAge=0;phone.equip(notePresentation?'empty':equipment);if(!automatic)resetInput();
+  const next=toggle&&equipment===kind?'empty':kind;
+  if(next===equipment)return;
+  cancelEmote();previousEquipment=automatic||reducedMotion.matches?null:equipment;equipment=next;equipmentAge=0;phone.equip(notePresentation?'empty':equipment);if(!automatic)resetInput();
  }
  function releaseCapture(element,pointer){try{if(pointer!==null&&element?.hasPointerCapture(pointer))element.releasePointerCapture(pointer);}catch{}}
  function capture(element,pointer){try{element.setPointerCapture?.(pointer);}catch{}}
@@ -320,7 +327,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   lifeNoticeLeft=0;$('house-lives').hidden=true;
   television.sync(false,false);notePresentation=false;
   louis=null;loisShotDirector=null;rcTrap={armed:false,closed:false};finalCutscene=null;
-  mapReadOnly=false;mapPreview=null;mapReveal=false;emyMenuOpen=false;emyAbilities=createEmyAbilities();emyNameCue=createEmyNameCue();$('house-emy-name').hidden=true;heldNoise=null;hopAge=HOP_COOLDOWN;hopCancelled=false;clearMiniatureInput();
+  mapReadOnly=false;mapPreview=null;mapReveal=false;emyMenuOpen=false;emyAbilities=createEmyAbilities();emyNameCue=createEmyNameCue();$('house-emy-name').hidden=true;heldNoise=null;hopAge=HOP_COOLDOWN;hopCancelled=false;previousEquipment=null;lastHapticThreat=false;lastHapticPhase='';haptics.stop();clearMiniatureInput();
   $('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;$('house-emy-wave').hidden=true;
   releaseMouse();events.reset();mirrorSafe.reset();hudMessages.reset();phone.close();sound.setPhoneMusic(false);phone.musicPlaying=false;phone.hint='';phoneTurn=0;encounterCheckpoint=null;danger.hidden=true;
    root.querySelector('[data-act=emotes]').setAttribute('aria-expanded','false');
@@ -433,6 +440,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const loc=listener(),source=o?{x:o.x,y:o.y,z:o.z,material:o.material,surface:o.surface}:null;
   const occluded=source?lineBlocked(world.boxes,loc,source,o?.kind==='door'?'door-'+o.id:''):false;
   sound.effect(name,source,{...loc,yaw:s.yaw},occluded,{level});
+  if(name==='pickup')haptics.pulse(['key','screwdriver','rc-car'].includes(o?.kind)||o===world.emy?'key':'pickup');
   if(name==='cat')caption(o===world.emy||o?.kind==='emy-cat'?'Maullido de Emy':'Maullido junto a la salida');
   if(name==='cat-purr')caption('Ronroneo de Emy');
   if(name==='floor-groan')caption('Cruje el suelo');
@@ -1220,6 +1228,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   else if(!throwing&&!s.hidden&&!s.lying&&(target?.motion||hatchMoving))action=target.state==='opening'||hatchMoving&&target.open?'Abriendo…':'Cerrando…';
   const actionLabel=interactButton.querySelector('small');
   if(actionLabel.textContent!==action)actionLabel.textContent=action;
+  const actionIcon=interactionIcon(target,{throwing,hidden:!!s.hidden,lying:!!s.lying});
+  if(interactButton.dataset.icon!==actionIcon){interactButton.dataset.icon=actionIcon;interactButton.querySelector('.house-action-icon').innerHTML=feedbackIcon(actionIcon);}
+  root.classList.toggle('house-immersive',options.immersive!==false&&!scenario);
+  root.classList.toggle('house-action-ready',canInteract);
   const focusLabel='';
   if($('lab-focus').textContent!==focusLabel)$('lab-focus').textContent=focusLabel;
   const remote=rc?.mode==='driving';
@@ -1373,6 +1385,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  function beginCapture(){
   if(captureShot)return;
+  haptics.pulse('capture');
   // Save the debit immediately so reloading during the cinematic cannot undo it.
   const loss=captureLoss(s.lives,lastSafeCheckpoint,pursuer.witnessed,s.emyRescueUsed);
   s.lives=loss.lives;s.emyRescueUsed=loss.emyRescueUsed;lastSafeCheckpoint=loss.checkpoint;
@@ -1586,6 +1599,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(!s||!renderer)return;
   if(hopAge<HOP_COOLDOWN){
    const hop=advanceHop(hopAge,hopCancelled,isSuspended()?0:shotDelta,canHop());
+   if(!hop.cancelled&&hopAge<HOP_DURATION&&hop.age>=HOP_DURATION){haptics.pulse('landing');play('land',null,.18);}
    hopAge=hop.age;hopCancelled=hop.cancelled;
   }
   updateHiding(dt);
@@ -1666,7 +1680,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    const beforeX=s.x,beforeZ=s.z;tick(dt);view=cameraOf(s);elapsed+=isPaused()?0:dt;
    const dx=s.x-beforeX,dz=s.z-beforeZ;distance=Math.hypot(dx,dz);const divisor=distance||1;
    const wasEmote=animator.emote;
-   animator.advance(dt,{distance,forward:(dx*Math.sin(s.yaw)+dz*Math.cos(s.yaw))/divisor,side:(dx*Math.cos(s.yaw)-dz*Math.sin(s.yaw))/divisor,paused:isPaused(),reduced:reducedMotion.matches,equipment,emoteElapsed:sound.emoteElapsed});
+   animator.advance(dt,{distance,forward:(dx*Math.sin(s.yaw)+dz*Math.cos(s.yaw))/divisor,side:(dx*Math.cos(s.yaw)-dz*Math.sin(s.yaw))/divisor,paused:isPaused(),reduced:reducedMotion.matches,equipment,emoteElapsed:sound.emoteElapsed,hopAge:hopCancelled?Infinity:hopAge});
    const leftBathroom=wasEmote&&!inBathroom();
    if(leftBathroom)animator.cancelEmote();
    if(wasEmote&&!animator.emote){
@@ -1851,6 +1865,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    s.hidden?'Sigue patrullando · espera a que se aleje':'Está patrullando';
   if(danger.textContent!==threatText)danger.textContent=threatText;
   root.classList.toggle('house-threat',!danger.hidden);
+  if(!isSuspended()){
+   if(events.phase==='arrival'&&lastHapticPhase!=='arrival')haptics.pulse('arrival');
+   if(chasing&&!lastHapticThreat)haptics.pulse('chase');
+   lastHapticPhase=events.phase;lastHapticThreat=chasing;
+  }
   if(!isSuspended())equipmentAge+=shotDelta;
   const cameraMode=phone.open&&phone.app==='camera'&&!isPaused()&&!s.hidden;
   const turnTarget=Number(cameraMode);
@@ -1870,7 +1889,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   const raisedNote=noteLift>0&&!phone.open&&!cinematic&&events.phase!=='arrival'&&!s.hidden;
   if(keyTurn&&!isPaused()){keyTurn.time+=shotDelta;if(keyTurn.time>=.52)keyTurn=null;}
-  const visualEquipment=heldNoise?'empty':keyTurn?keyTurn.kind:raisedNote||equipment==='paper'&&(s.inventory.pendingNote??s.inventory.notes.at(-1))?.id==='mirror-note'?'note':notePresentation?'empty':equipment,noteRaise=noteLift*noteLift*(3-2*noteLift);
+  let visualEquipment=heldNoise?'empty':keyTurn?keyTurn.kind:raisedNote||equipment==='paper'&&(s.inventory.pendingNote??s.inventory.notes.at(-1))?.id==='mirror-note'?'note':notePresentation?'empty':equipment,noteRaise=noteLift*noteLift*(3-2*noteLift);
+  const normalEquip=!heldNoise&&!keyTurn&&!raisedNote&&!notePresentation&&!phone.open&&batterySwap===null&&!remoteInUse()&&!cinematic;
+  const lowering=normalEquip&&previousEquipment!==null&&equipmentAge<.12&&!reducedMotion.matches;
+  if(lowering)visualEquipment=previousEquipment;
+  if(equipmentAge>=.12||!normalEquip)previousEquipment=null;
+  const equipLift=raisedNote?-.52*(1-noteRaise):reducedMotion.matches?0:lowering?-.28*Math.min(1,equipmentAge/.12):-.25*Math.pow(1-Math.min(1,Math.max(0,equipmentAge-.12)/.26),2);
+  const hopMotion=hopCancelled?null:hopPose(hopAge,reducedMotion.matches);
+  if(hand&&visualEquipment==='empty'&&hopMotion?.weight>0)visualEquipment='hop-hands';
   if(roomAt(s.x,s.z,s.y)!=='Sala de estar')world.television.power.on=false;
   television.sync(world.television.power.on&&housePowered(world.lights.power),!isPaused()&&!phone.open);
   if(updateWallClock(world.clock)&&!isPaused()&&Math.hypot(s.x-world.clock.x,s.y,s.z-world.clock.z)<4.5)play('clock-tick',world.clock,.55);
@@ -1971,7 +1997,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    const takingPhoto=capturePhoto&&cameraMode;capturePhoto=false;
    const emyMemory=!phone.emyMemory&&!world.emy.hidden&&!reducedMotion.matches&&((emyShot&&emyShot.elapsed>1.25&&emyShot.elapsed<2.6)||(pet.reaction>1&&pet.reaction<2.4&&!phone.open&&!isSuspended()));
    const cameraFlash=takingPhoto&&phone.flash;
-   renderer.render(view,cameraFlash?1.4:torch,elapsed,hand,{phoneTurn,captureProjection:cameraMode ? .82 : 1,onWorldFrame:cameraMode||emyMemory?frame=>{if(emyMemory)phone.rememberEmy(frame);if(takingPhoto){phone.takePhoto(frame);play('click');}if(cameraMode)phone.updateCamera(frame,now);}:undefined,rcView:rc?.mode==='driving'&&!!rc,scanOutline:emyAbilities.scan>0&&pursuer.active,bob:s.bob,action:handAction,clickAction,speed:animator.speed,acceleration:animator.acceleration,walkWeight:animator.weight,reduced:s.reduceBob,swayX:handDrift.x,swayY:handDrift.y,introHands,animator,feetY:s.y,crouched:s.crouched,equipment:visualEquipment,keyTurn:keyTurn?.time,noteRaise,batterySwap,tabletLift,equipLift:raisedNote?-.52*(1-noteRaise):reducedMotion.matches?0:-.22*Math.pow(1-Math.min(1,equipmentAge/.3),2),bathDoorAmount:world.objects.find(o=>o.id==='bano').amount,thirdPerson,actorTime,actorWalk,actorPiano,shotLight:cameraFlash?Math.max(.58,shotLight||0):shotLight,pursuer:finalCutscene?{...pursuer.snapshot(),captureReach:Math.min(1,finalCutscene.elapsed/.8)*Math.max(0,Math.min(1,(2.45-finalCutscene.elapsed)/.35)),captureLift:0,captureFace:{jaw:0,bite:0,twitch:0,left:0,right:0,glance:0}}:pursuer.snapshot(),television});
+   renderer.render(view,cameraFlash?1.4:torch,elapsed,hand,{phoneTurn,captureProjection:cameraMode ? .82 : 1,onWorldFrame:cameraMode||emyMemory?frame=>{if(emyMemory)phone.rememberEmy(frame);if(takingPhoto){phone.takePhoto(frame);play('click');}if(cameraMode)phone.updateCamera(frame,now);}:undefined,rcView:rc?.mode==='driving'&&!!rc,scanOutline:emyAbilities.scan>0&&pursuer.active,bob:s.bob,action:handAction,clickAction,speed:animator.speed,acceleration:animator.acceleration,walkWeight:animator.weight,reduced:s.reduceBob,swayX:handDrift.x,swayY:handDrift.y,introHands,animator,feetY:s.y,crouched:s.crouched,equipment:visualEquipment,keyTurn:keyTurn?.time,noteRaise,batterySwap,tabletLift,equipLift,hop:hopMotion,equipGesture:normalEquip&&!reducedMotion.matches?Math.sin(Math.PI*Math.min(1,equipmentAge/.38)):0,bathDoorAmount:world.objects.find(o=>o.id==='bano').amount,thirdPerson,actorTime,actorWalk,actorPiano,shotLight:cameraFlash?Math.max(.58,shotLight||0):shotLight,pursuer:finalCutscene?{...pursuer.snapshot(),captureReach:Math.min(1,finalCutscene.elapsed/.8)*Math.max(0,Math.min(1,(2.45-finalCutscene.elapsed)/.35)),captureLift:0,captureFace:{jaw:0,bite:0,twitch:0,left:0,right:0,glance:0}}:pursuer.snapshot(),television});
   }catch(e){interruptGraphics('Error de renderizado',String(e.message||e));return;}
   const mirrorDistance=Math.hypot(view.x-BATH_MIRROR.x,view.z-BATH_MIRROR.z);
   const readingMirror=mirrorLit&&inBathroom()&&renderer.mirrorDrawn&&mirrorDistance<3&&Math.abs(view.pitch-Math.atan2(BATH_MIRROR.y-view.y,mirrorDistance))<.57&&!phone.open;
@@ -2111,9 +2137,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(key==='quality'){options.quality=field.value;renderer.quality=field.value;root.querySelectorAll('[data-setting="quality"]').forEach(el=>{if(el!==field)el.value=field.value;});}
   if(key==='sensitivity'){options.sensitivity=Number(field.value);root.querySelectorAll('[data-setting="sensitivity"]').forEach(el=>{if(el!==field)el.value=field.value;});saveCamera();}
   if(key==='invertX'){options.invertX=field.checked;saveCamera();}
-  if(['bob','motion','captions','hints','threatText'].includes(key)){
+  if(['bob','motion','captions','hints','threatText','haptics','immersive'].includes(key)){
    options[key]=field.checked;saveCamera();syncMotion();
    if(key==='captions'&&!field.checked)hudMessages.clearSound();
+   if(key==='haptics'&&!field.checked)haptics.stop();
   }
   if(MIX_CHANNELS.some(([channel])=>channel===key)){
    sound.set(key,Number(field.value));
@@ -2193,11 +2220,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(e.key==='i'||e.key==='I')runAction('bag');
  },{signal});
  window.addEventListener('keyup',e=>{const key=movementKey(e);if(key)keys.delete(key);},{signal,capture:true});
- window.addEventListener('blur',()=>{hasFocus=false;clearMiniatureInput();releaseMouse();resetInput();suspendPianoClock();sound.pause();},{signal});
+ window.addEventListener('blur',()=>{hasFocus=false;haptics.stop();clearMiniatureInput();releaseMouse();resetInput();suspendPianoClock();sound.pause();},{signal});
  window.addEventListener('focus',()=>{hasFocus=true;resetInput();last=performance.now();resumeHouseAudio();},{signal});
- window.addEventListener('pagehide',()=>{hasFocus=false;clearMiniatureInput();releaseMouse();resetInput();suspendPianoClock();sound.pause();},{signal});
+ window.addEventListener('pagehide',()=>{hasFocus=false;haptics.stop();clearMiniatureInput();releaseMouse();resetInput();suspendPianoClock();sound.pause();},{signal});
  window.addEventListener('pageshow',()=>{hasFocus=document.hasFocus();resetInput();last=performance.now();resumeHouseAudio();},{signal});
- document.addEventListener('visibilitychange',()=>{last=performance.now();if(document.hidden){resetInput();suspendPianoClock();sound.pause();}else resumeHouseAudio();},{signal});
+ document.addEventListener('visibilitychange',()=>{last=performance.now();if(document.hidden){haptics.stop();resetInput();suspendPianoClock();sound.pause();}else resumeHouseAudio();},{signal});
  window.addEventListener('resize',()=>{last=performance.now();resetInput();if(isPortrait()){suspendPianoClock();sound.pause();}else resumeHouseAudio();},{signal});
  canvas.addEventListener('webglcontextlost',e=>{
   e.preventDefault();
@@ -2233,6 +2260,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   root.querySelector('[data-setting="captions"]').checked=options.captions!==false;
   root.querySelector('[data-setting="hints"]').checked=options.hints===true;
   root.querySelector('[data-setting="threatText"]').checked=options.threatText===true;
+  root.querySelector('[data-setting="haptics"]').checked=options.haptics!==false;
+  root.querySelector('[data-setting="immersive"]').checked=options.immersive!==false;
   root.querySelectorAll('[data-setting="quality"]').forEach(el=>el.value=options.quality);
   startHouse();
   raf=requestAnimationFrame(frame);
@@ -2316,7 +2345,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(!active)return;active=false;
   // A GPU/audio teardown must never strand the LP React route. Each resource
   // is independent; detach the root even if a browser rejects one disposal.
-  for(const dispose of [clearMiniatureInput,releaseMouse,()=>cancelAnimationFrame(raf),()=>controller.abort(),()=>television.destroy(),()=>phone.destroy(),()=>sound.destroy(),()=>renderer?.destroy()]){
+  for(const dispose of [()=>haptics.stop(),clearMiniatureInput,releaseMouse,()=>cancelAnimationFrame(raf),()=>controller.abort(),()=>television.destroy(),()=>phone.destroy(),()=>sound.destroy(),()=>renderer?.destroy()]){
    try{dispose();}catch(error){console.warn('House cleanup:',error);}
   }
   if(window.__rescueHouse)delete window.__rescueHouse;root.remove();
