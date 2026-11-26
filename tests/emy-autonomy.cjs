@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 (async()=>{
- const {createHouse}=await import('../src/lab/world.js');
+ const {createHouse,setDoor}=await import('../src/lab/world.js');
  const {createEmyCompanion,commandEmyStay,releaseEmyStay,updateEmyCompanion,
   snapshotEmyCompanion,restoreEmyCompanion,sendEmyDistract,rejoinEmyInPerson}=await import('../src/lab/emy-companion.js');
  const world=createHouse(),emy=createEmyCompanion(world.emy,{waiting:false});
@@ -26,6 +26,7 @@ const fs=require('node:fs');
  assert.equal(snapshotEmyCompanion(emy).stage,'stay','explicit command survives checkpoints');
  const saved=snapshotEmyCompanion(emy);
  const recoveredWorld=createHouse();
+ const bedroom=recoveredWorld.objects.find(o=>o.id==='dormitorio');bedroom.locked=false;setDoor(bedroom,true);
  const recovered=createEmyCompanion(recoveredWorld.emy);
  restoreEmyCompanion(recovered,saved,'hunt');
  assert.equal(recovered.stage,'stay');
