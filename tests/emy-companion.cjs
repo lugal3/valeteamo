@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
  const {createHouse,setDoor,lineBlocked}=await import('../src/lab/world.js');
  const {Pursuer}=await import('../src/lab/pursuer.js');
  const {petEmy,emyLandmarks}=await import('../src/lab/emy-cat.js');
- const {EMY_ENTRANCE_SECONDS,createEmyCompanion,beginEmyEntrance,emyEntranceCamera,sendEmyToTrunk,
+ const {EMY_ENTRANCE_SECONDS,FOLLOW_STOP,FOLLOW_RESUME,createEmyCompanion,beginEmyEntrance,emyEntranceCamera,sendEmyToTrunk,
   updateEmyCompanion,snapshotEmyCompanion,restoreEmyCompanion}=await import('../src/lab/emy-companion.js');
  const world=createHouse();
  for(const id of ['salon','estudio','dormitorio'])setDoor(world.objects.find(o=>o.id===id),true);
@@ -33,9 +33,9 @@ const assert=require('node:assert/strict');
  // turn her into a compass needle or make her shuffle after Kitty.
  const personalWorld=createHouse();
  for(const id of ['salon','estudio','dormitorio'])setDoor(personalWorld.objects.find(o=>o.id===id),true);
- const personalPlayer={x:5.3,y:0,z:7.1,yaw:0,hidden:null};
+ const personalPlayer={x:7.17,y:0,z:8.1,yaw:0,hidden:null};
  const personal=createEmyCompanion(personalWorld.emy,{waiting:false});
- Object.assign(personal.cat,{x:4.1,y:0,z:7.1,yaw:.72});
+ Object.assign(personal.cat,{x:5.95,y:0,z:8.1,yaw:.72});
  const settled={x:personal.cat.x,z:personal.cat.z,yaw:personal.cat.yaw};
  for(let i=0;i<120;i++){
   const a=i/120*Math.PI*2;
@@ -45,11 +45,14 @@ const assert=require('node:assert/strict');
  }
  assert(Math.hypot(personal.cat.x-settled.x,personal.cat.z-settled.z)<.0001,'Emy stays put while Kitty circles nearby');
  assert(Math.abs(personal.cat.yaw-settled.yaw)<.0001,'Emy does not constantly look at nearby Kitty');
- personalPlayer.x=7.2;personalPlayer.z=7.1;
+ personalPlayer.x=5.95;personalPlayer.z=11.1;
  updateEmyCompanion(personal,1/60,{world:personalWorld,player:personalPlayer});
  assert(personal.chasing,'Emy resumes following once Kitty really moves away');
  for(let i=0;i<119;i++)updateEmyCompanion(personal,1/60,{world:personalWorld,player:personalPlayer});
- assert(personal.cat.x>settled.x+.25,'Emy closes the larger gap without hovering at Kitty’s heels');
+ assert(personal.cat.z>settled.z+.25,'Emy closes the larger gap without hovering at Kitty’s heels');
+ for(let i=0;i<180;i++)updateEmyCompanion(personal,1/60,{world:personalWorld,player:personalPlayer});
+ const personalGap=Math.hypot(personal.cat.x-personalPlayer.x,personal.cat.z-personalPlayer.z);
+ assert(personalGap>=FOLLOW_STOP-.06&&personalGap<=FOLLOW_RESUME+.05,'Natural resting distance, got '+personalGap);
  const route=new Pursuer(world);Object.assign(route,player);
  assert(route.plan({x:2.3,y:3.15,z:3.85}));
  for(const point of route.path){Object.assign(player,{x:point.x,y:point.y,z:point.z});
@@ -58,7 +61,7 @@ const assert=require('node:assert/strict');
  Object.assign(player,{x:2.3,y:3.15,z:3.85});
  for(let i=0;i<60*60;i++)updateEmyCompanion(companion,1/60,{world,player});
  assert.equal(world.emy.y,3.15,'Emy climbs the stairs behind Kitty');
- assert(Math.hypot(world.emy.x-player.x,world.emy.z-player.z)<1.25);
+ assert(Math.hypot(world.emy.x-player.x,world.emy.z-player.z)<=FOLLOW_RESUME+.06,'After climbing, stop at the new natural distance');
  const enteringHide={objectId:'wardrobe',returnX:player.x,returnZ:player.z};
  let sawEntry=false;
  for(let i=0;i<180&&companion.stage!=='hiding';i++){
