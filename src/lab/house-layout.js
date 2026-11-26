@@ -10,6 +10,7 @@ import {installHolidayTree} from './holiday-tree.js';
 import {installHolidayCollectibles} from './holiday-collectibles.js';
 import {installWallClock} from './wall-clock.js';
 import {installLivingHouseDetails} from './house-ambient-details.js';
+import {installHolidayAmbience} from './house-holiday-ambience.js';
 import {STUDY_SIGN} from './artwork.js';
 import {HATCH,floorAroundHatch,installBasement} from './basement.js';
 import {decorateKitchen,installPiano,installKitchenBar,installExtraHides,PIANO_SHEET_ID} from './house-additions.js';
@@ -286,7 +287,7 @@ export function buildHouse(spawn='ground'){
  for(let i=0;i<5;i++)rug.push(add('hatch-rug-diamond-'+i,8.15+i*.2,.139,rugZ,.10,.010,.10,'velvet',false,{dynamic:true,yaw:Math.PI/4,color:[.83,.52,.52]}));
  const hatchRug=obj('hatch-rug','rug','Tapete bordado',8.55,.15,rugZ,{amount:0,aside:false,
   parts:rug.map(box=>({box,x:box.x,y:box.y}))});
- add('bath-floor',8.75,.012,5.9,2.25,.024,2.75,'tile',false,{ao:.90});add('toilet-base',9.25,.27,6.55,.45,.54,.65,'cream',true,{shape:'round'});add('toilet-seat',9.25,.56,6.5,.52,.08,.63,'cream',false,{shape:'round'});add('toilet-tank',9.25,.70,7.0,.50,.56,.22,'cream');
+ add('bath-floor',8.75,.012,5.9,2.25,.024,2.75,'tile',false,{ao:.96,surface:'glaze',color:[.51,.63,.64]});add('toilet-base',9.25,.27,6.55,.45,.54,.65,'cream',true,{shape:'round'});add('toilet-seat',9.25,.56,6.5,.52,.08,.63,'cream',false,{shape:'round'});add('toilet-tank',9.25,.70,7.0,.50,.56,.22,'cream');
  installCabinet(add,obj,{id:'basin-cabinet',label:'Gabinete bajo el lavamanos',x:8.66,z:4.8,w:.89,h:.86,d:.57,color:[.37,.45,.47],
   items:[{id:'bath-battery',kind:'battery',label:'Pila del lavamanos',dx:.235},{id:'bath-note',kind:'note',label:'Papel bajo el lavamanos',dx:-.17,text:'W. mandó quitar el pestillo de la sala de música. Desde entonces la cierra por fuera.'}]});
  add('basin',8.66,.922,4.81,.81,.13,.53,'cream',false,{shape:'lathe',profile:BASIN_PROFILE,segments:16,surface:'glaze',color:[.9,.92,.88]});
@@ -426,6 +427,7 @@ export function buildHouse(spawn='ground'){
   add('decal-study-dust',.12,.005,1.5,.12,.01,2.8,'stain',false);
   // V2 ambience uses only decorative non-collision geometry.
   installLivingHouseDetails(add,HEIGHT);
+  installHolidayAmbience(add,obj,HEIGHT);
   const spawns={mirror:{...MIRROR_SPAWN},ground:{x:5.95,y:0,z:10.65,yaw:Math.PI},upstairs:{x:12,y:HEIGHT,z:4.15,yaw:-Math.PI/2,items:{key:1}},sound:{x:2.2,y:0,z:11.0,yaw:Math.PI},interactions:{x:3.3,y:0,z:3.6,yaw:-2.8,items:{key:1,batteries:1}}};
  const lights=installHouseLights(add,obj,HEIGHT);
  holiday.tree.supply=lights.power;
