@@ -1891,6 +1891,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   root.classList.toggle('house-threat',!danger.hidden);
   root.classList.toggle('house-chase-tension',chasing&&!isSuspended());
   root.classList.toggle('house-watch-tension',investigating&&!isSuspended());
+  if(pursuer.active&&!isPaused()&&!finalCutscene&&['patrol','hunt','evaded','rc-setup'].includes(events.phase)){
+   // Existing recorded tracks crossfade via RecordedAudio.setMood; the
+   // generated fallback receives the same calm/watch/chase progression.
+   sound.setThreat(chasing||investigating);
+   sound.setTension(chasing?1:investigating?.76:s.hidden?.58:.33);
+  }
   if(!isSuspended()){
    if(events.phase==='arrival'&&lastHapticPhase!=='arrival')haptics.pulse('arrival');
    if(chasing&&!lastHapticThreat)haptics.pulse('chase');
