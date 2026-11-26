@@ -25,6 +25,19 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  while(hop.age<HOP_COOLDOWN)hop=advanceHop(hop.age,hop.cancelled,.1,true);
  assert(hop.cancelled,'Cancelled animation stays cancelled until an intentional new hop');
 
+ const {interactionIcon,feedbackIcon,createHaptics}=await import('../src/lab/hud-feedback.js');
+ assert.equal(interactionIcon({kind:'door'}),'door');
+ assert.equal(interactionIcon({kind:'key'}),'key');
+ assert.equal(interactionIcon({kind:'emy-cat'}),'cat');
+ assert.equal(interactionIcon({kind:'piano'},{throwing:true}),'throw');
+ assert.equal(interactionIcon(null,{hidden:true}),'exit');
+ assert(feedbackIcon('cat').includes('viewBox="0 0 24 24"'));
+ let time=0,enabled=true;const pulses=[];
+ const haptics=createHaptics({now:()=>time,enabled:()=>enabled,vibrate:p=>{pulses.push(p);return true;}});
+ assert(haptics.pulse('pickup'));assert(!haptics.pulse('pickup'));assert(haptics.pulse('chase'));assert(!haptics.pulse('chase'));
+ time=1200;assert(haptics.pulse('chase'));assert(haptics.pulse('capture'));enabled=false;assert(!haptics.pulse('capture'));
+ assert.notDeepEqual(pulses[0],pulses[1]);haptics.stop();assert.equal(pulses.at(-1),0);
+ assert(!createHaptics().pulse('key'),'Unsupported hardware is a harmless no-op');
  assert(threatAccessibility('chase').includes('Peligro'));
  assert(threatAccessibility('watch').includes('investigando'));
  assert(threatAccessibility('search').includes('Sin persecución'));
@@ -44,7 +57,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  assert(house.includes('id="lab-hop"'));
  assert(house.includes('phone.close();$(\'lab-camera-settings\').open=false;bag();return;'),'Inventory replaces rather than stacks the phone settings');
  assert(house.includes('const canUseHotbar=()=>ready&&!heldNoise'),'Occupied hand cannot equip a second item');
- assert(house.includes("const visualEquipment=heldNoise?'empty'"),'No floating second tool while throwing');
+ assert(/(?:const|let) visualEquipment=heldNoise\?'empty'/.test(house)&&house.includes('const normalEquip=!heldNoise'),'No floating second tool while throwing or transitioning');
 
  assert(house.includes('view={...view,y:view.y+hopOffset'));
  assert(css.includes('#lab3d #lab-hop{grid-area:2/3}'));
