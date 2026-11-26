@@ -83,7 +83,7 @@ export class Pursuer{
   Object.assign(this,{x,y,z,facing,yaw:facing,route,visited,quiet,mode:'cooldown',modeTime:Math.max(3,clamp(rest,0,7)),replan:0});
   return true;
  }
- planningBoxes(){const leaves=new Set(this.world.objects.filter(o=>o.kind==='door'&&o.state!=='open'&&(!this.navigationProfile||!o.locked&&!o.sealed)).flatMap(o=>[o.box,...(o.parts||[]).map(p=>p.box)]));return this.world.boxes.filter(b=>b.solid&&!leaves.has(b));}
+ planningBoxes(){const leaves=new Set(this.world.objects.filter(o=>o.kind==='door'&&o.state!=='open'&&!o.locked&&!o.sealed).flatMap(o=>[o.box,...(o.parts||[]).map(p=>p.box)]));return this.world.boxes.filter(b=>b.solid&&!leaves.has(b));}
  buildGraph(){
   const hatchOpen=this.world.hatch?.amount>.92;
   if(this.nodes&&this.graphHatchOpen===hatchOpen)return;
@@ -250,7 +250,7 @@ export class Pursuer{
    if(this.breakerDelay<=0&&!this.breakerGoal){this.breakerGoal={x:meter.x,y:0,z:meter.z+.58};this.replan=0;}
    if(this.breakerGoal&&Math.abs(this.y)<.2&&Math.hypot(this.x-meter.x,this.z-meter.z)<1){
     this.yaw=this.facing=Math.atan2(meter.x-this.x,meter.z-this.z);
-    this.speed=0;this.path=[];this.breakerGoal=null;this.breakerDelay=65+Math.random()*30;
+    this.speed=0;this.path=[];this.breakerGoal=null;this.breakerDelay=78;
     this.mode='patrol-rest';this.modeTime=.85;this.replan=0;
     cues.push('cut-power');return cues;
    }
