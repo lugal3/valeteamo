@@ -87,15 +87,17 @@ export class Pursuer{
   this.graphHatchOpen=hatchOpen;
   const doors=new Set(this.world.objects.filter(o=>o.kind==='door').flatMap(o=>[o.box,...(o.parts||[]).map(p=>p.box)])),boxes=this.world.boxes.filter(b=>b.solid&&!doors.has(b));
   const profile=this.navigationProfile,ground=profile?.ground??groundHeight;
+  const cellSize=profile?.cellSize??CELL,columns=profile?Math.ceil(HOUSE.width/cellSize):GRID_COLUMNS,rows=profile?Math.ceil(15.2/cellSize):GRID_ROWS;
+  const keyOf=profile?((i,j)=>i*(rows+2)+j):cellId;
   const isBlocked=indexNavigationColliders(boxes,profile?.radius??.16,profile?.height??1.72);
   this.nodes=[];this.cells=new Map();
-  for(let i=0;i<GRID_COLUMNS;i++)for(let j=0;j<GRID_ROWS;j++)for(const level of LEVELS){
-   const x=.2+i*CELL,z=.2+j*CELL,y=ground(x,z,level,hatchOpen),key=cellId(i,j);
+  for(let i=0;i<columns;i++)for(let j=0;j<rows;j++)for(const level of LEVELS){
+   const x=.2+i*cellSize,z=.2+j*cellSize,y=ground(x,z,level,hatchOpen),key=keyOf(i,j);
    const cell=this.cells.get(key)||[];
    if(!Number.isFinite(y)||cell.some(n=>Math.abs(n.y-y)<.1)||isBlocked(x,y,z))continue;
    const n={x,y,z,i,j,index:this.nodes.length};cell.push(n);this.cells.set(key,cell);this.nodes.push(n);
   }
-  for(const n of this.nodes){n.neighbors=[];for(const [di,dj]of NEIGHBORS)for(const next of this.cells.get(cellId(n.i+di,n.j+dj))||[]){
+  for(const n of this.nodes){n.neighbors=[];for(const [di,dj]of NEIGHBORS)for(const next of this.cells.get(keyOf(n.i+di,n.j+dj))||[]){
    if(Math.abs(next.y-n.y)>((n.y<0||next.y<0)?0.60:0.34))continue;
    let clear=true,sampleY=n.y;
    // Check the real walking surface on each substep, not a linear interpolation
