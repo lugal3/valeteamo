@@ -3,6 +3,7 @@ import {removeVentCover,advanceVentCover,poseVentCover} from './study-vent.js';
 import {HouseEvents} from './story-events.js';
 import {HouseMessages} from './hud-messages.js';
 import {interactionIcon,feedbackIcon,createHaptics} from './hud-feedback.js';
+import {PLUSH_NAMES,holidayPowered,beginGift,advanceGift,collectPlush,collectedPlushes} from './holiday-collectibles.js';
 import {hopPose} from './animations/hop.js';
 import {captureHouseCheckpoint,restoreHouseCheckpoint} from './house-checkpoint.js';
 import {PhoneUI} from './phone-ui.js';
@@ -86,6 +87,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   <div id="capture-loss" hidden><h2>Te atraparon</h2><p></p></div>
   <div id="capture-caption" class="capture-caption" role="status"></div>
  </div>
+ <div id="house-plush-toast" hidden role="status" aria-live="polite"><div class="plush-reward-art" aria-hidden="true"><i></i><b>♡</b></div><small>RECUERDO ENCONTRADO</small><strong></strong><span></span></div>
  <div id="house-lives" hidden role="status"><div class="life-slots" aria-hidden="true"></div><strong></strong></div>
  <div class="lab-window-intro lab-hidden" id="lab-window-intro" aria-label="Entrada cinematográfica por la ventana">
    <div class="lab-intro-top"></div>
@@ -201,6 +203,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const hudMessages=new HouseMessages(root);
  phone.onPresentationChange=()=>hudMessages.layout(phone.rect,phone.open);
  const controller=new AbortController(),signal=controller.signal;
+ let plushNoticeLeft=0;
  let rcViewSmoothed=null,hopAge=HOP_COOLDOWN,hopCancelled=false,previousEquipment=null,lastHapticThreat=false,lastHapticPhase='';
  let renderer,world,emyCompanion=null,emyShot=null,bathCircuit,puzzle=createHousePuzzle(config.entry),sound=new HouseSound(),s,raf=0,last=0,lastPaint=0,fps=0,elapsed=0,lookPointer=null,stickPointer=null;
  let active=true,ready=false,hasFocus=true,focus=null,lookLast={x:0,y:0},paused=false,modal='',intro=true,contextLost=false,stickPointerType=null,lookPointerType=null;
@@ -324,7 +327,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const seed=!saved&&scenario?.milestone;
   if(seed)saved=trialCheckpoint(seed);
   previousToolTarget=null;autoUseTarget=null;keyTurn=null;
-  lifeNoticeLeft=0;$('house-lives').hidden=true;
+  lifeNoticeLeft=0;$('house-lives').hidden=true;plushNoticeLeft=0;$('house-plush-toast').hidden=true;
   television.sync(false,false);notePresentation=false;
   louis=null;loisShotDirector=null;rcTrap={armed:false,closed:false};finalCutscene=null;
   mapReadOnly=false;mapPreview=null;mapReveal=false;emyMenuOpen=false;emyAbilities=createEmyAbilities();emyNameCue=createEmyNameCue();$('house-emy-name').hidden=true;heldNoise=null;hopAge=HOP_COOLDOWN;hopCancelled=false;previousEquipment=null;lastHapticThreat=false;lastHapticPhase='';haptics.stop();clearMiniatureInput();
@@ -557,6 +560,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    const action=$('lab-interact');(action.hidden||action.disabled?canvas:action).focus({preventScroll:true});
   });
  }
+ function showPlush(item){
+  const toast=$('house-plush-toast'),count=collectedPlushes(world.holiday).length;
+  toast.dataset.variant=String(item.index);toast.querySelector('strong').textContent=PLUSH_NAMES[item.index];toast.querySelector('span').textContent=count+' de 3 coleccionables';
+  toast.hidden=false;plushNoticeLeft=1.75;renderer.updateVisibility();play('pickup',item);haptics.pulse('puzzle');saveCheckpoint();
+ }
  function interact(){
   // Throw is a distinct action from pickup: do not swallow an intentional
   // press of the newly enabled action button during the pickup debounce.
@@ -589,6 +597,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(batterySwap!==null){say('Termina de cambiar la pila antes de recoger el objeto.');return;}
    if(grabNoiseProp(o)){heldNoise=o;previousToolTarget=null;autoUseTarget=null;cancelEmote({immediate:true});play('pickup',o);say(o.label.replace('Recoger','Recogiste')+'. '+throwableHint(!desktop.matches),3);}
    return;
+  }else if(o.kind==='holiday-switch'){
+   if(!housePowered(world.lights.power)){say('Sin corriente · revisa el interruptor general');return;}
+   o.tree.on=!o.tree.on;play('click',o);saveCheckpoint();return;
+  }else if(o.kind==='gift'){
+   if(beginGift(world.holiday,reducedMotion.matches)){play('cloth',o);handAction=1;}return;
+  }else if(o.kind==='collectible'){
+   if(collectPlush(world.holiday,o))showPlush(o);return;
   }else if(o.kind==='light-switch'){
    const on=toggleCircuit(o.circuit);play('click',o);
    say(on===null?'Sin corriente · revisa el interruptor general':on?'Luz encendida':'Luz apagada');
@@ -785,7 +800,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const actions=[['Cerrar mochila','close']];
   const charge=Math.ceil(s.battery);
   if(!heldNoise&&charge<100&&s.inventory.batteries>0)actions.unshift(['Usar pila (hasta +'+SPARE_CHARGE+'%)','recharge']);
-  showModal('Mi mochila',`<p><b>Auto RC:</b> ${s.inventory.rc?'Auto y tablet listos':'Sin recoger'}</p><p><b>⚿ Llave:</b> ${s.inventory.key?'Llave con lazo · abre el dormitorio':'Sin llave con lazo'}</p>${s.inventory.masterKey?'<p><b>Llave maestra</b> · Abre la puerta principal</p>':''}<p><b>Linterna:</b> ${charge}% · <b>Pilas de repuesto:</b> ${s.inventory.batteries}</p><div class="lab-note-list">${notes}</div>`,actions);
+  showModal('Mi mochila',`<p><b>Recuerdos:</b> ${collectedPlushes(world.holiday).length} de 3 peluches</p><p><b>Auto RC:</b> ${s.inventory.rc?'Auto y tablet listos':'Sin recoger'}</p><p><b>⚿ Llave:</b> ${s.inventory.key?'Llave con lazo · abre el dormitorio':'Sin llave con lazo'}</p>${s.inventory.masterKey?'<p><b>Llave maestra</b> · Abre la puerta principal</p>':''}<p><b>Linterna:</b> ${charge}% · <b>Pilas de repuesto:</b> ${s.inventory.batteries}</p><div class="lab-note-list">${notes}</div>`,actions);
  }
  function startBatterySwap(){
   if(heldNoise){say('Lanza primero el objeto que llevas.');return false;}
@@ -1283,6 +1298,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    case 'tap':return target.on?'Cerrar llave':'Abrir llave';
    case 'cupboard':return target.open?'Cerrar mueble':'Abrir mueble';
    case 'safe':return mirrorSafe.opened?'Ver contenido':'Introducir código';
+   case 'holiday-switch':return !housePowered(world.lights.power)?'Árbol sin corriente':holidayPowered(world.holiday)?'Apagar árbol':'Encender árbol';
+   case 'gift':return 'Abrir regalo';
+   case 'collectible':return 'Recoger peluche';
    case 'light-switch':return !housePowered(world.lights.power)?'Sin corriente':target.circuit.on?'Apagar luz':'Encender luz';
    default:return target.label||'Examinar';
   }
@@ -1290,6 +1308,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function tick(dt){
   if(isPaused()||finalCutscene)return;
   updateFurniture(world.objects,dt,s);
+  const gifted=advanceGift(world.holiday,dt);if(gifted)showPlush(gifted);
   const louisCue=updateLouisEscape(louis,dt,s);
   if(louisCue==='untied'){
    for(const box of world.boxes)if(box.id.startsWith('captive-rope-'))box.hiddenGeometry=true;
@@ -1603,6 +1622,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    hopAge=hop.age;hopCancelled=hop.cancelled;
   }
   updateHiding(dt);
+  if(plushNoticeLeft>0&&!isSuspended()){plushNoticeLeft=Math.max(0,plushNoticeLeft-shotDelta);if(!plushNoticeLeft)$('house-plush-toast').hidden=true;}
   if(lifeNoticeLeft>0&&!captureShot){
    if(!isSuspended())lifeNoticeLeft=Math.max(0,lifeNoticeLeft-shotDelta);
    if(!lifeNoticeLeft)$('house-lives').hidden=true;
@@ -2275,6 +2295,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    mirrorPuzzle:()=>({...mirrorSafe.snapshot(),noteLift,safe:(()=>{const o=world.objects.find(o=>o.id==='mirror-safe');return {amount:o.amount,state:o.state};})()}),
    pianoPuzzle:()=>({picked:world.pianoSheet.taken,placed:world.piano.scorePlaced,solved:world.piano.solved,
     compartment:world.piano.compartmentAmount}),
+   holiday:()=>({powered:holidayPowered(world.holiday),switchOn:world.holiday.tree.on,plushes:collectedPlushes(world.holiday),giftOpened:world.holiday.gift.opened,giftAge:world.holiday.gift.age}),
    amenities:()=>({power:housePowered(world.lights.power),lights:world.lights.circuits.filter(circuitPowered).map(c=>c.id),
     battery:{charge:s.battery,spares:s.inventory.batteries,swap:batterySwap},
     television:{on:television.powered,time:television.video.currentTime,duration:television.video.duration,frame:renderer.tvFrame},
