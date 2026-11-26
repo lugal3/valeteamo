@@ -220,16 +220,16 @@ const {chromium,webkit}=require('playwright');
   assert.equal(await page.locator('#house-emy-map [data-act^="emy:room:"]').count(),0);
   assert.equal(await page.locator('#house-emy-miniature [data-marker="threat"]').count(),0);
   await shot(page,'03f-mapas-telefono-consulta');
-  await page.locator('#house-emy-map [data-act="emy:map:back"]').click();
-  await page.locator('.phone-apps[data-home-page="0"]').waitFor();
-  await shot(page,'03g-iphone-inicio');
   // The scan injected a live pursuer into an otherwise peaceful explore
-  // fixture. End that fixture only after verifying the phone map marker.
-  // A real spotted cue intentionally closes the phone; WebKit takes longer
-  // to render the remaining apps and used to encounter that unrelated chase.
+  // fixture. End the fixture while the read-only map is still paused,
+  // only after verifying its marker. A real sighting deliberately closes
+  // the phone; unrelated app tests must not race that gameplay event.
   const cleared=await page.evaluate(()=>window.__rescueHouse.clearThreatFixture());
   assert.equal(cleared.active,false);
+  await page.locator('#house-emy-map [data-act="emy:map:back"]').click();
+  await page.locator('.phone-apps[data-home-page="0"]').waitFor();
   assert(await page.locator('.phone-screen').isVisible());
+  await shot(page,'03g-iphone-inicio');
   // A horizontal gesture goes through the shell's actual pointer handlers.
   await page.locator('.phone-shell').evaluate(el=>{
    const r=el.getBoundingClientRect(),y=r.top+r.height*.55;
