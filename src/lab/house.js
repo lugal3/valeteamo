@@ -842,6 +842,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const markers=miniatureMarkers({x:s.x,y:s.y,z:s.z},{x:world.emy.x,y:world.emy.y,z:world.emy.z,hidden:world.emy.hidden},
    pursuer,emyAbilities.scan>0&&pursuer.active&&renderer.lastScanOutline);
   host.innerHTML=miniatureSVG(world,miniatureView,{floor:emyMapFloor,selectedId:emyMapSelected,lockedIds,markers});
+  const legend=$('house-emy-mini-legend');
+  if(legend){
+   const ids=new Set([...host.querySelectorAll('[data-marker]')].map(el=>el.dataset.marker));
+   const entries=[['kitty','K','Kitty'],['emy','E','Emy'],['threat','!','Amenaza']].filter(([id])=>ids.has(id));
+   const html=entries.map(([id,symbol,label])=>'<span class="mini-legend-item '+id+'"><b>'+symbol+'</b> '+label+'</span>').join('');
+   if(legend.dataset.markers!==html){legend.dataset.markers=html;legend.innerHTML=html||'Toca o desliza la lista ↓';}
+  }
  }
  const mapPointers=new Map();let mapDragged=false,mapSuppressUntil=0,mapRedraw=0,mapUnavailable={},mapRejected={},mapValidation=new Map();
  function scheduleMiniature(){if(!mapRedraw)mapRedraw=requestAnimationFrame(()=>{mapRedraw=0;drawEmyMiniature();});}
@@ -911,7 +918,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      [['left','↶','Girar izquierda'],['right','↷','Girar derecha'],['up','↑','Inclinar arriba'],['down','↓','Inclinar abajo'],['plus','+','Acercar'],['minus','−','Alejar'],['reset','⌂','Restablecer vista']].map(([id,label,desc])=>'<button data-act="emy:view:'+id+'" aria-label="'+desc+'">'+label+'</button>').join('')+'</div>'+
     '</section>'+
     '<section class="house-emy-destination-panel" aria-label="Habitaciones de '+floorName+'">'+
-     '<div class="house-emy-destination-head"><strong>Habitaciones y zonas</strong><small>Toca o desliza la lista ↓</small></div>'+
+     '<div class="house-emy-destination-head"><strong>Habitaciones y zonas</strong><small id="house-emy-mini-legend">Toca o desliza la lista ↓</small></div>'+
      (emyMapFloor<0?'<div class="mini-exterior-copy"><b>La casa de Kitty</b><p>Gira la miniatura para explorar el exterior. Selecciona planta baja o alta para retirar la cubierta y elegir dónde enviar a Emy.</p><p>● Kitty &nbsp; ◆ Emy</p></div>':
       '<div class="house-emy-destination-list">'+emyFloorList(world.rooms,emyMapFloor,options)+'</div>')+
     '</section>'+
