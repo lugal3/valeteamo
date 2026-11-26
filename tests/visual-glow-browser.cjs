@@ -69,6 +69,24 @@ const ORIGINAL_GLOW=`
   assert.equal(before.interestWidth,'64px');assert.equal(after.interestWidth,'28px');
   assert(after.screws>=1);
   fs.writeFileSync(path.join(dir,'comparison.json'),JSON.stringify({before,after,notes:'Same V2 scene, legacy main CSS injected only for the before screenshot'},null,2));
+  // Exercise seasonal objects through the real interaction raycast and game loop.
+  const use=id=>page.evaluate(id=>window.__rescueHouse.interactWith(id),id);
+  const holiday=()=>page.evaluate(()=>window.__rescueHouse.holiday());
+  await use('holiday-tree-switch');assert.equal((await holiday()).powered,false);
+  await page.screenshot({path:path.join(dir,'arbol-apagado.png')});
+  await use('holiday-tree-switch');assert.equal((await holiday()).powered,true);
+  await page.screenshot({path:path.join(dir,'arbol-encendido.png')});
+  await use('house-power');assert.equal((await holiday()).powered,false);
+  await use('house-power');assert.equal((await holiday()).powered,true);
+  await use('plush-gift');
+  await page.waitForFunction(()=>window.__rescueHouse.holiday().giftOpened);
+  assert.deepEqual((await holiday()).plushes,['plush-gift']);
+  await page.locator('#house-plush-toast').waitFor();
+  await page.screenshot({path:path.join(dir,'regalo-1-de-3.png')});
+  await use('plush-stairs');assert.equal((await holiday()).plushes.length,2);
+  await use('plush-altar');assert.equal((await holiday()).plushes.length,3);
+  await page.screenshot({path:path.join(dir,'coleccion-3-de-3.png')});
+  assert.equal(await page.locator('#lab-canvas').evaluate(c=>c.getContext('webgl').getError()),0);
   console.log('PASS V2 glow comparison: real WebGL1 study, before/after marker widths, unobstructed scene',JSON.stringify({before,after}));
  }finally{await browser?.close();await server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});
