@@ -110,19 +110,21 @@ function tailPoint(t,mode,phase){
   const a=-Math.PI*.4+t*Math.PI*1.55;
   return [.01+Math.sin(a)*.255,.09+Math.sin(t*Math.PI)*.012,-.10-Math.cos(a)*.32];
  }
- if(mode==='sit'||mode==='groom'){
-  const a=t*2.9;return [.28*(1-Math.cos(a))*.5,.10+.10*(1-t),-.30-Math.sin(a)*.22];
+ if(mode==='sit'||mode==='groom'||mode==='crouch'){
+  const a=t*2.9,sway=mode==='crouch'?0:Math.sin(phase*1.05)*.018*t*t;
+  return [.28*(1-Math.cos(a))*.5+sway,.10+.10*(1-t),-.30-Math.sin(a)*.22];
  }
+ if(mode==='alert')return [.025*Math.sin(t*3+phase*2)*t,.30+.49*Math.sin(t*Math.PI*.64),-.35-.24*t];
  const sway=Math.sin(phase*1.8+t*1.3)*.035*t;
  return [sway+.06*Math.sin(t*Math.PI),.30+.27*t+(mode==='purr'?.09*t:0),-.35-.43*t+.07*Math.sin(t*Math.PI)];
 }
 // A continuous swept tube for the tail, with shared seam vertices and normals.
-export function emyTailSurface(mode='walk',phase=0,fibres=0){
+export function emyTailSurface(mode='walk',phase=0,fibres=0,alarm=0){
  const vertices=[],indices=[],rings=22,sides=10;
  for(let i=0;i<=rings;i++){
   const t=i/rings,p=tailPoint(t,mode,phase),a=tailPoint(Math.max(0,t-.001),mode,phase),b=tailPoint(Math.min(1,t+.001),mode,phase),dir=norm(b.map((v,k)=>v-a[k]));
   const right=norm([dir[2],0,-dir[0]]),up=norm([dir[1]*right[2],dir[2]*right[0]-dir[0]*right[2],-dir[1]*right[0]]);
-  const radius=t===1?.00001:.065*Math.pow(Math.sin(Math.PI*(.11+.88*t)),.55)+.004;
+  const radius=t===1?.00001:(.065*Math.pow(Math.sin(Math.PI*(.11+.88*t)),.55)+.004)*(1+.36*alarm);
   for(let j=0;j<=sides;j++){
    const u=j/sides,angle=u*Math.PI*2,normal=right.map((v,k)=>v*Math.cos(angle)+up[k]*Math.sin(angle));
    vertices.push(...p.map((v,k)=>v+normal[k]*radius),.89,.93,.97,...normal,.51+u*.48,.01+t*.48,20,64,...right);
@@ -134,7 +136,7 @@ export function emyTailSurface(mode='walk',phase=0,fibres=0){
  for(let j=0;j<fibres;j++){
   const t=.03+rand()*.94,a=rand()*Math.PI*2,p=tailPoint(t,mode,phase),b=tailPoint(Math.min(1,t+.001),mode,phase),dir=norm(b.map((v,k)=>v-p[k]));
   const right=norm([dir[2],0,-dir[0]]),up=norm([dir[1]*right[2],dir[2]*right[0]-dir[0]*right[2],-dir[1]*right[0]]),normal=right.map((v,k)=>v*Math.cos(a)+up[k]*Math.sin(a));
-  const radius=.065*Math.pow(Math.sin(Math.PI*(.11+.88*t)),.55)+.004,len=.025+rand()*.035,offset=vertices.length/16,shade=1+rand()*.18;
+  const radius=(.065*Math.pow(Math.sin(Math.PI*(.11+.88*t)),.55)+.004)*(1+.36*alarm),len=(.025+rand()*.035)*(1+.35*alarm),offset=vertices.length/16,shade=1+rand()*.18;
   for(let row=0;row<3;row++)for(const side of row===2?[0]:[-1,1]){
    const f=row*.5,w=(1-f)*.0006*side,pt=p.map((v,k)=>v+normal[k]*(radius+.001+len*.32*Math.sin(f*Math.PI*.8))+dir[k]*len*f+right[k]*w);
    vertices.push(...pt,.89*shade,.93*shade,.97*shade,...normal,.51+a/(Math.PI*2)*.48,.01+t*.48,20,65,...right);
@@ -159,14 +161,17 @@ export function writeEmySurface(out,start,box){
   // the flank and back while keeping both root vertices attached.
   if(box.bristle&&mesh.skin&&i/16>=mesh.baseCount&&py>.16){
    const row=Math.floor(((i/16-mesh.baseCount)%7)/2);
-   const lift=.044*box.bristle*(row/3)**2;
+   const lift=.062*box.bristle*(row/3)**2;
    px+=nnx*lift;py+=(.45+Math.max(0,nny))*lift;pz+=nnz*lift;
   }
-  if(box.earTurn&&py>.09){
-   const weight=Math.min(1,(py-.09)/.06),angle=box.earTurn*weight;
+  if((box.earTurn||box.earFlatten)&&py>.09){
+   const weight=Math.min(1,(py-.09)/.06),angle=(box.earTurn||0)*weight;
    const cs=Math.cos(angle),sn=Math.sin(angle),pivot=Math.sign(px)*.107,dx=px-pivot;
    px=pivot+cs*dx+sn*pz;pz=cs*pz-sn*dx;
    const nx=nnx;nnx=cs*nx+sn*nnz;nnz=cs*nnz-sn*nx;
+   const fold=(box.earFlatten||0)*weight*.46,cf=Math.cos(fold),sf=Math.sin(fold),ey=py-.09;
+   py=.09+cf*ey-sf*pz;pz=sf*ey+cf*pz;
+   const ny=nny;nny=cf*ny-sf*nnz;nnz=sf*ny+cf*nnz;
   }
   if(mesh.skin&&box.emySkinFrames){
    const at=i/2;let x=0,y=0,z=0,nx=0,ny=0,nz=0;
