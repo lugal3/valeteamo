@@ -104,7 +104,7 @@ export class PhoneUI{
   this.host.querySelector('[data-app=close]').focus();this.onPresentationChange();
  }
  get canWalk(){return this.open&&!['settings','snake'].includes(this.app);}
- syncAppMode(){this.root.classList.toggle('house-phone-walk',this.canWalk);this.root.classList.toggle('house-phone-camera',this.open&&this.app==='camera');this.onAppChange(this.open?this.app:null);}
+ syncAppMode(){this.root.classList.toggle('house-phone-walk',this.canWalk);this.host.querySelector('.phone-screen').setAttribute('aria-modal',String(!this.canWalk));this.root.classList.toggle('house-phone-camera',this.open&&this.app==='camera');this.onAppChange(this.open?this.app:null);}
  setApp(app){this.app=app;this.selectedPhoto=null;if(app==='snake')this.resetSnake();this.last='';this.syncAppMode();if(this.events)this.update(this.events,0);}
  changePage(page){this.homePage=Math.max(0,Math.min(PHONE_PAGES.length-1,page));this.last='';if(this.events)this.update(this.events,0);}
  close(){if(this.settings){this.settings.open=false;this.settings.hidden=true;}const wasOpen=this.open;this.open=false;this.root.classList.remove('house-phone-open');if(wasOpen)this.syncAppMode();this.host.querySelector('.phone-screen').hidden=true;if(wasOpen&&this.previousFocus?.isConnected)this.previousFocus.focus({preventScroll:true});if(wasOpen)this.onPresentationChange();}
@@ -117,7 +117,7 @@ export class PhoneUI{
   image.getContext('2d').drawImage(canvas,(canvas.width-sw)/2,(canvas.height-sh)/2,sw,sh,0,0,image.width,image.height);
   const photo={url:image.toDataURL('image/jpeg',.78),label:'Casa · '+formatPhoneTime()};
   this.gallery.unshift(photo);
-  this.root.classList.add('phone-photo-taken');clearTimeout(this.photoFlashTimer);this.photoFlashTimer=setTimeout(()=>this.root.classList.remove('phone-photo-taken'),160);
+  if(this.flash){this.root.classList.add('phone-photo-taken');clearTimeout(this.photoFlashTimer);this.photoFlashTimer=setTimeout(()=>this.root.classList.remove('phone-photo-taken'),160);}
   if(this.gallery.length>gallerySprites.length+8)this.gallery.splice(8,1);
   this.photoCount++;this.last='';
  }
