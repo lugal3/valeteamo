@@ -42,7 +42,7 @@ import {BATTERY_SWAP_SECONDS} from './viewmodel.js';
 import {rescueProgress} from './rescue-progress.js';
 import {poseEscapeAmbush,poseEmyLastChance,createRescueObjectives,updateEmySenses} from './emy-rescue.js';
 import {collectCinematicCues} from './cinematic-cues.js';
-import {FINALE_BEATS,finaleStage,finaleThreat,finaleWeather} from './escape-finale.js';
+import {FINALE_BEATS,finaleStage,finaleThreat,finaleWeather,finaleEmyGoal} from './escape-finale.js';
 import {createAltarVisit,advanceAltarVisit,activateAltarRecord} from './louis-altar.js';
 import {rcControlHint,throwableHint,threatAccessibility,hopOffset,HOP_DURATION,HOP_COOLDOWN,advanceHop} from './hud-context.js';
 import {updateUpstairsEmy,petEmy,poseEmy} from './emy-cat.js';
@@ -1889,13 +1889,20 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     // cat on walkable ground. Do not resume her old trunk controller.
     if(!isSuspended()&&events.phase==='ending'){
      shot.runAge+=shotDelta;
-     const cat=world.emy,goal={x:5.38,z:Math.max(17.05,Math.min(20.0,s.z+2.4))};
+     const cat=world.emy,goal=finaleEmyGoal(s);
      const dx=goal.x-cat.x,dz=goal.z-cat.z,d=Math.hypot(dx,dz);
      const step=d>.14?Math.min(d,2.55*dt):0;
      const moved=step?navigate(cat,world,dx/d*step,dz/d*step,.40):0;
-     if(moved>.001)cat.yaw=Math.atan2(dx,dz);
+     const settled=goal.rejoin&&Math.hypot(goal.x-cat.x,goal.z-cat.z)<.23;
+      if(moved>.001)cat.yaw=Math.atan2(dx,dz);
+      else if(settled){
+       const heading=Math.atan2(s.x-cat.x,s.z-cat.z);
+       const angle=Math.atan2(Math.sin(heading-cat.yaw),Math.cos(heading-cat.yaw));
+       cat.yaw+=clamp(angle,-dt*5,dt*5);
+      }
+      shot.rejoinAge=settled?(shot.rejoinAge||0)+dt:0;
      cat.age+=dt;poseEmy(cat,{walking:moved>.001,mode:moved>.001?'walk':'idle',phase:cat.age,reduced:reducedMotion.matches});
-     if(s.z>=17.7&&s.x>3.8&&s.x<8.0&&cat.z>=17&&Math.hypot(s.x-louis.x,s.z-louis.z)<2.25){
+     if(s.z>=17.7&&s.x>3.8&&s.x<8.0&&cat.z>=17&&shot.rejoinAge>=.55&&Math.hypot(s.x-louis.x,s.z-louis.z)<2.25){
       events.phase='safe';resetInput();
       for(const cue of collectCinematicCues('escape',shot.elapsed,FINALE_BEATS.finish,shot.cues)){play(cue.sound,null,cue.level);caption(cue.caption);}
       showModal('Final 1 · ¡Kitty y Louis escaparon!',
