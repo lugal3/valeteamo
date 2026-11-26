@@ -375,7 +375,7 @@ export class HouseSound {
   }
   if(this.recordings?.kind(kind,{gain:gain*(kind==='danger-alert'?.85:kind==='cat-purr'?.70:1.8),pan:stereo,output})){this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;}
   // Do not substitute artificial pitched tones for missing breathing recordings.
-  if(kind==='kitty-breath-calm'||kind==='kitty-breath-fear'||kind==='rc-wheel-wood'||kind==='rc-wheel-tile'||kind==='rc-signal-loss'||kind==='inspect-cloth')return;
+  if(kind==='kitty-breath-calm'||kind==='kitty-breath-fear'||kind==='rc-wheel-wood'||kind==='rc-wheel-tile'||kind==='rc-signal-loss'||kind==='rc-damage'||kind==='inspect-cloth')return;
   if(kind==='house-creak')kind='floor-groan';
   if(kind==='hatch-close')kind='door-close';
   if(kind==='power-cut')kind='latch';
