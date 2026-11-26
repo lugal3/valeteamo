@@ -10,6 +10,7 @@ import {PhoneUI} from './phone-ui.js';
 import {FloorSounds} from './floor-sounds.js';
 import {EMOTES} from './animations/emotes.js';
 import {Pursuer} from './pursuer.js';
+import {createFrameSampler} from './frame-sampler.js';
 import {difficultyProfile,validDifficulty} from './difficulty.js';
 import {STARTING_LIVES,LIFE_NOTICE_SECONDS,captureLoss,lifeSlots} from './capture-lives.js';
 import {captureFrame,capturePath,captureTiming} from './capture-shot.js';
@@ -155,10 +156,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      <button data-act="reset">${scenario?'Reiniciar prueba':'Reiniciar casa'}</button>
      <button data-act="bag">Inventario · pilas y notas</button>
       <button data-act="hud">Editar controles / hotbar</button>
-     ${!config.trial?'':'<details><summary>Diagnóstico</summary><div id="lab-metrics"></div></details>'}
+     ${!config.trial?'':'<details><summary>Diagnóstico</summary><div id="lab-metrics"></div><label><input type="checkbox" data-setting="perf"> Medir rendimiento durante la prueba</label><small>Muestra hasta 600 fotogramas activos. CPU = envío de trabajo, no tiempo GPU.</small><button data-act="perf-copy">Copiar informe</button></details>'}
      <details class="lab-settings-note"><summary>Controles</summary><p>WASD para caminar, Mayús para correr y C para agacharte y Espacio para saltar. Arrastra para mirar o pulsa R para capturar el ratón. E interactúa, F usa el objeto equipado, I abre el inventario (también disponible en Ajustes) y Esc libera el ratón o pausa.</p><p>En pantalla táctil, mueve el joystick izquierdo y arrastra a la derecha para mirar. Puedes hacer ambos gestos a la vez.</p></details>
    </div></details>
  </div>
+ ${config.trial?'<output id="house-perf" class="house-perf" hidden aria-live="off"></output>':''}
  <div class="lab-focus" id="lab-focus" role="status" aria-live="polite"></div>
  <div class="house-messages" id="house-messages" hidden>
   <div class="lab-objective" id="lab-objective">Explora la casa</div>
@@ -328,6 +330,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   Object.assign(target,{x:cat.x,y:cat.y+.38,z:cat.z,interactable:!cat.hidden&&(!emyCompanion||['following','stay','distract','distract-recover'].includes(emyCompanion.stage))&&cat.reaction<=0});
  }
  function reset(saved){
+  perfSampler.reset();perfAt=0;
   const seed=!saved&&scenario?.milestone;
   if(seed)saved=trialCheckpoint(seed);
   previousToolTarget=null;autoUseTarget=null;keyTurn=null;
@@ -1145,6 +1148,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   if(act==='hud'&&ready&&!cinematic){$('lab-camera-settings').open=false;phone.edit();return;}
   if(act==='copy-mix'){void copyMix();return;}
+  if(act==='perf-copy'&&config.trial){const report=JSON.stringify(perfReport(),null,2);if(navigator.clipboard?.writeText)void navigator.clipboard.writeText(report).then(()=>say('Informe de rendimiento copiado')).catch(()=>window.prompt('Copia el informe',report));else window.prompt('Copia el informe',report);return;}
   if(act.startsWith('audio:')){void previewAudio(act.slice(6));return;}
   if(isPaused()||finalCutscene)return;
   if(rc?.mode==='driving'||rc?.mode==='deploying')return;
@@ -1418,6 +1422,17 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   for(const cue of floorSounds.advance(dt,s,moved))play(cue.kind,cue.origin?{...cue.origin,y:cue.origin.y+.25}:null,cue.level);
  }
  let statsAt=performance.now(),frameCount=0,slowSeconds=0;
+ const perfSampler=createFrameSampler();let perfEnabled=false,perfAt=0,idleWarm=null;
+ const perfReport=()=>({...perfSampler.report(),quality:options.quality,room:ctxRoom(s),vertices:renderer.vertexCount,triangles:renderer.triangleCount,shadowPasses:renderer.shadowPasses??0,reflectionUploads:renderer.reflectedUploads??0});
+ function warmPursuer(){
+  if(!demo||config.trial||!renderer||idleWarm!==null||typeof window.requestIdleCallback!=='function')return;
+  const name=!renderer.pursuerMeshes?.patrol?'patrol':!renderer.pursuerMeshes?.capture&&(events.phase==='rc-setup'||events.phase==='escape')?'capture':null;
+  if(!name)return;
+  idleWarm=window.requestIdleCallback(deadline=>{
+   idleWarm=null;
+   if(active&&!contextLost&&!document.hidden&&deadline.timeRemaining()>10&&!pursuer.caught)renderer.preparePursuerMesh(name);
+  });
+ }
  function showLives(lives){
   const notice=$('house-lives');
   notice.querySelector('.life-slots').innerHTML=lifeSlots(lives);
@@ -1641,6 +1656,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(now-lastPaint<limit-2)return;
   const shotDelta=Math.min(.1,Math.max(0,(now-last)/1000||0)),dt=Math.min(.055,shotDelta);last=now;lastPaint=now;
   if(!s||!renderer)return;
+  const measuring=perfEnabled&&!isSuspended()&&!captureShot;
+  const cpuStart=measuring?performance.now():0;
+  if(perfEnabled&&!measuring)perfSampler.pause();
+  if(!isSuspended()&&!pursuer.caught)warmPursuer();
   if(hopAge<HOP_COOLDOWN){
    const hop=advanceHop(hopAge,hopCancelled,isSuspended()?0:shotDelta,canHop());
    if(!hop.cancelled&&hopAge<HOP_DURATION&&hop.age>=HOP_DURATION){haptics.pulse('landing');play('land',null,.18);}
@@ -2093,6 +2112,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    }
   }
   updateControls();
+  if(measuring){perfSampler.record(now,performance.now()-cpuStart);if(now-perfAt>=1000){perfAt=now;const m=perfReport();$('house-perf').textContent=m.samples?`${m.fps.toFixed(1)} FPS · 1% ${m.low1.toFixed(1)} · p95 ${m.p95.toFixed(1)} ms\nCPU p95 ${m.cpuP95.toFixed(1)} ms · >50 ms ${m.hitches} · sombras ${m.shadowPasses}\n${m.quality} · ${m.room} · ${m.samples} frames`:'Midiendo…';}}
  }
  function interruptGraphics(title,message){
   contextLost=true;cancelAnimationFrame(raf);raf=0;
@@ -2194,6 +2214,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  syncMotion();
  root.addEventListener('input',e=>{
   const field=e.target,key=field.dataset.setting;if(!key)return;
+  if(key==='perf'&&config.trial){perfEnabled=field.checked;perfSampler.reset();perfAt=0;$('house-perf').hidden=!perfEnabled;$('house-perf').textContent='Midiendo…';return;}
   if(key==='quality'){options.quality=field.value;renderer.quality=field.value;root.querySelectorAll('[data-setting="quality"]').forEach(el=>{if(el!==field)el.value=field.value;});}
   if(key==='sensitivity'){options.sensitivity=Number(field.value);root.querySelectorAll('[data-setting="sensitivity"]').forEach(el=>{if(el!==field)el.value=field.value;});saveCamera();}
   if(key==='invertX'){options.invertX=field.checked;saveCamera();}
@@ -2370,6 +2391,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    clearThreatFixture:()=>{pursuer.reset();sound.setThreat(false);return pursuer.snapshot();},
    // DEV-only route harness for deterministic test setup; not in the production build.
    placeRC:(pose)=>{if(rc.mode!=='driving')throw Error('RC must be deployed first');const y=groundHeight(pose.x,pose.z,pose.y??rc.y,world.hatch?.amount>.92);if(!Number.isFinite(y)||blocked(world.boxes,pose.x,y,pose.z,.155,.38))throw Error('Blocked RC test position');rc.x=pose.x;rc.y=y;rc.z=pose.z;rc.yaw=pose.yaw??rc.yaw;rc.noise=0;syncRCObject(rc);return {x:rc.x,y:rc.y,z:rc.z};},
+   performance:()=>perfReport(),
    finale:()=>finalCutscene?{elapsed:finalCutscene.elapsed,playable:finalCutscene.playable,runAge:finalCutscene.runAge,stage:finalCutscene.playable?'run':finalCutscene.stage,weather:finaleWeather(finalCutscene,s),view:finalCutscene.lastView}:null,
    intro:()=>cinematic?{elapsed:cinematic.elapsed,...windowIntroState(cinematic.elapsed/WINDOW_SHOT_SECONDS),camera:windowIntroCamera(cinematic.elapsed/WINDOW_SHOT_SECONDS)}:null,
    atmosphere:()=>({room:sound.atmosphere?.room,outdoor:sound.atmosphere?.outdoor,events:sound.atmosphere?.events,voices:sound.atmosphere?.voices.size,loops:sound.atmosphere?.loops.length,lastEvent:sound.atmosphere?.lastEvent,muted:sound.settings.muted,volume:sound.settings.ambient}),
@@ -2411,6 +2433,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  function stop(){
   if(!active)return;active=false;
+  if(idleWarm!==null&&typeof window.cancelIdleCallback==='function')window.cancelIdleCallback(idleWarm);
   // A GPU/audio teardown must never strand the LP React route. Each resource
   // is independent; detach the root even if a browser rejects one disposal.
   for(const dispose of [()=>haptics.stop(),clearMiniatureInput,releaseMouse,()=>cancelAnimationFrame(raf),()=>controller.abort(),()=>television.destroy(),()=>phone.destroy(),()=>sound.destroy(),()=>renderer?.destroy()]){
