@@ -44,6 +44,11 @@ const assert = require('node:assert/strict');
  assert(piecesOn.some(p => p.id.includes('hand-cuff')), 'Hand pink cuff exists');
  assert(piecesOn.some(p => p.id.includes('hand-sleeve')), 'Hand pink sleeve exists');
 
+ assert(viewModelPieces('hop-hands').some(p=>p.id.startsWith('hop-left-')));
+ assert(viewModelPieces('hop-hands').some(p=>p.id.startsWith('hop-right-')));
+ assert(piecesOn.some(p=>p.id.includes('torch-body')&&p.mat==='torchmetal'));
+ assert(viewModelPieces('key').some(p=>p.mat==='brass'));
+ assert(viewModelPieces('phone').some(p=>p.mat==='glass'));
  // 7. Dust pieces in beam
  const dust = dustPieces(true);
  assert.equal(dust.length, 4, '4 dust motes in beam');
