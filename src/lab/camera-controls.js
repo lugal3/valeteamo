@@ -45,7 +45,7 @@ export function readCameraSettings(storage){
 }
 function presentationPreferences(settings){
  const result={};
- for(const key of ['bob','motion','captions','hints','threatText'])if(typeof settings?.[key]==='boolean')result[key]=settings[key];
+ for(const key of ['bob','motion','captions','hints','threatText','haptics','immersive'])if(typeof settings?.[key]==='boolean')result[key]=settings[key];
  return result;
 }
 export function writeCameraSettings(storage,settings){
