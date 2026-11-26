@@ -184,7 +184,13 @@ export class Pursuer{
    this.mode='investigate';this.awareness=Math.max(.75,this.awareness);
    this.modeTime=3;this.replan=0;this.path=[];this.task=null;
   }
-  const bait=decoy?.active&&!confirmedKitty&&(decoy.noisy||this.canSee(decoy));
+  // The RC horn is deliberately loud, but it cannot reveal a position
+  // beyond the same finite, wall-aware acoustic model used for Emy.
+  const validDecoy=decoy?.active&&[decoy.x,decoy.y,decoy.z].every(Number.isFinite);
+  const audibleDecoy=validDecoy&&decoy.noisy&&canHearNoise(
+   {x:this.x,y:this.y+1.1,z:this.z},{x:decoy.x,y:decoy.y+.2,z:decoy.z},2.5,
+   lineBlocked(this.world.boxes,{x:this.x,y:this.y+1.1,z:this.z},{x:decoy.x,y:decoy.y+.2,z:decoy.z}));
+  const bait=validDecoy&&!confirmedKitty&&(audibleDecoy||this.canSee(decoy));
   if(bait){
    if(this.mode!=='rc-chase'){this.mode='rc-chase';this.replan=0;}
    this.lastSeen={x:decoy.x,y:decoy.y,z:decoy.z};this.task=null;this.witnessed=null;
