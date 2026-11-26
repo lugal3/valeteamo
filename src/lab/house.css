@@ -443,7 +443,8 @@
 #lab3d.house-phone-camera .phone-shell header button{min-height:28px;font-size:22px}
 #lab3d.house-phone-camera .phone-home-indicator{min-height:9px}
 #lab3d.house-phone-camera .phone-camera-actions{grid-template-columns:36px 44px;grid-template-rows:repeat(2,minmax(36px,1fr));gap:2px;grid-column:2;grid-row:1 / 3;align-content:center}
-#lab3d.house-phone-camera .phone-camera-actions [data-photo=take]{grid-column:2;grid-row:1 / 3}
+#lab3d.house-phone-camera .phone-camera-actions button{box-sizing:border-box;width:36px;min-width:36px;min-height:36px;padding:3px}
+#lab3d.house-phone-camera .phone-camera-actions [data-photo=take]{grid-column:2;grid-row:1 / 3;width:44px;min-width:44px;height:44px}
 #lab3d.house-phone-camera .phone-camera-actions [data-app=photos]{grid-column:1;grid-row:1}
 #lab3d.house-phone-camera .phone-camera-actions [data-photo=flash]{grid-column:1;grid-row:2}
 #lab3d.house-phone-camera .phone-camera-mode{grid-column:1;grid-row:2}
