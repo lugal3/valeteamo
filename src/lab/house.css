@@ -411,8 +411,9 @@
 #lab3d .phone-page-dots{display:flex;justify-content:center;gap:2px;margin:0 auto;position:relative;flex:none}
 #lab3d .phone-page-dots button{font-size:8px;min-width:28px;min-height:24px;padding:0;background:transparent;color:#ffffff77;text-shadow:none}
 #lab3d .phone-page-dots button[aria-current=page]{color:#fff}
-#lab3d .phone-dock-apps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;flex:none;position:relative;padding:8px 5px 6px;border-radius:19px;background:#ffffff30;border:1px solid #ffffff25;backdrop-filter:blur(8px)}
+ #lab3d .phone-dock-apps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;flex:none;position:relative;padding:8px 5px 6px;border-radius:19px;background:#ffffff30;border:1px solid #ffffff25;backdrop-filter:blur(8px)}
 #lab3d .phone-dock-apps button>span:last-child{display:none}
+#lab3d .phone-dock-apps{flex:0 0 auto;align-content:center}
 #lab3d .phone-journal{font:500 12px/1.5 system-ui;color:#574346;background:#fffdf6;padding:12px;border-radius:12px;min-height:100%;box-sizing:border-box}
 #lab3d .phone-journal small{color:#a06c68;letter-spacing:.08em;font-size:9px}
 #lab3d .phone-journal h2{font:700 17px/1.3 system-ui;margin:8px 0}
