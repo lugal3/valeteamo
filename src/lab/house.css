@@ -504,3 +504,9 @@
 @media(max-height:420px){#lab3d #lab-interact:not([hidden]){gap:4px;padding:5px 6px}#lab3d .house-action-icon{width:19px;height:19px;flex-basis:19px}}
 @media(prefers-reduced-motion:reduce){#lab3d .house-hotbar button{transition:none}}
 #lab3d.house-motion-reduced .house-hotbar button{transition:none}
+
+/* First-person finale: remove controls only during the directed shot.
+   The real escape restores the normal movement joystick and look surface. */
+#lab3d.house-finale-shot :is(.lab-cross,.lab-joystick,.lab-buttons,.lab-look,.house-hotbar,.house-charge,.house-stamina,.lab-focus){visibility:hidden;pointer-events:none}
+#lab3d.house-finale-run :is(.lab-cross,.lab-buttons,.house-hotbar,.lab-focus){visibility:hidden;pointer-events:none}
+#lab3d.house-finale-shot .house-rc-caption,#lab3d.house-finale-run .house-rc-caption{bottom:max(16px,calc(env(safe-area-inset-bottom) + 12px));font:600 clamp(13px,2vw,19px)/1.4 system-ui;text-shadow:0 2px 7px #0a080d,0 0 12px #120e15}
