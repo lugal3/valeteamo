@@ -1,4 +1,5 @@
 import {lazy,Suspense,useCallback,useEffect,useRef,useState,type ComponentType} from 'react';
+import {flushSync} from 'react-dom';
 import {CHARACTERS,type CharacterId} from './characters';
 import {CONTENT_IS_SAMPLE,STORY,type MemoryPhoto} from './story-content';
 import {advance,goTo,initialProgress,readProgress,writeProgress,type StoryProgress} from './story-progress';
@@ -47,7 +48,10 @@ export function StoryApp({ClassicApp,initialRoute}:{ClassicApp:ComponentType;ini
  const [demoTrial,setDemoTrial]=useState(false);const [saved,setSaved]=useState(progress.started);const [storageOK,setStorageOK]=useState(true);
  const [houseTrial,setHouseTrial]=useState<HouseTrialId|null>(null);
  const [cosmosEntry,setCosmosEntry]=useState<'countdown'|'gift'|'intro'|'loading'|'galaxy'>('countdown');
- const closeHouseTrial=useCallback(()=>setHouseTrial(null),[]);
+ // House exits originate from a native, body-level WebGL event, outside React.
+ // Commit the return route synchronously so a disposed canvas never strands
+ // the user on the fallback page waiting for a scheduled render.
+ const closeHouseTrial=useCallback(()=>flushSync(()=>setHouseTrial(null)),[]);
  const [audioNotice,setAudioNotice]=useState('');
  const [comicOpen,setComicOpen]=useState(false);
  const chapter=STORY[progress.index];
