@@ -43,7 +43,7 @@ function stridePhase(travel,front,side){
 export function emyLandmarks(mode='idle',phase=0,walking=false,reduced=false,travel=phase*.55){
  const sit=['sit','groom','purr'].includes(mode),sleep=mode==='sleep',stretch=mode==='stretch',groom=mode==='groom',jump=mode==='jump',crouch=mode==='crouch',alert=mode==='alert';
  const motion=reduced?0:Math.sin(phase*8),bob=walking?Math.abs(motion)*.006:0;
- const breath=reduced?0:Math.sin(phase*2.25)*.004;
+ const breath=reduced?0:Math.round(Math.sin(Math.floor(phase*12)/12*2.25)*4)/1000;
  const body=sleep?[0,.17+breath,-.12]:crouch?[0,.215,-.12]:stretch?[0,.30,-.13]:sit?[0,.32+breath,-.14]:[0,.31+bob+breath,-.12];
  const head=sleep?[.13,.205+breath,.12]:crouch?[0,.33,.26]:stretch?[0,.245,.35]:sit?[0,.585,.14]:[0,.52+bob,.26];
  const lick=reduced?0:.5+.5*Math.sin(phase*6.4),wash=reduced?0:.5+.5*Math.sin(phase*2.1);
@@ -159,8 +159,8 @@ export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.a
   }else if(joint==='tail'){
    p=[0,0,0];
    const tailMode=alarm>.28?'alert':mode;
-   const key=tailMode+':'+(['sleep','crouch'].includes(tailMode)||reduced?0:Math.floor(phase*12))+':'+alarm;
-   if(box.emyTailMode!==mode){box.emyTailMode=mode;box.emyTailBlend=1;}
+   const key=tailMode+':'+(['sleep','crouch'].includes(tailMode)||reduced?0:Math.floor(phase*(['sit','groom'].includes(tailMode)?8:12)))+':'+alarm;
+   if(box.emyTailMode!==tailMode){box.emyTailMode=tailMode;box.emyTailBlend=1;}
    if(key!==box.emyTailKey||box.emyTailBlend>.002){
    box.emyTailKey=key;box.emyTailBlend*=1-blend;box.emyTailRevision=(box.emyTailRevision||0)+1;
    const next=emyTailSurface(tailMode,reduced?0:phase,box.emySpec.fibres,alarm),old=box.emyTailMesh;
