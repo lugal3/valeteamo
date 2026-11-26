@@ -80,7 +80,7 @@ export function geometry(boxes){
  for(const box of boxes){
   const baseColor=box.color||colors[box.mat]||colors.cream;
   const color=box.ao?[baseColor[0]*box.ao,baseColor[1]*box.ao,baseColor[2]*box.ao]:baseColor;
-  const style=(box.atmosphere==='steam'?11:materialStyle(box))+(box.chibi?(box.emissive?96:64):(box.atmosphere?16:box.holidayBulb?48:box.glow?32:0)),first=vertices.length;
+  const style=box.weatherPane?112:(box.atmosphere==='steam'?11:materialStyle(box))+(box.chibi?(box.emissive?96:64):(box.atmosphere?16:box.holidayBulb?48:box.glow?32:0)),first=vertices.length;
   const range={start:first,end:first,indexStart:indices.length,indexEnd:indices.length};ranges.push(range);
   const projectReference=()=>{
    if(!box.photoMapped)return;
@@ -387,7 +387,7 @@ export class HouseRenderer {
   this.locations={};
   for(const [quality,p] of Object.entries(this.programs)){
    const atrib={},uniform={};for(const key of ['aPos','aCol','aNormal','aUV','aArt','aStyle','aTangent'])atrib[key]=gl.getAttribLocation(p,key);
-   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uHolidayMotion','uHolidayPower','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld','uTV','uTVSignal','uShot','uLoisFace','uFascia','uFasciaReady','uPursuerSkin','uPursuerSkinReady','uPursuerKey','uScanOutline'])uniform[key]=gl.getUniformLocation(p,key);
+   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uHolidayMotion','uHolidayPower','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld','uTV','uTVSignal','uRain','uDawn','uShot','uLoisFace','uFascia','uFasciaReady','uPursuerSkin','uPursuerSkinReady','uPursuerKey','uScanOutline'])uniform[key]=gl.getUniformLocation(p,key);
    uniform.uEmyCoat=gl.getUniformLocation(p,'uEmyCoat');
    uniform.uLamps=gl.getUniformLocation(p,'uLamps[0]');
    this.locations[quality]={atrib,uniform};
@@ -913,8 +913,10 @@ export class HouseRenderer {
   gl.uniform1f(this.uniform.uNear,motion.grasp ? .032 : .07);gl.uniform1f(this.uniform.uFar,45);
   gl.uniform1f(this.uniform.uFlash,beamPower);gl.uniform1f(this.uniform.uTime,time);gl.uniform1f(this.uniform.uHolidayMotion,motion.reduced?0:1);gl.uniform1f(this.uniform.uHolidayPower,this.holidayPower&&!this.holidayPower.on||this.holidayPower&&!this.holidayPower.supply?.on?0:1);
   gl.uniform1f(this.uniform.uShot,motion.shotLight??0);
+  gl.uniform1f(this.uniform.uRain,motion.weather?.rain??0);gl.uniform1f(this.uniform.uDawn,motion.weather?.dawn??0);
   gl.uniform3fv(this.uniform.uPursuerKey,motion.pursuerKey||[0,0,0]);
   gl.uniform1f(this.uniform.uOcclude,this.quality==='low'?0:1);
+  gl.clearColor(...(motion.weather?.sky??NIGHT_SKY),1);
   gl.stencilMask(0xff);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT|gl.STENCIL_BUFFER_BIT);
   // Closed doors are useful depth occluders too. All these surfaces are opaque.
   if(this.dynamicCount){this.bind(this.dynamicVbo,this.dynamicIbo);gl.drawElements(gl.TRIANGLES,this.dynamicCount,gl.UNSIGNED_SHORT,0);}
