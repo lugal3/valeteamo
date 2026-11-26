@@ -1,0 +1,21 @@
+const assert=require('node:assert/strict'),fs=require('node:fs');
+(async()=>{
+ const {createFrameSampler}=await import('../src/lab/frame-sampler.js');
+ const s=createFrameSampler(5);
+ assert.equal(s.report().samples,0);
+ for(let i=0;i<=5;i++)s.record(i*20,4);
+ assert.equal(s.report().fps,50);assert.equal(s.report().p95,20);
+ s.record(180,12);assert.equal(s.report().hitches,1);assert.equal(s.report().p99,80);
+ assert.equal(s.report().cpuP95,12);assert.equal(s.report().low1,12.5);
+ s.pause();s.record(10000,1);assert.equal(s.report().hitches,1);
+ s.record(10020,4);assert.equal(s.report().samples,5);
+ s.reset();assert.equal(s.report().samples,0);
+ const renderer=fs.readFileSync('src/lab/renderer.js','utf8');
+ assert(renderer.includes('this.reflectedRevision!==this.dynamicRevision'));
+ assert(renderer.includes('this.dynamicRevision++;metrics.uploads++'));
+ assert(renderer.includes('this.preparePursuerMesh(name)'));
+ const house=fs.readFileSync('src/lab/house.js','utf8');
+ assert(house.includes('perfEnabled=false')&&house.includes('perfSampler.pause()'));
+ assert(house.includes('requestIdleCallback')&&house.includes('cancelIdleCallback'));
+ console.log('PASS bounded active-frame profiler, paused interval exclusion, exact mirror invalidation and unchanged mesh preparation');
+})().catch(e=>{console.error(e);process.exitCode=1;});

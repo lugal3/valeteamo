@@ -3,7 +3,8 @@ import {EMY_DISTRACT_SECONDS} from './emy-abilities.js';
 import {animateFurniture} from './furniture-motion.js';
 import {Pursuer} from './pursuer.js';
 import {ALTAR_THRESHOLD} from './emy-rescue.js';
-import {roomAt,blocked,groundHeight,segmentHitsBox} from './world.js';
+import {inHatch} from './basement.js';
+import {roomAt,blocked,groundHeight,segmentHitsBox,lineBlocked} from './world.js';
 
 export const EMY_ENTRANCE_SECONDS=3.5;
 const WINDOW_START={x:2.2,y:1.17,z:12.48};
@@ -12,15 +13,27 @@ const TRUNK_APPROACH={x:2.08,y:0,z:2.25};
 // Emy gives Kitty room to move.  The two thresholds deliberately create a
 // small hysteresis band: walking around her does not make her keep turning
 // and taking little corrective steps, but moving away still calls her along.
-const FOLLOW_STOP=1.08;
-const FOLLOW_RESUME=1.46;
+export const FOLLOW_STOP=1.62;
+export const FOLLOW_RESUME=2.28;
 const smooth=t=>{const x=Math.max(0,Math.min(1,t));return x*x*(3-2*x);};
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const deltaAngle=(a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a));
+// Emy stays above the open hatch after her story withdrawal. If a legacy
+// save placed her below ground, permit a real uphill escape, never a snap.
+export function emyGroundHeight(x,z,y,hatchOpen){
+ const next=groundHeight(x,z,y,hatchOpen);
+ return y>=-.01&&next<-.01?NaN:next;
+}
+const EMY_NAV_PROFILE=Object.freeze({radius:.16,height:.62,cellSize:.40,ground:emyGroundHeight});
+const EMY_NOOK_PROFILE=Object.freeze({...EMY_NAV_PROFILE,cellSize:.30});
+// The narrow floor-level strip beside the stair nook needs a finer lattice.
+// Keep the previously validated main-house lattice elsewhere.
+const nearNook=p=>p.y<.15&&p.y>=-.01&&p.x>10.12&&p.x<12.85&&p.z>5.22&&p.z<8.03;
+const clearNavigation=companion=>Object.assign(companion,{route:[],trail:[],routeTarget:null,nextPlanAt:0,nextSight:0,direct:false,chasing:undefined,stuck:0});
 
 export function createEmyCompanion(cat,{waiting=true}={}){
  const companion={cat,stage:waiting?'waiting':'following',age:0,entranceAge:0,trail:[],route:[],stuck:0,planner:null,hiddenAt:null};
- companion.lidAmount=0;
+ companion.lidAmount=0;companion.mood='calm';companion.fatigue=0;companion.idleAge=0;
  if(!waiting){Object.assign(cat,{x:5.1,y:0,z:10.65,yaw:Math.PI});poseEmy(cat,{mode:'sit'});}
  setVisibility(companion,waiting);
  return companion;
@@ -36,22 +49,38 @@ export function commandEmyStay(companion){
 }
 export function releaseEmyStay(companion){
  if(!companion||companion.stage!=='stay')return false;
- Object.assign(companion,{stage:'following',route:[],trail:[],chasing:undefined,stuck:0,idleAge:0});
+ Object.assign(companion,{stage:'following',idleAge:0});clearNavigation(companion);
+ return true;
+}
+// Stop an existing distraction only by approaching the physical cat.
+// The caller must retain the independent ability cooldown.
+export function rejoinEmyInPerson(companion,world,player){
+ if(!companion||!['stay','distract','distract-recover'].includes(companion.stage)||companion.cat.hidden)return false;
+ const cat=companion.cat;
+ if(!player||player.hidden||Math.abs(player.y-cat.y)>.45||distance(cat,player)>1.45||
+  lineBlocked(world.boxes,{x:player.x,y:player.y+(player.eye??1.63),z:player.z},{x:cat.x,y:cat.y+.38,z:cat.z}))return false;
+ Object.assign(companion,{stage:'following',distraction:null,idleAge:0,refuge:null});clearNavigation(companion);
  return true;
 }
 // Uses the existing rig; no extra meshes or animation systems.
 function companionIdle(companion,dt,{reduced=false,lookAt=null,quiet=false}={}){
  const cat=companion.cat;
  companion.idleAge=(companion.idleAge||0)+dt;
- const t=companion.idleAge%23;
- let mode=quiet||reduced?'sit':t<7?'sit':t<10.4?'groom':t<13?'sit':t<15.4?'stretch':'sit';
- if(cat.alarm>.28)mode='idle';
+ const t=companion.idleAge%33;
+ const alarm=cat.alarm||0;
+ // Mood is an overlay, not a new task. It cannot interrupt story or movement.
+ companion.mood=alarm>.28?'scared':quiet?'calm':(companion.fatigue||0)>.68||t>25?'tired':t>=3&&t<7?'curious':'calm';
+ let mode=quiet?'crouch':alarm>.28?'alert':t<3?'sit':t<7?'idle':t<12?'groom':t<15?'sit':t<18?'stretch':t<25?'sit':'sleep';
+ if(companion.mood==='tired'&&t>18&&!quiet&&alarm<.28)mode='sleep';
+ if(reduced&&['groom','stretch'].includes(mode))mode='sit';
  let headYaw=0;
- if(lookAt&&Math.abs(lookAt.y-cat.y)<.65){
-  headYaw=Math.max(-.60,Math.min(.60,deltaAngle(cat.yaw,Math.atan2(lookAt.x-cat.x,lookAt.z-cat.z))));
+ const target=alarm>.28?cat.senseTarget:companion.mood==='curious'?cat.curiosityTarget:lookAt;
+ if(target&&Math.abs((target.y??cat.y)-cat.y)<2.1&&mode!=='sleep'&&mode!=='groom'&&mode!=='stretch'){
+  headYaw=Math.max(-.72,Math.min(.72,deltaAngle(cat.yaw,Math.atan2(target.x-cat.x,target.z-cat.z))));
  }
+ companion.fatigue=Math.max(0,(companion.fatigue||0)-dt*(mode==='sleep'?.045:.012));
  cat.phase=mode;
- poseEmy(cat,{mode,walking:false,phase:cat.age,reduced,headYaw,blend:1-Math.exp(-dt*9)});
+ poseEmy(cat,{mode,walking:false,phase:cat.age,activityAge:t,reduced,headYaw,blend:1-Math.exp(-dt*6)});
 }
 export function beginEmyEntrance(companion){
  if(companion.stage!=='waiting')return false;
@@ -73,9 +102,18 @@ export function emyEntranceCamera(camera,progress,reduced=false,cat){
   yaw:camera.yaw+deltaAngle(camera.yaw,windowYaw)*look,
   pitch:camera.pitch+(pitch-camera.pitch)*look};
 }
+// Hold the physical lid shut only while a visible cat occupies its
+// footprint. The story command runs independently and walks her off it.
+export function emyOccupiesHatch(companion){
+ const cat=companion?.cat;
+ return !!cat&&!cat.hidden&&cat.y>=-.05&&cat.y<.35&&inHatch(cat.x,cat.z,.18);
+}
 export function sendEmyToTrunk(companion){
- if(['waiting','trunk','trunk-enter'].includes(companion.stage))return false;
- companion.stage='trunk-run';companion.trail=[];companion.route=[];companion.stuck=0;companion.chasing=false;
+ if(['waiting','trunk-run','trunk','trunk-enter'].includes(companion.stage))return false;
+ // A shared closet animation may have temporarily moved the model inside
+ // a closed prop. Resume at its recorded walkable entrance, not its camera.
+ if(companion.stage==='closet-entry'&&companion.closetEntry)Object.assign(companion.cat,{x:companion.closetEntry.x,z:companion.closetEntry.z});
+ companion.stage='trunk-run';clearNavigation(companion);companion.distraction=null;companion.refuge=null;companion.hiddenAt=null;companion.closetEntry=null;companion.altarWait=false;
  companion.cat.reaction=0;
  setVisibility(companion,false);
  return true;
@@ -161,36 +199,50 @@ function fetchKey(companion,world,player,dt,reduced){
  }
  return cue;
 }
-export function sendEmyDistract(companion,world,goal){
- if(companion?.stage!=='following'||!goal)return false;
- const previous={stage:companion.stage,route:companion.route,trail:companion.trail};
- companion.route=[];companion.trail=[];companion.stuck=0;
- planRoute(companion,world,goal);
+// Preview and execution share the same validation and A* route. Only the
+// planner cache may be populated while the player studies the map.
+export function previewEmyDistract(companion,world,goal){
+ if(companion?.stage!=='following'||world.hatch?.open||!goal||![goal.x,goal.y,goal.z].every(Number.isFinite)||goal.y<-.01)return null;
+ if(roomAt(goal.x,goal.z,goal.y)==='Sala de música')return null;
+ const ground=emyGroundHeight(goal.x,goal.z,goal.y,world.hatch?.amount>.92);
+ if(!Number.isFinite(ground)||Math.abs(ground-goal.y)>.18||blocked(world.boxes,goal.x,ground,goal.z,.20,.62))return null;
+ const draft={...companion,route:[],trail:[],stuck:0};
+ planRoute(draft,world,goal);
+ // Cache only the reusable graph, not the companion's live task or route.
+ companion.planner=draft.planner;companion.nookPlanner=draft.nookPlanner;
  const lockedDoors=world.objects.filter(door=>door.kind==='door'&&(door.locked||door.sealed)&&!door.open);
+ const origin={x:companion.cat.x,y:companion.cat.y,z:companion.cat.z};
+ const waypoints=[origin,...draft.route,{...goal}];
  const collidesWithLockedDoor=lockedDoors.some(door=>{
   const walls=[door.box,...(door.parts||[]).map(part=>part.box)].filter(box=>box?.solid);
-  return companion.route.slice(1).some((node,i)=>{
-   const prior=companion.route[i],from={x:prior.x,y:prior.y+.70,z:prior.z},to={x:node.x,y:node.y+.70,z:node.z};
+  return waypoints.slice(1).some((node,i)=>{
+   const prior=waypoints[i],from={x:prior.x,y:prior.y+.70,z:prior.z},to={x:node.x,y:node.y+.70,z:node.z};
    return walls.some(box=>segmentHitsBox(from,to,box,.13));
   });
  });
- if(collidesWithLockedDoor||!companion.route.length&&distance(companion.cat,goal)>.85){
-  Object.assign(companion,previous);return false;
- }
- companion.distraction={goal:{...goal},remaining:EMY_DISTRACT_SECONDS,arrived:false,nextNoise:0,nextPlan:0,stuck:0};
+ if(waypoints.slice(1).some(node=>roomAt(node.x,node.z,node.y)==='Sala de música')||collidesWithLockedDoor||!draft.route.length&&(distance(companion.cat,goal)>.85||!clearPassage(world,companion.cat,goal)))return null;
+ const metres=waypoints.slice(1).reduce((sum,p,i)=>sum+Math.hypot(p.x-waypoints[i].x,p.y-waypoints[i].y,p.z-waypoints[i].z),0);
+ return {goal:{...goal},route:draft.route,waypoints,seconds:Math.max(1,Math.ceil(metres/2.0)),metres};
+}
+export function sendEmyDistract(companion,world,goal){
+ const plan=previewEmyDistract(companion,world,goal);
+ if(!plan)return false;
+ clearNavigation(companion);
+ companion.route=plan.route;companion.routeTarget={...plan.goal};companion.nextPlanAt=companion.age+1.1;
+ companion.distraction={goal:{...plan.goal},remaining:EMY_DISTRACT_SECONDS,arrived:false,nextNoise:0,nextPlan:0,stuck:0};
  companion.stage='distract';companion.cat.reaction=0;return true;
 }
 export function snapshotEmyCompanion(companion){
  const {cat,stage}=companion;
  if(stage==='closet-entry')return {stage:'following',x:companion.closetEntry.x,y:cat.y,z:companion.closetEntry.z,yaw:cat.yaw};
  if(stage==='fetch'&&['leap-in','crawl','leap-out'].includes(companion.fetch.phase))return {stage:'following',...companion.fetch.vent.takeoff,yaw:0};
- return {stage:['entrance','fetch','distract','hold'].includes(stage)?'following':stage==='trunk-enter'?'trunk':stage,
+ return {stage:['entrance','fetch','distract','distract-recover','hold'].includes(stage)?'following':stage==='trunk-enter'?'trunk':stage,
   x:cat.x,y:cat.y,z:cat.z,yaw:cat.yaw};
 }
 export function restoreEmyCompanion(companion,saved,storyPhase='explore'){
  const valid=['waiting','following','stay','hiding','trunk-run','trunk'];
  const stage=valid.includes(saved?.stage)?saved.stage:storyPhase==='explore'?'waiting':['sleep','patrol','hide','resting','arrival'].includes(storyPhase)?'following':'trunk';
- companion.stage=stage;companion.trail=[];companion.route=[];companion.stuck=0;companion.chasing=undefined;
+ companion.stage=stage;clearNavigation(companion);companion.refuge=null;companion.distraction=null;companion.idleAge=0;companion.wardrobeAttempt=0;companion.closetEntry=null;companion.cat.dodge=null;companion.altarWait=false;
  if(['following','stay','hiding','trunk-run'].includes(stage)&&[saved?.x,saved?.y,saved?.z,saved?.yaw].every(Number.isFinite))
   Object.assign(companion.cat,{x:saved.x,y:saved.y,z:saved.z,yaw:saved.yaw});
  else if(stage==='trunk')Object.assign(companion.cat,TRUNK_APPROACH,{yaw:-Math.PI/2});
@@ -198,11 +250,43 @@ export function restoreEmyCompanion(companion,saved,storyPhase='explore'){
  setVisibility(companion,['waiting','hiding','trunk'].includes(stage));
  poseEmy(companion.cat,{mode:'sit'});
 }
+// Trial setup only: choose a genuine walkable spot on Kitty's current floor.
+// Never use this during normal following, distraction or hiding.
+export function trialEmyPose(world,player){
+ if(!player||![player.x,player.y,player.z,player.yaw].every(Number.isFinite))return null;
+ const room=roomAt(player.x,player.z,player.y);
+ const angles=[.95,-.95,1.57,-1.57,.52,-.52,2.1,-2.1,2.62,-2.62,0,Math.PI];
+ let alternative=null,nearby=null;
+ for(const radius of [1.20,1.34,1.04,1.55,.86,1.85,2.20,2.65,3.10]){
+  for(const angle of angles){
+   const a=player.yaw+angle,x=player.x+Math.sin(a)*radius,z=player.z+Math.cos(a)*radius;
+   const y=groundHeight(x,z,player.y,world.hatch?.amount>.92);
+   if(!Number.isFinite(y)||Math.abs(y-player.y)>.12||blocked(world.boxes,x,y,z,.24,.72))continue;
+   const pose={x,y,z,yaw:Math.atan2(player.x-x,player.z-z)};
+   if(!clearPassage(world,pose,player)){if(roomAt(x,z,y)===room)nearby??=pose;continue;}
+   if(roomAt(x,z,y)===room)return pose;
+   alternative??=pose;
+  }
+ }
+ return alternative??nearby;
+}
+export function initializeTrialEmy(companion,world,player,stage='following'){
+ if(stage==='following'){
+  const pose=trialEmyPose(world,player);
+  // Explicit failure, not a silently invisible cat or an unsafe teleport.
+  if(!pose)return false;
+  restoreEmyCompanion(companion,{stage,...pose},'explore');
+ }else restoreEmyCompanion(companion,{stage},'explore');
+ return true;
+}
 function planRoute(companion,world,goal){
  const {cat}=companion;
- const planner=companion.planner??=new Pursuer(world);
+ const useNook=nearNook(cat)||nearNook(goal);
+ const planner=useNook?(companion.nookPlanner??=new Pursuer(world,EMY_NOOK_PROFILE)):(companion.planner??=new Pursuer(world,EMY_NAV_PROFILE));
  Object.assign(planner,{x:cat.x,y:cat.y,z:cat.z});
- if(planner.plan(goal))companion.route=planner.path.map(({x,y,z})=>({x,y,z}));
+ companion.route=[];companion.routeTarget={x:goal.x,y:goal.y,z:goal.z};companion.nextPlanAt=companion.age+1.1;
+ if(!planner.plan(goal))return false;
+ companion.route=planner.path.map(({x,y,z})=>({x,y,z}));return true;
 }
 function openRouteDoor(companion,world,player,reduced){
  const {cat,route}=companion;
@@ -216,31 +300,75 @@ function openRouteDoor(companion,world,player,reduced){
 function clearPassage(world,from,to){
  const length=distance(from,to);
  if(length>4)return false;
- const steps=Math.max(1,Math.ceil(length/.14));
+ const steps=Math.max(1,Math.ceil(length/.06));
  let floor=from.y;
  for(let i=1;i<=steps;i++){
   const x=from.x+(to.x-from.x)*i/steps,z=from.z+(to.z-from.z)*i/steps;
-  const y=groundHeight(x,z,floor,world.hatch?.amount>.92);
-  if(!Number.isFinite(y)||Math.abs(y-floor)>.23||blocked(world.boxes,x,y,z,.20,.62))return false;
+  const y=emyGroundHeight(x,z,floor,world.hatch?.amount>.92);
+  if(!Number.isFinite(y)||Math.abs(y-floor)>.12||blocked(world.boxes,x,y,z,.16,.62))return false;
   floor=y;
  }
  return Math.abs(floor-to.y)<.23;
 }
-function moveToward(companion,world,goal,dt,speed,allowMusic=false){
+function moveToward(companion,world,goal,dt,speed){
  const cat=companion.cat,dx=goal.x-cat.x,dz=goal.z-cat.z,d=Math.hypot(dx,dz);
  if(d<.055)return false;
  const turn=deltaAngle(cat.yaw,Math.atan2(dx,dz));
  cat.yaw+=turn*(1-Math.exp(-18*dt));
- const step=Math.min(d,speed*dt*Math.max(.12,Math.cos(turn))),nx=cat.x+dx/d*step,nz=cat.z+dz/d*step;
- const y=groundHeight(nx,nz,cat.y,world.hatch?.amount>.92);
- if(!allowMusic&&roomAt(nx,nz,y)==='Sala de música')return false;
- if(!Number.isFinite(y)||Math.abs(y-cat.y)>.30||blocked(world.boxes,nx,y,nz,.14,.62))return false;
- cat.x=nx;cat.y=y;cat.z=nz;
- return true;
+ const step=Math.min(d,speed*dt*Math.max(.12,Math.cos(turn))),pieces=Math.max(1,Math.ceil(step/.045));
+ let moved=false;
+ for(let i=0;i<pieces;i++){
+  const nx=cat.x+dx/d*step/pieces,nz=cat.z+dz/d*step/pieces,y=emyGroundHeight(nx,nz,cat.y,world.hatch?.amount>.92);
+  if(roomAt(cat.x,cat.z,cat.y)!=='Sala de música'&&roomAt(nx,nz,y)==='Sala de música')break;
+  if(!Number.isFinite(y)||Math.abs(y-cat.y)>.12||blocked(world.boxes,nx,y,nz,.16,.62))break;
+  cat.x=nx;cat.y=y;cat.z=nz;moved=true;
+ }
+ return moved;
 }
-export function updateEmyCompanion(companion,delta,{world,player,enteringHide=null,reduced=false,finale=false}={}){
+// A local refuge is a real, traversable floor point screened by furniture.
+// No invisible relocation and no navigation toward Kitty's hiding spot.
+export function findEmyRefuge(world,cat,player,threat){
+ const origin={x:cat.x,y:cat.y,z:cat.z},eye={x:cat.x,y:cat.y+1.55,z:cat.z};
+ // Restrict repeated collision checks to the local search radius, allowing
+ // for rotated furniture. No full navigation rebuild when Kitty hides.
+ const localBoxes=world.boxes.filter(b=>b.solid&&Math.abs(b.y-cat.y)<b.h/2+1.8&&Math.hypot(b.x-cat.x,b.z-cat.z)<3.2+Math.hypot(b.w,b.d)/2);
+ const localWorld={...world,boxes:localBoxes};
+ const danger=threat?.active&&Math.abs(threat.y-cat.y)<1.4?{x:threat.x,y:threat.y+1.5,z:threat.z}:eye;
+ const hidden=player?.hidden,avoid=hidden?{x:hidden.returnX??player.x,z:hidden.returnZ??player.z}:player;
+ let best=null,score=-Infinity;
+ for(const radius of [.65,1.05,1.45,1.85,2.25])for(let i=0;i<12;i++){
+  const angle=i*Math.PI/6,x=cat.x+Math.sin(angle)*radius,z=cat.z+Math.cos(angle)*radius;
+  const y=emyGroundHeight(x,z,cat.y,world.hatch?.amount>.92),point={x,y,z};
+  if(!Number.isFinite(y)||Math.abs(y-cat.y)>.1||roomAt(x,z,y)!==roomAt(cat.x,cat.z,cat.y)||roomAt(x,z,y)==='Sala de música'||blocked(localBoxes,x,y,z,.24,.72)||!clearPassage(localWorld,origin,point))continue;
+  if(avoid&&Math.abs(player.y-y)<.45&&distance(point,avoid)<Math.min(1.75,distance(origin,avoid)))continue;
+  if(!lineBlocked(world.boxes,danger,{x,y:y+.32,z}))continue;
+  const cover=localBoxes.some(b=>b.solid&&!b.walkSurface&&b.h>.07&&b.y+b.h/2>y+.3&&b.y-b.h/2<y+.95&&Math.hypot(Math.max(0,Math.abs(x-b.x)-b.w/2),Math.max(0,Math.abs(z-b.z)-b.d/2))<.65);
+  if(!cover)continue;
+  const rank=-radius+(threat?.active?Math.min(3,distance(point,threat))*.18:0);
+  if(rank>score){score=rank;best=point;}
+ }
+ return best;
+}
+function beginIndependentCover(companion,world,player,threat){
+ clearNavigation(companion);
+ Object.assign(companion,{stage:'hold',refuge:findEmyRefuge(world,companion.cat,player,threat),refugeAge:0});
+ companion.cat.reaction=0;
+}
+function updateIndependentCover(companion,world,dt,reduced){
+ const cat=companion.cat,goal=companion.refuge;
+ companion.refugeAge=(companion.refugeAge||0)+dt;
+ if(goal&&companion.refugeAge<3&&distance(cat,goal)>.12&&clearPassage(world,cat,goal)){
+  const walking=moveToward(companion,world,goal,dt,1.45);
+  if(walking){cat.phase='walk';poseEmy(cat,{mode:'walk',walking:true,phase:cat.age,reduced,blend:1});return;}
+ }
+ companion.refuge=null;companionIdle(companion,dt,{reduced,quiet:true});
+}
+export function updateEmyCompanion(companion,delta,{world,player,enteringHide=null,reduced=false,finale=false,threat=null,distractCooldown=0}={}){
  const cat=companion.cat,dt=Number.isFinite(delta)?Math.max(0,Math.min(.1,delta)):0;
  if(finale){setVisibility(companion,true);return null;}
+ // Story priority also applies after a restore or an interrupted command.
+ // Once the hatch opens, Emy must retire; Kitty below ground is never a follow target.
+ if((world.hatch?.open||player?.y<-.02)&&!['waiting','trunk','trunk-run','trunk-enter'].includes(companion.stage))sendEmyToTrunk(companion);
  if(companion.stage==='waiting'||companion.stage==='trunk')return null;
  companion.age+=dt;cat.age+=dt;
  if(companion.stage==='closet-entry'){
@@ -293,16 +421,19 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
    while(companion.route.length&&distance(cat,companion.route[0])<.19&&Math.abs(cat.y-companion.route[0].y)<.28)companion.route.shift();
    if(companion.route.length)openRouteDoor(companion,world,player,reduced);
    const point=companion.route[0]||goal;
-   const walking=moveToward(companion,world,point,dt,2.25,true);
+   const walking=moveToward(companion,world,point,dt,2.25);
    job.stuck=walking?0:job.stuck+dt;
    if(job.stuck>.65&&companion.age>job.nextPlan){
     planRoute(companion,world,goal);job.nextPlan=companion.age+1.0;
    }
    poseEmy(cat,{mode:walking?'walk':'idle',walking,phase:cat.age,reduced,blend:1-Math.exp(-12*dt)});
-   if(distance(cat,goal)<.95&&Math.abs(cat.y-goal.y)<.4){
+   // Horizontal proximity alone can be on the other side of a wall/floor.
+   // Never start the noise countdown until Emy really has a clear final leg.
+   if(distance(cat,goal)<.60&&Math.abs(cat.y-goal.y)<.18&&clearPassage(world,cat,goal)){
     job.arrived=true;job.nextNoise=0;companion.route=[];
    }
-   if(job.stuck>12){companion.stage='following';companion.distraction=null;companion.route=[];return 'distract-failed';}
+   job.travelAge=(job.travelAge||0)+dt;
+   if(job.stuck>12||job.travelAge>60){companion.stage='following';companion.distraction=null;clearNavigation(companion);return 'distract-failed';}
    return null;
   }
   job.remaining-=dt;job.nextNoise-=dt;
@@ -312,41 +443,49 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
    // The noise finishes at the commanded room even when Kitty is hidden on
    // another floor. Do NOT automatically path back toward a live hiding spot:
    // that creates unfair noise and exposes Kitty's wardrobe to the pursuer.
-   companion.stage=enteringHide||player?.hidden?'hold':'following';
-   companion.distraction=null;companion.trail=[];companion.route=[];companion.chasing=undefined;
+   companion.distraction=null;clearNavigation(companion);
+   if(distractCooldown>0){companion.stage='distract-recover';companion.idleAge=0;return 'distract-rest';}
+   if(enteringHide||player?.hidden)beginIndependentCover(companion,world,player,threat);
+   else companion.stage='following';
    return 'distract-done';
   }
   if(job.nextNoise<=0){job.nextNoise=1.5;return 'distract-noise';}
   return null;
  }
- if(companion.altarWait&&companion.stage==='following')player=ALTAR_THRESHOLD;
+ if(companion.stage==='distract-recover'){
+  if(distractCooldown>0){companionIdle(companion,dt,{reduced,quiet:!!(enteringHide||player?.hidden)});return null;}
+  if(enteringHide||player?.hidden)beginIndependentCover(companion,world,player,threat);
+  else {companion.stage='following';clearNavigation(companion);}
+  return 'distract-done';
+ }
  const hide=enteringHide||player?.hidden;
+ if(companion.altarWait&&companion.stage==='following'&&!hide)player=ALTAR_THRESHOLD;
  // "hold" is a safe, quiet companion state, distinct from the story's
- // initial "waiting" and physical "hiding". No teleport, no route, no
- // cat noise, no approach to the wardrobe. The player can hide instantly.
+ // initial "waiting" and physical "hiding". Only a short local refuge path,
+ // no cat noise, no approach to the player's remote wardrobe.
  if(companion.stage==='hold'){
   if(hide){
-   companionIdle(companion,dt,{reduced,quiet:true});
+   updateIndependentCover(companion,world,dt,reduced);
    return null;
   }
-  companion.stage='following';
-  companion.route=[];companion.trail=[];companion.chasing=undefined;
+  companion.refuge=null;companion.stage='following';clearNavigation(companion);
  }
  // Only a nearby Emy may OPTIONALLY join Kitty's wardrobe. A remote Emy,
  // especially on another floor, must stop instead of travelling for ages
  // toward a hiding player. This never gates Kitty's animation in house.js.
+ companion.wardrobeAttempt=hide&&companion.stage==='following'?(companion.wardrobeAttempt||0)+dt:0;
+ const sharedDoor=hide&&player?{x:hide.returnX??player.x,y:player.y,z:hide.returnZ??player.z}:null;
  if(companion.stage==='following'&&hide&&player&&
-  (Math.abs(cat.y-player.y)>.48||distance(cat,player)>1.45)){
-  companion.stage='hold';
-  companion.trail=[];companion.route=[];companion.chasing=undefined;
-  cat.reaction=0;
-  poseEmy(cat,{mode:'sit',walking:false,phase:cat.age,reduced});
+  (hide.objectId!=='wardrobe'||Math.abs(cat.y-player.y)>.48||distance(cat,sharedDoor)>2.1||companion.wardrobeAttempt>3.0||
+   (roomAt(cat.x,cat.z,cat.y)!==roomAt(sharedDoor.x,sharedDoor.z,sharedDoor.y)&&!clearPassage(world,cat,sharedDoor)))){
+  beginIndependentCover(companion,world,player,threat);
+  updateIndependentCover(companion,world,dt,reduced);
   return null;
  }
  let following=companion.stage==='following';
  if(following&&hide)cat.reaction=0;
  if(companion.stage==='hiding'&&!hide){
-  companion.stage='following';companion.hiddenAt=null;following=true;
+  companion.stage='following';companion.hiddenAt=null;following=true;clearNavigation(companion);
   // She reappears at the safe floor position where she followed Kitty in.
   setVisibility(companion,false);
  }
@@ -357,7 +496,7 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
    if(companion.trail.length>450)companion.trail.shift();
   }
  }
- if(companion.stage==='trunk-run'&&!companion.route.length&&distance(cat,TRUNK_APPROACH)>.42)
+ if(companion.stage==='trunk-run'&&!companion.route.length&&companion.age>=(companion.nextPlanAt||0)&&(distance(cat,TRUNK_APPROACH)>.42||Math.abs(cat.y)>.25))
   planRoute(companion,world,TRUNK_APPROACH);
  if(companion.stage==='hiding')return null;
  const hideDoor=hide&&player?{x:hide.returnX??player.x,y:player.y,z:hide.returnZ??player.z}:null;
@@ -406,14 +545,17 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  const gap=distance(cat,heading);
  if(following&&!hide){
   const differentFloor=Math.abs(cat.y-heading.y)>.25;
-  if(companion.chasing===undefined)companion.chasing=gap>FOLLOW_RESUME||differentFloor;
-  if(companion.chasing&&!differentFloor&&gap<=FOLLOW_STOP){
+  // A small horizontal gap through a closed wall is not actual proximity.
+  const separateRoom=roomAt(cat.x,cat.z,cat.y)!==roomAt(heading.x,heading.z,heading.y);
+  const separated=differentFloor||(separateRoom&&!companion.direct);
+  if(companion.chasing===undefined)companion.chasing=gap>FOLLOW_RESUME||separated;
+  if(companion.chasing&&!separated&&gap<=FOLLOW_STOP){
    // Her current spot is intentional once she is close enough.  Discarding
    // stale breadcrumbs avoids a delayed turn if Kitty circles around Emy.
    companion.chasing=false;
    companion.trail.length=0;
    companion.route.length=0;
-  }else if(!companion.chasing&&(gap>FOLLOW_RESUME||differentFloor))companion.chasing=true;
+  }else if(!companion.chasing&&(gap>FOLLOW_RESUME||separated))companion.chasing=true;
  }
  if(following){
   // Prefer Kitty when there is room for the whole cat. Keep the recorded
@@ -426,7 +568,15 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
   if(companion.direct){
    goal=heading;
    companion.trail.length=0;
-   companion.route.length=0;
+   companion.route.length=0;companion.routeTarget=null;
+  }else if(companion.age>=(companion.nextPlanAt||0)&&(companion.chasing||hide||companion.altarWait)){
+   const target=companion.routeTarget;
+   if(!companion.route.length||!target||distance(target,heading)>1.1||Math.abs(target.y-heading.y)>.4){
+    // Clear breadcrumbs from a different elevation or a long-obsolete
+    // doorway. Plan to the latest real location and follow only that path.
+    companion.trail.length=0;planRoute(companion,world,heading);
+    goal=companion.route[0]||heading;
+   }
   }
  }
  const stop=following?(hide?.21:companion.altarWait?.18:FOLLOW_STOP):.32;
@@ -434,14 +584,15 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  // properly away.  Hiding remains deliberately close so Emy takes cover.
  const far=following&&!hide&&!companion.altarWait?Boolean(companion.chasing):(gap>stop+.008||Math.abs(cat.y-heading.y)>.25);
  let walking=false;
- if((companion.stage==='trunk-run'||hide)&&companion.route.length)openRouteDoor(companion,world,player,reduced);
+ if((companion.stage==='trunk-run'||hide||following)&&companion.route.length)openRouteDoor(companion,world,player,reduced);
  if(far&&cat.reaction<=0&&dt>0){
-  const pace=following?Math.min(4.8,.85+3.8*Math.max(0,gap-stop)):1.4;
-  walking=moveToward(companion,world,goal,dt,goal===heading?Math.min(pace,Math.max(0,gap-stop)/dt):pace);
+  const pace=following?Math.min(4.2,.70+2.35*Math.max(0,gap-stop)):1.4;
+  const directStop=goal===heading&&Math.abs(cat.y-heading.y)<.25&&(!following||companion.direct);
+  walking=moveToward(companion,world,goal,dt,directStop?Math.min(pace,Math.max(0,gap-stop)/dt):pace);
  }
  if(!walking&&far&&cat.reaction<=0){
   companion.stuck+=dt;
-  if(companion.stuck>1.2){planRoute(companion,world,hide?heading:goal);companion.stuck=0;}
+  if(companion.stuck>1.2&&companion.age>=(companion.nextPlanAt||0)){companion.trail.length=0;planRoute(companion,world,heading);companion.stuck=0;}
  }else companion.stuck=0;
  if(companion.stage==='following'&&hide&&companion.direct&&distance(cat,heading)<.38&&Math.abs(cat.y-heading.y)<.45){
   if(hide.objectId==='wardrobe'&&(enteringHide||player?.hidden?.objectId==='wardrobe')){
@@ -451,14 +602,16 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
   }
   companion.stage='hiding';companion.hiddenAt=hide.objectId;setVisibility(companion,true);return 'hid';
  }
- if(companion.altarWait&&following&&!walking){cat.yaw+=deltaAngle(cat.yaw,Math.PI)*(1-Math.exp(-4*dt));}
+ if(companion.altarWait&&following&&!walking){cat.yaw+=deltaAngle(cat.yaw,Math.atan2(12.27-cat.x,.44-cat.z))*(1-Math.exp(-4*dt));}
  if(cat.reaction>0&&player){
   const facing=Math.atan2(player.x-cat.x,player.z-cat.z);
   cat.yaw+=deltaAngle(cat.yaw,facing)*(1-Math.exp(-6*dt));
 
  }
  companion.restTime=walking?0:(companion.restTime||0)+dt;
- const mode=cat.reaction>0?'purr':walking?'walk':cat.alarm>.2?'idle':companion.restTime<.65?'idle':'sit';
+ if(walking){companion.fatigue=Math.min(1,(companion.fatigue||0)+dt*.008);companion.mood=cat.alarm>.28?'scared':'calm';}
+ if(cat.alarm>.28)companion.mood='scared';
+ const mode=cat.reaction>0?'purr':walking?'walk':cat.alarm>.28?'alert':companion.restTime<.65?'idle':'sit';
  if(cat.reaction>0)cat.reaction=Math.max(0,cat.reaction-dt);
  if(!walking&&cat.reaction<=0&&companion.restTime>=.65){
   companionIdle(companion,dt,{reduced,lookAt:player});

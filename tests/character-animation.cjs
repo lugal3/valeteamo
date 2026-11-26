@@ -25,6 +25,21 @@ const near=(a,b,message,tol=1e-5)=>assert(Math.abs(a-b)<tol,message+': '+a+' vs 
  const rates=[];for(const hz of [30,60]){const a=new CharacterAnimator();for(let i=0;i<hz;i++)a.advance(1/hz,{distance:1/hz});rates.push(a.snapshot());}near(rates[0].distance,rates[1].distance,'Frame-independent stride');near(rates[0].weight,rates[1].weight,'Frame-independent blend');
  for(const t of [0,.2,.5,.8,1])assert([...sampleWindowEntry(t,createPose())].every(Number.isFinite));
  assert([...sampleWindowEntry(0,createPose())].every(v=>v===0));assert([...sampleWindowEntry(1,createPose())].every(v=>v===0));assert.equal(windowEntryHands(.4).length,2);
+ const {sampleHop,hopPose}=await import('../src/lab/animations/hop.js');
+ const {HOP_DURATION,HOP_COOLDOWN}=await import('../src/lab/hud-context.js');
+ const air=hopPose(HOP_DURATION*.5);assert(air.lift>.1&&air.tuck>.03);
+ const contact=hopPose(HOP_DURATION);assert.equal(contact.lift,0);assert(contact.squash>.02);
+ assert.equal(hopPose(HOP_COOLDOWN).weight,0);
+ assert.equal(hopPose(.18,true).weight,0,'Reduced motion omits expressive pose');
+ for(const t of [0,.03,.09,.18,.27,.36,.44,.62]){
+  const p=sampleHop(t,createPose(),{handsFree:true});
+  assert([...p].every(Number.isFinite));
+  evaluateRig(binding,p);skinCharacter(g.vertices,out,binding);assert(out.every(Number.isFinite));
+ }
+ const jumping=new CharacterAnimator();jumping.advance(.055,{hopAge:.18,equipment:'empty'});
+ evaluateRig(binding,jumping.sample());assert(jointPosition(binding,'leftFoot')[1]>.15);
+ jumping.advance(.055,{hopAge:HOP_COOLDOWN,equipment:'empty'});
+ assert.equal(jumping.hopAge,HOP_COOLDOWN);
  await require('./animation-quality.cjs')();
  assert.equal(JOINTS.length,15);console.log('PASS animation: articulated bind pose, attachments, unit normals, planted feet in 4 directions, collision stops, smooth blends, 30/60 Hz, pause, reduced motion and reusable window clip');
 })().catch(e=>{console.error(e);process.exitCode=1;});

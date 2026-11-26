@@ -1,4 +1,5 @@
 import {poseVentCover} from './study-vent.js';
+import {restoreHoliday,collectedPlushes} from './holiday-collectibles.js';
 import {poseArrivalCar} from './arrival-car.js';
 import {HATCH,poseHatch,poseHatchRug} from './basement.js';
 import {createLouisEscape,freeLouis,LOUIS_HIDING_SPOT} from './louis-escape.js';
@@ -29,7 +30,7 @@ export function captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTr
  const phase=events.phase==='hide'&&s.hidden?'patrol':events.phase;
  const pursuit=['patrol','hunt','evaded','rc-setup'].includes(phase)?{phase,actor:pursuer?.active?pursuer.checkpoint():null}:null;
  return {
-  version:VERSION,stage,ventOpen:world.studyVent.unlatched,lives:checkpointLives(s.lives),emyRescueUsed:!!s.emyRescueUsed,intruderSeen:!!pursuer?.intruderSeen,powered:world.lights.power.on,drawer:puzzle.drawer,
+  version:VERSION,stage,plushes:world.holiday?collectedPlushes(world.holiday):[],treeLights:world.holiday?.tree.on!==false,ventOpen:world.studyVent.unlatched,lives:checkpointLives(s.lives),emyRescueUsed:!!s.emyRescueUsed,intruderSeen:!!pursuer?.intruderSeen,powered:world.lights.power.on,drawer:puzzle.drawer,
   picked:world.objects.filter(object=>PICKUPS.has(object.kind)&&object.taken).map(object=>object.id),
   rugAside:world.hatchRug.aside,hatchUnlocked:!world.hatch.locked,hatchOpen:world.hatch.open,
   mirrorRevealed:mirrorSafe.revealed,safeOpened:mirrorSafe.opened,pianoSolved:world.piano.solved,
@@ -59,6 +60,7 @@ export function restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,r
  const solvedPiano=saved.pianoSolved===true&&picked.has('piano-sheet');
  if(saved.version===1&&louisUntied)picked.add(MASTER_KEY_ID);
  world.lights.power.on=saved.powered!==false;
+ restoreHoliday(world.holiday,saved);
  // Later checkpoints imply the prerequisites even if an older write omitted a pickup.
  if(bedroomUnlocked)picked.add('key');
  if(saved.hatchUnlocked===true||louisUntied)picked.add('red-key');

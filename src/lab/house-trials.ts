@@ -1,7 +1,10 @@
 import {progressStops} from './rescue-progress.js';
+import {trialEmyStage} from './trial-checkpoint.js';
 
 export type HouseTrial={
  milestone?:number;
+ /** Isolated preview scenes may intentionally omit Emy's companion entrance. */
+ emy?:'following'|'waiting'|'trunk';
  title:string;
  description:string;
  objective:string;
@@ -27,7 +30,7 @@ const nextActions=[
 type StopId=`hito-${number}`;
 export const milestoneIds=progressStops.map((_,i):StopId=>`hito-${i+1}`);
 const milestoneTrials=Object.fromEntries(progressStops.map(({percent,label},i)=>[milestoneIds[i],{
- title:`${percent}% · ${label}`,description:nextActions[i],objective:nextActions[i],checkpoint:'ground',milestone:i+1
+ title:`${percent}% · ${label}`,description:nextActions[i],objective:nextActions[i],checkpoint:'ground',milestone:i+1,emy:trialEmyStage(i+1)
 }])) as Record<StopId,HouseTrial>;
 const legacyTrials={
 
@@ -71,7 +74,7 @@ const legacyTrials={
   title:'Auto del secuestrador',
   description:'Mira desde el jardín cómo el auto gira, entra y se estaciona frente a la casa. Al terminar puedes caminar a su alrededor.',
   objective:'Acércate al auto estacionado',
-  pose:{x:8.1,floor:0,z:14.05,yaw:Math.atan2(2.05,2.60),pitch:-.23},events:'car'
+  pose:{x:8.1,floor:0,z:14.05,yaw:Math.atan2(2.05,2.60),pitch:-.23},events:'car',emy:'waiting'
  },
  wardrobe:{
   title:'Levantarse y entrar al armario',

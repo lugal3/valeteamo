@@ -1,12 +1,17 @@
-import {trialCheckpoint} from './trial-checkpoint.js';
+import {trialCheckpoint,trialStartPose,trialEmyStage} from './trial-checkpoint.js';
 import {removeVentCover,advanceVentCover,poseVentCover} from './study-vent.js';
 import {HouseEvents} from './story-events.js';
 import {HouseMessages} from './hud-messages.js';
+import {interactionIcon,feedbackIcon,createHaptics} from './hud-feedback.js';
+import {PLUSH_NAMES,holidayPowered,beginGift,advanceGift,collectPlush,collectedPlushes} from './holiday-collectibles.js';
+import {hopPose} from './animations/hop.js';
 import {captureHouseCheckpoint,restoreHouseCheckpoint} from './house-checkpoint.js';
 import {PhoneUI} from './phone-ui.js';
 import {FloorSounds} from './floor-sounds.js';
 import {EMOTES} from './animations/emotes.js';
 import {Pursuer} from './pursuer.js';
+import {createFrameSampler} from './frame-sampler.js';
+import {difficultyProfile,validDifficulty} from './difficulty.js';
 import {STARTING_LIVES,LIFE_NOTICE_SECONDS,captureLoss,lifeSlots} from './capture-lives.js';
 import {captureFrame,capturePath,captureTiming} from './capture-shot.js';
 import {movementKey,releasedPointer,hasControlTouch} from './movement-input.js';
@@ -37,11 +42,14 @@ import {BATTERY_SWAP_SECONDS} from './viewmodel.js';
 import {rescueProgress} from './rescue-progress.js';
 import {poseEscapeAmbush,poseEmyLastChance,createRescueObjectives,updateEmySenses} from './emy-rescue.js';
 import {collectCinematicCues} from './cinematic-cues.js';
-import {rcControlHint,throwableHint,threatAccessibility} from './hud-context.js';
-import {updateUpstairsEmy,petEmy} from './emy-cat.js';
-import {createEmyAbilities,advanceEmyAbilities,activateEmyScan,roomChoices,roomDestinations,isEmyRoomLocked,emyFloorMap,emyFloorList} from './emy-abilities.js';
+import {FINALE_BEATS,finaleStage,finaleThreat,finaleWeather} from './escape-finale.js';
+import {createAltarVisit,advanceAltarVisit,activateAltarRecord} from './louis-altar.js';
+import {rcControlHint,throwableHint,threatAccessibility,hopOffset,HOP_DURATION,HOP_COOLDOWN,advanceHop} from './hud-context.js';
+import {updateUpstairsEmy,petEmy,poseEmy} from './emy-cat.js';
+import {createEmyAbilities,advanceEmyAbilities,activateEmyScan,createEmyNameCue,advanceEmyNameCue,roomChoices,roomDestinations,isEmyRoomLocked,emyFloorList} from './emy-abilities.js';
+import {defaultMiniatureView,changeMiniatureView,miniatureSVG,miniatureMarkers} from './emy-miniature.js';
 import {installNoiseProps,grabNoiseProp,holdNoiseProp,releaseNoiseProp,stepNoiseProps} from './noise-props.js';
-import {sendEmyDistract,commandEmyStay,releaseEmyStay,requestRibbonKey,EMY_ENTRANCE_SECONDS,createEmyCompanion,beginEmyEntrance,emyEntranceCamera,sendEmyToTrunk,updateEmyCompanion,snapshotEmyCompanion,restoreEmyCompanion} from './emy-companion.js';
+import {previewEmyDistract,sendEmyDistract,commandEmyStay,rejoinEmyInPerson,requestRibbonKey,EMY_ENTRANCE_SECONDS,createEmyCompanion,beginEmyEntrance,emyEntranceCamera,sendEmyToTrunk,emyOccupiesHatch,updateEmyCompanion,snapshotEmyCompanion,restoreEmyCompanion,initializeTrialEmy} from './emy-companion.js';
 import {createRC,syncRCObject,deployRC,driveRC,beepRC,updateRC,stopRC,crashRC,recoverRC,rcCamera,advanceRCCamera,rcDeploymentView,canTrapPursuer} from './rc-car.js';
 import {createLouisEscape,updateLouisEscape,freeLouis,louisCamera} from './louis-escape.js';
 import {createLoisShotDirector,advanceLoisShot,finishLoisShot} from './lois-ps2-cinematics.js';
@@ -74,7 +82,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const checkpointStore=demo&&!config.trial&&checkpoint==='ground'?config.checkpointStore:null;
  const animator=new CharacterAnimator();
  const root=document.createElement('div');root.id='lab3d';root.innerHTML=`
- <canvas id="lab-canvas" aria-label="Escenario tridimensional interactivo de la casa"></canvas>
+ <canvas id="lab-canvas" tabindex="-1" aria-label="Escenario tridimensional interactivo de la casa"></canvas>
  <div id="house-interest" class="house-interest" aria-hidden="true" hidden><i>✧</i><span>OBJETIVO</span></div>\n <div class="house-screw-glows" aria-hidden="true"><i class="house-vent-screw-glow" data-screw="0" hidden>✧</i><i class="house-vent-screw-glow" data-screw="1" hidden>✧</i><i class="house-vent-screw-glow" data-screw="2" hidden>✧</i><i class="house-vent-screw-glow" data-screw="3" hidden>✧</i></div>
  <div id="torch-outline" class="torch-silhouette" hidden><svg viewBox="0 0 40 20" aria-hidden="true"><path d="M3 6h10l7-4h6v16h-6l-7-4H3z" fill="none" stroke="#c4f3ff" stroke-width="2" transform="rotate(-20 16 10)"/></svg></div>
  <div class="lab-vignette" aria-hidden="true"></div>
@@ -83,6 +91,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   <div id="capture-loss" hidden><h2>Te atraparon</h2><p></p></div>
   <div id="capture-caption" class="capture-caption" role="status"></div>
  </div>
+ <div id="house-plush-toast" hidden role="status" aria-live="polite"><div class="plush-reward-art" aria-hidden="true"><i></i><b>♡</b></div><small>RECUERDO ENCONTRADO</small><strong></strong><span></span></div>
  <div id="house-lives" hidden role="status"><div class="life-slots" aria-hidden="true"></div><strong></strong></div>
  <div class="lab-window-intro lab-hidden" id="lab-window-intro" aria-label="Entrada cinematográfica por la ventana">
    <div class="lab-intro-top"></div>
@@ -93,36 +102,30 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  </div>
  <div class="lab-cross" aria-hidden="true">+</div>
  <div class="house-emy-wave" id="house-emy-wave" hidden aria-hidden="true"></div>
- <div class="house-emy-menu" id="house-emy-menu" hidden role="group" aria-label="Acciones de Emy">
-  <strong>Emy ♡</strong>
-  <button data-act="emy:pet">♡ Acariciar</button>
-  <button id="house-emy-stay" data-act="emy:stay" aria-pressed="false">⌑ Quédate aquí</button>
-  <button data-act="emy:scan">◎ Escaneo <small id="house-emy-scan-cd"></small></button>
-  <button data-act="emy:map">✿ Distracción <small id="house-emy-distract-cd"></small></button>
-  <button data-act="emy:close">Cerrar</button>
+ <div id="house-emy-name" class="house-emy-name" aria-hidden="true" hidden>Emy ♡</div>
+ <div class="house-emy-menu" id="house-emy-menu" hidden role="dialog" aria-modal="true" aria-label="Acciones de Emy">
+  <header><strong>Emy ♡</strong><span>Tu pequeña compañera</span><button data-act="emy:close" class="emy-close" aria-label="Cerrar acciones de Emy">✕</button></header>
+  <button class="emy-card pet" data-act="emy:pet"><i aria-hidden="true">♡</i><b>Acariciar</b><span>Dale un poquito de cariño ♡</span></button>
+  <button class="emy-card stay" id="house-emy-stay" data-act="emy:stay" aria-pressed="false"><i id="house-emy-stay-icon" aria-hidden="true">Ⅱ</i><b id="house-emy-stay-title">Quédate aquí</b><span id="house-emy-stay-copy">Emy esperará en este lugar</span></button>
+  <button class="emy-card scan" data-act="emy:scan"><i aria-hidden="true">◎</i><b>Escaneo</b><span>Detecta amenazas cercanas</span><small id="house-emy-scan-cd" hidden></small></button>
+  <button class="emy-card distract" data-act="emy:map"><i aria-hidden="true">♫</i><b>Distracción</b><span>Envía a Emy a hacer ruido</span><small id="house-emy-distract-cd" hidden></small></button>
  </div>
  <div class="house-emy-map" id="house-emy-map" hidden role="dialog" aria-modal="true" aria-label="Mapa de distracción de Emy">
   <header class="house-emy-map-header">
    <div><span class="house-emy-map-kicker">EMY · PLAN DE DISTRACCIÓN</span><strong>Elige dónde hacer ruido</strong></div>
-   <button data-act="emy:close" aria-label="Cerrar plano de la casa">✕</button>
+   <div class="emy-map-nav"><button data-act="emy:map:back" aria-label="Volver a acciones de Emy">←</button><button data-act="emy:close" aria-label="Cerrar plano de la casa">✕</button></div>
   </header>
-  <div class="house-emy-floor-switch" role="tablist" aria-label="Seleccionar planta de la casa">
-   <button id="house-emy-tab-0" role="tab" aria-controls="house-emy-map-rooms" aria-selected="true" data-act="emy:floor:0">01 · PLANTA BAJA <small>6 lugares</small></button>
+  <div class="house-emy-floor-switch" role="tablist" aria-label="Seleccionar vista de la casa">
+   <button id="house-emy-tab--1" role="tab" aria-controls="house-emy-map-rooms" aria-selected="true" data-act="emy:floor:-1">Exterior</button>
+   <button id="house-emy-tab-0" role="tab" aria-controls="house-emy-map-rooms" aria-selected="false" data-act="emy:floor:0">01 · PLANTA BAJA <small>6 lugares</small></button>
    <button id="house-emy-tab-1" role="tab" aria-controls="house-emy-map-rooms" aria-selected="false" data-act="emy:floor:1">02 · PLANTA ALTA <small>4 lugares</small></button>
   </div>
-  <p class="house-emy-intro">① Elige el piso &nbsp; ② Toca una habitación del plano o su nombre &nbsp; ③ Confirma</p>
+  <p class="house-emy-intro">Arrastra para girar e inclinar · Pellizca o usa +/− · Elige un piso y una habitación</p>
   <div class="house-emy-map-rooms" id="house-emy-map-rooms" role="tabpanel" aria-labelledby="house-emy-tab-0"></div>
   <footer class="house-emy-map-footer">
    <p id="house-emy-map-status" role="status" aria-live="polite">Selecciona una habitación para enviar a Emy.</p>
    <button id="house-emy-map-send" data-act="emy:send" disabled>Enviar a Emy <span aria-hidden="true">➜</span></button>
   </footer>
- </div>
- <div class="house-noise-controls" id="house-noise-controls" hidden role="group" aria-label="Objeto en la mano">
-  <strong id="house-noise-held" aria-live="off"></strong>
-  <small id="house-noise-hint" class="house-control-hint"></small>
-  <button data-act="noise:throw" aria-keyshortcuts="G">Lanzar <kbd>G</kbd></button>
-   <button data-act="noise:lob">Lanzar suave</button>
-  <button data-act="noise:drop" aria-keyshortcuts="V">Soltar <kbd>V</kbd></button>
  </div>
  <div id="house-mouse-status" class="house-mouse-status" hidden>Esc o R · Liberar ratón</div>
  <div class="lab-top">
@@ -135,9 +138,16 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      <label>Velocidad de giro <input data-setting="sensitivity" aria-label="Sensibilidad de giro" type="range" min="${SENSITIVITY_MIN}" max="${SENSITIVITY_MAX}" step="${SENSITIVITY_STEP}" value="${DEFAULT_CAMERA_SETTINGS.sensitivity}"></label>
      <label class="lab-invert-label"><input data-setting="invertX" type="checkbox"> Invertir giro horizontal</label>
      <label>Calidad de imagen <select data-setting="quality" aria-label="Calidad gráfica"><option value="medium">Detalles (auto)</option><option value="low">Modo fluido</option></select></label>
+     <label class="lab-preference"><input data-setting="showFPS" type="checkbox"> Mostrar FPS durante el juego</label>
      <label class="lab-preference"><input data-setting="bob" type="checkbox" checked> Balanceo al caminar</label>
      <label class="lab-preference"><input data-setting="motion" type="checkbox"> Reducir movimiento</label>
      <label class="lab-preference"><input data-setting="captions" type="checkbox" checked> Subtítulos de sonidos</label>
+     <label class="lab-preference"><input data-setting="hints" type="checkbox"> Mostrar instrucciones de objetivo</label>
+     <label class="lab-preference"><input data-setting="threatText" type="checkbox"> Mostrar avisos del perseguidor</label>
+     <label class="lab-preference"><input data-setting="haptics" type="checkbox" checked> Vibración (si el dispositivo la admite)</label>
+     <label class="lab-preference"><input data-setting="immersive" type="checkbox" checked> HUD discreto</label>
+     <label>Dificultad <select data-setting="difficulty" aria-label="Dificultad"><option value="story">Historia · recomendada</option><option value="normal">Equilibrado</option><option value="tense">Tensión</option></select></label>
+     <label class="lab-preference"><input data-setting="adaptive" type="checkbox" checked> Ayuda adaptable tras perder vidas</label>
      <details class="house-mixer"><summary>Mezclador de sonido</summary>
        <label class="lab-preference"><input data-setting="mute" type="checkbox"> Silenciar la casa</label>
        ${MIX_CHANNELS.map(([key,label,preview])=>`<div class="mixer-row"><label><span>${label} <output data-level="${key}"></output></span><input data-setting="${key}" type="range" min="0" max="${mixLimit(key)}" step=".01" aria-label="${label}"></label><button data-act="audio:${preview||key}" aria-label="Probar ${label}">▶</button></div>`).join('')}
@@ -146,11 +156,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
        <small class="mixer-status" role="status"></small>
      </details>
      <button data-act="reset">${scenario?'Reiniciar prueba':'Reiniciar casa'}</button>
-     <button data-act="hud">Editar controles / hotbar</button>
-     ${!config.trial?'':'<details><summary>Diagnóstico</summary><div id="lab-metrics"></div></details>'}
-     <details class="lab-settings-note"><summary>Controles</summary><p>WASD para caminar, Mayús para correr y C para agacharte. Arrastra para mirar o pulsa R para capturar el ratón. E interactúa, F usa el objeto equipado, I abre la mochila y Esc libera el ratón o pausa.</p><p>En pantalla táctil, mueve el joystick izquierdo y arrastra a la derecha para mirar. Puedes hacer ambos gestos a la vez.</p></details>
+     <button data-act="bag">Inventario · pilas y notas</button>
+      <button data-act="hud">Editar controles / hotbar</button>
+     ${!config.trial?'':'<details><summary>Diagnóstico</summary><div id="lab-metrics"></div><label><input type="checkbox" data-setting="perf"> Medir rendimiento durante la prueba</label><small>Muestra hasta 600 fotogramas activos. CPU = envío de trabajo, no tiempo GPU.</small><button data-act="perf-copy">Copiar informe</button></details>'}
+     <details class="lab-settings-note"><summary>Controles</summary><p>WASD para caminar, Mayús para correr y C para agacharte y Espacio para saltar. Arrastra para mirar o pulsa R para capturar el ratón. E interactúa, F usa el objeto equipado, I abre el inventario (también disponible en Ajustes) y Esc libera el ratón o pausa.</p><p>En pantalla táctil, mueve el joystick izquierdo y arrastra a la derecha para mirar. Puedes hacer ambos gestos a la vez.</p></details>
    </div></details>
  </div>
+ <output id="house-fps" class="house-fps" hidden aria-live="off" aria-label="Fotogramas por segundo"></output>
+ ${config.trial?'<output id="house-perf" class="house-perf" hidden aria-live="off"></output>':''}
  <div class="lab-focus" id="lab-focus" role="status" aria-live="polite"></div>
  <div class="house-messages" id="house-messages" hidden>
   <div class="lab-objective" id="lab-objective">Explora la casa</div>
@@ -161,11 +174,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  <div class="lab-joystick" id="lab-joystick" aria-label="Joystick izquierdo, arrastrar para caminar"><div class="lab-stick-ring"><div id="lab-stick" class="lab-stick-thumb">♡</div></div></div>
  <div class="lab-look" id="lab-look" aria-label="Arrastrar para mirar"></div>
  <div class="lab-buttons">
-  <button data-act="interact" id="lab-interact" aria-keyshortcuts="E" hidden><kbd aria-hidden="true">E</kbd><small>Usar</small></button>
+  <button data-act="interact" id="lab-interact" aria-keyshortcuts="E" hidden disabled><span class="house-action-icon" aria-hidden="true">${feedbackIcon("examine")}</span><kbd aria-hidden="true">E</kbd><small>Interactuar</small></button>
   <button data-act="emotes" aria-label="Elegir emote" aria-controls="house-emotes" aria-expanded="false" hidden>☺<small>Emotes</small></button>
-  <button data-act="bag">▣<small>Mochila</small></button>
+  
   <button data-act="flash" id="house-light">☼<small>Luz</small></button>
   <button data-act="phone" class="phone-expand" id="house-use-phone" aria-label="Usar teléfono" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></svg><small>Usar</small></button>
+  <button data-act="hop" id="lab-hop" aria-label="Saltar" aria-keyshortcuts="Space" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-5 5 5-5 5 5M5 21h14"/></svg><small>Saltar</small></button>
   <button data-act="crouch" id="lab-crouch" aria-label="Agacharse" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2"/><path d="m13 8-3 4 5 2-2 3h5m-8-5-4 5M7 21h10m-7-12-3 2"/></svg><small>Agachar</small></button>
  </div>
  <div class="house-emotes" id="house-emotes" hidden role="group" aria-label="Emotes"><span>En el espejo · moverte cancela</span>${EMOTES.map(e=>`<button data-act="emote:${e.id}">${e.key} · ${e.label}</button>`).join('')}<button data-act="emote:stop">Detener</button></div>
@@ -180,14 +194,15 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const events=new HouseEvents({pursuit:config.entry!=='rescue',twoActs:true,arrivalLead:CAR_ARRIVAL_SECONDS}),floorSounds=new FloorSounds();let pursuer=null,equipment='flashlight',equipmentAge=1,encounterCheckpoint=null,thirdView=null;
  const mirrorSafe=new MirrorSafePuzzle(),television=new HouseTelevision();
  let previousToolTarget=null,autoUseTarget=null,keyTurn=null;
- let safeInput='',activeSafe=null,noteLift=0,noteHold=0,notePresentation=false,capturePhoto=false,piano=null;
+ let safeInput='',activeSafe=null,noteLift=0,noteHold=0,notePresentation=false,capturePhoto=false,piano=null,phoneTurn=0;
  const objectives=createRescueObjectives();
  let rc=null,louis=null,loisShotDirector=null,rcTrap={armed:false,closed:false},finalCutscene=null;
- let emyAbilities=createEmyAbilities(),emyMenuOpen=false,emyMapFloor=0,emyMapSelected='',noiseProps=[],heldNoise=null;
+ let altarVisit=createAltarVisit();
+ let emyAbilities=createEmyAbilities(),emyNameCue=createEmyNameCue(),emyMenuOpen=false,emyMapFloor=-1,emyMapSelected='',miniatureView=defaultMiniatureView(),noiseProps=[],heldNoise=null;
  let resumed=false,lastSafeCheckpoint=null,captureShot=null,captureCount=0,lifeNoticeLeft=0;
  let equipmentBeforeNote='empty',batterySwap=null;
- const canUseHotbar=()=>ready&&!isSuspended()&&!cinematic&&!emyShot&&events.phase!=='arrival'&&events.phase!=='failed'&&events.phase!=='safe'&&rc?.mode!=='driving'&&rc?.mode!=='deploying';
- const phone=new PhoneUI(root,(kind,toggle=true)=>equip(kind,toggle),()=>resetInput(),{canEquip:canUseHotbar,canUse:()=>canUseHotbar()&&!notePresentation,onEdit:()=>{releaseMouse();resetInput();if(isSuspended())sound.pause();else sound.resume();},onPhoto:()=>{capturePhoto=true;}});phone.equip(equipment);
+ const canUseHotbar=()=>ready&&!heldNoise&&!isSuspended()&&!cinematic&&!emyShot&&events.phase!=='arrival'&&events.phase!=='failed'&&events.phase!=='safe'&&rc?.mode!=='driving'&&rc?.mode!=='deploying';
+ const phone=new PhoneUI(root,(kind,toggle=true)=>equip(kind,toggle),()=>resetInput(),{canEquip:canUseHotbar,canUse:()=>canUseHotbar()&&!notePresentation,onEdit:()=>{releaseMouse();resetInput();if(isSuspended())sound.pause();else sound.resume();},onPhoto:()=>{if(!isPaused()&&phone.open&&phone.app==='camera')capturePhoto=true;},onMap:()=>openHouseMap(true),onAppChange:()=>{capturePhoto=false;resetInput();},onHint:()=>phone.objective,onMusic:enabled=>sound.setPhoneMusic(enabled)});phone.equip(equipment);
  const danger=document.createElement('div');danger.className='house-danger';danger.hidden=true;danger.setAttribute('role','status');root.querySelector('#house-messages').append(danger);
  const enableSound=document.createElement('button');enableSound.className='house-enable-sound';enableSound.textContent='Activar sonido';enableSound.hidden=true;root.querySelector('.house-mixer').before(enableSound);
  enableSound.addEventListener('click',async()=>{
@@ -198,7 +213,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const hudMessages=new HouseMessages(root);
  phone.onPresentationChange=()=>hudMessages.layout(phone.rect,phone.open);
  const controller=new AbortController(),signal=controller.signal;
- let rcViewSmoothed=null;
+ let plushNoticeLeft=0;
+ let rcViewSmoothed=null,hopAge=HOP_COOLDOWN,hopCancelled=false,previousEquipment=null,lastHapticThreat=false,lastHapticPhase='';
  let renderer,world,emyCompanion=null,emyShot=null,bathCircuit,puzzle=createHousePuzzle(config.entry),sound=new HouseSound(),s,raf=0,last=0,lastPaint=0,fps=0,elapsed=0,lookPointer=null,stickPointer=null;
  let active=true,ready=false,hasFocus=true,focus=null,lookLast={x:0,y:0},paused=false,modal='',intro=true,contextLost=false,stickPointerType=null,lookPointerType=null;
  let lookTarget={yaw:Math.PI,pitch:0},cinematic=null,poseTransition=null,handAction=0,clickAction=0,lastInteraction=-Infinity,audioPreview=false;
@@ -206,8 +222,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const motionMedia=window.matchMedia('(prefers-reduced-motion: reduce)');
  const keys=new Set(),joystick={x:0,z:0,sprint:false},velocity={forward:0,side:0,speed:KITTY_SPEED.walk};
  const cameraSettings=(()=>{try{return readCameraSettings(window.localStorage)}catch{return {...DEFAULT_CAMERA_SETTINGS}}})();
- const options={...cameraSettings,bob:cameraSettings.bob??!motionMedia.matches,quality:'medium'};
+ const options={...cameraSettings,bob:cameraSettings.bob??!motionMedia.matches,quality:'medium',difficulty:cameraSettings.difficulty??(scenario?'normal':'story'),adaptive:cameraSettings.adaptive!==false};
  const reducedMotion={get matches(){return motionMedia.matches||options.motion===true;}};
+ const haptics=createHaptics({vibrate:pattern=>navigator.vibrate?.(pattern)??false,now:()=>performance.now(),enabled:()=>options.haptics!==false&&!document.hidden&&hasFocus});
  const saveCamera=()=>{try{writeCameraSettings(window.localStorage,options)}catch{}};
  const points={ground:'Planta baja',upstairs:'Planta alta',sound:'Iluminación / sonido',interactions:'Interacciones',mirror:'Espejo del baño'};
  const say=(text,seconds=2.4)=>hudMessages.say(text,seconds);
@@ -217,11 +234,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const isSuspended=()=>!ready||paused||emyMenuOpen||!!modal||!!captureShot||phone.editing||$('lab-camera-settings').open||isPortrait()||document.hidden||!hasFocus||contextLost;
  const wakeShot=()=>events.phase==='lockdown'&&pursuer?.mode==='rising';
  const isPaused=()=>isSuspended()||!!cinematic||!!emyShot||!!poseTransition||events.phase==='car-preview'||wakeShot();
- const flashlightBeam=()=>s.flashlight&&batterySwap===null&&equipment==='flashlight'&&!s.hidden&&!s.lying&&!animator.performing&&!phone.open&&events.phase!=='arrival';
+ const flashlightBeam=()=>!heldNoise&&s.flashlight&&batterySwap===null&&equipment==='flashlight'&&!s.hidden&&!s.lying&&!animator.performing&&!phone.open&&events.phase!=='arrival';
  const torchMarker=$('torch-outline');
  const desktop=window.matchMedia('(any-hover: hover) and (any-pointer: fine)');
  const remoteInUse=()=>['driving','deploying'].includes(rc?.mode);
- const canLook=()=>!isPaused()&&!phone.open&&events.phase!=='arrival'&&!remoteInUse();
+ const canLook=()=>!isPaused()&&(!finalCutscene||finalCutscene.playable)&&(!phone.open||phone.canWalk)&&events.phase!=='arrival'&&!remoteInUse();
+ const canHop=()=>canLook()&&!phone.open&&!finalCutscene&&!loisShotDirector&&!s.hidden&&!s.lying&&!s.crouched&&!animator.performing&&$('house-emotes').hidden&&
+  !['safe','failed','rc-rescue','ending'].includes(events.phase)&&!isOnStairs(s,getStairDirection,inHatch)&&
+  !(world.hatch.open&&inHatch(s.x,s.z,.14))&&!blocked(world.boxes,s.x,s.y,s.z,.2,1.83);
  const mouseLocked=()=>document.pointerLockElement===canvas;
  function releaseMouse(){if(mouseLocked())document.exitPointerLock();}
  function lockMouse(){
@@ -231,10 +251,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  function cancelEmote(options){animator.cancelEmote(options);sound.stopEmote();}
  function equip(kind,toggle=false,automatic=false){
+  if(heldNoise)return;
   const inventory=s.inventory;
   if(notePresentation&&kind!=='flashlight')return;
   if(kind==='master-key'&&!inventory.masterKey||kind==='screwdriver'&&(!inventory.screwdriver||world.studyVent.unlatched)||kind==='rc'&&!inventory.rc||kind==='flashlight'&&!inventory.torch||kind==='key'&&!inventory.key||kind==='red-key'&&!inventory.redKey||kind==='paper'&&!inventory.notes.length&&!inventory.pendingNote)return;
-  cancelEmote();equipment=toggle&&equipment===kind?'empty':kind;equipmentAge=0;phone.equip(notePresentation?'empty':equipment);if(!automatic)resetInput();
+  const next=toggle&&equipment===kind?'empty':kind;
+  if(next===equipment)return;
+  cancelEmote();previousEquipment=automatic||reducedMotion.matches?null:equipment;equipment=next;equipmentAge=0;phone.equip(notePresentation?'empty':equipment);syncEquipmentControls();if(!automatic)resetInput();
  }
  function releaseCapture(element,pointer){try{if(pointer!==null&&element?.hasPointerCapture(pointer))element.releasePointerCapture(pointer);}catch{}}
  function capture(element,pointer){try{element.setPointerCapture?.(pointer);}catch{}}
@@ -265,12 +288,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function rebuild(){
   // Keep Emy's skinned meshes in the dynamic buffer while she waits outside
   // or hides, so the window jump and shared hide can reveal her without a rebuild.
-  renderer.rebuild([...world.boxes.filter(box=>!box.hiddenGeometry||box.emySpec),...pickupGeometry(world.objects)]);
+  renderer.rebuild([...world.boxes.filter(box=>(!box.hiddenGeometry||box.emySpec)&&(!box.source?.taken||box.dynamic)),...pickupGeometry(world.objects)]);
   renderer.setNoiseProps(noiseProps);
   renderer.updateVisibility();
  }
  function saveCheckpoint(){
-  if(!demo||pursuer.caught||events.phase==='failed')return;
+  if(!demo||pursuer.caught||events.phase==='failed'||finalCutscene)return;
   lastSafeCheckpoint=captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTrap,batterySwap,pursuer,emy:emyCompanion&&snapshotEmyCompanion(emyCompanion)});
   if(lastSafeCheckpoint.hide&&lastSafeCheckpoint.hide===pursuer.witnessed)lastSafeCheckpoint.hide=undefined;
   checkpointStore?.save(lastSafeCheckpoint);
@@ -306,16 +329,21 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(door.motion)updateFurniture(world.objects,.1,s);
   resetInput();saveCheckpoint();say('¡Es Emy! Ha entrado de un salto y ahora te acompaña.',4);
  }
+ function syncEmyInteraction(){
+  const cat=world.emy,target=world.emyInteraction;
+  Object.assign(target,{x:cat.x,y:cat.y+.38,z:cat.z,interactable:!cat.hidden&&(!emyCompanion||['following','stay','distract','distract-recover'].includes(emyCompanion.stage))&&cat.reaction<=0});
+ }
  function reset(saved){
+  perfSampler.reset();perfAt=0;clearFPS();altarVisit=createAltarVisit();
   const seed=!saved&&scenario?.milestone;
   if(seed)saved=trialCheckpoint(seed);
   previousToolTarget=null;autoUseTarget=null;keyTurn=null;
-  lifeNoticeLeft=0;$('house-lives').hidden=true;
+  lifeNoticeLeft=0;$('house-lives').hidden=true;plushNoticeLeft=0;$('house-plush-toast').hidden=true;
   television.sync(false,false);notePresentation=false;
   louis=null;loisShotDirector=null;rcTrap={armed:false,closed:false};finalCutscene=null;
-  emyMenuOpen=false;emyAbilities=createEmyAbilities();heldNoise=null;
-  $('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;$('house-emy-wave').hidden=true;$('house-noise-controls').hidden=true;
-  releaseMouse();events.reset();mirrorSafe.reset();hudMessages.reset();phone.close();encounterCheckpoint=null;danger.hidden=true;
+  mapReadOnly=false;mapPreview=null;mapReveal=false;emyMenuOpen=false;emyAbilities=createEmyAbilities();emyNameCue=createEmyNameCue();$('house-emy-name').hidden=true;heldNoise=null;hopAge=HOP_COOLDOWN;hopCancelled=false;previousEquipment=null;lastHapticThreat=false;lastHapticPhase='';haptics.stop();clearMiniatureInput();
+  $('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;$('house-emy-wave').hidden=true;
+  releaseMouse();events.reset();mirrorSafe.reset();hudMessages.reset();phone.close();sound.setPhoneMusic(false);phone.musicPlaying=false;phone.hint='';phoneTurn=0;encounterCheckpoint=null;danger.hidden=true;
    root.querySelector('[data-act=emotes]').setAttribute('aria-expanded','false');
   batterySwap=null;equipmentBeforeNote='empty';
   animator.reset();sound.stopEmote();floorSounds.reset();if(phone.editing)void phone.layoutAction('done');$('house-emotes').hidden=true;cinematic=null;emyShot=null;poseTransition=null;paused=false;lastInteraction=-Infinity;handAction=0;clickAction=0;noteLift=0;noteHold=0;capturePhoto=false;
@@ -323,7 +351,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   root.classList.remove('lab-intro-active');$('lab-window-intro').classList.add('lab-hidden');$('lab-camera-settings').open=false;
   world=createHouse(checkpoint);noiseProps=installNoiseProps(world);
   puzzle=createHousePuzzle(scenario?.puzzleEntry??config.entry);pursuer=new Pursuer(world);sound.setThreat(false);
-  emyCompanion=demo&&checkpoint==='ground'?createEmyCompanion(world.emy,{waiting:!scenario}):null;
+  // Every story trial uses the real companion controller, not the older
+  // autonomous upstairs cat. Non-story lab previews keep their old behavior.
+  emyCompanion=demo&&(checkpoint==='ground'||!!scenario)?createEmyCompanion(world.emy,{waiting:!scenario}):null;
   world.objects.find(o=>o.id==='emy-vent').interactable=!!emyCompanion&&!puzzle.key;
   if(emyCompanion){
    const drawer=world.objects.find(o=>o.id==='drawer'),key=world.objects.find(o=>o.id==='key');
@@ -377,28 +407,41 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(scenario.events==='car')events.phase='car-preview';
   }
   const restored=restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,rc,rcTrap,pursuer});
+  pursuer.setDifficulty(difficultyProfile(options.difficulty,options.adaptive,s.lives,s.emyRescueUsed));
   if(world.studyVent.unlatched||puzzle.key)world.studyVent.tool.taken=true;
   if(puzzle.key){world.studyVent.interactable=false;world.studyVent.unlatched=true;poseVentCover(world.studyVent,1);}
   resumed=!!restored;
-  // Keep an initial safe position even when a trial starts during a chase.
-  lastSafeCheckpoint=restored?saved:captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTrap,batterySwap,pursuer,emy:emyCompanion&&snapshotEmyCompanion(emyCompanion)});
   if(restored)({louis,equipment,encounterCheckpoint}=restored);
   if(seed){
-   const starts={2:[5.74,HEIGHT,2.4,-Math.PI/2],4:[2.78,HEIGHT,1.76,1.85],5:[2.78,HEIGHT,1.76,1.85],6:[6.9,HEIGHT,10.4,-Math.PI/2],7:[6.9,HEIGHT,10.4,-Math.PI/2],9:[7.86,-3.55,12.26,.65],11:[5.9,0,10.9,0],12:[5.9,0,11.4,0]};
-   if(starts[seed]){const [x,y,z,yaw]=starts[seed];if(!blocked(world.boxes,x,y,z,.2,1.69))Object.assign(s,{x,y,z,yaw,pitch:0});}
+   const start=trialStartPose(seed);
+   if(start&&!blocked(world.boxes,start.x,start.y,start.z,.2,1.69))Object.assign(s,start);
   }
   // Restored checkpoints and isolated trial teleports must never smooth the
   // camera up from the old floor through a ceiling.
   s.cameraGround=s.y;
   if(emyCompanion){
-   if(restored){
+   if(scenario&&(seed||!restored)){
+    const stage=scenario.emy??(scenario.events==='car'?'waiting':trialEmyStage(scenario.milestone));
+    // Place Emy AFTER restoring the player's milestone and final spawn pose.
+    // The hatch-opening withdrawal and finale are not bypassed.
+    if(!initializeTrialEmy(emyCompanion,world,s,stage)){
+     const anchor=s.y>HEIGHT*.52?world.spawns.upstairs:world.spawns.interactions;
+     initializeTrialEmy(emyCompanion,world,anchor,stage);
+    }
+   }else if(restored){
     const legacyExplored=!saved?.emy&&(saved.stage!=='explore'||saved.drawer||saved.picked?.length);
     const catSave=saved.version===1&&saved.emy?.stage?.startsWith('trunk')&&world.hatch.locked?{stage:'following'}:saved.emy;
     restoreEmyCompanion(emyCompanion,world.hatch.locked?(catSave??(legacyExplored?{stage:'following'}:null)):{stage:'trunk'},events.phase);
+    // A trial retry restores Kitty at a checkpoint, not necessarily where
+    // the cat was last walking. Rejoin only a saved following companion.
+    if(scenario&&emyCompanion.stage==='following'&&!s.hidden)initializeTrialEmy(emyCompanion,world,s,'following');
    }
-   else if(scenario?.events==='wake')restoreEmyCompanion(emyCompanion,{stage:'following',x:s.x+.5,y:s.y,z:s.z+.5,yaw:s.yaw},'sleep');
-   else if(scenario?.events==='evaded')restoreEmyCompanion(emyCompanion,{stage:'following',x:s.x+.5,y:s.y,z:s.z+.5,yaw:s.yaw},'evaded');
   }
+  syncEmyInteraction();
+  // Capture the actual initialized companion, not the pre-restore default.
+  // Preserve the original checkpoint's narrative and life fields on retries.
+  const emy=emyCompanion&&snapshotEmyCompanion(emyCompanion);
+  lastSafeCheckpoint=restored?{...saved,emy}:captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTrap,batterySwap,pursuer,emy});
   sound.setThreat(['patrol','hunt'].includes(events.phase));
   phone.setInventory(s.inventory);phone.equip(equipment);
   focus=null;lookTarget={yaw:s.yaw,pitch:s.pitch};modalClose();keys.clear();rebuild();
@@ -412,6 +455,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const loc=listener(),source=o?{x:o.x,y:o.y,z:o.z,material:o.material,surface:o.surface}:null;
   const occluded=source?lineBlocked(world.boxes,loc,source,o?.kind==='door'?'door-'+o.id:''):false;
   sound.effect(name,source,{...loc,yaw:s.yaw},occluded,{level});
+  if(name==='pickup')haptics.pulse(['key','screwdriver','rc-car'].includes(o?.kind)||o===world.emy?'key':'pickup');
   if(name==='cat')caption(o===world.emy||o?.kind==='emy-cat'?'Maullido de Emy':'Maullido junto a la salida');
   if(name==='cat-purr')caption('Ronroneo de Emy');
   if(name==='floor-groan')caption('Cruje el suelo');
@@ -500,7 +544,43 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(target.id==='entrada'&&target.sealed&&events.phase==='escape'&&bag.masterKey)return 'master-key';
   if(target.kind==='piano'&&world.pianoSheet.taken&&!target.scorePlaced)return 'paper';
  }
+ function refreshEmyMenu(){
+  for(const [act,id,left] of [['emy:scan','house-emy-scan-cd',emyAbilities.scanCooldown],['emy:map','house-emy-distract-cd',emyAbilities.distractCooldown]]){
+   const badge=$(id),button=badge.closest('button');
+   button.disabled=left>0;badge.hidden=left<=0;badge.textContent=left>0?Math.ceil(left)+' s':'';
+  }
+  const stage=emyCompanion?.stage,staying=['stay','distract','distract-recover'].includes(stage),busy=['distract','distract-recover'].includes(stage),stay=$('house-emy-stay');
+  if(emyCompanion?.stage!=='following'){
+   const distract=$('house-emy-distract-cd');distract.closest('button').disabled=true;
+   distract.hidden=false;distract.textContent=emyAbilities.distractCooldown>0?Math.ceil(emyAbilities.distractCooldown)+' s':staying?'Sígueme primero':'No disponible';
+  }
+  $('house-emy-stay-icon').textContent=staying?'↪':'Ⅱ';
+  $('house-emy-stay-title').textContent=staying?'Sígueme':'Quédate aquí';
+  $('house-emy-stay-copy').textContent=busy?'Interrumpe la orden; conserva la recarga':staying?'Vuelve a acompañar a Kitty':'Emy esperará en este lugar';
+  stay.setAttribute('aria-pressed',String(staying));stay.disabled=!['following','stay','distract','distract-recover'].includes(stage);
+  $('house-emy-menu').querySelector('[data-act="emy:pet"]').disabled=busy;
+  if(busy)$('house-emy-scan-cd').closest('button').disabled=true;
+ }
+ function closeEmyMenu(){
+  const backToPhone=mapReadOnly;mapReadOnly=false;mapPreview=null;mapReveal=false;
+  emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;clearMiniatureInput();
+  resetInput();if(!isSuspended())sound.resume();
+  if(backToPhone&&ready&&!isSuspended()&&!s.hidden&&equipment==='phone'){phone.show('home');return;}
+  // Return focus to the game action instead of retaining a hidden dialog card.
+  if(ready&&!isSuspended())requestAnimationFrame(()=>{
+   if(!active||isSuspended()||emyMenuOpen)return;
+   const action=$('lab-interact');(action.hidden||action.disabled?canvas:action).focus({preventScroll:true});
+  });
+ }
+ function showPlush(item){
+  const toast=$('house-plush-toast'),count=collectedPlushes(world.holiday).length;
+  toast.dataset.variant=String(item.index);toast.querySelector('strong').textContent=PLUSH_NAMES[item.index];toast.querySelector('span').textContent=count+' de 3 coleccionables';
+  toast.hidden=false;plushNoticeLeft=1.75;if(item.kind==='collectible')rebuild();else renderer.updateVisibility();play('pickup',item);haptics.pulse('puzzle');saveCheckpoint();
+ }
  function interact(){
+  // Throw is a distinct action from pickup: do not swallow an intentional
+  // press of the newly enabled action button during the pickup debounce.
+  if(heldNoise&&!s.hidden&&!s.lying){runAction('noise:throw');return;}
   const now=performance.now();if(now-lastInteraction<260)return;lastInteraction=now;handAction=1;
   if(s.hidden||s.lying){exitPose();return;}
   const o=closestObject(world,s,focus);if(!o){say('Acércate a un objeto y míralo para interactuar');return;}
@@ -521,16 +601,21 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   if(o.kind==='emy-cat'){
    if(Math.hypot(s.x-o.x,s.z-o.z)>1.45||Math.abs(s.y-world.emy.y)>1.5){say('Acércate un poco a Emy');return;}
-   emyMenuOpen=true;releaseMouse();resetInput();$('house-emy-menu').hidden=false;
-   $('house-emy-map').hidden=true;
-   $('house-emy-scan-cd').textContent=emyAbilities.scanCooldown>0?'('+Math.ceil(emyAbilities.scanCooldown)+' s)':'';
-   $('house-emy-distract-cd').textContent=emyAbilities.distractCooldown>0?'('+Math.ceil(emyAbilities.distractCooldown)+' s)':'';
-   $('house-emy-menu').querySelector('button')?.focus({preventScroll:true});
+   emyMenuOpen=true;releaseMouse();resetInput();sound.pause();$('house-emy-menu').hidden=false;
+   $('house-emy-map').hidden=true;$('house-emy-name').hidden=true;refreshEmyMenu();
+   $('house-emy-menu').querySelector('button.emy-card:not(:disabled)')?.focus({preventScroll:true});
    return;
   }else if(o.kind==='noise-prop'){
-   if(heldNoise){say('Ya llevas un objeto en la mano. Lánzalo o suéltalo.');return;}
-   if(grabNoiseProp(o)){heldNoise=o;play('pickup',o);say(o.label.replace('Recoger','Recogiste')+'. Pulsa G para lanzar o V para soltar.',3);}
+   if(batterySwap!==null){say('Termina de cambiar la pila antes de recoger el objeto.');return;}
+   if(grabNoiseProp(o)){heldNoise=o;previousToolTarget=null;autoUseTarget=null;cancelEmote({immediate:true});play('pickup',o);say(o.label.replace('Recoger','Recogiste')+'. '+throwableHint(!desktop.matches),3);}
    return;
+  }else if(o.kind==='holiday-switch'){
+   if(!housePowered(world.lights.power)){say('Sin corriente · revisa el interruptor general');return;}
+   o.tree.on=!o.tree.on;play('click',o);saveCheckpoint();return;
+  }else if(o.kind==='gift'){
+   if(beginGift(world.holiday,reducedMotion.matches)){play('cloth',o);handAction=1;}return;
+  }else if(o.kind==='collectible'){
+   if(collectPlush(world.holiday,o))showPlush(o);return;
   }else if(o.kind==='light-switch'){
    const on=toggleCircuit(o.circuit);play('click',o);
    say(on===null?'Sin corriente · revisa el interruptor general':on?'Luz encendida':'Luz apagada');
@@ -556,8 +641,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     renderer.updateVisibility();play('latch',o);
    }
    o.open=!o.open;
-   if(o.open&&emyCompanion&&!emyCompanion.stage.startsWith('trunk'))sendEmyToTrunk(emyCompanion);
-   if(reducedMotion.matches)poseHatch(o,Number(o.open));
+   if(o.open&&emyCompanion&&!emyCompanion.stage.startsWith('trunk')&&sendEmyToTrunk(emyCompanion))caption('Emy busca refugio en el estudio mientras Kitty baja.');
+   if(reducedMotion.matches&&(!o.open||!emyOccupiesHatch(emyCompanion)))poseHatch(o,Number(o.open));
    play(o.open?'door-open':'door-close',o,.85);
   }else if(o.kind==='tap'){
    o.on=!o.on;o.water.y=o.on?1.01:-100;play('click',o);say(o.on?'Llave de agua abierta':'Llave de agua cerrada');
@@ -628,6 +713,15 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    o.power.on=!o.power.on;
    television.sync(o.power.on,true);
    play(o.power.on?'tv-static':'click',world.television);
+  }
+  else if(o.id==='record-player'){
+   if(roomAt(s.x,s.z,s.y)!=='Sala de música')return;
+   if(!altarVisit.inside)advanceAltarVisit(altarVisit,{inside:true,near:true,dt:0});
+   if(activateAltarRecord(altarVisit)){
+    play('altar-record',o,1.1);caption('La aguja raspa el vinilo. Una melodía desafinada se repite.');
+    say('La misma parte, una y otra vez…',4);
+   }else say('La aguja sigue en el mismo surco.',2);
+   return;
   }
   else if(o.kind==='picture'||o.kind==='inspect'){
    play('click',o);showModal(o.label,`<p>${escapeHTML(o.text)}</p>`);
@@ -726,10 +820,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const notes=s.inventory.notes.map(n=>`<button class="lab-note" data-act="read" data-id="${escapeHTML(n.id)}">✉ ${escapeHTML(n.label)} ↗</button>`).join('')||'<p>Aún no hay notas guardadas.</p>';
   const actions=[['Cerrar mochila','close']];
   const charge=Math.ceil(s.battery);
-  if(charge<100&&s.inventory.batteries>0)actions.unshift(['Usar pila (hasta +'+SPARE_CHARGE+'%)','recharge']);
-  showModal('Mi mochila',`<p><b>Auto RC:</b> ${s.inventory.rc?'Auto y tablet listos':'Sin recoger'}</p><p><b>⚿ Llave:</b> ${s.inventory.key?'Llave con lazo · abre el dormitorio':'Sin llave con lazo'}</p>${s.inventory.masterKey?'<p><b>Llave maestra</b> · Abre la puerta principal</p>':''}<p><b>Linterna:</b> ${charge}% · <b>Pilas de repuesto:</b> ${s.inventory.batteries}</p><div class="lab-note-list">${notes}</div>`,actions);
+  if(!heldNoise&&charge<100&&s.inventory.batteries>0)actions.unshift(['Usar pila (hasta +'+SPARE_CHARGE+'%)','recharge']);
+  showModal('Mi mochila',`<p><b>Recuerdos:</b> ${collectedPlushes(world.holiday).length} de 3 peluches</p><p><b>Auto RC:</b> ${s.inventory.rc?'Auto y tablet listos':'Sin recoger'}</p><p><b>⚿ Llave:</b> ${s.inventory.key?'Llave con lazo · abre el dormitorio':'Sin llave con lazo'}</p>${s.inventory.masterKey?'<p><b>Llave maestra</b> · Abre la puerta principal</p>':''}<p><b>Linterna:</b> ${charge}% · <b>Pilas de repuesto:</b> ${s.inventory.batteries}</p><div class="lab-note-list">${notes}</div>`,actions);
  }
  function startBatterySwap(){
+  if(heldNoise){say('Lanza primero el objeto que llevas.');return false;}
   if(batterySwap!==null||!s.inventory.torch||s.inventory.batteries<1||Math.ceil(s.battery)>=100||s.hidden||s.lying)return false;
   s.inventory.batteries--;
   batterySwap=0;
@@ -761,6 +856,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function togglePause(){if(!ready||contextLost)return;phone.close();$('lab-camera-settings').open=false;paused=!paused;if(paused){sound.pause();showModal('Pausa',`<p>El tiempo de la casa y sus sonidos se han detenido.</p>`,[['Continuar','resume'],[exitLabel,'exit']]);}else{modalClose();sound.resume();}}
  const inBathroom=()=>roomAt(s.x,s.z,s.y)==='Baño';
  function useEquipment(){
+  if(heldNoise){say('Lanza primero el objeto que llevas.');return;}
   if((s.hidden||s.lying)&&equipment!=='phone')return;
   if(equipment==='rc'){
    if(!deployRC(rc,s,world)){say('Necesitas un suelo libre para colocar el auto.');return;}
@@ -790,58 +886,148 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   try{await navigator.clipboard.writeText(field.value);field.hidden=true;status.textContent='Mezcla copiada.';}
   catch{field.hidden=false;field.select();status.textContent='Copia los valores seleccionados.';}
  }
+ function drawEmyMiniature(){
+  const host=$('house-emy-miniature');if(!host||$('house-emy-map').hidden)return;
+  const lockedIds=Object.keys(mapUnavailable);
+  const markers=miniatureMarkers({x:s.x,y:s.y,z:s.z},{x:world.emy.x,y:world.emy.y,z:world.emy.z,hidden:world.emy.hidden},
+   pursuer,!mapReadOnly&&emyAbilities.scan>0&&pursuer.active&&renderer.lastScanOutline);
+  host.innerHTML=miniatureSVG(world,miniatureView,{floor:emyMapFloor,selectedId:emyMapSelected,lockedIds,markers,route:mapPreview,readOnly:mapReadOnly,reveal:reducedMotion.matches?false:mapReveal});mapReveal=false;
+  const legend=$('house-emy-mini-legend');
+  if(legend){
+   const ids=new Set([...host.querySelectorAll('[data-marker]')].map(el=>el.dataset.marker));
+   const entries=[['kitty','K','Kitty'],['emy','E','Emy'],['threat','!','Amenaza']].filter(([id])=>ids.has(id));
+   const html=entries.map(([id,symbol,label])=>'<span class="mini-legend-item '+id+'"><b>'+symbol+'</b> '+label+'</span>').join('');
+   if(legend.dataset.markers!==html){legend.dataset.markers=html;legend.innerHTML=html||'Toca o desliza la lista ↓';}
+  }
+ }
+ const mapPointers=new Map();let mapDragged=false,mapSuppressUntil=0,mapRedraw=0,mapUnavailable={},mapRejected={},mapValidation=new Map(),mapPreview=null,mapReadOnly=false,mapReveal=false;
+ function scheduleMiniature(){if(!mapRedraw)mapRedraw=requestAnimationFrame(()=>{mapRedraw=0;drawEmyMiniature();});}
+ function clearMiniatureInput(){
+  const ids=[...mapPointers.keys()];mapPointers.clear();
+  for(const id of ids)releaseCapture(mapPanel,id);
+  if(mapRedraw)cancelAnimationFrame(mapRedraw);mapRedraw=0;mapDragged=false;
+ }
+ const mapPanel=$('house-emy-map');
+ mapPanel.addEventListener('pointerdown',e=>{
+  if(!e.target.closest('#house-emy-miniature')||e.button!==0)return;
+  if(!mapPointers.size)mapDragged=false;
+  mapPointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY});
+  if(mapPointers.size>1){mapDragged=true;for(const id of mapPointers.keys())capture(mapPanel,id);}
+ },{signal});
+ mapPanel.addEventListener('pointermove',e=>{
+  const p=mapPointers.get(e.pointerId);if(!p)return;
+  if(e.pointerType==='mouse'&&!(e.buttons&1)){mapPointers.delete(e.pointerId);releaseCapture(mapPanel,e.pointerId);return;}
+  const dx=e.clientX-p.x,dy=e.clientY-p.y;
+  if(!mapDragged&&Math.hypot(e.clientX-p.startX,e.clientY-p.startY)<5)return;
+  mapDragged=true;capture(mapPanel,e.pointerId);
+  const other=[...mapPointers.entries()].find(([id])=>id!==e.pointerId)?.[1];
+  miniatureView=other?changeMiniatureView(miniatureView,{zoom:Math.hypot(e.clientX-other.x,e.clientY-other.y)/Math.max(1,Math.hypot(p.x-other.x,p.y-other.y))}):
+   changeMiniatureView(miniatureView,{yaw:dx*.009,pitch:-dy*.007});
+  p.x=e.clientX;p.y=e.clientY;scheduleMiniature();e.preventDefault();
+ },{signal});
+ for(const type of ['pointerup','pointercancel','lostpointercapture'])window.addEventListener(type,e=>{
+  if(!mapPointers.has(e.pointerId))return;mapPointers.delete(e.pointerId);
+  if(mapDragged)mapSuppressUntil=performance.now()+320;
+ },{signal});
+ mapPanel.addEventListener('wheel',e=>{
+  if(!e.target.closest('#house-emy-miniature'))return;
+  e.preventDefault();miniatureView=changeMiniatureView(miniatureView,{zoom:Math.exp(-e.deltaY*.0015)});drawEmyMiniature();
+ },{signal,passive:false});
  function renderEmyMap(){
   const all=roomChoices(world.rooms),selected=all.find(r=>r.id===emyMapSelected)||null;
-  const lockedIds=all.filter(r=>isEmyRoomLocked(world,r)).map(r=>r.id);
-  const options={selectedId:emyMapSelected,lockedIds};
-  for(const floor of [0,1]){
+  // The house is paused during this dialog, so walkability can be reused
+  // for the current visit instead of rescanning collision boxes per selection.
+  if(!mapValidation.has(emyMapFloor)){
+   const unavailable={};
+   for(const r of all.filter(r=>r.floor===emyMapFloor)){
+    if(!mapReadOnly&&r.id==='music')unavailable[r.id]='Emy se niega a entrar';
+    else if(isEmyRoomLocked(world,r))unavailable[r.id]='🔒 Puerta cerrada';
+    else if(!roomDestinations(world,r).length)unavailable[r.id]='Sin espacio libre';
+   }
+   mapValidation.set(emyMapFloor,unavailable);
+  }
+  mapUnavailable={...mapValidation.get(emyMapFloor),...mapRejected};
+  const lockedIds=Object.keys(mapUnavailable);
+  const options={selectedId:emyMapSelected,lockedIds,disabledReasons:mapUnavailable};
+  mapPanel.dataset.mode=mapReadOnly?'browse':'command';
+  mapPanel.setAttribute('aria-label',mapReadOnly?'Mapas · casa de Kitty':'Mapa de distracción de Emy');
+  mapPanel.querySelector('.house-emy-map-kicker').textContent=mapReadOnly?'MAPAS · CASA':'EMY · PLAN DE DISTRACCIÓN';
+  mapPanel.querySelector('.house-emy-map-header strong').textContent=mapReadOnly?'Explora la casa':'Elige dónde hacer ruido';
+  mapPanel.querySelector('[data-act="emy:map:back"]').setAttribute('aria-label',mapReadOnly?'Volver al teléfono':'Volver a acciones de Emy');
+  for(const floor of [-1,0,1]){
    const tab=$('house-emy-tab-'+floor);
    tab.setAttribute('aria-selected',String(emyMapFloor===floor));
    tab.tabIndex=0; // Both floors remain reachable by keyboard and touch.
   }
   $('house-emy-map-rooms').setAttribute('aria-labelledby','house-emy-tab-'+emyMapFloor);
-  const floorName=emyMapFloor===0?'PLANTA BAJA':'PLANTA ALTA';
-  $('house-emy-map-rooms').innerHTML=
+  const floorName=emyMapFloor<0?'EXTERIOR':emyMapFloor===0?'PLANTA BAJA':'PLANTA ALTA';
+  const roomsHost=$('house-emy-map-rooms');
+  const previousList=roomsHost.querySelector('.house-emy-destination-list');
+  const sameFloor=roomsHost.dataset.floor===String(emyMapFloor),scroll=sameFloor?previousList?.scrollTop||0:0;
+  mapReveal=!sameFloor&&emyMapFloor>=0?(roomsHost.dataset.floor==='-1'?'roof':'floor'):false;
+  roomsHost.dataset.floor=String(emyMapFloor);
+  roomsHost.innerHTML=
    '<div class="house-emy-map-layout">'+
     '<section class="house-emy-map-board" aria-label="Vista superior de '+floorName+'">'+
-     '<div class="house-emy-map-board-title"><strong>'+floorName+'</strong><span>Vista superior · '+(emyMapFloor?'SUR ↓':'Entrada ↓')+'</span></div>'+
-     emyFloorMap(world.rooms,emyMapFloor,options)+
+     '<div class="house-emy-map-board-title"><strong>'+floorName+'</strong><span>Miniatura 3D</span></div>'+
+     '<div id="house-emy-miniature" class="house-emy-plan mini-3d"></div>'+
+     '<div class="mini-tools" role="group" aria-label="Control de la miniatura">'+
+     [['left','↶','Girar izquierda'],['right','↷','Girar derecha'],['up','↑','Inclinar arriba'],['down','↓','Inclinar abajo'],['plus','+','Acercar'],['minus','−','Alejar'],['reset','⌂','Restablecer vista']].map(([id,label,desc])=>'<button data-act="emy:view:'+id+'" aria-label="'+desc+'">'+label+'</button>').join('')+'</div>'+
     '</section>'+
     '<section class="house-emy-destination-panel" aria-label="Habitaciones de '+floorName+'">'+
-     '<div class="house-emy-destination-head"><strong>Habitaciones y zonas</strong><small>Toca o desliza la lista ↓</small></div>'+
-     '<div class="house-emy-destination-list">'+emyFloorList(world.rooms,emyMapFloor,options)+'</div>'+
+     '<div class="house-emy-destination-head"><strong>Habitaciones y zonas</strong><small id="house-emy-mini-legend">Toca o desliza la lista ↓</small></div>'+
+     (emyMapFloor<0?'<div class="mini-exterior-copy"><b>La casa de Kitty</b><p>Gira la miniatura y selecciona una planta para retirar la cubierta'+(mapReadOnly?'.': ' y elegir dónde enviar a Emy.')+'</p></div>':
+      mapReadOnly?'<div class="house-emy-destination-list mini-readonly-list">'+all.filter(r=>r.floor===emyMapFloor).map(r=>'<div class="mini-readonly-room">'+escapeHTML(r.label)+'</div>').join('')+'</div>':
+      '<div class="house-emy-destination-list">'+emyFloorList(world.rooms,emyMapFloor,options)+'</div>')+
     '</section>'+
    '</div>';
-  $('house-emy-map-send').disabled=!selected||isEmyRoomLocked(world,selected);
-  $('house-emy-map-status').textContent=selected?
-   (isEmyRoomLocked(world,selected)?'🔒 '+selected.label+': abre primero la puerta.':
-    'Destino: '+selected.label+' · '+(selected.floor?'planta alta':'planta baja')+
-    ' · Emy '+(world.emy.y>HEIGHT*.52===Boolean(selected.floor)?'irá caminando':'usará las escaleras')+
-    ' y hará ruido durante 25 s.'):
-   'Selecciona una habitación en este piso. También puedes cambiar de planta arriba.';
+  drawEmyMiniature();
+  const destinationList=roomsHost.querySelector('.house-emy-destination-list');if(destinationList)destinationList.scrollTop=scroll;
+  $('house-emy-map-send').hidden=mapReadOnly;
+  $('house-emy-map-send').disabled=mapReadOnly||!selected||!mapPreview||!!mapUnavailable[selected.id];
+  const status=$('house-emy-map-status');
+  if(mapReadOnly)status.textContent='Mapa de consulta · Verde: abierta · Ocre: cerrada · Rosa: bloqueada';
+  else if(selected&&mapPreview)status.textContent='Destino: '+selected.label+' · '+(selected.floor?'planta alta':'planta baja')+' · aprox. '+mapPreview.seconds+' s'+
+    (mapPreview.waypoints.some(p=>p.y<HEIGHT*.5)&&mapPreview.waypoints.some(p=>p.y>=HEIGHT*.5)?' · Ver ambos pisos':'')+' · 25 s de distracción';
+  else status.textContent=emyMapFloor<0?'¿A qué piso quieres enviar a Emy?':'Selecciona una habitación en este piso.';
+ }
+ function openHouseMap(readOnly=false){
+  if(readOnly){
+   if(!phone.open||!canUseHotbar()||s.hidden||s.lying)return;
+   phone.close();emyMenuOpen=true;releaseMouse();resetInput();sound.pause();
+  }
+  mapReadOnly=readOnly;mapPreview=null;mapReveal=false;
+  emyMapFloor=-1;miniatureView=defaultMiniatureView();clearMiniatureInput();mapRejected={};mapValidation.clear();mapSuppressUntil=0;
+  emyMapSelected='';$('house-emy-menu').hidden=true;$('house-emy-map').hidden=false;
+  $('house-emy-map-rooms').dataset.floor='';
+  renderEmyMap();$('house-emy-tab--1').focus({preventScroll:true});
  }
  function runAction(act,node){
   if(act.startsWith('emy:')){
    if(act==='emy:close'){
-    emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;resetInput();return;
+    closeEmyMenu();return;
    }
    if(!emyMenuOpen||!world||!s)return;
+   if(mapReadOnly&&!['emy:map:back'].includes(act)&&!act.startsWith('emy:view:')&&!act.startsWith('emy:floor:'))return;
    if(act==='emy:stay'){
-     const staying=emyCompanion?.stage==='stay';
-     const ok=staying?releaseEmyStay(emyCompanion):commandEmyStay(emyCompanion);
-     if(!ok){say('Emy está ocupada con otra tarea.');return;}
-     emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;
+     const staying=['stay','distract','distract-recover'].includes(emyCompanion?.stage);
+     const ok=staying?rejoinEmyInPerson(emyCompanion,world,s):commandEmyStay(emyCompanion);
+     if(!ok){say('Acércate a Emy para cambiar su orden.');return;}
+     closeEmyMenu();
      say(staying?'Emy vuelve a seguir a Kitty.':'Emy se quedará aquí hasta que le indiques que te siga.',3);
      resetInput();return;
     }
     if(act==='emy:pet'){
-    emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;
-    if(petEmy(world.emy)){play('cat-purr',world.emy,.60);say('Emy ronronea y levanta su patita ♡',3);}
+    if(emyCompanion&& !['following','stay'].includes(emyCompanion.stage))return;
+    closeEmyMenu();
+    if(world.emy.alarm>.55){say('Emy está alerta. Busca un lugar tranquilo primero.');return;}
+    if(petEmy(world.emy)){resetInput();play('cat-purr',world.emy,.60);say('Emy ronronea y levanta su patita ♡',3);}
     return;
    }
    if(act==='emy:scan'){
+    if(emyCompanion&& !['following','stay'].includes(emyCompanion.stage))return;
     if(emyAbilities.scanCooldown>0){say('Emy necesita descansar '+Math.ceil(emyAbilities.scanCooldown)+' s.');return;}
-    emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;
+    closeEmyMenu();
     if(activateEmyScan(emyAbilities)){
      play('cat',world.emy,.9);
      say(pursuer.active?'Escaneo activo · sigue la silueta luminosa del secuestrador.':'Emy maúlla, pero todavía no hay amenazas activas.',4);
@@ -849,15 +1035,20 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    }
    if(act==='emy:map'){
     if(emyAbilities.distractCooldown>0){say('Emy necesita descansar '+Math.ceil(emyAbilities.distractCooldown)+' s.');return;}
-    emyMapFloor=s.y>HEIGHT*.52?1:0;
-    emyMapSelected='';
-    $('house-emy-menu').hidden=true;$('house-emy-map').hidden=false;
-    renderEmyMap();
-    $('house-emy-tab-'+emyMapFloor).focus({preventScroll:true});
-    return;
+    if(emyCompanion?.stage!=='following'){say('Indica primero a Emy que te siga.');return;}
+    openHouseMap(false);return;
    }
-   if(act==='emy:floor:0'||act==='emy:floor:1'){
-    emyMapFloor=Number(act.at(-1));emyMapSelected='';
+   if(act==='emy:map:back'){
+    if(mapReadOnly){closeEmyMenu();return;}
+    mapPreview=null;emyMapSelected='';$('house-emy-map').hidden=true;$('house-emy-menu').hidden=false;clearMiniatureInput();refreshEmyMenu();
+    $('house-emy-menu').querySelector('[data-act="emy:map"]').focus({preventScroll:true});return;
+   }
+   if(act.startsWith('emy:view:')){
+    const delta={left:{yaw:-.3},right:{yaw:.3},up:{pitch:.15},down:{pitch:-.15},plus:{zoom:1.13},minus:{zoom:1/1.13}}[act.slice(9)];
+    miniatureView=delta?changeMiniatureView(miniatureView,delta):defaultMiniatureView();drawEmyMiniature();return;
+   }
+   if(['emy:floor:-1','emy:floor:0','emy:floor:1'].includes(act)){
+    emyMapFloor=Number(act.slice(10));clearMiniatureInput();
     renderEmyMap();
     $('house-emy-tab-'+emyMapFloor).focus({preventScroll:true});
     return;
@@ -865,37 +1056,37 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(act.startsWith('emy:room:')){
     const id=act.slice('emy:room:'.length);
     const room=roomChoices(world.rooms).find(r=>r.id===id&&r.floor===emyMapFloor);
-    if(!room||isEmyRoomLocked(world,room))return;
+    if(!room||mapUnavailable[room.id]||performance.now()<mapSuppressUntil&&node?.closest('#house-emy-miniature'))return;
+    mapPreview=null;
+    for(const goal of roomDestinations(world,room)){mapPreview=previewEmyDistract(emyCompanion,world,goal);if(mapPreview)break;}
+    if(!mapPreview){mapRejected[room.id]='Ruta bloqueada';emyMapSelected='';renderEmyMap();$('house-emy-map-status').textContent='Emy no puede llegar a '+room.label+'. Abre el paso o elige otro lugar.';return;}
     emyMapSelected=room.id;renderEmyMap();
     $('house-emy-map-send').focus({preventScroll:true});
     return;
    }
    if(act==='emy:send'){
     const room=roomChoices(world.rooms).find(r=>r.id===emyMapSelected);
-    if(!room||isEmyRoomLocked(world,room)||emyAbilities.distractCooldown>0)return;
-    const targets=roomDestinations(world,room);
-    if(!targets.length){
-     $('house-emy-map-status').textContent='No hay espacio libre en '+room.label+'. Elige otro lugar.';
-     return;
-    }
-    if(!targets.some(goal=>sendEmyDistract(emyCompanion,world,goal))){
+    if(!room||mapUnavailable[room.id]||isEmyRoomLocked(world,room)||emyAbilities.distractCooldown>0)return;
+    if(!mapPreview)return;
+    if(!sendEmyDistract(emyCompanion,world,mapPreview.goal)){
+     mapPreview=null;mapRejected[room.id]='Ruta bloqueada';emyMapSelected='';renderEmyMap();
      $('house-emy-map-status').textContent='Emy no puede llegar a '+room.label+' con las puertas actuales. Abre el paso o elige otro destino.';
      return;
     }
     emyAbilities.distractCooldown=55;
-    emyMapSelected='';emyMenuOpen=false;
-    $('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;
+    emyMapSelected='';closeEmyMenu();
     play('cat',world.emy,.6);say('Emy va hacia '+room.label+' (planta '+(room.floor?'alta':'baja')+'). Hará ruido durante 25 segundos al llegar.',5);
     resetInput();return;
    }
    return;
   }
+  if(emyMenuOpen&&act!=='exit')return;
   if(act.startsWith('noise:')){
-   if(!heldNoise||isPaused())return;
-   const prop=heldNoise,throwing=act==='noise:throw'||act==='noise:lob';
-   if(act!=='noise:throw'&&act!=='noise:lob'&&act!=='noise:drop')return;
-   releaseNoiseProp(prop,cameraOf(s),throwing,act==='noise:lob'?.55:1);heldNoise=null;
-   play('cloth',prop,.5);say(throwing?'¡Objeto lanzado!':'Objeto soltado',2);return;
+   if(act!=='noise:throw'||!heldNoise||!canLook()||finalCutscene||s.hidden||s.lying)return;
+   const prop=heldNoise;
+   if(!releaseNoiseProp(prop,cameraOf(s),true,1))return;
+   heldNoise=null;lastInteraction=performance.now();handAction=1;
+   play('cloth',prop,.5);say('¡Objeto lanzado!',2);return;
   }
   if((events.phase==='safe'||events.phase==='failed')&&!['retry-arrival','exit','reset','finish'].includes(act))return;
   if(act==='retry-arrival'){
@@ -910,7 +1101,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    world.objects.find(o=>o.id==='entrada').sealed=false;for(const box of world.boxes)if(box.id.startsWith('entry-padlock'))box.hiddenGeometry=true;
    world.entryWindow.latch.hiddenGeometry=true;poseFurniture(world.entryWindow,1);rebuild();sound.setThreat(true);resetInput();return;
   }
-  if(act==='exit'){stop();onExit();return;}
+  if(act==='exit'){try{stop();}finally{onExit();}return;}
   if(act==='finish'){config.onRescue?.();return;}
   if(act.startsWith('rc:')&&(rc?.mode!=='driving'||isPaused()))return;
   if(act==='rc:stop'){
@@ -956,7 +1147,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(act==='recharge'){recharge();return;}
   if(act.startsWith('safe:')){safeAction(act.slice(5));return;}
   if(act==='read'){const note=s.inventory.notes.find(n=>n.id===node.dataset.id);if(note?.id==='mirror-note')showMirrorNote('bag');else if(note)showNote(note,'bag');return;}
-  if(act==='bag'){if(rc?.mode==='driving')return;bag();return;}
+  if(act==='bag'){
+   if(remoteInUse()||captureShot||finalCutscene||poseTransition||modal&&!node?.closest('#lab-dialog'))return;
+   phone.close();$('lab-camera-settings').open=false;bag();return;
+  }
   if(act==='reset'){
    phone.close();
    if(scenario){ready=false;intro=true;}
@@ -968,11 +1162,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   if(act==='hud'&&ready&&!cinematic){$('lab-camera-settings').open=false;phone.edit();return;}
   if(act==='copy-mix'){void copyMix();return;}
+  if(act==='perf-copy'&&config.trial){const report=JSON.stringify(perfReport(),null,2);if(navigator.clipboard?.writeText)void navigator.clipboard.writeText(report).then(()=>say('Informe de rendimiento copiado')).catch(()=>window.prompt('Copia el informe',report));else window.prompt('Copia el informe',report);return;}
   if(act.startsWith('audio:')){void previewAudio(act.slice(6));return;}
-  if(isPaused())return;
+  if(isPaused()||finalCutscene)return;
   if(rc?.mode==='driving'||rc?.mode==='deploying')return;
   if(events.phase==='arrival'||events.phase==='safe'||events.phase==='failed')return;
   if(act==='emotes'){
+   if(heldNoise)return;
    const enabled=inBathroom()&&!notePresentation&&!noteLift;
    const opening=enabled&&$('house-emotes').hidden;
    // En escritorio, pointer lock monopoliza el mouse. Soltarlo al abrir
@@ -984,7 +1180,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(opening)$('house-emotes').querySelector('button')?.focus({preventScroll:true});
    return;
   }
-  if(act.startsWith('emote:')&&inBathroom()&&!notePresentation&&!noteLift){
+  if(act.startsWith('emote:')&&!heldNoise&&inBathroom()&&!notePresentation&&!noteLift){
    const id=act.slice(6);$('house-emotes').hidden=true;
    root.querySelector('[data-act=emotes]').setAttribute('aria-expanded','false');
    if(id==='stop'){cancelEmote();equipmentAge=0;return;}
@@ -993,14 +1189,30 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(emote&&animator.startEmote(id)){sound.emote(id,emote.duration);resetInput();}
    return;
   }
-  if(act==='interact'){cancelEmote();interact();}
+  if(act==='interact'&&!phone.open&&!finalCutscene){cancelEmote();interact();}
   if(act==='crouch')crouch();
+  if(act==='hop'&&canHop()&&hopAge>=HOP_COOLDOWN){hopAge=0;hopCancelled=false;}
   if(act==='flash'||act==='phone')useEquipment();
+ }
+ // Keep the button and its text node stable while the renderer runs.
+ // Avoid invalidating pointer hit targets and layout on every animation frame.
+ function syncEquipmentControls(){
+  const light=$('house-light'),use=$('house-use-phone');
+  const lightHidden=!!heldNoise||equipment!=='flashlight'||!!s.hidden||!!s.lying;
+  const useHidden=!!heldNoise||!['phone','paper','rc'].includes(equipment)||notePresentation||!!noteLift||(equipment!=='phone'&&(!!s.hidden||!!s.lying));
+  const label=equipment==='rc'?'Usar auto RC':equipment==='paper'?'Observar nota':'Usar teléfono';
+  const caption=equipment==='paper'?'Observar':'Usar';
+  root.classList.toggle('lab-flash-off',!s.flashlight||!!heldNoise);
+  if(light.hidden!==lightHidden)light.hidden=lightHidden;
+  if(use.hidden!==useHidden)use.hidden=useHidden;
+  if(use.getAttribute('aria-label')!==label)use.setAttribute('aria-label',label);
+  const text=use.querySelector('small');
+  if(text.textContent!==caption)text.textContent=caption;
  }
  function updateControls(){
   const target=closestObject(world,s,focus);focus=target;
   phone.nav.hidden=!!cinematic||!!captureShot||!!finalCutscene||wakeShot()||!!poseTransition||events.phase==='arrival'||events.phase==='car-preview';
-  if(!isPaused()&&!phone.open&&!s.hidden&&!remoteInUse()&&events.phase!=='arrival'){
+  if(!heldNoise&&!isPaused()&&!phone.open&&!s.hidden&&!remoteInUse()&&events.phase!=='arrival'){
    const tool=toolFor(target);
    if(tool&&previousToolTarget!==target&&equipment!==tool)equip(tool,false,true);
    previousToolTarget=tool?target:null;
@@ -1011,15 +1223,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     interact();
    }
   }
-  root.classList.toggle('lab-flash-off',!s.flashlight);
-  $('house-noise-controls').hidden=!heldNoise||isPaused()||phone.open||remoteInUse();
-  $('house-noise-held').textContent=heldNoise?'En mano: '+heldNoise.label.replace(/^Recoger\s+/,''):'';
-  if(heldNoise)$('house-noise-hint').textContent=throwableHint(!desktop.matches);
-  $('house-light').hidden=equipment!=='flashlight'||!!s.hidden||!!s.lying;
-  $('house-use-phone').hidden=!['phone','paper','rc'].includes(equipment)||notePresentation||!!noteLift||(equipment!=='phone'&&(!!s.hidden||!!s.lying));
-  $('house-use-phone').setAttribute('aria-label',equipment==='rc'?'Usar auto RC':equipment==='paper'?'Observar nota':'Usar teléfono');
-  $('house-use-phone').querySelector('small').textContent=equipment==='paper'?'Observar':'Usar';
-  const canEmote=inBathroom()&&!notePresentation&&!noteLift;
+  root.classList.toggle('house-carrying-noise',!!heldNoise);
+  for(const button of phone.visibleSlots())if(button.disabled!==!!heldNoise)button.disabled=!!heldNoise;
+  syncEquipmentControls();
+  const canEmote=!heldNoise&&inBathroom()&&!notePresentation&&!noteLift;
   root.querySelector('[data-act=emotes]').hidden=!canEmote;
   if(!canEmote){$('house-emotes').hidden=true;
    root.querySelector('[data-act=emotes]').setAttribute('aria-expanded','false');}
@@ -1038,7 +1245,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    const active=objectives.update(context);
    if(active)objective=active.name;
   }
-  $('lab-objective').hidden=!!emyCompanion&&!scenario&&emyCompanion.stage==='following';
+  $('lab-objective').hidden=!!finalCutscene||!!emyCompanion&&!scenario&&emyCompanion.stage==='following';
+  phone.objective=objective;phone.notes=s.inventory.notes;
   if($('lab-objective').textContent!==objective)$('lab-objective').textContent=objective;
   const meter=$('house-charge'),charge=Math.ceil(s.battery);
   const hideMeters=isSuspended()||!!cinematic||events.phase==='arrival'||phone.open;
@@ -1054,20 +1262,26 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   root.classList.toggle('house-sprinting',s.sprinting&&!stamina.hidden);
   const interactButton=$('lab-interact');
-  const canInteract=!!(target||s.hidden||s.lying||poseTransition)&&!isSuspended()&&!cinematic&&!phone.open&&!remoteInUse();
-  interactButton.hidden=!canInteract||!!emyShot;
+  const showAction=!isSuspended()&&!cinematic&&!emyShot&&!phone.open&&!remoteInUse()&&!finalCutscene&&!wakeShot()&&!['arrival','car-preview','safe','failed'].includes(events.phase);
+  const throwing=!!heldNoise&&!s.hidden&&!s.lying;
   const hatchMoving=target?.kind==='hatch'&&target.amount!==Number(target.open);
-  interactButton.disabled=!!target?.motion||hatchMoving||!!poseTransition;
+  const canInteract=showAction&&!poseTransition&&(throwing||s.hidden||s.lying||!!target&&!target.motion&&!hatchMoving);
+  interactButton.hidden=!showAction;
+  interactButton.disabled=!canInteract;
   const vent=world.studyVent;
   const catAction=emyShot||vent.unlatched&&vent.coverAmount<1||['leap-in','crawl','leap-out'].includes(emyCompanion?.fetch?.phase);
   root.classList.toggle('house-emy-action',!!catAction&&!isSuspended()&&!phone.open);
-  root.querySelector('.lab-cross').classList.toggle('lab-target',!!target);
-  let action=target?.kind==='emy-cat'?'Acciones de Emy':target?.kind==='noise-prop'?'Recoger objeto':interactionLabel(target);
+  root.querySelector('.lab-cross').classList.toggle('lab-target',canInteract);
+  let action=throwing?'Lanzar':s.hidden||s.lying?interactionLabel(null):target?.kind==='emy-cat'?'Acciones de Emy':target?.kind==='noise-prop'?'Recoger objeto':interactionLabel(target);
   if(poseTransition)action=poseTransition.entering?'Entrando…':'Saliendo…';
-  if(target?.motion||hatchMoving)action=target.state==='opening'||hatchMoving&&target.open?'Abriendo…':'Cerrando…';
+  else if(!throwing&&!s.hidden&&!s.lying&&(target?.motion||hatchMoving))action=target.state==='opening'||hatchMoving&&target.open?'Abriendo…':'Cerrando…';
   const actionLabel=interactButton.querySelector('small');
   if(actionLabel.textContent!==action)actionLabel.textContent=action;
-  const focusLabel=canInteract&&mouseLocked()?(interactButton.disabled?action:'E o clic · '+action):'';
+  const actionIcon=interactionIcon(target,{throwing,hidden:!!s.hidden,lying:!!s.lying});
+  if(interactButton.dataset.icon!==actionIcon){interactButton.dataset.icon=actionIcon;interactButton.querySelector('.house-action-icon').innerHTML=feedbackIcon(actionIcon);}
+  root.classList.toggle('house-immersive',options.immersive!==false&&!scenario);
+  root.classList.toggle('house-action-ready',canInteract);
+  const focusLabel='';
   if($('lab-focus').textContent!==focusLabel)$('lab-focus').textContent=focusLabel;
   const remote=rc?.mode==='driving';
   const deploying=rc?.mode==='deploying';
@@ -1083,18 +1297,26 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   const announce=deploying||louis&&(['untying','climb','hide'].includes(louis.phase)||(louis.phase==='hidden'&&louis.age<1.6))||!!finalCutscene;
   $('house-rc-caption').hidden=!announce;
-  if(announce)$('house-rc-caption').textContent=finalCutscene?(finalCutscene.elapsed<1.5?'¡El secuestrador descubre a Kitty!':finalCutscene.elapsed<3.3?'¡Emy salta para salvarla!':'¡Corred hacia el jardín!'):louis?.phase==='untying'?'Kitty desata las cuerdas mientras Louis espera en silencio…':louis?.phase==='hidden'?'Louis se agacha tras la barra americana y mira alrededor…':louis&&['climb','hide'].includes(louis.phase)?'Louis sube del sótano y busca refugio tras la barra americana…':rc.elapsed<.53?'Colocando el autito…':'Conectando la tablet…';
+  if(announce)$('house-rc-caption').textContent=finalCutscene?(finalCutscene.playable?'¡Sigue a Emy hacia el jardín con Louis!':finalCutscene.elapsed<.36?'¿Qué ha sido ese ruido?':finalCutscene.elapsed<1.45?'¡Louis!':finalCutscene.elapsed<2.36?'¡Emy!':'¡Ahora, al jardín!'):louis?.phase==='untying'?'Kitty desata las cuerdas mientras Louis espera en silencio…':louis?.phase==='hidden'?'Louis se agacha tras la barra americana y mira alrededor…':louis&&['climb','hide'].includes(louis.phase)?'Louis sube del sótano y busca refugio tras la barra americana…':rc.elapsed<.53?'Colocando el autito…':'Conectando la tablet…';
+  root.classList.toggle('house-finale-shot',!!finalCutscene&&!finalCutscene.playable);
+  root.classList.toggle('house-finale-run',!!finalCutscene&&finalCutscene.playable);
   root.classList.toggle('house-rc-deploying',deploying);
   root.classList.toggle('house-rc-driving',remote);
-  interactButton.classList.toggle('lab-available',!!target||!!s.hidden||!!s.lying);
+  interactButton.classList.toggle('lab-available',canInteract);
+  $('lab-hop').hidden=!showAction;
+  $('lab-hop').disabled=!canHop()||hopAge<HOP_COOLDOWN;
   $('lab-crouch').classList.toggle('lab-available',s.crouched);
-  $('lab-crouch').setAttribute('aria-pressed',String(s.crouched));$('lab-crouch').setAttribute('aria-label',s.crouched?'Levantarse':'Agacharse');$('lab-crouch').querySelector('small').textContent=s.crouched?'Levantar':'Agachar';
+  const crouchButton=$('lab-crouch'),crouchPressed=String(s.crouched),crouchLabel=s.crouched?'Levantarse':'Agacharse',crouchCaption=s.crouched?'Levantar':'Agachar';
+  if(crouchButton.getAttribute('aria-pressed')!==crouchPressed)crouchButton.setAttribute('aria-pressed',crouchPressed);
+  if(crouchButton.getAttribute('aria-label')!==crouchLabel)crouchButton.setAttribute('aria-label',crouchLabel);
+  const crouchText=crouchButton.querySelector('small');
+  if(crouchText.textContent!==crouchCaption)crouchText.textContent=crouchCaption;
   if(config.trial&&$('lab-camera-settings').open)$('lab-metrics').textContent=`${fps} FPS · ${ctxRoom(s)} · altura ${s.y.toFixed(1)} m · rumbo ${Math.round((s.yaw*180/Math.PI%360+360)%360)}°`;
  }
  function interactionLabel(target){
   if(s.hidden)return 'Salir del escondite';
   if(s.lying)return 'Levantarse';
-  if(!target)return 'Usar';
+  if(!target)return 'Interactuar';
   if(target===world.pianoSheet)return 'Recoger partitura';
   switch(target.kind){
    case 'door':return target.id==='entrada'&&target.sealed&&events.phase==='escape'?'Abrir con llave maestra':target.open?'Cerrar puerta':'Abrir puerta';
@@ -1116,13 +1338,17 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    case 'tap':return target.on?'Cerrar llave':'Abrir llave';
    case 'cupboard':return target.open?'Cerrar mueble':'Abrir mueble';
    case 'safe':return mirrorSafe.opened?'Ver contenido':'Introducir código';
+   case 'holiday-switch':return !housePowered(world.lights.power)?'Árbol sin corriente':holidayPowered(world.holiday)?'Apagar árbol':'Encender árbol';
+   case 'gift':return 'Abrir regalo';
+   case 'collectible':return 'Recoger peluche';
    case 'light-switch':return !housePowered(world.lights.power)?'Sin corriente':target.circuit.on?'Apagar luz':'Encender luz';
    default:return target.label||'Examinar';
   }
  }
  function tick(dt){
-  if(isPaused()||finalCutscene)return;
+  if(isPaused()||finalCutscene&&!finalCutscene.playable)return;
   updateFurniture(world.objects,dt,s);
+  const gifted=advanceGift(world.holiday,dt);if(gifted)showPlush(gifted);
   const louisCue=updateLouisEscape(louis,dt,s);
   if(louisCue==='untied'){
    for(const box of world.boxes)if(box.id.startsWith('captive-rope-'))box.hiddenGeometry=true;
@@ -1143,7 +1369,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   updatePowerLever(world.lights.meter,reducedMotion.matches?1:dt);
   const hatch=world.hatch,hatchTarget=Number(hatch.open);
-  if(hatch.amount!==hatchTarget)poseHatch(hatch,clamp(hatch.amount+Math.sign(hatchTarget-hatch.amount)*dt/.64,0,1));
+  if(hatch.amount!==hatchTarget&&(!hatch.open||!emyOccupiesHatch(emyCompanion))){
+   poseHatch(hatch,reducedMotion.matches?hatchTarget:clamp(hatch.amount+Math.sign(hatchTarget-hatch.amount)*dt/.64,0,1));
+  }
   const rug=world.hatchRug,rugTarget=Number(rug.aside);
   if(rug.amount!==rugTarget)poseHatchRug(rug,reducedMotion.matches?rugTarget:clamp(rug.amount+Math.sign(rugTarget-rug.amount)*dt/.44,0,1));
   if(demo&&puzzle.key&&!puzzle.door&&world.objects.find(o=>o.id==='dormitorio').open)puzzle=puzzleEvent(puzzle,'door');
@@ -1163,18 +1391,18 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   handDrift.vy+=ay*dt;handDrift.y=clamp(handDrift.y+handDrift.vy*dt,-.03,.03);
   let forward=Number(keys.has('w'))-Number(keys.has('s'))-joystick.z;
   let side=Number(keys.has('d'))-Number(keys.has('a'))+joystick.x;
-  if(s.hidden||s.lying||phone.open||events.phase==='arrival'||events.phase==='safe'||events.phase==='failed'){forward=side=0;}
+  if(s.hidden||s.lying||phone.open&&!phone.canWalk||events.phase==='arrival'||events.phase==='safe'||events.phase==='failed'){forward=side=0;}
   const length=Math.hypot(forward,side);if(length>1){forward/=length;side/=length;}
   if(stickPointer===null)drawStick(side,-forward);
   // Movement intent is analogue and frame-rate independent. The room geometry,
   // stairs and collision checks still run through the original swept navigator.
-  const movementLocked=!!(s.hidden||s.lying||phone.open||events.phase==='arrival'||events.phase==='safe'||events.phase==='failed');
+  const movementLocked=!!(s.hidden||s.lying||phone.open&&!phone.canWalk||events.phase==='arrival'||events.phase==='safe'||events.phase==='failed');
   const intent=movementLocked?{forward:0,side:0}:advanceMoveIntent(velocity,forward,side,dt);
   velocity.forward=intent.forward;velocity.side=intent.side;
   const wantsSprint=joystick.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight');
   if(!wantsSprint)s.exhausted=false;
   const steepSteps=isOnStairs(s,getStairDirection,inHatch);
-  const sprint=wantsSprint&&length>.08&&!steepSteps&&!s.crouched&&!s.exhausted&&s.stamina>0;
+  const sprint=!phone.open&&wantsSprint&&length>.08&&!steepSteps&&!s.crouched&&!s.exhausted&&s.stamina>0;
   const targetSpeed=s.crouched?KITTY_SPEED.crouch:steepSteps?KITTY_SPEED.stairs:sprint?KITTY_SPEED.run:KITTY_SPEED.walk;
   velocity.speed=advanceMoveSpeed(velocity.speed,targetSpeed,dt);
   // Entering stairs or a crawlspace is safety-critical: clamp immediately.
@@ -1187,13 +1415,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   s.cameraGround=reducedMotion.matches?s.y:advanceCameraFloor(s.cameraGround,s.y,dt);
   if(events.phase==='escape'&&!world.objects.find(o=>o.id==='entrada').sealed&&louis?.phase==='follow'&&s.z>12.35&&s.x>4.6&&s.x<7.2){
    const ground=0,walk=2.70;
-   finalCutscene={elapsed:0,cues:new Set(),
+   finalCutscene={elapsed:0,cues:new Set(),camera:cameraOf(s),playable:false,runAge:0,
     kitty:{from:{x:s.x,z:s.z},to:{x:5.56,z:14.05},ground,walk,stand:0},
     louis:{from:{x:clamp(s.x+.36,5.35,6.45),z:s.z-.19},to:{x:6.23,z:13.95},ground,walk,stand:0},
     louisStride:louis.walk};
    world.emy.hidden=true;for(const {box} of world.emy.parts)box.hiddenGeometry=true;
-   renderer.updateVisibility();events.phase='ending';resetInput();
-   play('notification');
+   renderer.updateVisibility();events.phase='ending';phone.close();releaseMouse();resetInput();
+   louis.exitRouteActive=false;louis.concealed=false;louis.speed=0;
   }
   s.sprinting=sprint&&moved>.002;
   if(s.sprinting){
@@ -1208,6 +1436,19 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   for(const cue of floorSounds.advance(dt,s,moved))play(cue.kind,cue.origin?{...cue.origin,y:cue.origin.y+.25}:null,cue.level);
  }
  let statsAt=performance.now(),frameCount=0,slowSeconds=0;
+ const perfSampler=createFrameSampler(),fpsSampler=createFrameSampler(60);let perfEnabled=false,perfAt=0,idleWarm=null,fpsAt=0,fpsWasActive=false;
+ const fpsNode=$('house-fps');
+ function clearFPS(){fpsSampler.reset();fpsAt=0;fpsWasActive=false;fpsNode.hidden=true;fpsNode.textContent='';}
+ const perfReport=()=>({...perfSampler.report(),quality:options.quality,room:ctxRoom(s),vertices:renderer.vertexCount,triangles:renderer.triangleCount,shadowPasses:renderer.shadowPasses??0,reflectionUploads:renderer.reflectedUploads??0});
+ function warmPursuer(){
+  if(!demo||config.trial||!renderer||idleWarm!==null||typeof window.requestIdleCallback!=='function')return;
+  const name=!renderer.pursuerMeshes?.patrol?'patrol':!renderer.pursuerMeshes?.capture&&(events.phase==='rc-setup'||events.phase==='escape')?'capture':null;
+  if(!name)return;
+  idleWarm=window.requestIdleCallback(deadline=>{
+   idleWarm=null;
+   if(active&&!contextLost&&!document.hidden&&deadline.timeRemaining()>10&&!pursuer.caught)renderer.preparePursuerMesh(name);
+  });
+ }
  function showLives(lives){
   const notice=$('house-lives');
   notice.querySelector('.life-slots').innerHTML=lifeSlots(lives);
@@ -1216,6 +1457,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  function beginCapture(){
   if(captureShot)return;
+  haptics.pulse('capture');
   // Save the debit immediately so reloading during the cinematic cannot undo it.
   const loss=captureLoss(s.lives,lastSafeCheckpoint,pursuer.witnessed,s.emyRescueUsed);
   s.lives=loss.lives;s.emyRescueUsed=loss.emyRescueUsed;lastSafeCheckpoint=loss.checkpoint;
@@ -1373,7 +1615,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    const hiding=s.hidden?world.objects.find(o=>o.id===s.hidden.objectId):poseTransition?.object;
    const previousMode=pursuer.mode;
    const deferredDoorSounds=[];
-   const pursuitSignals=pursuer.update(Math.min(.055,delta),{x:s.x,y:s.y,z:s.z,crouched:s.crouched,flashlight:flashlightBeam(),dark:!housePowered(power),hidden:!!s.hidden&&!poseTransition,entering:!!poseTransition?.entering,hideId:hiding?.id,hideExit:hiding?{x:poseTransition?.outside.x??s.hidden?.returnX??hiding.returnX,y:s.y,z:poseTransition?.outside.z??s.hidden?.returnZ??hiding.returnZ}:null},door=>{if(door.id!=='entrada'&&!door.sealed&&!door.locked&&!door.motion&&sweepClear(door,door.amount,1,pursuer)){const result=animateFurniture(door,true,{player:s,reducedMotion:reducedMotion.matches});if(result.started)deferredDoorSounds.push(door);}},decoy);
+   const pursuitSignals=pursuer.update(Math.min(.055,delta),{x:s.x,y:s.y,z:s.z,crouched:s.crouched,flashlight:flashlightBeam(),dark:!housePowered(power),hidden:!!s.hidden&&!poseTransition,entering:!!poseTransition?.entering,hideId:hiding?.id,hideExit:hiding?{x:poseTransition?.outside.x??s.hidden?.returnX??hiding.returnX,y:s.y,z:poseTransition?.outside.z??s.hidden?.returnZ??hiding.returnZ}:null},door=>{if(door.id!=='entrada'&&!door.sealed&&!door.locked&&!door.motion&&sweepClear(door,door.amount,1,pursuer)){const result=animateFurniture(door,true,{player:s,reducedMotion:reducedMotion.matches});if(result.started){deferredDoorSounds.push(door);return true;}}},decoy);
    // Priority: start the loud chase warning BEFORE any footstep, door, UI or capture cue.
    if(pursuitSignals.includes('spotted')){sound.playDangerAlert();phone.close();}
    for(const door of deferredDoorSounds)play('door-open',door);
@@ -1388,9 +1630,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      play('alert',pursuer,1.1);
      say('El secuestrador golpeó el auto. Se perdió la señal; lo dejó en otro lugar de la casa ('+Math.round(pos.x)+', '+Math.round(pos.z)+'). Ve a recuperarlo.',7);
     }
-    if(signal==='investigate'&&emyCompanion?.stage!=='following')say('Notó movimiento. Busca cobertura.',2.5);
-    if(signal==='spotted'&&emyCompanion?.stage!=='following')say('Te vio. Gira una esquina para perderlo.',3);
-    if(signal==='lost'&&emyCompanion?.stage!=='following')say('Perdió de vista a Kitty y revisará la última zona. Sigue escondida.',3);
+    if(signal==='investigate'&&options.threatText===true)say('Notó movimiento. Busca cobertura.',2.5);
+    if(signal==='spotted'&&options.threatText===true)say('Te vio. Gira una esquina para perderlo.',3);
+    if(signal==='lost'&&options.threatText===true)say('Perdió de vista a Kitty y revisará la última zona. Sigue escondida.',3);
     if(signal==='at-entry'){
      const door=world.objects.find(o=>o.id==='entrada');
      if(!door.sealed&&roomAt(s.x,s.z,s.y)!=='Jardín y vecindario'&&sweepClear(door,door.amount,0,s)){
@@ -1406,15 +1648,15 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    sleeping:pursuer.mode==='sleeping',leftBedroom:!poseTransition&&roomAt(s.x,s.z,s.y)!=='Dormitorio',entranceLocked:world.objects.find(o=>o.id==='entrada').sealed})){
    if(cue==='keys')sound.sequence('keys');if(cue==='knock')sound.sequence('trying');
    if(cue==='hide'){setDoor(world.objects.find(o=>o.id==='entrada'),false);poseFurniture(world.entryWindow,0);world.entryWindow.latch.hiddenGeometry=false;rebuild();play('latch',world.entryWindow.box);resetInput();phone.close();say('Cerró la ventana. ¡Escóndete en el armario!',4);}
-   if(cue==='patrol'){pursuer.start();saveCheckpoint();say('Se oyen pasos hacia la escalera.',4);}
+   if(cue==='patrol'){pursuer.start();saveCheckpoint();if(options.threatText===true)say('Se oyen pasos hacia la escalera.',4);}
    if(cue==='resting')pursuer.goToBed();
-   if(cue==='sleep'){sound.setThreat(false);saveCheckpoint();say('Se durmió. Ya es seguro salir.',4);}
+   if(cue==='sleep'){sound.setThreat(false);saveCheckpoint();if(options.threatText===true)say('Se durmió. Ya es seguro salir.',4);}
    if(cue==='wake'){
     phone.close();resetInput();pursuer.wake();sound.sequence('notification',true);sound.setThreat(true);
-    say('¡El mensaje lo despertó!',3);
+    if(options.threatText===true)say('¡El mensaje lo despertó!',3);
    }
    if(cue==='hunt'){pursuer.resumeSearch();saveCheckpoint();}
-   if(cue==='evaded'){pursuer.settleUpstairs();sound.setThreat(false);sound.sequence('notification');saveCheckpoint();say('Se alejó. Ya puedes examinar la nota del dormitorio con calma.',5);}
+   if(cue==='evaded'){pursuer.settleUpstairs();sound.setThreat(false);sound.sequence('notification');saveCheckpoint();if(options.threatText===true)say('Se alejó. Ya puedes examinar la nota del dormitorio con calma.',5);}
    if(cue==='failed'&&pursuer.caught){beginCapture();return;}
    if(cue==='safe'||cue==='failed'){phone.close();resetInput();play('alert',pursuer,.55);showModal(cue==='safe'?'Estás a salvo':'Te descubrieron',cue==='safe'?'<p>Te quedas en silencio.</p>':'<p>El perseguidor te alcanzó o vio dónde te escondías.</p><p>Retomas desde el último momento seguro con la llave y las pistas.</p>',cue==='safe'?[[exitLabel,'exit']]:[['Reintentar','retry-arrival'],['Salir','exit']]);}
   }
@@ -1422,12 +1664,27 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  function frame(now){
   if(!active||contextLost)return;raf=requestAnimationFrame(frame);
-  const limit=(paused||!!modal&&!piano||$('lab-camera-settings').open||isPortrait()||document.hidden||!hasFocus)?1000/15:
+  // The start card covers a static preview. Keep enough frames for resize
+  // and recovery, but leave the main thread free for the actual Start click.
+  // Once started, preserve the existing gameplay/paused rendering budgets.
+  const limit=!ready?1000/5:(paused||!!modal&&!piano||$('lab-camera-settings').open||isPortrait()||document.hidden||!hasFocus)?1000/15:
    options.quality==='low'||piano&&piano.mode!=='performance'?1000/30:1000/60;
   if(now-lastPaint<limit-2)return;
   const shotDelta=Math.min(.1,Math.max(0,(now-last)/1000||0)),dt=Math.min(.055,shotDelta);last=now;lastPaint=now;
   if(!s||!renderer)return;
+  const measuring=perfEnabled&&!isSuspended()&&!captureShot;
+  const showFPS=options.showFPS===true&&!isPaused()&&!phone.open&&(!finalCutscene||finalCutscene.playable);
+  if(!showFPS&&fpsWasActive)clearFPS();
+  const cpuStart=measuring?performance.now():0;
+  if(perfEnabled&&!measuring)perfSampler.pause();
+  if(!isSuspended()&&!pursuer.caught)warmPursuer();
+  if(hopAge<HOP_COOLDOWN){
+   const hop=advanceHop(hopAge,hopCancelled,isSuspended()?0:shotDelta,canHop());
+   if(!hop.cancelled&&hopAge<HOP_DURATION&&hop.age>=HOP_DURATION){haptics.pulse('landing');play('land',null,.18);}
+   hopAge=hop.age;hopCancelled=hop.cancelled;
+  }
   updateHiding(dt);
+  if(plushNoticeLeft>0&&!isSuspended()){plushNoticeLeft=Math.max(0,plushNoticeLeft-shotDelta);if(!plushNoticeLeft)$('house-plush-toast').hidden=true;}
   if(lifeNoticeLeft>0&&!captureShot){
    if(!isSuspended())lifeNoticeLeft=Math.max(0,lifeNoticeLeft-shotDelta);
    if(!lifeNoticeLeft)$('house-lives').hidden=true;
@@ -1447,14 +1704,15 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(emyCompanion){
     const enteringHide=poseTransition?.entering?{objectId:poseTransition.object.id,returnX:poseTransition.outside.x,returnZ:poseTransition.outside.z}:null;
     updateEmySenses(emyCompanion,s,world,pursuer,objectives.active,shotDelta,flashlightBeam());
-    const cue=updateEmyCompanion(emyCompanion,emyShot&&reducedMotion.matches?shotDelta*3:shotDelta,{world,player:s,enteringHide,reduced:reducedMotion.matches,finale:world.greyCat.active});
+    const cue=updateEmyCompanion(emyCompanion,emyShot&&reducedMotion.matches?shotDelta*3:shotDelta,{world,player:s,enteringHide,reduced:reducedMotion.matches,finale:world.greyCat.active,threat:pursuer,distractCooldown:emyAbilities.distractCooldown});
     if(cue==='scratch')play('scratch',world.emy,.8);
     if(cue==='distract-noise'){
      play('cat',world.emy,.95);caption('Emy está maullando para distraer al secuestrador');
      pursuer.hearNoise({x:world.emy.x,y:world.emy.y,z:world.emy.z},1.5);
     }
-    if(cue==='distract-done')say('Emy terminó de distraerlo y vuelve contigo.',4);
-    if(cue==='distract-failed'){emyAbilities.distractCooldown=Math.min(5,emyAbilities.distractCooldown);say('Emy no logró llegar. Puedes intentarlo de nuevo.',4);}
+    if(cue==='distract-rest')say('Emy terminó la distracción. Descansará hasta que se recargue su habilidad.',4);
+    if(cue==='distract-done')say(s.hidden||enteringHide?'Emy terminó y se mantiene a cubierto.':'Emy vuelve contigo.',4);
+    if(cue==='distract-failed'){emyAbilities.distractCooldown=0;say('Emy no logró llegar. Puedes intentarlo de nuevo.',4);}
     if(cue==='delivered'){
      world.objects.find(o=>o.id==='key').taken=true;
      puzzle={...puzzle,key:true};s.inventory.key=true;equip('key',false,true);handAction=1;
@@ -1470,14 +1728,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     }
    }else updateUpstairsEmy(world.emy,shotDelta,{player:s,reduced:reducedMotion.matches,
     hidden:world.greyCat.active,blocked:(x,y,z,r,h)=>blocked(world.boxes,x,y,z,r,h)});
-   const cat=world.emy,target=world.emyInteraction;
-   Object.assign(target,{x:cat.x,y:cat.y+.38,z:cat.z,interactable:!cat.hidden&&(!emyCompanion||['following','stay'].includes(emyCompanion.stage))&&cat.reaction<=0});
-    if(emyCompanion){
-     const stay=$('house-emy-stay');
-     stay.textContent=emyCompanion.stage==='stay'?'↪ Sígueme':'⌑ Quédate aquí';
-     stay.setAttribute('aria-pressed',String(emyCompanion.stage==='stay'));
-     stay.disabled=!['following','stay'].includes(emyCompanion.stage);
-    }
+   syncEmyInteraction();
+   const cat=world.emy;
+    // Refresh only on opening; game time is paused during the dialog.
    if(wasHidden!==cat.hidden)renderer.updateVisibility();
   }
 
@@ -1490,8 +1743,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     else if(noiseCue.kind==='impact'){play('clatter',noiseCue.at,noiseCue.level);caption('Un objeto cayó e hizo ruido.');}
    }
   }
+  if(!isPaused()){
+   const inside=roomAt(s.x,s.z,s.y)==='Sala de música';
+   const near=inside||(Math.abs(s.y-3.15)<.45&&Math.hypot(s.x-9,s.z-3.6)<1.65);
+   const altarCue=advanceAltarVisit(altarVisit,{inside,near,afraid:!!emyCompanion?.altarFear&&!world.emy.hidden,dt:shotDelta});
+   if(altarCue.warn){play('altar-hiss',world.emy,.65);caption('Emy se eriza ante la sala de música');say('Emy no quiere entrar. Te esperará fuera.',4);}
+  }
   updateBatterySwap(shotDelta);
-  let view=cameraOf(s),hand=!s.hidden&&!s.lying&&!poseTransition&&!animator.performing&&!phone.open,torch=flashlightBeam(),introHands=null,distance=0;
+  let view=cameraOf(s),hand=!s.hidden&&!s.lying&&!poseTransition&&!animator.performing&&(!phone.open||phone.canWalk),torch=flashlightBeam(),introHands=null,distance=0;
   if(mouseLocked()&&!canLook())releaseMouse();
   if(cinematic){
    if(!paused&&!modal&&!isPortrait()&&!document.hidden&&hasFocus)cinematic.elapsed+=shotDelta;
@@ -1509,7 +1768,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    const beforeX=s.x,beforeZ=s.z;tick(dt);view=cameraOf(s);elapsed+=isPaused()?0:dt;
    const dx=s.x-beforeX,dz=s.z-beforeZ;distance=Math.hypot(dx,dz);const divisor=distance||1;
    const wasEmote=animator.emote;
-   animator.advance(dt,{distance,forward:(dx*Math.sin(s.yaw)+dz*Math.cos(s.yaw))/divisor,side:(dx*Math.cos(s.yaw)-dz*Math.sin(s.yaw))/divisor,paused:isPaused(),reduced:reducedMotion.matches,equipment,emoteElapsed:sound.emoteElapsed});
+   animator.advance(dt,{distance,forward:(dx*Math.sin(s.yaw)+dz*Math.cos(s.yaw))/divisor,side:(dx*Math.cos(s.yaw)-dz*Math.sin(s.yaw))/divisor,paused:isPaused(),reduced:reducedMotion.matches,equipment,emoteElapsed:sound.emoteElapsed,hopAge:hopCancelled?Infinity:hopAge});
    const leftBathroom=wasEmote&&!inBathroom();
    if(leftBathroom)animator.cancelEmote();
    if(wasEmote&&!animator.emote){
@@ -1521,10 +1780,19 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    torch=flashlightBeam();
   }
   const pet=world.emy;
-  if(pet.reaction>0&&!pet.hidden&&!s.hidden&&!poseTransition&&!phone.open&&!emyShot&&!isSuspended()&&Math.hypot(s.x-pet.x,s.z-pet.z)<1.5){
+  if(pet.reaction>0&&(distance>.012||s.sprinting||pursuer.mode==='chase'||pet.alarm>.55||s.hidden||remoteInUse()))pet.reaction=0;
+  if(pet.reaction>0&&!pet.hidden&&!s.hidden&&!poseTransition&&!phone.open&&!emyShot&&!cinematic&&!piano&&!finalCutscene&&!isSuspended()&&Math.abs(s.y-pet.y)<.45&&Math.hypot(s.x-pet.x,s.z-pet.z)<1.5){
    const age=3.4-pet.reaction;
    const reach=Math.min(1,age/.34,pet.reaction/.34);
    const stroke=(1-Math.cos(age*Math.PI*2))*.5;
+   // Render-only crouch and gentle downward glance. Movement, collision,
+   // pursuer perception and the saved player pose remain unchanged.
+   if(!reducedMotion.matches){
+    const lowered=view.y-.44*reach,dx=pet.x-view.x,dz=pet.z-view.z;
+    const aim=Math.atan2(pet.y+.48-lowered,Math.max(.25,Math.hypot(dx,dz)));
+    const yaw=Math.atan2(dx,dz),turn=Math.atan2(Math.sin(yaw-view.yaw),Math.cos(yaw-view.yaw));
+    view={...view,y:lowered,yaw:view.yaw+turn*.32*reach,pitch:view.pitch+(aim-view.pitch)*.42*reach};
+   }
    const startX=view.x+.18*Math.cos(view.yaw),startZ=view.z-.18*Math.sin(view.yaw);
    const contact=pet.landmarks.head;
    const along=contact[2]+.08-stroke*.15;
@@ -1533,7 +1801,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     z:startZ+(pet.z+Math.cos(pet.yaw)*along-startZ)*reach,flex:-.25,curl:.18}];
    hand=false;
   }
-  if(intro&&demo&&checkpoint==='ground'){view=windowIntroCamera(0);hand=false;torch=false;}
+  if(intro&&demo&&checkpoint==='ground'&&!scenario){view=windowIntroCamera(0);hand=false;torch=false;}
   if(!isPaused())placePianoScore();
   const instrument=world.piano;
   if(instrument.solved&&instrument.compartmentAmount<1&&!paused)
@@ -1592,46 +1860,51 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     view=rcViewSmoothed;hand=false;torch=true;shotLight=rc.y<0?.23:.08;
   }
   if(finalCutscene){
-   const previousFinale=finalCutscene.elapsed;
-   if(!isSuspended())finalCutscene.elapsed+=shotDelta;
-   for(const cue of collectCinematicCues('escape',previousFinale,finalCutscene.elapsed,finalCutscene.cues)){
-    const source=cue.source==='pursuer'?pursuer:cue.source==='emy'?world.emy:
-     cue.source==='kitty'?s:null;
-    play(cue.sound,source,cue.level);
-    caption(cue.caption);
-   }
-   // Three deliberate cinematic beats instead of one fixed camera:
-   // the pursuer approaches Kitty, Emy leaps in from the side, then they run.
-   const time=finalCutscene.elapsed,escapeTime=Math.max(0,time-3.48);
-   const t=Math.min(1,escapeTime/4.3),showChase=time>=3.35;
-   if(poseEscapeAmbush(finalCutscene,world.emy,pursuer,reducedMotion.matches))renderer.updateVisibility();
-   actorWalk=wardrobeWalk(escapeTime,finalCutscene.kitty);
-   const companion=wardrobeWalk(Math.max(0,escapeTime-.18),finalCutscene.louis);
-   if(reducedMotion.matches)actorWalk.stride=0;
-   Object.assign(louis,{x:companion.x,y:0,z:companion.z,yaw:companion.yaw,
-    walk:finalCutscene.louisStride+companion.distance,speed:companion.stride*.88});
-   // Keep the camera OUTSIDE the south wall and aim at the actors'
-   // current positions, not at a constant point below the front porch.
-   const attacker=t<.5?pursuer:world.emy;
-   const focus={
-    x:showChase?(actorWalk.x+louis.x+world.emy.x)/3:(finalCutscene.kitty.from.x+attacker.x)/2,
-    y:showChase?1.00:1.23,
-    z:showChase?(actorWalk.z+louis.z+world.emy.z)/3:
-     (finalCutscene.kitty.from.z+attacker.z)/2
-   };
-   const close=time<1.55,attack=time>=1.55&&time<3.35;
-   const x=close?8.10:attack?8.15:7.80-Math.sin(t*Math.PI)*.35;
-   const y=close?2.13:attack?2.29:2.27;
-   const z=close?16.40:attack?15.92:16.65+1.0*t;
-   const dx=focus.x-x,dz=focus.z-z;
-   view={x,y,z,yaw:Math.atan2(dx,dz),
-    pitch:Math.atan2(focus.y-y,Math.max(.1,Math.hypot(dx,dz)))};
-   thirdPerson=actorWalk;hand=false;torch=false;shotLight=.45;
-   if(time>=7.78&&events.phase==='ending'){
-    events.phase='safe';
-    showModal('Final 1 · ¡Kitty y Louis escaparon!',
-     '<p>El secuestrador intenta alcanzar a Kitty, pero Emy salta para detenerlo. Kitty y Louis aprovechan y escapan por el jardín, juntos.</p><p>Rescate completado · 100%</p>',
-     [[config.onRescue?'Ver final':exitLabel,config.onRescue?'finish':'exit']]);
+   const shot=finalCutscene;
+   if(!shot.playable){
+    const previousFinale=finalCutscene.elapsed;
+    if(!isSuspended())finalCutscene.elapsed=Math.min(FINALE_BEATS.run,finalCutscene.elapsed+shotDelta);
+    for(const cue of collectCinematicCues('escape',previousFinale,finalCutscene.elapsed,finalCutscene.cues)){
+     const source=cue.source==='pursuer'?pursuer:cue.source==='emy'?world.emy:cue.source==='kitty'?s:null;
+     play(cue.sound,source,cue.level);caption(cue.caption);
+    }
+    if(poseEscapeAmbush(finalCutscene,world.emy,pursuer,reducedMotion.matches))renderer.updateVisibility();
+    const staged=finaleStage(shot,pursuer,reducedMotion.matches);
+    Object.assign(louis,staged.louis);
+    view=staged.view;shot.stage=staged.stage;shot.lastView={...view};
+    hand=false;torch=false;shotLight=.53;
+    if(shot.elapsed>=FINALE_BEATS.run&&!isSuspended()){
+     // Put the controllable player at the exact last first-person camera.
+     // The cinematic cannot complete the game: the player must walk out.
+     Object.assign(s,{x:view.x,y:0,z:view.z,cameraGround:0,yaw:view.yaw,pitch:view.pitch,
+      eye:1.63,crouched:false,hidden:null,lying:false,bob:0});
+     shot.playable=true;shot.runAge=0;louis.exitRouteActive=false;
+     pursuer.mode='trapped';pursuer.speed=0;world.emy.y=0;world.emy.alarm=0;
+     resetInput();equip('empty',false,true);
+     sound.setThreat(false);say('¡Sigue a Emy por el sendero! Louis va contigo.',5);
+    }
+   }else{
+    shot.lastView={...view};
+    // Emy guides the real escape. The existing swept navigator keeps the
+    // cat on walkable ground. Do not resume her old trunk controller.
+    if(!isSuspended()&&events.phase==='ending'){
+     shot.runAge+=shotDelta;
+     const cat=world.emy,goal={x:5.38,z:Math.max(17.05,Math.min(20.0,s.z+2.4))};
+     const dx=goal.x-cat.x,dz=goal.z-cat.z,d=Math.hypot(dx,dz);
+     const step=d>.14?Math.min(d,2.55*dt):0;
+     const moved=step?navigate(cat,world,dx/d*step,dz/d*step,.40):0;
+     if(moved>.001)cat.yaw=Math.atan2(dx,dz);
+     cat.age+=dt;poseEmy(cat,{walking:moved>.001,mode:moved>.001?'walk':'idle',phase:cat.age,reduced:reducedMotion.matches});
+     if(s.z>=17.7&&s.x>3.8&&s.x<8.0&&cat.z>=17&&Math.hypot(s.x-louis.x,s.z-louis.z)<2.25){
+      events.phase='safe';resetInput();
+      for(const cue of collectCinematicCues('escape',shot.elapsed,FINALE_BEATS.finish,shot.cues)){play(cue.sound,null,cue.level);caption(cue.caption);}
+      showModal('Final 1 · ¡Kitty y Louis escaparon!',
+       '<p>Emy se lanzó para proteger a Louis. Los tres cruzaron el jardín y dejaron la casa atrás.</p><p>Rescate completado · 100%</p>',
+       [[config.onRescue?'Ver final':exitLabel,config.onRescue?'finish':'exit']]);
+     }
+    }
+    // Keep a readable first-person exterior; dawn lighting is a separate phase.
+    shotLight=.22;
    }
   }
   const carShot=events.phase==='car-preview'||events.phase==='arrival'&&events.time<CAR_ARRIVAL_SECONDS;
@@ -1660,6 +1933,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    const camera=walk.camera,dx=actorWalk.x-camera.x,dz=actorWalk.z-camera.z;
    view={...camera,yaw:Math.atan2(dx,dz),pitch:Math.atan2(s.y+1.01-camera.y,Math.hypot(dx,dz))};torch=false;shotLight=.15;
   }
+  // Render-only hop: the collision body, focus, AI and save coordinates are unchanged.
+  if(hopAge<HOP_COOLDOWN&&!hopCancelled&&!thirdPerson&&!carShot&&canHop())view={...view,y:view.y+hopOffset(hopAge,reducedMotion.matches)};
   sound.carEngine(carShot&&!isSuspended()?world.car.progress:null);
   sound.rcMotor(rc?.mode==='driving'&&!isPaused()?rc.velocity:0);
   root.classList.toggle('house-arrival',events.phase==='arrival'||events.phase==='car-preview'||wakeShot()||!!actorWalk);
@@ -1683,7 +1958,23 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    s.hidden?'Sigue patrullando · espera a que se aleje':'Está patrullando';
   if(danger.textContent!==threatText)danger.textContent=threatText;
   root.classList.toggle('house-threat',!danger.hidden);
+  root.classList.toggle('house-chase-tension',chasing&&!isSuspended());
+  root.classList.toggle('house-watch-tension',investigating&&!isSuspended());
+  if(pursuer.active&&!isPaused()&&!finalCutscene&&['patrol','hunt','evaded','rc-setup'].includes(events.phase)){
+   // Existing recorded tracks crossfade via RecordedAudio.setMood; the
+   // generated fallback receives the same calm/watch/chase progression.
+   sound.setThreat(chasing||investigating);
+   sound.setTension(chasing?1:investigating?.76:s.hidden?.58:.33);
+  }
+  if(!isSuspended()){
+   if(events.phase==='arrival'&&lastHapticPhase!=='arrival')haptics.pulse('arrival');
+   if(chasing&&!lastHapticThreat)haptics.pulse('chase');
+   lastHapticPhase=events.phase;lastHapticThreat=chasing;
+  }
   if(!isSuspended())equipmentAge+=shotDelta;
+  const cameraMode=phone.open&&phone.app==='camera'&&!isPaused()&&!s.hidden;
+  const turnTarget=Number(cameraMode);
+  phoneTurn=reducedMotion.matches?turnTarget:phoneTurn+(turnTarget-phoneTurn)*Math.min(1,shotDelta*9);
   phone.update(events,isSuspended()?0:shotDelta);enableSound.hidden=!sound.settings.muted&&!!sound.context&&(sound.paused||sound.context.state==='running');
   const mirrorLit=torch||circuitPowered(bathCircuit);
   if(!isPaused()){
@@ -1699,13 +1990,22 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   const raisedNote=noteLift>0&&!phone.open&&!cinematic&&events.phase!=='arrival'&&!s.hidden;
   if(keyTurn&&!isPaused()){keyTurn.time+=shotDelta;if(keyTurn.time>=.52)keyTurn=null;}
-  const visualEquipment=keyTurn?keyTurn.kind:raisedNote||equipment==='paper'&&(s.inventory.pendingNote??s.inventory.notes.at(-1))?.id==='mirror-note'?'note':notePresentation?'empty':equipment,noteRaise=noteLift*noteLift*(3-2*noteLift);
+  let visualEquipment=heldNoise?'empty':keyTurn?keyTurn.kind:raisedNote||equipment==='paper'&&(s.inventory.pendingNote??s.inventory.notes.at(-1))?.id==='mirror-note'?'note':notePresentation?'empty':equipment,noteRaise=noteLift*noteLift*(3-2*noteLift);
+  const normalEquip=!heldNoise&&!keyTurn&&!raisedNote&&!notePresentation&&!phone.open&&batterySwap===null&&!remoteInUse()&&!cinematic;
+  const lowering=normalEquip&&previousEquipment!==null&&equipmentAge<.12&&!reducedMotion.matches;
+  if(lowering)visualEquipment=previousEquipment;
+  if(equipmentAge>=.12||!normalEquip)previousEquipment=null;
+  const equipLift=raisedNote?-.52*(1-noteRaise):reducedMotion.matches?0:lowering?-.28*Math.min(1,equipmentAge/.12):-.25*Math.pow(1-Math.min(1,Math.max(0,equipmentAge-.12)/.26),2);
+  const hopMotion=hopCancelled?null:hopPose(hopAge,reducedMotion.matches);
+  if(hand&&visualEquipment==='empty'&&hopMotion?.weight>0)visualEquipment='hop-hands';
   if(roomAt(s.x,s.z,s.y)!=='Sala de estar')world.television.power.on=false;
   television.sync(world.television.power.on&&housePowered(world.lights.power),!isPaused()&&!phone.open);
   if(updateWallClock(world.clock)&&!isPaused()&&Math.hypot(s.x-world.clock.x,s.y,s.z-world.clock.z)<4.5)play('clock-tick',world.clock,.55);
   const torchItem=world.landingTorch;
   torchMarker.hidden=true;
-  if(torchItem&&puzzle.door&&!s.inventory.torch&&!phone.open&&!isPaused()&&!thirdPerson&&!remoteInUse()&&!s.hidden){
+  if(torchItem&&!torchItem.taken&&!s.inventory.torch&&!phone.open&&!isPaused()&&!thirdPerson&&!remoteInUse()&&!s.hidden&&
+   Math.hypot(torchItem.x-view.x,torchItem.y-view.y,torchItem.z-view.z)<3&&
+   !lineBlocked(world.boxes,view,torchItem)){
    const dx=torchItem.x-view.x,dy=torchItem.y-view.y,dz=torchItem.z-view.z;
    const flat=dx*Math.sin(view.yaw)+dz*Math.cos(view.yaw);
    const depth=flat*Math.cos(view.pitch)+dy*Math.sin(view.pitch);
@@ -1722,10 +2022,24 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   // the objective graph goes DRAWER → SCREWDRIVER → FOUR VENT SCREWS.
   // Never make an inaccessible object look clickable: respect taken and
   // concealed states, camera facing and visibility through closed doors.
+  const nameTag=$('house-emy-name'),catTarget=world.emyInteraction;
+  const canShowName=!isPaused()&&!phone.open&&!heldNoise&&!finalCutscene&&!thirdPerson&&!carShot&&!loisShotDirector&&!remoteInUse();
+  const lookingAtEmy=canShowName&&catTarget?.interactable&&Math.hypot(s.x-catTarget.x,s.z-catTarget.z)<=2.45&&closestObject(world,s,focus)===catTarget;
+  const showName=advanceEmyNameCue(emyNameCue,shotDelta,!!lookingAtEmy,!isPaused(),canShowName);
+  let nameVisible=false;
+  if(showName){
+   const dx=catTarget.x-view.x,dy=catTarget.y+.28-view.y,dz=catTarget.z-view.z;
+   const fwd=dx*Math.sin(view.yaw)+dz*Math.cos(view.yaw),side=dx*Math.cos(view.yaw)-dz*Math.sin(view.yaw);
+   const depth=fwd*Math.cos(view.pitch)+dy*Math.sin(view.pitch);
+   if(depth>.15){const scale=.65*canvas.clientHeight/depth,px=canvas.clientWidth/2+side*scale,py=canvas.clientHeight/2-(dy*Math.cos(view.pitch)-fwd*Math.sin(view.pitch))*scale;
+    if(px>0&&px<canvas.clientWidth&&py>0&&py<canvas.clientHeight){nameVisible=true;nameTag.style.left=px+'px';nameTag.style.top=py+'px';}
+   }
+  }
+  if(nameTag.hidden===nameVisible)nameTag.hidden=!nameVisible;
   const sparkle=$('house-interest');
   const candidate=!isPaused()&&!phone.open&&!cinematic&&!finalCutscene?
    (focus?.interactable&&!focus.taken&&!focus.concealed?focus:objectives.active?.target):null;
-  if(candidate&&candidate.interactable!==false&&!candidate.taken&&!candidate.concealed&&
+  if(candidate&&candidate.kind!=='emy-cat'&&!(candidate===torchItem&&!torchMarker.hidden)&&candidate.interactable!==false&&!candidate.taken&&!candidate.concealed&&
    Math.abs((candidate.floor??candidate.y??0)-s.y)<2.3){
    const dx=candidate.x-view.x,dy=(candidate.y??s.y)+.16-view.y,dz=candidate.z-view.z;
    const forward=dx*Math.sin(view.yaw)+dz*Math.cos(view.yaw),side=dx*Math.cos(view.yaw)-dz*Math.sin(view.yaw);
@@ -1775,20 +2089,23 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     const depth=forward*Math.cos(view.pitch)+dy*Math.sin(view.pitch);
     if(depth>.15){
      const factor=.65*canvas.clientHeight/depth;
-     const radius=(1.1-emyAbilities.wave)*160;
+     const progress=1-emyAbilities.wave/1.1;
+     const radius=reducedMotion.matches?64:Math.min(260,12+Math.pow(progress,.76)*Math.max(85,Math.min(245,factor*1.7)));
      wave.hidden=false;
-     Object.assign(wave.style,{left:(canvas.clientWidth/2+side*factor)+'px',top:(canvas.clientHeight/2-(dy*Math.cos(view.pitch)-forward*Math.sin(view.pitch))*factor)+'px',width:Math.max(12,radius*2)+'px',height:Math.max(12,radius*2)+'px',opacity:String(Math.min(.42,emyAbilities.wave/2.3))});
+     Object.assign(wave.style,{left:(canvas.clientWidth/2+side*factor)+'px',top:(canvas.clientHeight/2-(dy*Math.cos(view.pitch)-forward*Math.sin(view.pitch))*factor)+'px',width:Math.max(12,radius*2)+'px',height:Math.max(12,radius*2)+'px',opacity:String(Math.min(.72,emyAbilities.wave/1.1)*Math.min(1,.35+progress*8))});
     }else wave.hidden=true;
    }else wave.hidden=true;
-   renderer.render(view,torch,elapsed,hand,{rcView:rc?.mode==='driving'&&!!rc,scanOutline:emyAbilities.scan>0&&pursuer.active,bob:s.bob,action:handAction,clickAction,speed:animator.speed,acceleration:animator.acceleration,walkWeight:animator.weight,reduced:s.reduceBob,swayX:handDrift.x,swayY:handDrift.y,introHands,animator,feetY:s.y,crouched:s.crouched,equipment:visualEquipment,keyTurn:keyTurn?.time,noteRaise,batterySwap,tabletLift,equipLift:raisedNote?-.52*(1-noteRaise):reducedMotion.matches?0:-.22*Math.pow(1-Math.min(1,equipmentAge/.3),2),bathDoorAmount:world.objects.find(o=>o.id==='bano').amount,thirdPerson,actorTime,actorWalk,actorPiano,shotLight,pursuer:finalCutscene?{...pursuer.snapshot(),captureReach:Math.min(1,finalCutscene.elapsed/.8)*Math.max(0,Math.min(1,(2.45-finalCutscene.elapsed)/.35)),captureLift:0,captureFace:{jaw:0,bite:0,twitch:0,left:0,right:0,glance:0}}:pursuer.snapshot(),television});
-   if(capturePhoto){capturePhoto=false;if(phone.open&&phone.app==='camera')phone.takePhoto(canvas);}
-   phone.updateCamera(canvas,now);
+   const takingPhoto=capturePhoto&&cameraMode;capturePhoto=false;
+   const emyMemory=!phone.emyMemory&&!world.emy.hidden&&!reducedMotion.matches&&((emyShot&&emyShot.elapsed>1.25&&emyShot.elapsed<2.6)||(pet.reaction>1&&pet.reaction<2.4&&!phone.open&&!isSuspended()));
+   const cameraFlash=takingPhoto&&phone.flash;
+   renderer.render(view,cameraFlash?1.4:torch,elapsed,hand,{weather:finaleWeather(finalCutscene,s),altarPulse:altarVisit.pulse,phoneTurn,captureProjection:cameraMode ? .82 : 1,onWorldFrame:cameraMode||emyMemory?frame=>{if(emyMemory)phone.rememberEmy(frame);if(takingPhoto){phone.takePhoto(frame);play('click');}if(cameraMode)phone.updateCamera(frame,now);}:undefined,rcView:rc?.mode==='driving'&&!!rc,scanOutline:emyAbilities.scan>0&&pursuer.active,bob:s.bob,action:handAction,clickAction,speed:animator.speed,acceleration:animator.acceleration,walkWeight:animator.weight,reduced:s.reduceBob,swayX:handDrift.x,swayY:handDrift.y,introHands,animator,feetY:s.y,crouched:s.crouched,equipment:visualEquipment,keyTurn:keyTurn?.time,noteRaise,batterySwap,tabletLift,equipLift,hop:hopMotion,equipGesture:normalEquip&&!reducedMotion.matches?Math.sin(Math.PI*Math.min(1,equipmentAge/.38)):0,bathDoorAmount:world.objects.find(o=>o.id==='bano').amount,thirdPerson,actorTime,actorWalk,actorPiano,shotLight:cameraFlash?Math.max(.58,shotLight||0):shotLight,pursuer:finalCutscene&&!finalCutscene.playable?finaleThreat(pursuer.snapshot(),finalCutscene.elapsed,reducedMotion.matches):pursuer.snapshot(),television});
   }catch(e){interruptGraphics('Error de renderizado',String(e.message||e));return;}
   const mirrorDistance=Math.hypot(view.x-BATH_MIRROR.x,view.z-BATH_MIRROR.z);
   const readingMirror=mirrorLit&&inBathroom()&&renderer.mirrorDrawn&&mirrorDistance<3&&Math.abs(view.pitch-Math.atan2(BATH_MIRROR.y-view.y,mirrorDistance))<.57&&!phone.open;
   const mirrorCue=mirrorSafe.advance(shotDelta,{active:!isPaused()&&!phone.open,mirror:readingMirror&&noteLift>=.95});
   if(mirrorCue==='hint')say(MIRROR_HINT,6);
   if(mirrorCue==='revealed'){
+   haptics.pulse('puzzle');
    noteHold=4;
    const note=s.inventory.pendingNote;
    if(note){
@@ -1803,7 +2120,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    saveCheckpoint();
    play('pickup');
   }
-  hudMessages.update({dt:isPaused()?0:shotDelta,blocked:isSuspended()||!!cinematic,danger:danger.hidden?'':danger.textContent,revelation:readingMirror&&mirrorSafe.collected&&mirrorSafe.revealed&&!mirrorSafe.opened?'En el espejo: '+SAFE_CODE+' · combinación de la caja fuerte':'',unread:phone.messageCount>phone.readCount,messageCount:phone.messageCount,phoneOpen:phone.open,dock:phone.rect});
+  hudMessages.update({dt:isPaused()?0:shotDelta,blocked:isSuspended()||!!cinematic,danger:danger.hidden||options.threatText!==true&&events.phase!=='hide'?'':danger.textContent,showObjective:!finalCutscene&&(options.hints===true||!!scenario),revelation:readingMirror&&mirrorSafe.collected&&mirrorSafe.revealed&&!mirrorSafe.opened?'En el espejo: '+SAFE_CODE+' · combinación de la caja fuerte':'',unread:phone.messageCount>phone.readCount,messageCount:phone.messageCount,phoneOpen:phone.open,dock:phone.rect});
   frameCount++;
   if(now-statsAt>1000){
    fps=Math.round(frameCount*1000/(now-statsAt));
@@ -1819,9 +2136,16 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    }
   }
   updateControls();
+  if(showFPS){
+   fpsWasActive=true;fpsSampler.record(now,0);
+   if(now-fpsAt>=1000){fpsAt=now;const m=fpsSampler.report();if(m.samples){fpsNode.textContent=Math.round(m.fps)+' FPS';fpsNode.hidden=false;}else{fpsNode.textContent='— FPS';fpsNode.hidden=false;}}
+  }
+  if(measuring){perfSampler.record(now,performance.now()-cpuStart);if(now-perfAt>=1000){perfAt=now;const m=perfReport();$('house-perf').textContent=m.samples?`${m.fps.toFixed(1)} FPS · 1% ${m.low1.toFixed(1)} · p95 ${m.p95.toFixed(1)} ms\nCPU p95 ${m.cpuP95.toFixed(1)} ms · >50 ms ${m.hitches} · sombras ${m.shadowPasses}\n${m.quality} · ${m.room} · ${m.samples} frames`:'Midiendo…';}}
  }
  function interruptGraphics(title,message){
   contextLost=true;cancelAnimationFrame(raf);raf=0;
+  if(emyMenuOpen)closeEmyMenu();
+  phone.close();resetInput();
   captureLayer.hidden=true;
   renderer?.destroy({keepCanvas:true});
   showModal(title,`<p>${escapeHTML(message)}</p>`,[[exitLabel,'exit']]);
@@ -1831,7 +2155,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   root.querySelector('[data-act="exit"]').addEventListener('click',()=>{stop();onExit();},{signal});
   return stop;
  }
- function pointerStick(e){if(!active||isPaused()||phone.open||events.phase==='arrival'||stickPointer!==null||e.button!==0)return;stickPointer=e.pointerId;stickPointerType=e.pointerType||'mouse';capture(e.currentTarget,e.pointerId);moveStick(e);e.preventDefault();}
+ function pointerStick(e){if(!active||isPaused()||phone.open&&!phone.canWalk||events.phase==='arrival'||stickPointer!==null||e.button!==0)return;stickPointer=e.pointerId;stickPointerType=e.pointerType||'mouse';capture(e.currentTarget,e.pointerId);moveStick(e);e.preventDefault();}
  function drawStick(x,y){$('lab-stick').style.transform=`translate(${x*56}%,${y*56}%)`;}
  function moveStick(e){
   if(e.pointerId!==stickPointer)return;
@@ -1918,12 +2242,16 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  syncMotion();
  root.addEventListener('input',e=>{
   const field=e.target,key=field.dataset.setting;if(!key)return;
+  if(key==='showFPS'){options.showFPS=field.checked;saveCamera();clearFPS();return;}
+  if(key==='perf'&&config.trial){perfEnabled=field.checked;perfSampler.reset();perfAt=0;$('house-perf').hidden=!perfEnabled;$('house-perf').textContent='Midiendo…';return;}
   if(key==='quality'){options.quality=field.value;renderer.quality=field.value;root.querySelectorAll('[data-setting="quality"]').forEach(el=>{if(el!==field)el.value=field.value;});}
   if(key==='sensitivity'){options.sensitivity=Number(field.value);root.querySelectorAll('[data-setting="sensitivity"]').forEach(el=>{if(el!==field)el.value=field.value;});saveCamera();}
   if(key==='invertX'){options.invertX=field.checked;saveCamera();}
-  if(key==='bob'||key==='motion'||key==='captions'){
+  if(key==='difficulty'||key==='adaptive'){if(key==='difficulty')options.difficulty=validDifficulty(field.value);else options.adaptive=field.checked;pursuer.setDifficulty(difficultyProfile(options.difficulty,options.adaptive,s.lives,s.emyRescueUsed));saveCamera();}
+  if(['bob','motion','captions','hints','threatText','haptics','immersive'].includes(key)){
    options[key]=field.checked;saveCamera();syncMotion();
    if(key==='captions'&&!field.checked)hudMessages.clearSound();
+   if(key==='haptics'&&!field.checked)haptics.stop();
   }
   if(MIX_CHANNELS.some(([channel])=>channel===key)){
    sound.set(key,Number(field.value));
@@ -1939,11 +2267,23 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   root.classList.add('house-keyboard');
   if(e.isTrusted&&!e.repeat)unlockSound();
   const focused=e.target?.tagName;
+  if(emyMenuOpen){
+   if(e.key==='Escape'){e.preventDefault();closeEmyMenu();}
+   else if(e.key==='Tab'){
+    const panel=$('house-emy-map').hidden?$('house-emy-menu'):$('house-emy-map');
+    const items=[...panel.querySelectorAll('button:not(:disabled),[tabindex="0"]')].filter(el=>el.getClientRects().length);
+    if(items.length&&(!panel.contains(document.activeElement)||(!e.shiftKey&&document.activeElement===items.at(-1))||(e.shiftKey&&document.activeElement===items[0]))){e.preventDefault();(e.shiftKey?items.at(-1):items[0]).focus();}
+   }
+   return;
+  }
   if(e.key==='Escape'&&mouseLocked()){e.preventDefault();releaseMouse();return;}
   if(e.key==='Escape'&&rc?.mode==='driving'&&!isPaused()){e.preventDefault();runAction('rc:stop');return;}
   if(phone.editing){if(e.key==='Escape'){e.preventDefault();void phone.layoutAction('done');}else if(e.key==='Tab'){const panel=phone.host.querySelector(phone.preview?'.hud-preview-tools':'.hud-editor'),items=[...panel.querySelectorAll('button,input,select')];if(!panel.contains(document.activeElement)||(!e.shiftKey&&document.activeElement===items.at(-1))||(e.shiftKey&&document.activeElement===items[0])){e.preventDefault();(e.shiftKey?items.at(-1):items[0]).focus();}}return;}
   if(['INPUT','SELECT','TEXTAREA'].includes(focused)&&e.key!=='Escape')return;
-  if(e.key===' '&&['BUTTON','SUMMARY','A'].includes(focused))return;
+  // Preserve Space activation for keyboard-focused controls and dialogs, but
+  // a pointer-clicked gameplay button must not steal the jump key.
+  if(e.key===' '&&['BUTTON','SUMMARY','A'].includes(focused)&&
+   (!e.target.closest('.lab-buttons')||e.target.matches(':focus-visible')))return;
   if(piano&&e.key!=='Tab'){
    const note=PIANO_KEYS.indexOf(e.key.toLowerCase());
    if(note!==-1){e.preventDefault();if(!e.repeat)playPiano(note);return;}
@@ -1951,7 +2291,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   if(modal==='Caja fuerte'&&e.key!=='Tab'){if(/^\d$/.test(e.key)){e.preventDefault();safeAction(e.key);}else if(e.key==='Backspace'||e.key==='Delete'){e.preventDefault();safeAction(e.key==='Delete'?'clear':'back');}else if(e.key==='Enter'){e.preventDefault();safeAction('submit');}else if(e.key==='Escape'){e.preventDefault();modalClose();}return;}
   if((events.phase==='safe'||events.phase==='failed')&&!['Tab','Enter',' '].includes(e.key)){e.preventDefault();return;}
-  if(/^[1-9]$/.test(e.key)&&!isPaused()&&!phone.open&&events.phase!=='arrival'){
+  if(/^[1-9]$/.test(e.key)&&!isPaused()&&!finalCutscene&&!phone.open&&events.phase!=='arrival'){
    const slot=phone.visibleSlots()[Number(e.key)-1];
    if(slot){if(!e.repeat&&!remoteInUse())equip(slot.dataset.equip,true);return;}
   }
@@ -1959,7 +2299,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    e.preventDefault();runAction({q:'rc:noise',x:'rc:stop',t:'rc:trap'}[e.key.toLowerCase()]);return;
   }
   if(e.key.toLowerCase()==='r'&&!e.repeat&&canLook()){if(mouseLocked())releaseMouse();else lockMouse();return;}
-  if(phone.open){if(phone.app==='settings'&&e.key!=='Escape')return;if(e.key==='Escape'){e.preventDefault();phone.close();resetInput();}else if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'].includes(e.key)){e.preventDefault();phone.key(e.key);}else if(e.key==='Tab'){const b=[...root.querySelectorAll('.phone-screen button')],first=b[0],last=b.at(-1);if((e.shiftKey&&document.activeElement===first)||(!e.shiftKey&&document.activeElement===last)){e.preventDefault();(e.shiftKey?last:first).focus();}}return;}
+  if(phone.open){
+   if(phone.app==='settings'&&e.key!=='Escape')return;
+   if(e.key==='Escape'){e.preventDefault();phone.close();resetInput();}
+   else if(phone.app==='snake'){phone.key(e.key);if(movementKey(e))e.preventDefault();}
+   else if(e.key==='Tab'){const b=[...root.querySelectorAll('.phone-screen button')].filter(el=>el.getClientRects().length),first=b[0],last=b.at(-1);if((e.shiftKey&&document.activeElement===first)||(!e.shiftKey&&document.activeElement===last)){e.preventDefault();(e.shiftKey?last:first)?.focus();}}
+   else {const k=movementKey(e);if(phone.canWalk&&k&&!isPaused()){e.preventDefault();if(!e.repeat||keys.has(k))keys.add(k);}}
+   return;
+  }
   if((e.key==='p'||e.key==='P')&&equipment==='phone'){runAction('phone');return;}
   if(!e.repeat&&EMOTES.some(em=>em.key===e.key)){runAction('emote:'+EMOTES.find(em=>em.key===e.key).id);return;}
   if(!e.repeat&&(e.key==='m'||e.key==='M')){e.preventDefault();runAction('emotes');return;}
@@ -1977,18 +2324,18 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(modal){if(intro||contextLost)return;paused=false;modalClose();}else togglePause();return;
   }
   if(e.key==='g'||e.key==='G')runAction('noise:throw');
-  if(e.key==='v'||e.key==='V')runAction('noise:drop');
   if(e.key==='e'||e.key==='E')runAction('interact');
   if(e.key==='f'||e.key==='F')runAction('flash');
   if(e.key==='c'||e.key==='C')runAction('crouch');
+  if(e.code==='Space'||e.key===' ')runAction('hop');
   if(e.key==='i'||e.key==='I')runAction('bag');
  },{signal});
  window.addEventListener('keyup',e=>{const key=movementKey(e);if(key)keys.delete(key);},{signal,capture:true});
- window.addEventListener('blur',()=>{hasFocus=false;releaseMouse();resetInput();suspendPianoClock();sound.pause();},{signal});
+ window.addEventListener('blur',()=>{hasFocus=false;haptics.stop();clearMiniatureInput();releaseMouse();resetInput();suspendPianoClock();sound.pause();},{signal});
  window.addEventListener('focus',()=>{hasFocus=true;resetInput();last=performance.now();resumeHouseAudio();},{signal});
- window.addEventListener('pagehide',()=>{hasFocus=false;releaseMouse();resetInput();suspendPianoClock();sound.pause();},{signal});
+ window.addEventListener('pagehide',()=>{hasFocus=false;haptics.stop();clearMiniatureInput();releaseMouse();resetInput();suspendPianoClock();sound.pause();},{signal});
  window.addEventListener('pageshow',()=>{hasFocus=document.hasFocus();resetInput();last=performance.now();resumeHouseAudio();},{signal});
- document.addEventListener('visibilitychange',()=>{last=performance.now();if(document.hidden){resetInput();suspendPianoClock();sound.pause();}else resumeHouseAudio();},{signal});
+ document.addEventListener('visibilitychange',()=>{last=performance.now();if(document.hidden){haptics.stop();resetInput();suspendPianoClock();sound.pause();}else resumeHouseAudio();},{signal});
  window.addEventListener('resize',()=>{last=performance.now();resetInput();if(isPortrait()){suspendPianoClock();sound.pause();}else resumeHouseAudio();},{signal});
  canvas.addEventListener('webglcontextlost',e=>{
   e.preventDefault();
@@ -2001,7 +2348,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    rebuild();contextLost=false;paused=false;modalClose();
    if(captureShot){captureLayer.hidden=false;resumeHouseAudio();}
    if(!ready)startHouse();
-   last=statsAt=performance.now();lastPaint=0;frameCount=0;
+   last=statsAt=performance.now();lastPaint=0;frameCount=0;clearFPS();perfSampler.pause();
    raf=requestAnimationFrame(frame);
    if(ready)say('Gráficos recuperados');
   }catch(e){interruptGraphics('Error de renderizado',String(e.message||e));}
@@ -2022,6 +2369,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   root.querySelector('[data-setting="invertX"]').checked=options.invertX;
   root.querySelector('[data-setting="motion"]').checked=options.motion===true;
   root.querySelector('[data-setting="captions"]').checked=options.captions!==false;
+  root.querySelector('[data-setting="hints"]').checked=options.hints===true;
+  root.querySelector('[data-setting="threatText"]').checked=options.threatText===true;
+  root.querySelector('[data-setting="haptics"]').checked=options.haptics!==false;
+  root.querySelector('[data-setting="immersive"]').checked=options.immersive!==false;
+  root.querySelector('[data-setting="showFPS"]').checked=options.showFPS===true;
+  root.querySelector('[data-setting="difficulty"]').value=options.difficulty;
+  root.querySelector('[data-setting="adaptive"]').checked=options.adaptive;
   root.querySelectorAll('[data-setting="quality"]').forEach(el=>el.value=options.quality);
   startHouse();
   raf=requestAnimationFrame(frame);
@@ -2034,6 +2388,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    mirrorPuzzle:()=>({...mirrorSafe.snapshot(),noteLift,safe:(()=>{const o=world.objects.find(o=>o.id==='mirror-safe');return {amount:o.amount,state:o.state};})()}),
    pianoPuzzle:()=>({picked:world.pianoSheet.taken,placed:world.piano.scorePlaced,solved:world.piano.solved,
     compartment:world.piano.compartmentAmount}),
+   holiday:()=>({powered:holidayPowered(world.holiday),switchOn:world.holiday.tree.on,plushes:collectedPlushes(world.holiday),giftOpened:world.holiday.gift.opened,giftAge:world.holiday.gift.age}),
    amenities:()=>({power:housePowered(world.lights.power),lights:world.lights.circuits.filter(circuitPowered).map(c=>c.id),
     battery:{charge:s.battery,spares:s.inventory.batteries,swap:batterySwap},
     television:{on:television.powered,time:television.video.currentTime,duration:television.video.duration,frame:renderer.tvFrame},
@@ -2045,9 +2400,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     errors:sound.recordings?.errors.filter(error=>error.startsWith('user-sprite'))||[]}),
    rc:()=>({projection:renderer.lastProjection,mode:rc.mode,elapsed:rc.elapsed,position:{x:rc.x,y:rc.y,z:rc.z,yaw:rc.yaw},noise:rc.noise,crashes:rc.crashes,driveSpeed:rc.driveSpeed,steerAngle:rc.steerAngle,inventory:!!s.inventory.rc,trap:{...rcTrap},pursuer:{x:pursuer.x,y:pursuer.y,z:pursuer.z,mode:pursuer.mode}}),
    louis:()=>louis?{x:louis.x,y:louis.y,z:louis.z,phase:louis.phase,waypoint:louis.waypoint,age:louis.age,walk:louis.walk,speed:louis.speed,crouch:louis.crouch,reaction:louis.visualReaction?.type??null,cameraPhase:loisShotDirector?.phase??null}:null,
-   emy:()=>({x:world.emy.x,y:world.emy.y,z:world.emy.z,phase:world.emy.phase,reaction:world.emy.reaction,hidden:world.emy.hidden,companion:emyCompanion?.stage,stay:emyCompanion?.stage==='stay',ventOpen:world.studyVent.coverAmount===1,entrance:emyShot?.elapsed,trunk:emyCompanion?.stage==='trunk'}),
+   emy:()=>({x:world.emy.x,y:world.emy.y,z:world.emy.z,phase:world.emy.phase,reaction:world.emy.reaction,hidden:world.emy.hidden,mood:emyCompanion?.mood,alarm:world.emy.alarm||0,refuge:emyCompanion?.refuge?{...emyCompanion.refuge}:null,companion:emyCompanion?.stage,stay:emyCompanion?.stage==='stay',ventOpen:world.studyVent.coverAmount===1,entrance:emyShot?.elapsed,trunk:emyCompanion?.stage==='trunk'}),
    emySkills:()=>({scanRendered:!!renderer?.lastScanOutline,scan:emyAbilities.scan,scanCooldown:emyAbilities.scanCooldown,distractCooldown:emyAbilities.distractCooldown,
-    wave:emyAbilities.wave,stay:emyCompanion?.stage==='stay',menu:emyMenuOpen,mapOpen:!$('house-emy-map').hidden,stage:emyCompanion?.stage,
+    wave:emyAbilities.wave,stay:emyCompanion?.stage==='stay',menu:emyMenuOpen,mapOpen:!$('house-emy-map').hidden,mapReadOnly,preview:mapPreview?{goal:{...mapPreview.goal},seconds:mapPreview.seconds,waypoints:mapPreview.waypoints.map(p=>({...p}))}:null,stage:emyCompanion?.stage,
     distraction:emyCompanion?.distraction?{remaining:emyCompanion.distraction.remaining,arrived:emyCompanion.distraction.arrived,
       goal:{...emyCompanion.distraction.goal}}:null}),
    noiseProps:()=>noiseProps.map(p=>({id:p.id,x:p.x,y:p.y,z:p.z,held:p.held,spent:p.spent,flight:!!p.flight})),
@@ -2061,11 +2416,25 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     Object.assign(pursuer,{x:pose.x,y,z:pose.z,yaw:pose.yaw??0,facing:pose.yaw??0,mode:'search',awareness:0,lost:10,path:[],replan:1});
     return pursuer.snapshot();
    },
+   // End a synthetic scan fixture before unrelated phone and input scenarios.
+   // Production threat handling remains unchanged; this hook is DEV-only.
+   // DEV-only fixture: place Emy at a verified outside floor point to test
+   // her actual following, alarm, pose and room-boundary behavior.
+   placeEmyAtThreshold:()=>{
+    const pose={x:9,y:HEIGHT,z:3.6,yaw:Math.PI};
+    if(!emyCompanion||blocked(world.boxes,pose.x,pose.y,pose.z,.16,.62))throw Error('Unsafe Emy threshold fixture');
+    restoreEmyCompanion(emyCompanion,{stage:'following',...pose},events.phase);
+   },
+   clearThreatFixture:()=>{pursuer.reset();sound.setThreat(false);return pursuer.snapshot();},
    // DEV-only route harness for deterministic test setup; not in the production build.
    placeRC:(pose)=>{if(rc.mode!=='driving')throw Error('RC must be deployed first');const y=groundHeight(pose.x,pose.z,pose.y??rc.y,world.hatch?.amount>.92);if(!Number.isFinite(y)||blocked(world.boxes,pose.x,y,pose.z,.155,.38))throw Error('Blocked RC test position');rc.x=pose.x;rc.y=y;rc.z=pose.z;rc.yaw=pose.yaw??rc.yaw;rc.noise=0;syncRCObject(rc);return {x:rc.x,y:rc.y,z:rc.z};},
+   altar:()=>({...altarVisit,waiting:!!emyCompanion?.altarWait,fear:!!emyCompanion?.altarFear,bristle:world.emy.parts.find(p=>p.id==='coat')?.box.bristle??0,earFlatten:world.emy.earFlatten??0}),
+   scanFrame:()=>renderer?.scanFrame??null,
+   performance:()=>perfReport(),
+   finale:()=>finalCutscene?{elapsed:finalCutscene.elapsed,playable:finalCutscene.playable,runAge:finalCutscene.runAge,stage:finalCutscene.playable?'run':finalCutscene.stage,weather:finaleWeather(finalCutscene,s),view:finalCutscene.lastView}:null,
    intro:()=>cinematic?{elapsed:cinematic.elapsed,...windowIntroState(cinematic.elapsed/WINDOW_SHOT_SECONDS),camera:windowIntroCamera(cinematic.elapsed/WINDOW_SHOT_SECONDS)}:null,
    atmosphere:()=>({room:sound.atmosphere?.room,outdoor:sound.atmosphere?.outdoor,events:sound.atmosphere?.events,voices:sound.atmosphere?.voices.size,loops:sound.atmosphere?.loops.length,lastEvent:sound.atmosphere?.lastEvent,muted:sound.settings.muted,volume:sound.settings.ambient}),
-   snapshot:()=>({puzzle:{...puzzle},position:{x:s?.x,y:s?.y,z:s?.z},locomotion:{...velocity,eye:s?.eye,cameraGround:s?.cameraGround,stairs:s?getStairDirection(s):''},camera:{yaw:s?.yaw,pitch:s?.pitch,targetYaw:lookTarget.yaw,invertX:options.invertX},cinematic:!!cinematic,quality:options.quality,fps,target:focus?.id??null,paused:isPaused(),controls:{look:lookPointer,stick:stickPointer,joystick:{...joystick}},reduceBob:s.reduceBob,flashlight:s.flashlight,notes:s.inventory.notes.length,drawer:(()=>{const o=world.objects.find(o=>o.id==='drawer');return {state:o.state,amount:o.amount,z:o.box.z,key:world.objects.find(o=>o.id==='key').z,contentsAvailable:world.objects.find(o=>o.id==='key').interactable,contentsConcealed:world.objects.find(o=>o.id==='key').concealed}})(),doors:world.objects.filter(o=>o.kind==='door').map(o=>({id:o.id,open:o.open,state:o.state,amount:o.amount,x:o.box.x,z:o.box.z,yaw:o.box.yaw,solid:o.box.solid})),handVisible:renderer.lastShowHand,hidden:!!s.hidden,hideType:s.hidden?.hideType,poseTransition:poseTransition?{entering:poseTransition.entering,elapsed:poseTransition.elapsed}:null,view:cameraOf(s),wardrobeAmount:world.objects.find(o=>o.id==='wardrobe').amount,music:{scheduled:sound.musicStep,voices:sound.musicNodes.size,timer:sound.musicTimer!==null,volume:sound.settings.music},sound:sound.context?.state,mirror:{supported:renderer.mirrorSupported,drawn:renderer.mirrorDrawn,vertices:renderer.kittyVertices?.length/16,uploads:renderer.mirrorUploads},animation:{...animator.snapshot(),rigEvaluations:renderer.characterBinding?.evaluations},geometry:{vertices:renderer.vertexCount,triangles:renderer.triangleCount}}),
+   snapshot:()=>({puzzle:{...puzzle},hop:{age:hopAge,offset:hopCancelled?0:hopOffset(hopAge,reducedMotion.matches)},position:{x:s?.x,y:s?.y,z:s?.z},locomotion:{...velocity,eye:s?.eye,cameraGround:s?.cameraGround,stairs:s?getStairDirection(s):''},camera:{yaw:s?.yaw,pitch:s?.pitch,targetYaw:lookTarget.yaw,invertX:options.invertX},cinematic:!!cinematic,quality:options.quality,fps,target:focus?.id??null,paused:isPaused(),controls:{look:lookPointer,stick:stickPointer,joystick:{...joystick}},reduceBob:s.reduceBob,flashlight:s.flashlight,notes:s.inventory.notes.length,drawer:(()=>{const o=world.objects.find(o=>o.id==='drawer');return {state:o.state,amount:o.amount,z:o.box.z,key:world.objects.find(o=>o.id==='key').z,contentsAvailable:world.objects.find(o=>o.id==='key').interactable,contentsConcealed:world.objects.find(o=>o.id==='key').concealed}})(),doors:world.objects.filter(o=>o.kind==='door').map(o=>({id:o.id,open:o.open,state:o.state,amount:o.amount,x:o.box.x,z:o.box.z,yaw:o.box.yaw,solid:o.box.solid})),handVisible:renderer.lastShowHand,hidden:!!s.hidden,hideType:s.hidden?.hideType,poseTransition:poseTransition?{entering:poseTransition.entering,elapsed:poseTransition.elapsed}:null,view:cameraOf(s),wardrobeAmount:world.objects.find(o=>o.id==='wardrobe').amount,music:{scheduled:sound.musicStep,voices:sound.musicNodes.size,timer:sound.musicTimer!==null,volume:sound.settings.music},sound:sound.context?.state,mirror:{supported:renderer.mirrorSupported,drawn:renderer.mirrorDrawn,vertices:renderer.kittyVertices?.length/16,uploads:renderer.mirrorUploads},animation:{...animator.snapshot(),rigEvaluations:renderer.characterBinding?.evaluations},geometry:{vertices:renderer.vertexCount,triangles:renderer.triangleCount}}),
    setPose:(pose)=>{if(blocked(world.boxes,pose.x,pose.y,pose.z,.2,1.7))throw Error('Blocked test pose');Object.assign(s,pose);s.cameraGround=s.y;
     // QA-only teleports must move the interpolation target too, otherwise
     // the camera drifts away from the intended puzzle while tests interact.
@@ -2101,6 +2470,15 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    }
   };
  }
- function stop(){if(!active)return;active=false;releaseMouse();cancelAnimationFrame(raf);controller.abort();television.destroy();phone.destroy();sound.destroy();renderer?.destroy();if(window.__rescueHouse)delete window.__rescueHouse;root.remove();}
+ function stop(){
+  if(!active)return;active=false;
+  if(idleWarm!==null&&typeof window.cancelIdleCallback==='function')window.cancelIdleCallback(idleWarm);
+  // A GPU/audio teardown must never strand the LP React route. Each resource
+  // is independent; detach the root even if a browser rejects one disposal.
+  for(const dispose of [()=>haptics.stop(),clearMiniatureInput,releaseMouse,()=>cancelAnimationFrame(raf),()=>controller.abort(),()=>television.destroy(),()=>phone.destroy(),()=>sound.destroy(),()=>renderer?.destroy()]){
+   try{dispose();}catch(error){console.warn('House cleanup:',error);}
+  }
+  if(window.__rescueHouse)delete window.__rescueHouse;root.remove();
+ }
  return stop;
 }

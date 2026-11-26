@@ -1,7 +1,8 @@
 import {FLASH_REACH,FLASH_SPREAD,LAMP_REACH,LAMP_SPREAD,SHADOW_ATLAS,SHADOW_GRID,SHADOW_TILE,VISIBLE_LAMPS} from './lighting.js';
 import {ATLAS_SIZE,TILE_SIZE,GUTTER,INNER} from './materials.js';
 import {MIRROR_PLANE} from './mirror.js';
-import {HOUSE} from './house-layout.js';
+import {HOUSE,HEIGHT} from './house-layout.js';
+import {HOLIDAY_TREE} from './holiday-tree.js';
 export const VERTEX_SHADER=`
 precision highp float;
 attribute vec3 aPos,aCol,aNormal,aTangent;
@@ -29,8 +30,8 @@ uniform float uFlash,uOcclude;
 uniform float uShot,uFasciaReady,uPursuerSkinReady;
 uniform float uHasShadows;
 uniform vec4 uLamps[${VISIBLE_LAMPS}];
-uniform float uTime;
-uniform float uTVSignal;
+uniform float uTime,uHolidayMotion,uHolidayPower;
+uniform float uTVSignal,uRain,uDawn,uAltarPulse;
 uniform float uMirrorPass,uHeld,uScanOutline;
 uniform float uAtlasSize,uTileSize,uGutter,uInner;
 float depthAt(vec2 pixel,vec2 corner,float reach){
@@ -106,8 +107,19 @@ float lampLight(vec4 lamp,vec3 world,vec3 normal,vec3 surfaceNormal){
   visibility(floor(lamp.w),projected*.5+.5,depth,${LAMP_REACH.toFixed(1)},max(0.0,dot(surfaceNormal,direction)));
 }
 void main(){
- if(uScanOutline>.5){gl_FragColor=vec4(.34,1.0,.78,1.0);return;}
+ if(uScanOutline>.5){gl_FragColor=uScanOutline>1.5?vec4(.19,.82,.67,.28):vec4(.66,1.0,.88,.96);return;}
  if(uMirrorPass>.5&&vWorld.x<9.8375)discard;
+ // Window-local procedural streaks: no texture lookup, emitter or new pass.
+ if(vStyle>111.5&&vStyle<112.5){
+  if(uRain<.01||abs(vNormal.y)>.5)discard;
+  float horizontal=abs(vNormal.x)>.5?vWorld.z:vWorld.x;
+  float column=horizontal*23.0+vWorld.y*.9;
+  float seed=surfaceHash(vec2(floor(column),floor(vWorld.y*2.0)));
+  float phase=fract(vWorld.y*2.0+seed+uTime*uHolidayMotion*(1.4+seed));
+  float streak=(1.0-smoothstep(.018,.085,abs(fract(column)-.5)))*smoothstep(.60,.75,phase)*(1.0-smoothstep(.94,1.0,phase));
+  if(seed>uRain||streak<.32)discard;
+  gl_FragColor=vec4(mix(vec3(.085,.12,.17),vec3(.28,.36,.42),streak*uRain),1.0);return;
+ }
  if(vArt>1.5&&vArt<2.5&&uTVSignal>.5){
   vec2 grid=floor(vUV*vec2(256.0,144.0));
   float grain=fract(sin(dot(grid,vec2(3.4,7.3)))*419.3);
@@ -148,6 +160,18 @@ void main(){
   float mRand=fract(sin(dot(floor(mPos),vec3(12.9898,78.233,45.5432)))*43758.5453);
   if(mRand>.965)motes=smoothstep(.35,0.0,length(fract(mPos)-.5))*.22;
  }
+ // Small real world motes and dithered steam surfaces share the opaque batch.
+ if(vStyle>15.5&&vStyle<31.5){
+  if(tile==11.0){
+   float drift=uHolidayMotion*.35*uTime;
+   float haze=sin(vUV.x*18.0+sin(vUV.y*13.0-drift))*sin(vUV.y*21.0-drift);
+   float fade=clamp(beam*.45+.12,0.0,.5);
+   if(haze<.72||fract(sin(dot(floor(gl_FragCoord.xy),vec2(12.9898,78.233)))*43758.5453)>fade)discard;
+   gl_FragColor=vec4(vec3(.40,.48,.56)*(.15+beam*.6),1.0);return;
+  }
+  if(uFlash<.5||beam<.055||wide<.5||d>4.5)discard;
+  gl_FragColor=vec4(vColor*min(.95,beam*.9+.12),1.0);return;
+ }
  float warmth=0.0;
  for(int i=0;i<${VISIBLE_LAMPS};i++)warmth+=lampLight(uLamps[i],world,N,surfaceNormal);
  if(vArt>19.5&&vArt<21.5){
@@ -176,7 +200,8 @@ void main(){
    float glint=1.0-smoothstep(.025,.10,length((eye-vec2(-.27,.34))*vec2(1.0,1.35)));
    shine=glint*.48+pow(max(0.0,dot(surfaceNormal,normalize(key+viewDir))),80.0)*.20;
   }
-  float exposure=clamp(.30+beam+.78*warmth+uShot,.30,1.4);
+  float exterior=smoothstep(.08,.7,max(max(-vWorld.x,vWorld.x-14.0),max(-vWorld.z,vWorld.z-12.0)));
+  float exposure=clamp(.30+beam+.78*warmth+uShot+exterior*uDawn*.55,.30,1.4);
   vec3 light=vec3(.71+.30*wrap)*exposure;
   gl_FragColor=vec4(clamp(color*light+vec3(.80,.87,.86)*shine*exposure,0.0,1.0),1.0);return;
  }
@@ -336,7 +361,36 @@ void main(){
  float facing=.86+.14*max(0.0,dot(N,normalize(vec3(.3,.8,.4))));
  float boundary=max(max(-world.x,world.x-${HOUSE.width.toFixed(1)}),max(-world.z,world.z-${HOUSE.depth.toFixed(1)}));
  vec3 ambient=mix(vec3(.071,.076,.107),vec3(.20,.22,.32),smoothstep(.06,.48,boundary));
+ // Restrained cool spill near the actual west-facing boarded windows.
+ // The horizontal bands mirror their two wooden boards; no new light source.
+ float localY=mod(max(world.y,0.0),3.15);
+ float windowZ=max(1.0-smoothstep(.42,.70,abs(world.z-2.0)),1.0-smoothstep(.42,.70,abs(world.z-8.5)));
+ float sillMask=smoothstep(.85,1.02,localY)*(1.0-smoothstep(2.2,2.35,localY));
+ float boardMask=smoothstep(.08,.14,abs(localY-1.435))*smoothstep(.08,.14,abs(localY-1.87));
+ float spill=windowZ*sillMask*boardMask*(1.0-smoothstep(.10,1.1,world.x))*step(0.0,world.x)*step(0.0,world.y);
+ ambient+=vec3(.025,.040,.066)*spill;
+ // Dawn only reaches outdoor surfaces, not basement or rooms.
+ float outdoors=smoothstep(.10,.65,boundary)*step(-.04,world.y);
+ ambient+=outdoors*uDawn*vec3(.54,.43,.35);
  ambient=mix(ambient,vec3(.056,.048,.047),smoothstep(.18,1.1,-world.y));
+ // Local, power-gated warmth around the small Christmas tree. Restrict it
+ // to the upstairs music room: no leak through its south wall or the floor.
+ // This is a bounded diffuse fill in the existing batch, not a new lamp,
+ // shadow pass, screen overlay or source of gameplay visibility.
+ if(uHolidayPower>.5&&world.y>${HEIGHT.toFixed(2)}&&world.y<${(HEIGHT+2.8).toFixed(2)}&&world.x>11.2&&world.z<3.0&&world.z>0.0){
+  vec3 offset=world-vec3(${HOLIDAY_TREE.x.toFixed(2)},${(HEIGHT+1.13).toFixed(2)},${HOLIDAY_TREE.z.toFixed(2)});
+  float nearTree=(1.0-smoothstep(.25,1.0,length(offset*vec3(1.0,.65,1.0))));
+  nearTree*=smoothstep(0.0,.14,world.y-${HEIGHT.toFixed(2)})*(1.0-smoothstep(2.85,3.0,world.z));
+  ambient+=vec3(.34,.25,.20)*nearTree;
+ }
+ // Candle spill is a small local diffuse term in the existing pass. It
+ // cannot cross the music-room walls or floor and adds no shadow source.
+ if(uAltarPulse>.01&&world.y>3.15&&world.y<5.6&&world.x>10.8&&world.x<13.9&&world.z>0.0&&world.z<2.85){
+  vec3 offset=world-vec3(12.27,4.1,.51);
+  float reach=1.0-smoothstep(.28,1.55,length(offset*vec3(1.0,.85,1.0)));
+  float pulse=.96+.04*uHolidayMotion*sin(uTime*7.2);
+  ambient+=vec3(.27,.125,.058)*reach*pulse*uAltarPulse;
+ }
  vec3 lighting=(ambient+uShot*vec3(.75,.83,1.0))*facing+vec3(.94,.97,1.0)*(beam+motes*.50)+vec3(1.0,.82,.60)*warmth;
  // Retro character artwork carries a subtle baked fill light. Without it the
  // skin nearly disappears in shadow while the separate eyes remain bright.
@@ -361,8 +415,21 @@ void main(){
   shine=mix(s8*s8,s4,rough)*(1.0-rough)*beam*.14;
  }
  color=color*lighting/(1.0+.24*lighting)+vec3(1.0,.91,.79)*shine;
- if(vStyle>31.5)color=mix(color,vColor*(.55+material.r*.40),.82);
+ if(vStyle>31.5&&vStyle<47.5){
+  color=mix(color,vColor*(.55+material.r*.40),.82);
+  // Existing altar flame cores only: no new lights, meshes, or shadow passes.
+  if(vWorld.x>11.55&&vWorld.x<13.0&&vWorld.y>3.95&&vWorld.y<4.3&&vWorld.z>.36&&vWorld.z<.62){
+   float flutter=.91+.09*uHolidayMotion*sin(uTime*8.5+vWorld.x*17.0);
+   color*=mix(1.0,flutter*(1.0+.22*uAltarPulse),uAltarPulse);
+  }
+ }
+ // Styles 48–63: static tree lights, bright colored cores only when powered.
+ // Keep reduced-motion emission constant and preserve the unlit material.
+ if(vStyle>47.5&&vStyle<63.5&&uHolidayPower>.5){
+  float pulse=.96+uHolidayMotion*.04*sin(uTime*.75+vWorld.x*1.7+vWorld.y*2.1+vWorld.z);
+  color=mix(color,mix(vColor,vec3(1.0,.94,.86),.22)*pulse,.94);
+ }
  float fog=clamp((vDistance-6.0)/25.0,0.0,.32);
- color=mix(color,vec3(.024,.030,.054),fog);
+ color=mix(color,mix(vec3(.024,.030,.054),vec3(.42,.35,.39),outdoors*uDawn),fog);
  gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);
 }`;

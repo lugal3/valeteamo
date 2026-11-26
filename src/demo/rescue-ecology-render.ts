@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import {toScreen,type IsoPoint} from '../isometric';
-import {NIGHT_HOUSE} from './night-house-layout';
+import {NIGHT_HOUSE,HOUSE_3D_REFERENCE} from './night-house-layout';
 import type {RescueMapId} from './rescue-overworld';
 import {ECOLOGY_CAPS,ecologySeeds,ecologyFloraFrame,ecologyWildlifeStep,
  ecologyAmbientCue,ecologyMicroEvent,type AmbientCue,type WildlifeKind,
@@ -143,10 +143,12 @@ export function createLivingEcology(
  });
  // Two reusable, world-space buffers, never over player input/hotspots.
  const light=scene.add.graphics().setDepth(.78),micro=scene.add.graphics().setDepth(1702);
- // Windows must render ABOVE the house facade (its depth is y-145) but
- // BELOW Kitty and porch hotspots. Ground-level light would be invisible.
- const houseFoot=toScreen(NIGHT_HOUSE.center).y;
- const windows=scene.add.graphics().setDepth(houseFoot-139);
+ // Match the current front-on house facade, not the retired isometric box.
+ const doorFoot=toScreen(NIGHT_HOUSE.door),houseLeft=doorFoot.x-340*HOUSE_3D_REFERENCE.frontDoorX/HOUSE_3D_REFERENCE.width;
+ const houseTop=doorFoot.y-203,houseBase=doorFoot.y-8;
+ const windows=scene.add.graphics().setDepth(doorFoot.y-124);
+ const paneX=(realX:number)=>houseLeft+340*realX/HOUSE_3D_REFERENCE.width;
+ const panePositions=[...([2.2,6.1,12.1].map(x=>({x:paneX(x),y:houseTop+62}))),{x:paneX(HOUSE_3D_REFERENCE.openWindowX),y:houseBase-54}];
  let lastAudioPeriod=-1,lastMicroPeriod=-1;
  let event:MicroEvent|null=null,occurred=0,updates=0;
  let visibleWildlife=0,reactiveFlora=0,alarmedWildlife=0;
@@ -207,22 +209,18 @@ export function createLivingEcology(
     }
    }
   }else{
-   const house=toScreen(NIGHT_HOUSE.center),x=house.x,y=house.y;
-   // Flickering, drawn INSIDE existing windows. Curtains sway; one window
-   // grows dim from time to time, without jump-scaring the player.
-   const w=225,h=161,d=105;
-   const panePositions:[number,number][]=[
-    [-.44,-.27],[-.17,-.30],[.22,-.28],[.39,-.19],
-    [-.44,-.72],[-.20,-.69]
-   ];
-   for(let i=0;i<Math.min(ECOLOGY_CAPS.glowWindows,panePositions.length);i++){
-    const [xx,yy]=panePositions[i],wx=x+xx*w,wy=y+yy*h+d*(xx<0?.16:.11);
+   // All animated highlights are clipped to the actual glass rectangles.
+   // The open entry stays dark and readable; no glow over the door or clues.
+   for(let i=0;i<panePositions.length;i++){
+    const {x,y}=panePositions[i],entry=i===3;
     const flicker=Math.pow(Math.sin(t*.41+i*1.7),2);
-    const dark=i===3&&Math.floor(t/19)%3===1;
-    const alpha=(dark?.035:.11+.06*flicker)*(.6+night*.4);
-    windows.fillStyle(i%2?0xffdfb6:0xfff4cd,alpha)
-     .fillRect(wx+3,wy+3,13,17);
-    windows.fillStyle(0xc8a9ba,.23).fillRect(wx+5+Math.sin(t*.6+i)*2,wy+3,3,17);
+    const alpha=(entry?.025:.085+.045*flicker)*(.6+night*.4);
+    windows.fillStyle(0xffe4be,alpha).fillRect(x-12,y-20,24,40);
+    if(!entry){
+     const drift=reducedMotion?0:Math.sin(t*.6+i)*2;
+     windows.fillStyle(0xa68aaf,.16).fillRect(x-12+drift,y-20,5,40);
+     windows.fillRect(x+7+drift,y-20,5,40);
+    }
    }
    for(let i=0;i<4;i++){
     const p=toScreen({u:67+i*4.5,v:1.8});

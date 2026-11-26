@@ -1,16 +1,57 @@
 import {USER_AUDIO_SPRITE} from './audio/user-sprite-index.js';
 const spriteURL=new URL('./audio/user-sprite.ogg',import.meta.url).href;
 const spriteMP3URL=new URL('./audio/user-sprite.mp3',import.meta.url).href;
-const ids=['door-open','door-close','closet-close','unlock','trying-door','notification','light','wood-1','wood-2','wood-3','stair-1','stair-2','stair-3','ambient','tension','alert'];
+import sample0 from './audio/door-open.wav';
+import sample1 from './audio/door-close.wav';
+import sample2 from './audio/closet-close.wav';
+import sample3 from './audio/unlock.wav';
+import sample4 from './audio/trying-door.wav';
+import sample5 from './audio/notification.wav';
+import sample6 from './audio/light.wav';
+import sample7 from './audio/wood-1.wav';
+import sample8 from './audio/wood-2.wav';
+import sample9 from './audio/wood-3.wav';
+import sample10 from './audio/stair-1.wav';
+import sample11 from './audio/stair-2.wav';
+import sample12 from './audio/stair-3.wav';
+import sample13 from './audio/ambient.wav';
+import sample14 from './audio/tension.wav';
+import sample15 from './audio/alert.wav';
+import sample16 from './audio/preview-cat.wav';
+import sample17 from './audio/preview-hatch-close.wav';
+import sample18 from './audio/preview-power-cut.wav';
+import sample19 from './audio/preview-rc-motor.wav';
+import sample20 from './audio/upright-0.wav';
+import sample21 from './audio/upright-4.wav';
+import sample22 from './audio/upright-7.wav';
+import sample23 from './audio/upright-12.wav';
 const emoteURLs=import.meta.glob('./audio/emote-*.{mp3,ogg,wav}',{eager:true,query:'?url',import:'default'});
 export const SAMPLE_URLS=Object.fromEntries([
  ...Object.entries(emoteURLs).map(([path,url])=>[path.split('/').at(-1).replace(/\.[^.]+$/,''),url]),
- ...ids.map(id=>[id,new URL(`./audio/${id}.wav`,import.meta.url).href]),
- ['cat',new URL('./audio/preview-cat.wav',import.meta.url).href],
- ['hatch-close',new URL('./audio/preview-hatch-close.wav',import.meta.url).href],
- ['power-cut',new URL('./audio/preview-power-cut.wav',import.meta.url).href],
- ['rc-motor',new URL('./audio/preview-rc-motor.wav',import.meta.url).href],
- ...[0,4,7,12].map(note=>['upright-'+note,new URL(`./audio/upright-${note}.wav`,import.meta.url).href])
+ ['door-open',sample0],
+ ['door-close',sample1],
+ ['closet-close',sample2],
+ ['unlock',sample3],
+ ['trying-door',sample4],
+ ['notification',sample5],
+ ['light',sample6],
+ ['wood-1',sample7],
+ ['wood-2',sample8],
+ ['wood-3',sample9],
+ ['stair-1',sample10],
+ ['stair-2',sample11],
+ ['stair-3',sample12],
+ ['ambient',sample13],
+ ['tension',sample14],
+ ['alert',sample15],
+ ['cat',sample16],
+ ['hatch-close',sample17],
+ ['power-cut',sample18],
+ ['rc-motor',sample19],
+ ['upright-0',sample20],
+ ['upright-4',sample21],
+ ['upright-7',sample22],
+ ['upright-12',sample23]
 ]);
 export class RecordedAudio{
  constructor(ctx,effects,music,ambient=music){this.ctx=ctx;this.effects=effects;this.music=music;this.ambient=ambient;this.buffers=new Map();this.voices=new Set();this.loops=new Map();this.offsets={};this.indices={};this.abort=new AbortController();this.dead=false;this.mood='ambient';this.played=0;this.errors=[];this.sprite=null;this.userBufferCache=new Map();}

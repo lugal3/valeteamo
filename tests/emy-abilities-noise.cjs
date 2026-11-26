@@ -2,9 +2,23 @@ const assert=require('node:assert/strict');
 (async()=>{
  const {createHouse,setDoor}=await import('../src/lab/world.js');
  const {Pursuer}=await import('../src/lab/pursuer.js');
- const {createEmyAbilities,activateEmyScan,advanceEmyAbilities,roomChoices,roomDestination,roomDestinations,isEmyRoomLocked,emyFloorMap,emyFloorList}=await import('../src/lab/emy-abilities.js');
+ const {createEmyAbilities,activateEmyScan,advanceEmyAbilities,createEmyNameCue,advanceEmyNameCue,roomChoices,roomDestination,roomDestinations,isEmyRoomLocked,emyFloorMap,emyFloorList}=await import('../src/lab/emy-abilities.js');
  const {installNoiseProps,grabNoiseProp,holdNoiseProp,releaseNoiseProp,stepNoiseProps}=await import('../src/lab/noise-props.js');
- const {createEmyCompanion,sendEmyDistract,snapshotEmyCompanion,updateEmyCompanion}=await import('../src/lab/emy-companion.js');
+ const {createEmyCompanion,previewEmyDistract,sendEmyDistract,snapshotEmyCompanion,updateEmyCompanion}=await import('../src/lab/emy-companion.js');
+ const tag=createEmyNameCue();
+ assert(advanceEmyNameCue(tag,0,true),'First visible interaction shows name');
+ for(let i=0;i<12;i++)advanceEmyNameCue(tag,.1,true);
+ assert.equal(tag.left,0,'Label expires in one second');
+ for(let i=0;i<1800;i++)advanceEmyNameCue(tag,.1,true);
+ assert.equal(tag.cooldown,0);
+ assert(!advanceEmyNameCue(tag,.1,true),'Continued looking never retriggers');
+ assert(!advanceEmyNameCue(tag,.1,false));
+ assert(advanceEmyNameCue(tag,.1,true),'New look after 180 seconds triggers');
+ assert(!advanceEmyNameCue(tag,.1,true,false),'No name during a modal');
+ assert(!advanceEmyNameCue(tag,.1,true),'A modal does not re-arm a cue');
+ const beforeSuppression=tag.cooldown;
+ assert(!advanceEmyNameCue(tag,.1,false,true,false),'Occupied hand suppresses the label');
+ assert(tag.cooldown<beforeSuppression&&tag.looking,'Suppression counts play time but does not invent a look-away');
  const abilities=createEmyAbilities();
  assert(activateEmyScan(abilities));assert.equal(abilities.scan,6);assert(!activateEmyScan(abilities));
  advanceEmyAbilities(abilities,1/60);assert(abilities.scan<6&&abilities.wave<1.1);
@@ -13,6 +27,67 @@ const assert=require('node:assert/strict');
  assert(activateEmyScan(abilities));
 
  const world=createHouse();
+ const {defaultMiniatureView,changeMiniatureView,miniatureProject,miniatureSVG,miniatureMarkers,layoutMiniaturePins,miniatureRouteSegments,miniatureFurniture}=await import('../src/lab/emy-miniature.js');
+ const view=defaultMiniatureView(),turned=changeMiniatureView(view,{yaw:.5,pitch:.1,zoom:1.1});
+ assert.notDeepEqual(miniatureProject([0,0,0],view),miniatureProject([0,0,0],turned));
+ assert.equal(changeMiniatureView(view,{zoom:99,pitch:99}).zoom,1.65);
+ assert.equal(changeMiniatureView(view,{zoom:0,pitch:-99}).pitch,.28);
+ const exterior=miniatureSVG(world,view),rotated=miniatureSVG(world,turned);
+ assert(exterior.includes('Exterior tridimensional')&&exterior.includes('<polygon'));
+ assert.notEqual(exterior,rotated);
+ assert(!exterior.includes('data-act="emy:room:'));
+ const boxOf=svg=>svg.match(/viewBox="([^"]+)"/)[1].split(' ').map(Number);
+ const zoomed=miniatureSVG(world,changeMiniatureView(view,{zoom:1.25}));
+ assert.deepEqual(boxOf(exterior),boxOf(zoomed),'Fit the default projection without cancelling the player zoom');
+ assert(boxOf(exterior).every(Number.isFinite));
+ const fakeThreat={active:true,x:7.9,y:0,z:5.1};
+ const hiddenMarkers=miniatureMarkers({x:5.9,y:0,z:8},{x:5.1,y:0,z:8,hidden:false},fakeThreat,false);
+ const visibleMarkers=miniatureMarkers({x:5.9,y:0,z:8},{x:5.1,y:0,z:8,hidden:false},fakeThreat,true);
+ assert(hiddenMarkers.every(m=>m.id!=='threat'),'No threat coordinates in unscanned markers');
+ const clustered=visibleMarkers.map(m=>({...m,x:5.9,z:8}));
+ const pins=layoutMiniaturePins(clustered,p=>miniatureProject(p,view,0),0);
+ assert.equal(pins.length,3);
+ for(let i=0;i<pins.length;i++){
+  assert.deepEqual(pins[i].anchor,miniatureProject([clustered[i].x,.12,clustered[i].z],view,0),'Actual marker coordinates never move');
+  for(let j=0;j<i;j++)assert(Math.hypot(pins[i].badge.x-pins[j].badge.x,pins[i].badge.y-pins[j].badge.y)>=23,'Clustered badges remain legible');
+ }
+ assert(miniatureSVG(world,view,{floor:0,markers:clustered}).includes('<line x1='));
+
+ const lowerMini=miniatureSVG(world,view,{floor:0,markers:hiddenMarkers});
+ const scanMini=miniatureSVG(world,view,{floor:0,markers:visibleMarkers});
+ assert(lowerMini.includes('data-marker="kitty"')&&lowerMini.includes('data-marker="emy"'));
+ assert(!lowerMini.includes('data-marker="threat"')&&scanMini.includes('data-marker="threat"'));
+ assert(lowerMini.includes('data-act="emy:room:study"')&&!lowerMini.includes('data-act="emy:room:bedroom"'));
+ const upperMini=miniatureSVG(world,view,{floor:1,lockedIds:['bedroom'],markers:visibleMarkers});
+ assert(upperMini.includes('house-emy-stair-void')&&!upperMini.includes('data-act="emy:room:bedroom"')&&!upperMini.includes('data-marker="threat"'));
+ assert(emyFloorList(world.rooms,0,{lockedIds:['study'],disabledReasons:{study:'Ruta bloqueada'}}).includes('Ruta bloqueada'));
+ assert(emyFloorList(world.rooms,0).includes('house-emy-destination-icon'));
+ const stairPin={id:'kitty',label:'Kitty',color:'#fff',x:12,y:1.2,z:7.8};
+ assert(miniatureSVG(world,view,{floor:0,markers:[stairPin]}).includes('data-marker="kitty"'),'Stair traversal has a real horizontal marker');
+ // Furniture is sourced from the actual house rather than decorative
+ // approximations at arbitrary positions.
+ assert(miniatureFurniture(world,0).some(b=>b.id==='sofa'));
+ assert(miniatureFurniture(world,1).some(b=>b.id==='upper-bed'));
+ assert(lowerMini.includes('data-furniture="sofa"'));
+ assert(upperMini.includes('data-furniture="upper-bed"'));
+ assert(upperMini.includes('data-door="dormitorio" data-door-state="locked"'));
+ assert(miniatureSVG(world,view,{floor:0,reveal:true}).includes('mini-roof-lift'));
+ assert(miniatureSVG(world,view,{floor:0,reveal:true}).includes('mini-upper-lift'));
+ assert(!lowerMini.includes('mini-cover-reveal'),'No repeated roof animation while rotating');
+ const previewWorld=createHouse(),previewCat=createEmyCompanion(previewWorld.emy,{waiting:false});
+ const previewRoom=roomChoices(previewWorld.rooms).find(r=>r.id==='reading');
+ const beforePreview=snapshotEmyCompanion(previewCat);
+ const plan=roomDestinations(previewWorld,previewRoom).map(p=>previewEmyDistract(previewCat,previewWorld,p)).find(Boolean);
+ assert(plan&&plan.seconds>0&&plan.metres>0);
+ assert.deepEqual(snapshotEmyCompanion(previewCat),beforePreview,'Preview cannot issue a command or move Emy');
+ assert.equal(previewCat.distraction,undefined);
+ assert(miniatureRouteSegments(plan.waypoints,0).length>0&&miniatureRouteSegments(plan.waypoints,1).length>0);
+ assert(miniatureSVG(previewWorld,view,{floor:0,route:plan}).includes('data-route-floor="0"'));
+ assert(miniatureSVG(previewWorld,view,{floor:1,route:plan}).includes('mini-route-goal'));
+ assert(sendEmyDistract(previewCat,previewWorld,plan.goal));
+ assert.deepEqual(previewCat.route,plan.route,'Confirmed route equals the preview at the same world state');
+ const browse=miniatureSVG(world,view,{floor:0,markers:visibleMarkers,route:plan,readOnly:true});
+ assert(!browse.includes('data-marker="threat"')&&!browse.includes('data-act="emy:room:')&&!browse.includes('mini-route-track'),'Phone map has no threat or command path');
  const choices=roomChoices(world.rooms);
  for(const name of ['Estudio','Sala de estar','Cocina y comedor','Baño','Dormitorio','Sala de lectura','Sala de música','Recibidor y pasillo','Distribuidor y descansillo']){
   assert(choices.some(room=>room.label===name),name+' exists in the two-floor command map');
@@ -37,7 +112,7 @@ const assert=require('node:assert/strict');
  const study=choices.find(room=>room.id==='study');
  const target=roomDestination(world,study);
  assert(target&&target.y===0,'Room waypoint should be on a navigable floor');
- for(const id of ['study','living','kitchen','bath','hall-ground','stairs','reading','music','hall-upper']){
+ for(const id of ['study','living','kitchen','bath','hall-ground','stairs','reading','hall-upper']){
   const room=choices.find(r=>r.id===id);
   const cat=createEmyCompanion(world.emy,{waiting:false});
   const reachable=roomDestinations(world,room).some(point=>sendEmyDistract(cat,world,point));
@@ -45,6 +120,14 @@ const assert=require('node:assert/strict');
   assert.equal(cat.distraction.goal.y,room.floor?3.15:0,'Cross-floor route elevation for '+id);
  }
 
+
+ // Emy's fear of the music room must also apply to tactical commands.
+ const musicRoom=choices.find(r=>r.id==='music');
+ const afraidCat=createEmyCompanion(world.emy,{waiting:false});
+ const musicPoints=roomDestinations(world,musicRoom);
+ assert(musicPoints.length,'The room remains physically accessible to Kitty');
+ assert(musicPoints.every(point=>!previewEmyDistract(afraidCat,world,point)&&!sendEmyDistract(afraidCat,world,point)),'Emy refuses every music-room command');
+ assert.equal(afraidCat.stage,'following');
 
  // The command's route must be physically traversable BOTH ways, not only
  // accepted by the path planner. Open ordinary doors as the game would while
@@ -68,6 +151,16 @@ const assert=require('node:assert/strict');
   assert(Math.abs(walker.cat.y-expectedFloor)<.4,'Emy must finish on the requested floor of '+id);
   walker.stage='following';walker.distraction=null;walker.route=[];walker.trail=[];
  }
+ // Verify that the near-wall arrival tolerance cannot start a distraction
+ // through a partition, and a malformed/airborne destination costs nothing.
+ const wallWorld=createHouse(),wallCat=createEmyCompanion(wallWorld.emy,{waiting:false});
+ Object.assign(wallCat.cat,{x:4.72,y:0,z:3.6});
+ assert(!sendEmyDistract(wallCat,wallWorld,{x:NaN,y:0,z:1}));
+ assert(!sendEmyDistract(wallCat,wallWorld,{x:5,y:1,z:3.6}));
+ assert.equal(wallCat.stage,'following');
+ wallCat.stage='distract';wallCat.route=[];wallCat.distraction={goal:{x:4.17,y:0,z:3.6},remaining:25,arrived:false,nextNoise:0,nextPlan:Infinity,stuck:0};
+ const blockedCue=updateEmyCompanion(wallCat,.016,{world:wallWorld,player:{x:5.9,y:0,z:10.65},reduced:true});
+ assert.equal(blockedCue,null);assert(!wallCat.distraction.arrived,'No false arrival through study wall');
  const props=installNoiseProps(world);
  assert.equal(props.length,6);
  assert(props.every(p=>!world.boxes.includes(p.box)), 'noise objects use a separate WebGL1 batch, never the saturated main dynamic buffer');

@@ -3,12 +3,12 @@ const assert=require('node:assert/strict');
 module.exports=async()=>{
  const {interactionTarget}=await import('../src/lab/interactions.js');
  const {createHouse,setDoor,blocked,groundHeight}=await import('../src/lab/world.js');
- const {createEmyCompanion,requestRibbonKey,updateEmyCompanion,sendEmyToTrunk}=await import('../src/lab/emy-companion.js');
+ const {createEmyCompanion,requestRibbonKey,updateEmyCompanion,sendEmyToTrunk,initializeTrialEmy,trialEmyPose}=await import('../src/lab/emy-companion.js');
  const {createRescueObjectives,updateEmySenses,poseEscapeAmbush}=await import('../src/lab/emy-rescue.js');
  const {rescueProgress}=await import('../src/lab/rescue-progress.js');
  const {Pursuer}=await import('../src/lab/pursuer.js');
  const {captureHouseCheckpoint,restoreHouseCheckpoint}=await import('../src/lab/house-checkpoint.js');
- const {trialCheckpoint}=await import('../src/lab/trial-checkpoint.js');
+ const {trialCheckpoint,trialStartPose,trialEmyStage}=await import('../src/lab/trial-checkpoint.js');
  const {progressStops}=await import('../src/lab/rescue-progress.js');
  for(const [index,stop] of progressStops.entries()){
   const w=createHouse(),ctx={world:w,s:{inventory:{notes:[]}},puzzle:{},events:{phase:'explore'},mirrorSafe:{},rc:{object:w.objects.find(o=>o.id==='rc-car')},rcTrap:{},pursuer:new Pursuer(w)};
@@ -18,6 +18,40 @@ module.exports=async()=>{
   if(index===1)assert(ctx.s.inventory.key&&w.objects.find(o=>o.id==='dormitorio').locked);
   if(index===8)assert(ctx.s.inventory.masterKey&&!ctx.puzzle.rescued);
   if(index===11)assert(!w.objects.find(o=>o.id==='entrada').sealed);
+  const step=index+1,pose=trialStartPose(step);
+  if(pose&&!blocked(w.boxes,pose.x,pose.y,pose.z,.2,1.69))Object.assign(ctx.s,pose);
+  const companion=createEmyCompanion(w.emy,{waiting:false});
+  const expected=step>=8?'trunk':'following';
+  assert.equal(trialEmyStage(step),expected);
+  assert(initializeTrialEmy(companion,w,ctx.s,expected),'Valid Emy spawn for milestone '+step);
+  assert.equal(companion.stage,expected);
+  assert.equal(w.emy.hidden,step>=8);
+  assert(w.emy.parts.every(part=>part.box.hiddenGeometry===(step>=8)));
+  if(step<8){
+   assert.equal(w.emy.y,ctx.s.y,'Same floor in milestone '+step);
+   assert(Math.hypot(w.emy.x-ctx.s.x,w.emy.z-ctx.s.z)<=3.11,'Nearby companion in milestone '+step);
+   assert(!blocked(w.boxes,w.emy.x,w.emy.y,w.emy.z,.24,.72),'No collision at milestone '+step);
+  }
+ }
+ // Evaluate the actual TypeScript scenario table, not a duplicate list.
+ const ts=require('typescript'),fs=require('node:fs'),vm=require('node:vm');
+ const exports={},modules={'./rescue-progress.js':{progressStops},'./trial-checkpoint.js':{trialEmyStage}};
+ const js=ts.transpileModule(fs.readFileSync('src/lab/house-trials.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+ vm.runInNewContext(js,{exports,require:id=>{if(!modules[id])throw Error(id);return modules[id];}});
+ for(const [id,trial] of Object.entries(exports.HOUSE_TRIALS)){
+  if(trial.milestone)continue;
+  const w=createHouse(trial.checkpoint??'interactions');
+  const player={...w.spawn};
+  if(trial.pose){const {floor,...pose}=trial.pose;Object.assign(player,pose,{y:floor*3.15});}
+  if(trial.puzzleEntry==='rescue')setDoor(w.objects.find(o=>o.id==='dormitorio'),true);
+  const stage=trial.emy??'following',cat=createEmyCompanion(w.emy,{waiting:false});
+  assert(initializeTrialEmy(cat,w,player,stage),'Valid Emy spawn for isolated '+id);
+  assert.equal(cat.cat.hidden,stage!=='following',id);
+  if(stage==='following'){
+   assert(trialEmyPose(w,player),'Walkable companion pose in '+id);
+   assert.equal(cat.cat.y,player.y,'Correct floor in '+id);
+   assert(!blocked(w.boxes,cat.cat.x,cat.cat.y,cat.cat.z,.24,.72),'Safe companion in '+id);
+  }
  }
  const world=createHouse(),item=id=>world.objects.find(o=>o.id===id);
  for(const door of world.objects.filter(o=>o.kind==='door'))setDoor(door,true);
@@ -71,11 +105,39 @@ module.exports=async()=>{
  const dx=master.x-x,dz=master.z-z;
  assert.equal(interactionTarget(world,{x,y:y+1.63,z,yaw:Math.atan2(dx,dz),pitch:Math.atan2(master.y-y-1.63,Math.hypot(dx,dz))}),master);
  const altarVisitor={...s,x:12.27,y:3.15,z:.8};
- for(let i=0;i<35;i++)updateEmySenses(cat,altarVisitor,world,hunter,tracker.active,1/30,false);
+ const quietHunter={...hunter,active:false};
+ const priorCatPose={x:cat.cat.x,y:cat.cat.y,z:cat.cat.z,yaw:cat.cat.yaw};
+ // The old fixture tested fear from a different floor. The new fear is
+ // local to Emy herself: she must not react to an altar she cannot sense.
+ cat.cat.alarm=0;cat.cat.earFlatten=0;
+ updateEmySenses(cat,altarVisitor,world,quietHunter,tracker.active,1/30,false);
+ assert(cat.altarWait&&!cat.altarFear&&cat.cat.alarm===0,'Remote Kitty does not instantly frighten Emy');
+ Object.assign(cat.cat,{x:9,y:3.15,z:3.6,yaw:Math.PI});
+ for(let i=0;i<35;i++)updateEmySenses(cat,altarVisitor,world,quietHunter,tracker.active,1/30,false);
  const {poseEmy}=await import('../src/lab/emy-cat.js');
  cat.cat.age=1;poseEmy(cat.cat,{mode:'idle'});
  assert(cat.altarWait&&cat.cat.parts.find(p=>p.id==='coat').box.bristle>.95);
  assert(cat.cat.parts.some(p=>p.joint==='eye'&&p.box.emyPose.scale[1]>1.35));
+ assert(cat.cat.earFlatten>.9,'Altar provokes ears laid back');
+ Object.assign(cat.cat,priorCatPose);
+ const moodWorld=createHouse(),moodCat=createEmyCompanion(moodWorld.emy,{waiting:false});
+ Object.assign(moodCat.cat,{x:5.95,y:0,z:8.1,yaw:0});
+ const moodPlayer={x:5.95,y:0,z:9.4,hidden:null};
+ moodWorld.objects.push({id:'qa-visible-prop',kind:'inspect',x:5.95,y:.6,z:8.9});
+ const distant={active:true,mode:'chase',x:5.95,y:3.15,z:8.1};
+ for(let i=0;i<60;i++)updateEmySenses(moodCat,moodPlayer,moodWorld,distant,null,1/30,false);
+ assert.equal(moodCat.cat.alarm,0,'No fear from another floor');
+ assert(moodCat.cat.curiosityTarget,'Curiosity observes an actual nearby visible object');
+ const close={active:true,mode:'chase',x:5.95,y:0,z:7.1};
+ for(let i=0;i<30;i++)updateEmySenses(moodCat,moodPlayer,moodWorld,close,null,1/30,false);
+ assert(moodCat.cat.alarm>.85&&moodCat.cat.earFlatten>.8,'Nearby chase visibly frightens Emy');
+ updateEmyCompanion(moodCat,.1,{world:moodWorld,player:moodPlayer,threat:close});
+ const {geometry}=await import('../src/lab/renderer.js');
+ const raised=geometry(moodCat.cat.parts.map(p=>p.box)).vertices;
+ assert(raised.every(Number.isFinite),'Frightened pose keeps a finite mesh');
+ for(let i=0;i<300;i++)updateEmySenses(moodCat,moodPlayer,moodWorld,{...close,active:false},null,1/30,false);
+ assert(moodCat.cat.alarm<.02,'Fear fades naturally once danger is gone');
+
  world.lights.power.on=false;
  Object.assign(hunter,{mode:'search',x:cat.cat.x+.8,y:0,z:cat.cat.z});
  updateEmySenses(cat,s,world,hunter,tracker.active,.1,false);

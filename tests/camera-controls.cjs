@@ -55,6 +55,13 @@ const near=(a,b,msg,tol=1e-9)=>assert(Math.abs(a-b)<tol,`${msg}: ${a} vs ${b}`);
  assert(writeCameraSettings(store,{sensitivity:1.25,invertX:true,bob:false,motion:true,captions:false}));
  assert.deepEqual(readCameraSettings(store),{sensitivity:1.25,invertX:true,bob:false,motion:true,captions:false});
 
+ // FPS is an optional presentation preference, never enabled by default.
+ assert.notEqual(readCameraSettings(store).showFPS,true);
+ assert(writeCameraSettings(store,{sensitivity:1.25,invertX:true,showFPS:true}));
+ assert.equal(readCameraSettings(store).showFPS,true);
+ assert(writeCameraSettings(store,{sensitivity:1.25,invertX:true,showFPS:false}));
+ assert.equal(readCameraSettings(store).showFPS,false);
+
  // ── 9. Corrupted JSON → factory default ─────────────────────────────────────
  assert.deepEqual(readCameraSettings({getItem:()=>'{bad'}),
    {sensitivity:DEFAULT_CAMERA_SETTINGS.sensitivity,invertX:false},

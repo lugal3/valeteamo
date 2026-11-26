@@ -93,6 +93,9 @@ const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
       if(scene==='Casa 3D'&&!matrix){
        await page.locator('#lab-dialog [data-act=start]').click();
        if(name==='Chromium'){
+        // Lose the context with the real phone Settings open: the interruption
+        // modal must not be covered by a stale phone or leave its pause active.
+        await togglePhoneSettings(page);
         await page.evaluate(()=>{
          const gl=document.querySelector('#lab-canvas').getContext('webgl');
          const extension=gl.getExtension('WEBGL_lose_context');
@@ -109,6 +112,16 @@ const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
         });
         assert.equal(await page.locator('#lab-canvas').evaluate(c=>c.getContext('webgl').getError()),0);
         assert.equal(await page.evaluate(()=>window.testHouseAudio.length),1,'Renderer recovery retains the audio instance');
+        assert(await page.locator('.phone-screen').isHidden(),'Recovered graphics must not leave a stale phone overlay');
+        assert(await page.locator('#lab-camera-settings').isHidden(),'Phone settings must release their pause on recovery');
+        assert.equal(await page.locator('[data-equip=phone]').getAttribute('aria-pressed'),'true','Recovery preserves the selected equipment');
+        // Observe actual frames with the phone equipped, rather than disabling
+        // rendering or forcing clicks to make the production test pass.
+        await page.evaluate(async()=>{
+         const label=document.querySelector('#house-use-phone small'),node=label.firstChild;
+         await new Promise(resolve=>{let frames=0;function tick(){if(++frames>=8)resolve();else requestAnimationFrame(tick);}requestAnimationFrame(tick);});
+         if(label.firstChild!==node)throw Error('Equipment label was reconstructed during gameplay');
+        });
         console.log('PASS HOUSE WEBGL RESTORE',name);
        }
        for(let entryNumber=0;entryNumber<2;entryNumber++){
@@ -128,7 +141,14 @@ const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
      }catch(e){
       const snap=await page.evaluate(()=>({root:!!document.querySelector('#lab3d'),
        canvas:document.querySelector('#lab-canvas')?.outerHTML.slice(0,200),
-       body:document.body?.innerText.slice(0,700)})).catch(()=>null);
+       body:document.body?.innerText.slice(0,700),
+       phone:(()=>{
+        const use=document.querySelector('#house-use-phone'),slot=document.querySelector('[data-equip=phone]'),screen=document.querySelector('.phone-screen');
+        const r=use?.getBoundingClientRect(),hit=r?.width?document.elementFromPoint(r.x+r.width/2,r.y+r.height/2):null;
+        return {selected:slot?.getAttribute('aria-pressed'),useHidden:use?.hidden,useLabel:use?.getAttribute('aria-label'),
+         screenHidden:screen?.hidden,settingsOpen:document.querySelector('#lab-camera-settings')?.open,
+         hit:hit?.outerHTML.slice(0,180),rootClass:document.querySelector('#lab3d')?.className,focused:document.hasFocus()};
+       })()})).catch(()=>null);
       console.error('HOUSE CSS FAILURE',JSON.stringify({name,scene,errors,snap}));
       throw e;
      }finally{await page.close();}

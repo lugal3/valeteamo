@@ -80,7 +80,7 @@ export function geometry(boxes){
  for(const box of boxes){
   const baseColor=box.color||colors[box.mat]||colors.cream;
   const color=box.ao?[baseColor[0]*box.ao,baseColor[1]*box.ao,baseColor[2]*box.ao]:baseColor;
-  const style=materialStyle(box)+(box.chibi?(box.emissive?96:64):(box.glow?32:0)),first=vertices.length;
+  const style=box.weatherPane?112:(box.atmosphere==='steam'?11:materialStyle(box))+(box.chibi?(box.emissive?96:64):(box.atmosphere?16:box.holidayBulb?48:box.glow?32:0)),first=vertices.length;
   const range={start:first,end:first,indexStart:indices.length,indexEnd:indices.length};ranges.push(range);
   const projectReference=()=>{
    if(!box.photoMapped)return;
@@ -325,6 +325,20 @@ export function geometry(boxes){
    }
    rotateMesh();continue;
   }
+  // A window weather surface needs only one quad. Both windings share the
+  // same four vertices (the shader uses absolute normal components).
+  // Avoid six-face cuboids and keep the world inside WebGL1 uint16 limits.
+  if(box.weatherPane){
+   const face=faces.find(f=>f.dir===(box.w<box.d?'east':'south'));
+   const frame=surfaceFrame(box,face.normal,11);
+   for(const [dx,dy,dz] of face.corners){
+    vertices.push(box.x+(box.w<box.d?0:dx*box.w/2),box.y+dy*box.h/2,
+     box.z+(box.w<box.d?dz*box.d/2:0),...color,...face.normal,0,0,0,style,...frame.tangent);
+   }
+   indices.push(offset,offset+1,offset+2,offset,offset+2,offset+3,
+    offset,offset+2,offset+1,offset,offset+3,offset+2);
+   offset+=4;rotateMesh();continue;
+  }
   const start=offset;
   for(const face of faces){
    const art=box.art!==undefined&&box.front===face.dir?box.art+1:0;
@@ -387,7 +401,7 @@ export class HouseRenderer {
   this.locations={};
   for(const [quality,p] of Object.entries(this.programs)){
    const atrib={},uniform={};for(const key of ['aPos','aCol','aNormal','aUV','aArt','aStyle','aTangent'])atrib[key]=gl.getAttribLocation(p,key);
-   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld','uTV','uTVSignal','uShot','uLoisFace','uFascia','uFasciaReady','uPursuerSkin','uPursuerSkinReady','uPursuerKey','uScanOutline'])uniform[key]=gl.getUniformLocation(p,key);
+   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uHolidayMotion','uHolidayPower','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld','uTV','uTVSignal','uRain','uDawn','uAltarPulse','uShot','uLoisFace','uFascia','uFasciaReady','uPursuerSkin','uPursuerSkinReady','uPursuerKey','uScanOutline'])uniform[key]=gl.getUniformLocation(p,key);
    uniform.uEmyCoat=gl.getUniformLocation(p,'uEmyCoat');
    uniform.uLamps=gl.getUniformLocation(p,'uLamps[0]');
    this.locations[quality]={atrib,uniform};
@@ -416,11 +430,13 @@ export class HouseRenderer {
   this.dynamicOrigins=this.dynamicBoxes.map(b=>[b.x,b.y,b.z,b.yaw||0,b.roll||0,b.pitch||0]);this.dynamicPositions=new Float32Array(this.dynamicBoxes.length*6);this.dynamicPositions.fill(Infinity);
   this.dynamicRigBinds=this.dynamicBoxes.map(b=>b.rigBone&&b.source?[b.source.x,b.source.y,b.source.z]:null);
   this.dynamicRigKeys=new Array(this.dynamicBoxes.length);
+  this.dynamicRevision=0;this.reflectedRevision=-1;this.reflectedUploads=0;
   this.dynamicEyeScale=new Float32Array(this.dynamicBoxes.length);this.dynamicEyeScale.fill(-1);
   gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamicVbo);gl.bufferData(gl.ARRAY_BUFFER,this.dynamicVertices,gl.DYNAMIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.dynamicIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,dynamic.indices,gl.STATIC_DRAW);
   this.vertexCount=(vertices.length+dynamic.vertices.length)/16;this.triangleCount=(indices.length+dynamic.indices.length)/3;
   this.occluders=boxes.filter(b=>b.solid);this.lightPose='';
+  this.holidayPower=boxes.find(b=>b.holidayPower)?.holidayPower;
   this.fixtures=boxes.flatMap(box=>box.fixture?[box.fixture]:[]);
   this.dirtyLampShadows=new Set(this.fixtures);
   this.dynamicCasters=this.dynamicBoxes.map(castsShadow);
@@ -521,7 +537,7 @@ export class HouseRenderer {
   const gl=this.gl;this.mirrorDrawn=false;
   if(!this.mirrorSupported||!mirrorVisible(camera,motion.bathDoorAmount||0))return;
   if(![0,-.6,.6].some(dz=>!lineBlocked(this.occluders,camera,{x:BATH_MIRROR.x-.03,y:BATH_MIRROR.y,z:BATH_MIRROR.z+dz})))return;
-  const equipment=motion.animator?.performing?'empty':motion.equipment||'flashlight';
+  const equipment=motion.animator?.performing||motion.equipment==='hop-hands'?'empty':motion.equipment||'flashlight';
   if(equipment!==this.mirrorEquipment){this.mirrorEquipment=equipment;this.mirrorMeshes[2]=geometry(kittyMirrorPieces(equipment));this.kittyVertices=new Float32Array(this.mirrorMeshes[2].vertices.length);this.characterBinding=createRigBinding(this.mirrorMeshes[2].groups);this.mirrorPose=null;gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[4]);gl.bufferData(gl.ARRAY_BUFFER,this.kittyVertices,gl.DYNAMIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.mirrorBuffers[5]);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,this.mirrorMeshes[2].indices,gl.STATIC_DRAW);}
   const draw=i=>{this.bind(this.mirrorBuffers[i*2],this.mirrorBuffers[i*2+1]);gl.drawElements(gl.TRIANGLES,this.mirrorMeshes[i].indices.length,gl.UNSIGNED_SHORT,0);};
   // Mark only visible mirror fragments. Walls/door/furniture still occlude it.
@@ -533,9 +549,15 @@ export class HouseRenderer {
   gl.depthRange(0,1);gl.depthFunc(gl.LESS);gl.colorMask(true,true,true,true);
   gl.uniform1f(this.uniform.uOcclude,0);
   gl.uniform1f(this.uniform.uMirrorPass,1);gl.frontFace(gl.CW);draw(1);
-  this.mirrorMeshes[3].vertices.set(this.dynamicVertices);reflectMesh(this.mirrorMeshes[3].vertices);gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[6]);gl.bufferData(gl.ARRAY_BUFFER,this.mirrorMeshes[3].vertices,gl.DYNAMIC_DRAW);draw(3);
+  // The reflected dynamic batch is byte-identical until a real pose upload.
+  if(this.reflectedRevision!==this.dynamicRevision){
+   this.mirrorMeshes[3].vertices.set(this.dynamicVertices);reflectMesh(this.mirrorMeshes[3].vertices);
+   gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[6]);gl.bufferData(gl.ARRAY_BUFFER,this.mirrorMeshes[3].vertices,gl.DYNAMIC_DRAW);
+   this.reflectedRevision=this.dynamicRevision;this.reflectedUploads++;
+  }
+  draw(3);
   const animator=motion.animator;
-  const pose=[camera.x,camera.y,camera.z,camera.yaw,motion.feetY,!!motion.crouched,animator?.reduced&&animator?.weight===0&&!animator?.performing?0:animator?.time,animator?.distance,animator?.weight,equipment,animator?.emote,animator?.emoteTime,animator?.transition?.age,motion.noteRaise];
+  const pose=[camera.x,camera.y,camera.z,camera.yaw,motion.feetY,!!motion.crouched,animator?.reduced&&animator?.weight===0&&!animator?.performing?0:animator?.time,animator?.distance,animator?.weight,equipment,animator?.emote,animator?.emoteTime,animator?.transition?.age,motion.noteRaise,animator?.hopAge];
   if(!this.mirrorPose||pose.some((v,i)=>v!==this.mirrorPose[i])){
    if(animator){
     const bones=animator.sample(motion.crouched?'crouch':motion.equipment==='phone'?'hold-phone':'locomotion');
@@ -569,7 +591,7 @@ export class HouseRenderer {
   const flushRig=()=>{
    if(rigStart<0)return;
    gl.bufferSubData(gl.ARRAY_BUFFER,rigStart*4,this.dynamicVertices.subarray(rigStart,rigEnd));
-   metrics.uploads++;metrics.bytes+=(rigEnd-rigStart)*4;
+   this.dynamicRevision++;metrics.uploads++;metrics.bytes+=(rigEnd-rigStart)*4;
    rigStart=-1;rigEnd=-1;
   };
   const bobAmp=reduced?0:0.012,swayAmp=reduced?0:0.14;
@@ -586,7 +608,7 @@ export class HouseRenderer {
     writeEmySurface(this.dynamicVertices,start,box);
     if(rigStart<0)rigStart=start;rigEnd=end;
     this.lightPose='';
-    for(const lamp of this.fixtures)if(Math.hypot(lamp.x-box.x,lamp.y-box.y,lamp.z-box.z)<LAMP_REACH+1)this.dirtyLampShadows.add(lamp);
+    for(const lamp of this.fixtures)if(!this.dirtyLampShadows.has(lamp)&&Math.hypot(lamp.x-box.x,lamp.y-box.y,lamp.z-box.z)<LAMP_REACH+1)this.dirtyLampShadows.add(lamp);
     continue;
    }
    // The PS2 option-B Lois uses a parented rigid rig. The legacy fallback
@@ -612,7 +634,7 @@ export class HouseRenderer {
     if(this.dynamicCasters[i]&&!shadowedRigs.has(source)){
      shadowedRigs.add(source);this.lightPose='';
      for(const lamp of this.fixtures)
-      if(Math.hypot(lamp.x-source.x,lamp.y-source.y,lamp.z-source.z)<LAMP_REACH+2)
+      if(!this.dirtyLampShadows.has(lamp)&&Math.hypot(lamp.x-source.x,lamp.y-source.y,lamp.z-source.z)<LAMP_REACH+2)
        this.dirtyLampShadows.add(lamp);
     }
     continue;
@@ -648,7 +670,7 @@ export class HouseRenderer {
     box.y=this.dynamicOrigins[i][1]+(reduced||motion.feetY>-.3?0:Math.sin(time*2.3)*.010);
    }
    const at=i*6,bx=box.x,by=box.y,bz=box.z,byaw=box.yaw||0,roll=box.roll||0,pitch=box.pitch||0;
-   const {start,end}=this.dynamicRanges[i],glow=circuitPowered(box.fixture?.circuit)||box.power?.on?32:0;
+   const {start,end}=this.dynamicRanges[i],glow=box.holidayPower?(box.holidayPower.on&&box.holidayPower.supply.on?48:0):circuitPowered(box.fixture?.circuit)||box.power?.on?32:0;
    const moved=Math.abs(eyeScale-(this.dynamicEyeScale?.[i]??1))>.00001||Math.fround(bx)!==this.dynamicPositions[at]||Math.fround(by)!==this.dynamicPositions[at+1]||Math.fround(bz)!==this.dynamicPositions[at+2]||Math.fround(byaw)!==this.dynamicPositions[at+3]||Math.fround(roll)!==this.dynamicPositions[at+4]||Math.fround(pitch)!==this.dynamicPositions[at+5];
    if(!moved&&this.dynamicVertices[start+12]===this.dynamicTemplate[start+12]+glow)continue;
    this.dynamicPositions.set([bx,by,bz,byaw,roll,pitch],at);
@@ -672,10 +694,11 @@ export class HouseRenderer {
     }
    }
    gl.bufferSubData(gl.ARRAY_BUFFER,start*4,this.dynamicVertices.subarray(start,end));
+   this.dynamicRevision++;
    if(moved&&this.dynamicCasters[i]){
     this.lightPose='';
     const reach=LAMP_REACH+Math.hypot(box.w,box.h,box.d)/2;
-    for(const lamp of this.fixtures)if(Math.hypot(lamp.x-bx,lamp.y-by,lamp.z-bz)<reach)this.dirtyLampShadows.add(lamp);
+    for(const lamp of this.fixtures)if(!this.dirtyLampShadows.has(lamp)&&Math.hypot(lamp.x-bx,lamp.y-by,lamp.z-bz)<reach)this.dirtyLampShadows.add(lamp);
    }
   }
   flushRig();
@@ -687,9 +710,11 @@ export class HouseRenderer {
    const {x,y,z,tile,strength:level=1}=lamp;
    this.lampUniforms.set([x,y,z,tile+(level===1?0:level)],i*4);
   });
+  this.shadowPasses=0;
   if(!this.shadows.available)return;
   const pose=flash?[camera.x,camera.y,camera.z,camera.yaw,camera.pitch].join(','):'';
   const torchChanged=flash&&pose!==this.lightPose,dirty=lamps.filter(lamp=>this.dirtyLampShadows.has(lamp));
+  this.shadowPasses=Number(!!torchChanged)+dirty.length;
   if(!torchChanged&&!dirty.length)return;
   this.shadows.begin();
   if(torchChanged){
@@ -770,9 +795,8 @@ export class HouseRenderer {
   poseReflectedKitty(this.actorMesh.vertices,this.actorVertices,subject,{feetY:motion.actorPiano?.instrument.floor??motion.feetY,blink},animator?this.actorBinding:null);reflectMesh(this.actorVertices);
   gl.bindBuffer(gl.ARRAY_BUFFER,this.handVbo);gl.bufferData(gl.ARRAY_BUFFER,this.actorVertices,gl.DYNAMIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.handIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,this.actorMesh.indices,gl.STATIC_DRAW);this.handIndexKind='actor';this.bind(this.handVbo,this.handIbo);gl.drawElements(gl.TRIANGLES,this.actorMesh.indices.length,gl.UNSIGNED_SHORT,0);
  }
- drawPursuer(actor,mirrored=false,reduced=false,scale=1){
-  const gl=this.gl;
-  const name=actor.captureFace?'capture':'patrol';
+ preparePursuerMesh(name){
+  if(name!=='capture'&&name!=='patrol')return null;
   this.pursuerMeshes??={};
   if(!this.pursuerMeshes[name]){
    const outside=pursuerPieces(name==='capture');
@@ -781,8 +805,12 @@ export class HouseRenderer {
    this.pursuerMeshes[name]={mesh,posed,shell:{count:shell.indexEnd,
     groups:mesh.groups.filter(g=>g.end*16<=shell.end),vertices:posed.subarray(0,shell.end)}};
   }
+  return this.pursuerMeshes[name];
+ }
+ drawPursuer(actor,mirrored=false,reduced=false,scale=1){
+  const gl=this.gl,name=actor.captureFace?'capture':'patrol';
+  const {mesh,posed,shell}=this.preparePursuerMesh(name);
   this.pursuerVbo??=gl.createBuffer();this.pursuerIbo??=gl.createBuffer();
-  const {mesh,posed,shell}=this.pursuerMeshes[name];
   if(this.pursuerIndex!==name){
    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.pursuerIbo);
    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,mesh.indices,gl.STATIC_DRAW);
@@ -811,9 +839,16 @@ export class HouseRenderer {
   this.drawPursuer(actor,false,reduced);
   gl.colorMask(true,true,true,true);gl.stencilFunc(gl.NOTEQUAL,1,0xff);
   gl.stencilOp(gl.KEEP,gl.KEEP,gl.KEEP);gl.stencilMask(0);
+  // Draw a restrained translucent halo and a fine bright inner rim.
+  // Both remain outside the real animated stencil silhouette.
+  gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+  if(!reduced&&this.quality!=='low'){
+   gl.uniform1f(this.uniform.uScanOutline,2);
+   this.drawPursuer(actor,false,reduced,1.095);
+  }
   gl.uniform1f(this.uniform.uScanOutline,1);
-  this.drawPursuer(actor,false,reduced,1.065);
-  gl.uniform1f(this.uniform.uScanOutline,0);
+  this.drawPursuer(actor,false,reduced,1.045);
+  gl.uniform1f(this.uniform.uScanOutline,0);gl.disable(gl.BLEND);
   gl.stencilMask(0xff);gl.disable(gl.STENCIL_TEST);
   gl.enable(gl.DEPTH_TEST);gl.depthMask(true);
  }
@@ -903,10 +938,12 @@ export class HouseRenderer {
   this.lastProjection=projection;
   gl.uniform2f(this.uniform.uProjection,projection*this.canvas.height/this.canvas.width,projection);
   gl.uniform1f(this.uniform.uNear,motion.grasp ? .032 : .07);gl.uniform1f(this.uniform.uFar,45);
-  gl.uniform1f(this.uniform.uFlash,beamPower);gl.uniform1f(this.uniform.uTime,time);
+  gl.uniform1f(this.uniform.uFlash,beamPower);gl.uniform1f(this.uniform.uTime,time);gl.uniform1f(this.uniform.uHolidayMotion,motion.reduced?0:1);gl.uniform1f(this.uniform.uHolidayPower,this.holidayPower&&!this.holidayPower.on||this.holidayPower&&!this.holidayPower.supply?.on?0:1);
   gl.uniform1f(this.uniform.uShot,motion.shotLight??0);
+  gl.uniform1f(this.uniform.uRain,motion.weather?.rain??0);gl.uniform1f(this.uniform.uDawn,motion.weather?.dawn??0);gl.uniform1f(this.uniform.uAltarPulse,motion.altarPulse??0);
   gl.uniform3fv(this.uniform.uPursuerKey,motion.pursuerKey||[0,0,0]);
   gl.uniform1f(this.uniform.uOcclude,this.quality==='low'?0:1);
+  gl.clearColor(...(motion.weather?.sky??NIGHT_SKY),1);
   gl.stencilMask(0xff);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT|gl.STENCIL_BUFFER_BIT);
   // Closed doors are useful depth occluders too. All these surfaces are opaque.
   if(this.dynamicCount){this.bind(this.dynamicVbo,this.dynamicIbo);gl.drawElements(gl.TRIANGLES,this.dynamicCount,gl.UNSIGNED_SHORT,0);}
@@ -920,7 +957,13 @@ export class HouseRenderer {
    if(motion.pursuerLight!==undefined)gl.uniform1f(this.uniform.uShot,motion.shotLight??0);
   }
   if(!motion.thirdPerson)this.drawMirror(camera,motion);else this.drawActor(motion.thirdPerson,motion);
-  if(motion.scanOutline&&motion.pursuer?.active)this.drawScanOutline(motion.pursuer,motion.reduced);
+  if(motion.scanOutline&&motion.pursuer?.active){
+   this.drawScanOutline(motion.pursuer,motion.reduced);
+   if(import.meta.env.DEV)this.scanFrame={sequence:(this.scanFrame?.sequence||0)+1,camera:{x:camera.x,y:camera.y,z:camera.z,yaw:camera.yaw,pitch:camera.pitch},actor:{x:motion.pursuer.x,y:motion.pursuer.y,z:motion.pursuer.z}};
+  }
+  // Capture the actual world image before drawing the held phone/paws.
+  // This avoids photographing the device itself or compositing HUD elements.
+  motion.onWorldFrame?.(this.canvas);
   gl.uniform1f(this.uniform.uHeld,1);
   if(motion.introHands)this.drawClimbingHands(motion.introHands);
   if(showHand)this.drawFirstPerson(camera,right,up,forward,time,flash,motion);

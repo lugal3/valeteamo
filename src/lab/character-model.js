@@ -1,5 +1,7 @@
 import {CHIBI,chibiPiece,placePieces,torchModel,grippingPaw} from './chibi-model.js';
-import {notePieces,phonePieces} from './equipment.js';
+import {notePieces,phonePieces,keyPieces} from './equipment.js';
+import {screwdriverModel} from './study-vent.js';
+import {rcCarModel} from './rc-car.js';
 import {JOINTS,JOINT_INDEX} from './character-rig.js';
 // Rest mesh is independent of the mirror and can be consumed by other cameras.
 function jointFor(id){
@@ -21,6 +23,7 @@ function cheekTint([x,y,z],color,head){
  return color.map((channel,i)=>channel+(rose[i]-channel)*strength);
 }
 export function characterPieces(equipment='flashlight'){
+ if(equipment==='hop-hands')equipment='empty';
  const parts=[];
  const add=(id,x,y,z,w,h,d,color=CHIBI.white,extra={})=>parts.push(chibiPiece('mirror-kitty-'+id,x,y,z,w,h,d,color,{joint:jointFor(id),...extra}));
  const segment=(id,from,to,width,color,joint)=>{
@@ -67,7 +70,7 @@ export function characterPieces(equipment='flashlight'){
  add('bow-knot',.335,1.74,.297,.15,.15,.115,CHIBI.red,{segments:20,rings:12});
  // Identical rounded barrel, lens and grip in both the mirror and first-person hand.
  if(equipment!=='empty'){
-  const held=equipment==='note'?notePieces(1.4):equipment==='phone'?phonePieces():[...torchModel(true),...grippingPaw()];
+  const held=equipment==='note'?notePieces(1.4):equipment==='paper'?notePieces(.9,false):equipment==='phone'?phonePieces():['key','red-key','master-key'].includes(equipment)?keyPieces(equipment==='red-key'):equipment==='screwdriver'?[...screwdriverModel((id,x,y,z,w,h,d,mat,extra)=>chibiPiece('driver-'+id,x,-.025+y,.115-z,w,h,d,extra.color??[.65,.65,.62],{...extra,mat})),...grippingPaw()]:equipment==='rc'?[...rcCarModel((id,x,y,z,w,h,d,mat,extra)=>chibiPiece('rc-'+id,x,y,z,w,h,d,extra.color,{...extra,mat}),true),...grippingPaw()]:[...torchModel(true),...grippingPaw()];
   parts.push(...placePieces(held,{x:equipment==='note'?.265:.365,y:1.145,z:.25,scale:.87,prefix:'mirror-kitty-'}).map(p=>({...p,joint:'rightHand'})));
  }
  // Scale the entire head around its center so the eyes, ears, whiskers and bow stay attached.

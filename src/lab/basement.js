@@ -127,6 +127,17 @@ export function installBasement(add,obj,lights){
   const at=4.35+i*.47,half=sectionAt(at)[2],dx=(i%2?1:-1)*(half-.09),size=.08+(i%4)*.019;
   add('tunnel-stone-'+i,X+dx,floor(at)+.029,at,size,.068,size*1.4,'earth',false,{shape:'round',segments:5,rings:3,color:i%3?dark:[.41,.39,.33]});
  }
+ // Rusty utilities follow the actual tunnel walls and ceiling. Their geometry
+ // is visual-only and stays outside the RC and human collision lanes.
+ for(const [i,[from,to,half]] of SECTIONS.entries()){
+  if(i===0)continue;
+  const mid=(from+to)/2,y=(floor(from)+floor(to))/2+1.83,pitch=Math.atan2(floor(from)-floor(to),to-from);
+  for(const side of [-1,1]){
+   const px=X+side*(half-.055);
+   add('tunnel-pipe-'+i+'-'+side,px,y,mid,.062,.062,Math.hypot(to-from,floor(from)-floor(to)),'torchmetal',false,{pitch,color:[.36,.29,.23],castShadow:false});
+   add('tunnel-pipe-clamp-'+i+'-'+side,px,y,mid,.10,.10,.075,'brass',false,{color:[.50,.31,.19],castShadow:false});
+  }
+ }
  // Kitty launches the decoy from safety after Louis reaches the kitchen.
  obj('rc-car','rc-car','Auto RC y tablet',9.45,.14,3.6,{floor:0,yaw:0,mode:'packed'});
  installCaptive(add,obj);

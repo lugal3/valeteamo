@@ -25,12 +25,17 @@ async function run(){
   const url='http://127.0.0.1:'+server.httpServer.address().port+'/';
   browser=await browserType.launch({headless:true,args:browserType===chromium?
    ['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']:[]});
-  const page=await browser.newPage({viewport:{width:960,height:540},reducedMotion:'reduce'});
-  const screenshotSession=browserType===chromium?await page.context().newCDPSession(page):null;
+  let page,screenshotSession;
   const errors=[];
-  page.setDefaultTimeout(60000);
-  page.on('pageerror',error=>errors.push(error.message));
-  await page.clock.setFixedTime(new Date('2026-11-16T15:00:00Z'));
+  const freshPage=async()=>{
+   if(page)await page.context().close();
+   page=await browser.newPage({viewport:{width:960,height:540},reducedMotion:'reduce'});
+   screenshotSession=browserType===chromium?await page.context().newCDPSession(page):null;
+   page.setDefaultTimeout(60000);
+   page.on('pageerror',error=>errors.push(error.message));
+   await page.clock.setFixedTime(new Date('2026-11-16T15:00:00Z'));
+  };
+  await freshPage();
   const read=key=>page.evaluate(key=>JSON.parse(localStorage.getItem(key)),key);
   const write=(key,value)=>page.evaluate(([key,value])=>localStorage.setItem(key,JSON.stringify(value)),[key,value]);
   const snapshot=()=>page.evaluate(()=>window.__rescueHouse.snapshot());
@@ -47,6 +52,21 @@ async function run(){
    }else await page.screenshot({path:filename});
   };
 
+  // Physical mouse input at an independently verified hit-tested button.
+  // Avoid Playwright waiting for multiple stable animation frames on a
+  // deliberately throttled five-FPS trial preview.
+  const clickTrialButton=async locator=>{
+   await locator.waitFor({state:'visible'});
+   const point=await locator.evaluate(el=>{
+    // Native immediate scroll, no Playwright animation-stability wait.
+    // Verify the actual target is enabled and hit-testable before mouse input.
+    el.scrollIntoView({block:'center',inline:'center',behavior:'instant'});
+    const r=el.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2;
+    if(el.disabled||!el.contains(document.elementFromPoint(x,y)))throw Error('Trial button is not actually clickable');
+    return {x,y};
+   });
+   await page.mouse.click(point.x,point.y);
+  };
   const openMenu=async()=>{
    await page.goto(url,{waitUntil:'domcontentloaded'});
    await passBirthdayCountdown(page);
@@ -73,6 +93,65 @@ async function run(){
   // A mounted canvas can still be awaiting the sprite loads. Navigate only
   // once the prologue is playable, so the test doesn't cancel those requests.
   const waitForPrologue=()=>page.waitForFunction(()=>Boolean(window.__valePrologue?.scene()?.player?.texture));
+
+  // Exercise the real LP route (not only a seeded checkpoint fixture).
+  // Inspect the actor before pressing start, then verify the live piano trial.
+  await openMenu();
+  const trialCases=[...Array.from({length:12},(_,i)=>['hito-'+(i+1),i<7]),
+   ...['mirror','drawer','safe','mirror-note','bedroom','arrival','wardrobe','wake','battery','power','piano','basement','television'].map(id=>[id,true]),['car',false]];
+  for(const [index,[id,visible]] of trialCases.entries()){
+   // The software GPU stalled even after a document navigation. Release its
+   // entire browser context after two real mount/exit cycles; every pair
+   // still exercises reopening LP without reload, and every card is tested.
+   if(index>0&&index%2===0){await freshPage();await openMenu();}
+   const card=page.locator('button[aria-labelledby="trial-'+id+'"]');
+   await card.waitFor({state:'attached'});
+   if(!await card.isVisible())await card.evaluate(el=>{el.closest('details').open=true;});
+   console.log('LP trial: '+id);
+   try{
+    // This is a React state transition, not a document navigation. Wait for
+    // the real start card below instead of Playwright's unrelated navigation.
+    await clickTrialButton(card);
+    await page.locator('#lab-dialog [data-act="start"]').or(page.locator('#lab3d .lab-error')).or(page.getByRole('alert').filter({hasText:'No se pudo abrir esta prueba'})).waitFor({timeout:60000});
+    const bootError=await page.locator('#lab3d .lab-error').count();
+    if(bootError)throw Error(await page.locator('#lab3d .lab-error').innerText());
+    // React can mount a new scene while the previous effect is cleaning up.
+    // Do not eagerly resolve locator.innerText on a detached root just to
+    // construct an assertion message. Wait for the new live harness instead.
+    // Poll the mounted DOM/DEV API by timer, independently of throttled
+    // requestAnimationFrame on the static software-WebGL preview.
+    await page.waitForFunction(()=>!!window.__rescueHouse&&document.querySelector('#lab3d #lab-dialog [data-act="start"]'),null,{timeout:60000,polling:250});
+    assert.equal(await page.locator('#lab3d .lab-error').count(),0);
+   }catch(error){
+    console.log('LP_TRIAL_FAILURE',id,await page.evaluate(()=>({body:document.body.innerText.slice(0,1600),api:!!window.__rescueHouse,root:!!document.querySelector('#lab3d'),start:!!document.querySelector('#lab3d #lab-dialog [data-act="start"]'),visibility:document.visibilityState})),errors);
+    throw error;
+   }
+   const state=await snapshot(),cat=await page.evaluate(()=>window.__rescueHouse.emy());
+   assert.equal(cat.hidden,!visible,'LP '+id+' must have the correct initial visibility');
+   assert.equal(cat.companion,visible?'following':id==='car'?'waiting':'trunk','LP '+id+' companion controller');
+   assert.equal(cat.entrance,undefined,'No repeated window entrance in '+id);
+   if(visible){
+    assert(Math.abs(cat.y-state.position.y)<.13,'LP '+id+' must place Emy on Kitty’s floor');
+    assert(Math.hypot(cat.x-state.position.x,cat.z-state.position.z)<=3.11,'LP '+id+' Emy nearby');
+   }
+   if(id==='piano'||id==='hito-1'){
+    await page.locator('#lab-dialog [data-act="start"]').click();
+    await page.waitForFunction(()=>!window.__rescueHouse.snapshot().paused);
+    assert.equal((await page.evaluate(()=>window.__rescueHouse.emy())).hidden,false);
+    await use('emy-upstairs');
+    assert.equal((await page.evaluate(()=>window.__rescueHouse.emySkills())).menu,true,'Companion actions work in '+id);
+    await shot('trial-'+id+'-emy-actions');
+    await page.locator('#house-emy-menu [data-act="emy:close"]').click();
+    await page.keyboard.press('Escape');
+   }
+   const exit=page.locator('#lab-dialog [data-act="exit"]');
+   await exit.waitFor({state:'visible'});
+   await clickTrialButton(exit);
+   await page.waitForFunction(()=>!window.__rescueHouse&&!document.querySelector('#lab3d'),null,{polling:250,timeout:60000});
+   await page.locator('.playtest-menu[data-admin-panel="lp"]').waitFor();
+   console.log('PASS LP '+id+' — '+cat.companion);
+  }
+  console.log('PASS LP checkpoint companions: same-floor visible Emy before hatch, hidden at basement/escape, live actions and isolated car');
 
   await openMenu();
   const birthday={version:1,index:0,unlocked:0,character:'louis',muted:true,started:true,answers:{}};
@@ -102,6 +181,14 @@ async function run(){
   await use('media-flashlight');
   assert.deepEqual(new Set((await checkpoint()).picked),new Set(['key','media-flashlight','screwdriver']),
    'The vent screwdriver collected earlier must survive checkpoint saves too');
+  if(SHOTS){
+   // Capture the actual new room decor from a legal pose with its real ceiling lamp.
+   await use('switch-musica');
+   await page.evaluate(()=>window.__rescueHouse.setPose({x:11.2,y:3.15,z:1.20,yaw:Math.atan2(1.40,1.07),pitch:-.15}));
+   await page.waitForFunction(()=>window.__rescueHouse.snapshot().position.x===11.2);
+   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+   await shot('00b-arbol-navideno-sala-musica');
+  }
   await page.emulateMedia({reducedMotion:'no-preference'});
   await reloadHouse();
   assert.equal((await snapshot()).cinematic,false);
@@ -243,6 +330,14 @@ async function run(){
   await page.keyboard.down('w');
   try{await page.waitForFunction(()=>['ending','safe'].includes(window.__rescueHouse.story().phase));}
   finally{await page.keyboard.up('w');}
+  // V3.1 has a playable garden escape after the directed ambush.
+  // Reaching "ending" starts the scene; it does not complete the rescue.
+  await page.waitForFunction(()=>window.__rescueHouse.finale()?.playable,null,{timeout:60000,polling:250});
+  assert.equal(await stage(),'ending');
+  await page.keyboard.down('w');
+  try{await page.waitForFunction(()=>window.__rescueHouse.story().phase==='safe',null,{timeout:90000,polling:250});}
+  finally{await page.keyboard.up('w');}
+  await page.getByRole('dialog',{name:/Kitty y Louis escaparon/}).waitFor({timeout:30000});
   await page.getByRole('button',{name:'Ver final',exact:true}).click();
   await page.getByRole('heading',{name:'¡Louis está a salvo!'}).waitFor();
   assert.equal((await read(RESCUE_KEY)).phase,'end');

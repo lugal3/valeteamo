@@ -28,7 +28,7 @@ export class HouseMessages{
    this.layoutStamp=stamp;this.rect=messageLayout(width,height,dock,{phoneOpen,...safe});this.feed.style.left=this.rect.x+'px';this.feed.style.top=this.rect.y+'px';this.feed.style.width=this.rect.w+'px';
   }
  }
- update({dt=0,blocked=false,danger='',revelation='',unread=false,messageCount=0,phoneOpen=false,dock=null}={}){
+ update({dt=0,blocked=false,danger='',revelation='',unread=false,messageCount=0,phoneOpen=false,dock=null,showObjective=true}={}){
   dt=Math.max(0,Math.min(.1,dt));
   if(messageCount<this.lastCount){this.noticeRemaining=0;this.lastCount=0;}
   if(messageCount>this.lastCount){this.noticeRemaining=unread?5:0;this.lastCount=messageCount;}
@@ -43,7 +43,7 @@ export class HouseMessages{
   if(this.sound&&!blocked){this.sound.remaining-=dt;if(this.sound.remaining<=0)this.clearSound();}
   this.layout(dock,phoneOpen);
   this.feed.hidden=blocked;this.root.dataset.hudMessage=channel;
-  this.objective.hidden=!!danger||!!revelation||phoneOpen||(channel!=='none'&&this.rect.w<220);
+  this.objective.hidden=!showObjective||!!danger||!!revelation||phoneOpen||(channel!=='none'&&this.rect.w<220);
   this.danger.hidden=channel!=='danger';this.notice.hidden=channel!=='phone';this.toast.hidden=channel!=='puzzle'&&channel!=='sound'&&(channel!=='toast'||!this.pending);
   const text=channel==='puzzle'?revelation:channel==='sound'?soundText:this.pending?.text||'';if(this.toast.textContent!==text)this.toast.textContent=text;
  }

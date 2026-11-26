@@ -15,7 +15,9 @@ async function play(){
   const page=await context.newPage(),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
   fs.mkdirSync('artifacts',{recursive:true});
-  await page.goto(base);
+  await page.clock.setFixedTime(new Date('2026-11-16T15:00:00Z'));
+  await page.goto(base,{waitUntil:'domcontentloaded'});
+  await page.getByRole('button',{name:'Administración'}).waitFor();
   const saves={
    'valeteamo-rescue-v2':JSON.stringify({version:2,phase:'house',heart:true,abducted:true,trail:true,house:true,rescued:false,
     houseCheckpoint:{version:1,stage:'explore',picked:['note-hall','key']}}),

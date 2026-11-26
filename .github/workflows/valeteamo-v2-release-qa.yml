@@ -10,6 +10,7 @@ on:
       - 'package-lock.json'
       - 'docs/VALETEAMO-V2-DEFECT-AUDIT.md'
       - '.github/workflows/valeteamo-v2-release-qa.yml'
+      - '.github/workflows/v31-size.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -54,6 +55,7 @@ jobs:
           - emy-desktop
           - emy-webkit
           - subtle-glows
+          - altar
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -63,11 +65,17 @@ jobs:
       - run: npm ci
       - name: Instalar navegador de prueba
         run: npx playwright install chromium webkit --with-deps
+      - name: Install FFmpeg for optimized production test
+        if: matrix.scenario == '3d-production' && github.head_ref == 'feature/v31-telefono-historia-final-perf'
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Preparar compilación para escenarios de producción
         if: matrix.scenario == '3d-production'
         run: npm run build
+        env:
+          VALE_REQUIRE_FLAC: ${{ github.head_ref == 'feature/v31-telefono-historia-final-perf' && '1' || '0' }}
       - name: Recorrer escenario
         env:
+          ALTAR_QA_ONLY: ${{ matrix.scenario == 'altar' && '1' || '0' }}
           EMY_QA_DIR: artifacts/v2/${{ matrix.scenario }}
           EMY_QA_VIEWPORT: ${{ matrix.scenario == 'emy-desktop' && 'desktop' || 'mobile' }}
           EMY_QA_ENGINE: ${{ matrix.scenario == 'emy-webkit' && 'webkit' || 'chromium' }}
@@ -83,6 +91,7 @@ jobs:
             mobile-input) node tests/house-input-browser.cjs ;;
             3d-production) node tests/house-css-production-browser.cjs ;;
             emy-mobile|emy-desktop|emy-webkit) node tests/emy-abilities-browser.cjs ;;
+            altar) node tests/emy-abilities-browser.cjs ;;
             subtle-glows) node tests/visual-glow-browser.cjs ;;
           esac
       - name: Capturas y evidencias
@@ -92,3 +101,7 @@ jobs:
           name: vale-v2-${{ matrix.scenario }}
           path: artifacts/
           if-no-files-found: ignore
+
+  performance-audit:
+    if: github.head_ref == 'feature/v31-telefono-historia-final-perf'
+    uses: ./.github/workflows/v31-size.yml

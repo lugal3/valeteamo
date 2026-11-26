@@ -87,7 +87,9 @@
 #lab3d #lab-crouch{grid-area:3/3}
 #lab3d .lab-buttons [data-act=bag]{grid-area:3/1}
 #lab3d #house-use-phone,#lab3d #house-light{grid-area:3/2}
-#lab3d .lab-buttons [data-act=emotes]{grid-area:2/3}
+#lab3d .lab-buttons [data-act=emotes]{grid-area:2/2}
+#lab3d #lab-hop{grid-area:2/3}
+#lab3d #lab-hop:disabled{opacity:.45;pointer-events:none}
 #lab3d #lab-interact{grid-area:1/1/2/4}
 
 /* A physical phone silhouette, with the live house visible around it. */
@@ -202,7 +204,9 @@
 #lab3d .lab-focus{font:500 11px/1.4 system-ui;padding:4px 8px;max-width:min(56vw,360px);border-color:#e3c7d540;border-radius:6px;background:#211b2bb3;animation:none}
 #lab3d .lab-buttons button{background:#33253bc7;color:#fff0f6;border-color:#ecb7cf83;box-shadow:none}
 #lab3d .lab-buttons [aria-pressed=true],#lab3d #lab-interact:not([hidden]){animation:none;background:#704760dc;border-color:#ffc6dd;box-shadow:none}
-#lab3d #lab-interact:not([hidden]){min-height:37px}
+#lab3d #lab-interact:not([hidden]){min-height:46px;border-radius:12px;min-width:0;transition:background-color .15s,opacity .15s}
+#lab3d #lab-interact:disabled{opacity:.42;background:#33253bc7;border-color:#ecb7cf83;cursor:default;pointer-events:none}
+#lab3d #lab-interact small{white-space:normal;overflow-wrap:anywhere;text-align:center}
 #lab3d .house-messages>.phone-notice{display:flex;align-items:center;gap:8px;max-width:100%;padding:7px 9px;background:#f3fff7f5;border-left:3px solid #24b66a;border-radius:10px;color:#132d24;box-shadow:0 4px 16px #14251f4d}
 #lab3d .phone-notice-icon{width:25px;height:25px;border-radius:7px;padding:3px;flex-shrink:0;background:#1fbc63;color:#fff}
 #lab3d .phone-notice-copy{display:grid;gap:1px;min-width:0}
@@ -270,11 +274,11 @@
 #lab3d .lab-settings-note p{margin:7px 0;line-height:1.45}
 #lab3d .house-mouse-status{position:absolute;z-index:11;top:max(8px,var(--house-safe-top));left:max(12px,var(--house-safe-left));padding:5px 8px;border-radius:6px;background:#241a2beb;color:#fff0fa;font:600 11px/1.3 system-ui;pointer-events:none}
 #lab3d.house-mouse-locked .lab-top{visibility:hidden}
-#lab3d.house-mouse-locked #lab-interact{visibility:hidden;pointer-events:none}
+#lab3d.house-mouse-locked #lab-interact{pointer-events:none}
 #lab3d.house-desktop .lab-look{left:0;cursor:grab}
 #lab3d.house-desktop .lab-look:active{cursor:grabbing}
 #lab3d.house-desktop .lab-stick-ring{width:80px;height:80px;opacity:.74}
-#lab3d.house-desktop #lab-interact{position:fixed;top:57%;left:50%;translate:-50% 0;width:max-content;max-width:45vw;min-height:34px;padding:5px 12px}
+#lab3d.house-desktop #lab-interact{position:static;min-height:44px;padding:5px 7px;justify-content:center}
 #lab3d #lab-interact small{font:650 12px/1.25 system-ui}
 #lab3d #lab-interact kbd{display:none}
 #lab3d.house-desktop #lab-interact{display:flex;align-items:center;gap:8px}
@@ -387,3 +391,130 @@
 @media(prefers-reduced-motion:reduce){
  #lab3d .house-rc-actions button{transition:none!important;animation:none!important}
 }
+
+/* V3 phone OS — compact, touch-friendly, world remains visible. */
+#lab3d .phone-shell{background:#f6f3f9;border-color:#24212b;box-shadow:0 0 0 2px #e4b2c8,0 12px 40px #10091a99;transform-origin:center}
+#lab3d .phone-shell[data-page=home]{background:radial-gradient(ellipse at 18% 14%,#f9d9de 0,transparent 52%),radial-gradient(ellipse at 85% 52%,#bba8e2 0,transparent 52%),linear-gradient(155deg,#78629f,#d992b4 72%,#f0c6c9);color:#fff}
+#lab3d .phone-shell[data-page=home] main{display:flex;flex-direction:column;overflow:hidden;position:relative;touch-action:pan-y}
+#lab3d .phone-wallpaper-art{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) rotate(-12deg);font:200 clamp(92px,21dvh,190px)/1 system-ui;color:#fff3;pointer-events:none}
+#lab3d .phone-apps{position:relative;flex:1 1 auto;align-content:start;gap:clamp(6px,2dvh,14px);padding:7px 2px 4px}
+#lab3d .phone-apps button,#lab3d .phone-dock-apps button{display:grid;justify-items:center;align-content:start;gap:3px;min-width:0;padding:0;background:none;font:500 clamp(8px,1.8dvh,11px) system-ui;color:inherit;text-shadow:0 1px 3px #31234166;touch-action:pan-y}
+#lab3d .phone-app-icon{width:min(100%,46px);max-height:12dvh;border-radius:23%;box-shadow:0 3px 7px #22183330,inset 0 1px 1px #fff6}
+#lab3d .phone-app-icon.music{background:linear-gradient(145deg,#ff789c,#d92c63)}
+#lab3d .phone-app-icon.journal{background:linear-gradient(#f2d977 28%,#fffaf1 28%);color:#745b44}
+#lab3d .phone-app-icon.clock{background:#22232c;color:#fff}
+#lab3d .phone-app-icon.calendar{background:linear-gradient(#e96c78 28%,#fff 28%);color:#433643}
+#lab3d .phone-app-icon.weather{background:linear-gradient(#55a6e7,#8cd4fa)}
+#lab3d .phone-app-icon.calculator{background:#37343e;color:#ffcb77}
+#lab3d .phone-app-icon.contacts{background:linear-gradient(130deg,#a5c9cc,#f1f3f4);color:#485f70}
+#lab3d .phone-app-icon.heart{background:#fff;color:#ed729c}
+#lab3d .phone-page-dots{display:flex;justify-content:center;gap:2px;margin:0 auto;position:relative;flex:none}
+#lab3d .phone-page-dots button{font-size:8px;min-width:28px;min-height:24px;padding:0;background:transparent;color:#ffffff77;text-shadow:none}
+#lab3d .phone-page-dots button[aria-current=page]{color:#fff}
+ #lab3d .phone-dock-apps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;flex:none;position:relative;padding:8px 5px 6px;border-radius:19px;background:#ffffff30;border:1px solid #ffffff25;backdrop-filter:blur(8px)}
+#lab3d .phone-dock-apps button>span:last-child{display:none}
+#lab3d .phone-dock-apps{flex:0 0 auto;align-content:center}
+#lab3d .phone-journal{font:500 12px/1.5 system-ui;color:#574346;background:#fffdf6;padding:12px;border-radius:12px;min-height:100%;box-sizing:border-box}
+#lab3d .phone-journal small{color:#a06c68;letter-spacing:.08em;font-size:9px}
+#lab3d .phone-journal h2{font:700 17px/1.3 system-ui;margin:8px 0}
+#lab3d .phone-journal section{border-top:1px solid #e9d5ca;padding-top:9px;margin-top:9px}
+#lab3d .phone-journal p{margin:5px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+#lab3d .phone-hint{flex:none;padding:5px;background:#f4f9f4;border-radius:10px;text-align:center}
+#lab3d .phone-hint button{color:#266847;background:#dcefe0;min-height:32px;width:100%}
+#lab3d .phone-hint p{font:500 11px/1.35 system-ui;margin:5px 0;color:#214d3b}
+#lab3d .phone-music,#lab3d .phone-quiet-app{display:grid;justify-items:center;text-align:center;gap:9px;padding:12px;color:#3d2a44}
+#lab3d .phone-album{width:min(150px,70%);aspect-ratio:1;display:grid;place-items:center;border-radius:18px;background:linear-gradient(135deg,#e9a8bd,#8372b4);color:white;font:700 62px system-ui}
+#lab3d .phone-music h2{font-size:16px;margin:0}
+#lab3d .phone-music p{margin:0;color:#856a83}
+#lab3d .phone-music button{width:100%;background:#d94c83;color:white}
+#lab3d.house-phone-walk .phone-screen{pointer-events:none;place-content:center end;padding:12px max(14px,env(safe-area-inset-right));background:transparent}
+#lab3d.house-phone-walk .phone-shell{pointer-events:auto}
+#lab3d.house-phone-walk .lab-joystick{visibility:visible;pointer-events:auto;z-index:36;left:max(14px,env(safe-area-inset-left))}
+#lab3d.house-phone-walk.house-desktop .lab-joystick{visibility:hidden;pointer-events:none}
+#lab3d.house-phone-walk .lab-look{visibility:visible;pointer-events:auto;left:24%;right:clamp(240px,40vw,410px)}
+#lab3d.house-phone-walk.house-desktop .lab-look{left:0}
+/* One chassis, two orientations. The same outer dimensions swap, not stretch. */
+#lab3d .phone-screen{--phone-long:min(640px,calc(100dvh - 28px),calc(100vw - 40px));--phone-short:calc(var(--phone-long) / 1.9)}
+#lab3d .phone-screen .phone-shell{box-sizing:border-box;inline-size:var(--phone-short);block-size:var(--phone-long);flex-shrink:0}
+#lab3d.house-phone-camera .phone-screen .phone-shell{inline-size:var(--phone-long);block-size:var(--phone-short)}
+#lab3d.house-phone-camera .phone-status{height:18px;padding:0 15px 0 18px;font-size:9px}
+#lab3d.house-phone-camera .phone-status i{left:3px;top:50%;transform:translateY(-50%);width:8px;height:26%;border-radius:12px}
+#lab3d.house-phone-camera .phone-shell header{min-height:28px;padding:0 7px}
+#lab3d.house-phone-camera .phone-shell header button{min-height:28px;font-size:22px}
+#lab3d.house-phone-camera .phone-home-indicator{min-height:9px}
+#lab3d.house-phone-camera .phone-camera-actions{grid-template-columns:36px 44px;grid-template-rows:repeat(2,minmax(36px,1fr));gap:2px;grid-column:2;grid-row:1 / 3;align-content:center}
+#lab3d.house-phone-camera .phone-camera-actions button{box-sizing:border-box;width:36px;min-width:36px;min-height:36px;padding:3px}
+#lab3d.house-phone-camera .phone-camera-actions [data-photo=take]{grid-column:2;grid-row:1 / 3;width:44px;min-width:44px;height:44px}
+#lab3d.house-phone-camera .phone-camera-actions [data-app=photos]{grid-column:1;grid-row:1}
+#lab3d.house-phone-camera .phone-camera-actions [data-photo=flash]{grid-column:1;grid-row:2}
+#lab3d.house-phone-camera .phone-camera-mode{grid-column:1;grid-row:2}
+#lab3d .phone-shell[data-page=camera] main{display:grid;grid-template-columns:minmax(0,1fr) 84px;grid-template-rows:minmax(0,1fr) 11px;overflow:hidden;gap:3px;padding:3px 6px 3px 11px}
+#lab3d .phone-camera-view{min-height:0;margin:0;position:relative;overflow:hidden;background:#19171d;border-radius:8px}
+#lab3d .phone-camera-view canvas{width:100%;height:100%;object-fit:contain}
+#lab3d .phone-camera-grid{position:absolute;inset:0;pointer-events:none;background:linear-gradient(to right,transparent 33%,#fff3 33%,#fff3 33.3%,transparent 33.3%,transparent 66%,#fff3 66%,#fff3 66.3%,transparent 66.3%),linear-gradient(to bottom,transparent 33%,#fff3 33%,#fff3 33.3%,transparent 33.3%,transparent 66%,#fff3 66%,#fff3 66.3%,transparent 66.3%)}
+#lab3d .phone-camera-mode{text-align:center;color:#f2d597;font:700 9px system-ui;letter-spacing:.12em}
+#lab3d .phone-camera-actions [data-photo=flash]{font:700 19px system-ui;color:#f6d171;background:transparent}
+#lab3d .phone-camera-actions [data-photo=flash][aria-pressed=false]{color:#b5afba}
+#lab3d.phone-photo-taken .phone-camera-view::after{content:"";position:absolute;inset:0;background:#fff;pointer-events:none;animation:phone-shutter .16s ease-out both}
+@keyframes phone-shutter{from{opacity:.8}to{opacity:0}}
+@media(max-height:430px){#lab3d .phone-dock-apps{padding:5px}#lab3d .phone-app-icon{width:min(100%,40px);max-height:10dvh}#lab3d .phone-shell[data-page=home] main{padding:4px 7px}#lab3d .phone-apps{gap:7px}}
+@media(prefers-reduced-motion:reduce){#lab3d .phone-shell{transition:none}#lab3d.phone-photo-taken .phone-camera-view::after{animation:none;opacity:.12}}
+#lab3d.house-motion-reduced .phone-shell{transition:none}
+#lab3d.house-motion-reduced.phone-photo-taken .phone-camera-view::after{animation:none;opacity:.12}
+
+
+/* Pursuit cues remain readable when text hints are disabled. */
+#lab3d .lab-vignette{transition:box-shadow .38s ease}
+#lab3d.house-watch-tension .lab-vignette{box-shadow:inset 0 0 65px 5px #9a614d25}
+#lab3d.house-chase-tension .lab-vignette{box-shadow:inset 0 0 80px 10px #a43d4e58}
+@media(prefers-reduced-motion:reduce){#lab3d .lab-vignette{transition:none}}
+#lab3d.house-motion-reduced .lab-vignette{transition:none}
+/* Optional collectible toast, never blocks movement or focus. */
+#lab3d #house-plush-toast{position:absolute;z-index:27;left:50%;top:13%;transform:translateX(-50%);width:min(220px,42vw);display:grid;justify-items:center;gap:4px;padding:12px;border:1px solid #f6c6d7;border-radius:19px;background:linear-gradient(150deg,#392b48e8,#694057ed);color:#fff5e8;box-shadow:0 9px 30px #160b2050;pointer-events:none;animation:plush-pop .32s cubic-bezier(.2,.8,.3,1.2) both}
+#lab3d #house-plush-toast small{font:700 9px system-ui;letter-spacing:.12em;color:#f5c3d9}
+#lab3d #house-plush-toast strong{font:700 14px system-ui;text-align:center}
+#lab3d #house-plush-toast span{font:500 11px system-ui;color:#f3dbef}
+#lab3d .plush-reward-art{position:relative;width:62px;height:65px;display:grid;place-items:end center}
+#lab3d .plush-reward-art i{position:absolute;top:3px;left:5px;width:52px;height:38px;border-radius:44%;background:#fff1e7;box-shadow:inset 0 -3px 0 #eddbd5}
+#lab3d .plush-reward-art i::before,#lab3d .plush-reward-art i::after{content:'';position:absolute;top:-5px;width:17px;height:18px;background:#fff1e7;border-radius:4px;transform:rotate(18deg)}
+#lab3d .plush-reward-art i::before{left:3px;transform:rotate(-18deg)}#lab3d .plush-reward-art i::after{right:3px;box-shadow:7px -1px 0 -3px #e46083}
+#lab3d .plush-reward-art b{position:relative;background:#d85a83;border-radius:40% 40% 35% 35%;width:37px;height:31px;color:#fff2ec;text-align:center;line-height:31px;font-size:18px}
+#lab3d [data-variant='1'] .plush-reward-art b{background:#9a85cf}#lab3d [data-variant='2'] .plush-reward-art b{background:#e7a8bc}
+@keyframes plush-pop{from{opacity:0;transform:translate(-50%,10px) scale(.82)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+@media(prefers-reduced-motion:reduce){#lab3d #house-plush-toast{animation:none}}#lab3d.house-motion-reduced #house-plush-toast{animation:none}
+/* Kitty V3.4 — clear object-specific controls and quiet HUD.
+   Visual transitions do not affect the real hit targets. */
+#lab3d #lab-interact:not([hidden]){display:flex;align-items:center;justify-content:center;gap:6px;padding:6px 8px}
+#lab3d .house-action-icon{width:22px;height:22px;display:grid;place-items:center;flex:0 0 22px;color:#ffe7f2}
+#lab3d .house-action-icon svg{width:100%;height:100%}
+#lab3d #lab-interact small{flex:0 1 auto;min-width:0}
+#lab3d #lab-interact[data-icon=cat]:not(:disabled){background:linear-gradient(135deg,#70568c,#995d91);border-color:#e7b7ee}
+#lab3d #lab-interact[data-icon=throw]:not(:disabled){background:linear-gradient(135deg,#985e65,#704964);border-color:#f0b5c7}
+#lab3d #lab-interact[data-icon=rescue]:not(:disabled){border-color:#ffe0ae}
+#lab3d .house-hotbar button{transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease,opacity .18s ease}
+#lab3d .house-hotbar button[aria-pressed=true]{background:linear-gradient(155deg,#f4b4ce55,#865b9e66);border-color:#ffdef0;box-shadow:inset 0 0 0 1px #e7a6c6,0 0 8px #f4b5cf38}
+#lab3d .house-hotbar button[aria-pressed=true] svg{color:#fff4e8}
+#lab3d .house-hotbar button:active span{transform:scale(.92)}
+#lab3d.house-immersive:not(.house-hud-editing) .house-hotbar{background:rgba(31,23,36,calc(var(--hud-opacity,.55)*.74));border-color:#ecb7cf50;box-shadow:none}
+#lab3d.house-immersive:not(.house-action-ready) #lab-interact:not([hidden]):disabled{opacity:.24}
+#lab3d.house-immersive:not(.house-action-ready) .lab-cross:not(.lab-target){opacity:.40}
+#lab3d.house-immersive .lab-buttons button:not(:disabled):not(#lab-interact){box-shadow:none}
+#lab3d.house-immersive .lab-joystick{opacity:.64}
+#lab3d.house-immersive .lab-joystick:active{opacity:1}
+@media(max-height:420px){#lab3d #lab-interact:not([hidden]){gap:4px;padding:5px 6px}#lab3d .house-action-icon{width:19px;height:19px;flex-basis:19px}}
+@media(prefers-reduced-motion:reduce){#lab3d .house-hotbar button{transition:none}}
+#lab3d.house-motion-reduced .house-hotbar button{transition:none}
+
+/* First-person finale: remove controls only during the directed shot.
+   The real escape restores the normal movement joystick and look surface. */
+#lab3d.house-finale-shot :is(.lab-cross,.lab-joystick,.lab-buttons,.lab-look,.house-hotbar,.house-charge,.house-stamina,.lab-focus,.lab-objective,.lab-toast){visibility:hidden;pointer-events:none}
+#lab3d.house-finale-run :is(.lab-cross,.lab-buttons,.house-hotbar,.lab-focus,.lab-objective,.house-charge,.lab-toast){visibility:hidden;pointer-events:none}
+#lab3d.house-finale-shot .house-rc-caption,#lab3d.house-finale-run .house-rc-caption{bottom:max(16px,calc(env(safe-area-inset-bottom) + 12px));font:600 clamp(13px,2vw,19px)/1.4 system-ui;text-shadow:0 2px 7px #0a080d,0 0 12px #120e15}
+
+/* Opt-in LP diagnostics only. Never intercept the gameplay controls. */
+#lab3d .house-perf{position:absolute;top:max(12px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:39;pointer-events:none;white-space:pre-line;max-width:65vw;padding:5px 9px;border-radius:6px;background:#13121bdd;color:#dbf6e6;font:11px/1.4 monospace;text-align:center}
+#lab3d .house-perf[hidden]{display:none}
+
+/* Opt-in FPS label: safe-area aware, no layout shifts or touch interception. */
+#lab3d .house-fps{position:absolute;top:max(10px,calc(var(--house-safe-top) + 5px));right:max(12px,calc(var(--house-safe-right) + 8px));z-index:26;pointer-events:none;white-space:nowrap;padding:4px 7px;border-radius:5px;background:#13121bb3;color:#e6f6ea;font:600 11px/1.2 system-ui;font-variant-numeric:tabular-nums}
+#lab3d .house-fps[hidden],#lab3d.house-phone-open .house-fps,#lab3d.house-hud-editing .house-fps,#lab3d.house-finale-shot .house-fps{display:none}

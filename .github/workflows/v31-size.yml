@@ -1,0 +1,117 @@
+name: V3.1 — peso real de producción (sin publicar)
+on:
+  workflow_call:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  measure:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'feature/v31-telefono-historia-final-perf'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: main
+            ref: f1ba942264d3f98bc501bd144886ae76fc776b65
+          - label: v3-validada
+            ref: f5783405c2bd3b206320a5dda9f063a8d7ba60a5
+          - label: v31
+            ref: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: auditor
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
+          path: target
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: target/package-lock.json
+      - run: npm ci
+        working-directory: target
+      - name: Install FFmpeg for optimized build
+        if: matrix.label == 'v31'
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: npm run build
+        working-directory: target
+        env:
+          VALE_REQUIRE_FLAC: ${{ matrix.label == 'v31' && '1' || '0' }}
+      - name: Assert compressed files actually emitted
+        if: matrix.label == 'v31'
+        run: node auditor/scripts/assert-flac-dist.mjs target/dist
+      - run: node auditor/scripts/audit-dist.mjs target/dist ${{ matrix.label }}.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-size-${{ matrix.label }}
+          path: ${{ matrix.label }}.json
+  lossless-and-model:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'feature/v31-telefono-historia-final-perf'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/checkout@v4
+        with:
+          ref: f5783405c2bd3b206320a5dda9f063a8d7ba60a5
+          path: baseline-v3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Exact model parity
+        run: node tests/emy-surface-parity.cjs baseline-v3/src/lab/emy-surface.js | tee model-parity.txt
+        shell: bash
+      - name: Install lossless conversion tools
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Convert and verify PCM
+        run: python3 scripts/audit-lossless-audio.py src/lab/audio audio-audit
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Verify both native decoders
+        run: node tests/lossless-audio-browser.cjs audio-audit
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v31-lossless-and-model
+          path: |
+            audio-audit/report.json
+            audio-audit/*.flac
+            model-parity.txt
+
+  frame-comparison:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'feature/v31-telefono-historia-final-perf'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/checkout@v4
+        with:
+          ref: f5783405c2bd3b206320a5dda9f063a8d7ba60a5
+          path: baseline-v3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm ci
+        working-directory: baseline-v3
+      - run: npx playwright install --with-deps chromium
+      - name: Validated V3 real WebGL scenes
+        run: node tests/house-frame-benchmark.cjs baseline-v3 frame-v3.json
+      - name: Optimized V3.1 same viewport and scenarios
+        run: node tests/house-frame-benchmark.cjs . frame-v31.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v31-real-frame-comparison
+          path: frame-v*.json

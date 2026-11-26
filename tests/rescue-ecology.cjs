@@ -101,7 +101,9 @@ for(const token of ['ecologyWildlifeStep(item.seed','ecologyFloraFrame(item.seed
  'ecologyMicroEvent(map','ecologyAmbientCue(map','ecologySeeds(map',
  'const dt=clamp(elapsed-previousElapsed,0,70)'])
  assert(render.includes(token),'animated Phaser renderer actually integrates '+token);
-assert(render.includes("const house=toScreen(NIGHT_HOUSE.center)")&&
+assert(render.includes("doorFoot=toScreen(NIGHT_HOUSE.door)")&&
+ render.includes("paneX(HOUSE_3D_REFERENCE.openWindowX)")&&
+ render.includes("windows.fillStyle(0xffe4be,alpha).fillRect(x-12,y-20,24,40)")&&
  render.includes("map==='dusk_search'")&&
  render.includes("map==='afternoon_meeting'")&&
  render.includes("map==='morning_garden'"),

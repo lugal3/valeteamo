@@ -1,8 +1,8 @@
 import {chibiPiece,CHIBI} from './chibi-model.js';
 import {SAFE_CODE} from './mirror-safe.js';
 export function phonePieces(){return [
- chibiPiece('phone-body',0,.02,0,.18,.32,.032,CHIBI.pink,{shape:'rounded-box',smooth:false,roundness:.12}),
- chibiPiece('phone-screen',0,.03,-.019,.148,.253,.006,[.13,.18,.27],{emissive:true,shape:'rounded-box',smooth:false,roundness:.08}),
+ chibiPiece('phone-body',0,.02,0,.18,.32,.032,CHIBI.pink,{shape:'rounded-box',smooth:false,roundness:.12,mat:'carpaint'}),
+ chibiPiece('phone-screen',0,.03,-.019,.148,.253,.006,[.13,.18,.27],{emissive:true,shape:'rounded-box',smooth:false,roundness:.08,mat:'glass'}),
  chibiPiece('phone-speaker',0,.158,-.024,.045,.007,.005,[.25,.15,.24]),
  chibiPiece('phone-notification',0,.08,-.025,.115,.045,.004,[.92,.68,.78],{emissive:true}),
  chibiPiece('phone-frame-left',-.093,.025,0,.008,.27,.025,[.64,.42,.53],{smooth:false}),
@@ -40,8 +40,8 @@ export function notePieces(scale=1,mirrored=true){
 
 export function keyPieces(red){
  const color=red?[.85,.15,.18]:[.91,.68,.29];
- const shaft=chibiPiece('held-key-shaft',.03,.113,.02,.031,.148,.018,color,{smooth:false});
- const teeth=[.151,.174].map((y,i)=>chibiPiece('held-key-tooth-'+i,.057,y,.02,.048,.018,.018,color,{smooth:false}));
- const ring=Array.from({length:8},(_,i)=>chibiPiece('held-key-ring-'+i,.03+.048*Math.cos(i*Math.PI/4),.027+.048*Math.sin(i*Math.PI/4),.02,.035,.031,.026,color,{smooth:false}));
+ const shaft=chibiPiece('held-key-shaft',.03,.113,.02,.031,.148,.018,color,{smooth:false,mat:'brass'});
+ const teeth=[.151,.174].map((y,i)=>chibiPiece('held-key-tooth-'+i,.057,y,.02,.048,.018,.018,color,{smooth:false,mat:'brass'}));
+ const ring=Array.from({length:8},(_,i)=>chibiPiece('held-key-ring-'+i,.03+.048*Math.cos(i*Math.PI/4),.027+.048*Math.sin(i*Math.PI/4),.02,.035,.031,.026,color,{smooth:false,mat:'brass'}));
  return [shaft,...teeth,...ring,chibiPiece('held-key-paw',.015,-.019,.039,.133,.106,.087),chibiPiece('held-key-cuff',.014,-.106,.065,.146,.107,.10,CHIBI.pink)];
 }

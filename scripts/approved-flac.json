@@ -1,0 +1,28 @@
+{
+  "auditRun": 45851368945,
+  "pcmSha256": {
+    "alert.wav": "1d8aefe654becd9d765aa2191a52f49752362fc046449967fc09dd65dbee6c72",
+    "ambient.wav": "bb004d4d2a1193349dd93fd4669d73376a7fcd9cd8ba30a41eb6ee44a92bad7f",
+    "closet-close.wav": "be91f54521fb5054eff6fc4651a933f4906104418624e31cf6a866256e246c1b",
+    "door-close.wav": "70e477753b9be93e3120685c8ebf2e810a99c8a00a14dcb2c89351595cd421f0",
+    "door-open.wav": "17f0dba0f124aaf0151e9c10a366e38cf7236203f1208a17cb02d8c21f536cf6",
+    "light.wav": "babe3c447d7ceb453dfdca86f430b6b9fc1b1f9ec78d9e00bbf49d4bb4a5b1b7",
+    "notification.wav": "477948ed9459eadc149f6d026b5ce148e06a1097d38e0caccba3713148e3d652",
+    "piano-reference.wav": "a5ae15ef2824662f15b977ebb711433a4893599cbd58536a46669fee496eed97",
+    "preview-churu.wav": "856406025836bee165b52e4f89c015ae382e459341ceec1350c09973165a7174",
+    "preview-hatch-close.wav": "42a7b2c75096c8c19a49660ee30d85e4bb03118c58784d181aad0a07cd9c6807",
+    "preview-power-cut.wav": "9dcc30674f4e95583a42566cc9d0242e20943593ed2c3a09def51f8059ed3d78",
+    "preview-rc-motor.wav": "f37724f9bffa4906cd23366c9f711b1aac3d3fc1d6e34a40efa4abbdbd805f2a",
+    "preview-van-away.wav": "4c410b02c3a36b210d3b21af069f31bd87625abdfc5c67b9b8a4288a08a41443",
+    "preview-van-door.wav": "2e2ecbf3e0c8b250c362d4f831fb0c878169feab58ac9a90463ba93cc9534cd4",
+    "stair-3.wav": "5baceadc12d6387aa1cb32cac1ffa4438bc7384b761d39c0ce34b8791c42880d",
+    "tension.wav": "8be5d342eca3f1a3e82d859b8a7ab17714424cda68d351c28fc82b1003d12809",
+    "trying-door.wav": "a662b3f743493f7a08d210e84f3db52502958bff1a1409153088e91719f096e6",
+    "unlock.wav": "4204c29211b208161040993440958865628060c3101a2329b9ecc4a8da2a78fa",
+    "upright-0.wav": "c6e1da5e4c1992f94df807e5f90118f1e2661b277253e559d91bef4cf006a0a4",
+    "upright-4.wav": "1cfdfc72251fbaa779e7ff1a518d2c09b37c62721db1b6766e42fe7e8b6a0c52",
+    "upright-7.wav": "c3141f02492e202a568ab58c1245e405b5e57c2fdb5d0c4f28c1dd58adc30606",
+    "wood-2.wav": "7c3de9ef08aeb11b65d9343a2a34fb620492508a8f9367a8b7db5a5da4d37de4",
+    "upright-12.wav": "036fb6e22ba47ff010fcbb35a6211a01d9d9f6d4be9fd4c48831d4af244b083a"
+  }
+}

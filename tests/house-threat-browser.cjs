@@ -61,6 +61,12 @@ const {chromium}=require('playwright');
   await page.goto(url);await ready();
   assert.equal((await story()).phase,'hunt');
   assert.equal((await story()).pursuer.active,true);
+  assert.equal((await story()).pursuer.difficulty,'story');
+  await page.evaluate(()=>{const field=document.querySelector('[data-setting="difficulty"]');field.value='tense';field.dispatchEvent(new Event('input',{bubbles:true}));});
+  assert.equal((await story()).pursuer.difficulty,'tense');
+  await page.evaluate(()=>{const field=document.querySelector('[data-setting="difficulty"]');field.value='story';field.dispatchEvent(new Event('input',{bubbles:true}));});
+  assert.equal((await story()).pursuer.difficulty,'story');
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('valeteamo-house-camera-v4')).difficulty),'story');
 
   await aimAt('underbed');await interact();
   assert.equal((await snapshot()).hidden,false,'The standing player cannot enter under the bed');

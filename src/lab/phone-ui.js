@@ -1,6 +1,6 @@
 import {DEFAULT_HUD,normalizeHUD,readHUD,writeHUD,hudRect} from './hud-layout.js';
 import {formatPhoneTime} from './device-time.js';
-import {phoneHome,phoneChat,phoneNotice,gallerySprites,earlierMessages} from './phone-content.js';
+import {phoneHome,phoneChat,phoneNotice,gallerySprites,earlierMessages,phoneJournal,PHONE_PAGES} from './phone-content.js';
 const keyIcon='<path d="M14 10 5 19H2v-3l9-9"/><circle cx="15.5" cy="6.5" r="4"/><path d="M7 13l2 2"/>';
 const dockPaths={
  flashlight:'<path d="m6 4 12 0-2 8v8H8v-8Z"/><path d="M7 8h10M10 16h4"/>',
@@ -13,10 +13,10 @@ const dockPaths={
 const dockIcon=kind=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${dockPaths[kind]}</svg>`;
 
 export class PhoneUI{
- constructor(root,onEquip,onClose,{canUse=()=>true,canEquip=canUse,onEdit=()=>{},onPhoto=()=>{}}={}){
+ constructor(root,onEquip,onClose,{canUse=()=>true,canEquip=canUse,onEdit=()=>{},onPhoto=()=>{},onMap=()=>{},onAppChange=()=>{},onHint=()=>{},onMusic=()=>{}}={}){
   this.root=root;this.open=false;this.app='home';this.last='';this.readCount=0;this.score=0;this.direction=[1,0];this.pending=[1,0];this.resetSnake();
   this.gallery=[...gallerySprites];this.selectedPhoto=null;this.photoCount=0;this.messageTimes=new WeakMap();this.messageCount=0;this.latestNotice=null;this.clockMinute=-1;this.history=earlierMessages();
-  this.canUse=canUse;this.onEdit=onEdit;this.editing=false;this.preview=false;this.onPresentationChange=()=>{};
+  this.canUse=canUse;this.onEdit=onEdit;this.onAppChange=onAppChange;this.onMusic=onMusic;this.homePage=0;this.flash=true;this.musicPlaying=false;this.notes=[];this.objective='';this.hint='';this.photoFlashTimer=0;this.editing=false;this.preview=false;this.onPresentationChange=()=>{};
   try{this.layout=readHUD(window.localStorage);}catch{this.layout={...DEFAULT_HUD};}
   const host=document.createElement('div');host.className='house-equipment';host.innerHTML=`<nav class="house-hotbar" aria-label="Objetos equipados"><button data-equip="flashlight" aria-label="Equipar linterna" title="Linterna"><span></span><small></small></button><button data-equip="phone" aria-label="Equipar teléfono" title="Teléfono"><span></span><small></small><b class="phone-badge" hidden>●</b></button></nav><button class="phone-notice" type="button" hidden></button>
   <section class="phone-screen" hidden role="dialog" aria-modal="true" aria-label="Teléfono de Kitty"><div class="phone-shell" data-page="home"><div class="phone-status"><time></time><i aria-hidden="true"></i><svg viewBox="0 0 44 14" aria-hidden="true"><path fill="currentColor" d="M1 10h2v3H1zm4-3h2v6H5zm4-3h2v9H9zm4-3h2v12h-2zm8 3h17v6H21z"/><rect x="19" y="2" width="21" height="10" rx="2" stroke="currentColor" fill="none"/><path d="M42 5v4" stroke="currentColor"/></svg></div><header><button data-app="home" aria-label="Volver al inicio del teléfono">‹</button><b></b><button data-app="close" aria-label="Guardar teléfono">×</button></header><main tabindex="-1"></main><button class="phone-home-indicator" data-app="home" aria-label="Inicio del teléfono"></button></div></section>
@@ -34,13 +34,22 @@ export class PhoneUI{
    const button=document.createElement('button');button.type='button';button.dataset.equip=kind;button.setAttribute('aria-label',label);button.title=label;
    button.innerHTML='<span>'+dockIcon(kind)+'</span><small></small>';nav.append(button);
   }
+  const shell=host.querySelector('.phone-shell');let swipe=null,suppressUntil=0;
+  shell.addEventListener('pointerdown',e=>{if(this.open&&this.app==='home'&&e.button===0)swipe={id:e.pointerId,x:e.clientX,y:e.clientY};});
+  shell.addEventListener('pointerup',e=>{if(!swipe||swipe.id!==e.pointerId)return;const dx=e.clientX-swipe.x,dy=e.clientY-swipe.y;swipe=null;if(Math.abs(dx)>36&&Math.abs(dx)>Math.abs(dy)*1.25){this.changePage(this.homePage+(dx<0?1:-1));suppressUntil=performance.now()+350;}});
+  shell.addEventListener('pointercancel',()=>{swipe=null;});
   host.addEventListener('click',e=>{
    const action=e.target.closest('[data-layout]')?.dataset.layout;if(action){this.layoutAction(action);return;}
    if(this.editing)return;
    if(!this.open&&!canUse())return;
    if(e.target.closest('.phone-notice')){onEquip('phone',false);this.show('messages');return;}
-   const b=e.target.closest('[data-app]');if(b){if(b.dataset.app==='close'){this.close();onClose();}else{this.app=b.dataset.app;this.selectedPhoto=null;if(this.app==='snake')this.resetSnake();this.last='';}}
+   if(performance.now()<suppressUntil&&this.app==='home'){e.preventDefault();return;}
+   const dot=e.target.closest('button[data-home-page]');if(dot){this.changePage(Number(dot.dataset.homePage));return;}
+   const b=e.target.closest('[data-app]');if(b){if(b.dataset.app==='maps'){onMap();return;}if(b.dataset.app==='close'){this.close();onClose();}else{this.setApp(b.dataset.app);}}
    if(e.target.closest('[data-photo=take]'))onPhoto();
+   if(e.target.closest('[data-photo=flash]')){this.flash=!this.flash;this.last='';this.update(this.events,0);}
+   if(e.target.closest('[data-phone-hint]')){this.hint=onHint()||'Revisa las pistas que ya tienes.';this.last='';this.update(this.events,0);}
+   if(e.target.closest('[data-phone-music]')){this.musicPlaying=!!onMusic(!this.musicPlaying);this.last='';this.update(this.events,0);}
    const photo=e.target.closest('[data-photo-index]');if(photo){this.selectedPhoto=this.gallery[Number(photo.dataset.photoIndex)];this.last='';}
    if(e.target.classList.contains('phone-screen')){this.close();onClose();}
    const d=e.target.closest('[data-dir]');if(d)this.turn(Number(d.dataset.dir));
@@ -76,42 +85,89 @@ export class PhoneUI{
   if(action==='reset'){this.layout={...DEFAULT_HUD};try{writeHUD(window.localStorage,this.layout);}catch{}this.syncEditor();}
   if(action==='copy'){const text=JSON.stringify({...this.layout,viewport:[this.root.clientWidth,this.root.clientHeight],rect:this.rect});try{await navigator.clipboard.writeText(text);this.host.querySelector('.hud-copy-status').textContent='Ajuste copiado. Puedes pegarlo junto a tu captura.';}catch{this.host.querySelector('.hud-copy-status').textContent=text;}}
  }
- equip(kind){for(const b of this.nav.querySelectorAll('[data-equip]'))b.setAttribute('aria-pressed',String(b.dataset.equip===kind));if(kind!=='phone')this.close();}
+ motionAllowed(){return !this.root.classList.contains('house-motion-reduced')&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches;}
+ equip(kind){
+  const changed=this.selectedEquipment!==kind;this.selectedEquipment=kind;
+  for(const b of this.nav.querySelectorAll('[data-equip]')){
+   const selected=b.dataset.equip===kind;
+   if(b.getAttribute('aria-pressed')!==String(selected))b.setAttribute('aria-pressed',String(selected));
+   if(changed&&selected&&this.motionAllowed()&&b.animate){b.querySelector('span')?.animate([{transform:'translateY(4px) scale(.87)',opacity:.65},{transform:'translateY(-2px) scale(1.08)',opacity:1},{transform:'translateY(0) scale(1)',opacity:1}],{duration:260,easing:'ease-out'});}
+  }
+  if(kind!=='phone')this.close();
+ }
  visibleSlots(){return [...this.nav.querySelectorAll('[data-equip]:not([hidden])')];}
  setInventory(inventory){
   const available={'master-key':inventory.masterKey,screwdriver:inventory.screwdriver,flashlight:inventory.torch,phone:true,key:inventory.key,'red-key':inventory.redKey,paper:!!inventory.pendingNote||inventory.notes.length>0,rc:!!inventory.rc};
+  const old=new Map(this.visibleSlots().map(button=>[button,button.getBoundingClientRect()]));
   for(const button of this.nav.querySelectorAll('[data-equip]'))button.hidden=!available[button.dataset.equip];
   const papers=this.nav.querySelector('[data-equip=paper]');
   const label=inventory.notes.at(-1)?.id==='piano-sheet'&&!inventory.pendingNote?'Partitura':'Notas';
   papers.setAttribute('aria-label',label);
   this.visibleSlots().forEach((button,i)=>{button.querySelector('small').textContent=String(i+1);button.title=button.getAttribute('aria-label');});
   this.applyLayout();
+  if(this.motionAllowed()&&this.nav.isConnected)for(const button of this.visibleSlots()){
+   const before=old.get(button),after=button.getBoundingClientRect();
+   if(!after.width||!button.animate)continue;
+   if(!before?.width)button.animate([{opacity:0,transform:'scale(.78)'},{opacity:1,transform:'scale(1)'}],{duration:210,easing:'ease-out'});
+   else {const x=before.left-after.left,y=before.top-after.top;if(Math.hypot(x,y)>2)button.animate([{transform:'translate('+x+'px,'+y+'px)'},{transform:'translate(0,0)'}],{duration:230,easing:'ease-out'});}
+  }
  }
  show(app='home'){
   if(!this.canUse()||this.editing||this.open)return;
-  this.open=true;this.root.classList.add('house-phone-open');this.app=app;this.selectedPhoto=null;this.last='';this.previousFocus=document.activeElement;
+  this.open=true;this.root.classList.add('house-phone-open');this.app=app;this.selectedPhoto=null;this.last='';this.previousFocus=document.activeElement;this.syncAppMode();
   this.host.querySelector('.phone-screen').hidden=false;
   if(this.events)this.update(this.events,0);
   this.host.querySelector('[data-app=close]').focus();this.onPresentationChange();
  }
- close(){if(this.settings){this.settings.open=false;this.settings.hidden=true;}const wasOpen=this.open;this.open=false;this.root.classList.remove('house-phone-open');this.host.querySelector('.phone-screen').hidden=true;if(wasOpen&&this.previousFocus?.isConnected)this.previousFocus.focus({preventScroll:true});if(wasOpen)this.onPresentationChange();}
+ get canWalk(){return this.open&&!['settings','snake'].includes(this.app);}
+ syncAppMode(){this.root.classList.toggle('house-phone-walk',this.canWalk);this.host.querySelector('.phone-screen').setAttribute('aria-modal',String(!this.canWalk));this.root.classList.toggle('house-phone-camera',this.open&&this.app==='camera');this.onAppChange(this.open?this.app:null);}
+ setApp(app){
+  const shell=this.host.querySelector('.phone-shell'),turn=this.open&&(this.app==='camera')!==(app==='camera');
+  if(turn)this.rotation?.cancel();
+  const before=turn?shell.getBoundingClientRect():null;
+  this.app=app;this.selectedPhoto=null;if(app==='snake')this.resetSnake();this.last='';this.syncAppMode();if(this.events)this.update(this.events,0);
+  if(!before?.width||!shell.animate||this.root.classList.contains('house-motion-reduced')||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const after=shell.getBoundingClientRect(),angle=app==='camera'?-90:90;
+  if(!after.width||!after.height)return;
+  // Final layout is immediately the correct orientation; rotate the actual
+  // chassis around its center, with a small uniform scale during the turn to
+  // keep its corners inside the viewport. Never interpolate width and height.
+  const dx=before.left+before.width/2-after.left-after.width/2,dy=before.top+before.height/2-after.top-after.height/2;
+  const clearance=Math.min(1,(window.innerHeight-16)/Math.hypot(after.width,after.height));
+  this.rotation=shell.animate([
+   {transform:'translate('+dx+'px,'+dy+'px) rotate('+angle+'deg)'},
+   {transform:'translate('+dx*.5+'px,'+dy*.5+'px) rotate('+angle*.5+'deg) scale('+clearance+')',offset:.5},
+   {transform:'translate(0,0) rotate(0deg)'}
+  ],{duration:320,easing:'cubic-bezier(.22,.7,.3,1)'});
+ }
+ changePage(page){this.homePage=Math.max(0,Math.min(PHONE_PAGES.length-1,page));this.last='';if(this.events)this.update(this.events,0);}
+ close(){this.rotation?.cancel();if(this.settings){this.settings.open=false;this.settings.hidden=true;}const wasOpen=this.open;this.open=false;this.root.classList.remove('house-phone-open');if(wasOpen)this.syncAppMode();this.host.querySelector('.phone-screen').hidden=true;if(wasOpen&&this.previousFocus?.isConnected)this.previousFocus.focus({preventScroll:true});if(wasOpen)this.onPresentationChange();}
  resetSnake(){this.snake=[[4,6],[3,6],[2,6]];this.food=[9,6];this.direction=[1,0];this.pending=[1,0];this.clock=0;this.score=0;this.dead=false;}
  turn(index){const d=[[0,-1],[1,0],[0,1],[-1,0]][index];if(d[0]!==-this.direction[0]||d[1]!==-this.direction[1])this.pending=d;}
  key(key){const n={ArrowUp:0,w:0,ArrowRight:1,d:1,ArrowDown:2,s:2,ArrowLeft:3,a:3}[key];if(this.open&&this.app==='snake'&&n!==undefined)this.turn(n);}
- takePhoto(canvas){
-  const image=document.createElement('canvas'),scale=Math.min(1,640/canvas.width);
-  image.width=Math.round(canvas.width*scale);image.height=Math.round(canvas.height*scale);
+ rememberEmy(canvas){
+  if(this.emyMemory)return;
+  const image=document.createElement('canvas'),scale=Math.min(1,640/canvas.width);image.width=Math.round(canvas.width*scale);image.height=Math.round(canvas.height*scale);
   image.getContext('2d').drawImage(canvas,0,0,image.width,image.height);
+  this.emyMemory=true;this.gallery.push({url:image.toDataURL('image/jpeg',.83),label:'Emy ♡ · Nuestro encuentro'});this.last='';
+ }
+ takePhoto(canvas){
+  const image=document.createElement('canvas'),aspect=16/9,sw=Math.min(canvas.width,canvas.height*aspect),sh=Math.min(canvas.height,canvas.width/aspect),scale=Math.min(1,960/sw);
+  image.width=Math.round(sw*scale);image.height=Math.round(sh*scale);
+  image.getContext('2d').drawImage(canvas,(canvas.width-sw)/2,(canvas.height-sh)/2,sw,sh,0,0,image.width,image.height);
   const photo={url:image.toDataURL('image/jpeg',.78),label:'Casa · '+formatPhoneTime()};
   this.gallery.unshift(photo);
-  if(this.gallery.length>gallerySprites.length+8)this.gallery.splice(8,1);
+  if(this.flash){this.root.classList.add('phone-photo-taken');clearTimeout(this.photoFlashTimer);this.photoFlashTimer=setTimeout(()=>this.root.classList.remove('phone-photo-taken'),160);}
+  if(this.gallery.length>gallerySprites.length+8+Number(!!this.emyMemory))this.gallery.splice(8,1);
   this.photoCount++;this.last='';
  }
  updateCamera(canvas,now){
   if(!this.open||this.app!=='camera'||now-(this.lastPreview||0)<125)return;
   const preview=this.host.querySelector('.phone-camera-view canvas');if(!preview)return;
   this.lastPreview=now;
-  preview.getContext('2d').drawImage(canvas,0,0,preview.width,preview.height);
+  // Center-crop instead of stretching the house into a different aspect ratio.
+  const aspect=preview.width/preview.height,sw=Math.min(canvas.width,canvas.height*aspect),sh=Math.min(canvas.height,canvas.width/aspect);
+  preview.getContext('2d').drawImage(canvas,(canvas.width-sw)/2,(canvas.height-sh)/2,sw,sh,0,0,preview.width,preview.height);
  }
  update(events,dt){
   this.events=events;
@@ -130,7 +186,7 @@ export class PhoneUI{
   if(this.clockMinute!==minute){this.clockMinute=minute;this.host.querySelector('.phone-status time').textContent=formatPhoneTime();}
   if(this.app==='messages')events.read();
   if(this.app==='snake'&&!this.dead){this.clock+=dt;if(this.clock>=.18){this.clock=0;this.direction=this.pending;const head=[this.snake[0][0]+this.direction[0],this.snake[0][1]+this.direction[1]],eat=head[0]===this.food[0]&&head[1]===this.food[1],body=eat?this.snake:this.snake.slice(0,-1);if(head.some(v=>v<0||v>=12)||body.some(p=>p[0]===head[0]&&p[1]===head[1]))this.dead=true;else{this.snake.unshift(head);if(eat){this.score++;const free=[];for(let x=0;x<12;x++)for(let y=0;y<12;y++)if(!this.snake.some(p=>p[0]===x&&p[1]===y))free.push([x,y]);if(free.length)this.food=free[Math.floor(Math.random()*free.length)];else this.dead=true;}else this.snake.pop();}}}
-  const stamp=[this.app,events.messages.length,events.replyAt!==null,this.score,this.dead,this.photoCount,this.app==='progress'?this.progress?.mask:0].join('|');
+  const stamp=[this.app,this.homePage,events.messages.length,events.replyAt!==null,this.score,this.dead,this.photoCount,this.flash,this.musicPlaying,this.hint,this.app==='journal'?this.notes.length+':'+this.objective:'',this.app==='progress'?this.progress?.mask:0].join('|');
   if(stamp!==this.last){this.last=stamp;this.renderApp(events,unread);}
   if(this.app==='snake'){const c=this.host.querySelector('canvas').getContext('2d');c.fillStyle='#222b29';c.fillRect(0,0,240,240);c.fillStyle='#f49cba';c.fillRect(this.food[0]*20+2,this.food[1]*20+2,16,16);c.fillStyle='#bad59e';for(const [x,y]of this.snake)c.fillRect(x*20+1,y*20+1,18,18);}
  }
@@ -143,17 +199,24 @@ export class PhoneUI{
   }
   main.hidden=this.app==='settings';
   if(this.app==='progress')main.innerHTML=this.progress?.html||'';
-  shell.querySelector('header b').innerHTML={home:'',messages:'<span class="phone-avatar">L</span> Mi Luis ❤️',snake:'Snake · '+this.score,photos:'Fotos',camera:'Cámara',settings:'Settings',progress:'Progreso'}[this.app];
+  shell.querySelector('header b').innerHTML={home:'',messages:'<span class="phone-avatar">L</span> Mi Luis ❤️',snake:'Snake · '+this.score,photos:'Fotos',camera:'Cámara',settings:'Settings',progress:'Progreso',journal:'Diario',music:'Música',clock:'Reloj',calendar:'Calendario',weather:'Tiempo',calculator:'Calculadora',contacts:'Contactos',heart:'Recuerdos'}[this.app]||'';
   shell.querySelector('header [data-app=home]').hidden=this.app==='home';
-  if(this.app==='home')main.innerHTML=phoneHome(unread);
+  if(this.app==='home')main.innerHTML=phoneHome(unread,this.homePage);
   if(this.app==='messages'){
    main.innerHTML=phoneChat(events.messages,events.replyAt!==null,message=>this.messageTimes.get(message),this.history);
    const chat=main.querySelector('.phone-chat');chat.scrollTop=chat.scrollHeight;
+   const hint=document.createElement('div');hint.className='phone-hint';const ask=document.createElement('button');ask.dataset.phoneHint='';ask.textContent='Pedir una pista a Luis';hint.append(ask);if(this.hint){const reply=document.createElement('p');reply.textContent=this.hint;hint.append(reply);}main.append(hint);
   }
   if(this.app==='snake')main.innerHTML=`<canvas width="240" height="240" aria-label="Tablero de Snake"></canvas>${this.dead?'<button data-app="snake">Reintentar Snake</button>':''}<div class="snake-controls"><button data-dir="0" aria-label="Arriba">↑</button><button data-dir="3" aria-label="Izquierda">←</button><button data-dir="2" aria-label="Abajo">↓</button><button data-dir="1" aria-label="Derecha">→</button></div>`;
   if(this.app==='photos')main.innerHTML=this.selectedPhoto?`<button data-app="photos">‹ Todas las fotos</button><img class="phone-full-photo" src="${this.selectedPhoto.url}" alt="${this.selectedPhoto.label}">`:`<div class="phone-gallery">${this.gallery.map((photo,i)=>`<button data-photo-index="${i}"><img loading="lazy" src="${photo.url}" alt=""><span>${photo.label}</span></button>`).join('')}</div>`;
-  if(this.app==='camera')main.innerHTML=`<div class="phone-camera-view"><canvas width="320" height="200" aria-label="Visor de la casa"></canvas></div><div class="phone-camera-actions"><button data-app="photos" aria-label="Abrir Fotos">${this.photoCount?`<img src="${this.gallery[0].url}" alt="">`:'▧'}</button><button data-photo="take" aria-label="Fotografiar la casa"></button></div>`;
+  if(this.app==='camera')main.innerHTML=`<div class="phone-camera-view"><canvas width="480" height="270" aria-label="Visor de la casa"></canvas><div class="phone-camera-grid" aria-hidden="true"></div></div><div class="phone-camera-actions"><button data-app="photos" aria-label="Abrir Fotos">${this.photoCount?`<img src="${this.gallery[0].url}" alt="">`:'▧'}</button><button data-photo="take" aria-label="Fotografiar la casa"></button><button data-photo="flash" aria-label="Flash" aria-pressed="${this.flash}">${this.flash?'⚡':'⚡̸'}</button></div><small class="phone-camera-mode">FOTO · 16:9</small>`;
+  if(this.app==='journal')main.innerHTML=phoneJournal(this.notes,this.objective);
+  if(this.app==='music')main.innerHTML='<div class="phone-music"><div class="phone-album">♫</div><h2>Una melodía para Kitty</h2><p>Melodía original · caja musical</p><button data-phone-music aria-pressed="'+this.musicPlaying+'">'+(this.musicPlaying?'Ⅱ Pausar':'▶ Reproducir')+'</button></div>';
+  if(['weather','clock','calendar','calculator','contacts','heart'].includes(this.app)){
+   const descriptions={weather:'Noche tranquila · sin conexión meteorológica',clock:formatPhoneTime(),calendar:'Un día especial ♡',calculator:'Calculadora · vista decorativa',contacts:'Mi Luis ❤️ · Lois · Emy ♡',heart:'Cada recuerdo cuenta ♡'};
+   main.innerHTML='<div class="phone-quiet-app"><strong>'+descriptions[this.app]+'</strong></div>';
+  }
   if(previous!==this.app)main.focus({preventScroll:true});
  }
- destroy(){this.observer.disconnect();this.nav.remove();window.removeEventListener('resize',this.resize);this.host.remove();}
+ destroy(){clearTimeout(this.photoFlashTimer);this.root.classList.remove('phone-photo-taken');this.observer.disconnect();this.nav.remove();window.removeEventListener('resize',this.resize);this.host.remove();}
 }

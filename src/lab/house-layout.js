@@ -6,8 +6,11 @@ import {installGreyCat} from './grey-cat.js';
 import {installUpstairsEmy} from './emy-cat.js';
 import {installCabinet,installRefrigerator} from './house-cabinets.js';
 import {installLouisAltar} from './louis-altar.js';
+import {installHolidayTree} from './holiday-tree.js';
+import {installHolidayCollectibles} from './holiday-collectibles.js';
 import {installWallClock} from './wall-clock.js';
 import {installLivingHouseDetails} from './house-ambient-details.js';
+import {installHolidayAmbience} from './house-holiday-ambience.js';
 import {STUDY_SIGN} from './artwork.js';
 import {HATCH,floorAroundHatch,installBasement} from './basement.js';
 import {decorateKitchen,installPiano,installKitchenBar,installExtraHides,PIANO_SHEET_ID} from './house-additions.js';
@@ -52,6 +55,13 @@ export function buildHouse(spawn='ground'){
     const x=axis==='x'?coordinate:gap.center,z=axis==='z'?coordinate:gap.center,vertical=axis==='x';
     for(const side of [-1,1])add(id+'-frame-'+low+'-'+side,x+(vertical?0:side*gap.width/2),floor+sill+height/2,z+(vertical?side*gap.width/2:0),vertical?.14:.08,height,vertical?.08:.14,'wood',false);
     for(const top of [0,height])add(id+'-rail-'+low+'-'+top,x,floor+sill+top,z,vertical?.14:gap.width+.1,.08,vertical?gap.width+.1:.14,'wood',false);
+    // A single non-solid, non-shadow-casting rain plane per opening,
+    // behind the boards. The fragment shader discards everything except
+    // narrow streaks; the view through the window remains unobstructed.
+    add(id+'-rain-pane-'+low,x+(vertical?(coordinate===0?-.015:.015):0),
+     floor+sill+height/2,z+(vertical?0:(coordinate===0?-.015:.015)),
+     vertical?.002:gap.width-.10,height-.10,vertical?gap.width-.10:.002,
+     'glass',false,{weatherPane:true});
     if(!gap.intro){
      add(id+'-cross-'+low,x,floor+sill+height/2,z,vertical?.12:.055,height,vertical?.055:.12,'cream',false);
      const out=coordinate===0?-1:1;
@@ -234,7 +244,7 @@ export function buildHouse(spawn='ground'){
  for(const box of boxes.slice(studyStart))box.z+=deskOffset;
  for(const item of [drawer,key,drawer.origin,drawer.contents[0].origin,...drawer.parts.map(part=>part.origin)])item.z+=deskOffset;
  const driver=screwdriverModel((id,x,y,z,w,h,d,mat,extra)=>add('working-driver-'+id,0,-100,0,w,h,d,mat,false,{...extra,dynamic:true,offset:[x,y,z]}));
- const tool=obj('screwdriver','screwdriver','Destornillador',key.x,.70,key.z-.12,{dynamic:true,concealed:true,interactable:false});
+ const tool=obj('screwdriver','screwdriver','Destornillador',drawer.origin.x,.70,2.61+deskOffset,{dynamic:true,concealed:true,interactable:false});
  add('emy-vent-back',VENT_X,VENT_BASE+.31,-1.49,.84,.62,.04,'dark',false);
  for(const side of [-1,1]){
   add('emy-duct-side-'+side,VENT_X+side*.41,VENT_BASE+.31,-.69,.05,.59,1.61,'torchmetal',false);
@@ -284,7 +294,7 @@ export function buildHouse(spawn='ground'){
  for(let i=0;i<5;i++)rug.push(add('hatch-rug-diamond-'+i,8.15+i*.2,.139,rugZ,.10,.010,.10,'velvet',false,{dynamic:true,yaw:Math.PI/4,color:[.83,.52,.52]}));
  const hatchRug=obj('hatch-rug','rug','Tapete bordado',8.55,.15,rugZ,{amount:0,aside:false,
   parts:rug.map(box=>({box,x:box.x,y:box.y}))});
- add('bath-floor',8.75,.012,5.9,2.25,.024,2.75,'tile',false,{ao:.90});add('toilet-base',9.25,.27,6.55,.45,.54,.65,'cream',true,{shape:'round'});add('toilet-seat',9.25,.56,6.5,.52,.08,.63,'cream',false,{shape:'round'});add('toilet-tank',9.25,.70,7.0,.50,.56,.22,'cream');
+ add('bath-floor',8.75,.012,5.9,2.25,.024,2.75,'tile',false,{ao:.96,surface:'glaze',color:[.51,.63,.64]});add('toilet-base',9.25,.27,6.55,.45,.54,.65,'cream',true,{shape:'round'});add('toilet-seat',9.25,.56,6.5,.52,.08,.63,'cream',false,{shape:'round'});add('toilet-tank',9.25,.70,7.0,.50,.56,.22,'cream');
  installCabinet(add,obj,{id:'basin-cabinet',label:'Gabinete bajo el lavamanos',x:8.66,z:4.8,w:.89,h:.86,d:.57,color:[.37,.45,.47],
   items:[{id:'bath-battery',kind:'battery',label:'Pila del lavamanos',dx:.235},{id:'bath-note',kind:'note',label:'Papel bajo el lavamanos',dx:-.17,text:'W. mandó quitar el pestillo de la sala de música. Desde entonces la cierra por fuera.'}]});
  add('basin',8.66,.922,4.81,.81,.13,.53,'cream',false,{shape:'lathe',profile:BASIN_PROFILE,segments:16,surface:'glaze',color:[.9,.92,.88]});
@@ -368,19 +378,23 @@ export function buildHouse(spawn='ground'){
  add('record-deck',9.78,HEIGHT+.966,.40,.52,.105,.41,'wood',false,{shape:'rounded-box',roundness:.20,segments:8,rings:4});
  add('record-player',9.73,HEIGHT+1.026,.40,.33,.022,.33,'dark',false,{shape:'lathe',profile:CLOCK_PROFILE,segments:16});
  add('record-arm',9.94,HEIGHT+1.035,.41,.025,.026,.29,'torchmetal',false,{yaw:.19});
- obj('record-player','inspect','Tocadiscos',9.78,HEIGHT+1.05,.42,{text:'El vinilo está rayado en el mismo surco. Al lado, alguien escribió «Otra vez, desde el principio».'});
+ obj('record-player','inspect','Tocadiscos · escuchar',9.78,HEIGHT+1.05,.42,{text:'El vinilo está rayado en el mismo surco. Al lado, alguien escribió «Otra vez, desde el principio».'});
  shelf('music-books',13.80,HEIGHT,2.03,Math.PI/2);chair('music-chair',8.24,HEIGHT,1.33,.98);
  add('guitar-body',10.92,HEIGHT+1.13,.20,.35,.48,.10,'wood',false,{shape:'round'});add('guitar-neck',10.92,HEIGHT+1.6,.20,.055,.65,.08,'wood',false);
  obj('guitar','inspect','Guitarra de la sala',10.92,HEIGHT+1.39,.32,{text:'Una cuerda está rota. En la caja quedó un adhesivo de One Direction.'});
  installLouisAltar(add,obj,HEIGHT);
+ const holiday=installHolidayCollectibles(add,obj,HEIGHT,null);
+ installHolidayTree(add,HEIGHT,holiday);
  frame('archive',12.45,HEIGHT+1.71,2.86,'north',13,{width:1.36,height:.745,label:'Afiche de archivo',text:'Un afiche de campaña viejo, guardado junto a los recortes de la casa.'});
  chair('reading-chair',.67,HEIGHT,7.55,-Math.PI/2);table('reading-table',1.50,HEIGHT,7.92,.72,.62);lamp('reading-light',1.50,HEIGHT+.92,7.92);shelf('reading-books',.19,HEIGHT,9.8,-Math.PI/2);plant('reading-plant',4.02,HEIGHT,5.33);frame('reading',3.75,HEIGHT+1.9,11.83,'north',2);
  obj('reading-books','inspect','Biblioteca de la planta alta',.47,HEIGHT+1.16,9.8,{text:'Los anuarios tienen los lomos gastados. Entre ellos hay entradas de conciertos archivadas por fecha.'});
  installCabinet(add,obj,{id:'reading-cabinet',label:'Cajón de la sala de lectura',x:2.05,y:HEIGHT,z:5.12,w:1.28,d:.60,
   items:[{id:'reading-battery',kind:'battery',label:'Pila de la sala de lectura',dx:.27}]});
- installCabinet(add,obj,{id:'landing-cabinet',label:'Cajón del descansillo',x:6.76,y:HEIGHT,z:3.08,w:.97,d:.60,
-  items:[]});
- obj('media-flashlight','flashlight','Linterna',6.76,HEIGHT+.90,3.19,{dynamic:true});
+ // Keep the existing pickup ID, drawer and save compatibility. The cabinet
+ // is now against the east side of the central landing, clear of the stairs.
+ const landingCabinet={x:6.91,z:4.05};
+ installCabinet(add,obj,{id:'landing-cabinet',label:'Cajón del descansillo',...landingCabinet,y:HEIGHT,w:.97,d:.60,items:[]});
+ const landingTorch=obj('media-flashlight','flashlight','Linterna',landingCabinet.x,HEIGHT+.90,landingCabinet.z+.06,{dynamic:true});
  add('reading-rug',1.92,HEIGHT+.012,8.0,2.9,.024,4,'carpet',false,{ao:.88});add('upper-bench',4.95,HEIGHT+.43,11.65,1.15,.18,.48,'velvet');for(const x of [4.55,5.35])add('bench-leg-'+x,x,HEIGHT+.20,11.65,.08,.4,.35,'wood');plant('landing-plant',8.3,HEIGHT,11.54);frame('landing',8.0,HEIGHT+1.85,11.83,'north',0);
  const piano=installPiano(add,obj,{x:4.84,z:10.40,floor:HEIGHT});
  const pianoSheet=objects.find(item=>item.id===PIANO_SHEET_ID);
@@ -420,9 +434,11 @@ export function buildHouse(spawn='ground'){
   add('decal-study-dust',.12,.005,1.5,.12,.01,2.8,'stain',false);
   // V2 ambience uses only decorative non-collision geometry.
   installLivingHouseDetails(add,HEIGHT);
+  installHolidayAmbience(add,obj,HEIGHT);
   const spawns={mirror:{...MIRROR_SPAWN},ground:{x:5.95,y:0,z:10.65,yaw:Math.PI},upstairs:{x:12,y:HEIGHT,z:4.15,yaw:-Math.PI/2,items:{key:1}},sound:{x:2.2,y:0,z:11.0,yaw:Math.PI},interactions:{x:3.3,y:0,z:3.6,yaw:-2.8,items:{key:1,batteries:1}}};
  const lights=installHouseLights(add,obj,HEIGHT);
+ holiday.tree.supply=lights.power;
  const hatch=installBasement(add,obj,lights);
  hatchRug.hatch=hatch;
- return {boxes,objects,studyVent,lights,television,clock,hatch,hatchRug,entryWindow,car,greyCat,emy,emyInteraction,piano,pianoSheet,spawn:spawns[spawn]||spawns.ground,spawns,rooms:ROOMS,bounds:WORLD_BOUNDS,stair:STAIR,house:HOUSE};
+ return {boxes,objects,holiday,studyVent,landingTorch,lights,television,clock,hatch,hatchRug,entryWindow,car,greyCat,emy,emyInteraction,piano,pianoSheet,spawn:spawns[spawn]||spawns.ground,spawns,rooms:ROOMS,bounds:WORLD_BOUNDS,stair:STAIR,house:HOUSE};
 }

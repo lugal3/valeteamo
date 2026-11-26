@@ -59,36 +59,120 @@ const {chromium,webkit}=require('playwright');
   assert(userAudio.duration>40,'The real nine-effect user audio sprite must decode in the browser');
   assert(['opus','mp3'].includes(userAudio.codec),'Browser must select Opus or compatible MP3');
   assert.deepEqual(userAudio.errors,[],'Fallback must not report unresolved user audio errors');
+  if(process.env.ALTAR_QA_ONLY==='1'){
+   // Open the actual door, then start at the walkable corridor threshold.
+   await page.evaluate(async()=>{
+    const h=window.__rescueHouse;h.clearThreatFixture();
+    if(!h.snapshot().doors.find(d=>d.id==='habitación').open)await h.interactWith('habitación');
+    h.setPose({x:9,y:3.15,z:3.7,yaw:Math.PI,pitch:-.45});
+    h.placeEmyAtThreshold();
+   });
+   await page.waitForFunction(()=>{const a=window.__rescueHouse.altar();return a.fear&&a.bristle>.9&&a.earFlatten>.85;},null,{timeout:45000});
+   await shot(page,'altar-01-emy-erizada');
+   // Real movement through the doorway, not a teleport into the room.
+   await page.keyboard.down('w');
+   try{await page.waitForFunction(()=>window.__rescueHouse.snapshot().position.z<2.75,null,{timeout:30000});}
+   finally{await page.keyboard.up('w');}
+   await page.waitForFunction(()=>{const h=window.__rescueHouse,a=h.altar(),c=h.emy();return a.inside&&a.waiting&&a.fear&&c.z>=3&&a.pulse>.8;},null,{timeout:45000});
+   const waiting=await page.evaluate(()=>window.__rescueHouse.emy());
+   assert(waiting.y>3&&waiting.z>=3,'Emy waits on the correct side of the real doorway');
+   // Use the same contextual selection and interaction handler as gameplay.
+   await page.evaluate(()=>window.__rescueHouse.interactWith('louis-altar',false));
+   await shot(page,'altar-02-interior');
+   await page.evaluate(()=>window.__rescueHouse.interactWith('record-player'));
+   await page.waitForFunction(()=>window.__rescueHouse.altar().recorded,null,{timeout:10000});
+   assert((await page.evaluate(()=>window.__rescueHouse.altar())).recordCooldown>0);
+   await shot(page,'altar-03-tocadiscos');
+   await page.evaluate(()=>window.__rescueHouse.setPose({x:9,y:3.15,z:3.7,yaw:0,pitch:0}));
+   await page.keyboard.down('w');
+   try{await page.waitForFunction(()=>window.__rescueHouse.snapshot().position.z>6.1,null,{timeout:30000});}
+   finally{await page.keyboard.up('w');}
+   await page.waitForFunction(()=>{const h=window.__rescueHouse,a=h.altar(),c=h.emy(),p=h.snapshot().position;return !a.waiting&&!a.fear&&c.alarm<.15&&Math.hypot(c.x-p.x,c.z-p.z)<2.5;},null,{timeout:45000});
+   await shot(page,'altar-04-emy-vuelve');
+   assert.deepEqual(errors,[]);
+   await page.evaluate(()=>window.closeHouse());
+   console.log('PASS altar browser: real doorway, raised fur, record interaction and return to following');
+   return;
+  }
   const skills=()=>page.evaluate(()=>window.__rescueHouse.emySkills());
   const interactEmy=()=>page.evaluate(()=>window.__rescueHouse.interactWith('emy-upstairs'));
+  await page.evaluate(()=>window.__rescueHouse.interactWith('emy-upstairs',false));
+  await page.waitForFunction(()=>!document.querySelector('#house-emy-name').hidden,null,{timeout:8000});
+  await shot(page,'00-emy-etiqueta-temporal');
+  await page.waitForFunction(()=>document.querySelector('#house-emy-name').hidden,null,{timeout:12000});
+  assert(await page.locator('#lab-interact').isEnabled(),'The name disappearing cannot disable Emy interaction');
   await interactEmy();
   assert.equal((await skills()).menu,true,'Emy contextual menu must open');
   assert.equal(await page.locator('#house-emy-menu [data-act="emy:pet"]').count(),1,'Petting action still exists');
   assert.equal(await page.locator('#house-emy-menu [data-act="emy:scan"]').count(),1);
   assert.equal(await page.locator('#house-emy-menu [data-act="emy:map"]').count(),1);
+  assert.equal(await page.locator('#house-emy-menu .emy-card').count(),4);
+  assert.equal(await page.locator('#house-emy-menu .emy-close').count(),1);
+  const cards=await page.locator('#house-emy-menu .emy-card').evaluateAll(items=>items.map(el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height};}));
+  assert(Math.abs(cards[0].y-cards[1].y)<2&&Math.abs(cards[2].y-cards[3].y)<2&&cards[2].y>cards[0].y+40,'Four Emy cards must form a compact 2x2 grid: '+JSON.stringify(cards));
+  assert(Math.abs(cards[0].w-cards[3].w)<2,'All four cards have equal width');
   await shot(page,'01-emy-acciones');
+  // Position the threat while gameplay is paused by the menu, but keep the
+  // camera looking at Emy until the wave has actually rendered.
+  await page.evaluate(()=>window.__rescueHouse.placeThreat({x:8.1,y:0,z:6.2,yaw:Math.PI}));
   await page.locator('#house-emy-menu [data-act="emy:scan"]').click();
   const afterScan=await skills();
   assert(afterScan.scan>0&&afterScan.scanCooldown>0);
-  await page.waitForFunction(()=>!document.querySelector('#house-emy-wave').hidden,{timeout:6000});
-  await shot(page,'02-emy-escaneo-onda');
-  // The exact animated 3D model must render behind the opaque bathroom wall,
-  // not a 2D "last-known-position" marker.
+  // Observe the wave from the cat-facing pose first. Stage the occluded
+  // target immediately afterwards, before taking any expensive screenshots.
+  await page.waitForFunction(()=>!document.querySelector('#house-emy-wave').hidden&&window.__rescueHouse.emySkills().scanRendered,null,{timeout:12000});
+  const before=await page.evaluate(()=>window.__rescueHouse.scanFrame());
   await page.evaluate(()=>{
    window.__rescueHouse.placeThreat({x:8.1,y:0,z:6.2,yaw:Math.PI});
    window.__rescueHouse.setPose({x:6.2,y:0,z:6.2,yaw:Math.PI/2,pitch:0});
   });
-  await page.waitForFunction(()=>window.__rescueHouse.emySkills().scanRendered,null,{timeout:7000});
+  try{
+   await page.waitForFunction(previous=>{const f=window.__rescueHouse.scanFrame();return f&&f.sequence>previous&&Math.abs(f.camera.x-6.2)<.12&&Math.abs(f.camera.z-6.2)<.12;},before.sequence,{timeout:12000});
+  }catch(error){
+   console.log('SCAN_RENDER_DIAGNOSTIC',JSON.stringify(await page.evaluate(()=>({scan:window.__rescueHouse.emySkills(),frame:window.__rescueHouse.scanFrame(),snapshot:window.__rescueHouse.snapshot()}))));
+   throw error;
+  }
   await shot(page,'02b-contorno-secuestrador-tras-pared');
   await interactEmy();
+  assert(await page.locator('#house-emy-menu [data-act="emy:scan"]').isDisabled(),'Scan cooldown disables the real action');
   await page.locator('#house-emy-menu [data-act="emy:map"]').click();
   const floorPlans=page.locator('#house-emy-map .house-emy-plan');
-  assert.equal(await page.locator('#house-emy-map [role="tab"]').count(),2,'Both floors must always have explicit tabs');
+  assert.equal(await page.locator('#house-emy-map [role="tab"]').count(),3,'Exterior and both floors have explicit tabs');
+  assert.equal(await page.locator('#house-emy-map [role="tab"][aria-selected="true"]').getAttribute('id'),'house-emy-tab--1');
+  const miniature=page.locator('#house-emy-miniature svg');
+  assert.match(await miniature.getAttribute('aria-label'),/Exterior/);
+  await shot(page,'03-emy-exterior');
+  const original=await miniature.innerHTML();
+  await page.locator('[data-act="emy:view:right"]').click();
+  assert.notEqual(await miniature.innerHTML(),original,'Real projected geometry changes when rotated');
+  await page.locator('[data-act="emy:view:plus"]').click();
+  await page.locator('[data-act="emy:view:reset"]').click();
+  assert.equal(await miniature.innerHTML(),original,'Reset restores original geometry');
+  if(!mobile){
+   const r=await miniature.boundingBox();await page.mouse.move(r.x+r.width/2,r.y+r.height/2);
+   await page.mouse.down();await page.mouse.move(r.x+r.width/2+45,r.y+r.height/2-24,{steps:6});await page.mouse.up();
+   assert.notEqual(await miniature.innerHTML(),original,'Dragging the real SVG rotates it');
+   await page.locator('[data-act="emy:view:reset"]').click();
+   assert.equal(await miniature.innerHTML(),original);
+  }
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.locator('#house-emy-map [data-act="emy:floor:0"]').click();
+  assert.equal(await page.locator('.mini-roof-lift').count(),1,'Actual roof is animated with normal motion');
+  assert.equal(await page.locator('.mini-upper-lift').count(),1);
+  await shot(page,'03-emy-cubierta-apertura');
+  await page.waitForFunction(()=>{const e=document.querySelector('.mini-roof-lift');return e&&Number(getComputedStyle(e).opacity)<.05;},null,{timeout:5000});
+  await page.emulateMedia({reducedMotion:'reduce'});
   assert.equal(await floorPlans.count(),1,'Use a large readable floor plan instead of two tiny plans');
   assert.equal(await page.locator('#house-emy-map .house-emy-destination-list button').count(),6);
-  assert.equal(await page.locator('#house-emy-map [data-act="emy:room:study"]').count(),2,
-   'Study must be selectable on the map and from a full-name destination list');
+  assert.equal(await page.locator('#house-emy-miniature polygon[data-act="emy:room:study"]').count(),1,
+   'Study must be selectable on the projected floor surface');
+  assert.equal(await page.locator('#house-emy-map .house-emy-destination-list [data-act="emy:room:study"]').count(),1);
+  assert.equal(await page.locator('#house-emy-miniature [data-marker="kitty"]').count(),1);
+  assert.equal(await page.locator('#house-emy-miniature [data-marker="emy"]').count(),1);
+  if((await skills()).scan>0)assert.equal(await page.locator('#house-emy-miniature [data-marker="threat"]').count(),1);
   assert.equal(await page.locator('#house-emy-map [data-act="emy:room:bedroom"]').count(),0);
+  assert(await page.locator('#house-emy-miniature [data-furniture="sofa"]').count()>0);
+  assert(await page.locator('#house-emy-miniature [data-door="estudio"]').count()>0);
   await shot(page,'03-emy-planta-baja');
   const details=await page.evaluate(()=>{
    const modal=document.querySelector('#house-emy-map'),map=modal.querySelector('.house-emy-plan'),
@@ -97,10 +181,16 @@ const {chromium,webkit}=require('playwright');
     first=list.querySelector('button');
    return {mapWidth:map.getBoundingClientRect().width,mapHeight:map.getBoundingClientRect().height,
     listWidth:list.getBoundingClientRect().width,roomFont:parseFloat(getComputedStyle(first.querySelector('.house-emy-destination-name')).fontSize),
-    footerBottom:footer.getBoundingClientRect().bottom,viewportHeight:innerHeight};
+    footerBottom:footer.getBoundingClientRect().bottom,viewportHeight:innerHeight,
+    modalRight:modal.getBoundingClientRect().right,modalLeft:modal.getBoundingClientRect().left,viewportWidth:innerWidth,
+    navY:[...modal.querySelectorAll('.emy-map-nav button')].map(el=>el.getBoundingClientRect().y),
+    controlHeight:Math.min(...[...modal.querySelectorAll('.mini-tools button')].map(el=>el.getBoundingClientRect().height))};
   });
   assert(details.mapWidth>=200&&details.mapHeight>=150,
    'Map must remain large enough to tap on a landscape mobile viewport: '+JSON.stringify(details));
+  assert(details.modalLeft>=0&&details.modalRight<=details.viewportWidth+1,'Map stays inside both screen edges: '+JSON.stringify(details));
+  assert(Math.abs(details.navY[0]-details.navY[1])<2,'Back and close stay side by side');
+  if(mobile&&details.viewportHeight>=375&&details.viewportWidth>=761)assert(details.controlHeight>=44,'Touch rail retains 44px hit targets');
   assert(details.listWidth>=190&&details.roomFont>=12&&details.footerBottom<=details.viewportHeight+1,
    'Room names and confirmation must remain legible and on-screen: '+JSON.stringify(details));
   const stairs=page.locator('#house-emy-map .house-emy-destination-list [data-act="emy:room:stairs"]');
@@ -111,48 +201,192 @@ const {chromium,webkit}=require('playwright');
   await page.locator('#house-emy-map .house-emy-destination-list [data-act="emy:room:study"]').click();
   assert.equal(await page.locator('#house-emy-map-send').isEnabled(),true);
   assert.match(await page.locator('#house-emy-map-status').innerText(),/Estudio.*planta baja/i);
+  assert((await skills()).preview?.seconds>0);
+  assert.equal((await skills()).stage,'following','Preview does not send Emy');
+  assert.equal(await page.locator('#house-emy-miniature .mini-route-track').count(),1);
+  assert.match(await page.locator('#house-emy-map-status').innerText(),/aprox\. \d+ s/);
   await shot(page,'03b-emy-seleccion');
   await page.locator('#house-emy-map [data-act="emy:floor:1"]').click();
   assert.equal(await floorPlans.count(),1);
   assert.equal(await page.locator('#house-emy-map [role="tab"][aria-selected="true"]').getAttribute('id'),'house-emy-tab-1');
   assert.equal(await page.locator('#house-emy-map .house-emy-destination-list button').count(),4);
   assert.equal(await page.locator('#house-emy-map [data-act="emy:room:study"]').count(),0);
-  assert.equal(await page.locator('#house-emy-map [data-act="emy:room:bedroom"]').count(),2);
+  assert.equal(await page.locator('#house-emy-miniature polygon[data-act="emy:room:bedroom"]').count(),0,'Locked bedroom is not clickable on the miniature');
+  assert.equal(await page.locator('#house-emy-map .house-emy-destination-list [data-act="emy:room:bedroom"]').count(),1);
   assert.equal(await page.locator('#house-emy-map .house-emy-stair-void').count(),1,
    'The upper level must distinguish the open stairwell from walkable rooms');
   assert.equal(await page.locator('#house-emy-map .house-emy-destination-list [data-act="emy:room:bedroom"]').isDisabled(),true,
    'Do not send Emy through the story-locked bedroom door');
-  assert.equal(await page.locator('#house-emy-map-send').isDisabled(),true,'Switching floors clears the old selection');
+  assert.equal(await page.locator('#house-emy-map-send').isEnabled(),true,'Switching floors preserves the destination for inspecting a cross-floor route');
+  assert(await page.locator('#house-emy-miniature [data-furniture="upper-bed"]').count()>0);
+  assert(await page.locator('#house-emy-miniature [data-door="dormitorio"][data-door-state="locked"]').count()>0);
   await shot(page,'03c-emy-planta-alta');
   await page.locator('#house-emy-map .house-emy-destination-list [data-act="emy:room:reading"]').click();
   assert.match(await page.locator('#house-emy-map-status').innerText(),/Sala de lectura.*planta alta/i);
   assert.equal(await page.locator('#house-emy-map-send').isEnabled(),true);
+  const planned=(await skills()).preview;
+  assert(planned&&planned.waypoints.some(p=>p.y<.15)&&planned.goal.y>3);
   await shot(page,'03d-emy-destino-planta-alta');
+  await page.locator('#house-emy-map [data-act="emy:floor:0"]').click();
+  assert.deepEqual((await skills()).preview,planned);
+  assert.equal(await page.locator('#house-emy-miniature .mini-route[data-route-floor="0"]').count(),1);
+  await shot(page,'03d2-emy-ruta-tramo-inferior');
+  await page.locator('#house-emy-map [data-act="emy:floor:1"]').click();
   await page.locator('#house-emy-map-send').click();
   const command=await skills();
   assert.equal(command.stage,'distract','Selecting a room and confirming commands Emy navigation');
   assert(command.distractCooldown>0,'Distraction has cooldown');
   assert(command.distraction?.goal&&command.distraction.goal.y>3,'Emy must reach a real upstairs waypoint');
+  assert.deepEqual(command.distraction.goal,planned.goal,'The confirmation uses exactly the previewed destination');
   assert.equal(command.mapOpen,false,'The map must close after a successful order');
+  // Physical interaction with the busy cat, not a remote call button.
+  await interactEmy();
+  assert.equal((await skills()).menu,true,'Busy Emy can be approached in person');
+  assert.equal(await page.locator('#house-emy-stay-title').innerText(),'Sígueme');
+  assert(await page.locator('[data-act="emy:map"]').isDisabled());
+  assert(await page.locator('[data-act="emy:scan"]').isDisabled());
+  const cooldownBefore=(await skills()).distractCooldown;
+  await shot(page,'03e-emy-interrumpir-en-persona');
+  await page.locator('#house-emy-stay').click();
+  assert.equal((await skills()).stage,'following','Physical intervention cancels the distraction');
+  assert((await skills()).distractCooldown>0&&Math.abs((await skills()).distractCooldown-cooldownBefore)<1,
+   'The real distraction cooldown remains after early reunion');
+
+  // Use the real phone application while a distraction cooldown is active.
+  // It must not depend on Emy being available or expose the threat marker.
+  await page.locator('[data-equip="phone"]').click();
+  await page.locator('#house-use-phone').click();
+  await page.locator('.phone-screen [data-app="maps"]').click();
+  assert((await skills()).mapReadOnly);
+  await page.locator('#house-emy-map [data-act="emy:floor:0"]').click();
+  assert(await page.locator('#house-emy-map-send').isHidden());
+  assert.equal(await page.locator('#house-emy-map [data-act^="emy:room:"]').count(),0);
+  assert.equal(await page.locator('#house-emy-miniature [data-marker="threat"]').count(),0);
+  await shot(page,'03f-mapas-telefono-consulta');
+  // The scan injected a live pursuer into an otherwise peaceful explore
+  // fixture. End the fixture while the read-only map is still paused,
+  // only after verifying its marker. A real sighting deliberately closes
+  // the phone; unrelated app tests must not race that gameplay event.
+  const cleared=await page.evaluate(()=>window.__rescueHouse.clearThreatFixture());
+  assert.equal(cleared.active,false);
+  await page.locator('#house-emy-map [data-act="emy:map:back"]').click();
+  await page.locator('.phone-apps[data-home-page="0"]').waitFor();
+  assert(await page.locator('.phone-screen').isVisible());
+  await shot(page,'03g-iphone-inicio');
+  // A horizontal gesture goes through the shell's actual pointer handlers.
+  await page.locator('.phone-shell').evaluate(el=>{
+   const r=el.getBoundingClientRect(),y=r.top+r.height*.55;
+   el.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:619,pointerType:'touch',button:0,clientX:r.right-24,clientY:y}));
+   el.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:619,pointerType:'touch',button:0,clientX:r.left+24,clientY:y}));
+  });
+  assert(await page.locator('.phone-apps[data-home-page="1"] [data-app="weather"]').isVisible());
+  await shot(page,'03h-iphone-segunda-pagina');
+  await page.waitForTimeout(380); // suppress the accidental click from the swipe
+  await page.locator('button[data-home-page="0"]').click();
+  await page.evaluate(()=>window.__rescueHouse.setPose({x:5.95,y:0,z:8,yaw:0,pitch:0}));
+  const phoneStart=await page.evaluate(()=>window.__rescueHouse.snapshot().position);
+  await page.keyboard.down('w');
+  try{await page.waitForFunction(z=>window.__rescueHouse.snapshot().position.z>z+.07,phoneStart.z,{timeout:12000});}
+  finally{await page.keyboard.up('w');}
+  assert(await page.locator('.phone-screen').isVisible(),'Movement must not close the device');
+  const portrait=await page.locator('.phone-shell').boundingBox();
+  assert(portrait.height>portrait.width,'Home is portrait');
+  await page.locator('.phone-screen [data-app="camera"]').click();
+  const shell=await page.locator('.phone-shell').boundingBox();
+  assert(shell.width>shell.height,'Camera opens as a landscape device');
+  assert(Math.abs(shell.width-portrait.height)<2&&Math.abs(shell.height-portrait.width)<2,'Same chassis must rotate without changing aspect ratio: '+JSON.stringify({portrait,shell}));
+  assert(shell.x>=0&&shell.y>=0&&shell.x+shell.width<= (await page.evaluate(()=>innerWidth))+1&&shell.y+shell.height<=(await page.evaluate(()=>innerHeight))+1,'Landscape device stays inside the viewport');
+  const cameraControls=await page.locator('.phone-camera-actions').evaluate(rail=>[...rail.querySelectorAll('button')].map(button=>{const r=button.getBoundingClientRect(),p=rail.closest('.phone-shell').getBoundingClientRect();return {inside:r.left>=p.left&&r.right<=p.right&&r.top>=p.top&&r.bottom<=p.bottom,width:r.width,height:r.height};}));
+  assert(cameraControls.every(c=>c.inside&&c.width>=28&&c.height>=28),'All photo controls are reachable: '+JSON.stringify(cameraControls));
+  assert(await page.locator('[data-photo="flash"]').getAttribute('aria-pressed')==='true');
+  await page.waitForFunction(()=>{const c=document.querySelector('.phone-camera-view canvas');if(!c)return false;return c.getContext('2d').getImageData(0,0,c.width,c.height).data.some((v,i)=>i%4!==3&&v>0);});
+  await shot(page,'03i-iphone-camara-horizontal');
+  await page.locator('[data-photo="take"]').click();
+  await page.locator('.phone-camera-actions img').waitFor();
+  await page.locator('[data-photo="flash"]').click();
+  assert.equal(await page.locator('[data-photo="flash"]').getAttribute('aria-pressed'),'false');
+  const firstPhoto=await page.locator('.phone-camera-actions img').getAttribute('src');
+  await page.locator('[data-photo="take"]').click();
+  await page.waitForFunction(prior=>document.querySelector('.phone-camera-actions img')?.getAttribute('src')!==prior,firstPhoto);
+  await page.locator('.phone-camera-actions [data-app="photos"]').click();
+  const restored=await page.locator('.phone-shell').boundingBox();
+  assert(Math.abs(restored.width-portrait.width)<2&&Math.abs(restored.height-portrait.height)<2,'Photos restores the original portrait chassis');
+  await page.waitForFunction(()=>{const i=document.querySelector('[data-photo-index="0"] img');return i?.naturalWidth>0&&Math.abs(i.naturalWidth/i.naturalHeight-16/9)<.02;});
+  await shot(page,'03j-iphone-galeria');
+  await page.locator('.phone-home-indicator').click();
+  await page.locator('[data-app="journal"]').click();
+  assert(await page.locator('.phone-journal').isVisible());
+  await page.locator('.phone-home-indicator').click();
+  await page.locator('[data-app="messages"]').click();
+  await page.locator('[data-phone-hint]').click();
+  assert((await page.locator('.phone-hint p').innerText()).length>0);
+  await page.locator('.phone-home-indicator').click();
+  await page.locator('[data-app="music"]').click();
+  await page.locator('[data-phone-music]').click();
+  assert.equal(await page.locator('[data-phone-music]').getAttribute('aria-pressed'),'true');
+  await page.locator('[data-phone-music]').click();
+  assert.equal(await page.locator('[data-phone-music]').getAttribute('aria-pressed'),'false');
+  await page.locator('.phone-home-indicator').click();
+  await page.locator('[data-app="settings"]').click();
+  const difficulty=page.getByLabel('Dificultad',{exact:true});
+  assert.equal(await difficulty.inputValue(),'story','Default difficulty prioritizes story');
+  await difficulty.selectOption('tense');
+  await page.getByLabel('Ayuda adaptable tras perder vidas',{exact:true}).uncheck();
+  const difficultyPrefs=await page.evaluate(()=>({settings:JSON.parse(localStorage.getItem('valeteamo-house-camera-v4')),pursuer:window.__rescueHouse.story().pursuer}));
+  assert.equal(difficultyPrefs.settings.difficulty,'tense');
+  assert.equal(difficultyPrefs.settings.adaptive,false);
+  assert.equal(difficultyPrefs.pursuer.difficulty,'tense');
+  await difficulty.selectOption('story');
+  await page.getByLabel('Ayuda adaptable tras perder vidas',{exact:true}).check();
+  await page.getByLabel('Mostrar instrucciones de objetivo',{exact:true}).check();
+  await page.getByLabel('Mostrar avisos del perseguidor',{exact:true}).check();
+  const savedPrefs=await page.evaluate(()=>JSON.parse(localStorage.getItem('valeteamo-house-camera-v4')));
+  assert(savedPrefs.hints&&savedPrefs.threatText,'Optional HUD hints are persisted independently');
+  await page.getByLabel('Vibración (si el dispositivo la admite)',{exact:true}).uncheck();
+  await page.getByLabel('HUD discreto',{exact:true}).uncheck();
+  const v4=await page.evaluate(()=>JSON.parse(localStorage.getItem('valeteamo-house-camera-v4')));
+  assert.equal(v4.haptics,false);assert.equal(v4.immersive,false);
+  await page.getByLabel('Vibración (si el dispositivo la admite)',{exact:true}).check();
+  await page.getByLabel('HUD discreto',{exact:true}).check();
+  await page.getByLabel('Mostrar instrucciones de objetivo',{exact:true}).uncheck();
+  await page.getByLabel('Mostrar avisos del perseguidor',{exact:true}).uncheck();
+  // The phone setting must work in regular gameplay, not only admin trials.
+  const fpsToggle=page.getByLabel('Mostrar FPS durante el juego',{exact:true});
+  assert.equal(await fpsToggle.isChecked(),false,'FPS is opt-in');
+  await fpsToggle.check();
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('valeteamo-house-camera-v4')).showFPS),true);
+  const fpsBadge=page.locator('#house-fps');
+  assert(await fpsBadge.isHidden(),'Phone settings must not display paused FPS');
+  await page.locator('.phone-screen [data-app="close"]').click();
+  await page.waitForFunction(()=>{const el=document.querySelector('#house-fps');return el&&!el.hidden&&/^\d+ FPS$/.test(el.textContent);},null,{timeout:30000});
+  assert.equal(await fpsBadge.evaluate(el=>getComputedStyle(el).pointerEvents),'none');
+  await shot(page,'phone-fps-enabled');
+  const togglePhoneSettings=require('./helpers/toggle-phone-settings.cjs');
+  await togglePhoneSettings(page);
+  assert(await fpsToggle.isChecked(),'FPS selection persists after reopening phone');
+  assert(await fpsBadge.isHidden());
+  await fpsToggle.uncheck();
+  await togglePhoneSettings(page);
+  assert(await fpsBadge.isHidden(),'FPS hides immediately when disabled');
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('valeteamo-house-camera-v4')).showFPS),false);
   const item='noise-glass-living';
   await page.evaluate(item=>window.__rescueHouse.interactWith(item),item);
   let objects=await page.evaluate(()=>window.__rescueHouse.noiseProps());
   assert(objects.find(p=>p.id===item).held,'The glass is held after interacting');
-  // The HUD publishes context help on its next render frame; WebKit software
-  // WebGL may schedule that frame after the synchronous interaction callback.
-  await page.waitForFunction(()=>/Toca Lanzar|G: lanzar/.test(
-   document.querySelector('#house-noise-hint')?.textContent||''),null,{timeout:8000});
-  assert.match(await page.locator('#house-noise-hint').innerText(),/Toca Lanzar|G: lanzar/,
-   'HUD explains throwable controls for the active input device');
-  assert.equal(await page.locator('#house-noise-controls button').count(),3,
-   'Throw, soft throw, and drop must all be present for mobile and desktop');
-  for(const action of ['noise:throw','noise:lob','noise:drop'])
-   assert.equal(await page.locator('#house-noise-controls [data-act="'+action+'"]').count(),1,
-    'Each throwable action remains reachable: '+action);
+  // V3: the permanent action button is the only throwable control.
+  const actionButton=page.locator('#lab-interact');
+  await page.waitForFunction(()=>document.querySelector('#lab-interact small')?.textContent==='Lanzar',null,{timeout:8000});
+  assert(await actionButton.isVisible()&&await actionButton.isEnabled());
+  assert.equal(await actionButton.getAttribute('data-icon'),'throw');
+  assert.equal(await actionButton.locator('.house-action-icon svg').count(),1);
+  assert.equal(await page.locator('#house-noise-controls').count(),0);
+  await page.waitForFunction(()=>document.querySelector('[data-equip="phone"]').disabled);
+  assert(await page.locator('[data-equip="phone"]').isDisabled(),'A held throwable occupies the hands');
   await shot(page,'04-objeto-en-mano');
-  await page.locator('#house-noise-controls [data-act="noise:throw"]').click();
+  await actionButton.click();
   objects=await page.evaluate(()=>window.__rescueHouse.noiseProps());
   assert(!objects.find(p=>p.id===item).held,'Released throwable no longer occupies the hand');
+  await page.waitForFunction(()=>!document.querySelector('[data-equip="phone"]').disabled);
   await page.waitForFunction(id=>window.__rescueHouse.noiseProps().find(p=>p.id===id)?.spent,item,{timeout:8000});
   await shot(page,'05-objeto-lanzado');
   // V2 phase 02: actual keyboard movement (also supported on mobile),
@@ -162,6 +396,20 @@ const {chromium,webkit}=require('playwright');
   }));
   const initial=await page.evaluate(()=>window.__rescueHouse.snapshot());
   assert.equal(initial.locomotion.cameraGround,0);
+  // A hop changes only the rendered camera, never the collision body or floor.
+  const hopButton=page.locator('#lab-hop');
+  await page.waitForFunction(()=>!document.querySelector('#lab-hop').disabled,null,{timeout:8000});
+  if(mobile)await hopButton.tap();
+  else {
+   await page.evaluate(()=>document.activeElement?.blur());
+   await page.keyboard.press('Space');
+  }
+  await page.waitForFunction(()=>window.__rescueHouse.snapshot().hop.age<.62,null,{timeout:8000});
+  await page.waitForFunction(()=>window.__rescueHouse.snapshot().hop.age>=.62,null,{timeout:8000});
+  const landed=await page.evaluate(()=>window.__rescueHouse.snapshot());
+  assert.deepEqual(landed.position,initial.position,'Hop must not move the collision body');
+  assert.equal(landed.hop.offset,0,'Camera settles after the hop');
+  assert.equal(landed.locomotion.cameraGround,0);
   await page.keyboard.down('w');
   let moving;
   try{

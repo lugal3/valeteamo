@@ -110,37 +110,43 @@ function tailPoint(t,mode,phase){
   const a=-Math.PI*.4+t*Math.PI*1.55;
   return [.01+Math.sin(a)*.255,.09+Math.sin(t*Math.PI)*.012,-.10-Math.cos(a)*.32];
  }
- if(mode==='sit'||mode==='groom'){
-  const a=t*2.9;return [.28*(1-Math.cos(a))*.5,.10+.10*(1-t),-.30-Math.sin(a)*.22];
+ if(mode==='sit'||mode==='groom'||mode==='crouch'){
+  const a=t*2.9,sway=mode==='crouch'?0:Math.sin(phase*1.05)*.018*t*t;
+  return [.28*(1-Math.cos(a))*.5+sway,.10+.10*(1-t),-.30-Math.sin(a)*.22];
  }
+ if(mode==='alert')return [.025*Math.sin(t*3+phase*2)*t,.30+.49*Math.sin(t*Math.PI*.64),-.35-.24*t];
  const sway=Math.sin(phase*1.8+t*1.3)*.035*t;
  return [sway+.06*Math.sin(t*Math.PI),.30+.27*t+(mode==='purr'?.09*t:0),-.35-.43*t+.07*Math.sin(t*Math.PI)];
 }
+// Tail topology is identical for a given fibre count, regardless of pose.
+// Cache immutable index arrays, not animated vertex data.
+const tailTopology=new Map();
 // A continuous swept tube for the tail, with shared seam vertices and normals.
-export function emyTailSurface(mode='walk',phase=0,fibres=0){
- const vertices=[],indices=[],rings=22,sides=10;
+export function emyTailSurface(mode='walk',phase=0,fibres=0,alarm=0){
+ const vertices=[],rings=22,sides=10,cached=tailTopology.get(fibres),indices=cached?.indices??[];
  for(let i=0;i<=rings;i++){
   const t=i/rings,p=tailPoint(t,mode,phase),a=tailPoint(Math.max(0,t-.001),mode,phase),b=tailPoint(Math.min(1,t+.001),mode,phase),dir=norm(b.map((v,k)=>v-a[k]));
   const right=norm([dir[2],0,-dir[0]]),up=norm([dir[1]*right[2],dir[2]*right[0]-dir[0]*right[2],-dir[1]*right[0]]);
-  const radius=t===1?.00001:.065*Math.pow(Math.sin(Math.PI*(.11+.88*t)),.55)+.004;
+  const radius=t===1?.00001:(.065*Math.pow(Math.sin(Math.PI*(.11+.88*t)),.55)+.004)*(1+.36*alarm);
   for(let j=0;j<=sides;j++){
    const u=j/sides,angle=u*Math.PI*2,normal=right.map((v,k)=>v*Math.cos(angle)+up[k]*Math.sin(angle));
    vertices.push(...p.map((v,k)=>v+normal[k]*radius),.89,.93,.97,...normal,.51+u*.48,.01+t*.48,20,64,...right);
   }
  }
- for(let i=0;i<rings;i++)for(let j=0;j<sides;j++){const a=i*(sides+1)+j;indices.push(a,a+sides+2,a+1,a,a+sides+1,a+sides+2);}
- const baseIndexCount=indices.length;
+ if(!cached)for(let i=0;i<rings;i++)for(let j=0;j<sides;j++){const a=i*(sides+1)+j;indices.push(a,a+sides+2,a+1,a,a+sides+1,a+sides+2);}
+ const baseIndexCount=cached?.baseIndexCount??indices.length;
  let seed=402;const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
  for(let j=0;j<fibres;j++){
   const t=.03+rand()*.94,a=rand()*Math.PI*2,p=tailPoint(t,mode,phase),b=tailPoint(Math.min(1,t+.001),mode,phase),dir=norm(b.map((v,k)=>v-p[k]));
   const right=norm([dir[2],0,-dir[0]]),up=norm([dir[1]*right[2],dir[2]*right[0]-dir[0]*right[2],-dir[1]*right[0]]),normal=right.map((v,k)=>v*Math.cos(a)+up[k]*Math.sin(a));
-  const radius=.065*Math.pow(Math.sin(Math.PI*(.11+.88*t)),.55)+.004,len=.025+rand()*.035,offset=vertices.length/16,shade=1+rand()*.18;
+  const radius=(.065*Math.pow(Math.sin(Math.PI*(.11+.88*t)),.55)+.004)*(1+.36*alarm),len=(.025+rand()*.035)*(1+.35*alarm),offset=vertices.length/16,shade=1+rand()*.18;
   for(let row=0;row<3;row++)for(const side of row===2?[0]:[-1,1]){
    const f=row*.5,w=(1-f)*.0006*side,pt=p.map((v,k)=>v+normal[k]*(radius+.001+len*.32*Math.sin(f*Math.PI*.8))+dir[k]*len*f+right[k]*w);
    vertices.push(...pt,.89*shade,.93*shade,.97*shade,...normal,.51+a/(Math.PI*2)*.48,.01+t*.48,20,65,...right);
   }
-  for(const tri of [[0,1,3],[0,3,2],[2,3,4]]){const ids=tri.map(i=>i+offset);indices.push(...ids,ids[2],ids[1],ids[0]);}
+  if(!cached)for(const tri of [[0,1,3],[0,3,2],[2,3,4]]){const ids=tri.map(i=>i+offset);indices.push(...ids,ids[2],ids[1],ids[0]);}
  }
+ if(!cached&&tailTopology.size<8)tailTopology.set(fibres,{indices,baseIndexCount});
  return {vertices:new Float32Array(vertices),indices,baseIndexCount};
 }
 export function writeEmySurface(out,start,box){
@@ -159,19 +165,26 @@ export function writeEmySurface(out,start,box){
   // the flank and back while keeping both root vertices attached.
   if(box.bristle&&mesh.skin&&i/16>=mesh.baseCount&&py>.16){
    const row=Math.floor(((i/16-mesh.baseCount)%7)/2);
-   const lift=.044*box.bristle*(row/3)**2;
+   const lift=.062*box.bristle*(row/3)**2;
    px+=nnx*lift;py+=(.45+Math.max(0,nny))*lift;pz+=nnz*lift;
   }
-  if(box.earTurn&&py>.09){
-   const weight=Math.min(1,(py-.09)/.06),angle=box.earTurn*weight;
+  if((box.earTurn||box.earFlatten)&&py>.09){
+   const weight=Math.min(1,(py-.09)/.06),angle=(box.earTurn||0)*weight;
    const cs=Math.cos(angle),sn=Math.sin(angle),pivot=Math.sign(px)*.107,dx=px-pivot;
    px=pivot+cs*dx+sn*pz;pz=cs*pz-sn*dx;
    const nx=nnx;nnx=cs*nx+sn*nnz;nnz=cs*nnz-sn*nx;
+   const fold=(box.earFlatten||0)*weight*.46,cf=Math.cos(fold),sf=Math.sin(fold),ey=py-.09;
+   py=.09+cf*ey-sf*pz;pz=sf*ey+cf*pz;
+   const ny=nny;nny=cf*ny-sf*nnz;nnz=sf*ny+cf*nnz;
   }
   if(mesh.skin&&box.emySkinFrames){
    const at=i/2;let x=0,y=0,z=0,nx=0,ny=0,nz=0;
    for(let k=0;k<8;k+=2){
-    const id=mesh.skin[at+k],m=box.emySkinFrames[id],n=box.emyNormalFrames[id],w=mesh.skin[at+k+1];
+    const w=mesh.skin[at+k+1];
+    // Zero-weight influences contribute exactly nothing. Their matrices are
+    // finite by construction; skip both position and normal multiplication.
+    if(w===0)continue;
+    const id=mesh.skin[at+k],m=box.emySkinFrames[id],n=box.emyNormalFrames[id];
     x+=(m[0]*px+m[3]*py+m[6]*pz+m[9])*w;y+=(m[1]*px+m[4]*py+m[7]*pz+m[10])*w;z+=(m[2]*px+m[5]*py+m[8]*pz+m[11])*w;
     nx+=(n[0]*nnx+n[3]*nny+n[6]*nnz)*w;ny+=(n[1]*nnx+n[4]*nny+n[7]*nnz)*w;nz+=(n[2]*nnx+n[5]*nny+n[8]*nnz)*w;
    }
@@ -181,7 +194,10 @@ export function writeEmySurface(out,start,box){
    if(py<.018){const t=(py-.0005)/.003,derivative=1/(1+Math.exp(-t));py=.0005+.003*Math.log1p(Math.exp(t));nny/=Math.max(.025,derivative);}
   }
   const at=start+i,x=px*s[0],y=py*s[1],z=pz*s[2];
-  for(let k=3;k<16;k++)out[at+k]=v[i+k];
+  // Copy only unchanged material attributes; normal and tangent slots
+  // are fully written by the exact original transforms below.
+  out[at+3]=v[i+3];out[at+4]=v[i+4];out[at+5]=v[i+5];
+  out[at+9]=v[i+9];out[at+10]=v[i+10];out[at+11]=v[i+11];out[at+12]=v[i+12];
   if(box.emissive)out[at+12]=96;
   out[at]=p.pos[0]+a[0]*x+b[0]*y+c[0]*z;out[at+1]=p.pos[1]+a[1]*x+b[1]*y+c[1]*z;out[at+2]=p.pos[2]+a[2]*x+b[2]*y+c[2]*z;
   const nx=nnx/s[0],ny=nny/s[1],nz=nnz/s[2];

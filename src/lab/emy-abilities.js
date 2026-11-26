@@ -9,6 +9,22 @@ export const EMY_DISTRACT_COOLDOWN=55;
 const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
 const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+// The name tag is a one-second, edge-triggered cue, never a persistent HUD.
+export function createEmyNameCue(){return {left:0,cooldown:0,looking:false};}
+export function advanceEmyNameCue(state,dt,looking,active=true,allowCue=true){
+ const step=active?clamp(Number.isFinite(dt)?dt:0,0,.1):0;
+ state.left=Math.max(0,state.left-step);
+ state.cooldown=Math.max(0,state.cooldown-step);
+ // A phone, cutaway or occupied hand hides the tag without resetting the
+ // look-edge; ordinary gameplay still counts toward the three-minute wait.
+ if(!active||!allowCue){state.left=0;return false;}
+ if(!looking)state.left=0;
+ if(looking&&!state.looking&&state.cooldown===0){
+  state.left=1;state.cooldown=180;
+ }
+ state.looking=!!looking;
+ return state.left>0&&looking;
+}
 export function createEmyAbilities(){return {scan:0,scanCooldown:0,distractCooldown:0,wave:0};}
 export function advanceEmyAbilities(state,dt){
  const step=clamp(Number.isFinite(dt)?dt:0,0,.1);
@@ -26,6 +42,9 @@ export function activateEmyScan(state){
 // The two long passages are NOT invented rooms. They are the real spaces
 // between the 4.4 m/7.5 m partitions and, upstairs, the upstairs floor slabs.
 // The upstairs stairwell void is intentionally excluded (no floating waypoint).
+// Shared room identity for the 3D model and the accessible destination list.
+export const EMY_ROOM_COLORS=Object.freeze({study:'#c4b9e9',living:'#ebafca',kitchen:'#b3d8bd',bath:'#aed6eb',stairs:'#ebc392',bedroom:'#efb6cc',reading:'#d5b9e7',music:'#e8c69a','hall-ground':'#a9bdc9','hall-upper':'#a9bdc9'});
+const ROOM_ICONS={study:'📚',living:'🛋',kitchen:'🍽',bath:'🛁',stairs:'↕',bedroom:'🛏',reading:'📖',music:'♫','hall-ground':'↔','hall-upper':'↔'};
 const SHORT={
  study:'Estudio',living:'Sala',kitchen:'Cocina',bath:'Baño',
  stairs:'Escalera',bedroom:'Dormitorio',reading:'Lectura',music:'Música',
@@ -77,7 +96,7 @@ export function roomChoices(rooms){
 export function isEmyRoomLocked(world,choice){
  const id=DOORS[choice?.id];
  const door=id&&world.objects.find(o=>o.id===id&&o.kind==='door');
- return !!door?.locked&&!door.open;
+ return !!door&&(door.locked||door.sealed)&&!door.open;
 }
 function walkable(world,choice,point){
  const level=choice.floor?HEIGHT:0;
@@ -143,16 +162,17 @@ export function emyFloorMap(rooms,floor,{selectedId='',lockedIds=[]}={}){
   '<div class="house-emy-entrance" aria-hidden="true">↓ '+(floor?'SUR':'ENTRADA')+'</div>'+
   '</div>';
 }
-export function emyFloorList(rooms,floor,{selectedId='',lockedIds=[]}={}){
+export function emyFloorList(rooms,floor,{selectedId='',lockedIds=[],disabledReasons={}}={}){
  const choices=roomChoices(rooms).filter(r=>r.floor===floor),locked=new Set(lockedIds);
  return choices.map((room,index)=>{
-  const selected=selectedId===room.id,blocked=locked.has(room.id);
+  const selected=selectedId===room.id,blocked=locked.has(room.id),reason=disabledReasons[room.id]||'Puerta cerrada';
   return '<button type="button" class="house-emy-destination'+(selected?' is-selected':'')+
    (blocked?' is-locked':'')+'" data-act="emy:room:'+room.id+'" data-zone="'+room.id+
    '" aria-pressed="'+selected+'"'+(blocked?' disabled':'')+'>'+
-   '<span class="house-emy-destination-number">'+String(index+1).padStart(2,'0')+'</span>'+
+   '<span class="house-emy-destination-number" style="--room-accent:'+(EMY_ROOM_COLORS[room.id]||'#c2bacb')+'">'+String(index+1).padStart(2,'0')+'</span>'+
+   '<span class="house-emy-destination-icon" aria-hidden="true">'+(ROOM_ICONS[room.id]||'•')+'</span>'+
    '<span class="house-emy-destination-name">'+escapeHTML(room.label)+'</span>'+
-   (blocked?'<small>🔒 Cerrada</small>':'<span class="house-emy-destination-arrow" aria-hidden="true">›</span>')+
+   (blocked?'<small>'+escapeHTML(reason)+'</small>':'<span class="house-emy-destination-arrow" aria-hidden="true">›</span>')+
    '</button>';
  }).join('');
 }

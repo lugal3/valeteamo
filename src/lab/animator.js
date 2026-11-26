@@ -1,5 +1,6 @@
 import {createPose,JOINT_INDEX} from './character-rig.js';
 import {sampleIdle} from './animations/idle.js';
+import {sampleHop,hopPose} from './animations/hop.js';
 import {sampleWalk,WALK_CYCLE} from './animations/walk.js';
 import {sampleWindowEntry} from './animations/window-entry.js';
 import {sampleCrouch} from './animations/crouch.js';
@@ -22,12 +23,12 @@ export class CharacterAnimator{
   this.hidePose=createPose();
   this.lookBehindPose=createPose();
   this.pose=createPose();
-  this.emotePose=createPose();this.transitionPose=createPose();
+  this.emotePose=createPose();this.transitionPose=createPose();this.hopPose=createPose();
   this.reset();
  }
  reset(){
   this.time=0;this.distance=0;this.weight=0;this.forward=1;this.side=0;
-  this.reduced=false;this.evaluations=0;this.emote=null;this.emoteTime=0;this.transition=null;this.equipment='flashlight';this.speed=0;this.acceleration=0;
+  this.hopAge=Infinity;this.reduced=false;this.evaluations=0;this.emote=null;this.emoteTime=0;this.transition=null;this.equipment='flashlight';this.speed=0;this.acceleration=0;
  }
  get performing(){return !!this.emote||!!this.transition;}
  captureTransition(){this.transitionPose.set(this.sample(this.equipment==='phone'?'hold-phone':'locomotion'));this.transition={age:0,duration:this.reduced ? .10 : .22};}
@@ -35,11 +36,11 @@ export class CharacterAnimator{
  cancelEmote({immediate=false}={}){if(immediate){this.transition=null;}else if(this.emote)this.captureTransition();this.emote=null;this.emoteTime=0;}
  // This lightweight bookkeeping runs with simulation. Bone poses are sampled
  // only by a visible consumer (mirror now, cinematic/full-body shots later).
- advance(dt,{distance=0,forward=1,side=0,paused=false,reduced=false,equipment=this.equipment,emoteElapsed=null}={}){
+ advance(dt,{distance=0,forward=1,side=0,paused=false,reduced=false,equipment=this.equipment,emoteElapsed=null,hopAge=Infinity}={}){
   if(paused)return;
   dt=Math.max(0,Math.min(.1,dt));
   if(!dt)return;
-  this.time+=dt;this.reduced=reduced;this.equipment=equipment;
+  this.time+=dt;this.reduced=reduced;this.equipment=equipment;this.hopAge=hopAge;
   if(this.transition){this.transition.age+=dt;if(this.transition.age>=this.transition.duration)this.transition=null;}
   distance=Math.max(0,Number.isFinite(distance)?distance:0);
   const speed=distance/dt;this.acceleration=Math.max(-1,Math.min(1,(speed-this.speed)*.35));this.speed+=(speed-this.speed)*(1-Math.exp(-dt*10));
@@ -70,7 +71,9 @@ export class CharacterAnimator{
    if(this.transition)blendPose(this.transitionPose,this.pose,ease(this.transition.age/this.transition.duration),this.pose);
    return this.pose;
   }
-  return this.basePose(clip,progress);
+  const base=this.basePose(clip,progress);
+  if(clip==='locomotion'&&!this.emote){const hop=hopPose(this.hopAge,this.reduced);if(hop.weight>0){sampleHop(this.hopAge,this.hopPose,{reduced:this.reduced,handsFree:this.equipment==='empty'});blendPose(base,this.hopPose,hop.weight,base);}}
+  return base;
  }
  basePose(clip,progress){
   if(clip==='crouch'){

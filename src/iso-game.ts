@@ -75,7 +75,7 @@ export class IsoAdventure extends Phaser.Scene {
  storyStage:IsoStoryStage='intro';
  storyObjects:Phaser.GameObjects.GameObject[]=[];
  storyLouis?:StoryActor;storyLuis?:StoryActor;storyVillain?:StoryActor;
- storyVale?:StoryActor;storyHands?:Phaser.GameObjects.Graphics;
+ storyVale?:StoryActor;storyValeShadow?:Phaser.GameObjects.Ellipse;storyHands?:Phaser.GameObjects.Graphics;
  storyChuru?:StoryActor;storyCatPoint:IsoPoint={...GREY_CAT_POSITION};
  storyCat?:StoryActor;storyFeeding?:{elapsed:number;done:()=>void};
  storyLouisWalk?:{from:{x:number;y:number};to:{x:number;y:number};elapsed:number;duration:number};
@@ -190,7 +190,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   for(const light of this.collectibles)light.s.destroy();this.collectibles=[];
   this.dangers=[];this.bursts=[];this.charm=undefined;this.pendingOffer=false;
   this.storyLouis=undefined;this.storyLuis=undefined;this.storyVillain=undefined;
-  this.storyVale=undefined;this.storyHands=undefined;this.storyCat=undefined;this.storyChuru=undefined;this.storyFeeding=undefined;
+  this.storyVale=undefined;this.storyValeShadow=undefined;this.storyHands=undefined;this.storyCat=undefined;this.storyChuru=undefined;this.storyFeeding=undefined;
   this.storyLouisWalk=undefined;this.storyAbduction=undefined;
   this.storyLuisShadow=undefined;this.storyLuisMotion=undefined;
   this.storyLuisReady=false;this.storyLuisArriving=false;this.storyLuisFarewell=false;
@@ -272,7 +272,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
     this.storyVale=this.add.image(xy.x-30,xy.y+2,valeTexture(false,0))
      .setOrigin(.5,.9).setScale(.87).setDepth(xy.y+2);
     this.storyHands=this.add.graphics().setDepth(xy.y+3);
-    this.storyObjects.push(this.storyVale,this.storyHands);
+    this.storyValeShadow=this.add.ellipse(xy.x-30,xy.y+4,25,8,0x534859,.20).setDepth(xy.y+1);
+    this.storyObjects.push(this.storyVale,this.storyValeShadow,this.storyHands);
     this.story.guide('Luis y Vale caminan por el sendero de los cerezos. Acércate a saludarlos.');
    }else{
     const next=toScreen({u:35.3,v:6.3});
@@ -482,8 +483,16 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const vale=this.storyVale,hands=this.storyHands;
   if(!vale||!hands)return;
   const alpha=motion?.kind==='farewell-walk'?Math.min(1,(motion.duration-motion.elapsed)/320):1;
-  vale.setTexture(valeTexture(pose==='walk',frame)).setPosition(npc.x-30,npc.y+2)
-   .setDepth(npc.y+2).setAlpha(alpha);
+  // The two walkers share the route, but not a single rigid gait. Vale
+  // stays beside Luis while her own step cycle and posture follow his pace.
+  const walking=pose==='walk',offset=this.reducedMotion?0:walking?Math.sin(clock/160)*1.8:Math.sin(clock/1050)*.8;
+  const valeFrame=luisAnimationFrame(clock+85,walking?'walk':'idle',this.reducedMotion);
+  const valeKey=valeTexture(walking,valeFrame);
+  if(vale.texture.key!==valeKey&&this.textures.exists(valeKey))vale.setTexture(valeKey);
+  vale.setPosition(npc.x-30+offset,npc.y+2).setDepth(npc.y+2).setAlpha(alpha)
+   .setFlipX(facing==='right'&&dx<0)
+   .setAngle(this.reducedMotion?0:walking?Math.sin(clock/160)*1.6:0);
+  this.storyValeShadow?.setPosition(vale.x,vale.y+2).setDepth(vale.y-1).setAlpha(alpha);
   npc.setAlpha(alpha);this.storyLuisShadow?.setAlpha(alpha);
   hands.clear().setDepth(npc.y+3);
   hands.lineStyle(4,0x634257,alpha).lineBetween(vale.x+12,vale.y-10,npc.x-12,npc.y-10);

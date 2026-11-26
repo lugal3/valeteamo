@@ -82,6 +82,7 @@ export function pursuerPose(actor,reduced=false){
  const amount=clamp((actor.speed??0)/1.42,0,1)*(reduced?.68:1);
  const phase=(actor.walk/STRIDE)%1,step=phase*TAU;
  const sway=Math.sin(step)*.037*amount;
+ const turning=reduced?0:clamp((actor.turnRate||0)/4,-1,1);
  let hips=-.104*amount+Math.cos(2*step)*.022*amount;
  const feet=[-1,1].map(side=>{
   const cycle=(phase+(side===1?.5:0))%1,foot=footfall(cycle,amount);
@@ -91,8 +92,9 @@ export function pursuerPose(actor,reduced=false){
   return {side,cycle,foot};
  });
  const hurry=['chase','rc-chase'].includes(actor.mode)?amount:0;
- const joints={hips:{y:hips},chest:{py:1.07,x:sway,y:hips,pitch:.06+hurry*.15,yaw:-Math.sin(step)*.11*amount,roll:sway*.8},
+ const joints={hips:{y:hips},chest:{py:1.07,x:sway,y:hips,pitch:.06+hurry*.15,yaw:-Math.sin(step)*.11*amount,roll:sway*.8-turning*.046},
   head:{py:1.52,x:sway,y:hips-.005,z:.033+hurry*.065,yaw:reduced?0:Math.sin((actor.age??0)*(hurry?3.7:2.1))*(hurry?.065:.17),pitch:-.02-hurry*.07}};
+ joints.head.yaw+=turning*.17;
  const settled=1-amount;
  if(actor.mode==='patrol-rest'){
   const breath=reduced?0:Math.sin(actor.age*2.2);
@@ -118,6 +120,13 @@ export function pursuerPose(actor,reduced=false){
   const shoulderZ=(side*-.037*Math.sin(step)+.033)*amount;
   joints['arm'+side]={py:SHOULDER,x:sway,y:hips,z:shoulderZ,pitch:swing};
   joints['forearm'+side]={py:ELBOW,x:sway,y:hips+(SHOULDER-ELBOW)*(1-Math.cos(swing)),z:shoulderZ-(SHOULDER-ELBOW)*Math.sin(swing),pitch:swing-.13-amount*.20-hurry*.35};
+ }
+ if(actor.doorReach>0&&!actor.captureReach&&actor.mode!=='stunned'){
+  const t=clamp(actor.doorReach/.44,0,1),reach=reduced?.6:Math.sin(Math.PI*t)**.65;
+  const side=1,pitch=-.28-1.05*reach;
+  joints.chest.yaw+=.12*reach;joints.head.yaw+=.12*reach;
+  joints['arm'+side]={py:SHOULDER,y:hips,pitch,roll:-.17*reach};
+  joints['forearm'+side]={py:ELBOW,pitch:pitch-.46*reach,y:hips+(SHOULDER-ELBOW)*(1-Math.cos(pitch)),z:-(SHOULDER-ELBOW)*Math.sin(pitch)};
  }
  if(actor.captureReach){
   joints.chest.pitch=.12-.10*actor.captureLift;

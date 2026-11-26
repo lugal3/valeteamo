@@ -477,6 +477,46 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
  g.fillStyle(back[map]).fillRect(-1600,-1300,7200,4500);
  let tiles=0;
  const low=Math.floor(cfg.minU),high=Math.ceil(cfg.maxU);
+ // A soft, continuous landscape behind the actual walkable tiles. Former
+ // maps ended abruptly against a flat pastel void; these distant meadows,
+ // wooded shoulders and river extensions remain purely decorative.
+ const landscape:Record<RescueMapId,readonly [number,number,number]>={
+  morning_garden:[0xdfe4c9,0xcbd9b8,0x90b395],
+  afternoon_meeting:[0xe2d7b5,0xcbd1a8,0xa0ad83],
+  dusk_search:[0xa8b0aa,0x919f96,0x667f79],
+  night_neighborhood:[0x79858d,0x687a81,0x566a73]
+ };
+ const [outer,inner,canopy]=landscape[map];
+ const shoulder=(margin:number,color:number,alpha:number)=>{
+  const edges:Array<[number,number]>=[],opposite:Array<[number,number]>=[];
+  for(let u=low-9;u<=high+9;u+=1){
+   const sample=clamp(u,low,high),lim=routeLimits(sample);
+   const a=toScreen({u,v:lim.min-margin-.6*Math.sin(u*.52)}),
+    b=toScreen({u,v:lim.max+margin+.5*Math.cos(u*.44)});
+   edges.push([a.x,a.y]);opposite.push([b.x,b.y]);
+  }
+  poly(g,color,[...edges,...opposite.reverse()],alpha);
+ };
+ shoulder(9,outer,.67);shoulder(5.2,inner,.60);
+ for(let u=low-5;u<=high+5;u+=2){
+  const lim=routeLimits(clamp(u,low,high));
+  for(const side of [-1,1]){
+   const v=(side<0?lim.min:lim.max)+side*(3.5+hashCell(u,side,34)*2.9);
+   const point=toScreen({u,v});
+   const scale=.68+hashCell(u,side,35)*.63;
+   // Low contrast distant vegetation, not interactable foreground trees.
+   g.fillStyle(canopy,.15).fillEllipse(point.x,point.y,74*scale,21*scale);
+   g.fillStyle(canopy,.23).fillEllipse(point.x-12,point.y-12,46*scale,23*scale);
+   g.fillStyle(canopy,.18).fillEllipse(point.x+13,point.y-8,40*scale,21*scale);
+  }
+ }
+ if(map==='morning_garden'){
+  // Water continues beyond both banks of the viewport; the existing bridge
+  // and walkable span keep exactly the same coordinates.
+  const waterBand=(u:number,v:number)=>{const p=toScreen({u,v});return [p.x,p.y] as [number,number];};
+  poly(g,0x9ecdc5,[waterBand(9.6,-14),waterBand(16.2,-14),waterBand(16.2,25),waterBand(9.6,25)],.90);
+  poly(g,0x79bdc5,[waterBand(10.2,-14),waterBand(15.8,-14),waterBand(15.8,25),waterBand(10.2,25)],.75);
+ }
  for(let u=low;u<=high;u++)for(let v=-4;v<=16;v++){
   const lim=routeLimits(u);
   const rag=((u*7+v*13)%9===0?-.45:0)+((u*11+v*3)%11===0?.36:0);
@@ -691,6 +731,36 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
     color:'#ffe7fa',stroke:'#4b3853',strokeThickness:3})
    .setOrigin(.5).setDepth(toScreen(NIGHT_HOUSE.window).y+18);
  }
+ // Shared trail vocabulary at both ends of every chapter. The road keeps
+ // going beyond the playable edge rather than ending against a flat void.
+ // Decorative geometry only; existing portal coordinates and collision stay.
+ const seam=scene.add.graphics().setDepth(.35);
+ const links=[...(map==='morning_garden'?[]:[{u:cfg.minU+.35,v:cfg.spawn.v,dir:-1}]),
+  ...(cfg.exit?[{u:cfg.exit.u,v:cfg.exit.v,dir:1}]:[])];
+ for(const link of links){
+  for(let i=0;i<8;i++){
+   const u=link.u+link.dir*i*.56,v=link.v,point=toScreen({u,v});
+   const fade=1-i/9;
+   const color=map==='morning_garden'?0xf4e4c5:map==='afternoon_meeting'?0xe5caaa:
+    map==='dusk_search'?0xbcb1b4:0x989ba6;
+   seam.fillStyle(color,.85*fade).fillEllipse(point.x,point.y,76,36);
+   for(const side of [-1,1]){
+    const edge=toScreen({u,v:v+side*1.25});
+    seam.fillStyle(map==='night_neighborhood'?0x9b9a9d:0xc4b6a1,.65*fade)
+     .fillEllipse(edge.x,edge.y,11,6);
+   }
+  }
+  // Repeated paired posts and pink ribbons form recognizable landmarks.
+  for(const side of [-1,1]){
+   const point=toScreen({u:link.u-link.dir*.75,v:link.v+side*2.35});
+   const post=scene.add.graphics().setDepth(point.y);
+   post.fillStyle(0x5c5362,.19).fillEllipse(point.x,point.y,24,8);
+   post.fillStyle(0x987b78).fillRect(point.x-3,point.y-33,6,33);
+   post.fillStyle(0xf0d9bf).fillRect(point.x-5,point.y-36,10,5);
+   post.fillStyle(0xce819f).fillRect(point.x-6,point.y-25,12,5);
+   post.fillStyle(0xe8a9b7).fillTriangle(point.x+3,point.y-22,point.x+14,point.y-17,point.x+5,point.y-12);
+  }
+ }
  // A spatially legible exit: pearly luminous boundary leading to another map.
  if(cfg.exit){
   sign(scene,cfg.exit.u-1.1,cfg.exit.v-2.9,'➜');
@@ -770,7 +840,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    }
   }
   if(cfg.exit){
-   const p=toScreen(cfg.exit),pulse=.45+Math.sin(visualT*2.1)*.16;
+   const p=toScreen(cfg.exit),pulse=.36+Math.sin(visualT*2.1)*.10;
    portalGlow.fillStyle(0xfff6d8,.10+pulse*.15).fillEllipse(p.x,p.y-3,105,40);
    portalGlow.lineStyle(2,0xfff2c8,.33+pulse*.34).strokeEllipse(p.x,p.y-3,88,30);
    portalGlow.fillStyle(0xffeed7,.65).fillCircle(p.x,p.y-26+Math.sin(visualT*1.8)*5,3.2);

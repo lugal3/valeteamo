@@ -9,7 +9,8 @@ const {chromium}=require('playwright');
  try{
   await server.listen();
   const url='http://127.0.0.1:'+server.httpServer.address().port+'/';
-  browser=await chromium.launch({headless:true});
+  // Match the software WebGL configuration of the other 3D CI suites.
+  browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   const context=await browser.newContext({viewport:{width:1280,height:720},hasTouch:false,deviceScaleFactor:1});
   const page=await context.newPage(),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
@@ -20,12 +21,19 @@ const {chromium}=require('playwright');
   // The LP panel groups the mirror scene inside its closed advanced section.
   await page.getByText('Escenas y mecánicas aisladas',{exact:true}).click();
   await page.getByRole('button',{name:'Espejo',exact:true}).click();
-  await page.locator('#lab-canvas').waitFor({timeout:25000});
-  // Starting the embedded house may schedule app navigation; do not wait for
-   // that unrelated document lifecycle. We explicitly wait for game readiness.
+  await page.waitForFunction(()=>document.querySelector('#lab-canvas')?.width>300&&!!window.__rescueHouse?.snapshot,null,{timeout:25000});
+  // Keep a real mouse click and assert readiness. Save diagnostics on any
+  // startup failure instead of force-clicking or skipping the scenario.
+  try{
    await page.getByRole('button',{name:'Iniciar prueba'}).click({noWaitAfter:true});
-   await page.waitForFunction(()=>!!window.__rescueHouse?.snapshot?.() &&
-    window.__rescueHouse.snapshot().paused===false,null,{timeout:20000});
+   await page.waitForFunction(()=>window.__rescueHouse.snapshot().paused===false,null,{timeout:20000});
+  }catch(error){
+   fs.mkdirSync('artifacts',{recursive:true});
+   const state=await page.evaluate(()=>({root:document.querySelector('#lab3d')?.className,dialog:document.querySelector('#lab-dialog')?.innerText,canvasWidth:document.querySelector('#lab-canvas')?.width,ready:window.__rescueHouse?.snapshot?.(),focused:document.hasFocus()})).catch(()=>null);
+   console.error('EMOTES_START_DIAGNOSTIC',JSON.stringify({state,errors}));
+   await page.screenshot({path:'artifacts/desktop-emotes-start-failure.png',timeout:10000}).catch(()=>{});
+   throw error;
+  }
   const toggle=page.getByRole('button',{name:'Elegir emote'});
   await toggle.waitFor({state:'visible',timeout:15000});
   const menu=page.locator('#house-emotes');
