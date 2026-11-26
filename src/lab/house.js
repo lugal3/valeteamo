@@ -42,7 +42,7 @@ import {updateUpstairsEmy,petEmy} from './emy-cat.js';
 import {createEmyAbilities,advanceEmyAbilities,activateEmyScan,createEmyNameCue,advanceEmyNameCue,roomChoices,roomDestinations,isEmyRoomLocked,emyFloorList} from './emy-abilities.js';
 import {defaultMiniatureView,changeMiniatureView,miniatureSVG,miniatureMarkers} from './emy-miniature.js';
 import {installNoiseProps,grabNoiseProp,holdNoiseProp,releaseNoiseProp,stepNoiseProps} from './noise-props.js';
-import {sendEmyDistract,commandEmyStay,rejoinEmyInPerson,requestRibbonKey,EMY_ENTRANCE_SECONDS,createEmyCompanion,beginEmyEntrance,emyEntranceCamera,sendEmyToTrunk,emyOccupiesHatch,updateEmyCompanion,snapshotEmyCompanion,restoreEmyCompanion,initializeTrialEmy} from './emy-companion.js';
+import {previewEmyDistract,sendEmyDistract,commandEmyStay,rejoinEmyInPerson,requestRibbonKey,EMY_ENTRANCE_SECONDS,createEmyCompanion,beginEmyEntrance,emyEntranceCamera,sendEmyToTrunk,emyOccupiesHatch,updateEmyCompanion,snapshotEmyCompanion,restoreEmyCompanion,initializeTrialEmy} from './emy-companion.js';
 import {createRC,syncRCObject,deployRC,driveRC,beepRC,updateRC,stopRC,crashRC,recoverRC,rcCamera,advanceRCCamera,rcDeploymentView,canTrapPursuer} from './rc-car.js';
 import {createLouisEscape,updateLouisEscape,freeLouis,louisCamera} from './louis-escape.js';
 import {createLoisShotDirector,advanceLoisShot,finishLoisShot} from './lois-ps2-cinematics.js';
@@ -184,7 +184,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  let resumed=false,lastSafeCheckpoint=null,captureShot=null,captureCount=0,lifeNoticeLeft=0;
  let equipmentBeforeNote='empty',batterySwap=null;
  const canUseHotbar=()=>ready&&!heldNoise&&!isSuspended()&&!cinematic&&!emyShot&&events.phase!=='arrival'&&events.phase!=='failed'&&events.phase!=='safe'&&rc?.mode!=='driving'&&rc?.mode!=='deploying';
- const phone=new PhoneUI(root,(kind,toggle=true)=>equip(kind,toggle),()=>resetInput(),{canEquip:canUseHotbar,canUse:()=>canUseHotbar()&&!notePresentation,onEdit:()=>{releaseMouse();resetInput();if(isSuspended())sound.pause();else sound.resume();},onPhoto:()=>{capturePhoto=true;}});phone.equip(equipment);
+ const phone=new PhoneUI(root,(kind,toggle=true)=>equip(kind,toggle),()=>resetInput(),{canEquip:canUseHotbar,canUse:()=>canUseHotbar()&&!notePresentation,onEdit:()=>{releaseMouse();resetInput();if(isSuspended())sound.pause();else sound.resume();},onPhoto:()=>{capturePhoto=true;},onMap:()=>openHouseMap(true)});phone.equip(equipment);
  const danger=document.createElement('div');danger.className='house-danger';danger.hidden=true;danger.setAttribute('role','status');root.querySelector('#house-messages').append(danger);
  const enableSound=document.createElement('button');enableSound.className='house-enable-sound';enableSound.textContent='Activar sonido';enableSound.hidden=true;root.querySelector('.house-mixer').before(enableSound);
  enableSound.addEventListener('click',async()=>{
@@ -318,7 +318,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   lifeNoticeLeft=0;$('house-lives').hidden=true;
   television.sync(false,false);notePresentation=false;
   louis=null;loisShotDirector=null;rcTrap={armed:false,closed:false};finalCutscene=null;
-  emyMenuOpen=false;emyAbilities=createEmyAbilities();emyNameCue=createEmyNameCue();$('house-emy-name').hidden=true;heldNoise=null;hopAge=HOP_COOLDOWN;hopCancelled=false;clearMiniatureInput();
+  mapReadOnly=false;mapPreview=null;mapReveal=false;emyMenuOpen=false;emyAbilities=createEmyAbilities();emyNameCue=createEmyNameCue();$('house-emy-name').hidden=true;heldNoise=null;hopAge=HOP_COOLDOWN;hopCancelled=false;clearMiniatureInput();
   $('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;$('house-emy-wave').hidden=true;
   releaseMouse();events.reset();mirrorSafe.reset();hudMessages.reset();phone.close();encounterCheckpoint=null;danger.hidden=true;
    root.querySelector('[data-act=emotes]').setAttribute('aria-expanded','false');
@@ -537,8 +537,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(busy)$('house-emy-scan-cd').closest('button').disabled=true;
  }
  function closeEmyMenu(){
+  const backToPhone=mapReadOnly;mapReadOnly=false;mapPreview=null;mapReveal=false;
   emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;clearMiniatureInput();
   resetInput();if(!isSuspended())sound.resume();
+  if(backToPhone&&ready&&!isSuspended()&&!s.hidden&&equipment==='phone'){phone.show('home');return;}
   // Return focus to the game action instead of retaining a hidden dialog card.
   if(ready&&!isSuspended())requestAnimationFrame(()=>{
    if(!active||isSuspended()||emyMenuOpen)return;
@@ -842,8 +844,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const host=$('house-emy-miniature');if(!host||$('house-emy-map').hidden)return;
   const lockedIds=Object.keys(mapUnavailable);
   const markers=miniatureMarkers({x:s.x,y:s.y,z:s.z},{x:world.emy.x,y:world.emy.y,z:world.emy.z,hidden:world.emy.hidden},
-   pursuer,emyAbilities.scan>0&&pursuer.active&&renderer.lastScanOutline);
-  host.innerHTML=miniatureSVG(world,miniatureView,{floor:emyMapFloor,selectedId:emyMapSelected,lockedIds,markers});
+   pursuer,!mapReadOnly&&emyAbilities.scan>0&&pursuer.active&&renderer.lastScanOutline);
+  host.innerHTML=miniatureSVG(world,miniatureView,{floor:emyMapFloor,selectedId:emyMapSelected,lockedIds,markers,route:mapPreview,readOnly:mapReadOnly,reveal:mapReveal&&!reducedMotion.matches});mapReveal=false;
   const legend=$('house-emy-mini-legend');
   if(legend){
    const ids=new Set([...host.querySelectorAll('[data-marker]')].map(el=>el.dataset.marker));
@@ -852,7 +854,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(legend.dataset.markers!==html){legend.dataset.markers=html;legend.innerHTML=html||'Toca o desliza la lista ↓';}
   }
  }
- const mapPointers=new Map();let mapDragged=false,mapSuppressUntil=0,mapRedraw=0,mapUnavailable={},mapRejected={},mapValidation=new Map();
+ const mapPointers=new Map();let mapDragged=false,mapSuppressUntil=0,mapRedraw=0,mapUnavailable={},mapRejected={},mapValidation=new Map(),mapPreview=null,mapReadOnly=false,mapReveal=false;
  function scheduleMiniature(){if(!mapRedraw)mapRedraw=requestAnimationFrame(()=>{mapRedraw=0;drawEmyMiniature();});}
  function clearMiniatureInput(){
   const ids=[...mapPointers.keys()];mapPointers.clear();
@@ -900,6 +902,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   mapUnavailable={...mapValidation.get(emyMapFloor),...mapRejected};
   const lockedIds=Object.keys(mapUnavailable);
   const options={selectedId:emyMapSelected,lockedIds,disabledReasons:mapUnavailable};
+  mapPanel.dataset.mode=mapReadOnly?'browse':'command';
+  mapPanel.setAttribute('aria-label',mapReadOnly?'Mapas · casa de Kitty':'Mapa de distracción de Emy');
+  mapPanel.querySelector('.house-emy-map-kicker').textContent=mapReadOnly?'MAPAS · CASA':'EMY · PLAN DE DISTRACCIÓN';
+  mapPanel.querySelector('.house-emy-map-header strong').textContent=mapReadOnly?'Explora la casa':'Elige dónde hacer ruido';
+  mapPanel.querySelector('[data-act="emy:map:back"]').setAttribute('aria-label',mapReadOnly?'Volver al teléfono':'Volver a acciones de Emy');
   for(const floor of [-1,0,1]){
    const tab=$('house-emy-tab-'+floor);
    tab.setAttribute('aria-selected',String(emyMapFloor===floor));
@@ -909,7 +916,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const floorName=emyMapFloor<0?'EXTERIOR':emyMapFloor===0?'PLANTA BAJA':'PLANTA ALTA';
   const roomsHost=$('house-emy-map-rooms');
   const previousList=roomsHost.querySelector('.house-emy-destination-list');
-  const scroll=roomsHost.dataset.floor===String(emyMapFloor)?previousList?.scrollTop||0:0;
+  const sameFloor=roomsHost.dataset.floor===String(emyMapFloor),scroll=sameFloor?previousList?.scrollTop||0:0;
+  mapReveal=!sameFloor&&emyMapFloor>=0;
   roomsHost.dataset.floor=String(emyMapFloor);
   roomsHost.innerHTML=
    '<div class="house-emy-map-layout">'+
@@ -921,19 +929,31 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     '</section>'+
     '<section class="house-emy-destination-panel" aria-label="Habitaciones de '+floorName+'">'+
      '<div class="house-emy-destination-head"><strong>Habitaciones y zonas</strong><small id="house-emy-mini-legend">Toca o desliza la lista ↓</small></div>'+
-     (emyMapFloor<0?'<div class="mini-exterior-copy"><b>La casa de Kitty</b><p>Gira la miniatura para explorar el exterior. Selecciona planta baja o alta para retirar la cubierta y elegir dónde enviar a Emy.</p><p>● Kitty &nbsp; ◆ Emy</p></div>':
+     (emyMapFloor<0?'<div class="mini-exterior-copy"><b>La casa de Kitty</b><p>Gira la miniatura y selecciona una planta para retirar la cubierta'+(mapReadOnly?'.': ' y elegir dónde enviar a Emy.')+'</p></div>':
+      mapReadOnly?'<div class="house-emy-destination-list mini-readonly-list">'+all.filter(r=>r.floor===emyMapFloor).map(r=>'<div class="mini-readonly-room">'+escapeHTML(r.label)+'</div>').join('')+'</div>':
       '<div class="house-emy-destination-list">'+emyFloorList(world.rooms,emyMapFloor,options)+'</div>')+
     '</section>'+
    '</div>';
   drawEmyMiniature();
   const destinationList=roomsHost.querySelector('.house-emy-destination-list');if(destinationList)destinationList.scrollTop=scroll;
-  $('house-emy-map-send').disabled=!selected||!!mapUnavailable[selected.id];
-  $('house-emy-map-status').textContent=selected?
-   (mapUnavailable[selected.id]?selected.label+': '+mapUnavailable[selected.id]+'.':
-    'Destino: '+selected.label+' · '+(selected.floor?'planta alta':'planta baja')+
-    ' · Emy '+(world.emy.y>HEIGHT*.52===Boolean(selected.floor)?'irá caminando':'usará las escaleras')+
-    ' y hará ruido durante 25 s.'):
-   emyMapFloor<0?'¿A qué piso quieres enviar a Emy?':'Selecciona una habitación en este piso.';
+  $('house-emy-map-send').hidden=mapReadOnly;
+  $('house-emy-map-send').disabled=mapReadOnly||!selected||!mapPreview||!!mapUnavailable[selected.id];
+  const status=$('house-emy-map-status');
+  if(mapReadOnly)status.textContent='Mapa de consulta · Verde: abierta · Ocre: cerrada · Rosa: bloqueada';
+  else if(selected&&mapPreview)status.textContent='Destino: '+selected.label+' · '+(selected.floor?'planta alta':'planta baja')+' · aprox. '+mapPreview.seconds+' s'+
+    (mapPreview.waypoints.some(p=>p.y<HEIGHT*.5)&&mapPreview.waypoints.some(p=>p.y>=HEIGHT*.5)?' · Ver ambos pisos':'')+' · 25 s de distracción';
+  else status.textContent=emyMapFloor<0?'¿A qué piso quieres enviar a Emy?':'Selecciona una habitación en este piso.';
+ }
+ function openHouseMap(readOnly=false){
+  if(readOnly){
+   if(!phone.open||!canUseHotbar()||s.hidden||s.lying)return;
+   phone.close();emyMenuOpen=true;releaseMouse();resetInput();sound.pause();
+  }
+  mapReadOnly=readOnly;mapPreview=null;mapReveal=false;
+  emyMapFloor=-1;miniatureView=defaultMiniatureView();clearMiniatureInput();mapRejected={};mapValidation.clear();mapSuppressUntil=0;
+  emyMapSelected='';$('house-emy-menu').hidden=true;$('house-emy-map').hidden=false;
+  $('house-emy-map-rooms').dataset.floor='';
+  renderEmyMap();$('house-emy-tab--1').focus({preventScroll:true});
  }
  function runAction(act,node){
   if(act.startsWith('emy:')){
@@ -941,6 +961,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     closeEmyMenu();return;
    }
    if(!emyMenuOpen||!world||!s)return;
+   if(mapReadOnly&&!['emy:map:back'].includes(act)&&!act.startsWith('emy:view:')&&!act.startsWith('emy:floor:'))return;
    if(act==='emy:stay'){
      const staying=['stay','distract','distract-recover'].includes(emyCompanion?.stage);
      const ok=staying?rejoinEmyInPerson(emyCompanion,world,s):commandEmyStay(emyCompanion);
@@ -968,15 +989,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(act==='emy:map'){
     if(emyAbilities.distractCooldown>0){say('Emy necesita descansar '+Math.ceil(emyAbilities.distractCooldown)+' s.');return;}
     if(emyCompanion?.stage!=='following'){say('Indica primero a Emy que te siga.');return;}
-    emyMapFloor=-1;miniatureView=defaultMiniatureView();clearMiniatureInput();mapRejected={};mapValidation.clear();mapSuppressUntil=0;
-    emyMapSelected='';
-    $('house-emy-menu').hidden=true;$('house-emy-map').hidden=false;
-    renderEmyMap();
-    $('house-emy-tab-'+emyMapFloor).focus({preventScroll:true});
-    return;
+    openHouseMap(false);return;
    }
    if(act==='emy:map:back'){
-    $('house-emy-map').hidden=true;$('house-emy-menu').hidden=false;clearMiniatureInput();refreshEmyMenu();
+    if(mapReadOnly){closeEmyMenu();return;}
+    mapPreview=null;emyMapSelected='';$('house-emy-map').hidden=true;$('house-emy-menu').hidden=false;clearMiniatureInput();refreshEmyMenu();
     $('house-emy-menu').querySelector('[data-act="emy:map"]').focus({preventScroll:true});return;
    }
    if(act.startsWith('emy:view:')){
@@ -984,7 +1001,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     miniatureView=delta?changeMiniatureView(miniatureView,delta):defaultMiniatureView();drawEmyMiniature();return;
    }
    if(['emy:floor:-1','emy:floor:0','emy:floor:1'].includes(act)){
-    emyMapFloor=Number(act.slice(10));emyMapSelected='';clearMiniatureInput();
+    emyMapFloor=Number(act.slice(10));clearMiniatureInput();
     renderEmyMap();
     $('house-emy-tab-'+emyMapFloor).focus({preventScroll:true});
     return;
@@ -993,6 +1010,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     const id=act.slice('emy:room:'.length);
     const room=roomChoices(world.rooms).find(r=>r.id===id&&r.floor===emyMapFloor);
     if(!room||mapUnavailable[room.id]||performance.now()<mapSuppressUntil&&node?.closest('#house-emy-miniature'))return;
+    mapPreview=null;
+    for(const goal of roomDestinations(world,room)){mapPreview=previewEmyDistract(emyCompanion,world,goal);if(mapPreview)break;}
+    if(!mapPreview){mapRejected[room.id]='Ruta bloqueada';emyMapSelected='';renderEmyMap();$('house-emy-map-status').textContent='Emy no puede llegar a '+room.label+'. Abre el paso o elige otro lugar.';return;}
     emyMapSelected=room.id;renderEmyMap();
     $('house-emy-map-send').focus({preventScroll:true});
     return;
@@ -1000,13 +1020,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(act==='emy:send'){
     const room=roomChoices(world.rooms).find(r=>r.id===emyMapSelected);
     if(!room||mapUnavailable[room.id]||isEmyRoomLocked(world,room)||emyAbilities.distractCooldown>0)return;
-    const targets=roomDestinations(world,room);
-    if(!targets.length){
-     $('house-emy-map-status').textContent='No hay espacio libre en '+room.label+'. Elige otro lugar.';
-     return;
-    }
-    if(!targets.some(goal=>sendEmyDistract(emyCompanion,world,goal))){
-     mapRejected[room.id]='Ruta bloqueada';emyMapSelected='';renderEmyMap();
+    if(!mapPreview)return;
+    if(!sendEmyDistract(emyCompanion,world,mapPreview.goal)){
+     mapPreview=null;mapRejected[room.id]='Ruta bloqueada';emyMapSelected='';renderEmyMap();
      $('house-emy-map-status').textContent='Emy no puede llegar a '+room.label+' con las puertas actuales. Abre el paso o elige otro destino.';
      return;
     }
@@ -2225,7 +2241,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    louis:()=>louis?{x:louis.x,y:louis.y,z:louis.z,phase:louis.phase,waypoint:louis.waypoint,age:louis.age,walk:louis.walk,speed:louis.speed,crouch:louis.crouch,reaction:louis.visualReaction?.type??null,cameraPhase:loisShotDirector?.phase??null}:null,
    emy:()=>({x:world.emy.x,y:world.emy.y,z:world.emy.z,phase:world.emy.phase,reaction:world.emy.reaction,hidden:world.emy.hidden,mood:emyCompanion?.mood,alarm:world.emy.alarm||0,refuge:emyCompanion?.refuge?{...emyCompanion.refuge}:null,companion:emyCompanion?.stage,stay:emyCompanion?.stage==='stay',ventOpen:world.studyVent.coverAmount===1,entrance:emyShot?.elapsed,trunk:emyCompanion?.stage==='trunk'}),
    emySkills:()=>({scanRendered:!!renderer?.lastScanOutline,scan:emyAbilities.scan,scanCooldown:emyAbilities.scanCooldown,distractCooldown:emyAbilities.distractCooldown,
-    wave:emyAbilities.wave,stay:emyCompanion?.stage==='stay',menu:emyMenuOpen,mapOpen:!$('house-emy-map').hidden,stage:emyCompanion?.stage,
+    wave:emyAbilities.wave,stay:emyCompanion?.stage==='stay',menu:emyMenuOpen,mapOpen:!$('house-emy-map').hidden,mapReadOnly,preview:mapPreview?{goal:{...mapPreview.goal},seconds:mapPreview.seconds,waypoints:mapPreview.waypoints.map(p=>({...p}))}:null,stage:emyCompanion?.stage,
     distraction:emyCompanion?.distraction?{remaining:emyCompanion.distraction.remaining,arrived:emyCompanion.distraction.arrived,
       goal:{...emyCompanion.distraction.goal}}:null}),
    noiseProps:()=>noiseProps.map(p=>({id:p.id,x:p.x,y:p.y,z:p.z,held:p.held,spent:p.spent,flight:!!p.flight})),
