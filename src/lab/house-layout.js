@@ -378,7 +378,7 @@ export function buildHouse(spawn='ground'){
  add('record-deck',9.78,HEIGHT+.966,.40,.52,.105,.41,'wood',false,{shape:'rounded-box',roundness:.20,segments:8,rings:4});
  add('record-player',9.73,HEIGHT+1.026,.40,.33,.022,.33,'dark',false,{shape:'lathe',profile:CLOCK_PROFILE,segments:16});
  add('record-arm',9.94,HEIGHT+1.035,.41,.025,.026,.29,'torchmetal',false,{yaw:.19});
- obj('record-player','inspect','Tocadiscos',9.78,HEIGHT+1.05,.42,{text:'El vinilo está rayado en el mismo surco. Al lado, alguien escribió «Otra vez, desde el principio».'});
+ obj('record-player','inspect','Tocadiscos · escuchar',9.78,HEIGHT+1.05,.42,{text:'El vinilo está rayado en el mismo surco. Al lado, alguien escribió «Otra vez, desde el principio».'});
  shelf('music-books',13.80,HEIGHT,2.03,Math.PI/2);chair('music-chair',8.24,HEIGHT,1.33,.98);
  add('guitar-body',10.92,HEIGHT+1.13,.20,.35,.48,.10,'wood',false,{shape:'round'});add('guitar-neck',10.92,HEIGHT+1.6,.20,.055,.65,.08,'wood',false);
  obj('guitar','inspect','Guitarra de la sala',10.92,HEIGHT+1.39,.32,{text:'Una cuerda está rota. En la caja quedó un adhesivo de One Direction.'});
