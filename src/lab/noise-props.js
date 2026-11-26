@@ -52,7 +52,7 @@ export function stepNoiseProps(props,dt,world,pursuer,emy){
   const f=prop.flight,step=Math.min(.055,Math.max(0,dt));f.ttl-=step;
   const prev={x:prop.x,y:prop.y,z:prop.z};
   f.vy-=9.8*step;prop.x+=f.vx*step;prop.y+=f.vy*step;prop.z+=f.vz*step;
-  const hitEnemy=pursuer?.active&&Math.abs(pursuer.x-prop.x)<.5&&Math.abs(pursuer.z-prop.z)<.5&&
+  let hitEnemy=pursuer?.active&&Math.abs(pursuer.x-prop.x)<.5&&Math.abs(pursuer.z-prop.z)<.5&&
    prop.y>pursuer.y+.2&&prop.y<pursuer.y+2;
   const nearCat=emy&&!emy.hidden&&!emy.dodge&&!f.dodged&&Math.abs(emy.x-prop.x)<.48&&Math.abs(emy.z-prop.z)<.48&&Math.abs(emy.y+.35-prop.y)<.60;
   if(nearCat){
@@ -87,6 +87,8 @@ export function stepNoiseProps(props,dt,world,pursuer,emy){
    Math.abs(box.y-(prev.y+prop.y)*.5)<box.h/2+.6&&
    segmentHitsBox(prev,prop,box,.035));
   const hitSurface=Boolean(struck);
+  // A wall impact wins over an enemy overlap behind the wall.
+  hitEnemy=hitEnemy&&!hitSurface;
   const landed=!Number.isFinite(base)||prop.y<=base+.055||hitSurface||f.ttl<=0||hitEnemy;
   if(landed){
    prop.x=hitSurface?prev.x:prop.x;prop.z=hitSurface?prev.z:prop.z;
