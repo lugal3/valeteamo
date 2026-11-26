@@ -11,11 +11,13 @@ const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>'
 
 // The name tag is a one-second, edge-triggered cue, never a persistent HUD.
 export function createEmyNameCue(){return {left:0,cooldown:0,looking:false};}
-export function advanceEmyNameCue(state,dt,looking,active=true){
+export function advanceEmyNameCue(state,dt,looking,active=true,allowCue=true){
  const step=active?clamp(Number.isFinite(dt)?dt:0,0,.1):0;
  state.left=Math.max(0,state.left-step);
  state.cooldown=Math.max(0,state.cooldown-step);
- if(!active){state.left=0;return false;}
+ // A phone, cutaway or occupied hand hides the tag without resetting the
+ // look-edge; ordinary gameplay still counts toward the three-minute wait.
+ if(!active||!allowCue){state.left=0;return false;}
  if(!looking)state.left=0;
  if(looking&&!state.looking&&state.cooldown===0){
   state.left=1;state.cooldown=180;
