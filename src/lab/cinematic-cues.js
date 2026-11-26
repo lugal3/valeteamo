@@ -2,7 +2,7 @@
 // No camera/actor positions, puzzle flags or audio contexts are modified here.
 export const ESCAPE_FINALE_CUES=Object.freeze([
  Object.freeze({id:'threat',at:.28,sound:'floor-groan',source:'pursuer',level:1,caption:'Un golpe fuerte detrás de Kitty'}),
- Object.freeze({id:'emy-warning',at:1.70,sound:'cat',source:'emy',level:1.20,caption:'Emy salta para liberar a Louis'}),
+ Object.freeze({id:'emy-warning',at:1.30,sound:'cat',source:'emy',level:1.20,caption:'Emy se eriza y se prepara para saltar'}),
  Object.freeze({id:'impact',at:2.08,sound:'cloth',source:'pursuer',level:1,caption:'Emy alcanza al secuestrador'}),
  Object.freeze({id:'escape',at:3.52,sound:'wood',source:'kitty',level:.72,caption:'¡Corre hacia el jardín con Louis!'}),
  Object.freeze({id:'safe',at:6.80,sound:'notification',source:null,level:.65,caption:'Kitty, Louis y Emy están a salvo'})
