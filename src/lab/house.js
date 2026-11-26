@@ -278,7 +278,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function rebuild(){
   // Keep Emy's skinned meshes in the dynamic buffer while she waits outside
   // or hides, so the window jump and shared hide can reveal her without a rebuild.
-  renderer.rebuild([...world.boxes.filter(box=>!box.hiddenGeometry||box.emySpec),...pickupGeometry(world.objects)]);
+  renderer.rebuild([...world.boxes.filter(box=>(!box.hiddenGeometry||box.emySpec)&&(!box.source?.taken||box.dynamic)),...pickupGeometry(world.objects)]);
   renderer.setNoiseProps(noiseProps);
   renderer.updateVisibility();
  }
@@ -563,7 +563,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function showPlush(item){
   const toast=$('house-plush-toast'),count=collectedPlushes(world.holiday).length;
   toast.dataset.variant=String(item.index);toast.querySelector('strong').textContent=PLUSH_NAMES[item.index];toast.querySelector('span').textContent=count+' de 3 coleccionables';
-  toast.hidden=false;plushNoticeLeft=1.75;renderer.updateVisibility();play('pickup',item);haptics.pulse('puzzle');saveCheckpoint();
+  toast.hidden=false;plushNoticeLeft=1.75;if(item.kind==='collectible')rebuild();else renderer.updateVisibility();play('pickup',item);haptics.pulse('puzzle');saveCheckpoint();
  }
  function interact(){
   // Throw is a distinct action from pickup: do not swallow an intentional
