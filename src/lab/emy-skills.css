@@ -242,7 +242,7 @@
 }
 
 /* V3 companion cards and a quiet world-anchored name tag. */
-#lab3d .house-emy-name{position:absolute;z-index:19;transform:translate(-50%,-100%);pointer-events:none;white-space:nowrap;color:#ffe6f7;background:#39264bd9;border:1px solid #eba9d3;border-radius:9px;padding:3px 9px;font:650 12px/1.3 system-ui;box-shadow:0 2px 9px #150e263d}
+#lab3d .house-emy-name{animation:emy-name-fade 1s ease both;position:absolute;z-index:19;transform:translate(-50%,-100%);pointer-events:none;white-space:nowrap;color:#ffe6f7;background:#39264bd9;border:1px solid #eba9d3;border-radius:9px;padding:3px 9px;font:650 12px/1.3 system-ui;box-shadow:0 2px 9px #150e263d}
 #lab3d .house-emy-menu{width:min(390px,calc(100vw - 40px));box-sizing:border-box;max-height:calc(100dvh - 24px);overflow:auto;gap:9px;padding:14px;border:1px solid #eab4d8;background:linear-gradient(145deg,#30233e,#201927);box-shadow:0 16px 45px #100b1bbb}
 #lab3d .house-emy-menu header{grid-column:1/-1;position:relative;display:grid;gap:2px;padding:0 48px 7px 2px}
 #lab3d .house-emy-menu header strong{margin:0;text-align:left;font:750 22px/1.15 system-ui;color:#ffe1f2}
@@ -340,3 +340,9 @@
  #lab3d .house-emy-menu{max-width:400px}
  #lab3d .house-emy-menu .emy-card{min-height:82px}
 }
+
+@keyframes emy-name-fade{0%{opacity:0;translate:0 3px}15%,76%{opacity:1;translate:0 0}100%{opacity:0;translate:0 -2px}}
+@keyframes emy-menu-enter{from{opacity:0;transform:translate(-50%,-48%) scale(.98)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+#lab3d .house-emy-menu:not([hidden]){animation:emy-menu-enter .16s ease-out}
+@media(prefers-reduced-motion:reduce){#lab3d .house-emy-name,#lab3d .house-emy-menu:not([hidden]){animation:none}}
+#lab3d.house-motion-reduced :is(.house-emy-name,.house-emy-menu){animation:none!important}
