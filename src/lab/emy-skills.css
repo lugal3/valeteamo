@@ -271,9 +271,9 @@
 #lab3d .mini-3d svg{display:block;width:100%;height:100%;overflow:hidden}
 #lab3d .mini-3d [data-act]{cursor:pointer}
 #lab3d .mini-3d polygon.mini-room[data-act]:hover{stroke:#fff4dc;stroke-width:2}
-#lab3d .mini-3d .mini-label{font:700 10px system-ui;text-anchor:middle;dominant-baseline:central;fill:#2a2134;stroke:#fff4;stroke-width:1.8px;paint-order:stroke;pointer-events:none}
+#lab3d .mini-3d .mini-label{font:700 15px system-ui;text-anchor:middle;dominant-baseline:central;fill:#2a2134;stroke:#fff4;stroke-width:1.8px;paint-order:stroke;pointer-events:none}
 #lab3d .mini-3d .mini-pin{pointer-events:none}
-#lab3d .mini-3d .mini-pin text{font:750 10px system-ui;text-anchor:middle;fill:#fff;stroke:#201827;stroke-width:3px;paint-order:stroke}
+#lab3d .mini-3d .mini-pin text{font:750 16px system-ui;text-anchor:middle;fill:#fff;stroke:#201827;stroke-width:3px;paint-order:stroke}
 #lab3d .mini-tools{display:flex;justify-content:center;gap:4px;width:100%;flex:0 0 auto}
 #lab3d .mini-tools button{flex:0 1 44px;min-width:28px;min-height:35px;padding:2px 4px;font:700 18px system-ui;background:#493750;border-color:#c7a2c2}
 #lab3d .mini-exterior-copy{padding:12px;color:#e5d7e8;font:500 13px/1.5 system-ui}
@@ -294,9 +294,9 @@
  #lab3d .house-emy-floor-switch button{min-height:44px}
  #lab3d .house-emy-intro{font-size:10px;line-height:1.1}
  #lab3d .house-emy-map-layout{grid-template-columns:minmax(0,1.3fr) minmax(195px,.7fr);gap:6px}
- #lab3d .house-emy-map-board{padding:3px 98px 3px 3px}
+ #lab3d .house-emy-map-board{padding:3px 144px 3px 3px}
  #lab3d .house-emy-map-board-title{display:none}
- #lab3d .mini-tools{position:absolute;right:4px;top:50%;transform:translateY(-50%);display:grid;grid-template-columns:repeat(2,44px);gap:3px;width:auto}
+ #lab3d .mini-tools{position:absolute;right:4px;top:50%;transform:translateY(-50%);display:grid;grid-template-columns:repeat(3,44px);gap:3px;width:auto}
  #lab3d .mini-tools button{min-width:44px;min-height:44px;font-size:17px}
  #lab3d .house-emy-destination-list .house-emy-destination{min-height:44px}
  #lab3d .house-emy-map-footer button{min-height:44px}
@@ -313,3 +313,15 @@
 #lab3d.house-cutaway .house-emy-name,
 #lab3d.lab-intro-active .house-emy-name{visibility:hidden}
 #lab3d .house-emy-destination-list .house-emy-destination small{max-width:40%;white-space:normal;text-align:right}
+
+#lab3d .mini-3d .mini-pin circle{vector-effect:non-scaling-stroke}
+#lab3d .mini-3d .mini-wall{pointer-events:none}
+#lab3d .mini-3d .mini-room.is-locked{cursor:default}
+#lab3d .house-emy-destination-list .house-emy-destination.is-locked .house-emy-destination-name{color:#fff3f7}
+@media(max-width:760px) and (min-width:621px) and (max-height:470px){
+ #lab3d .house-emy-map-layout{grid-template-columns:minmax(0,1fr) minmax(195px,.7fr)}
+ #lab3d .house-emy-map-board{padding:3px}
+ #lab3d .mini-tools{position:static;display:flex;transform:none;width:100%;gap:2px}
+ #lab3d .mini-tools button{flex:1 1 40px;min-width:30px;min-height:35px}
+ #lab3d .house-emy-intro{display:none}
+}
