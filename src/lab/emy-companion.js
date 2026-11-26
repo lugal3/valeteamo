@@ -91,7 +91,7 @@ export function emyEntranceCamera(camera,progress,reduced=false,cat){
 }
 export function sendEmyToTrunk(companion){
  if(['waiting','trunk','trunk-enter'].includes(companion.stage))return false;
- companion.stage='trunk-run';companion.trail=[];companion.route=[];companion.stuck=0;companion.chasing=false;
+ companion.stage='trunk-run';companion.trail=[];companion.route=[];companion.stuck=0;companion.chasing=false;companion.distraction=null;companion.refuge=null;
  companion.cat.reaction=0;
  setVisibility(companion,false);
  return true;
@@ -498,14 +498,17 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  const gap=distance(cat,heading);
  if(following&&!hide){
   const differentFloor=Math.abs(cat.y-heading.y)>.25;
-  if(companion.chasing===undefined)companion.chasing=gap>FOLLOW_RESUME||differentFloor;
-  if(companion.chasing&&!differentFloor&&gap<=FOLLOW_STOP){
+  // A small horizontal gap through a closed wall is not actual proximity.
+  const separateRoom=roomAt(cat.x,cat.z,cat.y)!==roomAt(heading.x,heading.z,heading.y);
+  const separated=differentFloor||(separateRoom&&!companion.direct);
+  if(companion.chasing===undefined)companion.chasing=gap>FOLLOW_RESUME||separated;
+  if(companion.chasing&&!separated&&gap<=FOLLOW_STOP){
    // Her current spot is intentional once she is close enough.  Discarding
    // stale breadcrumbs avoids a delayed turn if Kitty circles around Emy.
    companion.chasing=false;
    companion.trail.length=0;
    companion.route.length=0;
-  }else if(!companion.chasing&&(gap>FOLLOW_RESUME||differentFloor))companion.chasing=true;
+  }else if(!companion.chasing&&(gap>FOLLOW_RESUME||separated))companion.chasing=true;
  }
  if(following){
   // Prefer Kitty when there is room for the whole cat. Keep the recorded
@@ -526,14 +529,15 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  // properly away.  Hiding remains deliberately close so Emy takes cover.
  const far=following&&!hide&&!companion.altarWait?Boolean(companion.chasing):(gap>stop+.008||Math.abs(cat.y-heading.y)>.25);
  let walking=false;
- if((companion.stage==='trunk-run'||hide)&&companion.route.length)openRouteDoor(companion,world,player,reduced);
+ if((companion.stage==='trunk-run'||hide||following)&&companion.route.length)openRouteDoor(companion,world,player,reduced);
  if(far&&cat.reaction<=0&&dt>0){
   const pace=following?Math.min(4.2,.70+2.35*Math.max(0,gap-stop)):1.4;
-  walking=moveToward(companion,world,goal,dt,goal===heading?Math.min(pace,Math.max(0,gap-stop)/dt):pace);
+  const directStop=goal===heading&&Math.abs(cat.y-heading.y)<.25&&companion.direct;
+  walking=moveToward(companion,world,goal,dt,directStop?Math.min(pace,Math.max(0,gap-stop)/dt):pace);
  }
  if(!walking&&far&&cat.reaction<=0){
   companion.stuck+=dt;
-  if(companion.stuck>1.2){planRoute(companion,world,hide?heading:goal);companion.stuck=0;}
+  if(companion.stuck>1.2){planRoute(companion,world,heading);companion.stuck=0;}
  }else companion.stuck=0;
  if(companion.stage==='following'&&hide&&companion.direct&&distance(cat,heading)<.38&&Math.abs(cat.y-heading.y)<.45){
   if(hide.objectId==='wardrobe'&&(enteringHide||player?.hidden?.objectId==='wardrobe')){
