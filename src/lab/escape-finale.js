@@ -34,8 +34,12 @@ export function finaleStage(shot,enemy,reduced=false,emy=null){
  const toward=Math.atan2(target.x-x,target.z-z),tilt=Math.atan2(target.y-y,Math.max(.1,Math.hypot(target.x-x,target.z-z)));
  const reveal=reduced?Number(t>=b.turnEnd):ease((t-b.turnStart)/(b.turnEnd-b.turnStart));
  const leave=reduced?Number(t>=b.run):ease((t-b.lookOut)/(b.run-b.lookOut));
- const facing=turn(origin.yaw,toward,reveal);
- const view={x,y,z,yaw:turn(facing,0,leave),pitch:mix(mix(origin.pitch,tilt,reveal),-.28,leave)+(reduced?0:.045*impact)};
+ // Choose a continuous angular branch around the back of the porch, not
+ // a different shortest arc on every frame. Crossing ±π otherwise flips
+ // the interpolated view while Kitty is still turning toward the rescue.
+ const back=turn(origin.yaw,Math.PI,1),targetYaw=turn(back,toward,1);
+ const facing=mix(origin.yaw,targetYaw,reveal),outward=turn(origin.yaw,0,1);
+ const view={x,y,z,yaw:mix(facing,outward,leave),pitch:mix(mix(origin.pitch,tilt,reveal),-.28,leave)+(reduced?0:.045*impact)};
  return {view,louis,stage:t<b.turnStart?'noise':t<b.turnEnd?'turn':t<b.leap?'grab':t<b.release?'intervention':t<b.run?'release':'run'};
 }
 export function finaleThreat(actor,elapsed,reduced=false){
