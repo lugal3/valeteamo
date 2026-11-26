@@ -271,6 +271,40 @@ async function run(){
   await page.getByRole('button',{name:'Reiniciar casa',exact:true}).click();
   assert.equal(await checkpoint(),undefined);
   assert.equal((await read(RESCUE_KEY)).phase,'house');
+  // Exercise the real LP route (not only a seeded checkpoint fixture).
+  // Inspect the actor before pressing start, then verify the live piano trial.
+  await openMenu();
+  const trialCases=[['hito-1',true],['hito-2',true],['hito-6',true],['hito-7',true],
+   ['hito-8',false],['hito-12',false],['drawer',true],['mirror-note',true],['piano',true],['basement',true],['car',false]];
+  for(const [id,visible] of trialCases){
+   const card=page.locator('#trial-'+id);
+   if(!await card.isVisible())await card.evaluate(el=>{el.closest('details').open=true;});
+   await card.click();
+   await page.locator('#lab-dialog [data-act="start"]').waitFor();
+   await page.waitForFunction(()=>!!window.__rescueHouse);
+   const state=await snapshot(),cat=await page.evaluate(()=>window.__rescueHouse.emy());
+   assert.equal(cat.hidden,!visible,'LP '+id+' must have the correct initial visibility');
+   assert.equal(cat.companion,visible?'following':id==='car'?'waiting':'trunk','LP '+id+' companion controller');
+   assert.equal(cat.entrance,undefined,'No repeated window entrance in '+id);
+   if(visible){
+    assert(Math.abs(cat.y-state.position.y)<.13,'LP '+id+' must place Emy on Kitty’s floor');
+    assert(Math.hypot(cat.x-state.position.x,cat.z-state.position.z)<=3.11,'LP '+id+' Emy nearby');
+   }
+   if(id==='piano'||id==='hito-1'){
+    await page.locator('#lab-dialog [data-act="start"]').click();
+    await page.waitForFunction(()=>!window.__rescueHouse.snapshot().paused);
+    assert.equal((await page.evaluate(()=>window.__rescueHouse.emy())).hidden,false);
+    await use('emy-upstairs');
+    assert.equal((await page.evaluate(()=>window.__rescueHouse.emySkills())).menu,true,'Companion actions work in '+id);
+    await shot('trial-'+id+'-emy-actions');
+    await page.locator('#house-emy-menu [data-act="emy:close"]').click();
+    await page.keyboard.press('Escape');
+   }
+   await page.locator('#lab-dialog [data-act="exit"]').click();
+   await page.waitForFunction(()=>!window.__rescueHouse&&!document.querySelector('#lab3d'));
+   await page.locator('.playtest-menu[data-admin-panel="lp"]').waitFor();
+  }
+  console.log('PASS LP checkpoint companions: same-floor visible Emy before hatch, hidden at basement/escape, live actions and isolated car');
   assert.deepEqual(errors,[]);
   console.log('PASS house checkpoints: legacy handoff, one canvas, keys/safe/hatch, pursuit/RC recovery, trial isolation, escape, reset and corrupt save');
  }finally{await browser?.close();await server.close();}
