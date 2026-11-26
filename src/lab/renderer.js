@@ -80,7 +80,7 @@ export function geometry(boxes){
  for(const box of boxes){
   const baseColor=box.color||colors[box.mat]||colors.cream;
   const color=box.ao?[baseColor[0]*box.ao,baseColor[1]*box.ao,baseColor[2]*box.ao]:baseColor;
-  const style=materialStyle(box)+(box.chibi?(box.emissive?96:64):(box.holidayBulb&&!box.holidayPower?48:box.glow?32:0)),first=vertices.length;
+  const style=(box.atmosphere==='steam'?11:materialStyle(box))+(box.chibi?(box.emissive?96:64):(box.atmosphere?16:box.holidayBulb&&!box.holidayPower?48:box.glow?32:0)),first=vertices.length;
   const range={start:first,end:first,indexStart:indices.length,indexEnd:indices.length};ranges.push(range);
   const projectReference=()=>{
    if(!box.photoMapped)return;
