@@ -1,6 +1,6 @@
 // V3 tactical dollhouse. Geometry is projected from world-space XYZ into SVG.
 // Orthographic, depth-sorted faces keep the house readable without a second GL context.
-import {roomChoices} from './emy-abilities.js';
+import {roomChoices,EMY_ROOM_COLORS} from './emy-abilities.js';
 import {HEIGHT,HOUSE,STAIR} from './world.js';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -14,7 +14,6 @@ export function miniatureProject(p,view,floor=-1){
  const u=x*c-z*s,v=x*s+z*c,k=(floor<0?14:16)*view.zoom;
  return {x:260+u*k,y:171+(v*sp-y*cp)*k,depth:v*cp+y*sp};
 }
-const roomColors={study:'#c4b9e9',living:'#ebafca',kitchen:'#b3d8bd',bath:'#aed6eb',stairs:'#ebc392',bedroom:'#efb6cc',reading:'#d5b9e7',music:'#e8c69a','hall-ground':'#a9bdc9','hall-upper':'#a9bdc9'};
 const quad=(x0,x1,z0,z1,y)=>[[x0,y,z0],[x1,y,z0],[x1,y,z1],[x0,y,z1]];
 function cuboid(x,y,z,w,h,d,colors,faces,klass=''){
  const a=quad(x-w/2,x+w/2,z-d/2,z+d/2,y-h/2),b=quad(x-w/2,x+w/2,z-d/2,z+d/2,y+h/2);
@@ -55,7 +54,7 @@ export function miniatureSVG(world,view,{floor=-1,selectedId='',lockedIds=[],mar
   for(const room of choices){
    for(const r of room.segments){
     const isLocked=locked.has(room.id),selected=room.id===selectedId;
-    faces.push({p:quad(r.x0,r.x1,r.z0,r.z1,level+.035),fill:isLocked?'#65576d':selected?'#8de7c2':roomColors[room.id]||'#c2bacb',stroke:selected?'#ecfff4':'#544761',width:selected?2:1,id:isLocked?null:room.id,label:room.label,klass:'mini-room'+(isLocked?' is-locked':'')});
+    faces.push({p:quad(r.x0,r.x1,r.z0,r.z1,level+.035),fill:isLocked?'#65576d':selected?'#8de7c2':EMY_ROOM_COLORS[room.id]||'#c2bacb',stroke:selected?'#ecfff4':'#544761',width:selected?2:1,id:isLocked?null:room.id,label:room.label,klass:'mini-room'+(isLocked?' is-locked':'')});
    }
    const r=room.segments[0];
    labels.push({p:[(r.x0+r.x1)/2,level+.07,(r.z0+r.z1)/2],label:room.short,id:room.id,locked:locked.has(room.id)});
