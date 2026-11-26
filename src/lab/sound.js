@@ -165,6 +165,27 @@ export class HouseSound {
   else motor.frequency.setTargetAtTime(75+power*150,ctx.currentTime,.055);
   gain.gain.setTargetAtTime(sampled?.11+power*.11:.018+power*.032,ctx.currentTime,.055);
  }
+ // Optional recorded loops (never synthetic fallback). A slot has at most
+ // one active loop; fading an old one does not affect the next voice.
+ sampleLoop(slot,id,level=0,rate=1){
+  const ctx=this.context,buffer=id&&this.recordings?.clipBuffer(id);
+  const enabled=!!buffer&&!!ctx&&!this.paused&&ctx.state==='running'&&!this.settings.muted&&level>0;
+  this.polishLoops??=new Map();let voice=this.polishLoops.get(slot);
+  if(voice&&(!enabled||voice.id!==id)){
+   this.polishLoops.delete(slot);voice.gain.gain.setTargetAtTime(0,ctx.currentTime,.045);
+   try{voice.source.stop(ctx.currentTime+.22);}catch{}voice=null;
+  }
+  if(!enabled)return;
+  if(!voice){
+   const source=ctx.createBufferSource(),gain=ctx.createGain();
+   source.buffer=buffer;source.loop=true;gain.gain.value=0;source.playbackRate.value=rate;
+   source.connect(gain);gain.connect(this.channels.objects);source.onended=()=>{source.disconnect();gain.disconnect();};
+   source.start();voice={id,source,gain};this.polishLoops.set(slot,voice);
+  }
+  voice.gain.gain.setTargetAtTime(Math.min(.16,Math.max(0,level)),ctx.currentTime,.12);
+  voice.source.playbackRate.setTargetAtTime(Math.max(.65,Math.min(1.5,rate)),ctx.currentTime,.09);
+ }
+ stopPolishLoops(){for(const slot of this.polishLoops?.keys()||[])this.sampleLoop(slot,null);}
  preparePiano(){
   if(!this.context||this.pianoLoading)return;
   const context=this.context,signal=this.recordings.abort.signal;
@@ -446,7 +467,7 @@ export class HouseSound {
   tick();this.phoneMusicTimer=window.setInterval(tick,75);
  }
  stopPhoneMusic(){if(this.phoneMusicTimer!=null){window.clearInterval(this.phoneMusicTimer);this.phoneMusicTimer=null;}for(const node of this.phoneMusicVoices||[])try{node.stop();}catch{}this.phoneMusicVoices?.clear();}
- pause(){this.stopPhoneMusic();this.paused=true;this.carEngine(null);this.rcMotor(0);this.recordings?.pause(this.emoteVoice);this.stopMusic();for(const node of this.sequenceNodes||[])try{node.stop();}catch{}for(const voice of this.foleyVoices||[])voice.stop();this.atmosphere?.pause();try{if(this.context?.state==='running')void this.context.suspend().catch(()=>{});}catch{}}
+ pause(){this.stopPhoneMusic();this.paused=true;this.carEngine(null);this.rcMotor(0);this.stopPolishLoops();this.recordings?.pause(this.emoteVoice);this.stopMusic();for(const node of this.sequenceNodes||[])try{node.stop();}catch{}for(const voice of this.foleyVoices||[])voice.stop();this.atmosphere?.pause();try{if(this.context?.state==='running')void this.context.suspend().catch(()=>{});}catch{}}
  async resume(){
   const ctx=this.context;if(!ctx)return false;
   this.paused=false;
