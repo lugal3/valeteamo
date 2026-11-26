@@ -203,6 +203,35 @@ export function restoreEmyCompanion(companion,saved,storyPhase='explore'){
  setVisibility(companion,['waiting','hiding','trunk'].includes(stage));
  poseEmy(companion.cat,{mode:'sit'});
 }
+// Trial setup only: choose a genuine walkable spot on Kitty's current floor.
+// Never use this during normal following, distraction or hiding.
+export function trialEmyPose(world,player){
+ if(!player||![player.x,player.y,player.z,player.yaw].every(Number.isFinite))return null;
+ const room=roomAt(player.x,player.z,player.y);
+ const angles=[.95,-.95,1.57,-1.57,.52,-.52,2.1,-2.1,2.62,-2.62,0,Math.PI];
+ let alternative=null;
+ for(const radius of [1.20,1.34,1.04,1.55,.86,1.85,2.20,2.65,3.10]){
+  for(const angle of angles){
+   const a=player.yaw+angle,x=player.x+Math.sin(a)*radius,z=player.z+Math.cos(a)*radius;
+   const y=groundHeight(x,z,player.y,world.hatch?.amount>.92);
+   if(!Number.isFinite(y)||Math.abs(y-player.y)>.12||blocked(world.boxes,x,y,z,.24,.72))continue;
+   const pose={x,y,z,yaw:Math.atan2(player.x-x,player.z-z)};
+   if(!clearPassage(world,pose,player))continue;
+   if(roomAt(x,z,y)===room)return pose;
+   alternative??=pose;
+  }
+ }
+ return alternative;
+}
+export function initializeTrialEmy(companion,world,player,stage='following'){
+ if(stage==='following'){
+  const pose=trialEmyPose(world,player);
+  // Explicit failure, not a silently invisible cat or an unsafe teleport.
+  if(!pose)return false;
+  restoreEmyCompanion(companion,{stage,...pose},'explore');
+ }else restoreEmyCompanion(companion,{stage},'explore');
+ return true;
+}
 function planRoute(companion,world,goal){
  const {cat}=companion;
  const planner=companion.planner??=new Pursuer(world);
