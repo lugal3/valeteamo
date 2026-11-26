@@ -811,9 +811,16 @@ export class HouseRenderer {
   this.drawPursuer(actor,false,reduced);
   gl.colorMask(true,true,true,true);gl.stencilFunc(gl.NOTEQUAL,1,0xff);
   gl.stencilOp(gl.KEEP,gl.KEEP,gl.KEEP);gl.stencilMask(0);
+  // Draw a restrained translucent halo and a fine bright inner rim.
+  // Both remain outside the real animated stencil silhouette.
+  gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+  if(!reduced&&this.quality!=='low'){
+   gl.uniform1f(this.uniform.uScanOutline,2);
+   this.drawPursuer(actor,false,reduced,1.095);
+  }
   gl.uniform1f(this.uniform.uScanOutline,1);
-  this.drawPursuer(actor,false,reduced,1.065);
-  gl.uniform1f(this.uniform.uScanOutline,0);
+  this.drawPursuer(actor,false,reduced,1.045);
+  gl.uniform1f(this.uniform.uScanOutline,0);gl.disable(gl.BLEND);
   gl.stencilMask(0xff);gl.disable(gl.STENCIL_TEST);
   gl.enable(gl.DEPTH_TEST);gl.depthMask(true);
  }
