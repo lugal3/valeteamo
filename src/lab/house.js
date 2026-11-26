@@ -26,7 +26,7 @@ import {createHouse,HEIGHT,HOUSE,blocked,groundHeight,lineBlocked,setDoor,setDra
 import {HouseRenderer,pickupGeometry} from './renderer.js';
 import {HouseSound,MIX_CHANNELS,mixLimit} from './sound.js';
 import {applyLookDelta,followLook,readCameraSettings,writeCameraSettings,DEFAULT_CAMERA_SETTINGS,SENSITIVITY_MIN,SENSITIVITY_MAX,SENSITIVITY_STEP} from './camera-controls.js';
-import {WINDOW_SHOT_SECONDS,WINDOW_LANDING,windowIntroCamera,windowIntroState,shouldPlayWindowIntro} from './window-intro.js';
+import {WINDOW_SHOT_SECONDS,WINDOW_LANDING,windowIntroCamera,windowIntroState,windowIntroLighting,shouldPlayWindowIntro} from './window-intro.js';
 import {navigate,getStairDirection} from './navigation.js';
 import {KITTY_SPEED,advanceMoveIntent,advanceMoveSpeed,advanceCameraFloor,advanceEye,isOnStairs} from './locomotion-feel.js';
 import {interactionTarget} from './interactions.js';
@@ -42,7 +42,7 @@ import {BATTERY_SWAP_SECONDS} from './viewmodel.js';
 import {rescueProgress} from './rescue-progress.js';
 import {poseEscapeAmbush,poseEmyLastChance,createRescueObjectives,updateEmySenses} from './emy-rescue.js';
 import {collectCinematicCues} from './cinematic-cues.js';
-import {FINALE_BEATS,finaleStage,finaleThreat,finaleWeather,finaleEmyGoal} from './escape-finale.js';
+import {FINALE_BEATS,finaleStage,finaleThreat,finaleWeather,finaleEmyGoal,finaleLighting} from './escape-finale.js';
 import {createAltarVisit,advanceAltarVisit,activateAltarRecord} from './louis-altar.js';
 import {rcControlHint,throwableHint,threatAccessibility,hopOffset,HOP_DURATION,HOP_COOLDOWN,advanceHop} from './hud-context.js';
 import {updateUpstairsEmy,petEmy,poseEmy} from './emy-cat.js';
@@ -1810,7 +1810,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const instrument=world.piano;
   if(instrument.solved&&instrument.compartmentAmount<1&&!paused)
    posePianoCompartment(instrument,reducedMotion.matches?1:Math.min(1,instrument.compartmentAmount+shotDelta/.48));
-  let thirdPerson=null,actorTime,actorWalk,actorPiano,shotLight=0;
+  let thirdPerson=null,actorTime,actorWalk,actorPiano,shotLight=cinematic?windowIntroLighting(cinematic.elapsed/WINDOW_SHOT_SECONDS):0,cinematicLight=null;
   if(piano){
    const standing=piano.advance(now,pianoRunning(),reducedMotion.matches);
    if(standing){
@@ -1869,14 +1869,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     const previousFinale=finalCutscene.elapsed;
     if(!isSuspended())finalCutscene.elapsed=Math.min(FINALE_BEATS.run,finalCutscene.elapsed+shotDelta);
     if(poseEscapeAmbush(finalCutscene,world.emy,pursuer,reducedMotion.matches))renderer.updateVisibility();
-    const staged=finaleStage(shot,pursuer,reducedMotion.matches);
+    const staged=finaleStage(shot,pursuer,reducedMotion.matches,world.emy);
     if(!isSuspended())for(const cue of collectCinematicCues('escape',previousFinale,finalCutscene.elapsed,finalCutscene.cues)){
      const source=cue.source==='pursuer'?pursuer:cue.source==='emy'?world.emy:null;
      play(cue.sound,source,cue.level,staged.view);if(cue.caption)caption(cue.caption);
     }
     Object.assign(louis,staged.louis);
     view=staged.view;shot.stage=staged.stage;shot.lastView={...view};
-    hand=false;torch=false;shotLight=.53;
+    hand=false;torch=false;cinematicLight=finaleLighting(shot.elapsed,reducedMotion.matches);shotLight=cinematicLight.room;
     if(shot.elapsed>=FINALE_BEATS.run&&!isSuspended()){
      // Put the controllable player at the exact last first-person camera.
      // The cinematic cannot complete the game: the player must walk out.
@@ -2111,7 +2111,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    const takingPhoto=capturePhoto&&cameraMode;capturePhoto=false;
    const emyMemory=!phone.emyMemory&&!world.emy.hidden&&!reducedMotion.matches&&((emyShot&&emyShot.elapsed>1.25&&emyShot.elapsed<2.6)||(pet.reaction>1&&pet.reaction<2.4&&!phone.open&&!isSuspended()));
    const cameraFlash=takingPhoto&&phone.flash;
-   renderer.render(view,cameraFlash?1.4:torch,elapsed,hand,{weather:finaleWeather(finalCutscene,s),altarPulse:altarVisit.pulse,phoneTurn,captureProjection:cameraMode ? .82 : 1,onWorldFrame:cameraMode||emyMemory?frame=>{if(emyMemory)phone.rememberEmy(frame);if(takingPhoto){phone.takePhoto(frame);play('click');}if(cameraMode)phone.updateCamera(frame,now);}:undefined,rcView:rc?.mode==='driving'&&!!rc,scanOutline:emyAbilities.scan>0&&pursuer.active,bob:s.bob,action:handAction,clickAction,speed:animator.speed,acceleration:animator.acceleration,walkWeight:animator.weight,reduced:s.reduceBob,swayX:handDrift.x,swayY:handDrift.y,introHands,animator,feetY:s.y,crouched:s.crouched,equipment:visualEquipment,keyTurn:keyTurn?.time,noteRaise,batterySwap,tabletLift,equipLift,hop:hopMotion,equipGesture:normalEquip&&!reducedMotion.matches?Math.sin(Math.PI*Math.min(1,equipmentAge/.38)):0,bathDoorAmount:world.objects.find(o=>o.id==='bano').amount,thirdPerson,actorTime,actorWalk,actorPiano,shotLight:cameraFlash?Math.max(.58,shotLight||0):shotLight,pursuer:finalCutscene&&!finalCutscene.playable?finaleThreat(pursuer.snapshot(),finalCutscene.elapsed,reducedMotion.matches):pursuer.snapshot(),television});
+   renderer.render(view,cameraFlash?1.4:torch,elapsed,hand,{weather:finaleWeather(finalCutscene,s),altarPulse:altarVisit.pulse,phoneTurn,captureProjection:cameraMode ? .82 : cinematicLight?.projection??1,pursuerLight:cinematicLight?.pursuer,pursuerKey:cinematicLight?.key,onWorldFrame:cameraMode||emyMemory?frame=>{if(emyMemory)phone.rememberEmy(frame);if(takingPhoto){phone.takePhoto(frame);play('click');}if(cameraMode)phone.updateCamera(frame,now);}:undefined,rcView:rc?.mode==='driving'&&!!rc,scanOutline:emyAbilities.scan>0&&pursuer.active,bob:s.bob,action:handAction,clickAction,speed:animator.speed,acceleration:animator.acceleration,walkWeight:animator.weight,reduced:s.reduceBob,swayX:handDrift.x,swayY:handDrift.y,introHands,animator,feetY:s.y,crouched:s.crouched,equipment:visualEquipment,keyTurn:keyTurn?.time,noteRaise,batterySwap,tabletLift,equipLift,hop:hopMotion,equipGesture:normalEquip&&!reducedMotion.matches?Math.sin(Math.PI*Math.min(1,equipmentAge/.38)):0,bathDoorAmount:world.objects.find(o=>o.id==='bano').amount,thirdPerson,actorTime,actorWalk,actorPiano,shotLight:cameraFlash?Math.max(.58,shotLight||0):shotLight,pursuer:finalCutscene&&!finalCutscene.playable?finaleThreat(pursuer.snapshot(),finalCutscene.elapsed,reducedMotion.matches):pursuer.snapshot(),television});
   }catch(e){interruptGraphics('Error de renderizado',String(e.message||e));return;}
   const mirrorDistance=Math.hypot(view.x-BATH_MIRROR.x,view.z-BATH_MIRROR.z);
   const readingMirror=mirrorLit&&inBathroom()&&renderer.mirrorDrawn&&mirrorDistance<3&&Math.abs(view.pitch-Math.atan2(BATH_MIRROR.y-view.y,mirrorDistance))<.57&&!phone.open;
