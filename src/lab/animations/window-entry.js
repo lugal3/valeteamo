@@ -7,15 +7,27 @@ export const WINDOW_BEATS=Object.freeze({
  approach:0,reach:.12,grip:.27,firstPush:.36,slip:.45,
  recovery:.53,secondPush:.61,straddle:.70,descent:.80,contact:.87,settle:1
 });
-export function windowEntryHands(progress){
+// The live first-person hands start and finish just below the camera,
+// instead of spawning on the sill. During contact only finger/roll channels
+// move; the palm itself is locked to the world-space anchor.
+export function windowEntryHands(progress,camera=null){
  const t=clamp(progress);
  if(t<=.12||t>=.88)return null;
  const hand=(side,start,release)=>{
   if(t<=start||t>=release+.10)return null;
   const reach=ease((t-start)/.14),leave=ease((t-release)/.10);
   const strain=curve([[0,0],[.34,0],[.45,1],[.54,.35],[.65,.75],[.74,0],[1,0]],t);
-  return {x:2.205+side*(.475-.045*leave),y:.76+.24*reach-.15*leave,
-   z:12.3-.18*reach-.20*leave,curl:reach*(1-leave)*(.60+.35*strain),flex:.12*strain};
+  const anchor={x:2.205+side*.475,y:1,z:12.12};
+  const hidden=camera?{x:camera.x+side*.27,y:camera.y-.78,z:camera.z-.39}
+   :{x:2.205+side*.475,y:.76,z:12.3};
+  const contact=reach*(1-leave);
+  // Blend toward the camera-relative rest position as the hand lets go,
+  // so the trailing paw doesn't visibly disappear in mid-air.
+  const mix=(a,b,w)=>a+(b-a)*w;
+  const home=camera?hidden:{x:hidden.x-side*.045*leave,y:hidden.y-.15*leave,z:hidden.z-.20*leave};
+  return {x:mix(home.x,anchor.x,contact),y:mix(home.y,anchor.y,contact),
+   z:mix(home.z,anchor.z,contact),curl:contact*(.60+.35*strain),
+   flex:.12*strain*contact,roll:side*(.07+.09*strain)*contact};
  };
  return [hand(-1,.12,.73),hand(1,.16,.78)];
 }
