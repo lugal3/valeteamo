@@ -10,6 +10,7 @@ on:
       - 'package-lock.json'
       - 'docs/VALETEAMO-V2-DEFECT-AUDIT.md'
       - '.github/workflows/valeteamo-v2-release-qa.yml'
+      - '.github/workflows/v31-size.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -92,3 +93,7 @@ jobs:
           name: vale-v2-${{ matrix.scenario }}
           path: artifacts/
           if-no-files-found: ignore
+
+  performance-audit:
+    if: github.head_ref == 'feature/v31-telefono-historia-final-perf'
+    uses: ./.github/workflows/v31-size.yml
