@@ -36,3 +36,16 @@ Base de evidencia: commit `aca535007ff95d09b4273509929301035c9a49c9` y [auditor�
 - **Pruebas añadidas:** interrupción del salto, ocupación de manos, nombre de Emy y cooldown, ajuste de cámara/zoom, ausencia de amenazas sin escaneo, llegada bloqueada por pared, cuadrícula y límites del mapa, arrastre de ratón y captura de la etiqueta.
 
 Los resultados de los commits intermedios no certifican el código nuevo. Antes de dar la fase 5 por cerrada, revisar los workflows del último commit y las nuevas capturas; no fusionar ni desplegar mientras haya fallos o evidencia insuficiente. El último commit de código y pruebas de esta pasada es `2cafc78f93fc356fdd3fa0f92ff43867372926bd` (posterior a la captura original). Las capturas de referencia son del commit anterior, no constituyen prueba visual de las correcciones.
+
+
+## Ampliación de fases — ambientación y perseguidor (26 de noviembre)
+
+Estado de la rama al retomar: 203 commits por delante de main, sin divergencia de la base. La ampliación posterior al megaprompt original incorpora la autonomía de Emy, maqueta amueblada y ruta entre pisos, mapas de consulta en el teléfono, interfaz del iPhone, HUD, árbol y tres coleccionables navideños, así como dificultad del perseguidor.
+
+### Fase 6 — persecución y dificultad (implementación, no aprobada)
+
+- Historia es la dificultad inicial; Equilibrado y Tensión son alternativas. Ayuda adaptable entre intentos, tiempo de reacción al ser visto, búsqueda local limitada a la última posición observada, pausas de patrulla y animación de puertas/giro. Mantener los objetivos de historia, puzles, RC y finales.
+- El sonido del RC ahora tiene alcance finito y atenuación por obstáculos, igual que la percepción acústica de Emy; no puede revelar coordenadas inválidas o remotas. Se añadieron pruebas de regresión para señuelo cercano, fuera de alcance y coordenadas inválidas.
+- Se añadieron comprobaciones de selector y persistencia de dificultad desde el iPhone, y se aisló el perseguidor artificial de las pruebas independientes de aplicaciones. No se desactiva el comportamiento de alerta en producción.
+- Evidencia anterior: en `f9c856508130aff6568941c26143448e9df95f9c`, [auditoría integral](https://github.com/lugal3/valeteamo/actions/runs/45747599430), lógica, alcance de objetivos, rendimiento, build, escondites, iluminación y controles móviles pasaron. Chromium móvil y WebKit fallaron por controles del teléfono presentes pero no visibles. La posible causa es el cierre del teléfono por la amenaza inyectada en la prueba de escaneo; se corrigió el aislamiento del fixture, pendiente confirmar en el nuevo SHA. Los demás trabajos fueron cancelados al avanzar la rama.
+- Verificar CI del último commit, evidencia visual de la decoración y persecución, rutas completas de RC/rescate, checkpoints y 2D. No declarar aprobación, fusionar ni desplegar hasta tener evidencia suficiente y revisión del propietario.
