@@ -346,3 +346,8 @@
 #lab3d .house-emy-menu:not([hidden]){animation:emy-menu-enter .16s ease-out}
 @media(prefers-reduced-motion:reduce){#lab3d .house-emy-name,#lab3d .house-emy-menu:not([hidden]){animation:none}}
 #lab3d.house-motion-reduced :is(.house-emy-name,.house-emy-menu){animation:none!important}
+
+#lab3d .house-emy-destination-list .house-emy-destination-number{background:var(--room-accent,#c2bacb);color:#241f30;border:1px solid #ffffff44}
+#lab3d .house-emy-destination-icon{flex:none;width:17px;text-align:center;font:15px/1 system-ui;color:#e9c6dd}
+#lab3d .house-emy-destination-list .house-emy-destination-name{overflow-wrap:anywhere}
+@media(max-width:700px){#lab3d .house-emy-destination-list .house-emy-destination{gap:5px}#lab3d .house-emy-destination-icon{width:15px;font-size:13px}}
