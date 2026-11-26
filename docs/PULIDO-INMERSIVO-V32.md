@@ -23,11 +23,21 @@ La rama de trabajo es `feature/v32-cinematic-animations`. No fusionar ni publica
 - Pruebas nuevas de cámara/refugio, pose de sombra, guardado real y RC; navegador threat-hide comprueba sostener y soltar V y botón.
 - 1.518 comprobaciones aisladas sobre funciones reales: todas pasan; navegación libre simulada para RC; NO equivalen a navegador o casa completa.
 
-## Siguiente bloque · Completar, corregir y validar
+## Bloque B · Inspección y transiciones (implementado, QA integral pendiente)
 
-1. Leer resultados CI del HEAD, solucionar fallos reales antes de ampliar alcance. Auditar tutoriales previos: tarjetas una vez, ambas rutas de escondite, cuenta de diez segundos con el actor arriba al cero, persistencia y muerte inmediata.
-2. Implementar inspección interactiva real: reutilizar geometría de los objetos (no duplicar modelos ni descargar recursos), controles táctiles/ratón, zoom acotado, cierre limpio, no alterar el espejo ni avanzar el puzzle. Confirmar guardado y transiciones de captura/reanudación. Completar audio de manipulación únicamente si hay grabación.
-3. Validar visualmente sombra cerca de una puerta, ambos refugios, RC y HUD móvil; corregir si la malla proxy o la cámara no ofrecen un resultado adecuado. No declarar validación visual sin evidencia.
-4. Ejecutar pruebas integrales y producción, rendimiento y recorrido narrativo. Evitar merges hasta pasar lo relevante y aprobación del usuario.
+- Vista interactiva de los modelos de recogida existentes (llaves, pila, linterna, destornillador, RC y papel), accesible desde las notas y el inventario. Arrastrar con ratón/dedo, pellizco o rueda, botones de zoom y centrado, teclado accesible; límites y cierre sin alterar poses, inventario ni puzles.
+- El render de inspección es un pequeño Canvas2D que proyecta los triángulos de la geometría real, sin duplicar modelos o abrir otro contexto WebGL. No reproduce las texturas/materiales complejos del shader. Solo se redibuja con interacción o resize. La nota del espejo conserva su sistema original y no se entrega un modelo giratorio con las cifras.
+- Fundido visual de recuperación de .58 s tras restaurar el checkpoint después de captura o rescate de Emy; se omite con movimiento reducido, no concede tiempo extra.
+- Puertas interiores: holgura inferior real de 5.5 cm, para que la luz/sombra pueda pasar cerca del umbral; no cambia el ancho del paso ni el estado cerrado de la puerta.
+- Pruebas añadidas al navegador de movimiento: abrir una nota real, píxeles visibles, ratón físico, pellizco nativo Chromium o eventos de puntero WebKit, centrado y cierre, integridad del puzle.
+- Prueba focalizada de la llegada: lectura pausada, bajo la cama al cero, reintento sin repetir tutorial, pérdida de exactamente una vida y posición del perseguidor en planta alta.
+- La auditoría previa (4eeb4e3) confirmó código/puzles/colisiones/build, amenaza/escondites, luces del árbol, entrada móvil, Emy móvil/WebKit, altar y prólogo. Otras pruebas se cancelaron por nuevos commits. 5.315 comprobaciones aisladas de proyección y límites del visor pasaron con malla sintética; las de mallas reales y navegador están en CI.
+
+## Siguiente bloque · QA, correcciones y cierre
+
+- Revisar resultados de CI del HEAD, corregir fallos reales antes de cualquier merge. No cancelar innecesariamente las ejecuciones con commits de documentación.
+- Confirmar ambas rutas de escondite y pérdida inmediata al cero en navegador real; verificar manual/historial y no repetición en campaña normal.
+- Comprobar visualmente sombra cerca de puertas, ambos refugios, RC, fundido y HUD/inspección móvil; corregir si es necesario. Validación visual aún no realizada en esta sesión.
+- Ejecutar pruebas integrales y producción y auditoría de rendimiento. Ningún cambio de main/Firebase hasta autorización explícita.
 
 Los WAV opcionales se buscan en `src/lab/audio/`: kitty-breath-calm.wav, kitty-breath-fear.wav, house-creak.wav, floor-groan.wav, rc-wheel-wood.wav, rc-wheel-tile.wav, rc-signal-loss.wav, rc-damage.wav, inspect-cloth.wav. No existen todavía grabaciones nuevas aportadas para este bloque. El juego mantiene los recursos anteriores y no exige descargarlos para funcionar.
