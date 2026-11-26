@@ -49,8 +49,16 @@ export function updateEmySenses(companion,player,world,enemy,objective,dt,beam){
  const cat=companion.cat;
  cat.darkEyes=!housePowered(world.lights.power);
  const live=['following','stay','hold','distract','distract-recover'].includes(companion.stage);
- if(!live){cat.earTurn=0;cat.earFlatten=0;cat.alarm=0;cat.senseTarget=null;cat.curiosityTarget=null;return;}
- companion.altarWait=companion.stage==='following'&&roomAt(player.x,player.z,player.y)==='Sala de música';
+ if(!live){companion.altarWait=false;companion.altarFear=false;cat.earTurn=0;cat.earFlatten=0;cat.alarm=0;cat.senseTarget=null;cat.curiosityTarget=null;return;}
+ const wasWaiting=!!companion.altarWait;
+ const inside=roomAt(player.x,player.z,player.y)==='Sala de música';
+ companion.altarWait=companion.stage==='following'&&inside;
+ if(wasWaiting!==companion.altarWait){
+  Object.assign(companion,{route:[],trail:[],routeTarget:null,nextPlanAt:0,nextSight:0,direct:false,chasing:undefined,stuck:0});
+ }
+ const nearAltar=Math.abs(cat.y-ALTAR_THRESHOLD.y)<.45&&Math.hypot(cat.x-ALTAR_THRESHOLD.x,cat.z-ALTAR_THRESHOLD.z)<2.1;
+ const altarFear=nearAltar&&(inside||Math.abs(player.y-ALTAR_THRESHOLD.y)<.45&&Math.hypot(player.x-ALTAR_THRESHOLD.x,player.z-ALTAR_THRESHOLD.z)<1.45);
+ companion.altarFear=altarFear;
  const gap=Math.hypot(cat.x-enemy.x,cat.z-enemy.z),sameFloor=Math.abs(cat.y-enemy.y)<1.1;
  const active=enemy.active&&!['trapped','sleeping','stunned'].includes(enemy.mode);
  // Do not detect an enemy through a ceiling or use omniscient hints. Nearby
@@ -60,7 +68,7 @@ export function updateEmySenses(companion,player,world,enemy,objective,dt,beam){
  const chasing=enemy.mode==='chase'&&active&&sameFloor&&gap<7&&Math.abs(player.y-cat.y)<1.1&&Math.hypot(player.x-cat.x,player.z-cat.z)<5;
  const visible=nearby&&!lineBlocked(world.boxes,{x:cat.x,y:cat.y+.42,z:cat.z},{x:enemy.x,y:enemy.y+1.05,z:enemy.z});
  const close=nearby&&gap<1.5;
- const danger=companion.altarWait?1:chasing?.96:visible?Math.max(.45,1-gap/5.4):close?.48:nearby?.26:0;
+ const danger=altarFear?1:chasing?.96:visible?Math.max(.45,1-gap/5.4):close?.48:nearby?.26:0;
  // Inspect nearby actual props occasionally, not on every animation frame.
  companion.senseClock=(companion.senseClock||0)+dt;
  if(companion.senseClock>=(companion.nextCuriosity||0)){
@@ -72,7 +80,7 @@ export function updateEmySenses(companion,player,world,enemy,objective,dt,beam){
   const other=visibleObjects.find(o=>o.id!==cat.curiosityTarget?.id)||visibleObjects[0];
   cat.curiosityTarget=other?{id:other.id,x:other.x,y:other.y,z:other.z}:null;
  }
- let target=companion.altarWait?{x:12.27,y:cat.y,z:.44}:danger>0?{x:enemy.x,y:enemy.y,z:enemy.z}:cat.curiosityTarget;
+ let target=altarFear?{x:12.27,y:cat.y,z:.44}:danger>0?{x:enemy.x,y:enemy.y,z:enemy.z}:cat.curiosityTarget;
  if(!target&&companion.stage==='following'&&objective?.target){
   // Preserve the original subtle directional clue when there is nothing
   // nearby worth investigating, without overriding a real fear reaction.
