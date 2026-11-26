@@ -8,14 +8,14 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
  const {createServer}=await import('vite');
  const server=await createServer({configFile:false,logLevel:'silent',server:{host:'127.0.0.1',port,strictPort:true},plugins:[{name:'rc-finale-harness',configureServer(s){
   s.middlewares.use((req,res,next)=>{
-   if(req.url!='/__rc')return next();
+   if(req.url!='/__rc'&&req.url!='/__rc?intro')return next();
    res.setHeader('Content-Type','text/html; charset=utf-8');
    res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
     <body><button id="launch">Probar RC</button><script type="module">
     import {launchHouse} from "/src/lab/house.js";
     const checkpoint={version:1,stage:"basement",pianoSolved:true,picked:["key","media-flashlight","piano-sheet","red-key"]};
     document.querySelector("#launch").onclick=()=>window.stopHouse=launchHouse(()=>{},"ground",{
-      demo:true,checkpointStore:{checkpoint,save:()=>{}},onRescue:()=>window.endingVisited=true
+      demo:true,checkpointStore:location.search?undefined:{checkpoint,save:()=>{}},onRescue:()=>window.endingVisited=true
     });
     </script></body></html>`);
   });
@@ -26,6 +26,31 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
  let browser,page;
  try{
   browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+  // The real non-reduced window entrance uses the same WebGL renderer as
+  // the RC route. Exercise it in a fresh desktop context, then close it
+  // before the long mobile RC scenario to release GPU resources.
+  const intro=await browser.newPage({viewport:{width:960,height:540},reducedMotion:'no-preference'});
+  const introErrors=[];intro.on('pageerror',e=>introErrors.push(e.message));
+  try{
+   await intro.goto('http://127.0.0.1:'+port+'/__rc?intro');
+   await intro.click('#launch');
+   await intro.waitForFunction(()=>!!window.__rescueHouse?.windowIntro(),null,{timeout:60000,polling:100});
+   await intro.waitForFunction(()=>{
+    const w=window.__rescueHouse.windowIntro();return w&&w.elapsed>=2.35&&w.amount>0&&w.amount<1;
+   },null,{timeout:60000,polling:100});
+   const opening=await intro.evaluate(()=>window.__rescueHouse.windowIntro());
+   assert(opening.view.x>2.7&&opening.view.z>12.8,'Camera waits outside the swinging window');
+   if(!process.env.RC_QA_NO_SHOTS)try{
+    await intro.screenshot({path:path.join(folder,'intro-window-opening.png'),timeout:7000});
+   }catch(error){if(error.name!=='TimeoutError')throw error;console.warn('INTRO_SCREENSHOT_TIMEOUT: continuing real scene validation');}
+   await intro.waitForFunction(()=>!window.__rescueHouse.windowIntro()&&!window.__rescueHouse.snapshot().paused,null,{timeout:90000,polling:100});
+   const landed=await intro.evaluate(()=>window.__rescueHouse.snapshot());
+   assert(Math.abs(landed.position.x-2.2)<.05&&Math.abs(landed.position.z-11)<.05,'Actual intro lands inside the house');
+   assert.equal(await intro.locator('#lab-canvas').evaluate(canvas=>canvas.getContext('webgl').getError()),0);
+   assert.deepEqual(introErrors,[],'No runtime errors in real window entrance');
+   await intro.evaluate(()=>window.stopHouse());
+   console.log('PASS real window entrance: moving sash, exterior camera, interior landing and WebGL');
+  }finally{await intro.context().close();}
   page=await browser.newPage({viewport:{width:844,height:390},hasTouch:true});
   page.setDefaultTimeout(60000);
   const errors=[];page.on('pageerror',error=>{errors.push(error.stack||error.message);console.error('PAGE ERROR:',error.message);});
@@ -178,6 +203,8 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   console.log('RC browser: Kitty and Louis escape using the physical front door');
   assert.equal((await page.evaluate(()=>window.__rescueHouse.snapshot())).doors.find(door=>door.id==='entrada').open,false);
   await use('entrada');
+  // Validate the actual expressive camera and rig, not only reduced-motion cuts.
+  await page.emulateMedia({reducedMotion:'no-preference'});
   await page.evaluate(()=>window.__rescueHouse.setPose({x:5.95,y:0,z:11.30,yaw:0,pitch:0}));
 
   // Frame time on headless SwiftShader varies; don't release W before Kitty
