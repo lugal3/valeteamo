@@ -20,7 +20,8 @@ export class Pursuer{
  reset(){this.captureGrace=0;this.doorReach=0;this.doorWait=0;this.failedPlans=0;this.turnRate=0;this.breakerDelay=15;this.breakerGoal=null;this.intruderSeen=false;this.x=5.8;this.y=0;this.z=11;this.yaw=this.facing=Math.PI;this.mode='dormant';this.awareness=0;this.lost=10;this.witnessed=null;this.lastSeen=null;this.path=[];this.route=0;this.visited=0;this.replan=0;this.walk=this.speed=this.age=this.bedTime=0;this.stepDistance=0;this.caught=false;this.stuck=0;this.task=null;this.modeTime=0;this.quiet=false;this.noiseGoal=null;this.noiseRemaining=0;this.stunned=0;this.trailPoints=[];this.trailIndex=0;this.trailRemaining=0;this.searchPause=0;}
  get active(){return this.mode!=='dormant';}
  hearNoise(position,intensity=1){
-  if(!this.active||['dormant','sleeping','lying-down','rising','to-bed','to-entry','trapped','stunned','rc-chase','chase'].includes(this.mode))return false;
+  if(!this.active||['dormant','sleeping','lying-down','rising','to-bed','to-entry','trapped','stunned','rc-chase'].includes(this.mode))return false;
+  if(this.mode==='chase'&&(this.lost<.85||this.witnessed||intensity<1.25))return false;
   if(!position||![position.x,position.y,position.z].every(Number.isFinite))return false;
   if(this.mode==='investigate'&&this.awareness>=.26)return false;
   const origin={x:this.x,y:this.y+1.1,z:this.z};
@@ -32,10 +33,10 @@ export class Pursuer{
   this.noiseGoal={x:position.x,y:position.y,z:position.z};
   this.noiseRemaining=Math.max(this.noiseRemaining,Math.min(9,3+intensity*2.5));
   if(changed){
-   this.mode='noise-investigate';this.task=null;this.replan=0;this.path=[];
+   this.mode='noise-investigate';this.task=null;this.captureGrace=0;this.replan=0;this.path=[];
    this.trailPoints=[];this.trailIndex=0;this.trailRemaining=0;
    // Hearing a sound only generates suspicion, never a confirmed sighting.
-   this.awareness=Math.max(.12,this.awareness);
+   this.awareness=Math.min(.25,Math.max(.12,this.awareness));
   }
   return true;
  }
@@ -272,7 +273,7 @@ export class Pursuer{
   for(const door of this.world.objects)if(door.kind==='door'&&door.state!=='open'&&Math.abs(door.y-1.1-this.y)<1.2&&Math.hypot(door.x-this.x,door.z-this.z)<1.6){
    if(onDoor(door)===true){this.doorReach=.44;this.doorWait=.24;this.doorYaw=Math.atan2(door.x-this.x,door.z-this.z);break;}
   }
-  if(this.doorWait>0){this.age+=dt;this.speed*=Math.exp(-10*dt);return cues;}
+  if(this.doorWait>0){this.age+=dt;this.speed*=Math.exp(-10*dt);if(Number.isFinite(this.doorYaw)){const turn=Math.atan2(Math.sin(this.doorYaw-this.facing),Math.cos(this.doorYaw-this.facing));this.facing+=turn*(1-Math.exp(-10*dt));}return cues;}
   let moved=0;
   const next=this.path[0];if(next){const dx=next.x-this.x,dz=next.z-this.z,d=Math.hypot(dx,dz);if(d<.07){this.path.shift();}else{
    this.yaw=Math.atan2(dx,dz);const pace=this.mode==='rc-chase'?2.15:this.mode==='chase'?this.difficulty.chase:this.difficulty.patrol;
