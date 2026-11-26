@@ -108,7 +108,15 @@ export function poseEscapeAmbush(shot,cat,enemy,reduced){
  Object.assign(cat,{x:start.x-1.25+1.4*leap+.28*land+.15*run,
   z:start.z-.15-.23*leap+.54*land+2.1*run,
   y:land===1?0:Math.sin(leap*Math.PI)*.36+.94*leap*(1-land),yaw:Math.PI*.53*(1-land)});
- poseEmy(cat,{mode:land<1?'jump':run>0?'walk':'idle',walking:run>0&&run<1,phase:t,reduced});
+ // After landing, Emy sprints past Kitty and is already visible ahead
+ // at the playable handoff, rather than starting behind the camera.
+ if(shot.camera&&t>=2.97){
+  const lead=ease((t-2.97)/.81);
+  cat.x+=(5.38-cat.x)*lead;
+  cat.z+=(17.05-cat.z)*lead;
+  cat.y=0;cat.yaw=0;
+ }
+ poseEmy(cat,{mode:land<1?'jump':run>0||shot.camera&&t>=2.97?'walk':'idle',walking:run>0&&run<1||!!shot.camera&&t>=2.97,phase:t,reduced});
  return appeared;
 }
 
