@@ -530,3 +530,11 @@
 @media(any-hover:none){#lab3d .house-hide-peek kbd{display:none}}
 @media(prefers-reduced-motion:reduce){#lab3d .house-save-notice svg{animation:none}}
 #lab3d.house-motion-reduced .house-save-notice svg{animation:none}
+
+#lab3d .house-rc-static[hidden]{display:none!important}
+#lab3d .house-rc-static{position:absolute;inset:0;z-index:75;display:grid;place-items:center;pointer-events:none;background:rgba(19,24,31,.42);color:#fff5eb;overflow:hidden}
+#lab3d .house-rc-static i{position:absolute;inset:0;background:repeating-linear-gradient(0deg,#bacbd63d 0 1px,transparent 1px 6px);opacity:.48;animation:rc-interference .85s ease-out both}
+#lab3d .house-rc-static strong{z-index:1;padding:9px 15px;border:1px solid #f0b3af;border-radius:5px;background:#2b1e28dc;color:#ffdad0;font:700 11px monospace;letter-spacing:.12em}
+@keyframes rc-interference{from{transform:translateY(-8px);opacity:.8}to{transform:translateY(8px);opacity:.12}}
+@media(prefers-reduced-motion:reduce){#lab3d .house-rc-static i{animation:none}}
+#lab3d.house-motion-reduced .house-rc-static i{animation:none}
