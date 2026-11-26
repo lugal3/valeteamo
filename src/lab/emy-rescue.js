@@ -72,6 +72,12 @@ export function updateEmySenses(companion,player,world,enemy,objective,dt,beam){
   cat.curiosityTarget=other?{id:other.id,x:other.x,y:other.y,z:other.z}:null;
  }
  let target=companion.altarWait?{x:12.27,y:cat.y,z:.44}:danger>0?{x:enemy.x,y:enemy.y,z:enemy.z}:cat.curiosityTarget;
+ if(!target&&companion.stage==='following'&&objective?.target){
+  // Preserve the original subtle directional clue when there is nothing
+  // nearby worth investigating, without overriding a real fear reaction.
+  target=objective.target;
+  if(Math.abs(cat.y-(target.floor??target.y))>2.65)target=cat.y<1.6?{x:12,y:cat.y,z:9.95}:{x:12,y:cat.y,z:4.95};
+}
  // A mild sound reaction may turn ears toward a noise, but never reveal a
  // pursuer marker or exact location to the player.
  cat.senseTarget=target;
