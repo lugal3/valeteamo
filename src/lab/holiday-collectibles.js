@@ -1,12 +1,14 @@
 // Optional collectibles are independent of story puzzles and collision.
 // The altar keepsake has a stable ID for a later puzzle gate.
+import {HOLIDAY_TREE,HOLIDAY_GIFT_OFFSET,HOLIDAY_SWITCH_OFFSET,holidayTreePoint} from './holiday-tree.js';
 export const PLUSH_IDS=Object.freeze(['plush-gift','plush-stairs','plush-altar']);
 export const PLUSH_NAMES=Object.freeze(['Kitty de Navidad','Kitty exploradora','Kitty de los recuerdos']);
 const tones=[[.87,.30,.45],[.58,.53,.84],[.94,.66,.76]];
 export function installHolidayCollectibles(add,obj,floor,power){
  const tree={on:true,supply:power},gift={age:0,opening:false,opened:false,parts:[]};
+ const giftPoint=holidayTreePoint(HOLIDAY_GIFT_OFFSET.x,HOLIDAY_GIFT_OFFSET.z);
  const plushes=PLUSH_IDS.map((id,i)=>{
-  const [x,y,z]=[[11.96,floor+.18,2.60],[10.96,.20,6.85],[12.55,floor+.97,.72]][i];
+  const [x,y,z]=[[giftPoint.x,floor+.18,giftPoint.z],[10.96,.20,6.85],[12.55,floor+.97,.72]][i];
   const item=obj(id,i===0?'gift':'collectible',i===0?'Abrir regalo':PLUSH_NAMES[i],x,y,z,{index:i,taken:false,requiresCrouch:i===1});
   if(i===0)return item;
   const part=(name,dx,dy,dz,w,h,d,color,extra={})=>add(id+'-'+name,x+dx,y+dy,z+dz,w,h,d,'glove',false,{dynamic:false,source:item,castShadow:false,color,shape:'round',segments:6,rings:3,...extra});
@@ -21,7 +23,8 @@ export function installHolidayCollectibles(add,obj,floor,power){
   item.parts=parts;
   return item;
  });
- obj('holiday-tree-switch','holiday-switch','Luces del árbol',12.01,floor+1.04,2.43,{tree});
+ const switchPoint=holidayTreePoint(HOLIDAY_SWITCH_OFFSET.x,HOLIDAY_SWITCH_OFFSET.z);
+ obj('holiday-tree-switch','holiday-switch','Luces del árbol',switchPoint.x,floor+1.04,switchPoint.z,{tree});
  return {tree,gift,plushes};
 }
 export function holidayPowered(holiday){return !!(holiday?.tree.on&&holiday.tree.supply.on);}
@@ -33,7 +36,16 @@ export function beginGift(holiday,reduced=false){
 }
 function poseGift(holiday){
  const gift=holiday.gift,t=Math.min(1,gift.age/.72),e=t*t*(3-2*t);
- for(const {box,y,z} of gift.parts){box.y=y+.17*e;box.z=z-.15*e;box.pitch=-1.22*e;}
+ // Move and tilt the gift lid in the new local tree frame, not toward
+ // the old music-room coordinates. The renderer applies world-space deltas.
+ const a=HOLIDAY_TREE.yaw,c=Math.cos(a),s=Math.sin(a),phi=-1.22*e;
+ const cp=Math.cos(phi),sp=Math.sin(phi);
+ const pitch=Math.asin(c*sp),roll=Math.atan2(s*sp,cp);
+ const turn=Math.atan2(-c*s*(1-cp),cp+s*s*(1-cp));
+ for(const part of gift.parts){const {box,x,y,z}=part;
+  box.x=x+.15*e*s;box.y=y+.17*e;box.z=z-.15*e*c;
+  box.yaw=a+turn;box.pitch=pitch;box.roll=(part.roll||0)+roll;
+ }
 }
 export function advanceGift(holiday,dt){
  const gift=holiday.gift;if(!gift.opening)return null;
