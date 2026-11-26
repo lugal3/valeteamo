@@ -86,7 +86,7 @@ export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.a
   for(const key of Object.keys(l.legs))for(const part of ['hip','knee','paw'])l.legs[key][part]=lerp(neutral.legs[key][part],l.legs[key][part],amount);
  }
  if(leap){
-  const {compression,flight,airborne}=leap;
+  const {compression,flight,airborne,strike=0}=leap;
   l.body[1]-=.105*compression;l.head[1]-=.13*compression;
   l.headRot[0]+=.18*compression;
   for(const [name,leg] of Object.entries(l.legs)){
@@ -97,6 +97,12 @@ export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.a
     leg.paw[1]+=(front?.13:.18)*tuck;
     leg.paw[2]+=(front?.18:-.08)*tuck;
     leg.knee[1]+=.065*tuck;
+    // The near front paw leads the strike; the other supports the body.
+    // Optional channel is zero for the existing companion vent jumps.
+    if(front&&strike>0){const lead=name.endsWith('-1')?1:.62;
+     leg.paw[2]+=.14*strike*lead;leg.paw[1]+=.045*strike*lead;
+     leg.knee[2]+=.06*strike*lead;
+    }
    }
   }
  }
