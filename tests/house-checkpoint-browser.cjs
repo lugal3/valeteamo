@@ -84,8 +84,10 @@ async function run(){
    if(!await card.isVisible())await card.evaluate(el=>{el.closest('details').open=true;});
    console.log('LP trial: '+id);
    await card.scrollIntoViewIfNeeded();
-   await card.click();
    try{
+    // This is a React state transition, not a document navigation. Wait for
+    // the real start card below instead of Playwright's unrelated navigation.
+    await card.click({noWaitAfter:true});
     await page.locator('#lab-dialog [data-act="start"]').or(page.locator('#lab3d .lab-error')).or(page.getByRole('alert').filter({hasText:'No se pudo abrir esta prueba'})).waitFor({timeout:60000});
     const bootError=await page.locator('#lab3d .lab-error').count();
     if(bootError)throw Error(await page.locator('#lab3d .lab-error').innerText());
@@ -116,7 +118,9 @@ async function run(){
     await page.locator('#house-emy-menu [data-act="emy:close"]').click();
     await page.keyboard.press('Escape');
    }
-   await page.locator('#lab-dialog [data-act="exit"]').click();
+   const exit=page.locator('#lab-dialog [data-act="exit"]');
+   await exit.waitFor({state:'visible'});
+   await exit.click({noWaitAfter:true});
    await page.waitForFunction(()=>!window.__rescueHouse&&!document.querySelector('#lab3d'));
    await page.locator('.playtest-menu[data-admin-panel="lp"]').waitFor();
    console.log('PASS LP '+id+' — '+cat.companion);
