@@ -39,6 +39,18 @@ const assert=require('node:assert/strict');
   const a=windowIntroCamera(t),b=windowIntroCamera(t===0?epsilon:1-epsilon);
   assert(Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z)/epsilon<.02,'Soft transition into and out of the shot');
  }
+ // The sash is non-solid in the renderer; ordinary collision tests alone
+ // cannot detect a camera clipping through its moving glass.
+ for(let i=0;i<=1000;i++){
+  const t=i/1000,p=windowIntroCamera(t),angle=windowIntroState(t).windowAmount*Math.PI/2;
+  const dx=p.x-1.5,dz=p.z-12,c=Math.cos(angle),s=Math.sin(angle);
+  const along=Math.max(0,Math.min(1.45,dx*c+dz*s));
+  assert(Math.hypot(dx-along*c,dz-along*s)>.30,'Camera clears the outward sash at '+t);
+ }
+ for(const t of [.19,.21,.24,.26]){
+  const state=windowIntroState(t),angle=state.windowAmount*Math.PI/2,paw=state.hands[1];
+  assert(Math.hypot(paw.x-(1.5+1.30*Math.cos(angle)-.10*Math.sin(angle)),paw.z-(12+1.30*Math.sin(angle)+.10*Math.cos(angle)))<1e-8,'Right paw follows the moving sash at '+t);
+ }
  const grip=windowIntroState(.35).hands;
  for(const t of [.39,.45,.53,.65,.70])for(let i=0;i<2;i++){
   const hand=windowIntroState(t).hands[i];
