@@ -27,15 +27,15 @@ export const gallerySprites=[
 ];
 const escape=text=>String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const PHONE_PAGES=Object.freeze([
- [['messages','WhatsApp'],['photos','Fotos'],['camera','Cámara'],['maps','Mapas'],['journal','Diario'],['progress','Progreso'],['clock','Reloj'],['settings','Ajustes']],
- [['snake','Snake'],['music','Música'],['calendar','Calendario'],['weather','Tiempo'],['calculator','Calculadora'],['contacts','Contactos'],['heart','Recuerdos']]
+ [['photos','Fotos'],['maps','Mapas'],['journal','Diario'],['progress','Progreso'],['clock','Reloj'],['snake','Snake'],['calendar','Calendario'],['contacts','Contactos']],
+ [['weather','Tiempo'],['calculator','Calculadora'],['heart','Recuerdos']]
 ]);
 const appButton=([id,label],unread)=>`<button data-app="${id}"><span class="phone-app-icon ${id}">${phoneIcon(id)}${id==='messages'&&unread?'<i aria-label="Mensaje sin leer"></i>':''}</span><span>${label}</span></button>`;
 export function phoneHome(unread,page=0){
  const index=Math.max(0,Math.min(PHONE_PAGES.length-1,page));
  return '<div class="phone-wallpaper-art" aria-hidden="true">♡</div><div class="phone-apps" data-home-page="'+index+'">'+PHONE_PAGES[index].map(app=>appButton(app,unread)).join('')+'</div>'+
  '<div class="phone-page-dots" role="group" aria-label="Páginas de aplicaciones">'+PHONE_PAGES.map((_,i)=>'<button data-home-page="'+i+'" aria-label="Página '+(i+1)+'" aria-current="'+(i===index?'page':'false')+'">●</button>').join('')+'</div>'+
- '<div class="phone-dock-apps">'+[['messages','WhatsApp'],['camera','Cámara'],['settings','Ajustes'],['music','Música']].map(app=>appButton(app,unread)).join('')+'</div>';
+ '<div class="phone-apps phone-dock-apps">'+[['messages','WhatsApp'],['camera','Cámara'],['settings','Ajustes'],['music','Música']].map(app=>appButton(app,unread)).join('')+'</div>';
 }
 export function phoneJournal(notes=[],objective=''){
  return '<article class="phone-journal"><small>DIARIO DE KITTY</small><h2>Mis pequeñas pistas ♡</h2><p>He venido a buscar a Lois. No quiero dejar ninguna pista atrás.</p>'+
