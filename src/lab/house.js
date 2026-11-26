@@ -207,7 +207,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const saveNotice=document.createElement('div');saveNotice.className='house-save-notice';saveNotice.hidden=true;saveNotice.setAttribute('role','status');saveNotice.innerHTML='<svg viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="7" cy="11" rx="3.7" ry="4.6" transform="rotate(-22 7 11)"/><ellipse cx="14" cy="6" rx="3.6" ry="4.7"/><ellipse cx="22" cy="8" rx="3.6" ry="4.7" transform="rotate(16 22 8)"/><ellipse cx="27" cy="15" rx="3.3" ry="4.2" transform="rotate(26 27 15)"/><path d="M6 24Q6 19 12 15Q17 11 22 16Q28 20 26 25Q24 30 17 27Q11 30 7 27Z"/></svg><span>Progreso guardado</span>';root.append(saveNotice);
  let saveNoticeLeft=0;
  const peekButton=document.createElement('button');peekButton.type='button';peekButton.className='house-hide-peek';peekButton.hidden=true;peekButton.setAttribute('aria-keyshortcuts','V');peekButton.setAttribute('aria-label','Mantener para asomarse');peekButton.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 12Q12 1 22 12 12 23 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Asomarse</span><kbd>V</kbd>';root.append(peekButton);
- let peekPointer=null,peekHeld=false,rcStaticLeft=0;
+ let peekPointer=null,peekHeld=false,rcStaticLeft=0,pursuerCreakLeft=3.6;
  const rcStatic=document.createElement('div');rcStatic.className='house-rc-static';rcStatic.hidden=true;rcStatic.innerHTML='<i></i><strong>SEÑAL INTERRUMPIDA</strong>';rcStatic.setAttribute('role','status');root.append(rcStatic);
  const endPeek=()=>{const p=peekPointer;peekPointer=null;peekHeld=false;if(p!==null)releaseCapture(peekButton,p);};
  peekButton.addEventListener('pointerdown',e=>{if(e.button!==0||peekButton.hidden||isPaused())return;e.preventDefault();peekPointer=e.pointerId;peekHeld=true;capture(peekButton,e.pointerId);});
@@ -354,7 +354,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   Object.assign(target,{x:cat.x,y:cat.y+.38,z:cat.z,interactable:!cat.hidden&&(!emyCompanion||['following','stay','distract','distract-recover'].includes(emyCompanion.stage))&&cat.reaction<=0});
  }
  function reset(saved){
-  saveNoticeLeft=0;saveNotice.hidden=true;endPeek();rcStaticLeft=0;rcStatic.hidden=true;peekButton.hidden=true;manual.clear();manual.restore(saved?.tutorials,!!saved);pendingTutorial=null;countdown.hidden=true;for(const node of guides)node.hidden=true;
+  saveNoticeLeft=0;saveNotice.hidden=true;endPeek();rcStaticLeft=0;pursuerCreakLeft=3.6;rcStatic.hidden=true;peekButton.hidden=true;manual.clear();manual.restore(saved?.tutorials,!!saved);pendingTutorial=null;countdown.hidden=true;for(const node of guides)node.hidden=true;
   perfSampler.reset();perfAt=0;clearFPS();altarVisit=createAltarVisit();
   const seed=!saved&&scenario?.milestone;
   if(seed)saved=trialCheckpoint(seed);
@@ -1664,6 +1664,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    setDoor(world.objects.find(o=>o.id==='entrada'),false);
   }
   if(pursuer.active&&!['hide','rc-rescue'].includes(events.phase)){
+   pursuerCreakLeft=Math.max(0,pursuerCreakLeft-delta);
    const decoy=rc?.mode==='driving'&&(rc.noise>0||pursuer.canSee({x:rc.x,y:rc.y,z:rc.z,hidden:false,crouched:true,flashlight:false}))
     ?{active:true,noisy:rc.noise>0,x:rc.x,y:rc.y,z:rc.z,crouched:true,flashlight:false,hidden:false}:null;
    const hiding=s.hidden?world.objects.find(o=>o.id===s.hidden.objectId):poseTransition?.object;
@@ -1676,10 +1677,15 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    for(const signal of pursuitSignals){
     if(signal==='cut-power'&&power.on){toggleHousePower(world.lights.meter);play('power-cut',world.lights.meter);saveCheckpoint();}
     if(signal==='caught'&&['evaded','rc-setup'].includes(events.phase)){events.phase='failed';beginCapture();return;}
-    if(signal==='step')play(pursuer.y>.1&&pursuer.y<HEIGHT-.1?'stair':'wood',pursuer,.8);
+    if(signal==='step'){
+     const surface=floorSurface(pursuer);play(surface==='stair'?'stair':surface,pursuer,.8);
+     if(pursuerCreakLeft<=0&&['wood','stair'].includes(surface)&&Math.hypot(pursuer.x-s.x,pursuer.z-s.z)<7&&Math.abs(pursuer.y-s.y)<HEIGHT+.2){
+      play('house-creak',pursuer,.42);pursuerCreakLeft=5.2+(pursuer.visited%3)*.7;
+     }
+    }
     if(signal==='stood')play('wood',pursuer,.9);
     if(signal==='rc-hit'){
-     rcStaticLeft=.85;play('rc-signal-loss',null,.85);
+     rcStaticLeft=.85;play('rc-signal-loss',null,.85);play('rc-damage',null,.70);
      const pos=crashRC(rc,world);s.inventory.rc=false;equipment='empty';
      phone.setInventory(s.inventory);phone.equip('empty');resetInput();rebuild();
      play('alert',pursuer,1.1);
@@ -1699,7 +1705,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(pursuer.mode!==previousMode&&pursuer.mode==='patrol-rest')saveCheckpoint();
   }
   const wasHide=events.phase==='hide';
-  if(wasHide){const oldWalk=pursuer.walk;if(events.remaining>3&&events.remaining-delta<=3){haptics.pulse('arrival');play('alert',null,.32);}poseArrivingPursuer(pursuer,Math.max(0,events.remaining-delta));if(Math.floor(pursuer.walk/.65)>Math.floor(oldWalk/.65))play(pursuer.y>.1&&pursuer.y<HEIGHT-.1?'stair':'wood',pursuer,.85);}
+  if(wasHide){pursuerCreakLeft=Math.max(0,pursuerCreakLeft-delta);const oldWalk=pursuer.walk;if(events.remaining>3&&events.remaining-delta<=3){haptics.pulse('arrival');play('alert',null,.32);}poseArrivingPursuer(pursuer,Math.max(0,events.remaining-delta));if(Math.floor(pursuer.walk/.65)>Math.floor(oldWalk/.65)){play(pursuer.y>.1&&pursuer.y<HEIGHT-.1?'stair':'wood',pursuer,.85);if(pursuerCreakLeft<=0){play('house-creak',pursuer,.42);pursuerCreakLeft=5.2;}}}
   for(const cue of events.advance(delta,wasHide?safeBedroomHide(s.hidden,poseTransition):!!s.hidden&&!poseTransition,{caught:pursuer.caught,clear:pursuer.lost>4&&pursuer.awareness<.1&&!pursuer.witnessed,visited:pursuer.visited,
    sleeping:pursuer.mode==='sleeping',leftBedroom:!poseTransition&&roomAt(s.x,s.z,s.y)!=='Dormitorio',entranceLocked:world.objects.find(o=>o.id==='entrada').sealed})){
    if(cue==='keys')sound.sequence('keys');if(cue==='knock')sound.sequence('trying');
