@@ -42,6 +42,9 @@ export function activateEmyScan(state){
 // The two long passages are NOT invented rooms. They are the real spaces
 // between the 4.4 m/7.5 m partitions and, upstairs, the upstairs floor slabs.
 // The upstairs stairwell void is intentionally excluded (no floating waypoint).
+// Shared room identity for the 3D model and the accessible destination list.
+export const EMY_ROOM_COLORS=Object.freeze({study:'#c4b9e9',living:'#ebafca',kitchen:'#b3d8bd',bath:'#aed6eb',stairs:'#ebc392',bedroom:'#efb6cc',reading:'#d5b9e7',music:'#e8c69a','hall-ground':'#a9bdc9','hall-upper':'#a9bdc9'});
+const ROOM_ICONS={study:'📚',living:'🛋',kitchen:'🍽',bath:'🛁',stairs:'↕',bedroom:'🛏',reading:'📖',music:'♫','hall-ground':'↔','hall-upper':'↔'};
 const SHORT={
  study:'Estudio',living:'Sala',kitchen:'Cocina',bath:'Baño',
  stairs:'Escalera',bedroom:'Dormitorio',reading:'Lectura',music:'Música',
@@ -166,7 +169,8 @@ export function emyFloorList(rooms,floor,{selectedId='',lockedIds=[],disabledRea
   return '<button type="button" class="house-emy-destination'+(selected?' is-selected':'')+
    (blocked?' is-locked':'')+'" data-act="emy:room:'+room.id+'" data-zone="'+room.id+
    '" aria-pressed="'+selected+'"'+(blocked?' disabled':'')+'>'+
-   '<span class="house-emy-destination-number">'+String(index+1).padStart(2,'0')+'</span>'+
+   '<span class="house-emy-destination-number" style="--room-accent:'+(EMY_ROOM_COLORS[room.id]||'#c2bacb')+'">'+String(index+1).padStart(2,'0')+'</span>'+
+   '<span class="house-emy-destination-icon" aria-hidden="true">'+(ROOM_ICONS[room.id]||'•')+'</span>'+
    '<span class="house-emy-destination-name">'+escapeHTML(room.label)+'</span>'+
    (blocked?'<small>'+escapeHTML(reason)+'</small>':'<span class="house-emy-destination-arrow" aria-hidden="true">›</span>')+
    '</button>';
