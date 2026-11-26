@@ -59,7 +59,8 @@ export function updateEmySenses(companion,player,world,enemy,objective,dt,beam){
  const nearby=active&&sameFloor&&gap<EMY_SENSES.dangerDistance;
  const chasing=enemy.mode==='chase'&&active&&sameFloor&&gap<7&&Math.abs(player.y-cat.y)<1.1&&Math.hypot(player.x-cat.x,player.z-cat.z)<5;
  const visible=nearby&&!lineBlocked(world.boxes,{x:cat.x,y:cat.y+.42,z:cat.z},{x:enemy.x,y:enemy.y+1.05,z:enemy.z});
- const danger=companion.altarWait?1:chasing?.96:visible?Math.max(.35,1-gap/4.8):nearby?.26:0;
+ const close=nearby&&gap<1.5;
+ const danger=companion.altarWait?1:chasing?.96:visible?Math.max(.45,1-gap/5.4):close?.48:nearby?.26:0;
  // Inspect nearby actual props occasionally, not on every animation frame.
  companion.senseClock=(companion.senseClock||0)+dt;
  if(companion.senseClock>=(companion.nextCuriosity||0)){
