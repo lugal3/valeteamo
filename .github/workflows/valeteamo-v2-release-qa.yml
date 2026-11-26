@@ -64,9 +64,14 @@ jobs:
       - run: npm ci
       - name: Instalar navegador de prueba
         run: npx playwright install chromium webkit --with-deps
+      - name: Install FFmpeg for optimized production test
+        if: matrix.scenario == '3d-production' && github.head_ref == 'feature/v31-telefono-historia-final-perf'
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Preparar compilación para escenarios de producción
         if: matrix.scenario == '3d-production'
         run: npm run build
+        env:
+          VALE_REQUIRE_FLAC: ${{ github.head_ref == 'feature/v31-telefono-historia-final-perf' && '1' || '0' }}
       - name: Recorrer escenario
         env:
           EMY_QA_DIR: artifacts/v2/${{ matrix.scenario }}
