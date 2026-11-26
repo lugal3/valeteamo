@@ -156,6 +156,21 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   poseEmy(cat,{mode:'idle',phase:0,reduced});const neutral=cat.landmarks.head[1];
   poseEmy(cat,{mode:'idle',phase:0,reduced,reunion:1});assert(cat.landmarks.head[1]>neutral+.04,'Relief gesture uses the original cat rig');
  }
+ // Nearby Louis starts from his real transform and preserves animation age.
+ const entryShot={elapsed:0,kitty:{from:{x:5.95,z:12.42}},camera:{x:5.95,y:1.63,z:12.42,yaw:0,pitch:0},
+  louis:{from:{x:5.55,y:0,z:12.22,yaw:.3,crouch:.1}},louisStride:4,louisAge:20};
+ const entryEnemy={x:6.53,z:12.37};
+ const initial=finaleStage(entryShot,entryEnemy).louis;
+ assert.equal(initial.x,5.55);assert.equal(initial.z,12.22);assert.equal(initial.age,20);
+ assert.equal(initial.yaw,.3);assert.equal(initial.crouch,.1);
+ entryShot.elapsed=.43;const moving=finaleStage(entryShot,entryEnemy).louis;
+ assert(moving.speed>0&&moving.walk>4&&moving.age>20);
+ const contactShot={elapsed:0,kitty:{from:{x:5.95,z:12.42}}};
+ const contactCat={x:0,y:0,z:0,yaw:0,age:0,parts:[],hidden:true},contactEnemy={};
+ const contactAt=t=>{contactShot.elapsed=t;poseEscapeAmbush(contactShot,contactCat,contactEnemy,false);return {x:contactCat.x,z:contactCat.z};};
+ const incoming=contactAt(2.07),hit=contactAt(2.08),outgoing=contactAt(2.09);
+ assert(hit.x-incoming.x>.02,'Emy retains forward momentum until contact');
+ assert(outgoing.x<hit.x&&outgoing.z>hit.z,'Impact redirects Emy into landing');
  const threat=finaleThreat({mode:'chase'},1.65,false);
  assert(threat.captureReach>.5&&threat.captureFace.left>0&&threat.captureFace.jaw>0,'Visible rig-native transformation during the grab');
  assert(finaleThreat({mode:'chase'},3.78,true).captureReach<.01,'Grasp released before control returns');
