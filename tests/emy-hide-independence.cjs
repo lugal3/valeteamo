@@ -9,6 +9,8 @@ const fs=require('node:fs');
  const {createEmyCompanion,sendEmyDistract,updateEmyCompanion,snapshotEmyCompanion,
   restoreEmyCompanion,findEmyRefuge,emyGroundHeight,sendEmyToTrunk,FOLLOW_RESUME}=await import('../src/lab/emy-companion.js');
  const world=createHouse();
+ // Kitty can only hide in this bedroom after the story key unlocks it.
+ const bedroom=world.objects.find(o=>o.id==='dormitorio');bedroom.locked=false;setDoor(bedroom,true);
  const wardrobe={objectId:'wardrobe',returnX:2.3,returnZ:3.85};
  const kitty={x:2.3,y:3.15,z:3.85,hidden:wardrobe};
 
