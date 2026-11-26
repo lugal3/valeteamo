@@ -2338,6 +2338,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     Object.assign(pursuer,{x:pose.x,y,z:pose.z,yaw:pose.yaw??0,facing:pose.yaw??0,mode:'search',awareness:0,lost:10,path:[],replan:1});
     return pursuer.snapshot();
    },
+   // End a synthetic scan fixture before unrelated phone and input scenarios.
+   // Production threat handling remains unchanged; this hook is DEV-only.
+   clearThreatFixture:()=>{pursuer.reset();sound.setThreat(false);return pursuer.snapshot();},
    // DEV-only route harness for deterministic test setup; not in the production build.
    placeRC:(pose)=>{if(rc.mode!=='driving')throw Error('RC must be deployed first');const y=groundHeight(pose.x,pose.z,pose.y??rc.y,world.hatch?.amount>.92);if(!Number.isFinite(y)||blocked(world.boxes,pose.x,y,pose.z,.155,.38))throw Error('Blocked RC test position');rc.x=pose.x;rc.y=y;rc.z=pose.z;rc.yaw=pose.yaw??rc.yaw;rc.noise=0;syncRCObject(rc);return {x:rc.x,y:rc.y,z:rc.z};},
    intro:()=>cinematic?{elapsed:cinematic.elapsed,...windowIntroState(cinematic.elapsed/WINDOW_SHOT_SECONDS),camera:windowIntroCamera(cinematic.elapsed/WINDOW_SHOT_SECONDS)}:null,
