@@ -118,9 +118,12 @@ function tailPoint(t,mode,phase){
  const sway=Math.sin(phase*1.8+t*1.3)*.035*t;
  return [sway+.06*Math.sin(t*Math.PI),.30+.27*t+(mode==='purr'?.09*t:0),-.35-.43*t+.07*Math.sin(t*Math.PI)];
 }
+// Tail topology is identical for a given fibre count, regardless of pose.
+// Cache immutable index arrays, not animated vertex data.
+const tailTopology=new Map();
 // A continuous swept tube for the tail, with shared seam vertices and normals.
 export function emyTailSurface(mode='walk',phase=0,fibres=0,alarm=0){
- const vertices=[],indices=[],rings=22,sides=10;
+ const vertices=[],rings=22,sides=10,cached=tailTopology.get(fibres),indices=cached?.indices??[];
  for(let i=0;i<=rings;i++){
   const t=i/rings,p=tailPoint(t,mode,phase),a=tailPoint(Math.max(0,t-.001),mode,phase),b=tailPoint(Math.min(1,t+.001),mode,phase),dir=norm(b.map((v,k)=>v-a[k]));
   const right=norm([dir[2],0,-dir[0]]),up=norm([dir[1]*right[2],dir[2]*right[0]-dir[0]*right[2],-dir[1]*right[0]]);
@@ -130,8 +133,8 @@ export function emyTailSurface(mode='walk',phase=0,fibres=0,alarm=0){
    vertices.push(...p.map((v,k)=>v+normal[k]*radius),.89,.93,.97,...normal,.51+u*.48,.01+t*.48,20,64,...right);
   }
  }
- for(let i=0;i<rings;i++)for(let j=0;j<sides;j++){const a=i*(sides+1)+j;indices.push(a,a+sides+2,a+1,a,a+sides+1,a+sides+2);}
- const baseIndexCount=indices.length;
+ if(!cached)for(let i=0;i<rings;i++)for(let j=0;j<sides;j++){const a=i*(sides+1)+j;indices.push(a,a+sides+2,a+1,a,a+sides+1,a+sides+2);}
+ const baseIndexCount=cached?.baseIndexCount??indices.length;
  let seed=402;const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
  for(let j=0;j<fibres;j++){
   const t=.03+rand()*.94,a=rand()*Math.PI*2,p=tailPoint(t,mode,phase),b=tailPoint(Math.min(1,t+.001),mode,phase),dir=norm(b.map((v,k)=>v-p[k]));
@@ -141,8 +144,9 @@ export function emyTailSurface(mode='walk',phase=0,fibres=0,alarm=0){
    const f=row*.5,w=(1-f)*.0006*side,pt=p.map((v,k)=>v+normal[k]*(radius+.001+len*.32*Math.sin(f*Math.PI*.8))+dir[k]*len*f+right[k]*w);
    vertices.push(...pt,.89*shade,.93*shade,.97*shade,...normal,.51+a/(Math.PI*2)*.48,.01+t*.48,20,65,...right);
   }
-  for(const tri of [[0,1,3],[0,3,2],[2,3,4]]){const ids=tri.map(i=>i+offset);indices.push(...ids,ids[2],ids[1],ids[0]);}
+  if(!cached)for(const tri of [[0,1,3],[0,3,2],[2,3,4]]){const ids=tri.map(i=>i+offset);indices.push(...ids,ids[2],ids[1],ids[0]);}
  }
+ if(!cached&&tailTopology.size<8)tailTopology.set(fibres,{indices,baseIndexCount});
  return {vertices:new Float32Array(vertices),indices,baseIndexCount};
 }
 export function writeEmySurface(out,start,box){
