@@ -122,6 +122,8 @@ const {chromium,webkit}=require('playwright');
   assert.equal(await page.locator('#house-emy-miniature [data-marker="emy"]').count(),1);
   if((await skills()).scan>0)assert.equal(await page.locator('#house-emy-miniature [data-marker="threat"]').count(),1);
   assert.equal(await page.locator('#house-emy-map [data-act="emy:room:bedroom"]').count(),0);
+  assert(await page.locator('#house-emy-miniature [data-furniture="sofa"]').count()>0);
+  assert(await page.locator('#house-emy-miniature [data-door="estudio"]').count()>0);
   await shot(page,'03-emy-planta-baja');
   const details=await page.evaluate(()=>{
    const modal=document.querySelector('#house-emy-map'),map=modal.querySelector('.house-emy-plan'),
@@ -150,6 +152,10 @@ const {chromium,webkit}=require('playwright');
   await page.locator('#house-emy-map .house-emy-destination-list [data-act="emy:room:study"]').click();
   assert.equal(await page.locator('#house-emy-map-send').isEnabled(),true);
   assert.match(await page.locator('#house-emy-map-status').innerText(),/Estudio.*planta baja/i);
+  assert((await skills()).preview?.seconds>0);
+  assert.equal((await skills()).stage,'following','Preview does not send Emy');
+  assert.equal(await page.locator('#house-emy-miniature .mini-route-track').count(),1);
+  assert.match(await page.locator('#house-emy-map-status').innerText(),/aprox\. \d+ s/);
   await shot(page,'03b-emy-seleccion');
   await page.locator('#house-emy-map [data-act="emy:floor:1"]').click();
   assert.equal(await floorPlans.count(),1);
@@ -162,17 +168,27 @@ const {chromium,webkit}=require('playwright');
    'The upper level must distinguish the open stairwell from walkable rooms');
   assert.equal(await page.locator('#house-emy-map .house-emy-destination-list [data-act="emy:room:bedroom"]').isDisabled(),true,
    'Do not send Emy through the story-locked bedroom door');
-  assert.equal(await page.locator('#house-emy-map-send').isDisabled(),true,'Switching floors clears the old selection');
+  assert.equal(await page.locator('#house-emy-map-send').isEnabled(),true,'Switching floors preserves the destination for inspecting a cross-floor route');
+  assert(await page.locator('#house-emy-miniature [data-furniture="upper-bed"]').count()>0);
+  assert(await page.locator('#house-emy-miniature [data-door="dormitorio"][data-door-state="locked"]').count()>0);
   await shot(page,'03c-emy-planta-alta');
   await page.locator('#house-emy-map .house-emy-destination-list [data-act="emy:room:reading"]').click();
   assert.match(await page.locator('#house-emy-map-status').innerText(),/Sala de lectura.*planta alta/i);
   assert.equal(await page.locator('#house-emy-map-send').isEnabled(),true);
+  const planned=(await skills()).preview;
+  assert(planned&&planned.waypoints.some(p=>p.y<.15)&&planned.goal.y>3);
   await shot(page,'03d-emy-destino-planta-alta');
+  await page.locator('#house-emy-map [data-act="emy:floor:0"]').click();
+  assert.deepEqual((await skills()).preview,planned);
+  assert.equal(await page.locator('#house-emy-miniature .mini-route[data-route-floor="0"]').count(),1);
+  await shot(page,'03d2-emy-ruta-tramo-inferior');
+  await page.locator('#house-emy-map [data-act="emy:floor:1"]').click();
   await page.locator('#house-emy-map-send').click();
   const command=await skills();
   assert.equal(command.stage,'distract','Selecting a room and confirming commands Emy navigation');
   assert(command.distractCooldown>0,'Distraction has cooldown');
   assert(command.distraction?.goal&&command.distraction.goal.y>3,'Emy must reach a real upstairs waypoint');
+  assert.deepEqual(command.distraction.goal,planned.goal,'The confirmation uses exactly the previewed destination');
   assert.equal(command.mapOpen,false,'The map must close after a successful order');
   // Physical interaction with the busy cat, not a remote call button.
   await interactEmy();
@@ -187,6 +203,19 @@ const {chromium,webkit}=require('playwright');
   assert((await skills()).distractCooldown>0&&Math.abs((await skills()).distractCooldown-cooldownBefore)<1,
    'The real distraction cooldown remains after early reunion');
 
+  // Use the real phone application while a distraction cooldown is active.
+  // It must not depend on Emy being available or expose the threat marker.
+  await page.locator('[data-equip="phone"]').click();
+  await page.locator('#house-use-phone').click();
+  await page.locator('.phone-screen [data-app="maps"]').click();
+  assert((await skills()).mapReadOnly);
+  await page.locator('#house-emy-map [data-act="emy:floor:0"]').click();
+  assert(await page.locator('#house-emy-map-send').isHidden());
+  assert.equal(await page.locator('#house-emy-map [data-act^="emy:room:"]').count(),0);
+  assert.equal(await page.locator('#house-emy-miniature [data-marker="threat"]').count(),0);
+  await shot(page,'03f-mapas-telefono-consulta');
+  await page.locator('#house-emy-map [data-act="emy:map:back"]').click();
+  await page.locator('.phone-screen [data-app="close"]').click();
   const item='noise-glass-living';
   await page.evaluate(item=>window.__rescueHouse.interactWith(item),item);
   let objects=await page.evaluate(()=>window.__rescueHouse.noiseProps());
