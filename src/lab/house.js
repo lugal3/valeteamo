@@ -449,12 +449,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   else if(!scenario)say('Escenario reiniciado · '+(points[checkpoint]||'planta baja'));
  }
  const listener=()=>cameraOf(s);
- const play=(name,o=null,level=1)=>{
+ const play=(name,o=null,level=1,shotView=null)=>{
   if(name==='door-close'&&o?.wardrobeLeaves)name='closet-close';
   if(name==='footstep'){const room=ctxRoom(s);name=s.x<0||s.x>HOUSE.width||s.z<0||s.z>HOUSE.depth?(Math.abs(s.x-5.9)<.9?'stone':'grass'):room==='Baño'||room==='Cocina y comedor'?'tile':'wood';}
-  const loc=listener(),source=o?{x:o.x,y:o.y,z:o.z,material:o.material,surface:o.surface}:null;
+  const loc=shotView??listener(),source=o?{x:o.x,y:o.y,z:o.z,material:o.material,surface:o.surface}:null;
   const occluded=source?lineBlocked(world.boxes,loc,source,o?.kind==='door'?'door-'+o.id:''):false;
-  sound.effect(name,source,{...loc,yaw:s.yaw},occluded,{level});
+  sound.effect(name,source,{...loc,yaw:shotView?.yaw??s.yaw},occluded,{level});
   if(name==='pickup')haptics.pulse(['key','screwdriver','rc-car'].includes(o?.kind)||o===world.emy?'key':'pickup');
   if(name==='cat')caption(o===world.emy||o?.kind==='emy-cat'?'Maullido de Emy':'Maullido junto a la salida');
   if(name==='cat-purr')caption('Ronroneo de Emy');
@@ -1753,11 +1753,15 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   let view=cameraOf(s),hand=!s.hidden&&!s.lying&&!poseTransition&&!animator.performing&&(!phone.open||phone.canWalk),torch=flashlightBeam(),introHands=null,distance=0;
   if(mouseLocked()&&!canLook())releaseMouse();
   if(cinematic){
-   if(!paused&&!modal&&!isPortrait()&&!document.hidden&&hasFocus)cinematic.elapsed+=shotDelta;
+   const previousWindow=cinematic.elapsed;
+   if(!isSuspended())cinematic.elapsed=Math.min(WINDOW_SHOT_SECONDS,cinematic.elapsed+shotDelta);
    const progress=Math.min(1,cinematic.elapsed/WINDOW_SHOT_SECONDS);
    view=windowIntroCamera(progress);hand=false;torch=false;
    const shot=windowIntroState(progress);poseFurniture(world.entryWindow,shot.windowAmount);introHands=shot.hands;
-   if(!paused&&!modal)for(const [at,name] of [[.16,'latch'],[.27,'window'],[.45,'cloth'],[.87,'land']])if(progress>=at&&!cinematic.cues.has(name)){cinematic.cues.add(name);play(name);}
+   if(!isSuspended())for(const cue of collectCinematicCues('window',previousWindow,cinematic.elapsed,cinematic.cues)){
+    const source=cue.source==='window'?{x:2.2,y:1.05,z:12}:null;
+    play(cue.sound,source,cue.level,view);if(cue.caption)caption(cue.caption);
+   }
    $('lab-intro-caption').textContent=progress<.18?'La ventana del jardín…':progress<.36?'Deslizo el pestillo despacio…':progress<.43?'Me apoyo en el marco…':progress<.53?'¡Uy!':progress<.62?'Un intento más…':progress<.86?'Con cuidado… sin hacer ruido.':'Ya estoy dentro.';
    if(progress>=1){finishWindowIntro();view=cameraOf(s);hand=true;}
   }else if(emyShot){
@@ -1864,12 +1868,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(!shot.playable){
     const previousFinale=finalCutscene.elapsed;
     if(!isSuspended())finalCutscene.elapsed=Math.min(FINALE_BEATS.run,finalCutscene.elapsed+shotDelta);
-    for(const cue of collectCinematicCues('escape',previousFinale,finalCutscene.elapsed,finalCutscene.cues)){
-     const source=cue.source==='pursuer'?pursuer:cue.source==='emy'?world.emy:cue.source==='kitty'?s:null;
-     play(cue.sound,source,cue.level);caption(cue.caption);
-    }
     if(poseEscapeAmbush(finalCutscene,world.emy,pursuer,reducedMotion.matches))renderer.updateVisibility();
     const staged=finaleStage(shot,pursuer,reducedMotion.matches);
+    if(!isSuspended())for(const cue of collectCinematicCues('escape',previousFinale,finalCutscene.elapsed,finalCutscene.cues)){
+     const source=cue.source==='pursuer'?pursuer:cue.source==='emy'?world.emy:null;
+     play(cue.sound,source,cue.level,staged.view);if(cue.caption)caption(cue.caption);
+    }
     Object.assign(louis,staged.louis);
     view=staged.view;shot.stage=staged.stage;shot.lastView={...view};
     hand=false;torch=false;shotLight=.53;
