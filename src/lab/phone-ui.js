@@ -111,6 +111,12 @@ export class PhoneUI{
  resetSnake(){this.snake=[[4,6],[3,6],[2,6]];this.food=[9,6];this.direction=[1,0];this.pending=[1,0];this.clock=0;this.score=0;this.dead=false;}
  turn(index){const d=[[0,-1],[1,0],[0,1],[-1,0]][index];if(d[0]!==-this.direction[0]||d[1]!==-this.direction[1])this.pending=d;}
  key(key){const n={ArrowUp:0,w:0,ArrowRight:1,d:1,ArrowDown:2,s:2,ArrowLeft:3,a:3}[key];if(this.open&&this.app==='snake'&&n!==undefined)this.turn(n);}
+ rememberEmy(canvas){
+  if(this.emyMemory)return;
+  const image=document.createElement('canvas'),scale=Math.min(1,640/canvas.width);image.width=Math.round(canvas.width*scale);image.height=Math.round(canvas.height*scale);
+  image.getContext('2d').drawImage(canvas,0,0,image.width,image.height);
+  this.emyMemory=true;this.gallery.push({url:image.toDataURL('image/jpeg',.83),label:'Emy ♡ · Nuestro encuentro'});this.last='';
+ }
  takePhoto(canvas){
   const image=document.createElement('canvas'),aspect=16/9,sw=Math.min(canvas.width,canvas.height*aspect),sh=Math.min(canvas.height,canvas.width/aspect),scale=Math.min(1,960/sw);
   image.width=Math.round(sw*scale);image.height=Math.round(sh*scale);
@@ -118,7 +124,7 @@ export class PhoneUI{
   const photo={url:image.toDataURL('image/jpeg',.78),label:'Casa · '+formatPhoneTime()};
   this.gallery.unshift(photo);
   if(this.flash){this.root.classList.add('phone-photo-taken');clearTimeout(this.photoFlashTimer);this.photoFlashTimer=setTimeout(()=>this.root.classList.remove('phone-photo-taken'),160);}
-  if(this.gallery.length>gallerySprites.length+8)this.gallery.splice(8,1);
+  if(this.gallery.length>gallerySprites.length+8+Number(!!this.emyMemory))this.gallery.splice(8,1);
   this.photoCount++;this.last='';
  }
  updateCamera(canvas,now){
