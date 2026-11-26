@@ -46,7 +46,7 @@ export function layoutMiniaturePins(markers,project,level){
 }
 // Read real model boxes, rather than inventing room furniture at unrelated
 // positions. A compact whitelist excludes actors, particles and tiny bolts.
-const FURNITURE=/^(sofa(?:-|$)|coffee-table|tv-(?:table|frame|screen)|study-(?:desk|chair|shelf)|desk-back|trunk|upper-bed|upper-mattress|upper-blanket|headboard|bed(?:-|$)|mattress|blanket|pillow|bedside|wardrobe-(?:back|side|top|bottom|stile|rail)|bedroom-writing-table|reading-(?:chair|table|books|cabinet)|music-(?:console|chair|books)|piano|landing-cabinet|media-cabinet|kitchen-(?:counter|drawer)|oven|sink$|fridge|refrigerator|(?:dining|dinner|kitchen-table|kitchen-chair)|(?:bar|island|american|counter-bar)|toilet|basin(?:-cabinet)?$|basin-cabinet|shower|bath-cabinet|bath-tub|stair-nook-crate|upper-bench|holiday-(?:trunk|branch|tier|base|pot|star|gift)|christmas-tree)/;
+const FURNITURE=/^(sofa(?:-|$)|coffee-table|tv-(?:table|frame|screen)|study-(?:desk|chair|shelf)|desk-back|trunk|upper-bed|upper-mattress|upper-blanket|headboard|bed(?:-|$)|mattress|blanket|pillow|bedside|wardrobe-(?:back|side|top|bottom|stile|rail)|bedroom-writing-table|reading-(?:chair|table|books|cabinet)|music-(?:console|chair|books)|piano|landing-cabinet|media-cabinet|kitchen-(?:counter|drawer|bar|prep)|freezer-door|oven|sink$|fridge|refrigerator|(?:dining|dinner|kitchen-table|kitchen-chair)|(?:bar|island|american|counter-bar)|toilet|basin(?:-cabinet)?$|basin-cabinet|shower|bath-cabinet|bath-tub|stair-nook-crate|upper-bench|holiday-(?:trunk|branch|tier|base|pot|star|gift)|christmas-tree)/;
 const palettes={wood:['#bfa18a','#91725f','#a68670'],velvet:['#e5b5c9','#ac789b','#c58fae'],pink:['#f5cbd9','#bc8ca6','#dda9c3'],cream:['#eee4d6','#b8b2b2','#d8cfc7'],glass:['#a6d5df','#709cae','#88b9c8'],dark:['#645c72','#494255','#554c60'],torchmetal:['#b4b8c3','#737986','#9298a6'],stone:['#cdd7d5','#8b9c9d','#adb9b9'],carpet:['#b9a5c5','#8b789d','#a08ab1'],foliage:['#9cbaa1','#5b846d','#759c7e'],paper:['#e8cfad','#af9174','#ccb18f']};
 export function miniatureFurniture(world,floor){
  const level=floor*HEIGHT;
@@ -82,7 +82,8 @@ function routeSVG(route,floor,project){
  const segments=miniatureRouteSegments(route?.waypoints,floor);
  if(!segments.length)return '';
  const pos=p=>project([p.x,p.y+.11,p.z]),n=v=>v.toFixed(1);
- const d=segments.map(([a,b])=>{const p=pos(a),q=pos(b);return 'M'+n(p.x)+' '+n(p.y)+'L'+n(q.x)+' '+n(q.y);}).join(' ');
+ let previous=null;
+ const d=segments.map(([a,b])=>{const p=pos(a),q=pos(b),connected=previous&&Math.hypot(previous.x-p.x,previous.y-p.y)<.1;previous=q;return (connected?'':'M'+n(p.x)+' '+n(p.y))+'L'+n(q.x)+' '+n(q.y);}).join(' ');
  const goal=route.goal,goalHere=(goal.y>=HEIGHT*.5?1:0)===floor,g=pos(goal);
  return '<g class="mini-route" data-route-floor="'+floor+'" aria-label="Ruta prevista de Emy"><path class="mini-route-shadow" d="'+d+'"/><path class="mini-route-track" d="'+d+'"/><path class="mini-route-motion" d="'+d+'"/>'+
  (goalHere?'<circle class="mini-route-goal" cx="'+n(g.x)+'" cy="'+n(g.y)+'" r="6"/><circle cx="'+n(g.x)+'" cy="'+n(g.y)+'" r="2.5" fill="#fff"/>':'')+'</g>';
@@ -140,12 +141,16 @@ export function miniatureSVG(world,view,{floor=-1,selectedId='',lockedIds=[],mar
  const sorted=faces.map(f=>polygon(f,project)).sort((a,b)=>a.depth-b.depth);
  // Fit the unzoomed geometry, not a fixed oversized SVG canvas. The user
  // zoom is deliberately excluded from the fit so zoom still changes scale.
- let left=Infinity,right=-Infinity,top=Infinity,bottom=-Infinity;
- for(const face of sorted)for(const p of face.points){
-  const x=260+(p.x-260)/view.zoom,y=171+(p.y-171)/view.zoom;
-  left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);
- }
- const margin=23,viewBox=Number.isFinite(left)?[left-margin,top-margin,right-left+2*margin,bottom-top+2*margin].map(v=>v.toFixed(2)).join(' '):'0 0 520 342';
+ const fit=items=>{
+  let left=Infinity,right=-Infinity,top=Infinity,bottom=-Infinity;
+  for(const face of items)for(const p of face.points){
+   const x=260+(p.x-260)/view.zoom,y=171+(p.y-171)/view.zoom;
+   left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);
+  }
+  const margin=23;
+  return Number.isFinite(left)?[left-margin,top-margin,right-left+2*margin,bottom-top+2*margin].map(v=>v.toFixed(2)).join(' '):'0 0 520 342';
+ };
+ const viewBox=fit(sorted);
  const text=labels.map(o=>{const p=project(o.p);return '<text x="'+p.x.toFixed(1)+'" y="'+p.y.toFixed(1)+'" class="mini-label'+(o.locked?' is-locked':'')+'"'+(!o.locked&&!readOnly?' data-act="emy:room:'+esc(o.id)+'"':'')+'>'+esc(o.label)+(o.locked?' 🔒':'')+'</text>';}).join('');
  const visibleMarkers=floor<0?[]:markers.filter(m=>(!readOnly||m.id!=='threat')&&Number.isFinite(m.x)&&Number.isFinite(m.y)&&Number.isFinite(m.z)&&m.x>=0&&m.x<=HOUSE.width&&m.z>=0&&m.z<=HOUSE.depth&&m.y>=-.18&&m.y<=HEIGHT+.6&&(m.y>=HEIGHT*.5?1:0)===floor);
  const n=v=>v.toFixed(1);
@@ -158,18 +163,26 @@ export function miniatureSVG(world,view,{floor=-1,selectedId='',lockedIds=[],mar
  // For floor entry, lift a real projected roof and (on the ground floor)
  // upper shell away in separate layers. CSS runs once on floor changes,
  // leaving rotation and zoom free of animation work or a second GL context.
- let cover='';
+ let cover='',cameraAnimation='';
  if(reveal&&floor>=0){
-  const upper=[];
+  const upper=[],facade=[];
+  const roof=reveal==='floor'?[]:roofFaces(world);
+  // Use the full exterior at the beginning, then reveal the cutaway as
+  // the roof and upper shell lift. Fit both poses so the roof cannot be
+  // clipped by the final floor's tighter frame.
+  for(const b of world.boxes.filter(b=>/^(west|east|north|south)-(0|3\.15)-/.test(b.id)&&b.solid&&b.h>.4&&Math.abs(b.y-b.h/2-level)<.16))
+   cuboid(b.x,b.y,b.z,b.w,b.h,b.d,['#edd8df','#ad91a5','#c8adbc'],facade);
   if(floor===0){
    for(const b of world.boxes.filter(b=>/^(west|east|north|south)-3\.15-/.test(b.id)&&b.solid&&b.h>.4))
     cuboid(b.x,b.y,b.z,b.w,b.h,b.d,['#edd8df','#ad91a5','#c8adbc'],upper);
    cuboid(HOUSE.width/2,HEIGHT-.08,HOUSE.depth/2,HOUSE.width,.16,HOUSE.depth,['#d9c4d0','#a08b9d','#b7a0b1'],upper);
   }
   const layer=(name,items)=>'<g class="'+name+'" aria-hidden="true">'+items.map(f=>polygon(f,project)).sort((a,b)=>a.depth-b.depth).map(f=>f.html).join('')+'</g>';
-  cover='<g class="mini-cover-reveal" pointer-events="none">'+layer('mini-upper-lift',upper)+layer('mini-roof-lift',roofFaces(world))+'</g>';
+  const exteriorFit=fit([...sorted,...[...facade,...upper,...roof].map(f=>polygon(f,project))]);
+  if(exteriorFit!==viewBox)cameraAnimation='<animate attributeName="viewBox" values="'+exteriorFit+';'+exteriorFit+';'+viewBox+'" keyTimes="0;0.18;1" dur="0.86s" calcMode="spline" keySplines="0.25 0.7 0.25 1;0.25 0.7 0.25 1" fill="freeze"/>';
+  cover='<g class="mini-cover-reveal" pointer-events="none">'+layer('mini-facade-fade',facade)+layer('mini-upper-lift',upper)+layer('mini-roof-lift',roof)+'</g>';
  }
- return '<svg viewBox="'+viewBox+'" role="img" aria-label="'+(floor<0?'Exterior tridimensional de la casa':'Casa en corte, planta '+(floor?'alta':'baja'))+'" xmlns="http://www.w3.org/2000/svg">'+sorted.map(o=>o.html).join('')+(floor>=0&&!readOnly?routeSVG(route,floor,project):'')+text+pins+cover+'</svg>';
+ return '<svg viewBox="'+viewBox+'" role="img" aria-label="'+(floor<0?'Exterior tridimensional de la casa':'Casa en corte, planta '+(floor?'alta':'baja'))+'" xmlns="http://www.w3.org/2000/svg">'+cameraAnimation+sorted.map(o=>o.html).join('')+(floor>=0&&!readOnly?routeSVG(route,floor,project):'')+text+pins+cover+'</svg>';
 }
 export function miniatureMarkers(player,cat,threat,scanVisible){
  const out=[{id:'kitty',label:'Kitty',color:'#f3a2c6',...player}];
