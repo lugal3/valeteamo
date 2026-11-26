@@ -1,4 +1,5 @@
 import {progressStops} from './rescue-progress.js';
+import {trialEmyStage} from './trial-checkpoint.js';
 
 export type HouseTrial={
  milestone?:number;
@@ -29,7 +30,7 @@ const nextActions=[
 type StopId=`hito-${number}`;
 export const milestoneIds=progressStops.map((_,i):StopId=>`hito-${i+1}`);
 const milestoneTrials=Object.fromEntries(progressStops.map(({percent,label},i)=>[milestoneIds[i],{
- title:`${percent}% · ${label}`,description:nextActions[i],objective:nextActions[i],checkpoint:'ground',milestone:i+1,emy:i+1>=8?'trunk':'following'
+ title:`${percent}% · ${label}`,description:nextActions[i],objective:nextActions[i],checkpoint:'ground',milestone:i+1,emy:trialEmyStage(i+1)
 }])) as Record<StopId,HouseTrial>;
 const legacyTrials={
 
