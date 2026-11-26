@@ -113,6 +113,8 @@ export function poseEscapeAmbush(shot,cat,enemy,reduced){
  // rig compresses before takeoff, extends at the impact and absorbs landing.
  if(t<.95)return false;
  const appeared=cat.hidden;
+ shot.emyAgeBase??=Number.isFinite(cat.age)?cat.age:0;
+ cat.age=shot.emyAgeBase+t;cat.darkEyes=false;
  cat.hidden=false;for(const {box} of cat.parts)box.hiddenGeometry=false;
  if(appeared){cat.footContacts=null;cat.lastFootRoot=null;}
  const turn=(a,b,v)=>a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*v;
@@ -139,9 +141,11 @@ export function poseEscapeAmbush(shot,cat,enemy,reduced){
  const yaw=t<2.08?face:t<2.73?turn(face,retreatFace,down):turn(retreatFace,leadFace,ease((t-2.73)/.17));
  Object.assign(cat,{x:mix(x,lead.x,run),z:mix(z,lead.z,run),y:height,
   yaw:turn(yaw,0,ease((t-3.56)/.22)),alarm:ease((t-1.10)/.25)*(1-ease((t-2.44)/.40)),
-  earFlatten:ease((t-1.10)/.25)*(1-ease((t-2.44)/.40))});
+  earFlatten:ease((t-1.10)/.25)*(1-ease((t-2.44)/.40)),
+  earTurn:reduced?0:.24*ease((t-.95)/.22)*(1-ease((t-1.32)/.20))});
  const walking=t<1.33||t>2.84&&t<3.78,airborne=t>1.45&&t<2.73;
  poseEmy(cat,{mode:walking?'walk':'idle',walking,phase:t,reduced,
+  headYaw:reduced?0:.18*ease((t-.95)/.24)*(1-ease((t-1.32)/.22))-.16*ease((t-3.02)/.23)*(1-ease((t-3.45)/.33)),
   leap:{compression:Math.max(prep,absorb),flight,airborne,strike:ease((t-1.83)/.22)*(1-ease((t-2.10)/.24))}});
 
  return appeared;
