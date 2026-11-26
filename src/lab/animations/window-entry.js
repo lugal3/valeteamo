@@ -10,14 +10,15 @@ export const WINDOW_BEATS=Object.freeze({
 // The live first-person hands start and finish just below the camera,
 // instead of spawning on the sill. During contact only finger/roll channels
 // move; the palm itself is locked to the world-space anchor.
+export const windowSashAmount=t=>ease((clamp(t)-.19)/.19);
 export function windowEntryHands(progress,camera=null){
  const t=clamp(progress);
  if(t<=.12||t>=.88)return null;
  const hand=(side,start,release)=>{
   if(t<=start||t>=release+.10)return null;
-  const reach=ease((t-start)/.14),leave=ease((t-release)/.10);
+  const reach=ease((t-start)/(.35-start)),leave=ease((t-release)/.10);
   const strain=curve([[0,0],[.34,0],[.45,1],[.54,.35],[.65,.75],[.74,0],[1,0]],t);
-  const anchor={x:2.205+side*.475,y:1,z:12.12};
+  const anchor={x:2.205+side*.475,y:.94,z:12.12};
   const hidden=camera?{x:camera.x+side*.27,y:camera.y-.78,z:camera.z-.39}
    :{x:2.205+side*.475,y:.76,z:12.3};
   const contact=reach*(1-leave);
@@ -25,11 +26,23 @@ export function windowEntryHands(progress,camera=null){
   // so the trailing paw doesn't visibly disappear in mid-air.
   const mix=(a,b,w)=>a+(b-a)*w;
   const home=camera?hidden:{x:hidden.x-side*.045*leave,y:hidden.y-.15*leave,z:hidden.z-.20*leave};
-  return {x:mix(home.x,anchor.x,contact),y:mix(home.y,anchor.y,contact),
+  const palm={x:mix(home.x,anchor.x,contact),y:mix(home.y,anchor.y,contact),
    z:mix(home.z,anchor.z,contact),curl:contact*(.60+.35*strain),
    flex:.12*strain*contact,roll:side*(.07+.09*strain)*contact};
+  // The right paw first pulls the outward-opening sash by its free edge.
+  // Follow the same hinge transform as poseFurniture, then transfer to the
+  // stationary sill before the first attempt. No hand passes through glass.
+  if(side===1&&t<.35){
+   const angle=Math.PI/2*windowSashAmount(t),c=Math.cos(angle),s=Math.sin(angle);
+   const latch={x:1.5+1.30*c-.10*s,y:1.17,z:12+1.30*s+.10*c};
+   const touch=ease((t-.12)/.07),transfer=ease((t-.265)/.085);
+   for(const k of ['x','y','z'])palm[k]=mix(mix(home[k],latch[k],touch),palm[k],transfer);
+   palm.curl=mix(.48*touch,palm.curl,transfer);
+   palm.roll=mix(-.18*touch,palm.roll,transfer);
+  }
+  return palm;
  };
- return [hand(-1,.12,.73),hand(1,.16,.78)];
+ return [hand(-1,.21,.73),hand(1,.12,.78)];
 }
 // Pose offsets are in actor space, not gameplay coordinates. Author the
 // weight transfer independently of the wrists so the limbs do not all
