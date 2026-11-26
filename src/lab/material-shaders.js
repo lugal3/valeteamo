@@ -106,7 +106,7 @@ float lampLight(vec4 lamp,vec3 world,vec3 normal,vec3 surfaceNormal){
   visibility(floor(lamp.w),projected*.5+.5,depth,${LAMP_REACH.toFixed(1)},max(0.0,dot(surfaceNormal,direction)));
 }
 void main(){
- if(uScanOutline>.5){gl_FragColor=vec4(.34,1.0,.78,1.0);return;}
+ if(uScanOutline>.5){gl_FragColor=uScanOutline>1.5?vec4(.19,.82,.67,.28):vec4(.66,1.0,.88,.96);return;}
  if(uMirrorPass>.5&&vWorld.x<9.8375)discard;
  if(vArt>1.5&&vArt<2.5&&uTVSignal>.5){
   vec2 grid=floor(vUV*vec2(256.0,144.0));
