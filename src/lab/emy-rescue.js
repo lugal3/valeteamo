@@ -127,20 +127,22 @@ export function poseEscapeAmbush(shot,cat,enemy,reduced){
  const up=ease((t-1.45)/.63),down=ease((t-2.08)/.65);
  const run=ease((t-2.84)/.94);
  const prep=ease((t-1.23)/.22)*(1-ease((t-1.45)/.14));
- const absorb=ease((t-2.59)/.14)*(1-ease((t-2.73)/.17));
+ const absorb=ease((t-2.65)/.10)*(1-ease((t-2.75)/.18));
  const face=Math.atan2(strike.x-takeoff.x,strike.z-takeoff.z);
  const retreatFace=Math.atan2(landing.x-strike.x,landing.z-strike.z);
  const leadFace=Math.atan2(lead.x-landing.x,lead.z-landing.z);
  const x=t<1.45?mix(from.x,takeoff.x,approachCat):t<2.08?mix(takeoff.x,strike.x,up):mix(strike.x,landing.x,down);
  const z=t<1.45?mix(from.z,takeoff.z,approachCat):t<2.08?mix(takeoff.z,strike.z,up):mix(strike.z,landing.z,down);
- const height=t<1.45?0:t<2.08?.96*up:.96*(1-down);
+ // Ballistic rise and fall: gravity accelerates the descent instead of
+ // easing to a hover just before touching the ground. The paws absorb it.
+ const height=3.84*flight*(1-flight);
  const yaw=t<2.08?face:t<2.73?turn(face,retreatFace,down):turn(retreatFace,leadFace,ease((t-2.73)/.17));
  Object.assign(cat,{x:mix(x,lead.x,run),z:mix(z,lead.z,run),y:height,
   yaw:turn(yaw,0,ease((t-3.56)/.22)),alarm:ease((t-1.10)/.25)*(1-ease((t-2.44)/.40)),
   earFlatten:ease((t-1.10)/.25)*(1-ease((t-2.44)/.40))});
  const walking=t<1.33||t>2.84&&t<3.78,airborne=t>1.45&&t<2.73;
  poseEmy(cat,{mode:walking?'walk':'idle',walking,phase:t,reduced,
-  leap:{compression:Math.max(prep,absorb),flight,airborne}});
+  leap:{compression:Math.max(prep,absorb),flight,airborne,strike:ease((t-1.83)/.22)*(1-ease((t-2.10)/.24))}});
 
  return appeared;
 }
