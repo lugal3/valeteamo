@@ -1285,7 +1285,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   $('lab-hop').hidden=!showAction;
   $('lab-hop').disabled=!canHop()||hopAge<HOP_COOLDOWN;
   $('lab-crouch').classList.toggle('lab-available',s.crouched);
-  $('lab-crouch').setAttribute('aria-pressed',String(s.crouched));$('lab-crouch').setAttribute('aria-label',s.crouched?'Levantarse':'Agacharse');$('lab-crouch').querySelector('small').textContent=s.crouched?'Levantar':'Agachar';
+  const crouchButton=$('lab-crouch'),crouchPressed=String(s.crouched),crouchLabel=s.crouched?'Levantarse':'Agacharse',crouchCaption=s.crouched?'Levantar':'Agachar';
+  if(crouchButton.getAttribute('aria-pressed')!==crouchPressed)crouchButton.setAttribute('aria-pressed',crouchPressed);
+  if(crouchButton.getAttribute('aria-label')!==crouchLabel)crouchButton.setAttribute('aria-label',crouchLabel);
+  const crouchText=crouchButton.querySelector('small');
+  if(crouchText.textContent!==crouchCaption)crouchText.textContent=crouchCaption;
   if(config.trial&&$('lab-camera-settings').open)$('lab-metrics').textContent=`${fps} FPS · ${ctxRoom(s)} · altura ${s.y.toFixed(1)} m · rumbo ${Math.round((s.yaw*180/Math.PI%360+360)%360)}°`;
  }
  function interactionLabel(target){
@@ -1626,7 +1630,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  function frame(now){
   if(!active||contextLost)return;raf=requestAnimationFrame(frame);
-  const limit=(paused||!!modal&&!piano||$('lab-camera-settings').open||isPortrait()||document.hidden||!hasFocus)?1000/15:
+  // The start card covers a static preview. Keep enough frames for resize
+  // and recovery, but leave the main thread free for the actual Start click.
+  // Once started, preserve the existing gameplay/paused rendering budgets.
+  const limit=!ready?1000/5:(paused||!!modal&&!piano||$('lab-camera-settings').open||isPortrait()||document.hidden||!hasFocus)?1000/15:
    options.quality==='low'||piano&&piano.mode!=='performance'?1000/30:1000/60;
   if(now-lastPaint<limit-2)return;
   const shotDelta=Math.min(.1,Math.max(0,(now-last)/1000||0)),dt=Math.min(.055,shotDelta);last=now;lastPaint=now;
