@@ -28,7 +28,7 @@ export function finaleStage(shot,enemy,reduced=false){
  const reveal=reduced?Number(t>=b.turnEnd):ease((t-b.turnStart)/(b.turnEnd-b.turnStart));
  const leave=reduced?Number(t>=b.run):ease((t-b.lookOut)/(b.run-b.lookOut));
  const facing=turn(origin.yaw,toward,reveal);
- const view={x,y,z,yaw:turn(facing,0,leave),pitch:mix(mix(origin.pitch,tilt,reveal),-.035,leave)};
+ const view={x,y,z,yaw:turn(facing,0,leave),pitch:mix(mix(origin.pitch,tilt,reveal),-.28,leave)};
  return {view,louis,stage:t<b.turnStart?'noise':t<b.turnEnd?'turn':t<b.leap?'grab':t<b.release?'intervention':t<b.run?'release':'run'};
 }
 export function finaleThreat(actor,elapsed,reduced=false){
@@ -40,4 +40,11 @@ export function finaleThreat(actor,elapsed,reduced=false){
    twitch:reduced?0:Math.sin(elapsed*17)*face*.35,glance:0,gaze:0,clamp:0,
    pressure:.18*face,strain:.28*face,blink:0,rupture:0},
   mode:recoil>.5?'stunned':actor.mode};
+}
+
+// Weather follows spatial escape progress, not a timeout that would let dawn
+// finish while the player stands still. Pure input, no particle simulation.
+export function finaleWeather(shot,player){
+ const dawn=shot?.playable?mix(.13,1,ease((player.z-14.65)/3.05)):0;
+ return {dawn,rain:.78*(1-dawn),sky:[mix(.018,.55,dawn),mix(.024,.48,dawn),mix(.046,.52,dawn)]};
 }
