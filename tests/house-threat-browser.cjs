@@ -9,16 +9,17 @@ const {chromium}=require('playwright');
   name:'house-threat-fixture',
   configureServer(server){
    server.middlewares.use((request,response,next)=>{
-    if(request.url!=='/__house-threat')return next();
+    if(!request.url.startsWith('/__house-threat'))return next();
     response.setHeader('Content-Type','text/html');
     response.end(`<!doctype html><html lang="es"><head><meta charset="UTF-8"></head><body><script type="module">
       import {launchHouse} from '/src/lab/house.js';
-      const key='test-house-threat';
-      const checkpoint=JSON.parse(localStorage.getItem(key))??{
+      const deadline=new URLSearchParams(location.search).has('deadline');
+      const key=deadline?'test-house-deadline':'test-house-threat';
+      const checkpoint=JSON.parse(localStorage.getItem(key))??(deadline?{version:2,stage:'encounter',picked:['key','media-flashlight'],tutorials:['movement','threat'],lives:3}:{
        version:1,stage:'rest',picked:['key','media-flashlight'],pursuit:{phase:'hunt'},blackout:{until:3.5,left:0}
-      };
-      window.closeHouse=launchHouse(()=>{},'ground',{demo:true,checkpointStore:{
-       checkpoint,save:value=>localStorage.setItem(key,JSON.stringify(value))
+      });
+      window.closeHouse=launchHouse(()=>{},'ground',{demo:true,fieldTutorials:deadline,checkpointStore:{
+       checkpoint,save:value=>{localStorage.setItem(key,JSON.stringify(value));return true;}
       }});
      </script></body></html>`);
    });
@@ -143,6 +144,39 @@ const {chromium}=require('playwright');
   assert.deepEqual(errors,[]);
   await page.evaluate(()=>window.closeHouse());
   console.log('PASS house threat browser: explicit hiding, safe reload and exits, manual power restoration and continued patrol');
+
+  // A focused campaign-like fixture bypasses the unrelated LP trial matrix.
+  // Both attempts use the real scripted arrival, modal, pursuer and save path.
+  await page.goto(url+'?deadline=1');await ready();
+  const dismiss=page.locator('.field-overlay [data-field-close]');
+  await page.waitForFunction(()=>window.__rescueHouse.story().tutorial==='hide',null,{timeout:90000});
+  assert.equal((await story()).remaining,10);
+  await page.waitForTimeout(400);
+  assert.equal((await story()).remaining,10,'Tutorial reading genuinely pauses the ten-second clock');
+  await dismiss.click();
+  await page.locator('.field-countdown').waitFor();
+  await page.keyboard.press('c');
+  await aimAt('underbed');await interact();
+  await page.waitForFunction(()=>window.__rescueHouse.snapshot().hideType==='underbed');
+  await page.waitForFunction(()=>window.__rescueHouse.story().phase==='patrol',null,{timeout:90000});
+  const arrived=await story();
+  assert.equal(arrived.remaining,0);assert.equal(arrived.pursuer.y,3.15);
+  assert.equal((await snapshot()).hidden,true);
+  const success=await page.evaluate(()=>JSON.parse(localStorage.getItem('test-house-deadline')));
+  assert.equal(success.lives,3);assert(success.tutorials.includes('hide'));
+  await shot('05-deadline-underbed-safe');
+  await page.evaluate(saved=>localStorage.setItem('test-house-deadline',JSON.stringify({...saved,stage:'encounter',hide:undefined,pursuit:null})),success);
+  await page.reload();await ready();
+  await page.waitForFunction(()=>window.__rescueHouse.story().phase==='hide',null,{timeout:90000});
+  assert.equal(await page.locator('.field-overlay:not([hidden])').count(),0,'No repeat on retry');
+  await page.waitForFunction(()=>window.__rescueHouse.story().phase==='failed',null,{timeout:90000});
+  const failed=await story();
+  assert.equal(failed.remaining,0);assert.equal(failed.pursuer.y,3.15);
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('test-house-deadline')).lives),2);
+  await shot('06-deadline-immediate-capture');
+  assert.deepEqual(errors,[]);
+  await page.evaluate(()=>window.closeHouse());
+  console.log('PASS real deadline: paused card, under-bed survival, upstairs at zero and exact one-life debit');
  }catch(error){
   try{console.log('THREAT_QA_FAILURE',await page?.evaluate(()=>({
    story:window.__rescueHouse?.story(),snapshot:window.__rescueHouse?.snapshot(),lights:window.__rescueHouse?.amenities()
