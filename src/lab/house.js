@@ -10,6 +10,7 @@ import {PhoneUI} from './phone-ui.js';
 import {FloorSounds} from './floor-sounds.js';
 import {EMOTES} from './animations/emotes.js';
 import {Pursuer} from './pursuer.js';
+import {difficultyProfile,validDifficulty} from './difficulty.js';
 import {STARTING_LIVES,LIFE_NOTICE_SECONDS,captureLoss,lifeSlots} from './capture-lives.js';
 import {captureFrame,capturePath,captureTiming} from './capture-shot.js';
 import {movementKey,releasedPointer,hasControlTouch} from './movement-input.js';
@@ -141,6 +142,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      <label class="lab-preference"><input data-setting="threatText" type="checkbox"> Mostrar avisos del perseguidor</label>
      <label class="lab-preference"><input data-setting="haptics" type="checkbox" checked> Vibración (si el dispositivo la admite)</label>
      <label class="lab-preference"><input data-setting="immersive" type="checkbox" checked> HUD discreto</label>
+     <label>Dificultad <select data-setting="difficulty" aria-label="Dificultad"><option value="story">Historia · recomendada</option><option value="normal">Equilibrado</option><option value="tense">Tensión</option></select></label>
+     <label class="lab-preference"><input data-setting="adaptive" type="checkbox" checked> Ayuda adaptable tras perder vidas</label>
      <details class="house-mixer"><summary>Mezclador de sonido</summary>
        <label class="lab-preference"><input data-setting="mute" type="checkbox"> Silenciar la casa</label>
        ${MIX_CHANNELS.map(([key,label,preview])=>`<div class="mixer-row"><label><span>${label} <output data-level="${key}"></output></span><input data-setting="${key}" type="range" min="0" max="${mixLimit(key)}" step=".01" aria-label="${label}"></label><button data-act="audio:${preview||key}" aria-label="Probar ${label}">▶</button></div>`).join('')}
@@ -212,7 +215,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const motionMedia=window.matchMedia('(prefers-reduced-motion: reduce)');
  const keys=new Set(),joystick={x:0,z:0,sprint:false},velocity={forward:0,side:0,speed:KITTY_SPEED.walk};
  const cameraSettings=(()=>{try{return readCameraSettings(window.localStorage)}catch{return {...DEFAULT_CAMERA_SETTINGS}}})();
- const options={...cameraSettings,bob:cameraSettings.bob??!motionMedia.matches,quality:'medium'};
+ const options={...cameraSettings,bob:cameraSettings.bob??!motionMedia.matches,quality:'medium',difficulty:cameraSettings.difficulty??(scenario?'normal':'story'),adaptive:cameraSettings.adaptive!==false};
  const reducedMotion={get matches(){return motionMedia.matches||options.motion===true;}};
  const haptics=createHaptics({vibrate:pattern=>navigator.vibrate?.(pattern)??false,now:()=>performance.now(),enabled:()=>options.haptics!==false&&!document.hidden&&hasFocus});
  const saveCamera=()=>{try{writeCameraSettings(window.localStorage,options)}catch{}};
@@ -396,6 +399,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(scenario.events==='car')events.phase='car-preview';
   }
   const restored=restoreHouseCheckpoint(saved,{world,s,puzzle,events,mirrorSafe,rc,rcTrap,pursuer});
+  pursuer.setDifficulty(difficultyProfile(options.difficulty,options.adaptive,s.lives,s.emyRescueUsed));
   if(world.studyVent.unlatched||puzzle.key)world.studyVent.tool.taken=true;
   if(puzzle.key){world.studyVent.interactable=false;world.studyVent.unlatched=true;poseVentCover(world.studyVent,1);}
   resumed=!!restored;
@@ -1562,7 +1566,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    const hiding=s.hidden?world.objects.find(o=>o.id===s.hidden.objectId):poseTransition?.object;
    const previousMode=pursuer.mode;
    const deferredDoorSounds=[];
-   const pursuitSignals=pursuer.update(Math.min(.055,delta),{x:s.x,y:s.y,z:s.z,crouched:s.crouched,flashlight:flashlightBeam(),dark:!housePowered(power),hidden:!!s.hidden&&!poseTransition,entering:!!poseTransition?.entering,hideId:hiding?.id,hideExit:hiding?{x:poseTransition?.outside.x??s.hidden?.returnX??hiding.returnX,y:s.y,z:poseTransition?.outside.z??s.hidden?.returnZ??hiding.returnZ}:null},door=>{if(door.id!=='entrada'&&!door.sealed&&!door.locked&&!door.motion&&sweepClear(door,door.amount,1,pursuer)){const result=animateFurniture(door,true,{player:s,reducedMotion:reducedMotion.matches});if(result.started)deferredDoorSounds.push(door);}},decoy);
+   const pursuitSignals=pursuer.update(Math.min(.055,delta),{x:s.x,y:s.y,z:s.z,crouched:s.crouched,flashlight:flashlightBeam(),dark:!housePowered(power),hidden:!!s.hidden&&!poseTransition,entering:!!poseTransition?.entering,hideId:hiding?.id,hideExit:hiding?{x:poseTransition?.outside.x??s.hidden?.returnX??hiding.returnX,y:s.y,z:poseTransition?.outside.z??s.hidden?.returnZ??hiding.returnZ}:null},door=>{if(door.id!=='entrada'&&!door.sealed&&!door.locked&&!door.motion&&sweepClear(door,door.amount,1,pursuer)){const result=animateFurniture(door,true,{player:s,reducedMotion:reducedMotion.matches});if(result.started){deferredDoorSounds.push(door);return true;}}},decoy);
    // Priority: start the loud chase warning BEFORE any footstep, door, UI or capture cue.
    if(pursuitSignals.includes('spotted')){sound.playDangerAlert();phone.close();}
    for(const door of deferredDoorSounds)play('door-open',door);
@@ -1577,9 +1581,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      play('alert',pursuer,1.1);
      say('El secuestrador golpeó el auto. Se perdió la señal; lo dejó en otro lugar de la casa ('+Math.round(pos.x)+', '+Math.round(pos.z)+'). Ve a recuperarlo.',7);
     }
-    if(signal==='investigate'&&emyCompanion?.stage!=='following')say('Notó movimiento. Busca cobertura.',2.5);
-    if(signal==='spotted'&&emyCompanion?.stage!=='following')say('Te vio. Gira una esquina para perderlo.',3);
-    if(signal==='lost'&&emyCompanion?.stage!=='following')say('Perdió de vista a Kitty y revisará la última zona. Sigue escondida.',3);
+    if(signal==='investigate'&&options.threatText===true)say('Notó movimiento. Busca cobertura.',2.5);
+    if(signal==='spotted'&&options.threatText===true)say('Te vio. Gira una esquina para perderlo.',3);
+    if(signal==='lost'&&options.threatText===true)say('Perdió de vista a Kitty y revisará la última zona. Sigue escondida.',3);
     if(signal==='at-entry'){
      const door=world.objects.find(o=>o.id==='entrada');
      if(!door.sealed&&roomAt(s.x,s.z,s.y)!=='Jardín y vecindario'&&sweepClear(door,door.amount,0,s)){
@@ -1885,6 +1889,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    s.hidden?'Sigue patrullando · espera a que se aleje':'Está patrullando';
   if(danger.textContent!==threatText)danger.textContent=threatText;
   root.classList.toggle('house-threat',!danger.hidden);
+  root.classList.toggle('house-chase-tension',chasing&&!isSuspended());
+  root.classList.toggle('house-watch-tension',investigating&&!isSuspended());
   if(!isSuspended()){
    if(events.phase==='arrival'&&lastHapticPhase!=='arrival')haptics.pulse('arrival');
    if(chasing&&!lastHapticThreat)haptics.pulse('chase');
@@ -2158,6 +2164,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(key==='quality'){options.quality=field.value;renderer.quality=field.value;root.querySelectorAll('[data-setting="quality"]').forEach(el=>{if(el!==field)el.value=field.value;});}
   if(key==='sensitivity'){options.sensitivity=Number(field.value);root.querySelectorAll('[data-setting="sensitivity"]').forEach(el=>{if(el!==field)el.value=field.value;});saveCamera();}
   if(key==='invertX'){options.invertX=field.checked;saveCamera();}
+  if(key==='difficulty'||key==='adaptive'){if(key==='difficulty')options.difficulty=validDifficulty(field.value);else options.adaptive=field.checked;pursuer.setDifficulty(difficultyProfile(options.difficulty,options.adaptive,s.lives,s.emyRescueUsed));saveCamera();}
   if(['bob','motion','captions','hints','threatText','haptics','immersive'].includes(key)){
    options[key]=field.checked;saveCamera();syncMotion();
    if(key==='captions'&&!field.checked)hudMessages.clearSound();
@@ -2283,6 +2290,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   root.querySelector('[data-setting="threatText"]').checked=options.threatText===true;
   root.querySelector('[data-setting="haptics"]').checked=options.haptics!==false;
   root.querySelector('[data-setting="immersive"]').checked=options.immersive!==false;
+  root.querySelector('[data-setting="difficulty"]').value=options.difficulty;
+  root.querySelector('[data-setting="adaptive"]').checked=options.adaptive;
   root.querySelectorAll('[data-setting="quality"]').forEach(el=>el.value=options.quality);
   startHouse();
   raf=requestAnimationFrame(frame);
