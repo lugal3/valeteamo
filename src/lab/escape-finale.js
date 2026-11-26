@@ -22,9 +22,9 @@ export function finaleStage(shot,enemy,reduced=false){
  const captive={x:mix(enemy.x-.05+sway,start.x-.25,release),
   z:mix(enemy.z+.44,start.z+1.4,release)};
  const louis={x:mix(captive.x,exit.x+.42,run),y:0,z:mix(captive.z,exit.z-.42,run),
-  yaw:turn(0,0,run),crouch:.28*(1-release)+.09*struggle,speed:run>0&&run<1?2.15:release>0&&release<1?.65:0,
+  yaw:turn(-.28*struggle+.20*release*(1-run),0,run),crouch:.22*(1-release)*ease(t/.68)+.09*struggle,speed:run>0&&run<1?2.15:release>0&&release<1?.65*Math.sin(Math.PI*release):0,
   walk:shot.louisStride+release*.8+run*2.8,
-  visualReaction:t>=.68&&t<2.75?{type:'startle',age:t-.68,duration:2.07}:null};
+  visualReaction:t<b.run?{type:'finale-captive',age:t,duration:b.run}:null};
  const target={x:(enemy.x+louis.x)*.5,y:1.32,z:(enemy.z+louis.z)*.5};
  const toward=Math.atan2(target.x-x,target.z-z),tilt=Math.atan2(target.y-y,Math.max(.1,Math.hypot(target.x-x,target.z-z)));
  const reveal=reduced?Number(t>=b.turnEnd):ease((t-b.turnStart)/(b.turnEnd-b.turnStart));
