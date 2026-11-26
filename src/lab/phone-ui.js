@@ -187,8 +187,20 @@ export class PhoneUI{
   if(this.clockMinute!==minute){this.clockMinute=minute;this.host.querySelector('.phone-status time').textContent=formatPhoneTime();}
   if(this.app==='messages')events.read();
   if(this.app==='snake'&&!this.dead){this.clock+=dt;if(this.clock>=.18){this.clock=0;this.direction=this.pending;const head=[this.snake[0][0]+this.direction[0],this.snake[0][1]+this.direction[1]],eat=head[0]===this.food[0]&&head[1]===this.food[1],body=eat?this.snake:this.snake.slice(0,-1);if(head.some(v=>v<0||v>=12)||body.some(p=>p[0]===head[0]&&p[1]===head[1]))this.dead=true;else{this.snake.unshift(head);if(eat){this.score++;const free=[];for(let x=0;x<12;x++)for(let y=0;y<12;y++)if(!this.snake.some(p=>p[0]===x&&p[1]===y))free.push([x,y]);if(free.length)this.food=free[Math.floor(Math.random()*free.length)];else this.dead=true;}else this.snake.pop();}}}
-  const stamp=[this.app,this.homePage,events.messages.length,events.replyAt!==null,this.score,this.dead,this.photoCount,this.flash,this.musicPlaying,this.hint,this.app==='journal'?this.notes.length+':'+this.objective:'',this.app==='progress'?this.progress?.mask:0].join('|');
-  if(stamp!==this.last){this.last=stamp;this.renderApp(events,unread);}
+  // A changing message, photo or game clock must not detach the home
+  // controls while a player is pressing them. The unread dots update in
+  // place, independently of the page and the actual app grid.
+  const stamp=this.app==='home'?'home|'+this.homePage:
+   [this.app,this.homePage,events.messages.length,events.replyAt!==null,this.score,this.dead,this.photoCount,this.flash,this.musicPlaying,this.hint,this.app==='journal'?this.notes.length+':'+this.objective:'',this.app==='progress'?this.progress?.mask:0].join('|');
+  if(stamp!==this.last){this.last=stamp;this.renderApp(events,unread);this.homeUnread=unread;}
+  if(this.app==='home'&&this.homeUnread!==unread){
+   for(const icon of this.host.querySelectorAll('.phone-app-icon.messages')){
+    const dot=icon.querySelector('i');
+    if(unread&&!dot){const marker=document.createElement('i');marker.setAttribute('aria-label','Mensaje sin leer');icon.append(marker);}
+    else if(!unread&&dot)dot.remove();
+   }
+   this.homeUnread=unread;
+  }
   if(this.app==='snake'){const c=this.host.querySelector('canvas').getContext('2d');c.fillStyle='#222b29';c.fillRect(0,0,240,240);c.fillStyle='#f49cba';c.fillRect(this.food[0]*20+2,this.food[1]*20+2,16,16);c.fillStyle='#bad59e';for(const [x,y]of this.snake)c.fillRect(x*20+1,y*20+1,18,18);}
  }
  renderApp(events,unread){
