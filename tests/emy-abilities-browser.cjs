@@ -223,6 +223,13 @@ const {chromium,webkit}=require('playwright');
   await page.locator('#house-emy-map [data-act="emy:map:back"]').click();
   await page.locator('.phone-apps[data-home-page="0"]').waitFor();
   await shot(page,'03g-iphone-inicio');
+  // The scan injected a live pursuer into an otherwise peaceful explore
+  // fixture. End that fixture only after verifying the phone map marker.
+  // A real spotted cue intentionally closes the phone; WebKit takes longer
+  // to render the remaining apps and used to encounter that unrelated chase.
+  const cleared=await page.evaluate(()=>window.__rescueHouse.clearThreatFixture());
+  assert.equal(cleared.active,false);
+  assert(await page.locator('.phone-screen').isVisible());
   // A horizontal gesture goes through the shell's actual pointer handlers.
   await page.locator('.phone-shell').evaluate(el=>{
    const r=el.getBoundingClientRect(),y=r.top+r.height*.55;
@@ -270,6 +277,16 @@ const {chromium,webkit}=require('playwright');
   assert.equal(await page.locator('[data-phone-music]').getAttribute('aria-pressed'),'false');
   await page.locator('.phone-home-indicator').click();
   await page.locator('[data-app="settings"]').click();
+  const difficulty=page.getByLabel('Dificultad',{exact:true});
+  assert.equal(await difficulty.inputValue(),'story','Default difficulty prioritizes story');
+  await difficulty.selectOption('tense');
+  await page.getByLabel('Ayuda adaptable tras perder vidas',{exact:true}).uncheck();
+  const difficultyPrefs=await page.evaluate(()=>({settings:JSON.parse(localStorage.getItem('valeteamo-house-camera-v4')),pursuer:window.__rescueHouse.story().pursuer}));
+  assert.equal(difficultyPrefs.settings.difficulty,'tense');
+  assert.equal(difficultyPrefs.settings.adaptive,false);
+  assert.equal(difficultyPrefs.pursuer.difficulty,'tense');
+  await difficulty.selectOption('story');
+  await page.getByLabel('Ayuda adaptable tras perder vidas',{exact:true}).check();
   await page.getByLabel('Mostrar instrucciones de objetivo',{exact:true}).check();
   await page.getByLabel('Mostrar avisos del perseguidor',{exact:true}).check();
   const savedPrefs=await page.evaluate(()=>JSON.parse(localStorage.getItem('valeteamo-house-camera-v4')));
