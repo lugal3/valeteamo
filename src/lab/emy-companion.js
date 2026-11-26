@@ -23,7 +23,11 @@ export function emyGroundHeight(x,z,y,hatchOpen){
  const next=groundHeight(x,z,y,hatchOpen);
  return y>=-.01&&next<-.01?NaN:next;
 }
-const EMY_NAV_PROFILE=Object.freeze({radius:.16,height:.62,cellSize:.30,ground:emyGroundHeight});
+const EMY_NAV_PROFILE=Object.freeze({radius:.16,height:.62,cellSize:.40,ground:emyGroundHeight});
+const EMY_NOOK_PROFILE=Object.freeze({...EMY_NAV_PROFILE,cellSize:.30});
+// The narrow floor-level strip beside the stair nook needs a finer lattice.
+// Keep the previously validated main-house lattice elsewhere.
+const nearNook=p=>p.y<.15&&p.y>=-.01&&p.x>10.12&&p.x<12.85&&p.z>5.22&&p.z<8.03;
 const clearNavigation=companion=>Object.assign(companion,{route:[],trail:[],routeTarget:null,nextPlanAt:0,nextSight:0,direct:false,chasing:undefined,stuck:0});
 
 export function createEmyCompanion(cat,{waiting=true}={}){
@@ -261,7 +265,8 @@ export function initializeTrialEmy(companion,world,player,stage='following'){
 }
 function planRoute(companion,world,goal){
  const {cat}=companion;
- const planner=companion.planner??=new Pursuer(world,EMY_NAV_PROFILE);
+ const useNook=nearNook(cat)||nearNook(goal);
+ const planner=useNook?(companion.nookPlanner??=new Pursuer(world,EMY_NOOK_PROFILE)):(companion.planner??=new Pursuer(world,EMY_NAV_PROFILE));
  Object.assign(planner,{x:cat.x,y:cat.y,z:cat.z});
  companion.route=[];companion.routeTarget={x:goal.x,y:goal.y,z:goal.z};companion.nextPlanAt=companion.age+1.1;
  if(!planner.plan(goal))return false;
