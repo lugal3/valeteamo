@@ -608,7 +608,7 @@ export class HouseRenderer {
     writeEmySurface(this.dynamicVertices,start,box);
     if(rigStart<0)rigStart=start;rigEnd=end;
     this.lightPose='';
-    for(const lamp of this.fixtures)if(Math.hypot(lamp.x-box.x,lamp.y-box.y,lamp.z-box.z)<LAMP_REACH+1)this.dirtyLampShadows.add(lamp);
+    for(const lamp of this.fixtures)if(!this.dirtyLampShadows.has(lamp)&&Math.hypot(lamp.x-box.x,lamp.y-box.y,lamp.z-box.z)<LAMP_REACH+1)this.dirtyLampShadows.add(lamp);
     continue;
    }
    // The PS2 option-B Lois uses a parented rigid rig. The legacy fallback
@@ -634,7 +634,7 @@ export class HouseRenderer {
     if(this.dynamicCasters[i]&&!shadowedRigs.has(source)){
      shadowedRigs.add(source);this.lightPose='';
      for(const lamp of this.fixtures)
-      if(Math.hypot(lamp.x-source.x,lamp.y-source.y,lamp.z-source.z)<LAMP_REACH+2)
+      if(!this.dirtyLampShadows.has(lamp)&&Math.hypot(lamp.x-source.x,lamp.y-source.y,lamp.z-source.z)<LAMP_REACH+2)
        this.dirtyLampShadows.add(lamp);
     }
     continue;
@@ -698,7 +698,7 @@ export class HouseRenderer {
    if(moved&&this.dynamicCasters[i]){
     this.lightPose='';
     const reach=LAMP_REACH+Math.hypot(box.w,box.h,box.d)/2;
-    for(const lamp of this.fixtures)if(Math.hypot(lamp.x-bx,lamp.y-by,lamp.z-bz)<reach)this.dirtyLampShadows.add(lamp);
+    for(const lamp of this.fixtures)if(!this.dirtyLampShadows.has(lamp)&&Math.hypot(lamp.x-bx,lamp.y-by,lamp.z-bz)<reach)this.dirtyLampShadows.add(lamp);
    }
   }
   flushRig();
