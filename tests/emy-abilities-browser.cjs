@@ -77,20 +77,17 @@ const {chromium,webkit}=require('playwright');
   assert(Math.abs(cards[0].y-cards[1].y)<2&&Math.abs(cards[2].y-cards[3].y)<2&&cards[2].y>cards[0].y+40,'Four Emy cards must form a compact 2x2 grid: '+JSON.stringify(cards));
   assert(Math.abs(cards[0].w-cards[3].w)<2,'All four cards have equal width');
   await shot(page,'01-emy-acciones');
-  // Stage the threat while the menu pauses gameplay. The six-second scan
-  // must not expire while a slow browser is taking a screenshot.
+  await page.locator('#house-emy-menu [data-act="emy:scan"]').click();
+  const afterScan=await skills();
+  assert(afterScan.scan>0&&afterScan.scanCooldown>0);
+  // Observe the wave from the cat-facing pose first. Stage the occluded
+  // target immediately afterwards, before taking any expensive screenshots.
+  await page.waitForFunction(()=>!document.querySelector('#house-emy-wave').hidden,null,{timeout:6000});
   await page.evaluate(()=>{
    window.__rescueHouse.placeThreat({x:8.1,y:0,z:6.2,yaw:Math.PI});
    window.__rescueHouse.setPose({x:6.2,y:0,z:6.2,yaw:Math.PI/2,pitch:0});
   });
-  await page.locator('#house-emy-menu [data-act="emy:scan"]').click();
-  const afterScan=await skills();
-  assert(afterScan.scan>0&&afterScan.scanCooldown>0);
-  await page.waitForFunction(()=>!document.querySelector('#house-emy-wave').hidden,{timeout:6000});
   await page.waitForFunction(()=>window.__rescueHouse.emySkills().scanRendered,null,{timeout:7000});
-  await shot(page,'02-emy-escaneo-onda');
-  // The exact animated 3D model must render behind the opaque bathroom wall,
-  // not a 2D "last-known-position" marker.
   await shot(page,'02b-contorno-secuestrador-tras-pared');
   await interactEmy();
   assert(await page.locator('#house-emy-menu [data-act="emy:scan"]').isDisabled(),'Scan cooldown disables the real action');
