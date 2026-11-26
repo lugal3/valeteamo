@@ -1417,8 +1417,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    const ground=0,walk=2.70;
    finalCutscene={elapsed:0,cues:new Set(),camera:cameraOf(s),playable:false,runAge:0,
     kitty:{from:{x:s.x,z:s.z},to:{x:5.56,z:14.05},ground,walk,stand:0},
-    louis:{from:{x:clamp(s.x+.36,5.35,6.45),z:s.z-.19},to:{x:6.23,z:13.95},ground,walk,stand:0},
-    louisStride:louis.walk};
+    louis:{from:{x:louis.x,y:louis.y,z:louis.z,yaw:louis.yaw,crouch:louis.crouch},to:{x:6.23,z:13.95},ground,walk,stand:0},
+    louisStride:louis.walk,louisAge:louis.age};
    world.emy.hidden=true;for(const {box} of world.emy.parts)box.hiddenGeometry=true;
    renderer.updateVisibility();events.phase='ending';phone.close();releaseMouse();resetInput();
    louis.exitRouteActive=false;louis.concealed=false;louis.speed=0;
