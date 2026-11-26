@@ -42,7 +42,7 @@ import {updateUpstairsEmy,petEmy} from './emy-cat.js';
 import {createEmyAbilities,advanceEmyAbilities,activateEmyScan,createEmyNameCue,advanceEmyNameCue,roomChoices,roomDestinations,isEmyRoomLocked,emyFloorList} from './emy-abilities.js';
 import {defaultMiniatureView,changeMiniatureView,miniatureSVG,miniatureMarkers} from './emy-miniature.js';
 import {installNoiseProps,grabNoiseProp,holdNoiseProp,releaseNoiseProp,stepNoiseProps} from './noise-props.js';
-import {sendEmyDistract,commandEmyStay,rejoinEmyInPerson,requestRibbonKey,EMY_ENTRANCE_SECONDS,createEmyCompanion,beginEmyEntrance,emyEntranceCamera,sendEmyToTrunk,updateEmyCompanion,snapshotEmyCompanion,restoreEmyCompanion,initializeTrialEmy} from './emy-companion.js';
+import {sendEmyDistract,commandEmyStay,rejoinEmyInPerson,requestRibbonKey,EMY_ENTRANCE_SECONDS,createEmyCompanion,beginEmyEntrance,emyEntranceCamera,sendEmyToTrunk,emyOccupiesHatch,updateEmyCompanion,snapshotEmyCompanion,restoreEmyCompanion,initializeTrialEmy} from './emy-companion.js';
 import {createRC,syncRCObject,deployRC,driveRC,beepRC,updateRC,stopRC,crashRC,recoverRC,rcCamera,advanceRCCamera,rcDeploymentView,canTrapPursuer} from './rc-car.js';
 import {createLouisEscape,updateLouisEscape,freeLouis,louisCamera} from './louis-escape.js';
 import {createLoisShotDirector,advanceLoisShot,finishLoisShot} from './lois-ps2-cinematics.js';
@@ -603,7 +603,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    }
    o.open=!o.open;
    if(o.open&&emyCompanion&&!emyCompanion.stage.startsWith('trunk')&&sendEmyToTrunk(emyCompanion))caption('Emy busca refugio en el estudio mientras Kitty baja.');
-   if(reducedMotion.matches)poseHatch(o,Number(o.open));
+   if(reducedMotion.matches&&(!o.open||!emyOccupiesHatch(emyCompanion)))poseHatch(o,Number(o.open));
    play(o.open?'door-open':'door-close',o,.85);
   }else if(o.kind==='tap'){
    o.on=!o.on;o.water.y=o.on?1.01:-100;play('click',o);say(o.on?'Llave de agua abierta':'Llave de agua cerrada');
@@ -1279,7 +1279,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   updatePowerLever(world.lights.meter,reducedMotion.matches?1:dt);
   const hatch=world.hatch,hatchTarget=Number(hatch.open);
-  if(hatch.amount!==hatchTarget)poseHatch(hatch,clamp(hatch.amount+Math.sign(hatchTarget-hatch.amount)*dt/.64,0,1));
+  if(hatch.amount!==hatchTarget&&(!hatch.open||!emyOccupiesHatch(emyCompanion))){
+   poseHatch(hatch,reducedMotion.matches?hatchTarget:clamp(hatch.amount+Math.sign(hatchTarget-hatch.amount)*dt/.64,0,1));
+  }
   const rug=world.hatchRug,rugTarget=Number(rug.aside);
   if(rug.amount!==rugTarget)poseHatchRug(rug,reducedMotion.matches?rugTarget:clamp(rug.amount+Math.sign(rugTarget-rug.amount)*dt/.44,0,1));
   if(demo&&puzzle.key&&!puzzle.door&&world.objects.find(o=>o.id==='dormitorio').open)puzzle=puzzleEvent(puzzle,'door');
