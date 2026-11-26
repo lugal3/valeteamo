@@ -928,6 +928,9 @@ export class HouseRenderer {
   }
   if(!motion.thirdPerson)this.drawMirror(camera,motion);else this.drawActor(motion.thirdPerson,motion);
   if(motion.scanOutline&&motion.pursuer?.active)this.drawScanOutline(motion.pursuer,motion.reduced);
+  // Capture the actual world image before drawing the held phone/paws.
+  // This avoids photographing the device itself or compositing HUD elements.
+  motion.onWorldFrame?.(this.canvas);
   gl.uniform1f(this.uniform.uHeld,1);
   if(motion.introHands)this.drawClimbingHands(motion.introHands);
   if(showHand)this.drawFirstPerson(camera,right,up,forward,time,flash,motion);
