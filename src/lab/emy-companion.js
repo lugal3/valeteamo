@@ -3,6 +3,7 @@ import {EMY_DISTRACT_SECONDS} from './emy-abilities.js';
 import {animateFurniture} from './furniture-motion.js';
 import {Pursuer} from './pursuer.js';
 import {ALTAR_THRESHOLD} from './emy-rescue.js';
+import {inHatch} from './basement.js';
 import {roomAt,blocked,groundHeight,segmentHitsBox,lineBlocked} from './world.js';
 
 export const EMY_ENTRANCE_SECONDS=3.5;
@@ -100,6 +101,12 @@ export function emyEntranceCamera(camera,progress,reduced=false,cat){
  return {...camera,x:camera.x+(peek.x-camera.x)*look,z:camera.z+(peek.z-camera.z)*look,
   yaw:camera.yaw+deltaAngle(camera.yaw,windowYaw)*look,
   pitch:camera.pitch+(pitch-camera.pitch)*look};
+}
+// Hold the physical lid shut only while a visible cat occupies its
+// footprint. The story command runs independently and walks her off it.
+export function emyOccupiesHatch(companion){
+ const cat=companion?.cat;
+ return !!cat&&!cat.hidden&&cat.y>=-.05&&cat.y<.35&&inHatch(cat.x,cat.z,.18);
 }
 export function sendEmyToTrunk(companion){
  if(['waiting','trunk-run','trunk','trunk-enter'].includes(companion.stage))return false;
