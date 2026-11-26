@@ -176,7 +176,11 @@ export function writeEmySurface(out,start,box){
   if(mesh.skin&&box.emySkinFrames){
    const at=i/2;let x=0,y=0,z=0,nx=0,ny=0,nz=0;
    for(let k=0;k<8;k+=2){
-    const id=mesh.skin[at+k],m=box.emySkinFrames[id],n=box.emyNormalFrames[id],w=mesh.skin[at+k+1];
+    const w=mesh.skin[at+k+1];
+    // Zero-weight influences contribute exactly nothing. Their matrices are
+    // finite by construction; skip both position and normal multiplication.
+    if(w===0)continue;
+    const id=mesh.skin[at+k],m=box.emySkinFrames[id],n=box.emyNormalFrames[id];
     x+=(m[0]*px+m[3]*py+m[6]*pz+m[9])*w;y+=(m[1]*px+m[4]*py+m[7]*pz+m[10])*w;z+=(m[2]*px+m[5]*py+m[8]*pz+m[11])*w;
     nx+=(n[0]*nnx+n[3]*nny+n[6]*nnz)*w;ny+=(n[1]*nnx+n[4]*nny+n[7]*nnz)*w;nz+=(n[2]*nnx+n[5]*nny+n[8]*nnz)*w;
    }
@@ -186,7 +190,10 @@ export function writeEmySurface(out,start,box){
    if(py<.018){const t=(py-.0005)/.003,derivative=1/(1+Math.exp(-t));py=.0005+.003*Math.log1p(Math.exp(t));nny/=Math.max(.025,derivative);}
   }
   const at=start+i,x=px*s[0],y=py*s[1],z=pz*s[2];
-  for(let k=3;k<16;k++)out[at+k]=v[i+k];
+  // Copy only unchanged material attributes; normal and tangent slots
+  // are fully written by the exact original transforms below.
+  out[at+3]=v[i+3];out[at+4]=v[i+4];out[at+5]=v[i+5];
+  out[at+9]=v[i+9];out[at+10]=v[i+10];out[at+11]=v[i+11];out[at+12]=v[i+12];
   if(box.emissive)out[at+12]=96;
   out[at]=p.pos[0]+a[0]*x+b[0]*y+c[0]*z;out[at+1]=p.pos[1]+a[1]*x+b[1]*y+c[1]*z;out[at+2]=p.pos[2]+a[2]*x+b[2]*y+c[2]*z;
   const nx=nnx/s[0],ny=nny/s[1],nz=nnz/s[2];
