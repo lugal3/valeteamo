@@ -44,6 +44,15 @@ export function finaleThreat(actor,elapsed,reduced=false){
   mode:recoil>.5?'stunned':actor.mode};
 }
 
+// Until the safe garden, Emy guides the escape. At sunrise she doubles back
+// to a point just ahead and beside Kitty, within the existing exterior lane.
+// The same navigator still controls the actual motion.
+export function finaleEmyGoal(player){
+ const rejoin=player.z>=17.7&&player.x>3.8&&player.x<8.0;
+ return rejoin?{x:clamp(player.x+(player.x<5.9?.55:-.55),4.1,7.7),z:clamp(player.z+.62,18.0,20.0),rejoin}
+  :{x:5.38,z:Math.max(17.05,Math.min(20.0,player.z+2.4)),rejoin};
+}
+
 // Weather follows spatial escape progress, not a timeout that would let dawn
 // finish while the player stands still. Pure input, no particle simulation.
 export function finaleWeather(shot,player){
