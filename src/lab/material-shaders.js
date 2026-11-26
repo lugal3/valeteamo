@@ -31,7 +31,7 @@ uniform float uShot,uFasciaReady,uPursuerSkinReady;
 uniform float uHasShadows;
 uniform vec4 uLamps[${VISIBLE_LAMPS}];
 uniform float uTime,uHolidayMotion,uHolidayPower;
-uniform float uTVSignal,uRain,uDawn;
+uniform float uTVSignal,uRain,uDawn,uAltarPulse;
 uniform float uMirrorPass,uHeld,uScanOutline;
 uniform float uAtlasSize,uTileSize,uGutter,uInner;
 float depthAt(vec2 pixel,vec2 corner,float reach){
@@ -407,7 +407,14 @@ void main(){
   shine=mix(s8*s8,s4,rough)*(1.0-rough)*beam*.14;
  }
  color=color*lighting/(1.0+.24*lighting)+vec3(1.0,.91,.79)*shine;
- if(vStyle>31.5&&vStyle<47.5)color=mix(color,vColor*(.55+material.r*.40),.82);
+ if(vStyle>31.5&&vStyle<47.5){
+  color=mix(color,vColor*(.55+material.r*.40),.82);
+  // Existing altar flame cores only: no new lights, meshes, or shadow passes.
+  if(vWorld.x>11.55&&vWorld.x<13.0&&vWorld.y>3.95&&vWorld.y<4.3&&vWorld.z>.36&&vWorld.z<.62){
+   float flutter=.91+.09*uHolidayMotion*sin(uTime*8.5+vWorld.x*17.0);
+   color*=mix(1.0,flutter*(1.0+.22*uAltarPulse),uAltarPulse);
+  }
+ }
  // Styles 48–63: static tree lights, bright colored cores only when powered.
  // Keep reduced-motion emission constant and preserve the unlit material.
  if(vStyle>47.5&&vStyle<63.5&&uHolidayPower>.5){
