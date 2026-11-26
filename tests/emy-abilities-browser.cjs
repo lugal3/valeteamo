@@ -112,7 +112,13 @@ const {chromium,webkit}=require('playwright');
    await page.locator('[data-act="emy:view:reset"]').click();
    assert.equal(await miniature.innerHTML(),original);
   }
+  await page.emulateMedia({reducedMotion:'no-preference'});
   await page.locator('#house-emy-map [data-act="emy:floor:0"]').click();
+  assert.equal(await page.locator('.mini-roof-lift').count(),1,'Actual roof is animated with normal motion');
+  assert.equal(await page.locator('.mini-upper-lift').count(),1);
+  await shot(page,'03-emy-cubierta-apertura');
+  await page.waitForFunction(()=>{const e=document.querySelector('.mini-roof-lift');return e&&Number(getComputedStyle(e).opacity)<.05;},null,{timeout:5000});
+  await page.emulateMedia({reducedMotion:'reduce'});
   assert.equal(await floorPlans.count(),1,'Use a large readable floor plan instead of two tiny plans');
   assert.equal(await page.locator('#house-emy-map .house-emy-destination-list button').count(),6);
   assert.equal(await page.locator('#house-emy-miniature polygon[data-act="emy:room:study"]').count(),1,
@@ -217,9 +223,15 @@ const {chromium,webkit}=require('playwright');
   await page.locator('#house-emy-map [data-act="emy:map:back"]').click();
   await page.locator('.phone-apps[data-home-page="0"]').waitFor();
   await shot(page,'03g-iphone-inicio');
-  await page.locator('button[data-home-page="1"]').click();
+  // A horizontal gesture goes through the shell's actual pointer handlers.
+  await page.locator('.phone-shell').evaluate(el=>{
+   const r=el.getBoundingClientRect(),y=r.top+r.height*.55;
+   el.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:619,pointerType:'touch',button:0,clientX:r.right-24,clientY:y}));
+   el.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:619,pointerType:'touch',button:0,clientX:r.left+24,clientY:y}));
+  });
   assert(await page.locator('.phone-apps[data-home-page="1"] [data-app="weather"]').isVisible());
   await shot(page,'03h-iphone-segunda-pagina');
+  await page.waitForTimeout(380); // suppress the accidental click from the swipe
   await page.locator('button[data-home-page="0"]').click();
   await page.evaluate(()=>window.__rescueHouse.setPose({x:5.95,y:0,z:8,yaw:0,pitch:0}));
   const phoneStart=await page.evaluate(()=>window.__rescueHouse.snapshot().position);
