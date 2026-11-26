@@ -162,19 +162,24 @@ function fetchKey(companion,world,player,dt,reduced){
  return cue;
 }
 export function sendEmyDistract(companion,world,goal){
- if(companion?.stage!=='following'||!goal)return false;
- const previous={stage:companion.stage,route:companion.route,trail:companion.trail};
+ if(companion?.stage!=='following'||!goal||![goal.x,goal.y,goal.z].every(Number.isFinite))return false;
+ const ground=groundHeight(goal.x,goal.z,goal.y,world.hatch?.amount>.92);
+ if(!Number.isFinite(ground)||Math.abs(ground-goal.y)>.18||blocked(world.boxes,goal.x,ground,goal.z,.20,.62))return false;
+ const previous={stage:companion.stage,route:companion.route,trail:companion.trail,stuck:companion.stuck};
  companion.route=[];companion.trail=[];companion.stuck=0;
  planRoute(companion,world,goal);
  const lockedDoors=world.objects.filter(door=>door.kind==='door'&&(door.locked||door.sealed)&&!door.open);
+ // Include the initial/final legs as well as the graph edges. The planner's
+ // nearest nodes need not be on the same side of a locked door as the cat.
+ const waypoints=[companion.cat,...companion.route,goal];
  const collidesWithLockedDoor=lockedDoors.some(door=>{
   const walls=[door.box,...(door.parts||[]).map(part=>part.box)].filter(box=>box?.solid);
-  return companion.route.slice(1).some((node,i)=>{
-   const prior=companion.route[i],from={x:prior.x,y:prior.y+.70,z:prior.z},to={x:node.x,y:node.y+.70,z:node.z};
+  return waypoints.slice(1).some((node,i)=>{
+   const prior=waypoints[i],from={x:prior.x,y:prior.y+.70,z:prior.z},to={x:node.x,y:node.y+.70,z:node.z};
    return walls.some(box=>segmentHitsBox(from,to,box,.13));
   });
  });
- if(collidesWithLockedDoor||!companion.route.length&&distance(companion.cat,goal)>.85){
+ if(collidesWithLockedDoor||!companion.route.length&&(distance(companion.cat,goal)>.85||!clearPassage(world,companion.cat,goal))){
   Object.assign(companion,previous);return false;
  }
  companion.distraction={goal:{...goal},remaining:EMY_DISTRACT_SECONDS,arrived:false,nextNoise:0,nextPlan:0,stuck:0};
@@ -299,7 +304,9 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
     planRoute(companion,world,goal);job.nextPlan=companion.age+1.0;
    }
    poseEmy(cat,{mode:walking?'walk':'idle',walking,phase:cat.age,reduced,blend:1-Math.exp(-12*dt)});
-   if(distance(cat,goal)<.95&&Math.abs(cat.y-goal.y)<.4){
+   // Horizontal proximity alone can be on the other side of a wall/floor.
+   // Never start the noise countdown until Emy really has a clear final leg.
+   if(distance(cat,goal)<.60&&Math.abs(cat.y-goal.y)<.18&&clearPassage(world,cat,goal)){
     job.arrived=true;job.nextNoise=0;companion.route=[];
    }
    if(job.stuck>12){companion.stage='following';companion.distraction=null;companion.route=[];return 'distract-failed';}
