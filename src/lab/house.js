@@ -13,7 +13,7 @@ import {Pursuer} from './pursuer.js';
 import {createFrameSampler} from './frame-sampler.js';
 import {difficultyProfile,validDifficulty} from './difficulty.js';
 import {STARTING_LIVES,LIFE_NOTICE_SECONDS,captureLoss,lifeSlots} from './capture-lives.js';
-import {captureFrame,capturePath,captureTiming} from './capture-shot.js';
+import {captureFrame,capturePath,captureTiming,captureBasis} from './capture-shot.js';
 import {movementKey,releasedPointer,hasControlTouch} from './movement-input.js';
 import {CharacterAnimator} from './animator.js';
 import {BATH_MIRROR} from './mirror.js';
@@ -1876,14 +1876,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     }
     Object.assign(louis,staged.louis);
     view=staged.view;shot.stage=staged.stage;shot.lastView={...view};
-    hand=false;torch=false;cinematicLight=finaleLighting(shot.elapsed,reducedMotion.matches);shotLight=cinematicLight.room;
+    hand=false;torch=false;cinematicLight=finaleLighting(shot.elapsed,reducedMotion.matches,captureBasis(view));shotLight=cinematicLight.room;
     if(shot.elapsed>=FINALE_BEATS.run&&!isSuspended()){
      // Put the controllable player at the exact last first-person camera.
      // The cinematic cannot complete the game: the player must walk out.
      Object.assign(s,{x:view.x,y:0,z:view.z,cameraGround:0,yaw:view.yaw,pitch:view.pitch,
       eye:1.63,crouched:false,hidden:null,lying:false,bob:0});
      shot.playable=true;shot.runAge=0;louis.exitRouteActive=false;
-     pursuer.mode='trapped';pursuer.speed=0;world.emy.y=0;world.emy.alarm=0;
+     pursuer.mode='trapped';pursuer.speed=0;world.emy.y=0;world.emy.alarm=0;world.emy.earTurn=0;world.emy.earFlatten=0;world.emy.darkEyes=false;
      resetInput();equip('empty',false,true);
      sound.setThreat(false);say('¡Sigue a Emy por el sendero! Louis va contigo.',5);
     }
