@@ -15,6 +15,29 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   browser=await (safari?webkit:chromium).launch({headless:true,args:safari?[]:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   for(const mobile of safari?[true]:observe?[false]:[false,true]){
    const context=await browser.newContext({viewport:mobile?{width:844,height:390}:{width:960,height:540},hasTouch:mobile,isMobile:mobile}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.emulateMedia({reducedMotion:'reduce'});await page.goto(`http://127.0.0.1:${port}/__input`);await page.click('#launch');await page.click('[data-act=start]');
+   if(!observe&&!historical){
+    const stable=await page.evaluate(async()=>{
+     const {PhoneUI}=await import('/src/lab/phone-ui.js');
+     const root=document.createElement('div');root.style.cssText='position:absolute;width:640px;height:360px';document.body.append(root);
+     const phone=new PhoneUI(root,()=>{},()=>{});
+     try{
+      const events={messages:[],replyAt:null,read(){}};
+      phone.update(events,0);phone.show();
+      const selector='button[data-home-page="1"]',dot=()=>phone.host.querySelector(selector),first=dot();
+      const badge=()=>phone.host.querySelectorAll('.phone-app-icon.messages i').length;
+      events.messages.push({from:'Luis',text:'Prueba de notificación'});events.replyAt=1;phone.update(events,0);
+      const afterMessage=first===dot()&&first.isConnected,unread=badge()>0;
+      phone.photoCount++;phone.score++;events.replyAt=null;phone.update(events,0);
+      const afterBackground=first===dot()&&first.isConnected;
+      events.messages.length=0;phone.update(events,0);
+      const afterRead=first===dot()&&badge()===0;
+      first.click();
+      return {afterMessage,unread,afterBackground,afterRead,changedPage:phone.homePage===1&&!!phone.host.querySelector('[data-app=manual]')};
+     }finally{phone.destroy();root.remove();}
+    });
+    assert(Object.values(stable).every(Boolean),'Phone controls must survive notifications and background changes '+JSON.stringify(stable));
+    console.log('PASS stable phone home DOM and unread badges: '+JSON.stringify(stable));
+   }
    const snap=()=>page.evaluate(()=>window.__rescueHouse.snapshot()),pose=()=>page.evaluate(()=>window.__rescueHouse.setPose({x:6,y:0,z:8,yaw:0,pitch:0}));await pose();const ring=await page.locator('.lab-stick-ring').boundingBox(),cx=ring.x+ring.width/2,cy=ring.y+ring.height/2;
    const advanceGame=async seconds=>{
     const end=(await snap()).animation.time+seconds;
