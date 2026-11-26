@@ -323,7 +323,7 @@ const {chromium,webkit}=require('playwright');
   const fpsBadge=page.locator('#house-fps');
   assert(await fpsBadge.isHidden(),'Phone settings must not display paused FPS');
   await page.locator('.phone-screen [data-app="close"]').click();
-  await page.waitForFunction(()=>{const el=document.querySelector('#house-fps');return el&&!el.hidden&&/^\\d+ FPS$/.test(el.textContent);},null,{timeout:30000});
+  await page.waitForFunction(()=>{const el=document.querySelector('#house-fps');return el&&!el.hidden&&/^\d+ FPS$/.test(el.textContent);},null,{timeout:30000});
   assert.equal(await fpsBadge.evaluate(el=>getComputedStyle(el).pointerEvents),'none');
   await shot(page,'phone-fps-enabled');
   const togglePhoneSettings=require('./helpers/toggle-phone-settings.cjs');
