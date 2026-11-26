@@ -82,6 +82,8 @@ jobs:
           V2_GLOW_QA_DIR: artifacts/v2/subtle-glows
           RC_QA_DIR: artifacts/v2/rc-rescue
           CHECKPOINT_QA_DIR: artifacts/v2/3d-checkpoints
+          HOUSE_THREAT_QA_DIR: artifacts/v2/threat-hide
+          HOUSE_INPUT_QA_DIR: artifacts/v2/mobile-input
         run: |
           case "${{ matrix.scenario }}" in
             2d-story) node tests/prologue-browser.cjs ;;
@@ -105,3 +107,35 @@ jobs:
   performance-audit:
     if: github.head_ref == 'feature/v31-telefono-historia-final-perf'
     uses: ./.github/workflows/v31-size.yml
+
+  v32-frame-comparison:
+    name: V3.2 vs main — fotogramas reales
+    if: github.head_ref == 'feature/v32-cinematic-animations' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: eb0bf41d698ccd26cd3c982cac09fdc719c89a26
+          path: baseline-v31
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            baseline-v31/package-lock.json
+      - run: npm ci
+      - run: npm ci
+        working-directory: baseline-v31
+      - run: npx playwright install chromium --with-deps
+      - name: V3.1 desplegada — escenas idénticas
+        run: node tests/house-frame-benchmark.cjs baseline-v31 frame-v31.json
+      - name: V3.2 — mismas escenas y resolución
+        run: node tests/house-frame-benchmark.cjs . frame-v32.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v32-real-frame-comparison
+          path: frame-v*.json
