@@ -123,7 +123,7 @@ const fs=require('node:fs');
   assert(!blocked(nookWorld.boxes,nookCat.cat.x,0,nookCat.cat.z,.16,.62));
   if(Math.hypot(nookCat.cat.x-nookKitty.x,nookCat.cat.z-nookKitty.z)<=FOLLOW_RESUME+.1){emerged=true;break;}
  }
- assert(emerged,'Emy must escape the real stair nook and return to Kitty');
+ assert(emerged,'Emy must escape the real stair nook and return to Kitty: '+JSON.stringify({x:nookCat.cat.x,y:nookCat.cat.y,z:nookCat.cat.z,stage:nookCat.stage,route:nookCat.route.slice(0,5),goal:nookCat.routeTarget,chasing:nookCat.chasing,stuck:nookCat.stuck,direct:nookCat.direct}));
  assert.equal(nookCat.stage,'following');
 
  // Opening the hatch supersedes a stay or active distraction. Even when
@@ -144,7 +144,7 @@ const fs=require('node:fs');
   assert.equal(basementCat.distraction,null,'Withdrawal clears active orders');
   if(cue==='trunk'){trunk=true;break;}
  }
- assert(trunk&&basementCat.cat.hidden,'Retire into the actual trunk even when Kitty descends immediately');
+ assert(trunk&&basementCat.cat.hidden,'Retire into the actual trunk even when Kitty descends immediately: '+JSON.stringify({stage:basementCat.stage,x:basementCat.cat.x,y:basementCat.cat.y,z:basementCat.cat.z,route:basementCat.route.slice(0,5)}));
  Object.assign(underground,{x:8.55,y:0,z:2.2});
  for(let i=0;i<120;i++)updateEmyCompanion(basementCat,1/30,{world:basementWorld,player:underground,reduced:true});
  assert.equal(basementCat.stage,'trunk','Returning from the basement must not revive a retired companion');
@@ -166,7 +166,7 @@ const fs=require('node:fs');
   assert(Math.abs(oldCat.cat.y-before.y)<.18,'No vertical teleport on hatch stairs');
   if(oldCat.cat.y>=-.01)climbedOut=true;
  }
- assert(climbedOut,'Legacy underground Emy can leave along the real tunnel slope');
+ assert(climbedOut,'Legacy underground Emy can leave along the real tunnel slope: '+JSON.stringify({stage:oldCat.stage,x:oldCat.cat.x,y:oldCat.cat.y,z:oldCat.cat.z,route:oldCat.route.slice(0,5)}));
 
  // Kitty's player animation in house.js has no seven-second cat dependency.
  const house=fs.readFileSync('src/lab/house.js','utf8');
