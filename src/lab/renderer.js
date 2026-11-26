@@ -957,7 +957,10 @@ export class HouseRenderer {
    if(motion.pursuerLight!==undefined)gl.uniform1f(this.uniform.uShot,motion.shotLight??0);
   }
   if(!motion.thirdPerson)this.drawMirror(camera,motion);else this.drawActor(motion.thirdPerson,motion);
-  if(motion.scanOutline&&motion.pursuer?.active)this.drawScanOutline(motion.pursuer,motion.reduced);
+  if(motion.scanOutline&&motion.pursuer?.active){
+   this.drawScanOutline(motion.pursuer,motion.reduced);
+   if(import.meta.env.DEV)this.scanFrame={sequence:(this.scanFrame?.sequence||0)+1,camera:{x:camera.x,y:camera.y,z:camera.z,yaw:camera.yaw,pitch:camera.pitch},actor:{x:motion.pursuer.x,y:motion.pursuer.y,z:motion.pursuer.z}};
+  }
   // Capture the actual world image before drawing the held phone/paws.
   // This avoids photographing the device itself or compositing HUD elements.
   motion.onWorldFrame?.(this.canvas);
