@@ -86,9 +86,14 @@ async function run(){
    await card.scrollIntoViewIfNeeded();
    await card.click();
    try{
-    await page.locator('#lab-dialog [data-act="start"]').or(page.locator('#lab3d .lab-error')).or(page.getByRole('alert').filter({hasText:'No se pudo abrir esta prueba'})).waitFor({timeout:30000});
-    assert.equal(await page.locator('#lab3d .lab-error').count(),0,await page.locator('#lab3d').innerText());
-    await page.waitForFunction(()=>!!window.__rescueHouse);
+    await page.locator('#lab-dialog [data-act="start"]').or(page.locator('#lab3d .lab-error')).or(page.getByRole('alert').filter({hasText:'No se pudo abrir esta prueba'})).waitFor({timeout:60000});
+    const bootError=await page.locator('#lab3d .lab-error').count();
+    if(bootError)throw Error(await page.locator('#lab3d .lab-error').innerText());
+    // React can mount a new scene while the previous effect is cleaning up.
+    // Do not eagerly resolve locator.innerText on a detached root just to
+    // construct an assertion message. Wait for the new live harness instead.
+    await page.waitForFunction(()=>!!window.__rescueHouse&&document.querySelector('#lab3d #lab-dialog [data-act="start"]'),null,{timeout:60000});
+    assert.equal(await page.locator('#lab3d .lab-error').count(),0);
    }catch(error){
     console.log('LP_TRIAL_FAILURE',id,await page.evaluate(()=>document.body.innerText.slice(0,1600)),errors);
     throw error;
