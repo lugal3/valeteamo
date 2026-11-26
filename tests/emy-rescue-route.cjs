@@ -106,6 +106,7 @@ module.exports=async()=>{
  assert.equal(interactionTarget(world,{x,y:y+1.63,z,yaw:Math.atan2(dx,dz),pitch:Math.atan2(master.y-y-1.63,Math.hypot(dx,dz))}),master);
  const altarVisitor={...s,x:12.27,y:3.15,z:.8};
  const quietHunter={...hunter,active:false};
+ const priorCatPose={x:cat.cat.x,y:cat.cat.y,z:cat.cat.z,yaw:cat.cat.yaw};
  // The old fixture tested fear from a different floor. The new fear is
  // local to Emy herself: she must not react to an altar she cannot sense.
  cat.cat.alarm=0;cat.cat.earFlatten=0;
@@ -118,6 +119,7 @@ module.exports=async()=>{
  assert(cat.altarWait&&cat.cat.parts.find(p=>p.id==='coat').box.bristle>.95);
  assert(cat.cat.parts.some(p=>p.joint==='eye'&&p.box.emyPose.scale[1]>1.35));
  assert(cat.cat.earFlatten>.9,'Altar provokes ears laid back');
+ Object.assign(cat.cat,priorCatPose);
  const moodWorld=createHouse(),moodCat=createEmyCompanion(moodWorld.emy,{waiting:false});
  Object.assign(moodCat.cat,{x:5.95,y:0,z:8.1,yaw:0});
  const moodPlayer={x:5.95,y:0,z:9.4,hidden:null};
