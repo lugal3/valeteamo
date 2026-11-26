@@ -6,7 +6,7 @@ const ease=n=>{const t=clamp(n);return t*t*t*(10+t*(-15+6*t));};
 const mix=(a,b,t)=>a+(b-a)*t;
 const turn=(a,b,t)=>a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*t;
 export const FINALE_BEATS=Object.freeze({noise:.28,turnStart:.36,turnEnd:1.32,grab:1.05,leap:1.45,release:2.36,lookOut:3.08,run:3.78,finish:7.78});
-export function finaleStage(shot,enemy,reduced=false){
+export function finaleStage(shot,enemy,reduced=false,emy=null){
  const t=Math.max(0,shot.elapsed),start=shot.kitty.from,origin=shot.camera;
  const b=FINALE_BEATS;
  const backing=ease(t/1.12),release=ease((t-b.release)/.68),run=ease((t-b.run)/(b.finish-b.run));
@@ -27,6 +27,10 @@ export function finaleStage(shot,enemy,reduced=false){
   walk:shot.louisStride+release*.8+run*2.8,
   visualReaction:t<b.run?{type:'finale-captive',age:t,duration:b.run}:null};
  const target={x:(enemy.x+louis.x)*.5,y:1.32,z:(enemy.z+louis.z)*.5};
+ // Let the framing acknowledge Emy's approach and leap without losing
+ // the captive or rotating away from the real porch encounter.
+ const witness=emy&&!emy.hidden?.28*ease((t-1.02)/.35)*(1-ease((t-2.10)/.52)):0;
+ if(witness>0){target.x=mix(target.x,emy.x,witness);target.y=mix(target.y,emy.y+.43,witness);target.z=mix(target.z,emy.z,witness);}
  const toward=Math.atan2(target.x-x,target.z-z),tilt=Math.atan2(target.y-y,Math.max(.1,Math.hypot(target.x-x,target.z-z)));
  const reveal=reduced?Number(t>=b.turnEnd):ease((t-b.turnStart)/(b.turnEnd-b.turnStart));
  const leave=reduced?Number(t>=b.run):ease((t-b.lookOut)/(b.run-b.lookOut));
@@ -59,7 +63,15 @@ export function finaleEmyGoal(player){
 
 // Weather follows spatial escape progress, not a timeout that would let dawn
 // finish while the player stands still. Pure input, no particle simulation.
+// Lighting and lens use the same clock as the actions, never wall time.
+// Existing shader uniforms only: no extra lights, passes or draw calls.
+export function finaleLighting(elapsed,reduced=false){
+ const t=Math.max(0,elapsed||0),reveal=ease((t-.36)/.96),exit=ease((t-2.62)/1.16);
+ const focus=reveal*(1-exit);
+ return {room:.22+.11*focus,pursuer:.22+.39*focus,
+  projection:1-(reduced?0:.09*focus),key:[-.40,.80,.42]};
+}
 export function finaleWeather(shot,player){
- const dawn=shot?.playable?mix(.13,1,ease((player.z-14.65)/3.05)):0;
+ const dawn=shot?.playable?mix(.13,1,ease((player.z-14.65)/3.05)):.13*ease(((shot?.elapsed??0)-3.08)/.70);
  return {dawn,rain:.78*(1-dawn),sky:[mix(.018,.55,dawn),mix(.024,.48,dawn),mix(.046,.52,dawn)]};
 }
