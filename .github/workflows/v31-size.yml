@@ -35,8 +35,16 @@ jobs:
           cache-dependency-path: target/package-lock.json
       - run: npm ci
         working-directory: target
+      - name: Install FFmpeg for optimized build
+        if: matrix.label == 'v31'
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: npm run build
         working-directory: target
+        env:
+          VALE_REQUIRE_FLAC: ${{ matrix.label == 'v31' && '1' || '0' }}
+      - name: Assert compressed files actually emitted
+        if: matrix.label == 'v31'
+        run: node auditor/scripts/assert-flac-dist.mjs target/dist
       - run: node auditor/scripts/audit-dist.mjs target/dist ${{ matrix.label }}.json
       - uses: actions/upload-artifact@v4
         with:
