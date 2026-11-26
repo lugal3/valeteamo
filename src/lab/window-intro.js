@@ -10,9 +10,22 @@ const keys=[
  [.46,2.25,1.68,12.85,-.29], [.53,2.25,1.65,12.85,-.25], [.65,2.2,2.02,12.30,-.38],
  [.72,2.2,1.85,11.65,-.25], [.86,2.2,1.46,11.12,-.10], [1,2.2,1.63,11,-.045]
 ];
+// Monotone cubic Hermite slopes. The camera keeps moving through ordinary
+// keys instead of braking to zero at every marker; genuine reversals (slip,
+// recovery, landing) still ease to a stop. No overshoot outside authored keys.
+const slopes=keys.map((key,i)=>key.slice(1).map((_,j)=>{
+ if(i===0||i===keys.length-1)return 0;
+ const k=j+1,prev=keys[i-1],next=keys[i+1],h0=key[0]-prev[0],h1=next[0]-key[0];
+ const d0=(key[k]-prev[k])/h0,d1=(next[k]-key[k])/h1;
+ if(d0*d1<=0)return 0;
+ const w0=2*h1+h0,w1=h1+2*h0;
+ return (w0+w1)/(w0/d0+w1/d1);
+}));
 export function windowIntroCamera(progress){
- const t=clamp01(progress),i=keys.findIndex((k,n)=>n<keys.length-1&&t<=keys[n+1][0]),a=keys[Math.max(0,i)],b=keys[Math.max(0,i)+1],f=easeInOut((t-a[0])/(b[0]-a[0]));
- return {x:a[1]+(b[1]-a[1])*f,y:a[2]+(b[2]-a[2])*f,z:a[3]+(b[3]-a[3])*f,yaw:Math.PI,pitch:a[4]+(b[4]-a[4])*f};
+ const t=clamp01(progress),i=Math.max(0,keys.findIndex((k,n)=>n<keys.length-1&&t<=keys[n+1][0]));
+ const a=keys[i],b=keys[i+1],span=b[0]-a[0],u=(t-a[0])/span,u2=u*u,u3=u2*u;
+ const sample=j=>(2*u3-3*u2+1)*a[j]+(u3-2*u2+u)*span*slopes[i][j-1]+(-2*u3+3*u2)*b[j]+(u3-u2)*span*slopes[i+1][j-1];
+ return {x:sample(1),y:sample(2),z:sample(3),yaw:Math.PI,pitch:sample(4)};
 }
 export function windowIntroState(progress){
  const t=clamp01(progress);
