@@ -1762,7 +1762,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     const source=cue.source==='window'?{x:2.2,y:1.05,z:12}:null;
     play(cue.sound,source,cue.level,view);if(cue.caption)caption(cue.caption);
    }
-   $('lab-intro-caption').textContent=progress<.18?'La ventana del jardín…':progress<.36?'Deslizo el pestillo despacio…':progress<.43?'Me apoyo en el marco…':progress<.53?'¡Uy!':progress<.62?'Un intento más…':progress<.86?'Con cuidado… sin hacer ruido.':'Ya estoy dentro.';
+   $('lab-intro-caption').textContent=progress<.12?'La ventana del jardín…':progress<.19?'Deslizo el pestillo despacio…':progress<.35?'Abro la ventana con cuidado…':progress<.43?'Me apoyo en el marco…':progress<.53?'¡Uy!':progress<.62?'Un intento más…':progress<.86?'Con cuidado… sin hacer ruido.':'Ya estoy dentro.';
    if(progress>=1){finishWindowIntro();view=cameraOf(s);hand=true;}
   }else if(emyShot){
    emyShot.elapsed=emyCompanion.entranceAge;
@@ -2444,6 +2444,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    altar:()=>({...altarVisit,waiting:!!emyCompanion?.altarWait,fear:!!emyCompanion?.altarFear,bristle:world.emy.parts.find(p=>p.id==='coat')?.box.bristle??0,earFlatten:world.emy.earFlatten??0}),
    scanFrame:()=>renderer?.scanFrame??null,
    performance:()=>perfReport(),
+   windowIntro:()=>cinematic?{elapsed:cinematic.elapsed,amount:world.entryWindow.amount,view:windowIntroCamera(cinematic.elapsed/WINDOW_SHOT_SECONDS)}:null,
    finale:()=>finalCutscene?{elapsed:finalCutscene.elapsed,playable:finalCutscene.playable,runAge:finalCutscene.runAge,stage:finalCutscene.playable?'run':finalCutscene.stage,weather:finaleWeather(finalCutscene,s),view:finalCutscene.lastView}:null,
    intro:()=>cinematic?{elapsed:cinematic.elapsed,...windowIntroState(cinematic.elapsed/WINDOW_SHOT_SECONDS),camera:windowIntroCamera(cinematic.elapsed/WINDOW_SHOT_SECONDS)}:null,
    atmosphere:()=>({room:sound.atmosphere?.room,outdoor:sound.atmosphere?.outdoor,events:sound.atmosphere?.events,voices:sound.atmosphere?.voices.size,loops:sound.atmosphere?.loops.length,lastEvent:sound.atmosphere?.lastEvent,muted:sound.settings.muted,volume:sound.settings.ambient}),
