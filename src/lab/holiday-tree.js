@@ -18,7 +18,7 @@ export function installHolidayTree(add,floor,holiday=null){
   const at=holidayTreePoint(px,pz);
   // The conical tiers retain axis-aligned collision bounds. Their geometry
   // is symmetric and the ring vertices themselves are already rotated.
-  return add('holiday-'+id,at.x,floor+y,at.z,w,h,d,mat,solid,{yaw:id.startsWith('tier-')?0:yaw,...extra});
+  return add('holiday-'+id,at.x,floor+y,at.z,w,h,d,mat,solid,{yaw:/^(tier-|garland-|pot$)/.test(id)?0:yaw,...extra});
  };
  piece('pot',0,.15,0,.43,.30,.43,'wood',true,{shape:'round',smooth:true,segments:8,rings:3,color:[.64,.39,.39]});
  // Three low-poly flared tiers. Their bounding collision is confined to the tree.
