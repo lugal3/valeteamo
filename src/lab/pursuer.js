@@ -14,7 +14,7 @@ const QUIET_ROUTE_END=4;
 const CHASE_SECONDS=5.5,COOLDOWN_SECONDS=5;
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 export class Pursuer{
- constructor(world){this.world=world;this.reset();}
+ constructor(world,navigationProfile=null){this.world=world;this.navigationProfile=navigationProfile;this.reset();}
  reset(){this.breakerDelay=15;this.breakerGoal=null;this.intruderSeen=false;this.x=5.8;this.y=0;this.z=11;this.yaw=this.facing=Math.PI;this.mode='dormant';this.awareness=0;this.lost=10;this.witnessed=null;this.lastSeen=null;this.path=[];this.route=0;this.visited=0;this.replan=0;this.walk=this.speed=this.age=this.bedTime=0;this.stepDistance=0;this.caught=false;this.stuck=0;this.task=null;this.modeTime=0;this.quiet=false;this.noiseGoal=null;this.noiseRemaining=0;this.stunned=0;this.trailPoints=[];this.trailIndex=0;this.trailRemaining=0;this.searchPause=0;}
  get active(){return this.mode!=='dormant';}
  hearNoise(position,intensity=1){
@@ -80,16 +80,17 @@ export class Pursuer{
   Object.assign(this,{x,y,z,facing,yaw:facing,route,visited,quiet,mode:'cooldown',modeTime:Math.max(3,clamp(rest,0,7)),replan:0});
   return true;
  }
- planningBoxes(){const leaves=new Set(this.world.objects.filter(o=>o.kind==='door'&&o.state!=='open').flatMap(o=>[o.box,...(o.parts||[]).map(p=>p.box)]));return this.world.boxes.filter(b=>b.solid&&!leaves.has(b));}
+ planningBoxes(){const leaves=new Set(this.world.objects.filter(o=>o.kind==='door'&&o.state!=='open'&&(!this.navigationProfile||!o.locked&&!o.sealed)).flatMap(o=>[o.box,...(o.parts||[]).map(p=>p.box)]));return this.world.boxes.filter(b=>b.solid&&!leaves.has(b));}
  buildGraph(){
   const hatchOpen=this.world.hatch?.amount>.92;
   if(this.nodes&&this.graphHatchOpen===hatchOpen)return;
   this.graphHatchOpen=hatchOpen;
   const doors=new Set(this.world.objects.filter(o=>o.kind==='door').flatMap(o=>[o.box,...(o.parts||[]).map(p=>p.box)])),boxes=this.world.boxes.filter(b=>b.solid&&!doors.has(b));
-  const isBlocked=indexNavigationColliders(boxes,.16,1.72);
+  const profile=this.navigationProfile,ground=profile?.ground??groundHeight;
+  const isBlocked=indexNavigationColliders(boxes,profile?.radius??.16,profile?.height??1.72);
   this.nodes=[];this.cells=new Map();
   for(let i=0;i<GRID_COLUMNS;i++)for(let j=0;j<GRID_ROWS;j++)for(const level of LEVELS){
-   const x=.2+i*CELL,z=.2+j*CELL,y=groundHeight(x,z,level,hatchOpen),key=cellId(i,j);
+   const x=.2+i*CELL,z=.2+j*CELL,y=ground(x,z,level,hatchOpen),key=cellId(i,j);
    const cell=this.cells.get(key)||[];
    if(!Number.isFinite(y)||cell.some(n=>Math.abs(n.y-y)<.1)||isBlocked(x,y,z))continue;
    const n={x,y,z,i,j,index:this.nodes.length};cell.push(n);this.cells.set(key,cell);this.nodes.push(n);
@@ -102,7 +103,7 @@ export class Pursuer{
    // A* enter a wall that navigate() correctly refused to cross.
    for(let k=1;k<=8;k++){
     const t=k/8,x=n.x+(next.x-n.x)*t,z=n.z+(next.z-n.z)*t;
-    const y=groundHeight(x,z,sampleY,hatchOpen);
+    const y=ground(x,z,sampleY,hatchOpen);
     if(!Number.isFinite(y)||Math.abs(y-sampleY)>.35||isBlocked(x,y,z)){clear=false;break;}
     sampleY=y;
    }
@@ -113,16 +114,33 @@ export class Pursuer{
   this.buildGraph();
   // Cache occupancy only for this planning pass: the door/furniture state may change
   // between plans, but remains fixed while the synchronous search is running.
-  const isBlocked=indexNavigationColliders(this.planningBoxes(),.16,1.72),availability=new Map();
+  const profile=this.navigationProfile,ground=profile?.ground??groundHeight,hatchOpen=this.world.hatch?.amount>.92;
+  const isBlocked=indexNavigationColliders(this.planningBoxes(),profile?.radius??.16,profile?.height??1.72),availability=new Map();
+  // The companion is small enough to enter real low refuges. Connect its
+  // exact position to the graph with a swept, height-aware segment instead
+  // of selecting a nearest node on the wrong side of a stair wall.
+  const link=(from,to)=>{
+   if(!profile)return true;
+   const length=Math.hypot(to.x-from.x,to.z-from.z);
+   if(length>1.15)return false;
+   let y=from.y;
+   const steps=Math.max(1,Math.ceil(length/.05));
+   for(let i=1;i<=steps;i++){
+    const x=from.x+(to.x-from.x)*i/steps,z=from.z+(to.z-from.z)*i/steps,next=ground(x,z,y,hatchOpen);
+    if(!Number.isFinite(next)||Math.abs(next-y)>.12||isBlocked(x,next,z))return false;
+    y=next;
+   }
+   return Math.abs(y-to.y)<.10;
+  };
   const available=n=>{
    if(!availability.has(n.index))availability.set(n.index,!isBlocked(n.x,n.y,n.z));
    return availability.get(n.index);
   };
-  const nearest=p=>{let best=null,d=Infinity;for(const n of this.nodes){const v=dist(n,p);if(v<d&&available(n)){best=n;d=v;}}return best;};
-  const start=nearest(this),end=nearest(goal);this.goal={...goal};this.path=[];this.replan=.8;if(!start||!end)return false;
+  const nearest=(p,fromActor)=>{let best=null,d=Infinity;for(const n of this.nodes){const v=dist(n,p);if(v<d&&available(n)&&(!profile||(fromActor?link(p,n):link(n,p)))){best=n;d=v;}}return best;};
+  const start=nearest(this,true),end=nearest(goal,false);this.goal={...goal};this.path=[];this.replan=.8;if(!start||!end)return false;
   const open=new Set([start.index]),cost=new Map([[start.index,0]]),parent=new Map();let found=false;
   while(open.size){let id=null,best=Infinity;for(const i of open){const f=cost.get(i)+dist(this.nodes[i],end);if(f<best){best=f;id=i;}}open.delete(id);if(id===end.index){found=true;break;}
-   for(const ni of this.nodes[id].neighbors){const n=this.nodes[ni];if(!available(n))continue;const value=cost.get(id)+dist(this.nodes[id],n);if(value>=(cost.get(ni)??Infinity))continue;cost.set(ni,value);parent.set(ni,id);open.add(ni);}
+   for(const ni of this.nodes[id].neighbors){const n=this.nodes[ni];if(!available(n)||profile&&!link(this.nodes[id],n))continue;const value=cost.get(id)+dist(this.nodes[id],n);if(value>=(cost.get(ni)??Infinity))continue;cost.set(ni,value);parent.set(ni,id);open.add(ni);}
   }
   if(!found)return false;let at=end.index;while(at!==start.index){this.path.unshift(this.nodes[at]);at=parent.get(at);}this.path.unshift(start);return true;
  }
