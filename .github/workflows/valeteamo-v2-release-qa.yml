@@ -94,7 +94,7 @@ jobs:
             3d-production) node tests/house-css-production-browser.cjs ;;
             emy-mobile|emy-desktop|emy-webkit) node tests/emy-abilities-browser.cjs ;;
             altar) node tests/emy-abilities-browser.cjs ;;
-            subtle-glows) node tests/visual-glow-browser.cjs ;;
+            subtle-glows) node tests/visual-glow-browser.cjs && node tests/pursuer-shadow-browser.cjs ;;
           esac
       - name: Capturas y evidencias
         if: always()
