@@ -47,7 +47,7 @@ export class Pursuer{
  }
  start(){this.reset();this.mode='search';this.plan(SEARCH_ROUTE[0]);}
  goToBed(){this.mode='to-bed';this.task=BED_EXIT;this.plan(this.task);}
- sleep(){this.mode='sleeping';this.speed=0;this.task=null;Object.assign(this,BED_EXIT,{facing:BED_EXIT.yaw});}
+ sleep(){this.mode='sleeping';this.speed=0;this.turnRate=0;this.doorReach=0;this.doorWait=0;this.task=null;Object.assign(this,BED_EXIT,{facing:BED_EXIT.yaw});}
  wake(){this.mode='rising';this.bedTime=0;}
  resumeSearch(){this.task=null;this.mode='search';this.route=4;this.visited=0;this.clearSight();this.plan(SEARCH_ROUTE[this.route]);}
  clearSight(){
