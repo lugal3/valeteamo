@@ -52,8 +52,10 @@ async function run(){
   // deliberately throttled five-FPS trial preview.
   const clickTrialButton=async locator=>{
    await locator.waitFor({state:'visible'});
-   await locator.scrollIntoViewIfNeeded();
    const point=await locator.evaluate(el=>{
+    // Native immediate scroll, no Playwright animation-stability wait.
+    // Verify the actual target is enabled and hit-testable before mouse input.
+    el.scrollIntoView({block:'center',inline:'center',behavior:'instant'});
     const r=el.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2;
     if(el.disabled||!el.contains(document.elementFromPoint(x,y)))throw Error('Trial button is not actually clickable');
     return {x,y};
@@ -101,7 +103,6 @@ async function run(){
    await card.waitFor({state:'attached'});
    if(!await card.isVisible())await card.evaluate(el=>{el.closest('details').open=true;});
    console.log('LP trial: '+id);
-   await card.scrollIntoViewIfNeeded();
    try{
     // This is a React state transition, not a document navigation. Wait for
     // the real start card below instead of Playwright's unrelated navigation.
