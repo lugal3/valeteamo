@@ -25,7 +25,15 @@ export function windowIntroCamera(progress){
  const t=clamp01(progress),i=Math.max(0,keys.findIndex((k,n)=>n<keys.length-1&&t<=keys[n+1][0]));
  const a=keys[i],b=keys[i+1],span=b[0]-a[0],u=(t-a[0])/span,u2=u*u,u3=u2*u;
  const sample=j=>(2*u3-3*u2+1)*a[j]+(u3-2*u2+u)*span*slopes[i][j-1]+(-2*u3+3*u2)*b[j]+(u3-u2)*span*slopes[i+1][j-1];
- return {x:sample(1),y:sample(2),z:sample(3),yaw:Math.PI,pitch:sample(4)};
+ // Small head/neck gestures layer over the collision-tested translation:
+ // footfalls on approach, effort during the climb, then checking the room.
+ // Every gesture begins and ends at zero velocity, including at handoff.
+ const bump=(from,to)=>{const q=clamp01((t-from)/(to-from));return Math.sin(Math.PI*q)**2;};
+ const step=.013*bump(.025,.070)-.011*bump(.085,.135);
+ const effort=-.022*bump(.35,.41)+.029*bump(.41,.49)-.014*bump(.57,.66);
+ const settle=.018*bump(.855,.915)-.009*bump(.915,.97);
+ const glance=-.075*bump(.89,.95)+.043*bump(.945,1);
+ return {x:sample(1),y:sample(2),z:sample(3),yaw:Math.PI+glance,pitch:sample(4)+step+effort+settle};
 }
 export function windowIntroState(progress){
  const t=clamp01(progress);
