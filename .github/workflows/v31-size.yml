@@ -1,0 +1,51 @@
+name: V3.1 — peso real de producción (sin publicar)
+on:
+  push:
+    branches: [feature/v31-telefono-historia-final-perf]
+    paths:
+      - '.github/workflows/v31-size.yml'
+      - 'scripts/audit-dist.mjs'
+      - 'public/**'
+      - 'src/**/*.wav'
+      - 'src/**/*.flac'
+      - 'src/**/*.mp3'
+      - 'src/**/*.ogg'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: main
+            ref: f1ba942264d3f98bc501bd144886ae76fc776b65
+          - label: v3-validada
+            ref: f5783405c2bd3b206320a5dda9f063a8d7ba60a5
+          - label: v31
+            ref: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: auditor
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
+          path: target
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: target/package-lock.json
+      - run: npm ci
+        working-directory: target
+      - run: npm run build
+        working-directory: target
+      - run: node auditor/scripts/audit-dist.mjs target/dist ${{ matrix.label }}.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-size-${{ matrix.label }}
+          path: ${{ matrix.label }}.json
