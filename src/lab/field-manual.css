@@ -19,7 +19,7 @@
 #lab3d .field-watermark svg{width:100%;height:auto}
 #lab3d .field-card button{border:1px solid var(--edge);background:var(--ink);color:var(--base);font-weight:750;padding:8px 16px;border-radius:4px;min-height:34px;font-size:12px;cursor:pointer}
 #lab3d .field-card button:focus-visible{outline:2px solid white;outline-offset:3px}
-#lab3d .field-countdown{position:absolute;z-index:55;right:max(14px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top));width:116px;color:#ffe0de;background:#40242fee;border:1px solid #e68e97;border-radius:5px;padding:7px 10px;box-shadow:0 2px 15px #0008;pointer-events:none;font-variant-numeric:tabular-nums}
+#lab3d .field-countdown{position:absolute;z-index:55;right:max(14px,env(safe-area-inset-right));top:calc(max(10px,env(safe-area-inset-top)) + 42px);width:116px;color:#ffe0de;background:#40242fee;border:1px solid #e68e97;border-radius:5px;padding:7px 10px;box-shadow:0 2px 15px #0008;pointer-events:none;font-variant-numeric:tabular-nums;animation:field-alert 1.6s ease-in-out infinite}
 #lab3d .field-countdown small{display:block;font-size:9px;letter-spacing:.09em;font-weight:bold}
 #lab3d .field-countdown strong{display:block;text-align:center;font:700 28px/1.1 monospace}
 #lab3d .field-countdown i{display:block;height:3px;background:#f39a9e;transform-origin:left;transform:scaleX(var(--remaining,1));border-radius:2px}
