@@ -514,3 +514,7 @@
 /* Opt-in LP diagnostics only. Never intercept the gameplay controls. */
 #lab3d .house-perf{position:absolute;top:max(12px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:39;pointer-events:none;white-space:pre-line;max-width:65vw;padding:5px 9px;border-radius:6px;background:#13121bdd;color:#dbf6e6;font:11px/1.4 monospace;text-align:center}
 #lab3d .house-perf[hidden]{display:none}
+
+/* Opt-in FPS label: safe-area aware, no layout shifts or touch interception. */
+#lab3d .house-fps{position:absolute;top:max(10px,calc(var(--house-safe-top) + 5px));right:max(12px,calc(var(--house-safe-right) + 8px));z-index:26;pointer-events:none;white-space:nowrap;padding:4px 7px;border-radius:5px;background:#13121bb3;color:#e6f6ea;font:600 11px/1.2 system-ui;font-variant-numeric:tabular-nums}
+#lab3d .house-fps[hidden],#lab3d.house-phone-open .house-fps,#lab3d.house-hud-editing .house-fps,#lab3d.house-finale-shot .house-fps{display:none}
