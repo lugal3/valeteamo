@@ -267,6 +267,27 @@ export class HouseSound {
   if(gain<.0007)return;
   const yaw=listener.yaw||0,dx=origin?origin.x-listener.x:0,dz=origin?origin.z-listener.z:0;
   const stereo=Math.max(-.85,Math.min(.85,(dx*Math.cos(yaw)-dz*Math.sin(yaw))/Math.max(1,distance)));
+  if(kind==='altar-record'){
+   // Original short, detuned locked-groove motif. No third-party recording,
+   // no loop timer. Every voice is tracked and stopped on pause/teardown.
+   const start=ctx.currentTime,amp=ctx.createGain(),pan=ctx.createStereoPanner();
+   const filter=ctx.createBiquadFilter();filter.type='bandpass';filter.frequency.value=860;filter.Q.value=.65;
+   amp.gain.value=Math.min(.18,gain*.85);pan.pan.value=stereo;
+   filter.connect(amp);amp.connect(pan);pan.connect(output);
+   let pending=0;
+   const voice=(hz,at,len,volume,type='triangle')=>{
+    const osc=ctx.createOscillator(),envelope=ctx.createGain();pending++;
+    osc.type=type;osc.frequency.setValueAtTime(hz,at);osc.frequency.linearRampToValueAtTime(hz*.94,at+len*.85);
+    envelope.gain.setValueAtTime(.0001,at);envelope.gain.exponentialRampToValueAtTime(volume,at+.018);envelope.gain.exponentialRampToValueAtTime(.0001,at+len);
+    osc.connect(envelope);envelope.connect(filter);this.sequenceNodes.add(osc);osc.start(at);osc.stop(at+len+.01);
+    osc.onended=()=>{this.sequenceNodes.delete(osc);osc.disconnect();envelope.disconnect();if(--pending===0){filter.disconnect();amp.disconnect();pan.disconnect();}};
+   };
+   for(let i=0;i<3;i++){
+    const at=start+i*1.12;voice(196,at+.08,.72,.42);voice(293.66,at+.39,.48,.28);
+    voice(1130,at,.055,.35,'sawtooth');
+   }
+   return;
+  }
   if(kind==='clatter'){
    const material=origin?.material||'ceramic',surface=origin?.surface||'hard';
    const timbre=material==='glass'?1.32:material==='metal'?.78:material==='wood'?.55:1;
