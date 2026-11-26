@@ -39,5 +39,21 @@ const assert=require('node:assert/strict');
   assert(Math.hypot(hand.x-grip[i].x,hand.y-grip[i].y,hand.z-grip[i].z)<.0001,'Hands stay fixed to the frame through the failed push');
  }
 
+ // Actual first-person paws approach from below the lens, stay planted,
+ // then return below the lens before the render visibility cut.
+ let previous=null;
+ for(let i=0;i<=1000;i++){
+  const t=i/1000,camera=windowIntroCamera(t),hands=windowIntroState(t).hands;
+  if(hands)for(let k=0;k<2;k++){
+   const hand=hands[k],old=previous?.[k];
+   if(!hand)continue;
+   assert(Object.values(hand).every(Number.isFinite),'Finite animated paw');
+   if(old)assert(Math.hypot(hand.x-old.x,hand.y-old.y,hand.z-old.z)<.04,'No hand teleport at '+t);
+   if(!old)assert(camera.y-hand.y>.70,'Hand enters below the camera');
+  }
+  if(previous)for(let k=0;k<2;k++)if(previous[k]&&!hands?.[k])
+   assert(camera.y-previous[k].y>.70,'Hand exits below the camera');
+  previous=hands;
+ }
  console.log('PASS: authored window shot, safe landing, real aperture and reduced-motion/test skipping');
 })().catch(e=>{console.error(e);process.exitCode=1});
