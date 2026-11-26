@@ -1,7 +1,7 @@
 // ValeTeAmo V2 phase 11: contextual control instructions and visual safety.
 const assert=require('node:assert/strict'),fs=require('node:fs');
 (async()=>{
- const {rcControlHint,throwableHint,threatAccessibility,hopOffset,HOP_DURATION,HOP_COOLDOWN}=await import('../src/lab/hud-context.js');
+ const {rcControlHint,throwableHint,threatAccessibility,hopOffset,HOP_DURATION,HOP_COOLDOWN,advanceHop}=await import('../src/lab/hud-context.js');
  assert(rcControlHint(false).includes('W/S')&&rcControlHint(false).includes('Q:'));
  assert(rcControlHint(true).includes('Joystick')&&!rcControlHint(true).includes('W/S'));
  assert(rcControlHint(false,5).includes('Señuelo activo'));
@@ -16,6 +16,15 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  assert(Math.abs(hopOffset(HOP_DURATION/2)-.12)<1e-9);
  assert(hopOffset(HOP_DURATION/2,true)<hopOffset(HOP_DURATION/2));
  assert(HOP_COOLDOWN>HOP_DURATION);
+ let hop=advanceHop(0,false,.1,true);
+ assert.equal(hop.cancelled,false);
+ hop=advanceHop(hop.age,hop.cancelled,.05,false);
+ assert(hop.cancelled&&hop.age<HOP_COOLDOWN,'Crouching must not instantly re-arm a hop');
+ hop=advanceHop(hop.age,hop.cancelled,0,true);
+ assert(hop.cancelled&&hop.age<HOP_COOLDOWN,'Resuming pause cannot resurrect the animation');
+ while(hop.age<HOP_COOLDOWN)hop=advanceHop(hop.age,hop.cancelled,.1,true);
+ assert(hop.cancelled,'Cancelled animation stays cancelled until an intentional new hop');
+
  assert(threatAccessibility('chase').includes('Peligro'));
  assert(threatAccessibility('watch').includes('investigando'));
  assert(threatAccessibility('search').includes('Sin persecución'));
@@ -33,6 +42,10 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  assert(house.includes('heldNoise=null;lastInteraction=performance.now();handAction=1;'));
  assert(house.includes('interactButton.disabled=!canInteract'));
  assert(house.includes('id="lab-hop"'));
+ assert(house.includes('phone.close();$(\'lab-camera-settings\').open=false;bag();return;'),'Inventory replaces rather than stacks the phone settings');
+ assert(house.includes('const canUseHotbar=()=>ready&&!heldNoise'),'Occupied hand cannot equip a second item');
+ assert(house.includes("const visualEquipment=heldNoise?'empty'"),'No floating second tool while throwing');
+
  assert(house.includes('view={...view,y:view.y+hopOffset'));
  assert(css.includes('#lab3d #lab-hop{grid-area:2/3}'));
  assert(css.includes('env(safe-area-inset-right)')&&css.includes('env(safe-area-inset-bottom)'));
