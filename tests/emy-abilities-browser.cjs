@@ -77,17 +77,26 @@ const {chromium,webkit}=require('playwright');
   assert(Math.abs(cards[0].y-cards[1].y)<2&&Math.abs(cards[2].y-cards[3].y)<2&&cards[2].y>cards[0].y+40,'Four Emy cards must form a compact 2x2 grid: '+JSON.stringify(cards));
   assert(Math.abs(cards[0].w-cards[3].w)<2,'All four cards have equal width');
   await shot(page,'01-emy-acciones');
+  // Position the threat while gameplay is paused by the menu, but keep the
+  // camera looking at Emy until the wave has actually rendered.
+  await page.evaluate(()=>window.__rescueHouse.placeThreat({x:8.1,y:0,z:6.2,yaw:Math.PI}));
   await page.locator('#house-emy-menu [data-act="emy:scan"]').click();
   const afterScan=await skills();
   assert(afterScan.scan>0&&afterScan.scanCooldown>0);
   // Observe the wave from the cat-facing pose first. Stage the occluded
   // target immediately afterwards, before taking any expensive screenshots.
-  await page.waitForFunction(()=>!document.querySelector('#house-emy-wave').hidden,null,{timeout:6000});
+  await page.waitForFunction(()=>!document.querySelector('#house-emy-wave').hidden&&window.__rescueHouse.emySkills().scanRendered,null,{timeout:12000});
+  const before=await page.evaluate(()=>window.__rescueHouse.scanFrame());
   await page.evaluate(()=>{
    window.__rescueHouse.placeThreat({x:8.1,y:0,z:6.2,yaw:Math.PI});
    window.__rescueHouse.setPose({x:6.2,y:0,z:6.2,yaw:Math.PI/2,pitch:0});
   });
-  await page.waitForFunction(()=>window.__rescueHouse.emySkills().scanRendered,null,{timeout:7000});
+  try{
+   await page.waitForFunction(previous=>{const f=window.__rescueHouse.scanFrame();return f&&f.sequence>previous&&Math.abs(f.camera.x-6.2)<.12&&Math.abs(f.camera.z-6.2)<.12;},before.sequence,{timeout:12000});
+  }catch(error){
+   console.log('SCAN_RENDER_DIAGNOSTIC',JSON.stringify(await page.evaluate(()=>({scan:window.__rescueHouse.emySkills(),frame:window.__rescueHouse.scanFrame(),snapshot:window.__rescueHouse.snapshot()}))));
+   throw error;
+  }
   await shot(page,'02b-contorno-secuestrador-tras-pared');
   await interactEmy();
   assert(await page.locator('#house-emy-menu [data-act="emy:scan"]').isDisabled(),'Scan cooldown disables the real action');
