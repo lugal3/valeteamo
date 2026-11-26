@@ -1,7 +1,7 @@
 import {chibiPiece,CHIBI} from './chibi-model.js';
 import {SAFE_CODE} from './mirror-safe.js';
 export function phonePieces(){return [
- chibiPiece('phone-body',0,.02,0,.18,.32,.032,CHIBI.pink,{shape:'rounded-box',smooth:false,roundness:.12,mat:'lacquer'}),
+ chibiPiece('phone-body',0,.02,0,.18,.32,.032,CHIBI.pink,{shape:'rounded-box',smooth:false,roundness:.12,mat:'carpaint'}),
  chibiPiece('phone-screen',0,.03,-.019,.148,.253,.006,[.13,.18,.27],{emissive:true,shape:'rounded-box',smooth:false,roundness:.08,mat:'glass'}),
  chibiPiece('phone-speaker',0,.158,-.024,.045,.007,.005,[.25,.15,.24]),
  chibiPiece('phone-notification',0,.08,-.025,.115,.045,.004,[.92,.68,.78],{emissive:true}),
