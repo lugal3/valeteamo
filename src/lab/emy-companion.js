@@ -23,7 +23,7 @@ export function emyGroundHeight(x,z,y,hatchOpen){
  const next=groundHeight(x,z,y,hatchOpen);
  return y>=-.01&&next<-.01?NaN:next;
 }
-const EMY_NAV_PROFILE=Object.freeze({radius:.16,height:.62,ground:emyGroundHeight});
+const EMY_NAV_PROFILE=Object.freeze({radius:.16,height:.62,cellSize:.30,ground:emyGroundHeight});
 const clearNavigation=companion=>Object.assign(companion,{route:[],trail:[],routeTarget:null,nextPlanAt:0,nextSight:0,direct:false,chasing:undefined,stuck:0});
 
 export function createEmyCompanion(cat,{waiting=true}={}){
