@@ -477,6 +477,46 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
  g.fillStyle(back[map]).fillRect(-1600,-1300,7200,4500);
  let tiles=0;
  const low=Math.floor(cfg.minU),high=Math.ceil(cfg.maxU);
+ // A soft, continuous landscape behind the actual walkable tiles. Former
+ // maps ended abruptly against a flat pastel void; these distant meadows,
+ // wooded shoulders and river extensions remain purely decorative.
+ const landscape:Record<RescueMapId,readonly [number,number,number]>={
+  morning_garden:[0xdfe4c9,0xcbd9b8,0x90b395],
+  afternoon_meeting:[0xe2d7b5,0xcbd1a8,0xa0ad83],
+  dusk_search:[0xa8b0aa,0x919f96,0x667f79],
+  night_neighborhood:[0x79858d,0x687a81,0x566a73]
+ };
+ const [outer,inner,canopy]=landscape[map];
+ const shoulder=(margin:number,color:number,alpha:number)=>{
+  const edges:Array<[number,number]>=[],opposite:Array<[number,number]>=[];
+  for(let u=low-9;u<=high+9;u+=1){
+   const sample=clamp(u,low,high),lim=routeLimits(sample);
+   const a=toScreen({u,v:lim.min-margin-.6*Math.sin(u*.52)}),
+    b=toScreen({u,v:lim.max+margin+.5*Math.cos(u*.44)});
+   edges.push([a.x,a.y]);opposite.push([b.x,b.y]);
+  }
+  poly(g,color,[...edges,...opposite.reverse()],alpha);
+ };
+ shoulder(9,outer,.67);shoulder(5.2,inner,.60);
+ for(let u=low-5;u<=high+5;u+=2){
+  const lim=routeLimits(clamp(u,low,high));
+  for(const side of [-1,1]){
+   const v=(side<0?lim.min:lim.max)+side*(3.5+hashCell(u,side,34)*2.9);
+   const point=toScreen({u,v});
+   const scale=.68+hashCell(u,side,35)*.63;
+   // Low contrast distant vegetation, not interactable foreground trees.
+   g.fillStyle(canopy,.15).fillEllipse(point.x,point.y,74*scale,21*scale);
+   g.fillStyle(canopy,.23).fillEllipse(point.x-12,point.y-12,46*scale,23*scale);
+   g.fillStyle(canopy,.18).fillEllipse(point.x+13,point.y-8,40*scale,21*scale);
+  }
+ }
+ if(map==='morning_garden'){
+  // Water continues beyond both banks of the viewport; the existing bridge
+  // and walkable span keep exactly the same coordinates.
+  const waterBand=(u:number,v:number)=>{const p=toScreen({u,v});return [p.x,p.y] as [number,number];};
+  poly(g,0x9ecdc5,[waterBand(9.6,-14),waterBand(16.2,-14),waterBand(16.2,25),waterBand(9.6,25)],.90);
+  poly(g,0x79bdc5,[waterBand(10.2,-14),waterBand(15.8,-14),waterBand(15.8,25),waterBand(10.2,25)],.75);
+ }
  for(let u=low;u<=high;u++)for(let v=-4;v<=16;v++){
   const lim=routeLimits(u);
   const rag=((u*7+v*13)%9===0?-.45:0)+((u*11+v*3)%11===0?.36:0);
