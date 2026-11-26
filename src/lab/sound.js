@@ -267,6 +267,17 @@ export class HouseSound {
   if(gain<.0007)return;
   const yaw=listener.yaw||0,dx=origin?origin.x-listener.x:0,dz=origin?origin.z-listener.z:0;
   const stereo=Math.max(-.85,Math.min(.85,(dx*Math.cos(yaw)-dz*Math.sin(yaw))/Math.max(1,distance)));
+  if(kind==='altar-hiss'&&this.atmosphere?.noise){
+   // Short filtered breath from the existing noise buffer; no new asset.
+   const source=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),amp=ctx.createGain(),pan=ctx.createStereoPanner();
+   const at=ctx.currentTime;source.buffer=this.atmosphere.noise;source.loop=true;
+   filter.type='bandpass';filter.frequency.setValueAtTime(4400,at);filter.frequency.exponentialRampToValueAtTime(1700,at+.42);filter.Q.value=.8;
+   amp.gain.setValueAtTime(.0001,at);amp.gain.exponentialRampToValueAtTime(Math.max(.0002,gain*.7),at+.05);amp.gain.exponentialRampToValueAtTime(.0001,at+.46);
+   pan.pan.value=stereo;source.connect(filter);filter.connect(amp);amp.connect(pan);pan.connect(output);
+   this.sequenceNodes.add(source);source.start(at);source.stop(at+.48);
+   source.onended=()=>{this.sequenceNodes.delete(source);source.disconnect();filter.disconnect();amp.disconnect();pan.disconnect();};
+   this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;
+  }
   if(kind==='altar-record'){
    // Original short, detuned locked-groove motif. No third-party recording,
    // no loop timer. Every voice is tracked and stopped on pause/teardown.
@@ -286,7 +297,7 @@ export class HouseSound {
     const at=start+i*1.12;voice(196,at+.08,.72,.42);voice(293.66,at+.39,.48,.28);
     voice(1130,at,.055,.35,'sawtooth');
    }
-   return;
+   this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;
   }
   if(kind==='clatter'){
    const material=origin?.material||'ceramic',surface=origin?.surface||'hard';
