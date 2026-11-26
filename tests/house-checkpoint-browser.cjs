@@ -330,6 +330,14 @@ async function run(){
   await page.keyboard.down('w');
   try{await page.waitForFunction(()=>['ending','safe'].includes(window.__rescueHouse.story().phase));}
   finally{await page.keyboard.up('w');}
+  // V3.1 has a playable garden escape after the directed ambush.
+  // Reaching "ending" starts the scene; it does not complete the rescue.
+  await page.waitForFunction(()=>window.__rescueHouse.finale()?.playable,null,{timeout:60000,polling:250});
+  assert.equal(await stage(),'ending');
+  await page.keyboard.down('w');
+  try{await page.waitForFunction(()=>window.__rescueHouse.story().phase==='safe',null,{timeout:90000,polling:250});}
+  finally{await page.keyboard.up('w');}
+  await page.getByRole('dialog',{name:/Kitty y Louis escaparon/}).waitFor({timeout:30000});
   await page.getByRole('button',{name:'Ver final',exact:true}).click();
   await page.getByRole('heading',{name:'¡Louis está a salvo!'}).waitFor();
   assert.equal((await read(RESCUE_KEY)).phase,'end');
