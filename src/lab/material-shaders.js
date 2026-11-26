@@ -148,6 +148,18 @@ void main(){
   float mRand=fract(sin(dot(floor(mPos),vec3(12.9898,78.233,45.5432)))*43758.5453);
   if(mRand>.965)motes=smoothstep(.35,0.0,length(fract(mPos)-.5))*.22;
  }
+ // Small real world motes and dithered steam surfaces share the opaque batch.
+ if(vStyle>15.5&&vStyle<31.5){
+  if(tile==11.0){
+   float drift=uHolidayMotion*.35*uTime;
+   float haze=sin(vUV.x*18.0+sin(vUV.y*13.0-drift))*sin(vUV.y*21.0-drift);
+   float fade=clamp(beam*.45+.12,0.0,.5);
+   if(haze<.72||fract(sin(dot(floor(gl_FragCoord.xy),vec2(12.9898,78.233)))*43758.5453)>fade)discard;
+   gl_FragColor=vec4(vec3(.40,.48,.56)*(.15+beam*.6),1.0);return;
+  }
+  if(uFlash<.5||beam<.055||wide<.5||d>4.5)discard;
+  gl_FragColor=vec4(vColor*min(.95,beam*.9+.12),1.0);return;
+ }
  float warmth=0.0;
  for(int i=0;i<${VISIBLE_LAMPS};i++)warmth+=lampLight(uLamps[i],world,N,surfaceNormal);
  if(vArt>19.5&&vArt<21.5){
@@ -336,6 +348,14 @@ void main(){
  float facing=.86+.14*max(0.0,dot(N,normalize(vec3(.3,.8,.4))));
  float boundary=max(max(-world.x,world.x-${HOUSE.width.toFixed(1)}),max(-world.z,world.z-${HOUSE.depth.toFixed(1)}));
  vec3 ambient=mix(vec3(.071,.076,.107),vec3(.20,.22,.32),smoothstep(.06,.48,boundary));
+ // Restrained cool spill near the actual west-facing boarded windows.
+ // The horizontal bands mirror their two wooden boards; no new light source.
+ float localY=mod(max(world.y,0.0),3.15);
+ float windowZ=max(1.0-smoothstep(.42,.70,abs(world.z-2.0)),1.0-smoothstep(.42,.70,abs(world.z-8.5)));
+ float sillMask=smoothstep(.85,1.02,localY)*(1.0-smoothstep(2.2,2.35,localY));
+ float boardMask=smoothstep(.08,.14,abs(localY-1.435))*smoothstep(.08,.14,abs(localY-1.87));
+ float spill=windowZ*sillMask*boardMask*(1.0-smoothstep(.10,1.1,world.x))*step(0.0,world.x)*step(0.0,world.y);
+ ambient+=vec3(.025,.040,.066)*spill;
  ambient=mix(ambient,vec3(.056,.048,.047),smoothstep(.18,1.1,-world.y));
  vec3 lighting=(ambient+uShot*vec3(.75,.83,1.0))*facing+vec3(.94,.97,1.0)*(beam+motes*.50)+vec3(1.0,.82,.60)*warmth;
  // Retro character artwork carries a subtle baked fill light. Without it the
