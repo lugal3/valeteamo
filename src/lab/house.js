@@ -201,9 +201,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const objectives=createRescueObjectives();
  const tutorialEnabled=demo&&config.fieldTutorials===true&&!config.trial&&checkpoint==='ground';
  let pendingTutorial=null;
- const manual=createFieldManual(root,{touch:()=>!desktop.matches,onSeen:()=>{phone.last='';if(lastSafeCheckpoint){lastSafeCheckpoint={...lastSafeCheckpoint,tutorials:manual.seen};checkpointStore?.save(lastSafeCheckpoint);}},onClose:()=>{resetInput();last=performance.now();if(!isSuspended())sound.resume();}});
+ const manual=createFieldManual(root,{touch:()=>!desktop.matches,onSeen:()=>{phone.last='';if(lastSafeCheckpoint){lastSafeCheckpoint={...lastSafeCheckpoint,tutorials:manual.seen};persistCheckpoint(lastSafeCheckpoint);}},onClose:()=>{resetInput();last=performance.now();if(!isSuspended())sound.resume();}});
  function tutorial(id,replay=false){if((!tutorialEnabled&&!replay)||(replay&&events.phase==='hide'))return false;if(!manual.show(id,replay))return false;releaseMouse();resetInput();sound.pause();return true;}
  const countdown=document.createElement('div');countdown.className='field-countdown';countdown.hidden=true;countdown.innerHTML='<small>⚠ ESCÓNDETE</small><strong>10 s</strong><i></i>';root.append(countdown);
+ const saveNotice=document.createElement('div');saveNotice.className='house-save-notice';saveNotice.hidden=true;saveNotice.setAttribute('role','status');saveNotice.innerHTML='<svg viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="7" cy="11" rx="3.7" ry="4.6" transform="rotate(-22 7 11)"/><ellipse cx="14" cy="6" rx="3.6" ry="4.7"/><ellipse cx="22" cy="8" rx="3.6" ry="4.7" transform="rotate(16 22 8)"/><ellipse cx="27" cy="15" rx="3.3" ry="4.2" transform="rotate(26 27 15)"/><path d="M6 24Q6 19 12 15Q17 11 22 16Q28 20 26 25Q24 30 17 27Q11 30 7 27Z"/></svg><span>Progreso guardado</span>';root.append(saveNotice);
+ let saveNoticeLeft=0;
+ function persistCheckpoint(value){if(!checkpointStore)return false;const result=checkpointStore.save(value);if(result===true&&value){saveNoticeLeft=1.65;}return result===true;}
  const guides=['wardrobe','underbed','mirror-note','mirror-safe','dormitorio'].map(id=>{const n=document.createElement('div');n.className='field-guide';n.hidden=true;n.dataset.target=id;n.innerHTML='<i>✧</i><span></span>';root.append(n);return n;});
  let rc=null,louis=null,loisShotDirector=null,rcTrap={armed:false,closed:false},finalCutscene=null;
  let altarVisit=createAltarVisit();
@@ -306,7 +309,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   lastSafeCheckpoint=captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTrap,batterySwap,pursuer,emy:emyCompanion&&snapshotEmyCompanion(emyCompanion)});
   lastSafeCheckpoint.tutorials=manual.seen;
   if(lastSafeCheckpoint.hide&&lastSafeCheckpoint.hide===pursuer.witnessed)lastSafeCheckpoint.hide=undefined;
-  checkpointStore?.save(lastSafeCheckpoint);
+  persistCheckpoint(lastSafeCheckpoint);
  }
  function finishWindowIntro(){
   poseFurniture(world.entryWindow,1);sound.setTension(.55);
@@ -344,7 +347,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   Object.assign(target,{x:cat.x,y:cat.y+.38,z:cat.z,interactable:!cat.hidden&&(!emyCompanion||['following','stay','distract','distract-recover'].includes(emyCompanion.stage))&&cat.reaction<=0});
  }
  function reset(saved){
-  manual.clear();manual.restore(saved?.tutorials,!!saved);pendingTutorial=null;countdown.hidden=true;for(const node of guides)node.hidden=true;
+  saveNoticeLeft=0;saveNotice.hidden=true;manual.clear();manual.restore(saved?.tutorials,!!saved);pendingTutorial=null;countdown.hidden=true;for(const node of guides)node.hidden=true;
   perfSampler.reset();perfAt=0;clearFPS();altarVisit=createAltarVisit();
   const seed=!saved&&scenario?.milestone;
   if(seed)saved=trialCheckpoint(seed);
@@ -1714,6 +1717,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(now-lastPaint<limit-2)return;
   const shotDelta=Math.min(.1,Math.max(0,(now-last)/1000||0)),dt=Math.min(.055,shotDelta);last=now;lastPaint=now;
   if(!s||!renderer)return;
+  if(saveNoticeLeft>0&&!isSuspended()&&!cinematic&&!finalCutscene)saveNoticeLeft=Math.max(0,saveNoticeLeft-shotDelta);
+  saveNotice.hidden=saveNoticeLeft<=0||isSuspended()||!!cinematic||!!finalCutscene;
   if(pendingTutorial&&!manual.active&&!isSuspended()&&!cinematic&&!emyShot&&!poseTransition&&events.phase!=='arrival'&&events.phase!=='hide'&&!finalCutscene){const id=pendingTutorial;pendingTutorial=null;tutorial(id);}
   const measuring=perfEnabled&&!isSuspended()&&!captureShot;
   const showFPS=options.showFPS===true&&!isPaused()&&!phone.open&&(!finalCutscene||finalCutscene.playable);
