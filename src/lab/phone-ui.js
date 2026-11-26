@@ -13,7 +13,7 @@ const dockPaths={
 const dockIcon=kind=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${dockPaths[kind]}</svg>`;
 
 export class PhoneUI{
- constructor(root,onEquip,onClose,{canUse=()=>true,canEquip=canUse,onEdit=()=>{},onPhoto=()=>{}}={}){
+ constructor(root,onEquip,onClose,{canUse=()=>true,canEquip=canUse,onEdit=()=>{},onPhoto=()=>{},onMap=()=>{}}={}){
   this.root=root;this.open=false;this.app='home';this.last='';this.readCount=0;this.score=0;this.direction=[1,0];this.pending=[1,0];this.resetSnake();
   this.gallery=[...gallerySprites];this.selectedPhoto=null;this.photoCount=0;this.messageTimes=new WeakMap();this.messageCount=0;this.latestNotice=null;this.clockMinute=-1;this.history=earlierMessages();
   this.canUse=canUse;this.onEdit=onEdit;this.editing=false;this.preview=false;this.onPresentationChange=()=>{};
@@ -39,7 +39,7 @@ export class PhoneUI{
    if(this.editing)return;
    if(!this.open&&!canUse())return;
    if(e.target.closest('.phone-notice')){onEquip('phone',false);this.show('messages');return;}
-   const b=e.target.closest('[data-app]');if(b){if(b.dataset.app==='close'){this.close();onClose();}else{this.app=b.dataset.app;this.selectedPhoto=null;if(this.app==='snake')this.resetSnake();this.last='';}}
+   const b=e.target.closest('[data-app]');if(b){if(b.dataset.app==='maps'){onMap();return;}if(b.dataset.app==='close'){this.close();onClose();}else{this.app=b.dataset.app;this.selectedPhoto=null;if(this.app==='snake')this.resetSnake();this.last='';}}
    if(e.target.closest('[data-photo=take]'))onPhoto();
    const photo=e.target.closest('[data-photo-index]');if(photo){this.selectedPhoto=this.gallery[Number(photo.dataset.photoIndex)];this.last='';}
    if(e.target.classList.contains('phone-screen')){this.close();onClose();}
