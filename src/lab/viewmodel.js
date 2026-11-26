@@ -135,6 +135,8 @@ export function drawViewModel(renderer, kind='flashlight', state={}){
   const turn=Math.max(0,Math.min(1,motion.phoneTurn));
   offset.roll+=Math.PI*.5*turn;offset.x-=.075*turn;offset.y+=.025*turn;offset.z+=.04*turn;
  }
+ if(!reduced&&motion.hop){offset.y+=.07*motion.hop.reach-.055*motion.hop.squash/.047;offset.pitch+=.14*motion.hop.reach;offset.roll-=.12*motion.hop.reach;}
+ if(!reduced&&motion.equipGesture){offset.pitch+=motion.equipGesture*.20;offset.roll-=motion.equipGesture*.26;offset.x+=motion.equipGesture*.035;}
  const cp=Math.cos(offset.pitch),sp=Math.sin(offset.pitch),cr=Math.cos(offset.roll),sr=Math.sin(offset.roll);
  const grip=kind==='phone'?{x:.37,y:-.25,z:.85}:kind==='flashlight'?VIEWMODEL_CONFIG.flashlight:noteGrip;
 
