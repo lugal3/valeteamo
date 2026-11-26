@@ -22,7 +22,7 @@ const paths={
  water:'<path d="M12 3c-3 5-7 9-7 13a7 7 0 0 0 14 0c0-4-4-8-7-13Z"/>',
  screen:'<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/>'
 };
-const kinds={door:'door',key:'key',drawer:'drawer',note:'note',hide:'hide',battery:'battery',flashlight:'torch',screwdriver:'tool',vent:'tool',piano:'piano','rc-car':'car',television:'screen','power-switch':'power','light-switch':'light',hatch:'lock',safe:'lock',rug:'pickup',tap:'water',cupboard:'drawer',rescue:'rescue','emy-cat':'cat','noise-prop':'pickup'};
+const kinds={'holiday-switch':'light',gift:'pickup',collectible:'rescue',door:'door',key:'key',drawer:'drawer',note:'note',hide:'hide',battery:'battery',flashlight:'torch',screwdriver:'tool',vent:'tool',piano:'piano','rc-car':'car',television:'screen','power-switch':'power','light-switch':'light',hatch:'lock',safe:'lock',rug:'pickup',tap:'water',cupboard:'drawer',rescue:'rescue','emy-cat':'cat','noise-prop':'pickup'};
 export function interactionIcon(target,{throwing=false,hidden=false,lying=false}={}){
  if(throwing)return 'throw';if(hidden||lying)return 'exit';return kinds[target?.kind]||'examine';
 }
