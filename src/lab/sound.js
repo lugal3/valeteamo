@@ -399,7 +399,19 @@ export class HouseSound {
   const voice=spookyFoley(ctx,this.channels.alerts,this.atmosphere.noise,kind,level,pan,v=>this.foleyVoices.delete(v));
   this.foleyVoices.add(voice);
  }
- pause(){this.paused=true;this.carEngine(null);this.rcMotor(0);this.recordings?.pause(this.emoteVoice);this.stopMusic();for(const node of this.sequenceNodes||[])try{node.stop();}catch{}for(const voice of this.foleyVoices||[])voice.stop();this.atmosphere?.pause();try{if(this.context?.state==='running')void this.context.suspend().catch(()=>{});}catch{}}
+ // A small original music-box tune for the phone. Reuse the house audio
+ // context and music bus; no autoplay, streaming or extra AudioContext.
+ setPhoneMusic(enabled){this.phoneMusicWanted=!!enabled;this.stopPhoneMusic();if(enabled&&!this.paused){if(this.context?.state==='running')this.startPhoneMusic();else void this.start().then(()=>{if(this.phoneMusicWanted&&!this.paused)this.startPhoneMusic();});}return this.phoneMusicWanted;}
+ startPhoneMusic(){
+  if(!this.phoneMusicWanted||this.phoneMusicTimer!=null||!this.context||this.paused)return;
+  const ctx=this.context,notes=[72,76,79,76,74,77,81,77,71,74,79,74,72,76,79,84];let next=ctx.currentTime+.03,index=0;
+  const tick=()=>{if(this.context!==ctx||ctx.state!=='running'||this.paused)return;while(next<ctx.currentTime+.15){
+   const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';osc.frequency.value=440*Math.pow(2,(notes[index++%notes.length]-69)/12);gain.gain.setValueAtTime(.0001,next);gain.gain.exponentialRampToValueAtTime(.18,next+.012);gain.gain.exponentialRampToValueAtTime(.0001,next+.31);osc.connect(gain);gain.connect(this.musicBus);osc.start(next);osc.stop(next+.33);(this.phoneMusicVoices??=new Set()).add(osc);osc.onended=()=>{osc.disconnect();gain.disconnect();this.phoneMusicVoices?.delete(osc);};next+=.30;
+  }};
+  tick();this.phoneMusicTimer=window.setInterval(tick,75);
+ }
+ stopPhoneMusic(){if(this.phoneMusicTimer!=null){window.clearInterval(this.phoneMusicTimer);this.phoneMusicTimer=null;}for(const node of this.phoneMusicVoices||[])try{node.stop();}catch{}this.phoneMusicVoices?.clear();}
+ pause(){this.stopPhoneMusic();this.paused=true;this.carEngine(null);this.rcMotor(0);this.recordings?.pause(this.emoteVoice);this.stopMusic();for(const node of this.sequenceNodes||[])try{node.stop();}catch{}for(const voice of this.foleyVoices||[])voice.stop();this.atmosphere?.pause();try{if(this.context?.state==='running')void this.context.suspend().catch(()=>{});}catch{}}
  async resume(){
   const ctx=this.context;if(!ctx)return false;
   this.paused=false;
@@ -408,9 +420,9 @@ export class HouseSound {
    if(this.context!==ctx)return false;
    if(this.paused){if(ctx.state==='running')await ctx.suspend();return false;}
    if(ctx.state!=='running')return false;
-   this.atmosphere?.resume();this.startMusic();this.recordings?.setMood(this.threat?'tension':'ambient');
+   this.atmosphere?.resume();this.startMusic();this.startPhoneMusic();this.recordings?.setMood(this.threat?'tension':'ambient');
    return true;
   }catch{return false;}
  }
- destroy(){this.stopPiano();this.stopEmote();this.pause();this.recordings?.destroy();this.atmosphere?.destroy();this.atmosphere=null;this.ambientNodes=[];if(this.context){void this.context.close().catch(()=>{});this.context=null;}}
+ destroy(){this.phoneMusicWanted=false;this.stopPhoneMusic();this.stopPiano();this.stopEmote();this.pause();this.recordings?.destroy();this.atmosphere?.destroy();this.atmosphere=null;this.ambientNodes=[];if(this.context){void this.context.close().catch(()=>{});this.context=null;}}
 }
