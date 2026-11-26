@@ -1905,8 +1905,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
        cat.yaw+=clamp(angle,-dt*5,dt*5);
       }
       shot.rejoinAge=settled?(shot.rejoinAge||0)+dt:0;
-     cat.age+=dt;poseEmy(cat,{walking:moved>.001,mode:moved>.001?'walk':'idle',phase:cat.age,reduced:reducedMotion.matches});
-     if(s.z>=17.7&&s.x>3.8&&s.x<8.0&&cat.z>=17&&shot.rejoinAge>=.55&&Math.hypot(s.x-louis.x,s.z-louis.z)<2.25){
+      shot.reunionBlend=clamp((shot.reunionBlend||0)+(settled?dt*2.4:-dt*4),0,1);
+      if(shot.rejoinAge>=.28&&!shot.reunionHeard){shot.reunionHeard=true;play('cat-purr',cat,.48,view);}
+     cat.age+=dt;poseEmy(cat,{walking:moved>.001,mode:moved>.001?'walk':'idle',phase:cat.age,reduced:reducedMotion.matches,reunion:shot.reunionBlend});
+     if(s.z>=17.7&&s.x>3.8&&s.x<8.0&&cat.z>=17&&shot.rejoinAge>=.85&&Math.hypot(s.x-louis.x,s.z-louis.z)<2.25){
       events.phase='safe';resetInput();
       for(const cue of collectCinematicCues('escape',shot.elapsed,FINALE_BEATS.finish,shot.cues)){play(cue.sound,null,cue.level);caption(cue.caption);}
       showModal('Final 1 · ¡Kitty y Louis escaparon!',
