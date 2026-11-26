@@ -821,7 +821,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    pursuer,emyAbilities.scan>0&&pursuer.active&&renderer.lastScanOutline);
   host.innerHTML=miniatureSVG(world,miniatureView,{floor:emyMapFloor,selectedId:emyMapSelected,lockedIds,markers});
  }
- const mapPointers=new Map();let mapDragged=false,mapSuppressUntil=0,mapRedraw=0,mapUnavailable={},mapRejected={};
+ const mapPointers=new Map();let mapDragged=false,mapSuppressUntil=0,mapRedraw=0,mapUnavailable={},mapRejected={},mapValidation=new Map();
  function scheduleMiniature(){if(!mapRedraw)mapRedraw=requestAnimationFrame(()=>{mapRedraw=0;drawEmyMiniature();});}
  function clearMiniatureInput(){
   const ids=[...mapPointers.keys()];mapPointers.clear();
@@ -856,11 +856,17 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  },{signal,passive:false});
  function renderEmyMap(){
   const all=roomChoices(world.rooms),selected=all.find(r=>r.id===emyMapSelected)||null;
-  mapUnavailable={...mapRejected};
-  for(const r of all.filter(r=>r.floor===emyMapFloor)){
-   if(isEmyRoomLocked(world,r))mapUnavailable[r.id]='🔒 Puerta cerrada';
-   else if(!roomDestinations(world,r).length)mapUnavailable[r.id]='Sin espacio libre';
+  // The house is paused during this dialog, so walkability can be reused
+  // for the current visit instead of rescanning collision boxes per selection.
+  if(!mapValidation.has(emyMapFloor)){
+   const unavailable={};
+   for(const r of all.filter(r=>r.floor===emyMapFloor)){
+    if(isEmyRoomLocked(world,r))unavailable[r.id]='🔒 Puerta cerrada';
+    else if(!roomDestinations(world,r).length)unavailable[r.id]='Sin espacio libre';
+   }
+   mapValidation.set(emyMapFloor,unavailable);
   }
+  mapUnavailable={...mapValidation.get(emyMapFloor),...mapRejected};
   const lockedIds=Object.keys(mapUnavailable);
   const options={selectedId:emyMapSelected,lockedIds,disabledReasons:mapUnavailable};
   for(const floor of [-1,0,1]){
@@ -870,7 +876,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   $('house-emy-map-rooms').setAttribute('aria-labelledby','house-emy-tab-'+emyMapFloor);
   const floorName=emyMapFloor<0?'EXTERIOR':emyMapFloor===0?'PLANTA BAJA':'PLANTA ALTA';
-  $('house-emy-map-rooms').innerHTML=
+  const roomsHost=$('house-emy-map-rooms');
+  const previousList=roomsHost.querySelector('.house-emy-destination-list');
+  const scroll=roomsHost.dataset.floor===String(emyMapFloor)?previousList?.scrollTop||0:0;
+  roomsHost.dataset.floor=String(emyMapFloor);
+  roomsHost.innerHTML=
    '<div class="house-emy-map-layout">'+
     '<section class="house-emy-map-board" aria-label="Vista superior de '+floorName+'">'+
      '<div class="house-emy-map-board-title"><strong>'+floorName+'</strong><span>Miniatura 3D</span></div>'+
@@ -885,13 +895,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     '</section>'+
    '</div>';
   drawEmyMiniature();
+  const destinationList=roomsHost.querySelector('.house-emy-destination-list');if(destinationList)destinationList.scrollTop=scroll;
   $('house-emy-map-send').disabled=!selected||!!mapUnavailable[selected.id];
   $('house-emy-map-status').textContent=selected?
    (mapUnavailable[selected.id]?selected.label+': '+mapUnavailable[selected.id]+'.':
     'Destino: '+selected.label+' · '+(selected.floor?'planta alta':'planta baja')+
     ' · Emy '+(world.emy.y>HEIGHT*.52===Boolean(selected.floor)?'irá caminando':'usará las escaleras')+
     ' y hará ruido durante 25 s.'):
-   emyMapFloor<0?'Elige una planta para abrir la casa.':'Selecciona una habitación en este piso.';
+   emyMapFloor<0?'¿A qué piso quieres enviar a Emy?':'Selecciona una habitación en este piso.';
  }
  function runAction(act,node){
   if(act.startsWith('emy:')){
@@ -923,7 +934,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(act==='emy:map'){
     if(emyAbilities.distractCooldown>0){say('Emy necesita descansar '+Math.ceil(emyAbilities.distractCooldown)+' s.');return;}
     if(emyCompanion?.stage!=='following'){say('Indica primero a Emy que te siga.');return;}
-    emyMapFloor=-1;miniatureView=defaultMiniatureView();clearMiniatureInput();mapRejected={};mapSuppressUntil=0;
+    emyMapFloor=-1;miniatureView=defaultMiniatureView();clearMiniatureInput();mapRejected={};mapValidation.clear();mapSuppressUntil=0;
     emyMapSelected='';
     $('house-emy-menu').hidden=true;$('house-emy-map').hidden=false;
     renderEmyMap();
@@ -1098,7 +1109,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   }
   root.classList.toggle('house-carrying-noise',!!heldNoise);
   for(const button of phone.visibleSlots())if(button.disabled!==!!heldNoise)button.disabled=!!heldNoise;
-  root.classList.toggle('lab-flash-off',!flashlightBeam());
+  root.classList.toggle('lab-flash-off',!s.flashlight||!!heldNoise);
   $('house-light').hidden=!!heldNoise||equipment!=='flashlight'||!!s.hidden||!!s.lying;
   $('house-use-phone').hidden=!!heldNoise||!['phone','paper','rc'].includes(equipment)||notePresentation||!!noteLift||(equipment!=='phone'&&(!!s.hidden||!!s.lying));
   $('house-use-phone').setAttribute('aria-label',equipment==='rc'?'Usar auto RC':equipment==='paper'?'Observar nota':'Usar teléfono');
@@ -1794,7 +1805,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(updateWallClock(world.clock)&&!isPaused()&&Math.hypot(s.x-world.clock.x,s.y,s.z-world.clock.z)<4.5)play('clock-tick',world.clock,.55);
   const torchItem=world.landingTorch;
   torchMarker.hidden=true;
-  if(torchItem&&puzzle.door&&!s.inventory.torch&&!phone.open&&!isPaused()&&!thirdPerson&&!remoteInUse()&&!s.hidden){
+  if(torchItem&&!torchItem.taken&&!s.inventory.torch&&!phone.open&&!isPaused()&&!thirdPerson&&!remoteInUse()&&!s.hidden&&
+   Math.hypot(torchItem.x-view.x,torchItem.y-view.y,torchItem.z-view.z)<3&&
+   !lineBlocked(world.boxes,view,torchItem)){
    const dx=torchItem.x-view.x,dy=torchItem.y-view.y,dz=torchItem.z-view.z;
    const flat=dx*Math.sin(view.yaw)+dz*Math.cos(view.yaw);
    const depth=flat*Math.cos(view.pitch)+dy*Math.sin(view.pitch);
@@ -1815,19 +1828,20 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const canShowName=!isPaused()&&!phone.open&&!heldNoise&&!finalCutscene&&!thirdPerson&&!carShot&&!loisShotDirector&&!remoteInUse();
   const lookingAtEmy=canShowName&&catTarget?.interactable&&Math.hypot(s.x-catTarget.x,s.z-catTarget.z)<=2.45&&closestObject(world,s,focus)===catTarget;
   const showName=advanceEmyNameCue(emyNameCue,shotDelta,!!lookingAtEmy,!isPaused(),canShowName);
-  nameTag.hidden=true;
+  let nameVisible=false;
   if(showName){
    const dx=catTarget.x-view.x,dy=catTarget.y+.28-view.y,dz=catTarget.z-view.z;
    const fwd=dx*Math.sin(view.yaw)+dz*Math.cos(view.yaw),side=dx*Math.cos(view.yaw)-dz*Math.sin(view.yaw);
    const depth=fwd*Math.cos(view.pitch)+dy*Math.sin(view.pitch);
    if(depth>.15){const scale=.65*canvas.clientHeight/depth,px=canvas.clientWidth/2+side*scale,py=canvas.clientHeight/2-(dy*Math.cos(view.pitch)-fwd*Math.sin(view.pitch))*scale;
-    if(px>0&&px<canvas.clientWidth&&py>0&&py<canvas.clientHeight){nameTag.hidden=false;nameTag.style.left=px+'px';nameTag.style.top=py+'px';}
+    if(px>0&&px<canvas.clientWidth&&py>0&&py<canvas.clientHeight){nameVisible=true;nameTag.style.left=px+'px';nameTag.style.top=py+'px';}
    }
   }
+  if(nameTag.hidden===nameVisible)nameTag.hidden=!nameVisible;
   const sparkle=$('house-interest');
   const candidate=!isPaused()&&!phone.open&&!cinematic&&!finalCutscene?
    (focus?.interactable&&!focus.taken&&!focus.concealed?focus:objectives.active?.target):null;
-  if(candidate&&candidate.kind!=='emy-cat'&&candidate.interactable!==false&&!candidate.taken&&!candidate.concealed&&
+  if(candidate&&candidate.kind!=='emy-cat'&&!(candidate===torchItem&&!torchMarker.hidden)&&candidate.interactable!==false&&!candidate.taken&&!candidate.concealed&&
    Math.abs((candidate.floor??candidate.y??0)-s.y)<2.3){
    const dx=candidate.x-view.x,dy=(candidate.y??s.y)+.16-view.y,dz=candidate.z-view.z;
    const forward=dx*Math.sin(view.yaw)+dz*Math.cos(view.yaw),side=dx*Math.cos(view.yaw)-dz*Math.sin(view.yaw);
