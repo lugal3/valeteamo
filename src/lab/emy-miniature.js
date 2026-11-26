@@ -16,14 +16,14 @@ export function miniatureProject(p,view,floor=-1){
 }
 const roomColors={study:'#c4b9e9',living:'#ebafca',kitchen:'#b3d8bd',bath:'#aed6eb',stairs:'#ebc392',bedroom:'#efb6cc',reading:'#d5b9e7',music:'#e8c69a','hall-ground':'#a9bdc9','hall-upper':'#a9bdc9'};
 const quad=(x0,x1,z0,z1,y)=>[[x0,y,z0],[x1,y,z0],[x1,y,z1],[x0,y,z1]];
-function cuboid(x,y,z,w,h,d,colors,faces){
+function cuboid(x,y,z,w,h,d,colors,faces,klass=''){
  const a=quad(x-w/2,x+w/2,z-d/2,z+d/2,y-h/2),b=quad(x-w/2,x+w/2,z-d/2,z+d/2,y+h/2);
- faces.push({p:b,fill:colors[0]});
- for(let i=0;i<4;i++)faces.push({p:[a[i],a[(i+1)%4],b[(i+1)%4],b[i]],fill:colors[1+i%2]||colors[1]});
+ faces.push({p:b,fill:colors[0],klass});
+ for(let i=0;i<4;i++)faces.push({p:[a[i],a[(i+1)%4],b[(i+1)%4],b[i]],fill:colors[1+i%2]||colors[1],klass});
 }
 function polygon(face,project){
  const pts=face.p.map(project),attrs=face.id?' data-zone="'+esc(face.id)+'" data-act="emy:room:'+esc(face.id)+'" aria-label="'+esc(face.label)+'"':'';
- return {depth:pts.reduce((sum,p)=>sum+p.depth,0)/pts.length,html:'<polygon points="'+pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ')+'" fill="'+face.fill+'" stroke="'+(face.stroke||'#30253e')+'" stroke-width="'+(face.width||.85)+'"'+attrs+(face.klass?' class="'+face.klass+'"':'')+' />'};
+ return {points:pts,depth:pts.reduce((sum,p)=>sum+p.depth,0)/pts.length,html:'<polygon points="'+pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ')+'" fill="'+face.fill+'" stroke="'+(face.stroke||'#30253e')+'" stroke-width="'+(face.width||.85)+'"'+attrs+(face.klass?' class="'+face.klass+'"':'')+' />'};
 }
 // The actual world, including real stair opening and walls, is the sole layout source.
 export function miniatureSVG(world,view,{floor=-1,selectedId='',lockedIds=[],markers=[]}={}){
@@ -33,6 +33,14 @@ export function miniatureSVG(world,view,{floor=-1,selectedId='',lockedIds=[],mar
   cuboid(HOUSE.width/2,-.2,HOUSE.depth/2,HOUSE.width+.35,.4,HOUSE.depth+.35,['#b9c1b2','#788b85','#899c90'],faces);
   for(const b of world.boxes.filter(b=>/^(west|east|north|south)-(0|3\.15)-/.test(b.id)&&!b.id.includes('nail')&&!b.id.includes('board')&&!b.id.includes('frame')&&!b.id.includes('rail')&&b.h>.4)){
    cuboid(b.x,b.y,b.z,b.w,b.h,b.d,['#edd8df','#ad91a5','#c8adbc'],faces);
+  }
+  // Show the actual boarded openings and front door; no invented facade.
+  for(const b of world.boxes){
+   if(/^(west|east|north|south)-(0|3\.15)-(frame|rail|board)/.test(b.id)){
+    cuboid(b.x,b.y,b.z,b.w,b.h,b.d,['#b99b83','#826757','#a07d6c'],faces);
+   }else if(b.id==='door-entrada'||b.id==='entry-window-sash'){
+    cuboid(b.x,b.y,b.z,b.w,b.h,b.d,b.id==='door-entrada'?['#bb937f','#805d53','#a27a68']:['#bbd8df','#7793a4','#91afbc'],faces);
+   }
   }
   // Roof dimensions are read from the real gable mesh.
   const roof=world.boxes.find(b=>b.id==='roof');
@@ -56,21 +64,29 @@ export function miniatureSVG(world,view,{floor=-1,selectedId='',lockedIds=[],mar
   const prefix=/^(west-|east-|north-|south-|music-west|music-south|kitchen-divider|bath-divider|stairwell-side)/;
   for(const b of world.boxes){
    if(!prefix.test(b.id)||!b.solid||b.y-b.h/2>level+.15||b.y+b.h/2<level+.35||b.h<1.8)continue;
-   cuboid(b.x,level+.24,b.z,b.w,.48,b.d,['#eee1ed','#97859f','#b9a7bd'],faces);
+   cuboid(b.x,level+.24,b.z,b.w,.48,b.d,['#eee1ed','#97859f','#b9a7bd'],faces,'mini-wall');
   }
   if(floor===0){
    for(let i=0;i<10;i++){
     const z=STAIR.zBottom-(i+.5)*(STAIR.zBottom-STAIR.zTop)/10;
-    cuboid(STAIR.centerX,level+.10+i*.025,z,STAIR.xMax-STAIR.xMin,.17,(STAIR.zBottom-STAIR.zTop)/10-.025,['#bca07e','#92785f','#a58a6c'],faces);
+    cuboid(STAIR.centerX,level+.10+i*.025,z,STAIR.xMax-STAIR.xMin,.17,(STAIR.zBottom-STAIR.zTop)/10-.025,['#bca07e','#92785f','#a58a6c'],faces,'mini-wall');
    }
   }else faces.push({p:quad(STAIR.wellX,HOUSE.width,STAIR.zTop,STAIR.wellZ,level+.01),fill:'#242336',stroke:'#a58ba6',klass:'house-emy-stair-void'});
  }
  const sorted=faces.map(f=>polygon(f,project)).sort((a,b)=>a.depth-b.depth);
- const text=labels.map(o=>{const p=project(o.p);return '<text x="'+p.x.toFixed(1)+'" y="'+p.y.toFixed(1)+'" class="mini-label"'+(!o.locked?' data-act="emy:room:'+esc(o.id)+'"':'')+'>'+esc(o.label)+(o.locked?' 🔒':'')+'</text>';}).join('');
- const pins=floor<0?'':markers.filter(m=>Number.isFinite(m.x)&&Number.isFinite(m.y)&&Number.isFinite(m.z)&&m.x>=0&&m.x<=HOUSE.width&&m.z>=0&&m.z<=HOUSE.depth&&Math.abs(m.y-level)<.6).map(m=>{
-  const p=project([m.x,level+.12,m.z]);return '<g class="mini-pin" data-marker="'+esc(m.id)+'" transform="translate('+p.x.toFixed(1)+' '+p.y.toFixed(1)+')"><circle r="7" fill="'+m.color+'" stroke="#fff" stroke-width="1.5"/><text y="-10">'+esc(m.label)+'</text></g>';
+ // Fit the unzoomed geometry, not a fixed oversized SVG canvas. The user
+ // zoom is deliberately excluded from the fit so zoom still changes scale.
+ let left=Infinity,right=-Infinity,top=Infinity,bottom=-Infinity;
+ for(const face of sorted)for(const p of face.points){
+  const x=260+(p.x-260)/view.zoom,y=171+(p.y-171)/view.zoom;
+  left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);
+ }
+ const margin=23,viewBox=Number.isFinite(left)?[left-margin,top-margin,right-left+2*margin,bottom-top+2*margin].map(v=>v.toFixed(2)).join(' '):'0 0 520 342';
+ const text=labels.map(o=>{const p=project(o.p);return '<text x="'+p.x.toFixed(1)+'" y="'+p.y.toFixed(1)+'" class="mini-label'+(o.locked?' is-locked':'')+'"'+(!o.locked?' data-act="emy:room:'+esc(o.id)+'"':'')+'>'+esc(o.label)+(o.locked?' 🔒':'')+'</text>';}).join('');
+ const pins=floor<0?'':markers.filter(m=>Number.isFinite(m.x)&&Number.isFinite(m.y)&&Number.isFinite(m.z)&&m.x>=0&&m.x<=HOUSE.width&&m.z>=0&&m.z<=HOUSE.depth&&m.y>=-.18&&m.y<=HEIGHT+.6&&(m.y>=HEIGHT*.5?1:0)===floor).map(m=>{
+  const p=project([m.x,level+.12,m.z]);return '<g class="mini-pin" data-marker="'+esc(m.id)+'" transform="translate('+p.x.toFixed(1)+' '+p.y.toFixed(1)+')"><circle r="8" fill="'+m.color+'" stroke="#fff" stroke-width="1.5"/><text y="-12">'+esc(m.label)+'</text></g>';
  }).join('');
- return '<svg viewBox="0 0 520 342" role="img" aria-label="'+(floor<0?'Exterior tridimensional de la casa':'Casa en corte, planta '+(floor?'alta':'baja'))+'" xmlns="http://www.w3.org/2000/svg">'+sorted.map(o=>o.html).join('')+text+pins+'</svg>';
+ return '<svg viewBox="'+viewBox+'" role="img" aria-label="'+(floor<0?'Exterior tridimensional de la casa':'Casa en corte, planta '+(floor?'alta':'baja'))+'" xmlns="http://www.w3.org/2000/svg">'+sorted.map(o=>o.html).join('')+text+pins+'</svg>';
 }
 export function miniatureMarkers(player,cat,threat,scanVisible){
  const out=[{id:'kitty',label:'Kitty',color:'#f3a2c6',...player}];
