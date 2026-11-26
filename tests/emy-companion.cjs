@@ -92,7 +92,7 @@ const assert=require('node:assert/strict');
    checkedFit=true;
   }
  }
- assert(checkedFit);
+ assert(checkedFit,'Trunk approach: '+JSON.stringify({x:companion.cat.x,y:companion.cat.y,z:companion.cat.z,stage:companion.stage,route:companion.route.slice(0,8),target:companion.routeTarget,stuck:companion.stuck,studyDoor:world.objects.find(o=>o.id==='estudio').state}));
  assert.equal(companion.stage,'trunk','Emy uses the stairs and enters the study trunk');
  assert(world.emy.parts.every(part=>part.box.hiddenGeometry));
  // A planted foot should stay put even when the body turns over it.
