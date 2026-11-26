@@ -401,7 +401,7 @@ export class HouseRenderer {
   this.locations={};
   for(const [quality,p] of Object.entries(this.programs)){
    const atrib={},uniform={};for(const key of ['aPos','aCol','aNormal','aUV','aArt','aStyle','aTangent'])atrib[key]=gl.getAttribLocation(p,key);
-   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uHolidayMotion','uHolidayPower','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld','uTV','uTVSignal','uRain','uDawn','uShot','uLoisFace','uFascia','uFasciaReady','uPursuerSkin','uPursuerSkinReady','uPursuerKey','uScanOutline'])uniform[key]=gl.getUniformLocation(p,key);
+   for(const key of ['uEye','uLightEye','uRight','uUp','uForward','uProjection','uNear','uFar','uAtlas','uFlash','uTime','uHolidayMotion','uHolidayPower','uLightDepth','uOcclude','uMaterials','uAtlasSize','uTileSize','uGutter','uInner','uMirrorPass','uHasShadows','uHeld','uTV','uTVSignal','uRain','uDawn','uAltarPulse','uShot','uLoisFace','uFascia','uFasciaReady','uPursuerSkin','uPursuerSkinReady','uPursuerKey','uScanOutline'])uniform[key]=gl.getUniformLocation(p,key);
    uniform.uEmyCoat=gl.getUniformLocation(p,'uEmyCoat');
    uniform.uLamps=gl.getUniformLocation(p,'uLamps[0]');
    this.locations[quality]={atrib,uniform};
@@ -940,7 +940,7 @@ export class HouseRenderer {
   gl.uniform1f(this.uniform.uNear,motion.grasp ? .032 : .07);gl.uniform1f(this.uniform.uFar,45);
   gl.uniform1f(this.uniform.uFlash,beamPower);gl.uniform1f(this.uniform.uTime,time);gl.uniform1f(this.uniform.uHolidayMotion,motion.reduced?0:1);gl.uniform1f(this.uniform.uHolidayPower,this.holidayPower&&!this.holidayPower.on||this.holidayPower&&!this.holidayPower.supply?.on?0:1);
   gl.uniform1f(this.uniform.uShot,motion.shotLight??0);
-  gl.uniform1f(this.uniform.uRain,motion.weather?.rain??0);gl.uniform1f(this.uniform.uDawn,motion.weather?.dawn??0);
+  gl.uniform1f(this.uniform.uRain,motion.weather?.rain??0);gl.uniform1f(this.uniform.uDawn,motion.weather?.dawn??0);gl.uniform1f(this.uniform.uAltarPulse,motion.altarPulse??0);
   gl.uniform3fv(this.uniform.uPursuerKey,motion.pursuerKey||[0,0,0]);
   gl.uniform1f(this.uniform.uOcclude,this.quality==='low'?0:1);
   gl.clearColor(...(motion.weather?.sky??NIGHT_SKY),1);
