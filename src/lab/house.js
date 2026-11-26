@@ -75,7 +75,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const checkpointStore=demo&&!config.trial&&checkpoint==='ground'?config.checkpointStore:null;
  const animator=new CharacterAnimator();
  const root=document.createElement('div');root.id='lab3d';root.innerHTML=`
- <canvas id="lab-canvas" aria-label="Escenario tridimensional interactivo de la casa"></canvas>
+ <canvas id="lab-canvas" tabindex="-1" aria-label="Escenario tridimensional interactivo de la casa"></canvas>
  <div id="house-interest" class="house-interest" aria-hidden="true" hidden><i>✧</i><span>OBJETIVO</span></div>\n <div class="house-screw-glows" aria-hidden="true"><i class="house-vent-screw-glow" data-screw="0" hidden>✧</i><i class="house-vent-screw-glow" data-screw="1" hidden>✧</i><i class="house-vent-screw-glow" data-screw="2" hidden>✧</i><i class="house-vent-screw-glow" data-screw="3" hidden>✧</i></div>
  <div id="torch-outline" class="torch-silhouette" hidden><svg viewBox="0 0 40 20" aria-hidden="true"><path d="M3 6h10l7-4h6v16h-6l-7-4H3z" fill="none" stroke="#c4f3ff" stroke-width="2" transform="rotate(-20 16 10)"/></svg></div>
  <div class="lab-vignette" aria-hidden="true"></div>
@@ -520,7 +520,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   emyMenuOpen=false;$('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;clearMiniatureInput();
   resetInput();if(!isSuspended())sound.resume();
   // Return focus to the game action instead of retaining a hidden dialog card.
-  if(ready&&!isSuspended()){$('lab-interact').hidden=false;$('lab-interact').focus({preventScroll:true});}
+  if(ready&&!isSuspended())requestAnimationFrame(()=>{
+   if(!active||isSuspended()||emyMenuOpen)return;
+   const action=$('lab-interact');(action.hidden||action.disabled?canvas:action).focus({preventScroll:true});
+  });
  }
  function interact(){
   // Throw is a distinct action from pickup: do not swallow an intentional
@@ -749,7 +752,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const notes=s.inventory.notes.map(n=>`<button class="lab-note" data-act="read" data-id="${escapeHTML(n.id)}">✉ ${escapeHTML(n.label)} ↗</button>`).join('')||'<p>Aún no hay notas guardadas.</p>';
   const actions=[['Cerrar mochila','close']];
   const charge=Math.ceil(s.battery);
-  if(charge<100&&s.inventory.batteries>0)actions.unshift(['Usar pila (hasta +'+SPARE_CHARGE+'%)','recharge']);
+  if(!heldNoise&&charge<100&&s.inventory.batteries>0)actions.unshift(['Usar pila (hasta +'+SPARE_CHARGE+'%)','recharge']);
   showModal('Mi mochila',`<p><b>Auto RC:</b> ${s.inventory.rc?'Auto y tablet listos':'Sin recoger'}</p><p><b>⚿ Llave:</b> ${s.inventory.key?'Llave con lazo · abre el dormitorio':'Sin llave con lazo'}</p>${s.inventory.masterKey?'<p><b>Llave maestra</b> · Abre la puerta principal</p>':''}<p><b>Linterna:</b> ${charge}% · <b>Pilas de repuesto:</b> ${s.inventory.batteries}</p><div class="lab-note-list">${notes}</div>`,actions);
  }
  function startBatterySwap(){
@@ -1051,7 +1054,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(act==='recharge'){recharge();return;}
   if(act.startsWith('safe:')){safeAction(act.slice(5));return;}
   if(act==='read'){const note=s.inventory.notes.find(n=>n.id===node.dataset.id);if(note?.id==='mirror-note')showMirrorNote('bag');else if(note)showNote(note,'bag');return;}
-  if(act==='bag'){if(rc?.mode==='driving'||rc?.mode==='deploying')return;$('lab-camera-settings').open=false;bag();return;}
+  if(act==='bag'){
+   if(remoteInUse()||captureShot||finalCutscene||poseTransition||modal&&!node?.closest('#lab-dialog'))return;
+   phone.close();$('lab-camera-settings').open=false;bag();return;
+  }
   if(act==='reset'){
    phone.close();
    if(scenario){ready=false;intro=true;}
