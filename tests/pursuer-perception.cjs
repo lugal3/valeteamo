@@ -59,6 +59,16 @@ const assert=require('node:assert/strict');
  p.update(.05,visible,()=>{},decoy);
  assert.notEqual(p.mode,'rc-chase','A witnessed nearby Kitty takes priority over a decoy');
  assert(p.awareness>=.7);
+ // A horn should be a strong local lure, never an omniscient world ping.
+ p.reset();p.mode='search';Object.assign(p,{x:6,y:3.15,z:2.8,yaw:-Math.PI/2,facing:-Math.PI/2});
+ const hiddenKitty={...unseen,hidden:true};
+ p.update(.05,hiddenKitty,()=>{}, {active:true,noisy:true,x:65,y:3.15,z:65,hidden:false,crouched:true});
+ assert.notEqual(p.mode,'rc-chase','A distant RC horn outside hearing cannot reveal its location');
+ p.update(.05,hiddenKitty,()=>{}, {active:true,noisy:true,x:7.1,y:3.15,z:2.8,hidden:false,crouched:true});
+ assert.equal(p.mode,'rc-chase','A nearby horn attracts the pursuer even outside his line of sight');
+ p.reset();p.mode='search';
+ p.update(.05,hiddenKitty,()=>{}, {active:true,noisy:true,x:Infinity,y:0,z:0});
+ assert.notEqual(p.mode,'rc-chase','Invalid decoy coordinates cannot enter navigation');
  const {difficultyProfile}=await import('../src/lab/difficulty.js');
  const {pursuerPose}=await import('../src/lab/pursuer-model.js');
  const story=difficultyProfile('story',true,3),assisted=difficultyProfile('story',true,1),normal=difficultyProfile('normal',false,3),tense=difficultyProfile('tense',false,3);
