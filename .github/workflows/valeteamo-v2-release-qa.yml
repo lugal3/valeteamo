@@ -55,6 +55,7 @@ jobs:
           - emy-desktop
           - emy-webkit
           - subtle-glows
+          - altar
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -74,6 +75,7 @@ jobs:
           VALE_REQUIRE_FLAC: ${{ github.head_ref == 'feature/v31-telefono-historia-final-perf' && '1' || '0' }}
       - name: Recorrer escenario
         env:
+          ALTAR_QA_ONLY: ${{ matrix.scenario == 'altar' && '1' || '0' }}
           EMY_QA_DIR: artifacts/v2/${{ matrix.scenario }}
           EMY_QA_VIEWPORT: ${{ matrix.scenario == 'emy-desktop' && 'desktop' || 'mobile' }}
           EMY_QA_ENGINE: ${{ matrix.scenario == 'emy-webkit' && 'webkit' || 'chromium' }}
@@ -89,6 +91,7 @@ jobs:
             mobile-input) node tests/house-input-browser.cjs ;;
             3d-production) node tests/house-css-production-browser.cjs ;;
             emy-mobile|emy-desktop|emy-webkit) node tests/emy-abilities-browser.cjs ;;
+            altar) node tests/emy-abilities-browser.cjs ;;
             subtle-glows) node tests/visual-glow-browser.cjs ;;
           esac
       - name: Capturas y evidencias
