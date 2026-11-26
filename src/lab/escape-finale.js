@@ -29,7 +29,7 @@ export function finaleStage(shot,enemy,reduced=false,emy=null){
  const target={x:(enemy.x+louis.x)*.5,y:1.32,z:(enemy.z+louis.z)*.5};
  // Let the framing acknowledge Emy's approach and leap without losing
  // the captive or rotating away from the real porch encounter.
- const witness=emy&&!emy.hidden?.28*ease((t-1.02)/.35)*(1-ease((t-2.10)/.52)):0;
+ const witness=emy&&!emy.hidden ? .28*ease((t-1.02)/.35)*(1-ease((t-2.10)/.52)) : 0;
  if(witness>0){target.x=mix(target.x,emy.x,witness);target.y=mix(target.y,emy.y+.43,witness);target.z=mix(target.z,emy.z,witness);}
  const toward=Math.atan2(target.x-x,target.z-z),tilt=Math.atan2(target.y-y,Math.max(.1,Math.hypot(target.x-x,target.z-z)));
  const reveal=reduced?Number(t>=b.turnEnd):ease((t-b.turnStart)/(b.turnEnd-b.turnStart));
@@ -65,11 +65,16 @@ export function finaleEmyGoal(player){
 // finish while the player stands still. Pure input, no particle simulation.
 // Lighting and lens use the same clock as the actions, never wall time.
 // Existing shader uniforms only: no extra lights, passes or draw calls.
-export function finaleLighting(elapsed,reduced=false){
+export function finaleLighting(elapsed,reduced=false,basis=null){
  const t=Math.max(0,elapsed||0),reveal=ease((t-.36)/.96),exit=ease((t-2.62)/1.16);
  const focus=reveal*(1-exit);
- return {room:.22+.11*focus,pursuer:.22+.39*focus,
-  projection:1-(reduced?0:.09*focus),key:[-.40,.80,.42]};
+ const base=.22*ease(t/.36),directed=[-.40,.80,.42];
+ // Match the shader's default camera-relative key at both ends. No light
+ // direction jump when the renderer stops using the cinematic override.
+ const normal=basis?basis.forward.map((v,i)=>-.61*v-.40*basis.right[i]+.74*basis.up[i]):directed;
+ const key=normal.map((v,i)=>mix(v,directed[i],focus));
+ return {room:base+.11*focus,pursuer:base+.39*focus,
+  projection:1-(reduced?0:.09*focus),key};
 }
 export function finaleWeather(shot,player){
  const dawn=shot?.playable?mix(.13,1,ease((player.z-14.65)/3.05)):.13*ease(((shot?.elapsed??0)-3.08)/.70);
