@@ -72,10 +72,36 @@ const ORIGINAL_GLOW=`
   // Exercise seasonal objects through the real interaction raycast and game loop.
   const use=id=>page.evaluate(id=>window.__rescueHouse.interactWith(id),id);
   const holiday=()=>page.evaluate(()=>window.__rescueHouse.holiday());
+  // Same walkable camera pose for both states: show the entire tree and
+  // gifts rather than staring down at the switch. Inspect real rendered pixels.
+  const treeView=async()=>{
+   await page.evaluate(()=>{
+    const x=10.2,z=1.65,y=3.15,dx=12.60-x,dz=2.27-z;
+    window.__rescueHouse.setPose({x,y,z,yaw:Math.atan2(dx,dz),pitch:Math.atan2(1.13-1.63,Math.hypot(dx,dz))});
+   });
+   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  };
+  const treeShot=async name=>{
+   await treeView();
+   const png=await page.screenshot({path:path.join(dir,name+'.png')});
+   return page.evaluate(async data=>{
+    const img=new Image();img.src='data:image/png;base64,'+data;await img.decode();
+    const canvas=document.createElement('canvas');canvas.width=img.width;canvas.height=img.height;
+    const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);
+    const {data:pixels}=ctx.getImageData(Math.floor(img.width*.37),Math.floor(img.height*.22),Math.floor(img.width*.26),Math.floor(img.height*.56));
+    let total=0,bright=0;
+    for(let i=0;i<pixels.length;i+=4){
+     const l=.2126*pixels[i]+.7152*pixels[i+1]+.0722*pixels[i+2];total+=l;if(l>75)bright++;
+    }
+    return {luminance:total/(pixels.length/4),brightPixels:bright};
+   },png.toString('base64'));
+  };
   await use('holiday-tree-switch');assert.equal((await holiday()).powered,false);
-  await page.screenshot({path:path.join(dir,'arbol-apagado.png')});
+  const treeOff=await treeShot('arbol-apagado');
   await use('holiday-tree-switch');assert.equal((await holiday()).powered,true);
-  await page.screenshot({path:path.join(dir,'arbol-encendido.png')});
+  const treeOn=await treeShot('arbol-encendido');
+  assert(treeOn.luminance>treeOff.luminance+.5,'Powered tree must visibly illuminate its own foliage: '+JSON.stringify({treeOff,treeOn}));
+  fs.writeFileSync(path.join(dir,'tree-comparison.json'),JSON.stringify({treeOff,treeOn,notes:'Same camera, real WebGL screenshot, central tree region'},null,2));
   await use('house-power');assert.equal((await holiday()).powered,false);
   await use('house-power');assert.equal((await holiday()).powered,true);
   await use('plush-gift');
