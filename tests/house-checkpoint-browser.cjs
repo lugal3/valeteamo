@@ -23,13 +23,14 @@ async function run(){
  try{
   await server.listen();
   const url='http://127.0.0.1:'+server.httpServer.address().port+'/';
-  browser=await browserType.launch({headless:true,args:browserType===chromium?
+  const launchBrowser=()=>browserType.launch({headless:true,args:browserType===chromium?
    ['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']:[]});
   let page,screenshotSession;
   const errors=[];
   const freshPage=async()=>{
-   if(page)await page.context().close();
-   page=await browser.newPage({viewport:{width:960,height:540},reducedMotion:'reduce'});
+   if(browser)await browser.close();
+    browser=await launchBrowser();
+    page=await browser.newPage({viewport:{width:960,height:540},reducedMotion:'reduce'});
    screenshotSession=browserType===chromium?await page.context().newCDPSession(page):null;
    page.setDefaultTimeout(60000);
    page.on('pageerror',error=>errors.push(error.message));
@@ -102,10 +103,9 @@ async function run(){
   const trialCases=[...Array.from({length:12},(_,i)=>['hito-'+(i+1),i<7]),
    ...['mirror','drawer','safe','mirror-note','bedroom','arrival','wardrobe','wake','battery','power','piano','basement','television'].map(id=>[id,true]),['car',false]];
   for(const [index,[id,visible]] of trialCases.entries()){
-   // The software GPU stalled even after a document navigation. Release its
-   // entire browser context after two real mount/exit cycles; every pair
-   // still exercises reopening LP without reload, and every card is tested.
-   if(index>0&&index%2===0){await freshPage();await openMenu();}
+   // Release the entire shared software GPU process between heavy previews.
+    // Every card still uses the actual menu, physical click and exit.
+    if(index>0){await freshPage();await openMenu();}
    const card=page.locator('button[aria-labelledby="trial-'+id+'"]');
    await card.waitFor({state:'attached'});
    if(!await card.isVisible())await card.evaluate(el=>{el.closest('details').open=true;});
@@ -122,7 +122,7 @@ async function run(){
     // construct an assertion message. Wait for the new live harness instead.
     // Poll the mounted DOM/DEV API by timer, independently of throttled
     // requestAnimationFrame on the static software-WebGL preview.
-    await page.waitForFunction(()=>!!window.__rescueHouse&&document.querySelector('#lab3d #lab-dialog [data-act="start"]'),null,{timeout:60000,polling:250});
+    await page.waitForFunction(()=>Boolean(window.__rescueHouse&&document.querySelector('#lab3d #lab-dialog [data-act="start"]')),null,{timeout:60000,polling:250});
     assert.equal(await page.locator('#lab3d .lab-error').count(),0);
    }catch(error){
     console.log('LP_TRIAL_FAILURE',id,await page.evaluate(()=>({body:document.body.innerText.slice(0,1600),api:!!window.__rescueHouse,root:!!document.querySelector('#lab3d'),start:!!document.querySelector('#lab3d #lab-dialog [data-act="start"]'),visibility:document.visibilityState})),errors);
@@ -155,7 +155,7 @@ async function run(){
   }
   console.log('PASS LP checkpoint companions: same-floor visible Emy before hatch, hidden at basement/escape, live actions and isolated car');
 
-  await openMenu();
+   await freshPage();await openMenu();
   const birthday={version:1,index:0,unlocked:0,character:'louis',muted:true,started:true,answers:{}};
   await write(BIRTHDAY_KEY,birthday);
   await write(PROLOGUE_KEY,{version:1,stage:'ribbon',hp:5,clues:0,completed:false});
