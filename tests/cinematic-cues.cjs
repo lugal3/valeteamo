@@ -1,7 +1,7 @@
 // Phase 10: real ending cue timeline; preserve the original finale state machine.
 const assert=require('node:assert/strict'),fs=require('node:fs');
 (async()=>{
- const {ESCAPE_FINALE_CUES,collectCinematicCues}=await import('../src/lab/cinematic-cues.js');
+ const {ESCAPE_FINALE_CUES,WINDOW_ENTRY_CUES,collectCinematicCues}=await import('../src/lab/cinematic-cues.js');
  assert(ESCAPE_FINALE_CUES.length>=4);
  assert.deepEqual(ESCAPE_FINALE_CUES.map(c=>c.at),[...ESCAPE_FINALE_CUES].map(c=>c.at).sort((a,b)=>a-b));
  assert.equal(new Set(ESCAPE_FINALE_CUES.map(c=>c.id)).size,ESCAPE_FINALE_CUES.length);
@@ -16,6 +16,18 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  assert.equal(collectCinematicCues('escape',8,0,play).length,0,'never rewind sound on scene reset');
  const skipped=collectCinematicCues('escape',0,10,new Set());
  assert.equal(skipped.length,ESCAPE_FINALE_CUES.length,'large frame jump must not miss events');
+ // Window sound cues are deterministic at different frame rates and on resume.
+ assert.equal(new Set(WINDOW_ENTRY_CUES.map(c=>c.id)).size,WINDOW_ENTRY_CUES.length);
+ assert(WINDOW_ENTRY_CUES.every((cue,i)=>cue.at>0&&cue.at<10&&(!i||cue.at>WINDOW_ENTRY_CUES[i-1].at)));
+ assert(WINDOW_ENTRY_CUES.filter(c=>c.sound==='cloth').length>=3,'Repeated sounds have independent contact IDs');
+ for(const hz of [15,30,60,120]){
+  const played=new Set(),ids=[];
+  for(let i=1;i<=hz*10;i++){
+   ids.push(...collectCinematicCues('window',(i-1)/hz,i/hz,played).map(c=>c.id));
+   assert.equal(collectCinematicCues('window',i/hz,i/hz,played).length,0);
+  }
+  assert.deepEqual(ids,WINDOW_ENTRY_CUES.map(c=>c.id),'Same sound sequence at '+hz+' Hz');
+ }
  const {FINALE_BEATS,finaleStage,finaleThreat,finaleWeather,finaleEmyGoal}=await import('../src/lab/escape-finale.js');
  const {createHouse,blocked,lineBlocked}=await import('../src/lab/world.js');
  const {poseEscapeAmbush}=await import('../src/lab/emy-rescue.js');
@@ -105,6 +117,22 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   const guiding=finaleEmyGoal({x:startX,z:16.4}),rejoin=finaleEmyGoal({x:startX,z:17.7});
   assert(!guiding.rejoin&&rejoin.rejoin);
   assert(Math.hypot(rejoin.x-startX,rejoin.z-17.7)<1,'Return beside Kitty at sunrise');
+ }
+ // The cat follows a gravitational arc and makes contact before release.
+ const {poseEmy}=await import('../src/lab/emy-cat.js');
+ for(const reduced of [false,true]){
+  const shot={elapsed:0,kitty:{from:{x:5.95,z:12.42}}},cat={x:0,y:0,z:0,yaw:0,age:0,parts:[],hidden:true},enemy={};
+  const sample=t=>{shot.elapsed=t;poseEscapeAmbush(shot,cat,enemy,reduced);return cat.y;};
+  assert.equal(sample(1.45),0);
+  const h1=sample(1.61),h2=sample(1.77),h3=sample(1.93),h4=sample(2.09);
+  assert(h2-h1>h3-h2&&h3-h2>h4-h3&&h4>.95,'Decelerates to the apex');
+  const h5=sample(2.25),h6=sample(2.41),h7=sample(2.57),h8=sample(2.73);
+  assert(h4-h5<h5-h6&&h5-h6<h6-h7&&h6-h7<h7-h8+1e-9,'Accelerates towards the ground');
+  assert(Math.abs(h8)<1e-9,'Lands on the ground');
+  sample(2.08);
+  assert(cat.landmarks.legs['front-1'].paw[2]>cat.landmarks.legs.front1.paw[2],'Leading paw reaches contact first');
+  poseEmy(cat,{mode:'idle',phase:0,reduced});const neutral=cat.landmarks.head[1];
+  poseEmy(cat,{mode:'idle',phase:0,reduced,reunion:1});assert(cat.landmarks.head[1]>neutral+.04,'Relief gesture uses the original cat rig');
  }
  const threat=finaleThreat({mode:'chase'},1.65,false);
  assert(threat.captureReach>.5&&threat.captureFace.left>0&&threat.captureFace.jaw>0,'Visible rig-native transformation during the grab');
