@@ -118,10 +118,12 @@ async function run(){
     // React can mount a new scene while the previous effect is cleaning up.
     // Do not eagerly resolve locator.innerText on a detached root just to
     // construct an assertion message. Wait for the new live harness instead.
-    await page.waitForFunction(()=>!!window.__rescueHouse&&document.querySelector('#lab3d #lab-dialog [data-act="start"]'),null,{timeout:60000});
+    // Poll the mounted DOM/DEV API by timer, independently of throttled
+    // requestAnimationFrame on the static software-WebGL preview.
+    await page.waitForFunction(()=>!!window.__rescueHouse&&document.querySelector('#lab3d #lab-dialog [data-act="start"]'),null,{timeout:60000,polling:250});
     assert.equal(await page.locator('#lab3d .lab-error').count(),0);
    }catch(error){
-    console.log('LP_TRIAL_FAILURE',id,await page.evaluate(()=>document.body.innerText.slice(0,1600)),errors);
+    console.log('LP_TRIAL_FAILURE',id,await page.evaluate(()=>({body:document.body.innerText.slice(0,1600),api:!!window.__rescueHouse,root:!!document.querySelector('#lab3d'),start:!!document.querySelector('#lab3d #lab-dialog [data-act="start"]'),visibility:document.visibilityState})),errors);
     throw error;
    }
    const state=await snapshot(),cat=await page.evaluate(()=>window.__rescueHouse.emy());
@@ -145,7 +147,7 @@ async function run(){
    const exit=page.locator('#lab-dialog [data-act="exit"]');
    await exit.waitFor({state:'visible'});
    await clickTrialButton(exit);
-   await page.waitForFunction(()=>!window.__rescueHouse&&!document.querySelector('#lab3d'));
+   await page.waitForFunction(()=>!window.__rescueHouse&&!document.querySelector('#lab3d'),null,{polling:250,timeout:60000});
    await page.locator('.playtest-menu[data-admin-panel="lp"]').waitFor();
    console.log('PASS LP '+id+' — '+cat.companion);
   }
