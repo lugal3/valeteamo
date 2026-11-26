@@ -13,10 +13,10 @@ const dockPaths={
 const dockIcon=kind=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${dockPaths[kind]}</svg>`;
 
 export class PhoneUI{
- constructor(root,onEquip,onClose,{canUse=()=>true,canEquip=canUse,onEdit=()=>{},onPhoto=()=>{},onMap=()=>{},onAppChange=()=>{},onHint=()=>{},onMusic=()=>{}}={}){
+ constructor(root,onEquip,onClose,{canUse=()=>true,canEquip=canUse,onEdit=()=>{},onPhoto=()=>{},onMap=()=>{},onAppChange=()=>{},onHint=()=>{},onMusic=()=>{},onManual=()=>{},manualHTML=()=>''}={}){
   this.root=root;this.open=false;this.app='home';this.last='';this.readCount=0;this.score=0;this.direction=[1,0];this.pending=[1,0];this.resetSnake();
   this.gallery=[...gallerySprites];this.selectedPhoto=null;this.photoCount=0;this.messageTimes=new WeakMap();this.messageCount=0;this.latestNotice=null;this.clockMinute=-1;this.history=earlierMessages();
-  this.canUse=canUse;this.onEdit=onEdit;this.onAppChange=onAppChange;this.onMusic=onMusic;this.homePage=0;this.flash=true;this.musicPlaying=false;this.notes=[];this.objective='';this.hint='';this.photoFlashTimer=0;this.editing=false;this.preview=false;this.onPresentationChange=()=>{};
+  this.canUse=canUse;this.onEdit=onEdit;this.onAppChange=onAppChange;this.onMusic=onMusic;this.manualHTML=manualHTML;this.homePage=0;this.flash=true;this.musicPlaying=false;this.notes=[];this.objective='';this.hint='';this.photoFlashTimer=0;this.editing=false;this.preview=false;this.onPresentationChange=()=>{};
   try{this.layout=readHUD(window.localStorage);}catch{this.layout={...DEFAULT_HUD};}
   const host=document.createElement('div');host.className='house-equipment';host.innerHTML=`<nav class="house-hotbar" aria-label="Objetos equipados"><button data-equip="flashlight" aria-label="Equipar linterna" title="Linterna"><span></span><small></small></button><button data-equip="phone" aria-label="Equipar teléfono" title="Teléfono"><span></span><small></small><b class="phone-badge" hidden>●</b></button></nav><button class="phone-notice" type="button" hidden></button>
   <section class="phone-screen" hidden role="dialog" aria-modal="true" aria-label="Teléfono de Kitty"><div class="phone-shell" data-page="home"><div class="phone-status"><time></time><i aria-hidden="true"></i><svg viewBox="0 0 44 14" aria-hidden="true"><path fill="currentColor" d="M1 10h2v3H1zm4-3h2v6H5zm4-3h2v9H9zm4-3h2v12h-2zm8 3h17v6H21z"/><rect x="19" y="2" width="21" height="10" rx="2" stroke="currentColor" fill="none"/><path d="M42 5v4" stroke="currentColor"/></svg></div><header><button data-app="home" aria-label="Volver al inicio del teléfono">‹</button><b></b><button data-app="close" aria-label="Guardar teléfono">×</button></header><main tabindex="-1"></main><button class="phone-home-indicator" data-app="home" aria-label="Inicio del teléfono"></button></div></section>
@@ -45,6 +45,7 @@ export class PhoneUI{
    if(e.target.closest('.phone-notice')){onEquip('phone',false);this.show('messages');return;}
    if(performance.now()<suppressUntil&&this.app==='home'){e.preventDefault();return;}
    const dot=e.target.closest('button[data-home-page]');if(dot){this.changePage(Number(dot.dataset.homePage));return;}
+   const manual=e.target.closest('[data-manual]');if(manual){onManual(manual.dataset.manual);return;}
    const b=e.target.closest('[data-app]');if(b){if(b.dataset.app==='maps'){onMap();return;}if(b.dataset.app==='close'){this.close();onClose();}else{this.setApp(b.dataset.app);}}
    if(e.target.closest('[data-photo=take]'))onPhoto();
    if(e.target.closest('[data-photo=flash]')){this.flash=!this.flash;this.last='';this.update(this.events,0);}
@@ -199,7 +200,7 @@ export class PhoneUI{
   }
   main.hidden=this.app==='settings';
   if(this.app==='progress')main.innerHTML=this.progress?.html||'';
-  shell.querySelector('header b').innerHTML={home:'',messages:'<span class="phone-avatar">L</span> Mi Luis ❤️',snake:'Snake · '+this.score,photos:'Fotos',camera:'Cámara',settings:'Settings',progress:'Progreso',journal:'Diario',music:'Música',clock:'Reloj',calendar:'Calendario',weather:'Tiempo',calculator:'Calculadora',contacts:'Contactos',heart:'Recuerdos'}[this.app]||'';
+  shell.querySelector('header b').innerHTML={home:'',messages:'<span class="phone-avatar">L</span> Mi Luis ❤️',snake:'Snake · '+this.score,photos:'Fotos',camera:'Cámara',settings:'Settings',progress:'Progreso',journal:'Diario',music:'Música',clock:'Reloj',calendar:'Calendario',weather:'Tiempo',calculator:'Calculadora',contacts:'Contactos',heart:'Recuerdos',manual:'Manual de campo'}[this.app]||'';
   shell.querySelector('header [data-app=home]').hidden=this.app==='home';
   if(this.app==='home')main.innerHTML=phoneHome(unread,this.homePage);
   if(this.app==='messages'){
@@ -211,6 +212,7 @@ export class PhoneUI{
   if(this.app==='photos')main.innerHTML=this.selectedPhoto?`<button data-app="photos">‹ Todas las fotos</button><img class="phone-full-photo" src="${this.selectedPhoto.url}" alt="${this.selectedPhoto.label}">`:`<div class="phone-gallery">${this.gallery.map((photo,i)=>`<button data-photo-index="${i}"><img loading="lazy" src="${photo.url}" alt=""><span>${photo.label}</span></button>`).join('')}</div>`;
   if(this.app==='camera')main.innerHTML=`<div class="phone-camera-view"><canvas width="480" height="270" aria-label="Visor de la casa"></canvas><div class="phone-camera-grid" aria-hidden="true"></div></div><div class="phone-camera-actions"><button data-app="photos" aria-label="Abrir Fotos">${this.photoCount?`<img src="${this.gallery[0].url}" alt="">`:'▧'}</button><button data-photo="take" aria-label="Fotografiar la casa"></button><button data-photo="flash" aria-label="Flash" aria-pressed="${this.flash}">${this.flash?'⚡':'⚡̸'}</button></div><small class="phone-camera-mode">FOTO · 16:9</small>`;
   if(this.app==='journal')main.innerHTML=phoneJournal(this.notes,this.objective);
+  if(this.app==='manual')main.innerHTML=this.manualHTML();
   if(this.app==='music')main.innerHTML='<div class="phone-music"><div class="phone-album">♫</div><h2>Una melodía para Kitty</h2><p>Melodía original · caja musical</p><button data-phone-music aria-pressed="'+this.musicPlaying+'">'+(this.musicPlaying?'Ⅱ Pausar':'▶ Reproducir')+'</button></div>';
   if(['weather','clock','calendar','calculator','contacts','heart'].includes(this.app)){
    const descriptions={weather:'Noche tranquila · sin conexión meteorológica',clock:formatPhoneTime(),calendar:'Un día especial ♡',calculator:'Calculadora · vista decorativa',contacts:'Mi Luis ❤️ · Lois · Emy ♡',heart:'Cada recuerdo cuenta ♡'};
