@@ -59,6 +59,41 @@ const {chromium,webkit}=require('playwright');
   assert(userAudio.duration>40,'The real nine-effect user audio sprite must decode in the browser');
   assert(['opus','mp3'].includes(userAudio.codec),'Browser must select Opus or compatible MP3');
   assert.deepEqual(userAudio.errors,[],'Fallback must not report unresolved user audio errors');
+  if(process.env.ALTAR_QA_ONLY==='1'){
+   // Open the actual door, then start at the walkable corridor threshold.
+   await page.evaluate(async()=>{
+    const h=window.__rescueHouse;h.clearThreatFixture();
+    if(!h.snapshot().doors.find(d=>d.id==='habitación').open)await h.interactWith('habitación');
+    h.setPose({x:9,y:3.15,z:3.7,yaw:Math.PI,pitch:-.45});
+    h.placeEmyAtThreshold();
+   });
+   await page.waitForFunction(()=>{const a=window.__rescueHouse.altar();return a.fear&&a.bristle>.9&&a.earFlatten>.85;},null,{timeout:45000});
+   await shot(page,'altar-01-emy-erizada');
+   // Real movement through the doorway, not a teleport into the room.
+   await page.keyboard.down('w');
+   try{await page.waitForFunction(()=>window.__rescueHouse.snapshot().position.z<2.75,null,{timeout:30000});}
+   finally{await page.keyboard.up('w');}
+   await page.waitForFunction(()=>{const h=window.__rescueHouse,a=h.altar(),c=h.emy();return a.inside&&a.waiting&&a.fear&&c.z>=3&&a.pulse>.8;},null,{timeout:45000});
+   const waiting=await page.evaluate(()=>window.__rescueHouse.emy());
+   assert(waiting.y>3&&waiting.z>=3,'Emy waits on the correct side of the real doorway');
+   // Use the same contextual selection and interaction handler as gameplay.
+   await page.evaluate(()=>window.__rescueHouse.interactWith('louis-altar',false));
+   await shot(page,'altar-02-interior');
+   await page.evaluate(()=>window.__rescueHouse.interactWith('record-player'));
+   await page.waitForFunction(()=>window.__rescueHouse.altar().recorded,null,{timeout:10000});
+   assert((await page.evaluate(()=>window.__rescueHouse.altar())).recordCooldown>0);
+   await shot(page,'altar-03-tocadiscos');
+   await page.evaluate(()=>window.__rescueHouse.setPose({x:9,y:3.15,z:3.7,yaw:0,pitch:0}));
+   await page.keyboard.down('w');
+   try{await page.waitForFunction(()=>window.__rescueHouse.snapshot().position.z>6.1,null,{timeout:30000});}
+   finally{await page.keyboard.up('w');}
+   await page.waitForFunction(()=>{const h=window.__rescueHouse,a=h.altar(),c=h.emy(),p=h.snapshot().position;return !a.waiting&&!a.fear&&c.alarm<.15&&Math.hypot(c.x-p.x,c.z-p.z)<2.5;},null,{timeout:45000});
+   await shot(page,'altar-04-emy-vuelve');
+   assert.deepEqual(errors,[]);
+   await page.evaluate(()=>window.closeHouse());
+   console.log('PASS altar browser: real doorway, raised fur, record interaction and return to following');
+   return;
+  }
   const skills=()=>page.evaluate(()=>window.__rescueHouse.emySkills());
   const interactEmy=()=>page.evaluate(()=>window.__rescueHouse.interactWith('emy-upstairs'));
   await page.evaluate(()=>window.__rescueHouse.interactWith('emy-upstairs',false));
