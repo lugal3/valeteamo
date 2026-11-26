@@ -1,7 +1,8 @@
 import {FLASH_REACH,FLASH_SPREAD,LAMP_REACH,LAMP_SPREAD,SHADOW_ATLAS,SHADOW_GRID,SHADOW_TILE,VISIBLE_LAMPS} from './lighting.js';
 import {ATLAS_SIZE,TILE_SIZE,GUTTER,INNER} from './materials.js';
 import {MIRROR_PLANE} from './mirror.js';
-import {HOUSE} from './house-layout.js';
+import {HOUSE,HEIGHT} from './house-layout.js';
+import {HOLIDAY_TREE} from './holiday-tree.js';
 export const VERTEX_SHADER=`
 precision highp float;
 attribute vec3 aPos,aCol,aNormal,aTangent;
@@ -357,6 +358,16 @@ void main(){
  float spill=windowZ*sillMask*boardMask*(1.0-smoothstep(.10,1.1,world.x))*step(0.0,world.x)*step(0.0,world.y);
  ambient+=vec3(.025,.040,.066)*spill;
  ambient=mix(ambient,vec3(.056,.048,.047),smoothstep(.18,1.1,-world.y));
+ // Local, power-gated warmth around the small Christmas tree. Restrict it
+ // to the upstairs music room: no leak through its south wall or the floor.
+ // This is a bounded diffuse fill in the existing batch, not a new lamp,
+ // shadow pass, screen overlay or source of gameplay visibility.
+ if(uHolidayPower>.5&&world.y>${HEIGHT.toFixed(2)}&&world.y<${(HEIGHT+2.8).toFixed(2)}&&world.x>11.2&&world.z<3.0&&world.z>0.0){
+  vec3 offset=world-vec3(${HOLIDAY_TREE.x.toFixed(2)},${(HEIGHT+1.13).toFixed(2)},${HOLIDAY_TREE.z.toFixed(2)});
+  float nearTree=(1.0-smoothstep(.25,1.0,length(offset*vec3(1.0,.65,1.0))));
+  nearTree*=smoothstep(0.0,.14,world.y-${HEIGHT.toFixed(2)})*(1.0-smoothstep(2.85,3.0,world.z));
+  ambient+=vec3(.34,.25,.20)*nearTree;
+ }
  vec3 lighting=(ambient+uShot*vec3(.75,.83,1.0))*facing+vec3(.94,.97,1.0)*(beam+motes*.50)+vec3(1.0,.82,.60)*warmth;
  // Retro character artwork carries a subtle baked fill light. Without it the
  // skin nearly disappears in shadow while the separate eyes remain bright.
@@ -381,12 +392,12 @@ void main(){
   shine=mix(s8*s8,s4,rough)*(1.0-rough)*beam*.14;
  }
  color=color*lighting/(1.0+.24*lighting)+vec3(1.0,.91,.79)*shine;
- if(vStyle>31.5)color=mix(color,vColor*(.55+material.r*.40),.82*(vStyle>47.5?uHolidayPower:1.0));
- // Styles 48–63 are reserved for the little static holiday bulbs. Slow,
- // low-contrast emission modulation; no shadow or point-light allocation.
- if(vStyle>47.5&&vStyle<63.5){
-  float pulse=.94+uHolidayMotion*.07*sin(uTime*.75+vWorld.x*1.7+vWorld.y*2.1+vWorld.z);
-  color*=pulse;
+ if(vStyle>31.5&&vStyle<47.5)color=mix(color,vColor*(.55+material.r*.40),.82);
+ // Styles 48–63: static tree lights, bright colored cores only when powered.
+ // Keep reduced-motion emission constant and preserve the unlit material.
+ if(vStyle>47.5&&vStyle<63.5&&uHolidayPower>.5){
+  float pulse=.96+uHolidayMotion*.04*sin(uTime*.75+vWorld.x*1.7+vWorld.y*2.1+vWorld.z);
+  color=mix(color,mix(vColor,vec3(1.0,.94,.86),.22)*pulse,.94);
  }
  float fog=clamp((vDistance-6.0)/25.0,0.0,.32);
  color=mix(color,vec3(.024,.030,.054),fog);
