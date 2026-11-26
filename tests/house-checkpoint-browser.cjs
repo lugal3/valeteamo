@@ -41,6 +41,8 @@ async function run(){
   const snapshot=()=>page.evaluate(()=>window.__rescueHouse.snapshot());
   const use=(id,activate=true)=>page.evaluate(([id,activate])=>window.__rescueHouse.interactWith(id,activate),[id,activate]);
   const stage=()=>page.evaluate(()=>window.__rescueHouse.story().phase);
+  const field=()=>page.locator('.field-overlay:not([hidden])');
+  const dismissField=async id=>{await page.waitForFunction(id=>window.__rescueHouse?.story().tutorial===id,id);assert((await snapshot()).paused,'Field tutorial really pauses the game');await field().locator('[data-field-close]').click();await field().waitFor({state:'hidden'});};
   const checkpoint=async()=> (await read(RESCUE_KEY)).houseCheckpoint;
   const shot=async name=>{
    if(!SHOTS)return;
@@ -171,8 +173,18 @@ async function run(){
   assert.equal((await read(RESCUE_KEY)).phase,'house','A prologue saved during handoff reaches the house');
   assert.equal((await checkpoint()).stage,'explore');
   console.log('Checkpoint QA: normal house entry');
-
+  await field().waitFor();await shot('00c-tutorial-movimiento');await dismissField('movement');
+  assert((await checkpoint()).tutorials.includes('movement'));
+  await page.locator('[data-equip=phone]').click();
+  await page.getByRole('button',{name:'Usar teléfono',exact:true}).click();
+  await dismissField('phone');
+  await page.locator('[data-home-page="1"]').click();
+  await page.locator('[data-app=manual]').click();
+  assert.equal(await page.locator('[data-manual=movement]').count(),1);assert.equal(await page.locator('[data-manual=hide]').count(),0);
+  await page.locator('[data-manual=movement]').click();await dismissField('movement');
+  await page.locator('.phone-shell [data-app=close]').click();
   await require('./helpers/fetch-ribbon.cjs')(page);
+  await dismissField('threat');
   assert.equal((await snapshot()).puzzle.note,false,'The study key needs no hall note');
   // Torch is on top of the landing cabinet; this drawer contains no quest item.
   // The rescue must not require opening an irrelevant drawer first.
@@ -191,6 +203,7 @@ async function run(){
   await page.emulateMedia({reducedMotion:'no-preference'});
   await reloadHouse();
   assert.equal((await snapshot()).cinematic,false);
+  assert.equal(await field().count(),0,'Seen tutorials do not recur on reload');
   assert.equal((await snapshot()).notes,0);
   assert.equal((await snapshot()).puzzle.key,true);
   assert(await page.locator('[data-equip=key]').isVisible());
@@ -212,7 +225,26 @@ async function run(){
   assert(await page.locator('[data-equip=key]').isHidden(),'The bedroom already consumed the study key');
 
   const interior=await read(RESCUE_KEY);
-  await write(RESCUE_KEY,{...interior,houseCheckpoint:{...interior.houseCheckpoint,stage:'rest'}});
+  await page.waitForFunction(()=>window.__rescueHouse.story().tutorial==='hide',null,{timeout:60000});
+  assert.equal(await page.evaluate(()=>window.__rescueHouse.story().remaining),10);
+  await page.waitForTimeout(250);assert.equal(await page.evaluate(()=>window.__rescueHouse.story().remaining),10,'Reading time is not survival time');
+  await shot('02b-tutorial-escondite');await dismissField('hide');
+  await page.locator('.field-countdown').waitFor();
+  await use('wardrobe');
+  await page.waitForFunction(()=>window.__rescueHouse.snapshot().hidden);
+  await page.waitForFunction(()=>window.__rescueHouse.story().phase==='patrol',null,{timeout:60000});
+  assert.equal(await page.evaluate(()=>window.__rescueHouse.story().pursuer.y),3.15,'Pursuer has already climbed by the deadline');
+  assert((await checkpoint()).tutorials.includes('hide'));
+  const seen=(await checkpoint()).tutorials;
+  await write(RESCUE_KEY,{...interior,houseCheckpoint:{...interior.houseCheckpoint,tutorials:seen}});
+  await reloadHouse();
+  await page.waitForFunction(()=>window.__rescueHouse.story().phase==='hide',null,{timeout:60000});
+  assert.equal(await field().count(),0,'Hide tutorial does not repeat on retry');
+  await page.waitForFunction(()=>window.__rescueHouse.story().phase==='failed',null,{timeout:60000});
+  assert.equal(await page.evaluate(()=>window.__rescueHouse.story().pursuer.y),3.15);
+  assert.equal((await checkpoint()).lives,2,'Exactly one life lost at zero');
+  console.log('PASS field manual, paused reading, successful hiding and deadline capture');
+  await write(RESCUE_KEY,{...interior,houseCheckpoint:{...interior.houseCheckpoint,tutorials:seen,stage:'rest'}});
   await reloadHouse();
   assert.equal(await stage(),'sleep');
   assert.equal(await page.evaluate(()=>window.__rescueHouse.story().pursuer.mode),'sleeping');
@@ -353,6 +385,8 @@ async function run(){
   assert.equal(await stage(),'explore');
   assert.equal((await snapshot()).puzzle.key,false);
   assert.equal((await checkpoint()).version,2,'An unknown interior schema falls back to the window');
+  await dismissField('movement');
+  await page.locator('[data-equip=phone]').click();await page.getByRole('button',{name:'Usar teléfono',exact:true}).click();await dismissField('phone');
   await togglePhoneSettings(page);
   await page.getByRole('button',{name:'Reiniciar casa',exact:true}).click();
   assert.equal(await checkpoint(),undefined);
