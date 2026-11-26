@@ -325,3 +325,18 @@
  #lab3d .mini-tools button{flex:1 1 40px;min-width:30px;min-height:35px}
  #lab3d .house-emy-intro{display:none}
 }
+
+/* Screenshot review: older V2 selectors were winning the cascade and
+   stacking the close buttons and fourth card. Explicitly scope V3 layout. */
+#lab3d .house-emy-menu>header{display:flex;flex-direction:column;min-height:44px;box-sizing:border-box;align-items:flex-start;justify-content:center}
+#lab3d .house-emy-menu>header>.emy-close{grid-column:auto;grid-row:auto;right:0;top:0}
+#lab3d .house-emy-menu>.emy-card:last-child{grid-column:auto}
+#lab3d .house-emy-menu .emy-card small{max-width:75%;white-space:normal;text-align:right}
+#lab3d .house-emy-map{width:auto;height:auto;max-width:960px;max-height:620px}
+#lab3d .house-emy-map-header>.emy-map-nav{display:flex;flex-direction:row;align-items:center;gap:4px}
+#lab3d .mini-3d .mini-label.is-locked{fill:#f4d9f1;stroke:#392b47;stroke-width:2px}
+#lab3d .house-emy-map-footer p{overflow-wrap:anywhere}
+@media(max-height:470px) and (min-width:621px){
+ #lab3d .house-emy-menu{max-width:400px}
+ #lab3d .house-emy-menu .emy-card{min-height:82px}
+}
