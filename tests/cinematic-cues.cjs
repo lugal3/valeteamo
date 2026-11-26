@@ -21,6 +21,11 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  const {poseEscapeAmbush}=await import('../src/lab/emy-rescue.js');
  const world=createHouse();
  const panes=world.boxes.filter(box=>box.weatherPane);
+ const {geometry}=await import('../src/lab/renderer.js');
+ const rainMesh=geometry(panes);
+ assert.equal(rainMesh.vertices.length/16,panes.length*4,'Each rain pane shares four vertices across both windings');
+ assert.equal(rainMesh.indices.length,panes.length*12);
+
  assert(panes.length>=10&&panes.length<=24,'Bounded actual window surfaces: '+panes.length);
  assert(panes.every(p=>!p.solid&&!p.castShadow&&Math.min(p.w,p.d)<=.002),'Weather does not block movement or cast shadows');
  const night=finaleWeather(null,{z:20}),threshold=finaleWeather({playable:false},{z:20});
