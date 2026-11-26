@@ -29,7 +29,7 @@ uniform float uFlash,uOcclude;
 uniform float uShot,uFasciaReady,uPursuerSkinReady;
 uniform float uHasShadows;
 uniform vec4 uLamps[${VISIBLE_LAMPS}];
-uniform float uTime,uHolidayMotion;
+uniform float uTime,uHolidayMotion,uHolidayPower;
 uniform float uTVSignal;
 uniform float uMirrorPass,uHeld,uScanOutline;
 uniform float uAtlasSize,uTileSize,uGutter,uInner;
@@ -381,7 +381,7 @@ void main(){
   shine=mix(s8*s8,s4,rough)*(1.0-rough)*beam*.14;
  }
  color=color*lighting/(1.0+.24*lighting)+vec3(1.0,.91,.79)*shine;
- if(vStyle>31.5)color=mix(color,vColor*(.55+material.r*.40),.82);
+ if(vStyle>31.5)color=mix(color,vColor*(.55+material.r*.40),.82*(vStyle>47.5?uHolidayPower:1.0));
  // Styles 48–63 are reserved for the little static holiday bulbs. Slow,
  // low-contrast emission modulation; no shadow or point-light allocation.
  if(vStyle>47.5&&vStyle<63.5){
