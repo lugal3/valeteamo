@@ -524,7 +524,7 @@
 #lab3d .house-save-notice{position:absolute;z-index:38;top:calc(max(10px,var(--house-safe-top,0px)) + 42px);left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid #d4b5c97a;border-radius:20px;background:#292233b8;color:#f3e6ee;font:500 11px system-ui;pointer-events:none}
 #lab3d .house-save-notice svg{width:23px;height:23px;fill:#e9b9d2;animation:save-paw 1.1s ease-in-out infinite}
 @keyframes save-paw{0%,100%{transform:rotate(-8deg) scale(.93);opacity:.68}50%{transform:rotate(5deg) scale(1.05);opacity:1}}
-#lab3d .house-hide-peek{position:absolute;z-index:30;right:max(12px,env(safe-area-inset-right));bottom:calc(max(10px,env(safe-area-inset-bottom)) + 135px);display:flex;align-items:center;gap:6px;min-height:43px;padding:8px 11px;border:1px solid #d9c2cb96;border-radius:12px;background:#292331d9;color:#f5eaf1;font:600 11px system-ui;touch-action:none;user-select:none}
+#lab3d .house-hide-peek{position:absolute;z-index:30;right:0;bottom:calc(100% + 8px);display:flex;align-items:center;gap:6px;min-height:43px;padding:8px 11px;border:1px solid #d9c2cb96;border-radius:12px;background:#292331d9;color:#f5eaf1;font:600 11px system-ui;touch-action:none;user-select:none}
 #lab3d .house-hide-peek svg{width:24px;height:24px}
 #lab3d .house-hide-peek[aria-pressed=true]{background:#735464e8;border-color:#e6b6cc}
 @media(any-hover:none){#lab3d .house-hide-peek kbd{display:none}}
@@ -561,3 +561,8 @@
 #lab3d .house-recovery-veil[hidden]{display:none!important}
 #lab3d .house-recovery-veil{position:absolute;inset:0;z-index:77;background:#100d17;pointer-events:none}
 @media(prefers-reduced-motion:reduce){#lab3d .house-recovery-veil{display:none!important}}
+
+/* Anchor above the whole action grid (including custom HUD placement), never over Exit. */
+#lab3d .lab-buttons .house-hide-peek{position:absolute;right:0;bottom:calc(100% + 8px);display:flex;flex-direction:row;justify-content:center;gap:6px;min-width:max-content;min-height:44px;padding:8px 11px;font:600 11px system-ui;border-radius:12px;touch-action:none}
+#lab3d .lab-buttons .house-hide-peek[hidden]{display:none!important}
+#lab3d .lab-buttons .house-hide-peek svg{width:22px;height:22px}
