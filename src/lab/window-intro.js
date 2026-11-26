@@ -35,6 +35,12 @@ export function windowIntroCamera(progress){
  const glance=-.075*bump(.89,.95)+.043*bump(.945,1);
  return {x:sample(1),y:sample(2),z:sample(3),yaw:Math.PI+glance,pitch:sample(4)+step+effort+settle};
 }
+// Restrained moonlit fill while Kitty is outside and on the sill. Fade
+// entirely before normal gameplay; never brighten the full house permanently.
+export function windowIntroLighting(progress){
+ const t=clamp01(progress),open=easeInOut((t-.12)/.24),close=easeInOut((t-.72)/.28);
+ return .10*open*(1-close);
+}
 export function windowIntroState(progress){
  const t=clamp01(progress);
  return {windowAmount:easeInOut((t-.14)/.24),phase:t<.18?'approach':t<.36?'open':t<.43?'climb':t<.53?'slip':t<.62?'recover':t<.75?'climb':t<.86?'land':'settle',
