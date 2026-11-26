@@ -279,9 +279,16 @@ async function run(){
   for(const [id,visible] of trialCases){
    const card=page.locator('#trial-'+id);
    if(!await card.isVisible())await card.evaluate(el=>{el.closest('details').open=true;});
+   console.log('LP trial: '+id);
    await card.click();
-   await page.locator('#lab-dialog [data-act="start"]').waitFor();
-   await page.waitForFunction(()=>!!window.__rescueHouse);
+   try{
+    await page.locator('#lab-dialog [data-act="start"]').or(page.locator('#lab3d .lab-error')).waitFor({timeout:30000});
+    assert.equal(await page.locator('#lab3d .lab-error').count(),0,await page.locator('#lab3d').innerText());
+    await page.waitForFunction(()=>!!window.__rescueHouse);
+   }catch(error){
+    console.log('LP_TRIAL_FAILURE',id,await page.evaluate(()=>document.body.innerText.slice(0,1600)),errors);
+    throw error;
+   }
    const state=await snapshot(),cat=await page.evaluate(()=>window.__rescueHouse.emy());
    assert.equal(cat.hidden,!visible,'LP '+id+' must have the correct initial visibility');
    assert.equal(cat.companion,visible?'following':id==='car'?'waiting':'trunk','LP '+id+' companion controller');
