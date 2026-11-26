@@ -30,7 +30,7 @@ export const PHONE_PAGES=Object.freeze([
  [['photos','Fotos'],['maps','Mapas'],['journal','Diario'],['progress','Progreso'],['clock','Reloj'],['snake','Snake'],['calendar','Calendario'],['contacts','Contactos']],
  [['weather','Tiempo'],['calculator','Calculadora'],['heart','Recuerdos']]
 ]);
-const appButton=([id,label],unread)=>`<button data-app="${id}"><span class="phone-app-icon ${id}">${phoneIcon(id)}${id==='messages'&&unread?'<i aria-label="Mensaje sin leer"></i>':''}</span><span>${label}</span></button>`;
+const appButton=([id,label],unread)=>`<button data-app="${id}" aria-label="${label}"><span class="phone-app-icon ${id}">${phoneIcon(id)}${id==='messages'&&unread?'<i aria-label="Mensaje sin leer"></i>':''}</span><span>${label}</span></button>`;
 export function phoneHome(unread,page=0){
  const index=Math.max(0,Math.min(PHONE_PAGES.length-1,page));
  return '<div class="phone-wallpaper-art" aria-hidden="true">♡</div><div class="phone-apps" data-home-page="'+index+'">'+PHONE_PAGES[index].map(app=>appButton(app,unread)).join('')+'</div>'+
