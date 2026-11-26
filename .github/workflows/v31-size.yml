@@ -85,3 +85,33 @@ jobs:
             audio-audit/report.json
             audio-audit/*.flac
             model-parity.txt
+
+  frame-comparison:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'feature/v31-telefono-historia-final-perf'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/checkout@v4
+        with:
+          ref: f5783405c2bd3b206320a5dda9f063a8d7ba60a5
+          path: baseline-v3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm ci
+        working-directory: baseline-v3
+      - run: npx playwright install --with-deps chromium
+      - name: Validated V3 real WebGL scenes
+        run: node tests/house-frame-benchmark.cjs baseline-v3 frame-v3.json
+      - name: Optimized V3.1 same viewport and scenarios
+        run: node tests/house-frame-benchmark.cjs . frame-v31.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v31-real-frame-comparison
+          path: frame-v*.json
