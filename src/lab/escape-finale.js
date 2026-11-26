@@ -16,7 +16,8 @@ export function finaleStage(shot,enemy,reduced=false){
  const exit={x:5.9,z:Math.max(16.65,stop.z+1.9)};
  const x=mix(mix(origin.x,stop.x,backing),exit.x,run);
  const z=mix(mix(origin.z,stop.z,backing),exit.z,run);
- const y=mix(origin.y,1.63,backing);
+ const impact=ease((t-2.08)/.12)*(1-ease((t-2.20)/.48));
+ const y=mix(origin.y,1.63,backing)-(reduced?0:.035*impact);
  const struggle=ease((t-b.grab)/.25)*(1-ease((t-b.release)/.28));
  const sway=reduced?0:Math.sin((t-b.grab)*12)*.045*struggle;
  const captive={x:mix(enemy.x-.05+sway,start.x-.25,release),
@@ -30,18 +31,21 @@ export function finaleStage(shot,enemy,reduced=false){
  const reveal=reduced?Number(t>=b.turnEnd):ease((t-b.turnStart)/(b.turnEnd-b.turnStart));
  const leave=reduced?Number(t>=b.run):ease((t-b.lookOut)/(b.run-b.lookOut));
  const facing=turn(origin.yaw,toward,reveal);
- const view={x,y,z,yaw:turn(facing,0,leave),pitch:mix(mix(origin.pitch,tilt,reveal),-.28,leave)};
+ const view={x,y,z,yaw:turn(facing,0,leave),pitch:mix(mix(origin.pitch,tilt,reveal),-.28,leave)+(reduced?0:.045*impact)};
  return {view,louis,stage:t<b.turnStart?'noise':t<b.turnEnd?'turn':t<b.leap?'grab':t<b.release?'intervention':t<b.run?'release':'run'};
 }
 export function finaleThreat(actor,elapsed,reduced=false){
- const morph=ease((elapsed-.90)/.76),recoil=ease((elapsed-2.08)/.42),release=ease((elapsed-2.15)/.55);
+ const morph=ease((elapsed-.90)/.76),recoil=ease((elapsed-2.08)/.15)*(1-ease((elapsed-2.30)/.82)),release=ease((elapsed-2.15)/.55);
  const reach=ease((elapsed-.38)/.63)*(1-release);
  const face=morph*(1-ease((elapsed-2.52)/.92));
- return {...actor,captureReach:Math.max(.001,reach),captureLift:.12*reach+(reduced?0:.025*Math.sin(elapsed*11)*reach),
+ const relax=ease((elapsed-2.70)/.65);
+ // Keep the capture mesh during the recoil/morph transition but drive a
+ // dedicated skeletal impact rather than the previous perpetual grab.
+ return {...actor,captureReach:reach,captureLift:.12*reach+(reduced?0:.025*Math.sin(elapsed*11)*reach),finaleImpact:recoil,finalePose:1-relax,
   captureFace:{left:.44*face,right:.32*face,upper:.19*face,jaw:.34*face,bite:0,
    twitch:reduced?0:Math.sin(elapsed*17)*face*.35,glance:0,gaze:0,clamp:0,
    pressure:.18*face,strain:.28*face,blink:0,rupture:0},
-  mode:recoil>.5?'stunned':actor.mode};
+  mode:elapsed>=2.08?'stunned':actor.mode,stunned:2*recoil};
 }
 
 // Until the safe garden, Emy guides the escape. At sunrise she doubles back
@@ -49,7 +53,7 @@ export function finaleThreat(actor,elapsed,reduced=false){
 // The same navigator still controls the actual motion.
 export function finaleEmyGoal(player){
  const rejoin=player.z>=17.7&&player.x>3.8&&player.x<8.0;
- return rejoin?{x:clamp(player.x+(player.x<5.9?.55:-.55),4.1,7.7),z:clamp(player.z+.62,18.0,20.0),rejoin}
+ return rejoin?{x:clamp(player.x+.55*Math.tanh((5.9-player.x)*2.4),4.1,7.7),z:clamp(player.z+.62,18.0,20.0),rejoin}
   :{x:5.38,z:Math.max(17.05,Math.min(20.0,player.z+2.4)),rejoin};
 }
 
