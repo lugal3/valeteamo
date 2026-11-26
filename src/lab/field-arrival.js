@@ -17,7 +17,8 @@ export function arrivalPose(remaining){
   const a=ARRIVAL_ROUTE[i-1],b=ARRIVAL_ROUTE[i],d=length(a,b);
   if(distance<=d||i===ARRIVAL_ROUTE.length-1){
    const t=Math.max(0,Math.min(1,distance/d)),x=a.x+(b.x-a.x)*t,z=a.z+(b.z-a.z)*t;
-   const y=z<=STAIR.zTop&&x>=STAIR.xMin?HEIGHT:groundHeight(x,z,0,false);
+   // On the stairs use the upper ramp, not the low hiding nook beneath it.
+   const y=x>=STAIR.xMin&&x<=STAIR.xMax?HEIGHT*Math.max(0,Math.min(1,(STAIR.zBottom-z)/(STAIR.zBottom-STAIR.zTop))):groundHeight(x,z,0,false);
    return {x,y,z,yaw:Math.atan2(b.x-a.x,b.z-a.z),walk:total*elapsed/HIDE_DEADLINE,speed:remaining>0?total/HIDE_DEADLINE:0,age:elapsed};
   }
   distance-=d;
