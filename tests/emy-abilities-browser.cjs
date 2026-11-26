@@ -174,6 +174,19 @@ const {chromium,webkit}=require('playwright');
   assert(command.distractCooldown>0,'Distraction has cooldown');
   assert(command.distraction?.goal&&command.distraction.goal.y>3,'Emy must reach a real upstairs waypoint');
   assert.equal(command.mapOpen,false,'The map must close after a successful order');
+  // Physical interaction with the busy cat, not a remote call button.
+  await interactEmy();
+  assert.equal((await skills()).menu,true,'Busy Emy can be approached in person');
+  assert.equal(await page.locator('#house-emy-stay-title').innerText(),'Sígueme');
+  assert(await page.locator('[data-act="emy:map"]').isDisabled());
+  assert(await page.locator('[data-act="emy:scan"]').isDisabled());
+  const cooldownBefore=(await skills()).distractCooldown;
+  await shot(page,'03e-emy-interrumpir-en-persona');
+  await page.locator('#house-emy-stay').click();
+  assert.equal((await skills()).stage,'following','Physical intervention cancels the distraction');
+  assert((await skills()).distractCooldown>0&&Math.abs((await skills()).distractCooldown-cooldownBefore)<1,
+   'The real distraction cooldown remains after early reunion');
+
   const item='noise-glass-living';
   await page.evaluate(item=>window.__rescueHouse.interactWith(item),item);
   let objects=await page.evaluate(()=>window.__rescueHouse.noiseProps());
