@@ -449,6 +449,12 @@
 #lab3d.house-motion-reduced.phone-photo-taken .phone-camera-view::after{animation:none;opacity:.12}
 
 
+/* Pursuit cues remain readable when text hints are disabled. */
+#lab3d .lab-vignette{transition:box-shadow .38s ease}
+#lab3d.house-watch-tension .lab-vignette{box-shadow:inset 0 0 65px 5px #9a614d25}
+#lab3d.house-chase-tension .lab-vignette{box-shadow:inset 0 0 80px 10px #a43d4e58}
+@media(prefers-reduced-motion:reduce){#lab3d .lab-vignette{transition:none}}
+#lab3d.house-motion-reduced .lab-vignette{transition:none}
 /* Optional collectible toast, never blocks movement or focus. */
 #lab3d #house-plush-toast{position:absolute;z-index:27;left:50%;top:13%;transform:translateX(-50%);width:min(220px,42vw);display:grid;justify-items:center;gap:4px;padding:12px;border:1px solid #f6c6d7;border-radius:19px;background:linear-gradient(150deg,#392b48e8,#694057ed);color:#fff5e8;box-shadow:0 9px 30px #160b2050;pointer-events:none;animation:plush-pop .32s cubic-bezier(.2,.8,.3,1.2) both}
 #lab3d #house-plush-toast small{font:700 9px system-ui;letter-spacing:.12em;color:#f5c3d9}
