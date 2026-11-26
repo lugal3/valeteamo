@@ -283,3 +283,33 @@
 @media(max-height:470px){#lab3d .mini-tools button{min-height:30px;font-size:16px}#lab3d .emy-map-nav button{min-height:34px;width:36px}#lab3d .house-emy-floor-switch button{min-height:40px}}
 @media(prefers-reduced-motion:reduce){#lab3d .house-emy-map-rooms{animation:none}}
 #lab3d.house-motion-reduced .house-emy-map-rooms{animation:none}
+
+/* V3 audit: landscape needs vertical room for the actual model, not just its frame.
+   Keep all seven controls in a side rail and preserve a 44px touch target. */
+@media (max-height:470px) and (min-width:621px){
+ #lab3d .house-emy-map{padding:7px 9px;gap:4px}
+ #lab3d .house-emy-map-kicker{display:none}
+ #lab3d .house-emy-map-header strong{font-size:16px}
+ #lab3d .emy-map-nav button{width:44px;min-height:44px}
+ #lab3d .house-emy-floor-switch button{min-height:44px}
+ #lab3d .house-emy-intro{font-size:10px;line-height:1.1}
+ #lab3d .house-emy-map-layout{grid-template-columns:minmax(0,1.3fr) minmax(195px,.7fr);gap:6px}
+ #lab3d .house-emy-map-board{padding:3px 98px 3px 3px}
+ #lab3d .house-emy-map-board-title{display:none}
+ #lab3d .mini-tools{position:absolute;right:4px;top:50%;transform:translateY(-50%);display:grid;grid-template-columns:repeat(2,44px);gap:3px;width:auto}
+ #lab3d .mini-tools button{min-width:44px;min-height:44px;font-size:17px}
+ #lab3d .house-emy-destination-list .house-emy-destination{min-height:44px}
+ #lab3d .house-emy-map-footer button{min-height:44px}
+}
+@media (max-height:370px) and (min-width:621px){
+ #lab3d .house-emy-map-board{padding-right:3px}
+ #lab3d .mini-tools{position:static;display:flex;transform:none;width:100%;gap:3px}
+ #lab3d .mini-tools button{flex:1 1 44px;min-width:32px;min-height:35px}
+ #lab3d .house-emy-intro{display:none}
+ #lab3d .house-emy-map-header strong{font-size:14px}
+}
+#lab3d.house-capture-active .house-emy-name,
+#lab3d.house-arrival .house-emy-name,
+#lab3d.house-cutaway .house-emy-name,
+#lab3d.lab-intro-active .house-emy-name{visibility:hidden}
+#lab3d .house-emy-destination-list .house-emy-destination small{max-width:40%;white-space:normal;text-align:right}
