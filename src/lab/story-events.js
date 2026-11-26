@@ -10,7 +10,7 @@ export class HouseEvents{
  advance(dt,hidden,threat={}){
   const cues=[];if(this.replyAt!==null){this.replyAt-=dt;if(this.replyAt<=0){this.replyAt=null;this.replied=true;this.messages.push({from:'Tú',text:'Estoy a punto de descubrir algo. Veré qué puedo hacer.'});}}
   if(this.phase==='arrival'){this.time+=dt;const inside=this.time-this.arrivalLead;for(const [at,name] of [[.45,'keys'],[1.2,'knock'],[2.25,'rattle']])if(inside>=at&&!this.cues.has(name)){this.cues.add(name);cues.push(name);}if(inside>=4){this.phase='hide';this.remaining=10;cues.push('hide');}}
-  else if(this.phase==='hide'){this.remaining=Math.max(0,this.remaining-dt);if(this.remaining===0){this.phase=this.pursuit?(this.twoActs?'patrol':'hunt'):hidden?'safe':'failed';this.remaining=this.pursuit&&!this.twoActs?28:0;cues.push(this.phase);}}
+  else if(this.phase==='hide'){this.remaining=Math.max(0,this.remaining-dt);if(this.remaining===0){this.phase=!hidden?'failed':this.pursuit?(this.twoActs?'patrol':'hunt'):'safe';this.remaining=this.pursuit&&!this.twoActs?28:0;cues.push(this.phase);}}
   else if(this.phase==='patrol'){
    if(threat.caught){this.phase='failed';cues.push('failed');}
    else if(threat.clear&&threat.visited>=3){this.phase='resting';cues.push('resting');}
