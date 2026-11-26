@@ -112,7 +112,7 @@ const assert=require('node:assert/strict');
  const study=choices.find(room=>room.id==='study');
  const target=roomDestination(world,study);
  assert(target&&target.y===0,'Room waypoint should be on a navigable floor');
- for(const id of ['study','living','kitchen','bath','hall-ground','stairs','reading','music','hall-upper']){
+ for(const id of ['study','living','kitchen','bath','hall-ground','stairs','reading','hall-upper']){
   const room=choices.find(r=>r.id===id);
   const cat=createEmyCompanion(world.emy,{waiting:false});
   const reachable=roomDestinations(world,room).some(point=>sendEmyDistract(cat,world,point));
@@ -120,6 +120,14 @@ const assert=require('node:assert/strict');
   assert.equal(cat.distraction.goal.y,room.floor?3.15:0,'Cross-floor route elevation for '+id);
  }
 
+
+ // Emy's fear of the music room must also apply to tactical commands.
+ const musicRoom=choices.find(r=>r.id==='music');
+ const afraidCat=createEmyCompanion(world.emy,{waiting:false});
+ const musicPoints=roomDestinations(world,musicRoom);
+ assert(musicPoints.length,'The room remains physically accessible to Kitty');
+ assert(musicPoints.every(point=>!previewEmyDistract(afraidCat,world,point)&&!sendEmyDistract(afraidCat,world,point)),'Emy refuses every music-room command');
+ assert.equal(afraidCat.stage,'following');
 
  // The command's route must be physically traversable BOTH ways, not only
  // accepted by the path planner. Open ordinary doors as the game would while
