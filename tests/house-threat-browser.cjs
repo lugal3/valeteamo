@@ -81,6 +81,10 @@ const {chromium}=require('playwright');
    return snap.hideType==='underbed'&&!snap.handVisible;
   });
   const tucked=await snapshot();
+  const peek=page.locator('.house-hide-peek');await peek.waitFor();
+  await page.keyboard.down('v');
+  try{await page.waitForFunction(()=>window.__rescueHouse.snapshot().hidePeek>.9);const lean=await snapshot();assert.deepEqual(lean.position,tucked.position);assert.equal(lean.hideType,'underbed');assert(Math.hypot(lean.view.x-tucked.view.x,lean.view.z-tucked.view.z)>.15);}finally{await page.keyboard.up('v');}
+  await page.waitForFunction(()=>window.__rescueHouse.snapshot().hidePeek<.02);
   assert.equal(tucked.handVisible,false);
   await page.keyboard.down('w');
   try{await page.waitForTimeout(350);}finally{await page.keyboard.up('w');}
@@ -105,6 +109,10 @@ const {chromium}=require('playwright');
    return snap.hideType==='wardrobe'&&!snap.handVisible;
   });
   assert.equal((await snapshot()).handVisible,false);
+  const closet=await snapshot();await peek.waitFor();const point=await peek.boundingBox();
+  await page.mouse.move(point.x+point.width/2,point.y+point.height/2);await page.mouse.down();
+  try{await page.waitForFunction(()=>window.__rescueHouse.snapshot().hidePeek>.9);const lean=await snapshot();assert.deepEqual(lean.position,closet.position);assert.equal(lean.hideType,'wardrobe');assert.equal(lean.wardrobeAmount,closet.wardrobeAmount);await shot('03b-armario-asomarse');}finally{await page.mouse.up();}
+  await page.waitForFunction(()=>window.__rescueHouse.snapshot().hidePeek<.02);
   await shot('03-armario');
   await page.waitForTimeout(300);await page.keyboard.press('e');
   await page.waitForFunction(()=>!window.__rescueHouse.snapshot().hidden);
