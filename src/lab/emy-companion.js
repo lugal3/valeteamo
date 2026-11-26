@@ -419,8 +419,8 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  const hide=enteringHide||player?.hidden;
  if(companion.altarWait&&companion.stage==='following'&&!hide)player=ALTAR_THRESHOLD;
  // "hold" is a safe, quiet companion state, distinct from the story's
- // initial "waiting" and physical "hiding". No teleport, no route, no
- // cat noise, no approach to the wardrobe. The player can hide instantly.
+ // initial "waiting" and physical "hiding". Only a short local refuge path,
+ // no cat noise, no approach to the player's remote wardrobe.
  if(companion.stage==='hold'){
   if(hide){
    updateIndependentCover(companion,world,dt,reduced);
@@ -432,9 +432,11 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  // Only a nearby Emy may OPTIONALLY join Kitty's wardrobe. A remote Emy,
  // especially on another floor, must stop instead of travelling for ages
  // toward a hiding player. This never gates Kitty's animation in house.js.
+ companion.wardrobeAttempt=hide&&companion.stage==='following'?(companion.wardrobeAttempt||0)+dt:0;
+ const sharedDoor=hide&&player?{x:hide.returnX??player.x,y:player.y,z:hide.returnZ??player.z}:null;
  if(companion.stage==='following'&&hide&&player&&
-  (hide.objectId!=='wardrobe'||Math.abs(cat.y-player.y)>.48||distance(cat,{x:hide.returnX??player.x,z:hide.returnZ??player.z})>2.1||
-   !clearPassage(world,cat,{x:hide.returnX??player.x,y:player.y,z:hide.returnZ??player.z}))){
+  (hide.objectId!=='wardrobe'||Math.abs(cat.y-player.y)>.48||distance(cat,sharedDoor)>2.1||companion.wardrobeAttempt>3.0||
+   (roomAt(cat.x,cat.z,cat.y)!==roomAt(sharedDoor.x,sharedDoor.z,sharedDoor.y)&&!clearPassage(world,cat,sharedDoor)))){
   beginIndependentCover(companion,world,player,threat);
   updateIndependentCover(companion,world,dt,reduced);
   return null;
@@ -536,7 +538,7 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  if((companion.stage==='trunk-run'||hide||following)&&companion.route.length)openRouteDoor(companion,world,player,reduced);
  if(far&&cat.reaction<=0&&dt>0){
   const pace=following?Math.min(4.2,.70+2.35*Math.max(0,gap-stop)):1.4;
-  const directStop=goal===heading&&Math.abs(cat.y-heading.y)<.25&&companion.direct;
+  const directStop=goal===heading&&Math.abs(cat.y-heading.y)<.25&&(!following||companion.direct);
   walking=moveToward(companion,world,goal,dt,directStop?Math.min(pace,Math.max(0,gap-stop)/dt):pace);
  }
  if(!walking&&far&&cat.reaction<=0){
