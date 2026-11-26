@@ -909,25 +909,48 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  const mapPanel=$('house-emy-map');
  mapPanel.addEventListener('pointerdown',e=>{
-  if(!e.target.closest('#house-emy-miniature')||e.button!==0)return;
-  if(!mapPointers.size)mapDragged=false;
-  mapPointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY});
-  if(mapPointers.size>1){mapDragged=true;for(const id of mapPointers.keys())capture(mapPanel,id);}
- },{signal});
- mapPanel.addEventListener('pointermove',e=>{
-  const p=mapPointers.get(e.pointerId);if(!p)return;
+  if(!e.target.closest('#house-emy-miniature')||e.button!==0||mapPanel.hidden)return;
+  if(mapPointers.size>=2)return;
+  if(!mapPointers.size){mapDragged=false;mapSuppressUntil=0;}
+  const room=e.target.closest('[data-act^="emy:room:"]')?.dataset.act??null;
+  mapPointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,room,touch:e.pointerType==='touch'});
+  // Touch browsers implicitly capture the SVG child. It is replaced on each
+  // redraw, so transfer capture to the stable dialog BEFORE the first move.
+  // A short touch tap is resolved explicitly on release below.
+  if(e.pointerType==='touch'){capture(mapPanel,e.pointerId);e.preventDefault();}
+  if(mapPointers.size===2){mapDragged=true;for(const id of mapPointers.keys())capture(mapPanel,id);}
+ },{signal,passive:false});
+ window.addEventListener('pointermove',e=>{
+  const p=mapPointers.get(e.pointerId);if(!p||mapPanel.hidden)return;
   if(e.pointerType==='mouse'&&!(e.buttons&1)){mapPointers.delete(e.pointerId);releaseCapture(mapPanel,e.pointerId);return;}
   const dx=e.clientX-p.x,dy=e.clientY-p.y;
   if(!mapDragged&&Math.hypot(e.clientX-p.startX,e.clientY-p.startY)<5)return;
   mapDragged=true;capture(mapPanel,e.pointerId);
   const other=[...mapPointers.entries()].find(([id])=>id!==e.pointerId)?.[1];
-  miniatureView=other?changeMiniatureView(miniatureView,{zoom:Math.hypot(e.clientX-other.x,e.clientY-other.y)/Math.max(1,Math.hypot(p.x-other.x,p.y-other.y))}):
-   changeMiniatureView(miniatureView,{yaw:dx*.009,pitch:-dy*.007});
+  if(other){
+   const before=Math.hypot(p.x-other.x,p.y-other.y),after=Math.hypot(e.clientX-other.x,e.clientY-other.y);
+   // Ignore the singular distance when fingers cross; incremental ratios
+   // keep zoom smooth and allow reversing immediately at either zoom limit.
+   if(before>=12&&after>=12)miniatureView=changeMiniatureView(miniatureView,{zoom:after/before});
+  }else miniatureView=changeMiniatureView(miniatureView,{yaw:dx*.009,pitch:-dy*.007});
   p.x=e.clientX;p.y=e.clientY;scheduleMiniature();e.preventDefault();
- },{signal});
+ },{signal,passive:false});
  for(const type of ['pointerup','pointercancel','lostpointercapture'])window.addEventListener(type,e=>{
-  if(!mapPointers.has(e.pointerId))return;mapPointers.delete(e.pointerId);
-  if(mapDragged)mapSuppressUntil=performance.now()+320;
+  // Safari/Chrome emit lostpointercapture from the original SVG child
+  // when ownership transfers to the dialog. That is NOT the gesture end.
+  if(type==='lostpointercapture'&&e.target!==mapPanel)return;
+  const p=mapPointers.get(e.pointerId);if(!p)return;
+  mapPointers.delete(e.pointerId);
+  if(type!=='pointerup'||mapDragged){mapSuppressUntil=performance.now()+320;return;}
+  if(p.touch){
+   const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('[data-act^="emy:room:"]');
+   if(p.room&&target?.dataset.act===p.room&&target.closest('#house-emy-miniature')&&Math.hypot(e.clientX-p.startX,e.clientY-p.startY)<5){
+    runAction(p.room,target);
+   }
+   // A touch click, if the browser still generates one, must never select
+   // twice or select a different room after the SVG has been replaced.
+   mapSuppressUntil=performance.now()+320;
+  }
  },{signal});
  mapPanel.addEventListener('wheel',e=>{
   if(!e.target.closest('#house-emy-miniature'))return;
@@ -969,14 +992,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   roomsHost.innerHTML=
    '<div class="house-emy-map-layout">'+
     '<section class="house-emy-map-board" aria-label="Vista superior de '+floorName+'">'+
-     '<div class="house-emy-map-board-title"><strong>'+floorName+'</strong><span>Miniatura 3D</span></div>'+
+     '<div class="house-emy-map-board-title"><strong>'+floorName+'</strong><span>Arrastra · Pellizca / rueda</span></div>'+
      '<div id="house-emy-miniature" class="house-emy-plan mini-3d"></div>'+
      '<div class="mini-tools" role="group" aria-label="Control de la miniatura">'+
      [['left','↶','Girar izquierda'],['right','↷','Girar derecha'],['up','↑','Inclinar arriba'],['down','↓','Inclinar abajo'],['plus','+','Acercar'],['minus','−','Alejar'],['reset','⌂','Restablecer vista']].map(([id,label,desc])=>'<button data-act="emy:view:'+id+'" aria-label="'+desc+'">'+label+'</button>').join('')+'</div>'+
     '</section>'+
     '<section class="house-emy-destination-panel" aria-label="Habitaciones de '+floorName+'">'+
      '<div class="house-emy-destination-head"><strong>Habitaciones y zonas</strong><small id="house-emy-mini-legend">Toca o desliza la lista ↓</small></div>'+
-     (emyMapFloor<0?'<div class="mini-exterior-copy"><b>La casa de Kitty</b><p>Gira la miniatura y selecciona una planta para retirar la cubierta'+(mapReadOnly?'.': ' y elegir dónde enviar a Emy.')+'</p></div>':
+     (emyMapFloor<0?'<div class="mini-exterior-copy"><b>La casa de Kitty</b><p>Arrastra con un dedo para girar y pellizca con dos para acercar o alejar. Selecciona una planta para retirar la cubierta'+(mapReadOnly?'.': ' y elegir dónde enviar a Emy.')+'</p></div>':
       mapReadOnly?'<div class="house-emy-destination-list mini-readonly-list">'+all.filter(r=>r.floor===emyMapFloor).map(r=>'<div class="mini-readonly-room">'+escapeHTML(r.label)+'</div>').join('')+'</div>':
       '<div class="house-emy-destination-list">'+emyFloorList(world.rooms,emyMapFloor,options)+'</div>')+
     '</section>'+
@@ -2415,7 +2438,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    louis:()=>louis?{x:louis.x,y:louis.y,z:louis.z,phase:louis.phase,waypoint:louis.waypoint,age:louis.age,walk:louis.walk,speed:louis.speed,crouch:louis.crouch,reaction:louis.visualReaction?.type??null,cameraPhase:loisShotDirector?.phase??null}:null,
    emy:()=>({x:world.emy.x,y:world.emy.y,z:world.emy.z,phase:world.emy.phase,reaction:world.emy.reaction,hidden:world.emy.hidden,mood:emyCompanion?.mood,alarm:world.emy.alarm||0,refuge:emyCompanion?.refuge?{...emyCompanion.refuge}:null,companion:emyCompanion?.stage,stay:emyCompanion?.stage==='stay',ventOpen:world.studyVent.coverAmount===1,entrance:emyShot?.elapsed,trunk:emyCompanion?.stage==='trunk'}),
    emySkills:()=>({scanRendered:!!renderer?.lastScanOutline,scan:emyAbilities.scan,scanCooldown:emyAbilities.scanCooldown,distractCooldown:emyAbilities.distractCooldown,
-    wave:emyAbilities.wave,stay:emyCompanion?.stage==='stay',menu:emyMenuOpen,mapOpen:!$('house-emy-map').hidden,mapReadOnly,preview:mapPreview?{goal:{...mapPreview.goal},seconds:mapPreview.seconds,waypoints:mapPreview.waypoints.map(p=>({...p}))}:null,stage:emyCompanion?.stage,
+    wave:emyAbilities.wave,stay:emyCompanion?.stage==='stay',menu:emyMenuOpen,mapOpen:!$('house-emy-map').hidden,mapReadOnly,miniatureView:{...miniatureView},mapPointers:mapPointers.size,preview:mapPreview?{goal:{...mapPreview.goal},seconds:mapPreview.seconds,waypoints:mapPreview.waypoints.map(p=>({...p}))}:null,stage:emyCompanion?.stage,
     distraction:emyCompanion?.distraction?{remaining:emyCompanion.distraction.remaining,arrived:emyCompanion.distraction.arrived,
       goal:{...emyCompanion.distraction.goal}}:null}),
    noiseProps:()=>noiseProps.map(p=>({id:p.id,x:p.x,y:p.y,z:p.z,held:p.held,spent:p.spent,flight:!!p.flight})),
