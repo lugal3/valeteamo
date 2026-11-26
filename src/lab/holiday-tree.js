@@ -39,7 +39,7 @@ export function installHolidayTree(add,floor,holiday=null){
  for(let i=0;i<10;i++){const a=pts[i],b=pts[(i+1)%10];tris.push([[...a,z-.025],[...b,z-.025],[...a,z+.025]],[[...a,z+.025],[...b,z-.025],[...b,z+.025]]);}
  piece('star',0,starY,0,.36,.36,.05,'brass',false,{triangles:tris,holidayBulb:true,dynamic:!!holiday,holidayPower:holiday?.tree,color:[1,.79,.36]});
  // A few hand-wrapped gifts, all tucked under the foliage rather than in the path.
- for(const [i,dx,dz,w,h,d] of [[0,-.30,.26,.27,.22,.24],[1,.28,.25,.25,.28,.21],[2,.05,-.30,.29,.18,.24]]){
+ for(const [i,dx,dz,w,h,d] of [[0,-.64,.33,.27,.22,.24],[1,.28,.25,.25,.28,.21],[2,.05,-.30,.29,.18,.24]]){
   const color=colors[i],ribbon=colors[(i+1)%4];
   piece('gift-'+i,dx,h/2,dz,w,h,d,'paper',false,{color});
   const lid=piece('gift-lid-'+i,dx,h+.012,dz,w+.014,.034,d+.014,'paper',false,{color,dynamic:i===0&&!!holiday,castShadow:false});
