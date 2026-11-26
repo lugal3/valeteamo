@@ -23,9 +23,9 @@ export function installHolidayTree(add,floor){
    piece('bauble-'+i+'-'+n,Math.cos(a)*rad,bottom+.25,Math.sin(a)*rad,.102,.102,.102,'pink',false,{shape:'round',smooth:true,segments:6,rings:3,color:colors[(n+i)%colors.length]});
   }
   // Two subtle strings of gold ribbon and little pastel emissive bulbs.
-  if(i<2)piece('garland-'+i,0,bottom+.15,0,r*1.76,.035,r*1.76,'brass',false,{shape:'torus',majorRadius:r*.88,tubeRadius:.014,segments:10,tubeSegments:3,color:[.91,.72,.39]});
+  if(i<2)piece('garland-'+i,0,bottom+.15,0,r*1.92,.035,r*1.92,'brass',false,{shape:'torus',majorRadius:r*.96,tubeRadius:.014,segments:10,tubeSegments:3,color:[.91,.72,.39]});
   for(let n=0;n<4;n++){
-   const a=TAU*(n/4+i*.19+.1),rad=r*.91;
+   const a=TAU*(n/4+i*.19+.1),rad=r*.97;
    piece('bulb-'+i+'-'+n,Math.cos(a)*rad,bottom+.16,Math.sin(a)*rad,.049,.049,.049,'torchglass',false,{holidayBulb:true,color:colors[(n+2*i)%4]});
   }
  }
