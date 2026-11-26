@@ -1,17 +1,6 @@
 name: V3.1 — peso real de producción (sin publicar)
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - '.github/workflows/v31-size.yml'
-      - 'scripts/audit-dist.mjs'
-      - 'scripts/audit-lossless-audio.py'
-      - 'tests/lossless-audio-browser.cjs'
-      - 'tests/emy-surface-parity.cjs'
-      - 'src/lab/emy-surface.js'
-      - 'public/**'
-      - 'src/**/*.wav'
-      - 'src/**/*.flac'
+  workflow_call:
   workflow_dispatch:
 permissions:
   contents: read
