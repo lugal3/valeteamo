@@ -845,7 +845,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const lockedIds=Object.keys(mapUnavailable);
   const markers=miniatureMarkers({x:s.x,y:s.y,z:s.z},{x:world.emy.x,y:world.emy.y,z:world.emy.z,hidden:world.emy.hidden},
    pursuer,!mapReadOnly&&emyAbilities.scan>0&&pursuer.active&&renderer.lastScanOutline);
-  host.innerHTML=miniatureSVG(world,miniatureView,{floor:emyMapFloor,selectedId:emyMapSelected,lockedIds,markers,route:mapPreview,readOnly:mapReadOnly,reveal:mapReveal&&!reducedMotion.matches});mapReveal=false;
+  host.innerHTML=miniatureSVG(world,miniatureView,{floor:emyMapFloor,selectedId:emyMapSelected,lockedIds,markers,route:mapPreview,readOnly:mapReadOnly,reveal:reducedMotion.matches?false:mapReveal});mapReveal=false;
   const legend=$('house-emy-mini-legend');
   if(legend){
    const ids=new Set([...host.querySelectorAll('[data-marker]')].map(el=>el.dataset.marker));
@@ -917,7 +917,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const roomsHost=$('house-emy-map-rooms');
   const previousList=roomsHost.querySelector('.house-emy-destination-list');
   const sameFloor=roomsHost.dataset.floor===String(emyMapFloor),scroll=sameFloor?previousList?.scrollTop||0:0;
-  mapReveal=!sameFloor&&emyMapFloor>=0;
+  mapReveal=!sameFloor&&emyMapFloor>=0?(roomsHost.dataset.floor==='-1'?'roof':'floor'):false;
   roomsHost.dataset.floor=String(emyMapFloor);
   roomsHost.innerHTML=
    '<div class="house-emy-map-layout">'+
