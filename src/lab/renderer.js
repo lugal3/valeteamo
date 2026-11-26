@@ -647,12 +647,15 @@ export class HouseRenderer {
     const sway=(box.id.includes('bow-left')||box.id.includes('bow-right'))?Math.sin(time*4.2)*swayAmp:0;
     if(source.kind==='rc-car'||source.master||source.carried){
      const angle=-(source.yaw||0),c=Math.cos(angle),s=Math.sin(angle);
-     const tilt=source.tilt||0,cp=Math.cos(tilt),sp=Math.sin(tilt),depth=offset[1]*sp+offset[2]*cp;
-     box.x=source.x+offset[0]*c-depth*s;
-     box.y=source.concealed?-100:source.y+offset[1]*cp-offset[2]*sp;
-     box.z=source.z+offset[0]*s+depth*c;
+     const tilt=source.kind==='rc-car'&&reduced?0:(source.tilt||0),cp=Math.cos(tilt),sp=Math.sin(tilt);
+     const roll=source.kind==='rc-car'&&!reduced?(source.roll||0):0,cr=Math.cos(roll),sr=Math.sin(roll);
+     const lx=offset[0]*cr-offset[1]*sr,ly=offset[0]*sr+offset[1]*cr,depth=ly*sp+offset[2]*cp;
+     box.x=source.x+lx*c-depth*s;
+     box.y=source.concealed?-100:source.y+ly*cp-offset[2]*sp+(source.kind==='rc-car'&&!reduced?(source.suspension||0):0);
+     box.z=source.z+lx*s+depth*c;
      box.yaw=angle+(box.baseYaw??0);
-     if(source.master||source.carried)box.pitch=tilt;
+     if(source.kind==='rc-car'){box.pitch=tilt;box.roll=roll;}
+     else if(source.master||source.carried)box.pitch=tilt;
     }else{
      box.x=source.x+offset[0];
      box.y=source.concealed?-100:source.y+offset[1]+bob;
