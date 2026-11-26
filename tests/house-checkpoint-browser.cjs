@@ -25,12 +25,17 @@ async function run(){
   const url='http://127.0.0.1:'+server.httpServer.address().port+'/';
   browser=await browserType.launch({headless:true,args:browserType===chromium?
    ['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']:[]});
-  const page=await browser.newPage({viewport:{width:960,height:540},reducedMotion:'reduce'});
-  const screenshotSession=browserType===chromium?await page.context().newCDPSession(page):null;
+  let page,screenshotSession;
   const errors=[];
-  page.setDefaultTimeout(60000);
-  page.on('pageerror',error=>errors.push(error.message));
-  await page.clock.setFixedTime(new Date('2026-11-16T15:00:00Z'));
+  const freshPage=async()=>{
+   if(page)await page.context().close();
+   page=await browser.newPage({viewport:{width:960,height:540},reducedMotion:'reduce'});
+   screenshotSession=browserType===chromium?await page.context().newCDPSession(page):null;
+   page.setDefaultTimeout(60000);
+   page.on('pageerror',error=>errors.push(error.message));
+   await page.clock.setFixedTime(new Date('2026-11-16T15:00:00Z'));
+  };
+  await freshPage();
   const read=key=>page.evaluate(key=>JSON.parse(localStorage.getItem(key)),key);
   const write=(key,value)=>page.evaluate(([key,value])=>localStorage.setItem(key,JSON.stringify(value)),[key,value]);
   const snapshot=()=>page.evaluate(()=>window.__rescueHouse.snapshot());
@@ -95,10 +100,10 @@ async function run(){
   const trialCases=[...Array.from({length:12},(_,i)=>['hito-'+(i+1),i<7]),
    ...['mirror','drawer','safe','mirror-note','bedroom','arrival','wardrobe','wake','battery','power','piano','basement','television'].map(id=>[id,true]),['car',false]];
   for(const [index,[id,visible]] of trialCases.entries()){
-   // Still exercise repeated real mount/exit cycles, but avoid accumulating
-   // 26 full software-rendered WebGL scenes in one document on CI.
-   // Each six-trial batch starts through the actual LP entrance again.
-   if(index>0&&index%6===0)await openMenu();
+   // The software GPU stalled even after a document navigation. Release its
+   // entire browser context after two real mount/exit cycles; every pair
+   // still exercises reopening LP without reload, and every card is tested.
+   if(index>0&&index%2===0){await freshPage();await openMenu();}
    const card=page.locator('button[aria-labelledby="trial-'+id+'"]');
    await card.waitFor({state:'attached'});
    if(!await card.isVisible())await card.evaluate(el=>{el.closest('details').open=true;});
