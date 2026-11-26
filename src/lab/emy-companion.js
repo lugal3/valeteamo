@@ -561,7 +561,8 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  }
  companion.restTime=walking?0:(companion.restTime||0)+dt;
  if(walking){companion.fatigue=Math.min(1,(companion.fatigue||0)+dt*.008);companion.mood=cat.alarm>.28?'scared':'calm';}
- const mode=cat.reaction>0?'purr':walking?'walk':cat.alarm>.2?'idle':companion.restTime<.65?'idle':'sit';
+ if(cat.alarm>.28)companion.mood='scared';
+ const mode=cat.reaction>0?'purr':walking?'walk':cat.alarm>.28?'alert':companion.restTime<.65?'idle':'sit';
  if(cat.reaction>0)cat.reaction=Math.max(0,cat.reaction-dt);
  if(!walking&&cat.reaction<=0&&companion.restTime>=.65){
   companionIdle(companion,dt,{reduced,lookAt:player});
