@@ -105,7 +105,14 @@ module.exports=async()=>{
  const dx=master.x-x,dz=master.z-z;
  assert.equal(interactionTarget(world,{x,y:y+1.63,z,yaw:Math.atan2(dx,dz),pitch:Math.atan2(master.y-y-1.63,Math.hypot(dx,dz))}),master);
  const altarVisitor={...s,x:12.27,y:3.15,z:.8};
- for(let i=0;i<35;i++)updateEmySenses(cat,altarVisitor,world,hunter,tracker.active,1/30,false);
+ const quietHunter={...hunter,active:false};
+ // The old fixture tested fear from a different floor. The new fear is
+ // local to Emy herself: she must not react to an altar she cannot sense.
+ cat.cat.alarm=0;cat.cat.earFlatten=0;
+ updateEmySenses(cat,altarVisitor,world,quietHunter,tracker.active,1/30,false);
+ assert(cat.altarWait&&!cat.altarFear&&cat.cat.alarm===0,'Remote Kitty does not instantly frighten Emy');
+ Object.assign(cat.cat,{x:9,y:3.15,z:3.6,yaw:Math.PI});
+ for(let i=0;i<35;i++)updateEmySenses(cat,altarVisitor,world,quietHunter,tracker.active,1/30,false);
  const {poseEmy}=await import('../src/lab/emy-cat.js');
  cat.cat.age=1;poseEmy(cat.cat,{mode:'idle'});
  assert(cat.altarWait&&cat.cat.parts.find(p=>p.id==='coat').box.bristle>.95);
