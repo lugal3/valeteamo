@@ -61,6 +61,11 @@ const {chromium,webkit}=require('playwright');
   assert.deepEqual(userAudio.errors,[],'Fallback must not report unresolved user audio errors');
   const skills=()=>page.evaluate(()=>window.__rescueHouse.emySkills());
   const interactEmy=()=>page.evaluate(()=>window.__rescueHouse.interactWith('emy-upstairs'));
+  await page.evaluate(()=>window.__rescueHouse.interactWith('emy-upstairs',false));
+  await page.waitForFunction(()=>!document.querySelector('#house-emy-name').hidden,null,{timeout:8000});
+  await shot(page,'00-emy-etiqueta-temporal');
+  await page.waitForFunction(()=>document.querySelector('#house-emy-name').hidden,null,{timeout:12000});
+  assert(await page.locator('#lab-interact').isEnabled(),'The name disappearing cannot disable Emy interaction');
   await interactEmy();
   assert.equal((await skills()).menu,true,'Emy contextual menu must open');
   assert.equal(await page.locator('#house-emy-menu [data-act="emy:pet"]').count(),1,'Petting action still exists');
@@ -68,6 +73,9 @@ const {chromium,webkit}=require('playwright');
   assert.equal(await page.locator('#house-emy-menu [data-act="emy:map"]').count(),1);
   assert.equal(await page.locator('#house-emy-menu .emy-card').count(),4);
   assert.equal(await page.locator('#house-emy-menu .emy-close').count(),1);
+  const cards=await page.locator('#house-emy-menu .emy-card').evaluateAll(items=>items.map(el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height};}));
+  assert(Math.abs(cards[0].y-cards[1].y)<2&&Math.abs(cards[2].y-cards[3].y)<2&&cards[2].y>cards[0].y+40,'Four Emy cards must form a compact 2x2 grid: '+JSON.stringify(cards));
+  assert(Math.abs(cards[0].w-cards[3].w)<2,'All four cards have equal width');
   await shot(page,'01-emy-acciones');
   await page.locator('#house-emy-menu [data-act="emy:scan"]').click();
   const afterScan=await skills();
@@ -97,6 +105,13 @@ const {chromium,webkit}=require('playwright');
   await page.locator('[data-act="emy:view:plus"]').click();
   await page.locator('[data-act="emy:view:reset"]').click();
   assert.equal(await miniature.innerHTML(),original,'Reset restores original geometry');
+  if(!mobile){
+   const r=await miniature.boundingBox();await page.mouse.move(r.x+r.width/2,r.y+r.height/2);
+   await page.mouse.down();await page.mouse.move(r.x+r.width/2+45,r.y+r.height/2-24,{steps:6});await page.mouse.up();
+   assert.notEqual(await miniature.innerHTML(),original,'Dragging the real SVG rotates it');
+   await page.locator('[data-act="emy:view:reset"]').click();
+   assert.equal(await miniature.innerHTML(),original);
+  }
   await page.locator('#house-emy-map [data-act="emy:floor:0"]').click();
   assert.equal(await floorPlans.count(),1,'Use a large readable floor plan instead of two tiny plans');
   assert.equal(await page.locator('#house-emy-map .house-emy-destination-list button').count(),6);
@@ -115,10 +130,16 @@ const {chromium,webkit}=require('playwright');
     first=list.querySelector('button');
    return {mapWidth:map.getBoundingClientRect().width,mapHeight:map.getBoundingClientRect().height,
     listWidth:list.getBoundingClientRect().width,roomFont:parseFloat(getComputedStyle(first.querySelector('.house-emy-destination-name')).fontSize),
-    footerBottom:footer.getBoundingClientRect().bottom,viewportHeight:innerHeight};
+    footerBottom:footer.getBoundingClientRect().bottom,viewportHeight:innerHeight,
+    modalRight:modal.getBoundingClientRect().right,modalLeft:modal.getBoundingClientRect().left,viewportWidth:innerWidth,
+    navY:[...modal.querySelectorAll('.emy-map-nav button')].map(el=>el.getBoundingClientRect().y),
+    controlHeight:Math.min(...[...modal.querySelectorAll('.mini-tools button')].map(el=>el.getBoundingClientRect().height))};
   });
   assert(details.mapWidth>=200&&details.mapHeight>=150,
    'Map must remain large enough to tap on a landscape mobile viewport: '+JSON.stringify(details));
+  assert(details.modalLeft>=0&&details.modalRight<=details.viewportWidth+1,'Map stays inside both screen edges: '+JSON.stringify(details));
+  assert(Math.abs(details.navY[0]-details.navY[1])<2,'Back and close stay side by side');
+  if(mobile&&details.viewportHeight>=375&&details.viewportWidth>=761)assert(details.controlHeight>=44,'Touch rail retains 44px hit targets');
   assert(details.listWidth>=190&&details.roomFont>=12&&details.footerBottom<=details.viewportHeight+1,
    'Room names and confirmation must remain legible and on-screen: '+JSON.stringify(details));
   const stairs=page.locator('#house-emy-map .house-emy-destination-list [data-act="emy:room:stairs"]');
@@ -162,10 +183,13 @@ const {chromium,webkit}=require('playwright');
   await page.waitForFunction(()=>document.querySelector('#lab-interact small')?.textContent==='Lanzar',null,{timeout:8000});
   assert(await actionButton.isVisible()&&await actionButton.isEnabled());
   assert.equal(await page.locator('#house-noise-controls').count(),0);
+  await page.waitForFunction(()=>document.querySelector('[data-equip="phone"]').disabled);
+  assert(await page.locator('[data-equip="phone"]').isDisabled(),'A held throwable occupies the hands');
   await shot(page,'04-objeto-en-mano');
   await actionButton.click();
   objects=await page.evaluate(()=>window.__rescueHouse.noiseProps());
   assert(!objects.find(p=>p.id===item).held,'Released throwable no longer occupies the hand');
+  await page.waitForFunction(()=>!document.querySelector('[data-equip="phone"]').disabled);
   await page.waitForFunction(id=>window.__rescueHouse.noiseProps().find(p=>p.id===id)?.spent,item,{timeout:8000});
   await shot(page,'05-objeto-lanzado');
   // V2 phase 02: actual keyboard movement (also supported on mobile),
