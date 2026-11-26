@@ -80,7 +80,7 @@ export function geometry(boxes){
  for(const box of boxes){
   const baseColor=box.color||colors[box.mat]||colors.cream;
   const color=box.ao?[baseColor[0]*box.ao,baseColor[1]*box.ao,baseColor[2]*box.ao]:baseColor;
-  const style=materialStyle(box)+(box.chibi?(box.emissive?96:64):(box.holidayBulb?48:box.glow?32:0)),first=vertices.length;
+  const style=materialStyle(box)+(box.chibi?(box.emissive?96:64):(box.holidayBulb&&!box.holidayPower?48:box.glow?32:0)),first=vertices.length;
   const range={start:first,end:first,indexStart:indices.length,indexEnd:indices.length};ranges.push(range);
   const projectReference=()=>{
    if(!box.photoMapped)return;
@@ -648,7 +648,7 @@ export class HouseRenderer {
     box.y=this.dynamicOrigins[i][1]+(reduced||motion.feetY>-.3?0:Math.sin(time*2.3)*.010);
    }
    const at=i*6,bx=box.x,by=box.y,bz=box.z,byaw=box.yaw||0,roll=box.roll||0,pitch=box.pitch||0;
-   const {start,end}=this.dynamicRanges[i],glow=circuitPowered(box.fixture?.circuit)||box.power?.on?32:0;
+   const {start,end}=this.dynamicRanges[i],glow=box.holidayPower?(box.holidayPower.on&&box.holidayPower.supply.on?48:0):circuitPowered(box.fixture?.circuit)||box.power?.on?32:0;
    const moved=Math.abs(eyeScale-(this.dynamicEyeScale?.[i]??1))>.00001||Math.fround(bx)!==this.dynamicPositions[at]||Math.fround(by)!==this.dynamicPositions[at+1]||Math.fround(bz)!==this.dynamicPositions[at+2]||Math.fround(byaw)!==this.dynamicPositions[at+3]||Math.fround(roll)!==this.dynamicPositions[at+4]||Math.fround(pitch)!==this.dynamicPositions[at+5];
    if(!moved&&this.dynamicVertices[start+12]===this.dynamicTemplate[start+12]+glow)continue;
    this.dynamicPositions.set([bx,by,bz,byaw,roll,pitch],at);
