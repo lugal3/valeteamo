@@ -375,7 +375,7 @@ export function buildHouse(spawn='ground'){
  add('guitar-body',10.92,HEIGHT+1.13,.20,.35,.48,.10,'wood',false,{shape:'round'});add('guitar-neck',10.92,HEIGHT+1.6,.20,.055,.65,.08,'wood',false);
  obj('guitar','inspect','Guitarra de la sala',10.92,HEIGHT+1.39,.32,{text:'Una cuerda está rota. En la caja quedó un adhesivo de One Direction.'});
  installLouisAltar(add,obj,HEIGHT);
- const holiday=installHolidayCollectibles(add,obj,HEIGHT,lights.power);
+ const holiday=installHolidayCollectibles(add,obj,HEIGHT,null);
  installHolidayTree(add,HEIGHT,holiday);
  frame('archive',12.45,HEIGHT+1.71,2.86,'north',13,{width:1.36,height:.745,label:'Afiche de archivo',text:'Un afiche de campaña viejo, guardado junto a los recortes de la casa.'});
  chair('reading-chair',.67,HEIGHT,7.55,-Math.PI/2);table('reading-table',1.50,HEIGHT,7.92,.72,.62);lamp('reading-light',1.50,HEIGHT+.92,7.92);shelf('reading-books',.19,HEIGHT,9.8,-Math.PI/2);plant('reading-plant',4.02,HEIGHT,5.33);frame('reading',3.75,HEIGHT+1.9,11.83,'north',2);
@@ -428,6 +428,7 @@ export function buildHouse(spawn='ground'){
   installLivingHouseDetails(add,HEIGHT);
   const spawns={mirror:{...MIRROR_SPAWN},ground:{x:5.95,y:0,z:10.65,yaw:Math.PI},upstairs:{x:12,y:HEIGHT,z:4.15,yaw:-Math.PI/2,items:{key:1}},sound:{x:2.2,y:0,z:11.0,yaw:Math.PI},interactions:{x:3.3,y:0,z:3.6,yaw:-2.8,items:{key:1,batteries:1}}};
  const lights=installHouseLights(add,obj,HEIGHT);
+ holiday.tree.supply=lights.power;
  const hatch=installBasement(add,obj,lights);
  hatchRug.hatch=hatch;
  return {boxes,objects,holiday,studyVent,landingTorch,lights,television,clock,hatch,hatchRug,entryWindow,car,greyCat,emy,emyInteraction,piano,pianoSheet,spawn:spawns[spawn]||spawns.ground,spawns,rooms:ROOMS,bounds:WORLD_BOUNDS,stair:STAIR,house:HOUSE};
