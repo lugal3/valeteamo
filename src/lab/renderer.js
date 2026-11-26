@@ -325,6 +325,20 @@ export function geometry(boxes){
    }
    rotateMesh();continue;
   }
+  // A window weather surface needs only one quad. Both windings share the
+  // same four vertices (the shader uses absolute normal components).
+  // Avoid six-face cuboids and keep the world inside WebGL1 uint16 limits.
+  if(box.weatherPane){
+   const face=faces.find(f=>f.dir===(box.w<box.d?'east':'south'));
+   const frame=surfaceFrame(box,face.normal,11);
+   for(const [dx,dy,dz] of face.corners){
+    vertices.push(box.x+(box.w<box.d?0:dx*box.w/2),box.y+dy*box.h/2,
+     box.z+(box.w<box.d?dz*box.d/2:0),...color,...face.normal,0,0,0,style,...frame.tangent);
+   }
+   indices.push(offset,offset+1,offset+2,offset,offset+2,offset+3,
+    offset,offset+2,offset+1,offset,offset+3,offset+2);
+   offset+=4;rotateMesh();continue;
+  }
   const start=offset;
   for(const face of faces){
    const art=box.art!==undefined&&box.front===face.dir?box.art+1:0;
