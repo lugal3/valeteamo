@@ -384,7 +384,7 @@ export function buildHouse(spawn='ground'){
  // is now against the east side of the central landing, clear of the stairs.
  const landingCabinet={x:6.91,z:4.05};
  installCabinet(add,obj,{id:'landing-cabinet',label:'Cajón del descansillo',...landingCabinet,y:HEIGHT,w:.97,d:.60,items:[]});
- obj('media-flashlight','flashlight','Linterna',landingCabinet.x,HEIGHT+.90,landingCabinet.z+.06,{dynamic:true});
+ const landingTorch=obj('media-flashlight','flashlight','Linterna',landingCabinet.x,HEIGHT+.90,landingCabinet.z+.06,{dynamic:true});
  add('reading-rug',1.92,HEIGHT+.012,8.0,2.9,.024,4,'carpet',false,{ao:.88});add('upper-bench',4.95,HEIGHT+.43,11.65,1.15,.18,.48,'velvet');for(const x of [4.55,5.35])add('bench-leg-'+x,x,HEIGHT+.20,11.65,.08,.4,.35,'wood');plant('landing-plant',8.3,HEIGHT,11.54);frame('landing',8.0,HEIGHT+1.85,11.83,'north',0);
  const piano=installPiano(add,obj,{x:4.84,z:10.40,floor:HEIGHT});
  const pianoSheet=objects.find(item=>item.id===PIANO_SHEET_ID);
@@ -428,5 +428,5 @@ export function buildHouse(spawn='ground'){
  const lights=installHouseLights(add,obj,HEIGHT);
  const hatch=installBasement(add,obj,lights);
  hatchRug.hatch=hatch;
- return {boxes,objects,studyVent,lights,television,clock,hatch,hatchRug,entryWindow,car,greyCat,emy,emyInteraction,piano,pianoSheet,spawn:spawns[spawn]||spawns.ground,spawns,rooms:ROOMS,bounds:WORLD_BOUNDS,stair:STAIR,house:HOUSE};
+ return {boxes,objects,studyVent,landingTorch,lights,television,clock,hatch,hatchRug,entryWindow,car,greyCat,emy,emyInteraction,piano,pianoSheet,spawn:spawns[spawn]||spawns.ground,spawns,rooms:ROOMS,bounds:WORLD_BOUNDS,stair:STAIR,house:HOUSE};
 }
