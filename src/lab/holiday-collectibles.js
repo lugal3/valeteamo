@@ -9,7 +9,7 @@ export function installHolidayCollectibles(add,obj,floor,power){
   const [x,y,z]=[[11.96,floor+.18,2.60],[10.96,.20,6.85],[12.55,floor+.97,.72]][i];
   const item=obj(id,i===0?'gift':'collectible',i===0?'Abrir regalo':PLUSH_NAMES[i],x,y,z,{index:i,taken:false,requiresCrouch:i===1});
   if(i===0)return item;
-  const part=(name,dx,dy,dz,w,h,d,color,extra={})=>add(id+'-'+name,x+dx,y+dy,z+dz,w,h,d,'glove',false,{dynamic:true,source:item,sourceOffset:[dx,dy,dz],castShadow:false,color,shape:'round',segments:6,rings:3,...extra});
+  const part=(name,dx,dy,dz,w,h,d,color,extra={})=>add(id+'-'+name,x+dx,y+dy,z+dz,w,h,d,'glove',false,{dynamic:false,source:item,castShadow:false,color,shape:'round',segments:6,rings:3,...extra});
   const white=[.99,.92,.89],ink=[.13,.085,.10];
   const parts=[part('body',0,-.035,0,.19,.19,.13,tones[i]),part('head',0,.095,0,.27,.20,.16,white),
    part('ear-l',-.087,.18,0,.083,.10,.075,white,{shape:'ear'}),part('ear-r',.087,.18,0,.083,.10,.075,white,{shape:'ear'}),
