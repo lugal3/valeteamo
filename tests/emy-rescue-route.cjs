@@ -3,12 +3,12 @@ const assert=require('node:assert/strict');
 module.exports=async()=>{
  const {interactionTarget}=await import('../src/lab/interactions.js');
  const {createHouse,setDoor,blocked,groundHeight}=await import('../src/lab/world.js');
- const {createEmyCompanion,requestRibbonKey,updateEmyCompanion,sendEmyToTrunk}=await import('../src/lab/emy-companion.js');
+ const {createEmyCompanion,requestRibbonKey,updateEmyCompanion,sendEmyToTrunk,initializeTrialEmy,trialEmyPose}=await import('../src/lab/emy-companion.js');
  const {createRescueObjectives,updateEmySenses,poseEscapeAmbush}=await import('../src/lab/emy-rescue.js');
  const {rescueProgress}=await import('../src/lab/rescue-progress.js');
  const {Pursuer}=await import('../src/lab/pursuer.js');
  const {captureHouseCheckpoint,restoreHouseCheckpoint}=await import('../src/lab/house-checkpoint.js');
- const {trialCheckpoint}=await import('../src/lab/trial-checkpoint.js');
+ const {trialCheckpoint,trialStartPose,trialEmyStage}=await import('../src/lab/trial-checkpoint.js');
  const {progressStops}=await import('../src/lab/rescue-progress.js');
  for(const [index,stop] of progressStops.entries()){
   const w=createHouse(),ctx={world:w,s:{inventory:{notes:[]}},puzzle:{},events:{phase:'explore'},mirrorSafe:{},rc:{object:w.objects.find(o=>o.id==='rc-car')},rcTrap:{},pursuer:new Pursuer(w)};
@@ -18,6 +18,40 @@ module.exports=async()=>{
   if(index===1)assert(ctx.s.inventory.key&&w.objects.find(o=>o.id==='dormitorio').locked);
   if(index===8)assert(ctx.s.inventory.masterKey&&!ctx.puzzle.rescued);
   if(index===11)assert(!w.objects.find(o=>o.id==='entrada').sealed);
+  const step=index+1,pose=trialStartPose(step);
+  if(pose&&!blocked(w.boxes,pose.x,pose.y,pose.z,.2,1.69))Object.assign(ctx.s,pose);
+  const companion=createEmyCompanion(w.emy,{waiting:false});
+  const expected=step>=8?'trunk':'following';
+  assert.equal(trialEmyStage(step),expected);
+  assert(initializeTrialEmy(companion,w,ctx.s,expected),'Valid Emy spawn for milestone '+step);
+  assert.equal(companion.stage,expected);
+  assert.equal(w.emy.hidden,step>=8);
+  assert(w.emy.parts.every(part=>part.box.hiddenGeometry===(step>=8)));
+  if(step<8){
+   assert.equal(w.emy.y,ctx.s.y,'Same floor in milestone '+step);
+   assert(Math.hypot(w.emy.x-ctx.s.x,w.emy.z-ctx.s.z)<=3.11,'Nearby companion in milestone '+step);
+   assert(!blocked(w.boxes,w.emy.x,w.emy.y,w.emy.z,.24,.72),'No collision at milestone '+step);
+  }
+ }
+ // Evaluate the actual TypeScript scenario table, not a duplicate list.
+ const ts=require('typescript'),fs=require('node:fs'),vm=require('node:vm');
+ const exports={},modules={'./rescue-progress.js':{progressStops},'./trial-checkpoint.js':{trialEmyStage}};
+ const js=ts.transpileModule(fs.readFileSync('src/lab/house-trials.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+ vm.runInNewContext(js,{exports,require:id=>{if(!modules[id])throw Error(id);return modules[id];}});
+ for(const [id,trial] of Object.entries(exports.HOUSE_TRIALS)){
+  if(trial.milestone)continue;
+  const w=createHouse(trial.checkpoint??'interactions');
+  const player={...w.spawn};
+  if(trial.pose){const {floor,...pose}=trial.pose;Object.assign(player,pose,{y:floor*3.15});}
+  if(trial.puzzleEntry==='rescue')setDoor(w.objects.find(o=>o.id==='dormitorio'),true);
+  const stage=trial.emy??'following',cat=createEmyCompanion(w.emy,{waiting:false});
+  assert(initializeTrialEmy(cat,w,player,stage),'Valid Emy spawn for isolated '+id);
+  assert.equal(cat.cat.hidden,stage!=='following',id);
+  if(stage==='following'){
+   assert(trialEmyPose(w,player),'Walkable companion pose in '+id);
+   assert.equal(cat.cat.y,player.y,'Correct floor in '+id);
+   assert(!blocked(w.boxes,cat.cat.x,cat.cat.y,cat.cat.z,.24,.72),'Safe companion in '+id);
+  }
  }
  const world=createHouse(),item=id=>world.objects.find(o=>o.id===id);
  for(const door of world.objects.filter(o=>o.kind==='door'))setDoor(door,true);
