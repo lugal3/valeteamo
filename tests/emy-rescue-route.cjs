@@ -110,6 +110,25 @@ module.exports=async()=>{
  cat.cat.age=1;poseEmy(cat.cat,{mode:'idle'});
  assert(cat.altarWait&&cat.cat.parts.find(p=>p.id==='coat').box.bristle>.95);
  assert(cat.cat.parts.some(p=>p.joint==='eye'&&p.box.emyPose.scale[1]>1.35));
+ assert(cat.cat.earFlatten>.9,'Altar provokes ears laid back');
+ const moodWorld=createHouse(),moodCat=createEmyCompanion(moodWorld.emy,{waiting:false});
+ Object.assign(moodCat.cat,{x:5.95,y:0,z:8.1,yaw:0});
+ const moodPlayer={x:5.95,y:0,z:9.4,hidden:null};
+ moodWorld.objects.push({id:'qa-visible-prop',kind:'inspect',x:5.95,y:.6,z:8.9});
+ const distant={active:true,mode:'chase',x:5.95,y:3.15,z:8.1};
+ for(let i=0;i<60;i++)updateEmySenses(moodCat,moodPlayer,moodWorld,distant,null,1/30,false);
+ assert.equal(moodCat.cat.alarm,0,'No fear from another floor');
+ assert(moodCat.cat.curiosityTarget,'Curiosity observes an actual nearby visible object');
+ const close={active:true,mode:'chase',x:5.95,y:0,z:7.1};
+ for(let i=0;i<30;i++)updateEmySenses(moodCat,moodPlayer,moodWorld,close,null,1/30,false);
+ assert(moodCat.cat.alarm>.85&&moodCat.cat.earFlatten>.8,'Nearby chase visibly frightens Emy');
+ updateEmyCompanion(moodCat,.1,{world:moodWorld,player:moodPlayer,threat:close});
+ const {geometry}=await import('../src/lab/renderer.js');
+ const raised=geometry(moodCat.cat.parts.map(p=>p.box)).vertices;
+ assert(raised.every(Number.isFinite),'Frightened pose keeps a finite mesh');
+ for(let i=0;i<300;i++)updateEmySenses(moodCat,moodPlayer,moodWorld,{...close,active:false},null,1/30,false);
+ assert(moodCat.cat.alarm<.02,'Fear fades naturally once danger is gone');
+
  world.lights.power.on=false;
  Object.assign(hunter,{mode:'search',x:cat.cat.x+.8,y:0,z:cat.cat.z});
  updateEmySenses(cat,s,world,hunter,tracker.active,.1,false);
