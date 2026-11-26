@@ -207,7 +207,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function tutorial(id,replay=false){if((!tutorialEnabled&&!replay)||(replay&&events.phase==='hide'))return false;if(!manual.show(id,replay))return false;releaseMouse();resetInput();sound.pause();return true;}
  const countdown=document.createElement('div');countdown.className='field-countdown';countdown.hidden=true;countdown.innerHTML='<small>⚠ ESCÓNDETE</small><strong>10 s</strong><i></i>';root.append(countdown);
  const saveNotice=document.createElement('div');saveNotice.className='house-save-notice';saveNotice.hidden=true;saveNotice.setAttribute('role','status');saveNotice.innerHTML='<svg viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="7" cy="11" rx="3.7" ry="4.6" transform="rotate(-22 7 11)"/><ellipse cx="14" cy="6" rx="3.6" ry="4.7"/><ellipse cx="22" cy="8" rx="3.6" ry="4.7" transform="rotate(16 22 8)"/><ellipse cx="27" cy="15" rx="3.3" ry="4.2" transform="rotate(26 27 15)"/><path d="M6 24Q6 19 12 15Q17 11 22 16Q28 20 26 25Q24 30 17 27Q11 30 7 27Z"/></svg><span>Progreso guardado</span>';root.append(saveNotice);
- let saveNoticeLeft=0;
+ let saveNoticeLeft=0,recoveryFadeLeft=0;
+ const recoveryVeil=document.createElement('div');recoveryVeil.className='house-recovery-veil';recoveryVeil.hidden=true;recoveryVeil.setAttribute('aria-hidden','true');root.append(recoveryVeil);
+ function startRecoveryFade(){recoveryFadeLeft=reducedMotion.matches?0:.58;recoveryVeil.hidden=recoveryFadeLeft===0;recoveryVeil.style.opacity='1';}
  const peekButton=document.createElement('button');peekButton.type='button';peekButton.className='house-hide-peek';peekButton.hidden=true;peekButton.setAttribute('aria-keyshortcuts','V');peekButton.setAttribute('aria-label','Mantener para asomarse');peekButton.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 12Q12 1 22 12 12 23 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Asomarse</span><kbd>V</kbd>';root.append(peekButton);
  let peekPointer=null,peekHeld=false,rcStaticLeft=0,pursuerCreakLeft=3.6;
  const rcStatic=document.createElement('div');rcStatic.className='house-rc-static';rcStatic.hidden=true;rcStatic.innerHTML='<i></i><strong>SEÑAL INTERRUMPIDA</strong>';rcStatic.setAttribute('role','status');root.append(rcStatic);
@@ -357,7 +359,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   Object.assign(target,{x:cat.x,y:cat.y+.38,z:cat.z,interactable:!cat.hidden&&(!emyCompanion||['following','stay','distract','distract-recover'].includes(emyCompanion.stage))&&cat.reaction<=0});
  }
  function reset(saved){
-  closeInspection();saveNoticeLeft=0;saveNotice.hidden=true;endPeek();rcStaticLeft=0;pursuerCreakLeft=3.6;rcStatic.hidden=true;peekButton.hidden=true;manual.clear();manual.restore(saved?.tutorials,!!saved);pendingTutorial=null;countdown.hidden=true;for(const node of guides)node.hidden=true;
+  closeInspection();recoveryFadeLeft=0;recoveryVeil.hidden=true;saveNoticeLeft=0;saveNotice.hidden=true;endPeek();rcStaticLeft=0;pursuerCreakLeft=3.6;rcStatic.hidden=true;peekButton.hidden=true;manual.clear();manual.restore(saved?.tutorials,!!saved);pendingTutorial=null;countdown.hidden=true;for(const node of guides)node.hidden=true;
   perfSampler.reset();perfAt=0;clearFPS();altarVisit=createAltarVisit();
   const seed=!saved&&scenario?.milestone;
   if(seed)saved=trialCheckpoint(seed);
@@ -1593,7 +1595,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   sound.setCaptureQuiet(false);
   reset(restore);events.messages=messages;
   if(pursuer.active)pursuer.cooldown();
-  saveCheckpoint();showLives(1);
+  saveCheckpoint();showLives(1);startRecoveryFade();
   say('¡Emy te ha salvado! Te regaló una última oportunidad. Escapa con Louis.',6);
   last=performance.now();
  }
@@ -1617,7 +1619,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     const messages=events.messages;
     reset(restore);events.messages=messages;
     if(['patrol','hunt'].includes(events.phase))pursuer.cooldown();
-    saveCheckpoint();showLives(lives);
+    saveCheckpoint();showLives(lives);startRecoveryFade();
    }else{
     // Genuine second ending; do NOT auto-restart or erase the story decision.
     events.phase='failed';s.emyRescueUsed=true;
@@ -1757,6 +1759,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(now-lastPaint<limit-2)return;
   const shotDelta=Math.min(.1,Math.max(0,(now-last)/1000||0)),dt=Math.min(.055,shotDelta);last=now;lastPaint=now;
   if(!s||!renderer)return;
+  if(recoveryFadeLeft>0&&!isSuspended())recoveryFadeLeft=Math.max(0,recoveryFadeLeft-shotDelta);
+  if(recoveryFadeLeft>0&&!reducedMotion.matches){recoveryVeil.hidden=false;recoveryVeil.style.opacity=String((recoveryFadeLeft/.58)**1.5);}else recoveryVeil.hidden=true;
   if(saveNoticeLeft>0&&!isSuspended()&&!cinematic&&!finalCutscene)saveNoticeLeft=Math.max(0,saveNoticeLeft-shotDelta);
   saveNotice.hidden=saveNoticeLeft<=0||isSuspended()||!!cinematic||!!finalCutscene;
   if(pendingTutorial&&!manual.active&&!isSuspended()&&!cinematic&&!emyShot&&!poseTransition&&events.phase!=='arrival'&&events.phase!=='hide'&&!finalCutscene){const id=pendingTutorial;pendingTutorial=null;tutorial(id);}
@@ -2515,6 +2519,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  if(import.meta.env.DEV&&demo){
   window.__rescueHouse={
    inspection:()=>inspection?.snapshot()??null,
+   recovery:()=>({fade:recoveryFadeLeft,saveNotice:saveNoticeLeft}),
    arrival:()=>({car:world.car.progress,wardrobe:poseTransition?.walk?wardrobeWalk(poseTransition.elapsed,poseTransition.walk):null,rising:wakeShot()}),
    mirrorPuzzle:()=>({...mirrorSafe.snapshot(),noteLift,safe:(()=>{const o=world.objects.find(o=>o.id==='mirror-safe');return {amount:o.amount,state:o.state};})()}),
    pianoPuzzle:()=>({picked:world.pianoSheet.taken,placed:world.piano.scorePlaced,solved:world.piano.solved,
