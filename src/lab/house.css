@@ -510,3 +510,7 @@
 #lab3d.house-finale-shot :is(.lab-cross,.lab-joystick,.lab-buttons,.lab-look,.house-hotbar,.house-charge,.house-stamina,.lab-focus,.lab-objective,.lab-toast){visibility:hidden;pointer-events:none}
 #lab3d.house-finale-run :is(.lab-cross,.lab-buttons,.house-hotbar,.lab-focus,.lab-objective,.house-charge,.lab-toast){visibility:hidden;pointer-events:none}
 #lab3d.house-finale-shot .house-rc-caption,#lab3d.house-finale-run .house-rc-caption{bottom:max(16px,calc(env(safe-area-inset-bottom) + 12px));font:600 clamp(13px,2vw,19px)/1.4 system-ui;text-shadow:0 2px 7px #0a080d,0 0 12px #120e15}
+
+/* Opt-in LP diagnostics only. Never intercept the gameplay controls. */
+#lab3d .house-perf{position:absolute;top:max(12px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:39;pointer-events:none;white-space:pre-line;max-width:65vw;padding:5px 9px;border-radius:6px;background:#13121bdd;color:#dbf6e6;font:11px/1.4 monospace;text-align:center}
+#lab3d .house-perf[hidden]{display:none}
