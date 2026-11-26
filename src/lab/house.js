@@ -42,7 +42,7 @@ import {updateUpstairsEmy,petEmy} from './emy-cat.js';
 import {createEmyAbilities,advanceEmyAbilities,activateEmyScan,createEmyNameCue,advanceEmyNameCue,roomChoices,roomDestinations,isEmyRoomLocked,emyFloorList} from './emy-abilities.js';
 import {defaultMiniatureView,changeMiniatureView,miniatureSVG,miniatureMarkers} from './emy-miniature.js';
 import {installNoiseProps,grabNoiseProp,holdNoiseProp,releaseNoiseProp,stepNoiseProps} from './noise-props.js';
-import {sendEmyDistract,commandEmyStay,releaseEmyStay,requestRibbonKey,EMY_ENTRANCE_SECONDS,createEmyCompanion,beginEmyEntrance,emyEntranceCamera,sendEmyToTrunk,updateEmyCompanion,snapshotEmyCompanion,restoreEmyCompanion} from './emy-companion.js';
+import {sendEmyDistract,commandEmyStay,releaseEmyStay,requestRibbonKey,EMY_ENTRANCE_SECONDS,createEmyCompanion,beginEmyEntrance,emyEntranceCamera,sendEmyToTrunk,updateEmyCompanion,snapshotEmyCompanion,restoreEmyCompanion,initializeTrialEmy} from './emy-companion.js';
 import {createRC,syncRCObject,deployRC,driveRC,beepRC,updateRC,stopRC,crashRC,recoverRC,rcCamera,advanceRCCamera,rcDeploymentView,canTrapPursuer} from './rc-car.js';
 import {createLouisEscape,updateLouisEscape,freeLouis,louisCamera} from './louis-escape.js';
 import {createLoisShotDirector,advanceLoisShot,finishLoisShot} from './lois-ps2-cinematics.js';
@@ -307,6 +307,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(door.motion)updateFurniture(world.objects,.1,s);
   resetInput();saveCheckpoint();say('¡Es Emy! Ha entrado de un salto y ahora te acompaña.',4);
  }
+ function syncEmyInteraction(){
+  const cat=world.emy,target=world.emyInteraction;
+  Object.assign(target,{x:cat.x,y:cat.y+.38,z:cat.z,interactable:!cat.hidden&&(!emyCompanion||['following','stay'].includes(emyCompanion.stage))&&cat.reaction<=0});
+ }
  function reset(saved){
   const seed=!saved&&scenario?.milestone;
   if(seed)saved=trialCheckpoint(seed);
@@ -324,7 +328,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   root.classList.remove('lab-intro-active');$('lab-window-intro').classList.add('lab-hidden');$('lab-camera-settings').open=false;
   world=createHouse(checkpoint);noiseProps=installNoiseProps(world);
   puzzle=createHousePuzzle(scenario?.puzzleEntry??config.entry);pursuer=new Pursuer(world);sound.setThreat(false);
-  emyCompanion=demo&&checkpoint==='ground'?createEmyCompanion(world.emy,{waiting:!scenario}):null;
+  // Every story trial uses the real companion controller, not the older
+  // autonomous upstairs cat. Non-story lab previews keep their old behavior.
+  emyCompanion=demo&&(checkpoint==='ground'||!!scenario)?createEmyCompanion(world.emy,{waiting:!scenario}):null;
   world.objects.find(o=>o.id==='emy-vent').interactable=!!emyCompanion&&!puzzle.key;
   if(emyCompanion){
    const drawer=world.objects.find(o=>o.id==='drawer'),key=world.objects.find(o=>o.id==='key');
@@ -381,8 +387,6 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(world.studyVent.unlatched||puzzle.key)world.studyVent.tool.taken=true;
   if(puzzle.key){world.studyVent.interactable=false;world.studyVent.unlatched=true;poseVentCover(world.studyVent,1);}
   resumed=!!restored;
-  // Keep an initial safe position even when a trial starts during a chase.
-  lastSafeCheckpoint=restored?saved:captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTrap,batterySwap,pursuer,emy:emyCompanion&&snapshotEmyCompanion(emyCompanion)});
   if(restored)({louis,equipment,encounterCheckpoint}=restored);
   if(seed){
    const starts={2:[5.74,HEIGHT,2.4,-Math.PI/2],4:[2.78,HEIGHT,1.76,1.85],5:[2.78,HEIGHT,1.76,1.85],6:[6.9,HEIGHT,10.4,-Math.PI/2],7:[6.9,HEIGHT,10.4,-Math.PI/2],9:[7.86,-3.55,12.26,.65],11:[5.9,0,10.9,0],12:[5.9,0,11.4,0]};
@@ -392,14 +396,28 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   // camera up from the old floor through a ceiling.
   s.cameraGround=s.y;
   if(emyCompanion){
-   if(restored){
+   if(scenario&&(seed||!restored)){
+    const stage=scenario.emy??(scenario.milestone>=8?'trunk':scenario.events==='car'?'waiting':'following');
+    // Place Emy AFTER restoring the player's milestone and final spawn pose.
+    // The hatch-opening withdrawal and finale are not bypassed.
+    if(!initializeTrialEmy(emyCompanion,world,s,stage)){
+     const anchor=s.y>HEIGHT*.52?world.spawns.upstairs:world.spawns.interactions;
+     initializeTrialEmy(emyCompanion,world,anchor,stage);
+    }
+   }else if(restored){
     const legacyExplored=!saved?.emy&&(saved.stage!=='explore'||saved.drawer||saved.picked?.length);
     const catSave=saved.version===1&&saved.emy?.stage?.startsWith('trunk')&&world.hatch.locked?{stage:'following'}:saved.emy;
     restoreEmyCompanion(emyCompanion,world.hatch.locked?(catSave??(legacyExplored?{stage:'following'}:null)):{stage:'trunk'},events.phase);
+    // A trial retry restores Kitty at a checkpoint, not necessarily where
+    // the cat was last walking. Rejoin only a saved following companion.
+    if(scenario&&emyCompanion.stage==='following'&&!s.hidden)initializeTrialEmy(emyCompanion,world,s,'following');
    }
-   else if(scenario?.events==='wake')restoreEmyCompanion(emyCompanion,{stage:'following',x:s.x+.5,y:s.y,z:s.z+.5,yaw:s.yaw},'sleep');
-   else if(scenario?.events==='evaded')restoreEmyCompanion(emyCompanion,{stage:'following',x:s.x+.5,y:s.y,z:s.z+.5,yaw:s.yaw},'evaded');
   }
+  syncEmyInteraction();
+  // Capture the actual initialized companion, not the pre-restore default.
+  // Preserve the original checkpoint's narrative and life fields on retries.
+  const emy=emyCompanion&&snapshotEmyCompanion(emyCompanion);
+  lastSafeCheckpoint=restored?{...saved,emy}:captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTrap,batterySwap,pursuer,emy});
   sound.setThreat(['patrol','hunt'].includes(events.phase));
   phone.setInventory(s.inventory);phone.equip(equipment);
   focus=null;lookTarget={yaw:s.yaw,pitch:s.pitch};modalClose();keys.clear();rebuild();
@@ -1580,8 +1598,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     }
    }else updateUpstairsEmy(world.emy,shotDelta,{player:s,reduced:reducedMotion.matches,
     hidden:world.greyCat.active,blocked:(x,y,z,r,h)=>blocked(world.boxes,x,y,z,r,h)});
-   const cat=world.emy,target=world.emyInteraction;
-   Object.assign(target,{x:cat.x,y:cat.y+.38,z:cat.z,interactable:!cat.hidden&&(!emyCompanion||['following','stay'].includes(emyCompanion.stage))&&cat.reaction<=0});
+   syncEmyInteraction();
+   const cat=world.emy;
     // Refresh only on opening; game time is paused during the dialog.
    if(wasHidden!==cat.hidden)renderer.updateVisibility();
   }
