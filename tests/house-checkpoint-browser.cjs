@@ -178,8 +178,9 @@ async function run(){
   await page.locator('[data-equip=phone]').click();
   await page.getByRole('button',{name:'Usar teléfono',exact:true}).click();
   await dismissField('phone');
-  await page.locator('[data-home-page="1"]').click();
-  await page.locator('[data-app=manual]').click();
+  await clickTrialButton(page.locator('button[data-home-page="1"]'));
+  await page.locator('button[data-app=manual]').waitFor({state:'visible'});
+  await clickTrialButton(page.locator('button[data-app=manual]'));
   assert.equal(await page.locator('[data-manual=movement]').count(),1);assert.equal(await page.locator('[data-manual=hide]').count(),0);
   await page.locator('[data-manual=movement]').click();await dismissField('movement');
   await page.locator('.phone-shell [data-app=close]').click();
