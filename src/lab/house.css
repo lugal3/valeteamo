@@ -557,3 +557,7 @@
 #lab3d .house-inspection-dialog .lab-paper-actions button{min-height:36px}
 @media(max-height:420px){#lab3d .house-inspection-dialog .lab-paper{padding:9px 12px}#lab3d .inspect-preview{height:29dvh}#lab3d .inspect-toolbar button{min-height:32px}}
 @media(max-width:480px) and (orientation:portrait){#lab3d .inspect-layout{flex-direction:column;align-items:stretch}}
+
+#lab3d .house-recovery-veil[hidden]{display:none!important}
+#lab3d .house-recovery-veil{position:absolute;inset:0;z-index:77;background:#100d17;pointer-events:none}
+@media(prefers-reduced-motion:reduce){#lab3d .house-recovery-veil{display:none!important}}
