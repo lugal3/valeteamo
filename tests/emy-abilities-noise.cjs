@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');
 (async()=>{
- const {createHouse,setDoor}=await import('../src/lab/world.js');
+ const {createHouse,setDoor,blocked,groundHeight,HEIGHT}=await import('../src/lab/world.js');
  const {Pursuer}=await import('../src/lab/pursuer.js');
  const {createEmyAbilities,activateEmyScan,advanceEmyAbilities,createEmyNameCue,advanceEmyNameCue,roomChoices,roomDestination,roomDestinations,isEmyRoomLocked,emyFloorMap,emyFloorList}=await import('../src/lab/emy-abilities.js');
  const {installNoiseProps,grabNoiseProp,holdNoiseProp,releaseNoiseProp,stepNoiseProps}=await import('../src/lab/noise-props.js');
@@ -244,6 +244,27 @@ const assert=require('node:assert/strict');
  assert.equal(sampleEmergencyRescue(0,shot.stage).foe.grip,0);
  assert(sampleEmergencyRescue(1,shot.stage).foe.grip>.95);
  assert.equal(sampleEmergencyRescue(2.3,shot.stage).foe.grip,0);
+ assert(!shot.stage.compact,'Exterior stage must remain visible');
+ const stages={wide:0,tight:0,closeup:0,occluded:0};
+ const fixturePoints=[[5.65,0,12.8],[5.9,0,8.1],[9.75,0,3.34],[3.3,0,3.6],[5.74,HEIGHT,2.4],[2.39,HEIGHT,3.85],[6.9,HEIGHT,10.4],[9,HEIGHT,3.6]];
+ for(const [x,y,z] of fixturePoints){
+  if(blocked(finaleWorld.boxes,x,y,z,.19,1.65)||Math.abs(groundHeight(x,z,y)-y)>.12)continue;
+  for(const angle of [0,Math.PI/2,Math.PI,-Math.PI/2]){
+   const k={x,y,z,yaw:angle},enemy={x:x+.78*Math.sin(angle),y,z:z+.78*Math.cos(angle),yaw:angle+Math.PI};
+   const stage=planEmyRescueShot(finaleWorld,k,enemy,{x,y:y+1.63,z,yaw:angle,pitch:0});
+   stages[stage.kind]++;
+   if(stage.compact){assert.equal(stage.viewMode,'occluded');continue;}
+   for(let frame=0;frame<=198;frame++){
+    const p=sampleEmergencyRescue(frame/50,stage);
+    assert(!blocked(finaleWorld.boxes,p.cat.x,p.cat.y,p.cat.z,.13,.38),'Rescue cat must avoid solid geometry: '+JSON.stringify({kind:stage.kind,p:p.cat}));
+    assert(!blocked(finaleWorld.boxes,p.foe.x,p.foe.y,p.foe.z,.16,1.70),'Rescue actor must avoid walls');
+    assert(!blocked(finaleWorld.boxes,p.kitty.x,p.kitty.y,p.kitty.z,.18,1.63),'Kitty recovery must avoid walls');
+   }
+  }
+ }
+ assert(stages.wide+stages.tight+stages.closeup>0,'At least one real visible stage required');
+ console.log('PASS actual house rescue paths: '+JSON.stringify(stages));
+
  rescueCat.hidden=true;
  for(const {box} of rescueCat.parts)box.hiddenGeometry=true;
  assert(!poseEmyLastChance(shot,rescueCat,foe,true),'Emy stays hidden during the first threat beat');
