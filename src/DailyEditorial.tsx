@@ -11,7 +11,7 @@ export const EDITORIAL:Record<string,{title:string;em:string;action:string;hint:
  music:{title:'Lado A.',em:'Para Vale.',action:'Elegir canción',hint:'Pon una canción que te guste.',total:0,done:''},
  finale:{title:'La última',em:'noche.',action:'Enciende las estrellas',hint:'Ilumina el cielo antes de medianoche.',total:6,done:'Pide un deseo. El resto puede esperar.'}
 };
-const FL=[[88,222],[130,185],[178,130],[230,67],[121,100],[292,145],[215,240],[320,109]];
+const FL=[[91,222],[146,177],[194,117],[255,47],[117,111],[280,169],[221,237],[344,107]];
 const ST=[[76,185],[122,97],[206,135],[273,67],[328,166],[235,223],[152,233]];
 const WI=[[200,68],[123,116],[277,116],[102,210],[298,210],[200,247]];
 const Dust=memo(function Dust(){return <div className="ed-dust" aria-hidden="true">{Array.from({length:32},(_,i)=><i className="daily-particle" key={i} style={{left:(i*37+4)%100+'%',top:(i*61+11)%100+'%',animationDelay:-i*.7+'s',animationDuration:7+i%7+'s'}}/>)}</div>});
@@ -36,6 +36,7 @@ export function DailyEditorial({theme,preview,children}:{theme:DailyTheme;previe
  const complete=info.total>0&&hits.length===info.total;
  return <div className={'ed-layout ed-'+theme.id}>
   <Dust/>
+  {theme.id==='blossom'&&<div className="ed-petal-field" aria-hidden="true">{Array.from({length:18},(_,i)=><i key={i} className="ed-falling-petal" style={{left:((i*37+5)%100)+'%',animationDelay:(-i*1.19)+'s',animationDuration:(10+i%8)+'s',width:(7+i%4*3)+'px',height:(12+i%4*4)+'px'}}/>)}{Array.from({length:14},(_,i)=><b key={i} className="ed-warm-spark" style={{left:((i*53+8)%100)+'%',top:((i*41+12)%100)+'%',animationDelay:-i*.37+'s'}}>{i%5===0?'♡':'✦'}</b>)}</div>}
   <div className="ed-top"><span>{preview?'LP / Vista previa · VALE':'VALE / una cuenta atrás'}</span><span>{theme.date} 2026</span></div>
   <div className="ed-main">
    <div className="ed-copy">
@@ -55,9 +56,20 @@ export function DailyEditorial({theme,preview,children}:{theme:DailyTheme;previe
    <div className="ed-object">
     <svg className="daily-art ed-art" viewBox="0 0 400 300" aria-hidden={theme.id==='letter'||theme.id==='aurora'||theme.id==='music'?true:undefined}>
      {theme.id==='blossom'&&<>
-      <g className="ed-branch"><path d="M50 310Q50 160 255 8M85 310Q160 235 330 125M42 220Q130 175 125 70" fill="none" stroke="#694b48" strokeWidth="5"/>
-      <g fill="#526650"><path d="M92 205q-75-20-35-55q40 15 35 55M172 138q-8-65 38-55q6 45-38 55M226 237q40-60 65-20q-11 40-65 20"/></g>
-      {FL.map(([x,y],n)=><g key={n} transform={`translate(${x} ${y})`}><g className={'ed-flower '+(hits.includes(n)?'hit':'')} {...target(n,'Flor '+(n+1))}>{Array.from({length:5},(_,i)=><ellipse key={i} cy="-12" rx="9" ry="15" transform={`rotate(${i*72})`} fill={n%2?'#f7ded1':'#a55564'} stroke="#6f4c50" strokeWidth=".8"/>)}<circle r="6" fill="#e7b26f"/>{hits.includes(n)&&<text y="-20" textAnchor="middle" fill="#8d3e55" fontSize="22" className="ed-bloom">♡</text>}</g></g>)}</g>
+      <defs>
+       <radialGradient id="ed-flower-sky" cx="72%" cy="20%" r="90%"><stop stopColor="#fce0c7"/><stop offset=".5" stopColor="#dc9e9c"/><stop offset="1" stopColor="#a86173"/></radialGradient>
+       <linearGradient id="ed-petal-pink" x1="0" y1="0" x2=".7" y2="1" gradientUnits="objectBoundingBox"><stop stopColor="#f4aeae"/><stop offset=".42" stopColor="#d96879"/><stop offset="1" stopColor="#9a344f"/></linearGradient>
+       <radialGradient id="ed-petal-cream" cx="40%" cy="20%" r="90%"><stop stopColor="#fff3d9"/><stop offset=".7" stopColor="#f2c9b5"/><stop offset="1" stopColor="#d68a86"/></radialGradient>
+       <linearGradient id="ed-wood"><stop stopColor="#53372f"/><stop offset=".5" stopColor="#a7765b"/><stop offset="1" stopColor="#634538"/></linearGradient>
+       <linearGradient id="ed-leaf" x2="1" y2="1"><stop stopColor="#81916a"/><stop offset="1" stopColor="#3f5945"/></linearGradient>
+      </defs>
+      <rect width="400" height="300" fill="url(#ed-flower-sky)"/>
+      <g opacity=".15" fill="#fff1c8"><circle cx="331" cy="51" r="47"/><circle cx="331" cy="51" r="59" fill="none" stroke="#fff1c8"/><path d="M0 260Q90 188 155 256T305 248T400 215V300H0Z"/></g>
+      <g className="ed-golden-orbit" fill="none" stroke="#fff2be" strokeWidth=".8" opacity=".65"><ellipse cx="205" cy="164" rx="191" ry="57" transform="rotate(-26 205 164)" strokeDasharray="1.5 4"/><ellipse cx="205" cy="164" rx="180" ry="65" transform="rotate(-26 205 164)" opacity=".5"/></g>
+      <g className="ed-branch"><path d="M20 310Q91 240 160 177T289 26M73 273Q163 266 249 208T362 100M112 220Q108 153 116 95M160 177Q227 174 280 158" fill="none" stroke="#50362e" strokeWidth="7" strokeLinecap="round"/><path d="M20 307Q91 240 160 177T289 26M73 270Q163 266 249 208T362 100M112 217Q108 153 116 95M160 174Q227 174 280 158" fill="none" stroke="url(#ed-wood)" strokeWidth="4" strokeLinecap="round"/>
+      {[[116,212,-34],[168,164,24],[233,211,35],[264,93,-35],[302,152,38],[91,251,-60]].map(([x,y,rot],n)=><g key={n} transform={`translate(${x} ${y}) rotate(${rot})`}><path d="M0 0Q-27-7-25-43Q12-35 0 0" fill="url(#ed-leaf)" stroke="#576447" strokeWidth=".6"/><path d="M0 0L-22-39M-10-16L-23-22M-14-24L-7-32" fill="none" stroke="#d2d09a" strokeWidth=".6" opacity=".6"/></g>)}
+      {[[285,30],[304,19],[108,91],[124,81],[360,96],[373,82],[267,196],[52,269]].map(([x,y],n)=><g key={n} transform={`translate(${x} ${y}) rotate(${n%2?30:-22})`}><path d="M0 7v-14" stroke="#68533e" strokeWidth="2"/><path d="M0 0C-12-4-8-20 0-19C10-19 12-5 0 0Z" fill="url(#ed-petal-pink)" stroke="#a85763" strokeWidth=".6"/><path d="M-3-4L0 2 5-5" fill="#727a50"/></g>)}
+      {FL.map(([x,y],n)=><g key={n} transform={`translate(${x} ${y})`}><g className={'ed-flower '+(hits.includes(n)?'hit':'')} {...target(n,'Flor '+(n+1))}><circle r="28" fill="transparent"/>{Array.from({length:5},(_,i)=><g key={i} transform={`rotate(${i*72+12})`}><path d="M0 3C-10-1-22-17-15-25C-9-32 0-28 2-26C13-33 22-20 15-11C9-3 4 1 0 3Z" fill={n%2?'url(#ed-petal-cream)':'url(#ed-petal-pink)'} stroke={n%2?'#e3ac99':'#b64e65'} strokeWidth=".6"/><path d="M0 0Q-3-12-8-23M1-1Q5-13 11-20" fill="none" stroke="#ffe4cb" opacity=".52" strokeWidth=".8"/></g>)}<circle r="7" fill="#c18b54"/>{Array.from({length:10},(_,i)=><g key={i} transform={`rotate(${i*36})`}><path d="M0 2V-9" stroke="#f5d19a" strokeWidth="1"/><circle cy="-9" r="1.7" fill="#ffe2a1"/></g>)}<circle r="3" fill="#9c6449"/>{hits.includes(n)&&<g className="ed-heart-burst"><text y="-35" textAnchor="middle" fill="#fff1d9" fontSize="22">♡</text><circle cx="-24" cy="-15" r="2" fill="#fff1b4"/><circle cx="23" cy="-24" r="2" fill="#fff1b4"/></g>}</g></g>)}</g>
      </>}
      {theme.id==='constellation'&&<>
       <g fill="none" stroke="#c4ac7950"><circle cx="200" cy="150" r="138"/><circle cx="200" cy="150" r="110"/><ellipse cx="200" cy="150" rx="177" ry="84" transform="rotate(-25 200 150)"/></g>

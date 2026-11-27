@@ -34,6 +34,7 @@ async function main(){
    messages.add(await root.locator('.daily-message p').innerText());
    assert.equal(await root.locator('.daily-particle').count(),32,'bounded themed particle field');
    assert.equal(await root.locator('.daily-art').count(),1,'individual decorative composition');
+   if(i===0){assert.equal(await root.locator('.ed-falling-petal').count(),18);assert.equal(await root.locator('.ed-warm-spark').count(),14);}
    assert(await root.locator('.birthday-time').evaluate(el=>el.scrollWidth<=el.clientWidth+1),'timer fits viewport');
    await page.screenshot({path:'artifacts/daily-'+(i+1)+'-'+themes[i]+'.png'});
   }
