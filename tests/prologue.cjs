@@ -63,6 +63,17 @@ const assert=require('node:assert/strict');
  assert.deepEqual(PROLOGUE_DIALOGUES.couple.map(line=>line.speaker),['Vale','Luis']);
  assert(PROLOGUE_DIALOGUES.warning.some(line=>line.speaker==='Louis'),
   'Louis must directly warn Kitty before being kidnapped');
+ const records=new Map();
+ const store={getItem:k=>records.get(k)??null,setItem:(k,v)=>records.set(k,v),removeItem:k=>records.delete(k)};
+ const first=story.openPrologueSave(store),stale=story.openPrologueSave(store);
+ assert.equal(first.save(advancePrologue(PROLOGUE_START,'churu')),true);
+ assert.equal(stale.save(visited),false,'stale prologue must not replace newer stage');
+ assert.equal(stale.reset(),false);
+ assert.equal(first.reset(),true);
+ const resumed=story.openPrologueSave(store);assert.equal(resumed.state.stage,'intro');
+ assert.equal(resumed.save(visited),true);
+ assert.equal(first.save(PROLOGUE_START),false,'old reset lease cannot erase another session');
+ assert.equal(story.openPrologueSave({getItem(){throw Error('blocked');}}),undefined);
  const fs=require('node:fs');
  const app=fs.readFileSync('src/StoryApp.tsx','utf8');
  const countdown=fs.readFileSync('src/BirthdayCountdown.tsx','utf8');

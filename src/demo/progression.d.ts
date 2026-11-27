@@ -4,4 +4,6 @@ export const RESCUE_SAVE_KEY:string;export const RESCUE_VERSION:2;export const S
 export function parseRescue(raw:string|null):RescueState;
 export function advanceRescue(state:RescueState,event:'heart'|'abduction'|'trail'|'house'|'rescue'):RescueState;
 export function loadRescue():RescueState;export function saveRescue(s:RescueState):boolean;export function resetRescue():void;
-export function openRescueHouseSave():(HouseCheckpointStore & {finish:()=>void})|undefined;
+export type RescueHouseSave=HouseCheckpointStore & {finish:()=>boolean};
+export function openRescueHouseSave(storage?:Storage,expectedRaw?:string|null):RescueHouseSave|undefined;
+export function openRescueEntrySave(storage?:Storage):{readonly state:RescueState;enter:()=>boolean;openHouse:()=>RescueHouseSave|undefined}|undefined;

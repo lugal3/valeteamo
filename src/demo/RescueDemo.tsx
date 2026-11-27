@@ -5,7 +5,7 @@ import {Sound} from '../audio';
 import {readCampaignMute,writeCampaignMute} from './campaign-audio';
 import {EPILOGUE_START,advanceEpilogue,openEpilogueSave,type EpilogueState,type EpilogueStage} from './epilogue-progress.js';
 import {resetPrologue} from './prologue-story.js';
-import {START,advanceRescue,loadRescue,saveRescue,resetRescue,openRescueHouseSave,type RescueState} from './progression.js';
+import {START,advanceRescue,loadRescue,resetRescue,openRescueEntrySave,type RescueState} from './progression.js';
 import '../lab/lab.css';
 import './rescue.css';
 
@@ -29,7 +29,8 @@ const checkpointFor=(entry:Entry):PrologueCheckpoint=>
  entry==='feeding'?'feed-cat':entry==='abduction'?'walk-together':entry==='trail'?'ribbon':'intro';
 
 export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,epilogueEntry,returnToUniverse=!test}:{onExit:()=>void;onComplete?:()=>void;entry?:Entry;test?:boolean;epilogueEntry?:Exclude<EpilogueStage,'complete'>;returnToUniverse?:boolean}){
- const [progress]=useState(()=>initial(entry,test));
+ const [entryStore]=useState(()=>({current:test?undefined:openRescueEntrySave()}));
+ const [progress]=useState(()=>entryStore.current?.state??initial(entry,test));
  const [epilogueStore]=useState(()=>({current:!test&&progress.rescued?openEpilogueSave():undefined}));
  const [epilogue,setEpilogue]=useState<EpilogueState>(()=>epilogueStore.current?.state??{...EPILOGUE_START,stage:test&&epilogueEntry?epilogueEntry:EPILOGUE_START.stage});
  const [mode,setMode]=useState<'garden'|'house'|'epilogue'|'end'>(test&&epilogueEntry?'epilogue':progress.rescued?(epilogue.stage==='complete'?'end':'epilogue'):progress.house?'house':'garden');
@@ -60,7 +61,7 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
   // prólogo; la clave y los guardados del arcade original no se tocan.
   const events:RescueEvent[]=['heart','abduction','trail','house'];
   phaseRef.current=events.reduce(advanceRescue,phaseRef.current);
-  if(!test)saveRescue(phaseRef.current);
+  if(!test&&!entryStore.current?.enter())setSaveWarning(true);
   setMode('house');
  };
 
@@ -75,7 +76,8 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
     const checkpoint=entry==='mirror'?'mirror':
       entry==='drawer'?'interactions':
       entry==='lock'||entry==='rescue'?'upstairs':'ground';
-    const checkpointStore=test?undefined:openRescueHouseSave();
+    const checkpointStore=test?undefined:entryStore.current?.openHouse();
+    if(!test&&!checkpointStore)setSaveWarning(true);
     teardown=launchHouse(onExit,checkpoint,{
      demo:true,trial:test&&entry!=='garden',fieldTutorials:true,entry,
      checkpointStore,
@@ -85,11 +87,11 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
       finishing.current=true;
       if(typeof houseMuted==='boolean')updateMuted(houseMuted);
       phaseRef.current=advanceRescue(phaseRef.current,'rescue');
-      checkpointStore?.finish();
+      const committed=checkpointStore?.finish()===true;
       // Only the existing successful 3D finish event can open the epilogue.
       // If storage is blocked or the lease is stale, keep this session playable
       // without overwriting the other tab's record.
-      epilogueStore.current=test?undefined:openEpilogueSave();
+      epilogueStore.current=!test&&committed?openEpilogueSave():undefined;
       if(!test&&!epilogueStore.current)setSaveWarning(true);
       const next=epilogueStore.current?.state??{...EPILOGUE_START};
       epilogueRef.current=next;setEpilogue(next);setMode(next.stage==='complete'?'end':'epilogue');
@@ -105,14 +107,14 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
  },[mode]);
 
  const reset=()=>{
-  if(!test){resetRescue();resetPrologue();}
+  if(!test){resetRescue();resetPrologue();entryStore.current=openRescueEntrySave();}
   phaseRef.current={...START};epilogueStore.current=undefined;epilogueRef.current={...EPILOGUE_START};setEpilogue(epilogueRef.current);
   entering.current=false;finishing.current=false;setSaveWarning(false);setError('');setHouseReady(false);setMode('garden');
  };
 
  return <div className="rescue-demo" aria-label="Demo jugable de rescate">
   {mode==='garden'&&<GardenPrologue key={entry+(test?'-trial':'-story')}
-   test={test} checkpoint={checkpointFor(entry)} onExit={onExit} onEnterHouse={enterHouse} muted={campaignMuted} onMute={updateMuted} onPrepareHouse={()=>{void import('../lab/house.js').catch(()=>{});}}/>}
+   test={test} checkpoint={checkpointFor(entry)} onExit={onExit} onEnterHouse={enterHouse} muted={campaignMuted} onMute={updateMuted} onSaveWarning={()=>setSaveWarning(true)} onPrepareHouse={()=>{void import('../lab/house.js').catch(()=>{});}}/>}
   {mode==='epilogue'&&epilogue.stage!=='complete'&&<GardenEpilogue key={epilogue.stage} stage={epilogue.stage} onAdvance={completeEpilogue} onExit={onExit} muted={campaignMuted} onMute={updateMuted} audio={epilogueAudio}/>}
   {mode==='end'&&<div className="rescue-transition rescue-final" data-epilogue-stage="complete">
    <span>♥ ✿ ♥</span><h1>Feliz cumpleaños, <em>Vale</em></h1>

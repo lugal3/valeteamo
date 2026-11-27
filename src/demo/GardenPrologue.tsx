@@ -17,7 +17,7 @@ import {valeTexture} from './rescue-intro-art';
 import {prologueProgress,HOUSE_HANDOFF_MS} from './prologue-beats.js';
 import {
  PROLOGUE_START,PROLOGUE_DIALOGUES,PROLOGUE_OBJECTIVES,
- advancePrologue,loadPrologue,savePrologue,resetPrologue,recordPrologueDiscovery,
+ advancePrologue,loadPrologue,openPrologueSave,recordPrologueDiscovery,
  type PrologueState,type PrologueEvent,type PrologueLine
 } from './prologue-story.js';
 import {dialogueGlyphs,dialogueDelay,dialogueVoice,dialogueWords} from './dialogue-feel.js';
@@ -34,10 +34,12 @@ const initial=(test:boolean,checkpoint:PrologueCheckpoint):PrologueState=>
 
 const label=(speaker:string)=>speaker;
 
-export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHouse,onPrepareHouse,muted=false,onMute}:{
- test?:boolean;checkpoint?:PrologueCheckpoint;onExit:()=>void;onEnterHouse:()=>void;onPrepareHouse?:()=>void;muted?:boolean;onMute?:(muted:boolean)=>void;
+export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHouse,onPrepareHouse,muted=false,onMute,onSaveWarning}:{
+ test?:boolean;checkpoint?:PrologueCheckpoint;onExit:()=>void;onEnterHouse:()=>void;onPrepareHouse?:()=>void;muted?:boolean;onMute?:(muted:boolean)=>void;onSaveWarning?:()=>void;
 }){
- const [run,setRun]=useState<PrologueState>(()=>initial(test,checkpoint));
+ const [prologueStore]=useState(()=>test?undefined:openPrologueSave());
+ const [run,setRun]=useState<PrologueState>(()=>prologueStore?.state??initial(test,checkpoint));
+ const persist=useCallback((state:PrologueState)=>{if(!test&&!prologueStore?.save(state))onSaveWarning?.();},[test,prologueStore,onSaveWarning]);
  const [dialog,setDialog]=useState<Dialog|null>(null),[letters,setLetters]=useState(0);
  const [feeding,setFeeding]=useState<Feeding|null>(null);
  const [near,setNear]=useState('');
@@ -77,10 +79,10 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  const changed=useCallback((event:PrologueEvent)=>{
   const current=phaseRef.current,next=advancePrologue(current,event);
   if(next.stage===current.stage)return current;
-  phaseRef.current=next;setRun(next);if(!test)savePrologue(next);
+  phaseRef.current=next;setRun(next);persist(next);
   sceneRef.current?.setStoryStage(next.stage);
   return next;
- },[test]);
+ },[persist]);
 
  const showDialog=useCallback((lines:PrologueLine[],done?:()=>void)=>{
   if(!lines.length){done?.();return;}
@@ -281,7 +283,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   discover:(id)=>{
    const current=phaseRef.current,next=recordPrologueDiscovery(current,id);
    if(current===next)return;
-   phaseRef.current=next;setRun(next);if(!test)savePrologue(next);
+   phaseRef.current=next;setRun(next);persist(next);
   },
   ready:()=>actions.current.ready(),
   interact:(stage)=>actions.current.interact(stage),
@@ -335,8 +337,8 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   closePostcard();setMoment(null);
   for(const timer of travelTimers.current)window.clearTimeout(timer);
   travelTimers.current=[];travelingRef.current=false;setTransition(null);setHouseHandoff(false);
-  if(!test)resetPrologue();
-  const next=initial(test,checkpoint);
+  if(!test&&!prologueStore?.reset())onSaveWarning?.();
+  const next=test?initial(true,checkpoint):{...PROLOGUE_START};
   phaseRef.current=next;setRun(next);setDialog(null);reveal(0);setSpeechPulse(0);
   showFeeding(null);
   dialogRef.current=null;dialogDone.current=null;lockedRef.current=false;enteringRef.current=false;

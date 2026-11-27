@@ -21,10 +21,33 @@ export function loadRescue(){try{return parseRescue(localStorage.getItem(RESCUE_
 export function saveRescue(s){try{localStorage.setItem(RESCUE_SAVE_KEY,JSON.stringify(s));return true;}catch{return false;}}
 export function resetRescue(){try{localStorage.removeItem(RESCUE_SAVE_KEY);}catch{}}
 
-export function openRescueHouseSave(){
+// Snapshot the public route before the prologue starts. A delayed handoff
+// must never erase another tab's house checkpoint or completed ending.
+export function openRescueEntrySave(storage){
  try{
-  const storage=globalThis.localStorage;
+  storage??=globalThis.localStorage;
   let raw=storage.getItem(RESCUE_SAVE_KEY);
+  return {
+   get state(){return parseRescue(raw);},
+   enter(){
+    try{
+     if(storage.getItem(RESCUE_SAVE_KEY)!==raw)return false;
+     const current=parseRescue(raw);
+     if(current.rescued)return false;
+     if(current.house)return true;
+     const next=JSON.stringify(['heart','abduction','trail','house'].reduce(advanceRescue,current));
+     storage.setItem(RESCUE_SAVE_KEY,next);raw=next;return true;
+    }catch{return false;}
+   },
+   openHouse(){return openRescueHouseSave(storage,raw);}
+  };
+ }catch{return undefined;}
+}
+export function openRescueHouseSave(storage,expectedRaw){
+ try{
+  storage??=globalThis.localStorage;
+  let raw=storage.getItem(RESCUE_SAVE_KEY);
+  if(expectedRaw!==undefined&&raw!==expectedRaw)return;
   if(parseRescue(raw).phase!=='house')return;
   function write(record){
    try{
@@ -45,7 +68,7 @@ export function openRescueHouseSave(){
     else record.houseCheckpoint=checkpoint;
     return write(record);
    },
-   finish(){write(advanceRescue(parseRescue(raw),'rescue'));}
+   finish(){return write(advanceRescue(parseRescue(raw),'rescue'));}
   };
  }catch{}
 }

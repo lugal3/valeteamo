@@ -20,3 +20,8 @@ Base publicada: d28fc0eaa26ddc348f60b4e9704aaf275f8fb4c0. Rama independiente fea
 - Epílogo: una instancia Sound compartida entre sus cuatro mapas, sin reiniciar la música en cada cambio. Destrucción al abandonar el epílogo. No se modifica Corazones 2.
 - Precarga del módulo del rescate durante splash existente; no se inicializa ningún motor en paralelo. Limpieza de entrada 2D al perder foco y pausa si el documento se oculta durante la carga. Regresión del epílogo comprueba silencio conservado tras cambiar capítulo y recargar.
 - Verificación pendiente de CI exacto. No se ha medido continuidad sonora, tiempo al primer frame ni FPS en teléfono físico. Persistencia narrativa y auditoría de carga siguen pendientes.
+
+## Fase 1 — tercer bloque
+- CI del commit bc4a4fc detectó TS2353 en HouseLaunchOptions: se declara initialMuted y el argumento opcional de onRescue, compatible con callbacks sin argumentos.
+- Guardado de prólogo y handoff a casa con snapshot: una pestaña antigua no puede escribir sobre checkpoint interior, rescate terminado ni reinicio. Se informa de fallo y se permite jugar en memoria. Un final cuyo guardado perdió el lease no adopta el epílogo de otra partida. No se cambia versión ni claves.
+- Cobertura en rescue.cjs y prologue.cjs de competencia entre pestañas, reinicio, rescate completo, guardado bloqueado y recuperación. Pendiente ejecutar suite de esta revisión; no se da fase por validada.

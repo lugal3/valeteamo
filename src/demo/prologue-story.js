@@ -78,6 +78,31 @@ export function savePrologue(state){
  try{localStorage.setItem(PROLOGUE_SAVE_KEY,JSON.stringify(state));return true;}
  catch{return false;}
 }
+// Lease the prologue independently of the house. A stale tab may keep
+// playing in memory but cannot resurrect a reset or replace newer progress.
+export function openPrologueSave(storage){
+ try{
+  storage??=globalThis.localStorage;
+  let raw=storage.getItem(PROLOGUE_SAVE_KEY);
+  return {
+   get state(){return parsePrologue(raw);},
+   save(state){
+    try{
+     if(storage.getItem(PROLOGUE_SAVE_KEY)!==raw)return false;
+     const next=JSON.stringify(state);
+     if(next!==raw){storage.setItem(PROLOGUE_SAVE_KEY,next);raw=next;}
+     return true;
+    }catch{return false;}
+   },
+   reset(){
+    try{
+     if(storage.getItem(PROLOGUE_SAVE_KEY)!==raw)return false;
+     storage.removeItem(PROLOGUE_SAVE_KEY);raw=null;return true;
+    }catch{return false;}
+   }
+  };
+ }catch{return undefined;}
+}
 export function resetPrologue(){
  try{localStorage.removeItem(PROLOGUE_SAVE_KEY);}catch{}
 }
