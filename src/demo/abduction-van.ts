@@ -12,7 +12,7 @@ export const ABDUCTION_TIMING={
  struggle:4870,load:5940,board:6640,close:7140,escape:8900
 } as const;
 export const VAN_PLATE='LUNA-07';
-export const VAN_NIGHT_POSITION:IsoPoint={u:73.9,v:5.15};
+export const VAN_NIGHT_POSITION:IsoPoint={u:70,v:6.5};
 
 const ease=(t:number)=>{const s=Math.max(0,Math.min(1,t));return s*s*(3-2*s);};
 const lerp=(a:number,b:number,t:number)=>a+(b-a)*t;

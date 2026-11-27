@@ -34,7 +34,7 @@ import {HouseRenderer,pickupGeometry} from './renderer.js';
 import {inspectionMesh,inspectionHTML,mountInspection} from './object-inspection.js';
 import {HouseSound,MIX_CHANNELS,mixLimit} from './sound.js';
 import {applyLookDelta,followLook,readCameraSettings,writeCameraSettings,DEFAULT_CAMERA_SETTINGS,SENSITIVITY_MIN,SENSITIVITY_MAX,SENSITIVITY_STEP} from './camera-controls.js';
-import {WINDOW_SHOT_SECONDS,WINDOW_LANDING,windowIntroCamera,windowIntroState,windowIntroLighting,shouldPlayWindowIntro} from './window-intro.js';
+import {WINDOW_SHOT_SECONDS,WINDOW_LANDING,windowIntroCamera,windowIntroState,windowIntroLighting,shouldPlayWindowIntro,WINDOW_ESTABLISH_SECONDS,windowEstablishCamera,windowSequenceCamera} from './window-intro.js';
 import {navigate,getStairDirection} from './navigation.js';
 import {KITTY_SPEED,advanceMoveIntent,advanceMoveSpeed,advanceCameraFloor,advanceEye,isOnStairs} from './locomotion-feel.js';
 import {interactionTarget} from './interactions.js';
@@ -52,7 +52,7 @@ import {poseEscapeAmbush,poseEmyLastChance,createRescueObjectives,updateEmySense
 import {EMY_RESCUE_BEATS,planEmyRescueShot,sampleEmergencyRescue,sampleRescuedKitty} from './emy-emergency-shot.js';
 import {createPose} from './character-rig.js';
 import {collectCinematicCues} from './cinematic-cues.js';
-import {FINALE_BEATS,finaleStage,finaleThreat,finaleWeather,finaleEmyGoal,finaleLouisGoal,reunionView,finaleLighting} from './escape-finale.js';
+import {FINALE_BEATS,finaleStage,finaleThreat,finaleWeather,finaleEmyGoal,finaleLouisGoal,reunionView,finaleLighting,facadeLookbackView,FACADE_LOOKBACK_SECONDS} from './escape-finale.js';
 import {createAltarVisit,advanceAltarVisit,activateAltarRecord} from './louis-altar.js';
 import {rcControlHint,throwableHint,threatAccessibility,hopOffset,HOP_DURATION,HOP_COOLDOWN,advanceHop} from './hud-context.js';
 import {updateUpstairsEmy,petEmy,poseEmy} from './emy-cat.js';
@@ -351,8 +351,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function beginWindowIntro(){
   resetInput();
   poseFurniture(world.entryWindow,0);sound.setTension(.32);
-  cinematic={elapsed:0,cues:new Set()};root.classList.add('lab-intro-active');$('lab-window-intro').classList.remove('lab-hidden');
-  $('lab-intro-caption').textContent='Una ventana entreabierta…';
+  cinematic={elapsed:0,establishAge:0,cues:new Set()};root.classList.add('lab-intro-active');$('lab-window-intro').classList.remove('lab-hidden');
+  $('lab-intro-caption').textContent='La fachada: la puerta y todas las ventanas tapiadas, salvo una…';
  }
  function beginEmyShot(door){
   if(!emyCompanion||emyCompanion.stage!=='waiting')return false;
@@ -1912,15 +1912,19 @@ function runAction(act,node){
   if(mouseLocked()&&!canLook())releaseMouse();
   if(cinematic){
    const previousWindow=cinematic.elapsed;
-   if(!isSuspended())cinematic.elapsed=Math.min(WINDOW_SHOT_SECONDS,cinematic.elapsed+shotDelta);
+   if(!isSuspended()){
+    const remaining=Math.max(0,WINDOW_ESTABLISH_SECONDS-cinematic.establishAge);
+    const prelude=Math.min(remaining,shotDelta);cinematic.establishAge+=prelude;
+    cinematic.elapsed=Math.min(WINDOW_SHOT_SECONDS,cinematic.elapsed+shotDelta-prelude);
+   }
    const progress=Math.min(1,cinematic.elapsed/WINDOW_SHOT_SECONDS);
-   view=windowIntroCamera(progress);hand=false;torch=false;
+   view=windowSequenceCamera(cinematic);hand=false;torch=false;
    const shot=windowIntroState(progress);poseFurniture(world.entryWindow,shot.windowAmount);introHands=shot.hands;
    if(!isSuspended())for(const cue of collectCinematicCues('window',previousWindow,cinematic.elapsed,cinematic.cues)){
     const source=cue.source==='window'?{x:2.2,y:1.05,z:12}:null;
     play(cue.sound,source,cue.level,view);if(cue.caption)caption(cue.caption);
    }
-   $('lab-intro-caption').textContent=progress<.12?'La ventana del jardín…':progress<.19?'Deslizo el pestillo despacio…':progress<.35?'Abro la ventana con cuidado…':progress<.43?'Me apoyo en el marco…':progress<.53?'¡Uy!':progress<.62?'Un intento más…':progress<.86?'Con cuidado… sin hacer ruido.':'Ya estoy dentro.';
+   $('lab-intro-caption').textContent=cinematic.establishAge<WINDOW_ESTABLISH_SECONDS?'La puerta principal y la única ventana sin tablas…':progress<.12?'La ventana del jardín…':progress<.19?'Deslizo el pestillo despacio…':progress<.35?'Abro la ventana con cuidado…':progress<.43?'Me apoyo en el marco…':progress<.53?'¡Uy!':progress<.62?'Un intento más…':progress<.86?'Con cuidado… sin hacer ruido.':'Ya estoy dentro.';
    if(progress>=1){finishWindowIntro();view=cameraOf(s);hand=true;}
   }else if(emyShot){
    emyShot.elapsed=emyCompanion.entranceAge;
@@ -1963,12 +1967,12 @@ function runAction(act,node){
     z:startZ+(pet.z+Math.cos(pet.yaw)*along-startZ)*reach,flex:-.25,curl:.18}];
    hand=false;
   }
-  if(intro&&demo&&checkpoint==='ground'&&!scenario){view=windowIntroCamera(0);hand=false;torch=false;}
+  if(intro&&demo&&checkpoint==='ground'&&!scenario){view=windowEstablishCamera(0);hand=false;torch=false;}
   if(!isPaused())placePianoScore();
   const instrument=world.piano;
   if(instrument.solved&&instrument.compartmentAmount<1&&!paused)
    posePianoCompartment(instrument,reducedMotion.matches?1:Math.min(1,instrument.compartmentAmount+shotDelta/.48));
-  let thirdPerson=null,actorTime,actorWalk,actorPiano,shotLight=cinematic?windowIntroLighting(cinematic.elapsed/WINDOW_SHOT_SECONDS):0,cinematicLight=null;
+  let thirdPerson=null,actorTime,actorWalk,actorPiano,shotLight=cinematic?(cinematic.establishAge<WINDOW_ESTABLISH_SECONDS?.13*(1-Math.min(1,cinematic.establishAge/WINDOW_ESTABLISH_SECONDS)):windowIntroLighting(cinematic.elapsed/WINDOW_SHOT_SECONDS)):0,cinematicLight=null;
   if(piano){
    const standing=piano.advance(now,pianoRunning(),reducedMotion.matches);
    if(standing){
@@ -2068,7 +2072,11 @@ function runAction(act,node){
       shot.reunionBlend=clamp((shot.reunionBlend||0)+(settled?dt*2.4:-dt*4),0,1);
       if(shot.rejoinAge>=.28&&!shot.reunionHeard){shot.reunionHeard=true;play('cat-purr',cat,.48,view);if(!loisDialogue.active)startLoisReaction(louis,'relief');caption('Emy ronronea. Louis respira aliviado.');}
      cat.age+=dt;poseEmy(cat,{walking:moved>.001,mode:moved>.001?'walk':'idle',phase:cat.age,reduced:reducedMotion.matches,reunion:shot.reunionBlend});
-     if(shot.gardenView&&shot.rejoinAge>=2.1&&!loisDialogue.active){
+     if(shot.gardenView&&shot.rejoinAge>=2.1&&!loisDialogue.active&&!shot.facadeLookFrom){
+      shot.facadeLookFrom={...shot.lastView};shot.facadeLookAge=0;resetInput();
+     }
+     if(shot.facadeLookFrom){shot.facadeLookAge+=shotDelta;}
+     if(shot.facadeLookFrom&&(reducedMotion.matches||shot.facadeLookAge>=FACADE_LOOKBACK_SECONDS)){
       events.phase='safe';resetInput();
       for(const cue of collectCinematicCues('escape',shot.elapsed,FINALE_BEATS.finish,shot.cues)){play(cue.sound,null,cue.level);caption(cue.caption);}
       showModal('Final 1 · ¡Kitty y Louis escaparon!',
@@ -2078,7 +2086,7 @@ function runAction(act,node){
     }
     if(shot.gardenView){
      if(!isSuspended())shot.reunionTime+=shotDelta;
-     view=reunionView(shot.gardenView,louis,world.emy,shot.reunionTime,reducedMotion.matches);
+     view=shot.facadeLookFrom?facadeLookbackView(shot.facadeLookFrom,shot.facadeLookAge,reducedMotion.matches):reunionView(shot.gardenView,louis,world.emy,shot.reunionTime,reducedMotion.matches);
      shot.lastView={...view};
      cinematicLight={projection:1-.16*(reducedMotion.matches?1:clamp(shot.reunionTime/1.05,0,1))};
     }
@@ -2648,11 +2656,11 @@ function runAction(act,node){
    altar:()=>({...altarVisit,waiting:!!emyCompanion?.altarWait,fear:!!emyCompanion?.altarFear,bristle:world.emy.parts.find(p=>p.id==='coat')?.box.bristle??0,earFlatten:world.emy.earFlatten??0}),
    scanFrame:()=>renderer?.scanFrame??null,
    performance:()=>perfReport(),
-   windowIntro:()=>cinematic?{elapsed:cinematic.elapsed,amount:world.entryWindow.amount,view:windowIntroCamera(cinematic.elapsed/WINDOW_SHOT_SECONDS)}:null,
+   windowIntro:()=>cinematic?{elapsed:cinematic.elapsed,amount:world.entryWindow.amount,view:windowSequenceCamera(cinematic),establishAge:cinematic.establishAge}:null,
    finale:()=>finalCutscene?{elapsed:finalCutscene.elapsed,playable:finalCutscene.playable,runAge:finalCutscene.runAge,stage:finalCutscene.gardenView?'reunion':finalCutscene.playable?'run':finalCutscene.stage,weather:finaleWeather(finalCutscene,s),view:finalCutscene.lastView}:null,
    emergencyEvidence:()=>emergencyEvidence.slice(),
    emergencyRescue:()=>captureShot?.loss.emyRescue?{elapsed:captureShot.elapsed,kind:captureShot.stage.kind,viewMode:captureShot.stage.viewMode,lives:captureShot.loss.lives,easy:!!captureShot.loss.easy,pose:sampleEmergencyRescue(captureShot.elapsed,captureShot.stage)}:null,
-   intro:()=>cinematic?{elapsed:cinematic.elapsed,...windowIntroState(cinematic.elapsed/WINDOW_SHOT_SECONDS),camera:windowIntroCamera(cinematic.elapsed/WINDOW_SHOT_SECONDS)}:null,
+   intro:()=>cinematic?{elapsed:cinematic.elapsed,...windowIntroState(cinematic.elapsed/WINDOW_SHOT_SECONDS),camera:windowSequenceCamera(cinematic),establishAge:cinematic.establishAge}:null,
    atmosphere:()=>({room:sound.atmosphere?.room,outdoor:sound.atmosphere?.outdoor,events:sound.atmosphere?.events,voices:sound.atmosphere?.voices.size,loops:sound.atmosphere?.loops.length,lastEvent:sound.atmosphere?.lastEvent,muted:sound.settings.muted,volume:sound.settings.ambient}),
    snapshot:()=>({puzzle:{...puzzle},hop:{age:hopAge,offset:hopCancelled?0:hopOffset(hopAge,reducedMotion.matches)},position:{x:s?.x,y:s?.y,z:s?.z},locomotion:{...velocity,eye:s?.eye,cameraGround:s?.cameraGround,stairs:s?getStairDirection(s):''},camera:{yaw:s?.yaw,pitch:s?.pitch,targetYaw:lookTarget.yaw,invertX:options.invertX},cinematic:!!cinematic,quality:options.quality,fps,target:focus?.id??null,paused:isPaused(),controls:{look:lookPointer,stick:stickPointer,joystick:{...joystick}},reduceBob:s.reduceBob,flashlight:s.flashlight,notes:s.inventory.notes.length,drawer:(()=>{const o=world.objects.find(o=>o.id==='drawer');return {state:o.state,amount:o.amount,z:o.box.z,key:world.objects.find(o=>o.id==='key').z,contentsAvailable:world.objects.find(o=>o.id==='key').interactable,contentsConcealed:world.objects.find(o=>o.id==='key').concealed}})(),doors:world.objects.filter(o=>o.kind==='door').map(o=>({id:o.id,open:o.open,state:o.state,amount:o.amount,x:o.box.x,z:o.box.z,yaw:o.box.yaw,solid:o.box.solid})),handVisible:renderer.lastShowHand,hidden:!!s.hidden,hideType:s.hidden?.hideType,hidePeek:s.hidePeek||0,poseTransition:poseTransition?{entering:poseTransition.entering,elapsed:poseTransition.elapsed}:null,view:cameraOf(s),wardrobeAmount:world.objects.find(o=>o.id==='wardrobe').amount,music:{scheduled:sound.musicStep,voices:sound.musicNodes.size,timer:sound.musicTimer!==null,volume:sound.settings.music},sound:sound.context?.state,mirror:{supported:renderer.mirrorSupported,drawn:renderer.mirrorDrawn,vertices:renderer.kittyVertices?.length/16,uploads:renderer.mirrorUploads},animation:{...animator.snapshot(),rigEvaluations:renderer.characterBinding?.evaluations},geometry:{vertices:renderer.vertexCount,triangles:renderer.triangleCount}}),
    setPose:(pose)=>{if(blocked(world.boxes,pose.x,pose.y,pose.z,.2,1.7))throw Error('Blocked test pose');Object.assign(s,pose);s.cameraGround=s.y;

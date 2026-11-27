@@ -4,7 +4,7 @@ import {createLivingEcology,type LivingWorld} from './rescue-ecology-render';
 import type {AmbientCue} from './rescue-ecology';
 import {ISO,toScreen,type IsoPoint} from '../isometric';
 import {HOUSE_3D_REFERENCE,NIGHT_HOUSE,nightRouteCenter,nightRouteLimits,nightHouseBlocks,
- nightWalkable,NIGHT_NEIGHBORS} from './night-house-layout';
+ nightWalkable,NIGHT_NEIGHBORS,FRONT_FACADE_WIDTH,frontFacadeOffset} from './night-house-layout';
 
 // Cuatro mapas cargados POR SEPARADO dentro de IsoAdventure. Ningún mapa crea
 // Phaser.Game, cámara, controles ni sprites: todo sigue siendo 2D Corazones.
@@ -480,11 +480,11 @@ function sign(scene:Phaser.Scene,u:number,v:number,title:string){
 // All proportions and the two-storey rhythm derive from HOUSE_3D_REFERENCE.
 // Crucially the door/window centers share the same projected ground baseline.
 function frontalRescueHouse(scene:Phaser.Scene,dawn=false){
- const ground=toScreen(NIGHT_HOUSE.door),width=340;
- const left=ground.x-width*(HOUSE_3D_REFERENCE.frontDoorX/HOUSE_3D_REFERENCE.width);
+ const ground=toScreen(NIGHT_HOUSE.door),width=FRONT_FACADE_WIDTH;
+ const left=ground.x+frontFacadeOffset(HOUSE_3D_REFERENCE.width);
  const top=ground.y-203,right=left+width,base=ground.y-8;
- const g=scene.add.graphics().setDepth(dawn?ground.y-8:ground.y-125);
- const px=(realX:number)=>left+width*realX/HOUSE_3D_REFERENCE.width;
+ const g=scene.add.graphics().setDepth(ground.y-8);
+ const px=(realX:number)=>ground.x+frontFacadeOffset(realX);
  // Dark foundation, sturdy level outlines, readable two-storey windows.
  g.fillStyle(0x5c5065,.9).fillRect(left-8,base-1,width+16,9);
  g.fillStyle(0xc6b6c9).fillRect(left,top,width,base-top);
@@ -519,8 +519,8 @@ function frontalRescueHouse(scene:Phaser.Scene,dawn=false){
   g.fillStyle(0x756375).fillRect(cx-19,cy-27,38,56);
   g.fillStyle(open?0x332b49:0xbfc7bc).fillRect(cx-14,cy-22,28,45);
   if(open){
-   // Open sash on left: Kitty enters from the FRONT patio.
-   g.fillStyle(0xf3c8d7).fillRect(cx-18,cy-22,5,46);
+   // The hinge at smaller world X appears on the viewer's right.
+   g.fillStyle(0xf3c8d7).fillRect(cx+13,cy-22,5,46);
    g.fillStyle(0xffe9a9,.18).fillRect(cx-11,cy-19,20,39);
   }else{
    g.fillStyle(0xe2e7da).fillRect(cx-1,cy-22,3,46);
@@ -528,7 +528,15 @@ function frontalRescueHouse(scene:Phaser.Scene,dawn=false){
   }
   g.fillStyle(0xb68e9e).fillRect(cx-23,cy+30,46,3);
   g.fillStyle(0xf1d5df).fillRect(cx-23,cy+28,46,3);
-  if(!open){g.fillStyle(0x8c8fa6,.5).fillRect(cx-12,cy-20,10,18);g.fillStyle(0xe6d9cb,.26).fillRect(cx+3,cy+3,8,17);}
+  if(!open){
+   g.fillStyle(0x8c8fa6,.5).fillRect(cx-12,cy-20,10,18);g.fillStyle(0xe6d9cb,.26).fillRect(cx+3,cy+3,8,17);
+   // Two rough boards match the actual 3D exterior barricades, not intact glass.
+   for(const [i,y] of [cy-12,cy+6].entries()){
+    g.fillStyle(i?0x76513e:0x634638).fillRect(cx-22,y,44,8);
+    g.lineStyle(1,0xb48b6b,.72).lineBetween(cx-20,y+2,cx+20,y+2);
+    for(const x of [cx-16,cx+16])g.fillStyle(0x383238).fillCircle(x,y+4,1.5);
+   }
+  }
  };
  // Match the upstairs bedroom / landing / music windows in house-layout.js.
  for(const x of [2.2,6.1,12.1])pane(px(x),top+62,false);
@@ -538,8 +546,9 @@ function frontalRescueHouse(scene:Phaser.Scene,dawn=false){
  if(!dawn)g.lineStyle(3,0xa9f9db,.92).strokeRect(windowX-21,base-83,42,59);
  const doorX=px(HOUSE_3D_REFERENCE.frontDoorX);
  g.fillStyle(0x765367).fillRect(doorX-27,base-84,54,81);
- g.fillStyle(0x342c43).fillRect(doorX-21,base-78,42,74);
- g.fillStyle(0xdfb79b).fillRect(doorX+12,base-40,5,5);
+ g.fillStyle(dawn?0x211b28:0x624334).fillRect(doorX-21,base-78,42,74);
+ if(dawn){poly(g,0x694938,[[doorX-21,base-78],[doorX-4,base-65],[doorX-4,base-8],[doorX-21,base-4]]);}
+ else g.fillStyle(0xdfb79b).fillRect(doorX-17,base-40,5,5);
  g.fillStyle(0x594757).fillRect(doorX-19,base-70,38,2).fillRect(doorX-19,base-20,38,2);
  g.lineStyle(1,0x745b6f,.75).strokeRect(doorX-15,base-64,29,30);
  g.fillStyle(0xc3adbd).fillRect(doorX-31,base-3,64,7);
@@ -552,7 +561,7 @@ function frontalRescueHouse(scene:Phaser.Scene,dawn=false){
  scene.add.text(left+width*.77,top+22,'CASA 14 ♡',{
   fontFamily:'monospace',fontSize:'13px',fontStyle:'bold',
   color:'#fff6e9',stroke:'#4b3a53',strokeThickness:4
- }).setOrigin(.5).setDepth(ground.y-110);
+ }).setOrigin(.5).setDepth(ground.y-7);
 }
 function house(scene:Phaser.Scene,u:number,v:number,main:boolean,style:'sage'|'rose'|'blue'='rose'){
  if(main){frontalRescueHouse(scene);return;}

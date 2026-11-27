@@ -376,13 +376,13 @@ async function play(){
   assert.equal(await game.getAttribute('data-story-act'),'night',
    'Window approach is part of Act III, not a new game');
   await houseCard.getByText('Ventana abierta').waitFor({timeout:6000});
-  // A second leg of navigation goes WEST toward the actual open 3D window.
+  // A second leg of navigation goes screen-right along the same front.
   const windowDistance=await page.evaluate(()=>window.__valePrologue.houseRoute().distance);
   if(windowDistance>=1.35){
    await houseCard.getByRole('button',{name:/Guiarme caminando/}).click();
    await page.waitForFunction(()=>window.__valePrologue.houseRoute().distance<.9,null,{timeout:13000});
   }
-  await page.screenshot({path:'artifacts/story-night-open-west-window.png'});
+  await page.screenshot({path:'artifacts/story-night-open-front-window.png'});
   await page.getByRole('button',{name:/Entrar por la ventana/}).click();
   await finishDialogue();
   await page.locator('#lab-canvas').waitFor({state:'visible',timeout:26000});

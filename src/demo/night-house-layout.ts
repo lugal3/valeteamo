@@ -12,16 +12,21 @@ export const HOUSE_3D_REFERENCE={
  frontDoorX:5.9,openWindowX:2.2,frontWallZ:12,
  frontPathX:5.9,frontPathZ:16.25,pavementZ:20.5,roadZ:23
 } as const;
+// A viewer standing on z>12 and facing the front has yaw PI: increasing
+// world X appears LEFT, not right. Project the same street-facing elevation.
+export const FRONT_FACADE_WIDTH=340;
+export const frontFacadeOffset=(x:number)=>(HOUSE_3D_REFERENCE.frontDoorX-x)*FRONT_FACADE_WIDTH/HOUSE_3D_REFERENCE.width;
+const DOOR={u:77.6,v:7.9};
+const windowShift=frontFacadeOffset(HOUSE_3D_REFERENCE.openWindowX)/82;
+const frontSum=DOOR.u+DOOR.v,frontLeft=DOOR.u-DOOR.v+frontFacadeOffset(HOUSE_3D_REFERENCE.width)/41;
 export const NIGHT_HOUSE={
- center:{u:78.7,v:9.0},
- door:{u:78.7,v:10.0},
- // This point is on the FRONT wall/porch, not behind the side facade.
- // The iso projection puts it on the same horizontal baseline as the door.
- window:{u:77.60,v:11.10},
- gate:{u:74.85,v:8.3},
+ center:{u:77.2,v:5.7},
+ door:DOOR,
+ window:{u:DOOR.u+windowShift,v:DOOR.v-windowShift},
+ gate:{u:74.85,v:10.2},
  yard:{u:76.2,v:10.20},
- porch:{u:78.0,v:10.20},
- sidewalk:{u:73.5,v:7.0},
+ porch:{u:77,v:9},
+ sidewalk:{u:73.5,v:8.9},
  road:{u:71.1,v:4.65},
  start:{u:65.7,v:4.45}
 } as const;
@@ -51,7 +56,8 @@ export function nightRouteLimits(u:number):{min:number;max:number}{
 export function nightHouseBlocks(p:IsoPoint):boolean{
  // Building footprint is above the walkable porch. A soft solid facade makes
  // Kitty slide along the side of the house instead of disappearing into a wall.
- return (p.u>=76.15&&p.u<=81.50&&p.v>=5.25&&p.v<=9.05)||
+ const depth=p.u+p.v,across=p.u-p.v;
+ return (depth>=frontSum-5&&depth<=frontSum-.55&&across>=frontLeft&&across<=frontLeft+FRONT_FACADE_WIDTH/41)||
   NIGHT_NEIGHBORS.some(h=>Math.abs(p.u-h.u)<=h.halfU&&Math.abs(p.v-h.v)<=h.halfV);
 }
 export function nightWalkable(p:IsoPoint):boolean{

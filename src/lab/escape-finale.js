@@ -124,3 +124,12 @@ export function finaleWeather(shot,player){
  const dawn=shot?.playable?mix(.13,1,ease((player.z-14.65)/3.05)):.13*ease(((shot?.elapsed??0)-3.08)/.70);
  return {dawn,rain:.78*(1-dawn),sky:[mix(.018,.55,dawn),mix(.024,.48,dawn),mix(.046,.52,dawn)]};
 }
+
+ // Once the companions have actually reached the garden, look back at the
+ // SAME south facade. No teleport and no automatic completion of the run.
+ export const FACADE_LOOKBACK_SECONDS=1.85;
+ export function facadeLookbackView(origin,elapsed,reduced=false){
+  const blend=reduced?1:ease(elapsed/1.35),dx=5.9-origin.x,dz=12-origin.z;
+  return {...origin,yaw:turn(origin.yaw,Math.atan2(dx,dz),blend),
+   pitch:mix(origin.pitch,Math.atan2(3.15-origin.y,Math.max(.1,Math.hypot(dx,dz))),blend)};
+ }

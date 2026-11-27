@@ -141,7 +141,7 @@ export const PROLOGUE_DIALOGUES={
   {speaker:'Kitty',tone:'whisper',text:'LUNA-07… es aquí. La puerta está cerrada. Tiene que haber otra entrada.'}
  ],
  window:[
-  {speaker:'Kitty',tone:'whisper',text:'La ventana está entreabierta. Avisaré a Luis antes de entrar. Louis, aguanta un poco más.'}
+  {speaker:'Kitty',tone:'whisper',text:'Todas las demás ventanas tienen tablas. Esta está junto a la puerta principal, sin barricada. Avisaré a Luis antes de entrar.'}
  ]
 };
 // Only confirmed actions from this run may be referenced during the return.
