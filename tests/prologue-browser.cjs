@@ -73,11 +73,17 @@ async function play(){
     'at least one animated wildlife species must be near Kitty in '+map);
    assert(state.stats.updates>1,'living scenery is actually updating in '+map);
   }
+  const capturedDialogues=new Set();
   async function finishDialogue(){
    await convo.waitFor({state:'visible',timeout:13000});
    for(let n=0;n<48;n++){
     if(!await convo.isVisible())return;
     const button=convo.getByRole('button',{name:/Mostrar todo|Continuar/});
+    const speaker=await convo.getAttribute('data-speaker'),tone=await convo.getAttribute('data-tone');
+    if(await convo.getAttribute('data-complete')==='true'&&speaker&&tone){
+     const key=speaker.toLowerCase()+'-'+tone;
+     if(!capturedDialogues.has(key)){assert.equal(await convo.locator('.prologue-portrait img').count(),1,'Real portrait '+speaker);await page.screenshot({path:'artifacts/story-dialogue-full-'+key+'.png'});capturedDialogues.add(key);}
+    }
     await button.click();
    }
    throw Error('Conversation did not finish in 48 clicks');
@@ -140,6 +146,7 @@ async function play(){
      await page.touchscreen.tap(10,35);
      assert.equal(await convo.getAttribute('data-line'),'0');
      assert.equal(await convo.getAttribute('data-complete'),'true');
+     await page.screenshot({path:'artifacts/story-dialogue-full-vale-warm.png'});capturedDialogues.add('vale-warm');
      await page.touchscreen.tap(10,35);
      await page.waitForFunction(()=>document.querySelector('.prologue-dialog-backdrop')?.dataset.speaker==='Luis');
      assert.equal(await convo.getAttribute('data-line'),'1');
