@@ -42,7 +42,7 @@ export function StoryApp({ClassicApp,initialRoute}:{ClassicApp:ComponentType;ini
  const container=useRef<HTMLDivElement>(null);
  const audio=useRef<Sound>(new Sound());
  const [progress,setProgress]=useState<StoryProgress>(()=>readProgress(STORY.length));
- const [screen,setScreen]=useState<'splash'|'cover'|'story'|'game'|'classic'|'rescue'|'tests'|'arcade'|'cosmos'|'cosmos-return'|'full-flow'>(()=>
+ const [screen,setScreen]=useState<'splash'|'cover'|'story'|'game'|'classic'|'rescue'|'tests'|'arcade'|'cosmos'|'cosmos-return'|'full-flow'|'daily-countdown'>(()=>
   initialRoute==='rescue'?(hasRescueProgress()?'rescue':'splash'):initialRoute==='classic'?'classic':initialRoute==='tests'?'tests':'cover');
  const [splashTarget,setSplashTarget]=useState<'rescue'|null>(screen==='splash'?'rescue':null);
  const [adminGranted]=useState(initialRoute==='tests');
@@ -80,6 +80,7 @@ export function StoryApp({ClassicApp,initialRoute}:{ClassicApp:ComponentType;ini
   setSplashTarget(welcome?'rescue':null);setScreen(welcome?'splash':'rescue');
  };
  if(screen==='splash')return <Splash muted={progress.muted} onStart={()=>{if(splashTarget==='rescue'){setSplashTarget(null);setScreen('rescue');}else{if(!progress.muted)tryAudio(true);setScreen('cover');}}}/>;
+ if(screen==='daily-countdown')return <BirthdayCountdown stylePreview={{onExit:()=>setScreen('tests')}}>{null}</BirthdayCountdown>;
  if(screen==='full-flow')return <BirthdayCountdown simulation={{onExit:()=>{setFullTrial(false);setScreen('tests');},onEnterGame:()=>openDemo('garden',true)}}>{null}</BirthdayCountdown>;
  if(screen==='cosmos')return <Suspense fallback={<main role="status" style={{display:'grid',placeItems:'center',background:'#0a0719',color:'#ffddf1'}}>Preparando las estrellas…</main>}><CosmosExperience preview startAt={cosmosEntry} onExit={()=>setScreen('tests')} onEnterGame={()=>{ // Heart always opens ACT I in 2D, not the old saved 3D checkpoint.
    // These keys belong only to the rescue story; classic Corazones is untouched.
@@ -92,6 +93,7 @@ export function StoryApp({ClassicApp,initialRoute}:{ClassicApp:ComponentType;ini
   onSelect={id=>{
    setFullTrial(false);
    switch(id){
+    case 'daily-countdown':setScreen('daily-countdown');break;
     case 'full-flow':setFullTrial(true);setScreen('full-flow');break;
     case '2d-feeding':openDemo('feeding',true);break;
     case '2d-abduction':openDemo('abduction',true);break;

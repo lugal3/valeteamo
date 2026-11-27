@@ -1,0 +1,65 @@
+/* Eight visual editions, shared accessible timer and identical unlock logic.
+   No external art requests, no extra canvas, no additional running timers. */
+.birthday-countdown[data-daily-theme]{--ink:#754363;--accent:#ad5f92;--paper:#fff4f3;--line:#dfb5ca}
+.birthday-countdown[data-daily-theme] .birthday-countdown-content h1{color:var(--ink)}
+.birthday-countdown[data-daily-theme] .birthday-countdown-content h1 em{color:var(--accent)}
+.birthday-countdown[data-daily-theme] .birthday-countdown-content>p,.birthday-countdown[data-daily-theme] .birthday-iphone-help{color:var(--ink)}
+.birthday-countdown[data-daily-theme] .birthday-cosmic-label,.birthday-countdown[data-daily-theme] .birthday-countdown-emblem{color:var(--accent)}
+.birthday-countdown[data-daily-theme] .birthday-time dd,.birthday-countdown[data-daily-theme] .birthday-time dt{color:var(--ink)}
+.daily-message{margin:0 auto 15px;max-width:510px;color:var(--ink);animation:daily-arrive .6s ease-out both}
+.daily-edition{font:700 9px/1.4 system-ui;letter-spacing:.17em;text-transform:uppercase;color:var(--accent)}
+.daily-message p{font:400 clamp(12px,1.7vw,15px)/1.5 system-ui;margin:5px 0 0}
+.daily-preview{display:flex;justify-content:center;flex-wrap:wrap;gap:5px;margin-top:12px}
+.daily-preview button{font:600 10px system-ui;min-height:36px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);cursor:pointer}
+.daily-preview button[aria-pressed=true]{background:var(--ink);color:var(--paper)}
+@keyframes daily-arrive{from{opacity:0;translate:0 5px}to{opacity:1;translate:0 0}}
+/* 27 — petal invitation, scalloped soft pink tiles */
+[data-daily-theme=blossom] .birthday-time>div{border-radius:50% 50% 19px 19px;background:linear-gradient(155deg,#fffdf9,#ffdeec);border:1px solid #e5a9c6;box-shadow:0 5px 15px #c9789a25}
+[data-daily-theme=blossom] .birthday-countdown-content{border-radius:34px 34px 20px 20px}
+/* 28 — a midnight star atlas, four orbital dials */
+.birthday-countdown[data-daily-theme=constellation]{--ink:#f0e7ff;--accent:#ffc2e7;--paper:#231936;--line:#74619a;background:radial-gradient(ellipse at 70% 25%,#473060,#120d29 65%,#070919);color:var(--ink)}
+[data-daily-theme=constellation] .birthday-countdown-content{background:#1a1632d9;border-color:#80669c;box-shadow:0 15px 50px #07051380;border-radius:20px}
+[data-daily-theme=constellation] .birthday-time>div{min-height:0;aspect-ratio:1;border-radius:50%;border:1px solid #b09bdf;background:radial-gradient(circle,#30254d 64%,transparent 65%),conic-gradient(from -90deg,#f7b9db var(--dial),#494065 0);box-shadow:0 0 14px #b9a0e03a;gap:4px}
+[data-daily-theme=constellation] .blossom-petal{border-radius:50%;width:4px;height:4px;background:#fff3e6;box-shadow:0 0 9px #c9afff}
+/* 29 — folded cream paper, perforated countdown tickets */
+.birthday-countdown[data-daily-theme=letter]{--ink:#785048;--accent:#9b4d62;--paper:#fff6e6;--line:#d8b9a4;background:repeating-linear-gradient(135deg,#efdcc8 0 12px,#f5e5d5 12px 24px)}
+[data-daily-theme=letter] .birthday-countdown-content{background:linear-gradient(160deg,#fffaf0,#f9ead9);border:1px solid #c5a18c;border-radius:5px;box-shadow:0 8px 25px #91665e35}
+[data-daily-theme=letter] .birthday-time{gap:0;border:1px solid #d3b29b;border-radius:8px;background:#fffaf0}
+[data-daily-theme=letter] .birthday-time>div{border:0;border-radius:0;background:transparent;box-shadow:none;border-right:1px dashed #bd9785}
+[data-daily-theme=letter] .birthday-time>div:last-child{border-right:0}
+[data-daily-theme=letter] .daily-message{padding:8px 12px;border-block:1px dashed #d3b29b}
+[data-daily-theme=letter] .blossom-turn-background{opacity:.3}
+/* 30 — garden: a large day counter with three small stone markers */
+.birthday-countdown[data-daily-theme=garden]{--ink:#365e50;--accent:#577f58;--paper:#f4f5e3;--line:#b6c6a1;background:radial-gradient(ellipse at top,#fff0e0,#d2e5c8 55%,#a9c7b7)}
+[data-daily-theme=garden] .birthday-countdown-content{background:#f9f8e9ed;border-color:#b4c9a7;border-radius:36px 12px 36px 12px;box-shadow:0 12px 40px #66886c38}
+[data-daily-theme=garden] .birthday-time{grid-template-columns:1.35fr repeat(3,1fr);align-items:end}
+[data-daily-theme=garden] .birthday-time>div{border-radius:48% 48% 12px 12px;background:#e1ecd5;border-color:#b7c7a8;min-height:75px;gap:5px}
+[data-daily-theme=garden] .birthday-time>div:first-child{min-height:115px;background:#d0e4c4}
+[data-daily-theme=garden] .blossom-petal{background:#f8f5c8}
+/* 01 — Corazones / pixel-art, retro game scoreboard */
+.birthday-countdown[data-daily-theme=pixel]{--ink:#fef4d8;--accent:#ff9fbd;--paper:#332f4d;--line:#bca4c8;background:linear-gradient(180deg,#292b46,#53435e)}
+[data-daily-theme=pixel] .birthday-countdown-content{background:#29263f;border:3px solid #d9b6ca;border-radius:0;box-shadow:6px 6px 0 #15162c;backdrop-filter:none}
+[data-daily-theme=pixel] .birthday-countdown-content h1{font-family:ui-monospace,monospace;font-size:clamp(28px,4.6vw,48px);letter-spacing:-.07em}
+[data-daily-theme=pixel] .birthday-time>div{border-radius:0;border:2px solid #e2b3cf;background:#3e3655;box-shadow:3px 3px 0 #17182a}
+[data-daily-theme=pixel] .birthday-time dd{font-family:ui-monospace,monospace;font-weight:800;text-shadow:2px 2px #15162c}
+[data-daily-theme=pixel] .blossom-petal{border-radius:0;width:6px;height:6px;background:#f0a9c6}
+/* 02 — aurora, translucent vertical prism columns */
+.birthday-countdown[data-daily-theme=aurora]{--ink:#eaffff;--accent:#b8f3e1;--paper:#17333c;--line:#7bb9bd;background:radial-gradient(ellipse at 18% 10%,#537e91,transparent 55%),radial-gradient(ellipse at 80% 75%,#704d87,transparent 62%),#112a3a}
+[data-daily-theme=aurora] .birthday-countdown-content{background:#173243c9;border-color:#9ed7d682;border-radius:42px 42px 18px 18px;box-shadow:0 12px 45px #091a2a80}
+[data-daily-theme=aurora] .birthday-time>div{border-radius:40px 40px 12px 12px;background:linear-gradient(180deg,#9ee4dc45,#5c73aa40);border-color:#a4e6e580;box-shadow:inset 0 1px #efffff55;min-height:115px}
+[data-daily-theme=aurora] .birthday-time>div:nth-child(even){background:linear-gradient(180deg,#d8a4ec45,#6188bc38)}
+/* 03 — music box: flip-clock display, no audio autoplay */
+.birthday-countdown[data-daily-theme=music]{--ink:#4d4264;--accent:#805d99;--paper:#f2eafa;--line:#bea8d0;background:linear-gradient(135deg,#e5dcf5,#c9c6e9 60%,#ead8e8)}
+[data-daily-theme=music] .birthday-countdown-content{background:#f7effbea;border-color:#fff;border-radius:20px;box-shadow:0 12px 40px #76678c40}
+[data-daily-theme=music] .birthday-time>div{border-radius:8px;border:1px solid #9e88b4;background:linear-gradient(#d8c9e8 49%,#8d78a7 49% 51%,#ece2f7 51%);box-shadow:0 5px 0 #b3a0c5;min-height:96px}
+[data-daily-theme=music] .birthday-time dd{font-family:ui-monospace,monospace;letter-spacing:-.08em}
+[data-daily-theme=music] .birthday-time dt{background:#eee6f6;border-radius:4px;padding:2px 5px}
+/* 04 — last night: gilded black-pink cosmic jewel */
+.birthday-countdown[data-daily-theme=finale]{--ink:#fff1d7;--accent:#f7c985;--paper:#35203a;--line:#b98d6c;background:radial-gradient(ellipse at 50% 18%,#703a62,#28172f 60%,#100c1b)}
+[data-daily-theme=finale] .birthday-countdown-content{background:linear-gradient(150deg,#38243aee,#1f182cdd);border:1px solid #d6a471;border-radius:90px 90px 22px 22px;box-shadow:0 0 45px #dca27025,inset 0 0 0 5px #e7ba8615}
+[data-daily-theme=finale] .birthday-time>div{border:1px solid #ce9c76;border-radius:12px;background:linear-gradient(150deg,#69415d,#302138);box-shadow:0 0 14px #f6c48820;min-height:100px}
+[data-daily-theme=finale] .birthday-time>div:last-child{border-color:#ffe2a7;box-shadow:0 0 20px #f8c3774a}
+[data-daily-theme=finale] .blossom-petal{background:#ffdf9a;border-radius:50%;width:4px;height:4px}
+@media(max-width:480px){[data-daily-theme] .birthday-time>div{min-height:70px}[data-daily-theme=constellation] .birthday-time>div{min-height:0}[data-daily-theme=garden] .birthday-time>div:first-child{min-height:90px}.daily-message{margin-bottom:10px}}
+@media(max-height:460px) and (orientation:landscape){.daily-message{margin-bottom:8px}.daily-message p{font-size:11px;margin-top:2px}.daily-edition{font-size:8px}[data-daily-theme] .birthday-time>div{min-height:58px;padding:6px 3px}[data-daily-theme=constellation] .birthday-time{max-width:360px;margin-inline:auto}[data-daily-theme=constellation] .birthday-time>div{min-height:0;aspect-ratio:1}[data-daily-theme=garden] .birthday-time>div:first-child{min-height:72px}.daily-preview{margin-top:5px}.daily-preview button{min-height:28px}}
+@media(prefers-reduced-motion:reduce){.daily-message{animation:none}}

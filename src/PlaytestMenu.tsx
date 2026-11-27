@@ -2,7 +2,7 @@ import {useEffect,useState,type CSSProperties} from 'react';
 import {HOUSE_TRIALS,milestoneIds,type HouseTrial,type HouseTrialId} from './lab/house-trials';
 import './playtest-menu.css';
 
-export type MenuAction='full-flow'|'2d-feeding'|'2d-abduction'|'2d-trail'|'epilogue-outside'|'epilogue-return-path'|'epilogue-reunion'|'epilogue-celebration'|'cosmos-countdown'|'cosmos-gift'|'cosmos-intro'|'cosmos-loading'|'cosmos-galaxy'|'house'|'rescue'|'arcade'|'classic'|'story'|HouseTrialId;
+export type MenuAction='daily-countdown'|'full-flow'|'2d-feeding'|'2d-abduction'|'2d-trail'|'epilogue-outside'|'epilogue-return-path'|'epilogue-reunion'|'epilogue-celebration'|'cosmos-countdown'|'cosmos-gift'|'cosmos-intro'|'cosmos-loading'|'cosmos-galaxy'|'house'|'rescue'|'arcade'|'classic'|'story'|HouseTrialId;
 type MenuCard={id:MenuAction;title:string;description:string};
 type AdvancedGroup={title:string;cards:MenuCard[]};
 type Area={id:string;number:string;title:string;subtitle:string;cards:MenuCard[];advanced:AdvancedGroup[]};
@@ -19,6 +19,7 @@ const areas:Area[]=[
    {id:'cosmos-galaxy',title:'Galaxia rosa del video',description:'Corazón interactivo, recuerdos y navegación por el cosmos.'}
   ],
   advanced:[{title:'Escenas intermedias',cards:[
+   {id:'daily-countdown',title:'Contador · Ocho diseños diarios',description:'Revisa los ocho estilos y mensajes de 27 NOV a 04 DIC, sin cambiar la fecha pública.'},
    {id:'cosmos-gift',title:'Regalo animado',description:'Apertura de la caja de regalo.'},
    {id:'cosmos-intro',title:'Inicio del video y personajes',description:'Presentación de los personajes y entrada al universo.'}
   ]}]
