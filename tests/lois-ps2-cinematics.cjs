@@ -88,7 +88,6 @@ const fs=require('node:fs');
  const house=fs.readFileSync(require('node:path').join(__dirname,'../src/lab/house.js'),'utf8');
  for(const line of ['createLoisShotDirector()','advanceLoisShot(loisShotDirector','finishLoisShot(loisShotDirector',
   'loisShotDirector=null'])assert(house.includes(line),'house needs actual camera integration: '+line);
- assert(!house.includes("startLoisReaction(louis,'speak'"),
-  'future speech cannot be activated before real dialogue exists');
+ assert(house.includes('createLoisDialogue()')&&house.includes('syncLoisDialogue('),'real dialogue drives speech');
  console.log('PASS: phase 5 — smooth safe rescue cameras, same events, look/listen/startle/relief, facial speech/reach hooks, paused/reduced motion and physical route.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

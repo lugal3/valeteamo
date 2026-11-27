@@ -26,6 +26,19 @@ const assert=require('node:assert/strict');
  assert(cues.indexOf('touchdown')>cues.indexOf('jump')&&cues.indexOf('landed')>cues.indexOf('touchdown'));
  assert.equal(cues.filter(cue=>cue==='landed').length,1);
  assert.equal(companion.stage,'following');assert.equal(world.emy.y,0);
+ // Reduced motion must keep the intended 3x entrance speed even at 10 FPS.
+ for(const delta of [1/60,.1,.3]){
+  const slowWorld=createHouse(),actor=createEmyCompanion(slowWorld.emy),signals=[];
+  assert(beginEmyEntrance(actor));
+  const bounded=Math.min(delta,.1),frames=Math.ceil(EMY_ENTRANCE_SECONDS/(bounded*3))+1;
+  for(let i=0;i<frames&&actor.stage==='entrance';i++){
+   const cue=updateEmyCompanion(actor,delta,{world:slowWorld,player,reduced:true});
+   if(cue)signals.push(cue);
+  }
+  assert.equal(actor.stage,'following','Reduced entrance must finish at delta '+delta);
+  assert.deepEqual(signals,['jump','touchdown','landed'],'Each cue occurs once in order');
+  assert.equal(slowWorld.emy.y,0);
+ }
  assert(petEmy(world.emy));
  updateEmyCompanion(companion,1/60,{world,player});assert.equal(world.emy.phase,'purr');
  world.emy.reaction=0;

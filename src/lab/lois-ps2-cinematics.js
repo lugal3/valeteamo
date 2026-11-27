@@ -26,7 +26,9 @@ export function advanceLoisShot(director,phase,target,delta=0,reduced=false){
  if(director.phase!==phase){
   // Start the first shot at a safe hand-placed camera, not by flying through
   // a wall from Kitty's gameplay camera.
-  director.from=director.view?{...director.view}:{...desired};
+  const previous=director.view;
+  const gap=previous?Math.hypot(previous.x-desired.x,previous.y-desired.y,previous.z-desired.z):0;
+  director.from=previous&&gap<1.9?{...previous}:{...desired};
   director.phase=phase;
   director.elapsed=0;
   director.returning=false;director.returnFrom=null;

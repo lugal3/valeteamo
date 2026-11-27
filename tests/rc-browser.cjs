@@ -100,6 +100,14 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   await page.locator('[data-equip="flashlight"]').click();
   await page.waitForTimeout(220);
   await shot('03b-louis-captive-photo-before-untie');
+  await page.locator('#lois-talk').tap();
+  await page.waitForFunction(()=>window.__rescueHouse.loisDialogue()?.context==='captive');
+  await page.locator('#lois-chat-next').tap();
+  assert.match(await page.locator('#lois-chat-text').innerText(),/Voy a sacarte/);
+  await page.locator('#lois-chat-next').tap();
+  await page.waitForFunction(()=>window.__rescueHouse.loisDialogue()?.speaker==='Louis');
+  await shot('03c-dialogo-con-louis');
+  await page.locator('[data-act="lois:close"]').tap();
   // Restore RC selection: the remainder of this test deploys the tablet
   // through its contextual button and must not stay in flashlight mode.
 
@@ -226,6 +234,15 @@ const net=require('node:net'),fs=require('node:fs'),path=require('node:path');
   try{
    await page.waitForFunction(()=>window.__rescueHouse.snapshot().position.z>=17.7,null,{timeout:30000});
   }finally{await page.keyboard.up('w');}
+  await page.waitForFunction(()=>window.__rescueHouse.finale()?.stage==='reunion');
+  await page.locator('#lois-talk').tap();
+  assert.equal(await page.evaluate(()=>window.__rescueHouse.loisDialogue()?.context),'garden');
+  await page.waitForFunction(()=>window.__rescueHouse.loisDialogue()?.shown>=10);
+  await page.locator('#lois-chat-next').tap();
+  await shot('06c-reencuentro');
+  await page.waitForFunction(()=>window.__rescueHouse.louis().motion?.speed<.08);
+  assert.equal((await story()).phase,'ending','Keep the conversation open while the group settles');
+  await page.locator('[data-act="lois:close"]').tap();
   await page.getByRole('dialog',{name:/Kitty y Louis escaparon/}).waitFor({timeout:30000});
   assert((await louis()).z>15.4,'Louis physically follows the player into the garden');
   const weatherAfter=await page.evaluate(()=>window.__rescueHouse.finale().weather);

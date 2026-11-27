@@ -73,7 +73,7 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
  add('neck',0,photoMode?1.450:1.449,photoMode?-.002:.011,
   photoMode?.188:.132,photoMode?.220:.158,photoMode?.155:.133,'paper',
   photoMode?[.78,.61,.53]:skin,
-  photoMode?{shape:'lois-neck-lowpoly',segments:16,rings:6,rigGroup:'body'}:
+  photoMode?{shape:'lois-neck-lowpoly',segments:12,rings:5,rigGroup:'body'}:
    {...oval,rigGroup:'body'});
 
  // Sculpted head is a single 3D face surface. Cheeks/nose/chin/lips are
@@ -90,7 +90,7 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
   // Ears were buried INSIDE the wider Photo-A head (half-width ~.20 m).
   // Keep their matte geometry, but project a narrow rounded helix on each
   // profile so the silhouette reads correctly without stretching face UVs.
-  add('ear-'+side,side*.226,1.605,-.016,.075,.114,.071,'paper',
+  add('ear-'+side,side*.202,1.605,-.016,.047,.085,.058,'paper',
    photoMode?[.82,.63,.55]:skin,
    {shape:'round',segments:desktop?14:10,rings:desktop?8:6,rigGroup:'head'});
   if(!photoMode){add('ear-shadow-'+side,side*.197,1.603,.023,.011,.042,.013,'paper',[.69,.46,.40],
@@ -196,7 +196,7 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
    {...limb,roll:-side*.045,rigGroup:'arm',rigSide:side});
   add('forearm-'+side,side*(photoMode?.298:.308),.940,.021,
    photoMode?.138:.145,photoMode?.248:.258,photoMode?.146:.154,'dark',jacket,
-   {...limb,rigGroup:'arm',rigSide:side});
+   {...limb,rings:desktop?5:3,rigGroup:'arm',rigSide:side});
   add('hand-'+side,side*.315,.764,.078,.095,.132,.107,'paper',skin,
    {...oval,rigGroup:'arm',rigSide:side});
   add('thigh-'+side,side*.123,.647,-.001,.173,.463,.216,'dark',p.trousers,
@@ -204,9 +204,9 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
   add('leg-'+side,side*.123,.291,.014,.148,.445,.184,'dark',p.trousers,
    {...limb,rigGroup:'leg',rigSide:side});
   add('shoe-'+side,side*.123,.083,.108,.192,.142,.277,'dark',p.shoes,
-   {...box,rigGroup:'leg',rigSide:side});
+   {...box,segments:desktop?8:6,rings:desktop?5:3,rigGroup:'leg',rigSide:side});
   add('sole-'+side,side*.123,.020,.130,.194,.025,.276,'dark',[.19,.19,.21],
-   {...box,rigGroup:'leg',rigSide:side});
+   {...box,segments:desktop?8:4,rings:desktop?5:2,rigGroup:'leg',rigSide:side});
  }
  return parts;
 }

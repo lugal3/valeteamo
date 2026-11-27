@@ -430,7 +430,9 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  if(companion.stage==='fetch')return fetchKey(companion,world,player,dt,reduced);
  if(companion.stage==='entrance'){
   const previous=companion.entranceAge/EMY_ENTRANCE_SECONDS;
-  companion.entranceAge=Math.min(EMY_ENTRANCE_SECONDS,companion.entranceAge+dt);
+  // Shorten only the cinematic clock after bounding the simulation step.
+  // Multiplying delta before the .1 clamp loses the accessibility speedup at low FPS.
+  companion.entranceAge=Math.min(EMY_ENTRANCE_SECONDS,companion.entranceAge+dt*(reduced?3:1));
   const t=companion.entranceAge/EMY_ENTRANCE_SECONDS;
   const clock=(t-.30)*EMY_ENTRANCE_SECONDS+.20;
   if(clock<0){poseEmy(cat,{mode:'sit',reduced});return null;}

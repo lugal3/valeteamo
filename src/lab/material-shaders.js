@@ -154,24 +154,8 @@ void main(){
    visibility(0.0,lightUV/${(2*FLASH_SPREAD).toFixed(2)}+.5,depth,${FLASH_REACH.toFixed(1)},max(0.0,dot(surfaceNormal,-direction)));
  }
  beam*=.38+.62*max(0.0,dot(N,-direction));
- float motes=0.0;
- if(uFlash>.5 && d<3.2 && wide>.65){
-  vec3 mPos=world*6.0+vec3(sin(uTime*.35),cos(uTime*.28),sin(uTime*.42));
-  float mRand=fract(sin(dot(floor(mPos),vec3(12.9898,78.233,45.5432)))*43758.5453);
-  if(mRand>.965)motes=smoothstep(.35,0.0,length(fract(mPos)-.5))*.22;
- }
- // Small real world motes and dithered steam surfaces share the opaque batch.
- if(vStyle>15.5&&vStyle<31.5){
-  if(tile==11.0){
-   float drift=uHolidayMotion*.35*uTime;
-   float haze=sin(vUV.x*18.0+sin(vUV.y*13.0-drift))*sin(vUV.y*21.0-drift);
-   float fade=clamp(beam*.45+.12,0.0,.5);
-   if(haze<.72||fract(sin(dot(floor(gl_FragCoord.xy),vec2(12.9898,78.233)))*43758.5453)>fade)discard;
-   gl_FragColor=vec4(vec3(.40,.48,.56)*(.15+beam*.6),1.0);return;
-  }
-  if(uFlash<.5||beam<.055||wide<.5||d>4.5)discard;
-  gl_FragColor=vec4(vColor*min(.95,beam*.9+.12),1.0);return;
- }
+ // Airborne ambience removed; discard any obsolete dust/steam geometry.
+ if(vStyle>15.5&&vStyle<31.5)discard;
  float warmth=0.0;
  for(int i=0;i<${VISIBLE_LAMPS};i++)warmth+=lampLight(uLamps[i],world,N,surfaceNormal);
  if(vArt>19.5&&vArt<21.5){
@@ -391,12 +375,19 @@ void main(){
   float pulse=.96+.04*uHolidayMotion*sin(uTime*7.2);
   ambient+=vec3(.27,.125,.058)*reach*pulse*uAltarPulse;
  }
- vec3 lighting=(ambient+uShot*vec3(.75,.83,1.0))*facing+vec3(.94,.97,1.0)*(beam+motes*.50)+vec3(1.0,.82,.60)*warmth;
+ vec3 lighting=(ambient+uShot*vec3(.75,.83,1.0))*facing+vec3(.94,.97,1.0)*beam+vec3(1.0,.82,.60)*warmth;
  // Retro character artwork carries a subtle baked fill light. Without it the
  // skin nearly disappears in shadow while the separate eyes remain bright.
  // Lighting is still dynamic above this floor; no lighting changes to the room.
  if(vArt>2.5&&vArt<3.5)lighting=max(lighting,vec3(.56,.52,.48));
- if(vArt>3.5&&vArt<4.5)lighting=max(lighting,vec3(.88,.84,.82));
+ // Photo-A is matte, not emissive. Actual room light and flashlight
+ // replace the old near-white constant fill that glowed in the basement.
+ bool photoLois=vArt>3.5&&vArt<4.5;
+ if(photoLois){
+  float form=.74+.26*max(0.0,dot(surfaceNormal,normalize(vec3(.30,.80,.40))));
+  lighting=(ambient*1.30+uShot*vec3(.72,.78,.88))*form
+    +vec3(.94,.97,1.0)*beam*.82+vec3(1.0,.82,.60)*warmth*.88;
+ }
  vec3 color=vColor*material.rrr*1.075;
  if(vArt>.5&&vArt<1.5){vec4 painted=texture2D(uAtlas,vUV);color=mix(color,painted.rgb,painted.a*.96);}
  if(vArt>2.5&&vArt<3.5){
@@ -410,7 +401,7 @@ void main(){
   color=texture2D(uLoisFace,clamp(vUV,vec2(.003),vec2(.997))).rgb;
  }
  float rough=material.a,shine=0.0;
- if(uOcclude>.5 && rough<.8){
+ if(!photoLois && uOcclude>.5 && rough<.8){
   float h=max(0.0,dot(N,-direction)),s2=h*h,s4=s2*s2,s8=s4*s4;
   shine=mix(s8*s8,s4,rough)*(1.0-rough)*beam*.14;
  }

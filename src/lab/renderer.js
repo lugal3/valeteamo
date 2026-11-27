@@ -108,7 +108,7 @@ export function geometry(boxes){
     // frontal photo remains untouched while sides and under-chin sample
     // feature-free skin from the same atlas, never duplicated eyes/nose.
     if(box.rigPart==='face'){
-     const uv=loisPhotoFaceUV(x,y,vertices[j+8]);
+     const uv=loisPhotoFaceUV(x,y,vertices[j+8],(vertices[j+2]-box.z)/(box.d*.5));
      vertices[j+9]=uv[0];vertices[j+10]=uv[1];
     }else if(box.rigPart==='neck'){
      // Match the photographic cheek skin on the new throat using a small
@@ -666,10 +666,7 @@ export class HouseRenderer {
    } else if(box.ambient==='curtain-sway'){
      const origin=this.dynamicOrigins[i],phase=box.ambientPhase||0;
      box.yaw=origin[3]+(reduced?0:(box.ambientAmplitude||.02)*Math.sin(time*.74+phase));
-    } else if(box.ambient==='floating-dust'){
-     const origin=this.dynamicOrigins[i],phase=box.ambientPhase||0;
-     box.y=origin[1]+(reduced?0:(box.ambientAmplitude||.04)*Math.sin(time*.58+phase));
-     box.x=origin[0]+(reduced?0:.025*Math.cos(time*.43+phase));
+
     } else if(box.ambient==='captive-breath'){
     box.y=this.dynamicOrigins[i][1]+(reduced||motion.feetY>-.3?0:Math.sin(time*2.3)*.010);
    }

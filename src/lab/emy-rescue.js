@@ -122,18 +122,21 @@ export function poseEscapeAmbush(shot,cat,enemy,reduced){
  const mix=(a,b,v)=>a+(b-a)*v;
  const from={x:start.x-1.25,z:start.z+.18};
  const takeoff={x:start.x-.68,z:start.z+.16};
- const strike={x:start.x+.43,z:Math.max(12.37,start.z-.10)+.47};
+ const strike={x:start.x+.08,z:Math.max(12.37,start.z-.10)+.50};
  const landing={x:start.x+.18,z:start.z+.92};
  const lead={x:5.38,z:17.05};
  const approachCat=ease((t-.95)/.38);
  const flight=Math.max(0,Math.min(1,(t-1.45)/1.28));
  // A strike has incoming momentum and a rebound, not a mid-air stop.
- const u=Math.max(0,Math.min(1,(t-1.45)/.63)),d=Math.max(0,Math.min(1,(t-2.08)/.65));
+ const u=Math.max(0,Math.min(1,(t-1.45)/.63)),d=Math.max(0,Math.min(1,(t-2.30)/.43));
  const up=.35*u+.65*u*u,down=d*(2-d);
  const run=ease((t-2.84)/.94);
  const prep=ease((t-1.23)/.22)*(1-ease((t-1.45)/.14));
  const absorb=ease((t-2.65)/.10)*(1-ease((t-2.75)/.18));
  const face=Math.atan2(strike.x-takeoff.x,strike.z-takeoff.z);
+ const contactFace=Math.atan2(enemy.x-strike.x,enemy.z-strike.z);
+ const grip=ease((t-1.87)/.21)*(1-ease((t-2.26)/.16));
+ const rake=ease((t-2.08)/.085)*(1-ease((t-2.18)/.10));
  const retreatFace=Math.atan2(landing.x-strike.x,landing.z-strike.z);
  const leadFace=Math.atan2(lead.x-landing.x,lead.z-landing.z);
  const x=t<1.45?mix(from.x,takeoff.x,approachCat):t<2.08?mix(takeoff.x,strike.x,up):mix(strike.x,landing.x,down);
@@ -141,7 +144,8 @@ export function poseEscapeAmbush(shot,cat,enemy,reduced){
  // Ballistic rise and fall: gravity accelerates the descent instead of
  // easing to a hover just before touching the ground. The paws absorb it.
  const height=3.84*flight*(1-flight);
- const yaw=t<2.08?face:t<2.73?turn(face,retreatFace,ease(d)):turn(retreatFace,leadFace,ease((t-2.73)/.17));
+ const attackYaw=turn(face,contactFace,ease((t-1.84)/.24));
+ const yaw=t<2.30?attackYaw:t<2.73?turn(attackYaw,retreatFace,ease(d)):turn(retreatFace,leadFace,ease((t-2.73)/.17));
  Object.assign(cat,{x:mix(x,lead.x,run),z:mix(z,lead.z,run),y:height,
   yaw:turn(yaw,0,ease((t-3.56)/.22)),alarm:ease((t-1.10)/.25)*(1-ease((t-2.44)/.40)),
   earFlatten:ease((t-1.10)/.25)*(1-ease((t-2.44)/.40)),
@@ -149,7 +153,7 @@ export function poseEscapeAmbush(shot,cat,enemy,reduced){
  const walking=t<1.33||t>2.84&&t<3.78,airborne=t>1.45&&t<2.73;
  poseEmy(cat,{mode:walking?'walk':'idle',walking,phase:t,reduced,
   headYaw:reduced?0:.18*ease((t-.95)/.24)*(1-ease((t-1.32)/.22))-.16*ease((t-3.02)/.23)*(1-ease((t-3.45)/.33)),
-  leap:{compression:Math.max(prep,absorb),flight,airborne,strike:ease((t-1.83)/.22)*(1-ease((t-2.10)/.24))}});
+  leap:{compression:Math.max(prep,absorb),flight,airborne,grip,rake,strike:ease((t-1.83)/.22)*(1-ease((t-2.21)/.24))}});
 
  return appeared;
 }
@@ -164,7 +168,7 @@ export function poseEmyLastChance(shot,cat,enemy,reduced=false){
   if(appeared){cat.footContacts=null;cat.lastFootRoot=null;}
   shot.emyAgeBase??=cat.age||0;
   Object.assign(cat,{x:p.x,y:p.y,z:p.z,yaw:p.yaw,alarm:p.alarm,earFlatten:p.alarm,earTurn:reduced?0:.20*p.alarm,age:shot.emyAgeBase+t,reaction:0});
-  poseEmy(cat,{mode:p.walking?'walk':'idle',walking:p.walking,phase:t,reduced,headYaw:reduced?0:.12*p.alarm,reunion:Math.max(0,Math.min(1,(t-B.protect)/.6)),leap:{compression:p.compression,flight:p.flight,airborne:p.airborne,strike:p.strike}});
+  poseEmy(cat,{mode:p.walking?'walk':'idle',walking:p.walking,phase:t,reduced,headYaw:reduced?0:.12*p.alarm,reunion:Math.max(0,Math.min(1,(t-B.protect)/.6)),leap:{compression:p.compression,flight:p.flight,airborne:p.airborne,strike:p.strike,grip:p.pawGrip,rake:p.rake}});
  }
  Object.assign(enemy,{x:pose.foe.x,y:pose.foe.y,z:pose.foe.z,yaw:pose.foe.yaw,facing:pose.foe.yaw,speed:0,mode:t>=B.impact?'stunned':'chase',stunned:2*pose.foe.hit});
  return appeared;

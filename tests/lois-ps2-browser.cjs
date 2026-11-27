@@ -36,6 +36,8 @@ const {chromium}=require('playwright');
      {id:'stage-floor',x:0,y:-.12,z:0,w:5,h:.18,d:5,mat:'floor',color:[.44,.43,.42],solid:false},
      {id:'stage-wall',x:0,y:1.60,z:-1.3,w:6,h:4,d:.1,mat:'plaster',color:[.50,.51,.56],solid:false}
     ];
+    const basement=pose?.qaLighting!=null;
+    if(basement){actor.y=-3;geo=pickupGeometry([actor]);for(const b of stage)b.y-=3;}
     const renderer=new HouseRenderer(canvas,quality);
     renderer.rebuild([...stage,...geo]);
     if(variant==='ps2-b'||variant==='ps2-b-faceonly'||variant==='ps2-b-nohair'||variant==='photo-a'){
@@ -54,9 +56,11 @@ const {chromium}=require('playwright');
      shot==='side'?{x:2.10,y:1.10,z:0,yaw:-Math.PI/2,pitch:0}:
      shot==='threequarter'?{x:1.40,y:1.20,z:2.10,yaw:Math.PI+Math.atan(1.40/2.10),pitch:0}:
      {x:0,y:1.10,z:2.2,yaw:Math.PI,pitch:0};
-    renderer.render(camera,true,1,false,{reduced:true,shotLight:.8});
+    if(basement)camera.y-=3;
+    const flashlight=basement?pose.qaLighting:true,shotLight=basement?0:.8;
+    renderer.render(camera,flashlight,1,false,{reduced:true,shotLight});
     const initialPerf={...renderer.loisRigMetrics};
-    renderer.render(camera,true,1.02,false,{reduced:true,shotLight:.8});
+    renderer.render(camera,flashlight,1.02,false,{reduced:true,shotLight});
     const perf={...renderer.loisRigMetrics}; // batch VBO updates in phase 6
     const gl=renderer.gl;gl.finish();
     // Numerical check of central facial readability, not just a successful draw call.
@@ -93,11 +97,11 @@ const {chromium}=require('playwright');
     assert.equal(data.textureSize,quality==='low'?512:1024,'face texture LOD matches device');
    } else assert.equal(data.textureUploads,0,'legacy and untextured fallback do not load portrait art');
    const png=Buffer.from(data.dataURL.split(',')[1]||'','base64');
-   assert(png.length>10000,'preview is a real canvas image, not an empty frame');
-   const name='lois-'+variant+'-'+shot+'-'+quality+(pose?'-'+pose.phase+(pose.visualReaction?.type?'-'+pose.visualReaction.type:'')+(pose.blink>=.9?'-blink':''):'')+'.png';
+   assert(png.length>(pose?.qaLighting===false?1000:10000),'preview is a real canvas image, not an empty frame');
+   const name='lois-'+variant+'-'+shot+'-'+quality+(pose?'-'+pose.phase+(pose.visualReaction?.type?'-'+pose.visualReaction.type:'')+(pose.blink>=.9?'-blink':'')+(pose.qaLighting!=null?(pose.qaLighting?'-basement-lit':'-basement-dark'):''):'')+'.png';
    fs.writeFileSync(path.join('artifacts',name),png);
    console.log('RENDER',JSON.stringify({name,triangles:data.triangles,vertices:data.vertices,pngBytes:png.length,faceBrightness:Math.round(data.faceBrightness),rigUploads:data.perf.uploads,rigBytes:data.perf.bytes}));
-   return png;
+   return data.faceBrightness;
   };
   // The shipped rescue uses exactly one Photo-A model. Capture it in
   // every orientation and rescue pose; do not spend CI rendering deleted
@@ -115,6 +119,10 @@ const {chromium}=require('playwright');
    {phase:'hide',age:.85,walk:0,speed:0,crouch:.78,blink:0},
    {phase:'follow',age:1.42,walk:0,speed:0,crouch:0,blink:1}
   ])await capture('photo-a','portrait','medium',pose);
+  const dark=await capture('photo-a','portrait','medium',{phase:'follow',qaLighting:false});
+  const lit=await capture('photo-a','portrait','medium',{phase:'follow',qaLighting:true});
+  assert(dark<lit*.55&&lit>35,'Photo reacts to actual flashlight: '+JSON.stringify({dark,lit}));
+  console.log('PASS BASEMENT MATTE LIGHT',JSON.stringify({dark,lit}));
   assert.deepEqual(errors,[],'no runtime page exceptions');
   console.log('PASS: one Photo-A rescue model, 21-bone rig, all directions and poses, no legacy render, one-time texture upload.');
  }finally{await browser?.close();await server.close();}
