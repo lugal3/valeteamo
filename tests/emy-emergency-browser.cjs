@@ -1,0 +1,56 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs/promises'),path=require('node:path');
+const {chromium}=require('playwright');
+(async()=>{
+ const {createServer}=await import('vite');
+ const server=await createServer({configFile:false,logLevel:'silent',server:{host:'127.0.0.1',port:0},plugins:[{
+  name:'emergency-fixture',configureServer(server){server.middlewares.use((req,res,next)=>{
+   if(!req.url.startsWith('/__emergency'))return next();
+   res.setHeader('Content-Type','text/html');res.end(`<!doctype html><meta charset="utf-8"><script type="module">
+    import {launchHouse} from '/src/lab/house.js';
+    const checkpoint=JSON.parse(localStorage.getItem('emy-easy-checkpoint'))??{version:2,stage:'rest',picked:['key','media-flashlight'],pursuit:{phase:'hunt'},lives:3,tutorials:['movement','threat','hide','stealth']};
+    window.closeHouse=launchHouse(()=>{},'ground',{demo:true,fieldTutorials:true,checkpointStore:{checkpoint,save(value){localStorage.setItem('emy-easy-checkpoint',JSON.stringify(value));return true}}});
+   </script>`);
+  });}
+ }]});
+ const folder=path.resolve(process.env.EMERGENCY_QA_DIR||'artifacts/v33-emergency');
+ let browser,page;
+ try{
+  await fs.mkdir(folder,{recursive:true});await server.listen();
+  browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+  page=await browser.newPage({viewport:{width:844,height:390},deviceScaleFactor:1,reducedMotion:'reduce'});
+  page.setDefaultTimeout(90000);
+  const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  const cdp=await page.context().newCDPSession(page);
+  const shot=async name=>{const {data}=await cdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});await fs.writeFile(path.join(folder,name+'.png'),Buffer.from(data,'base64'));};
+  const url='http://127.0.0.1:'+server.httpServer.address().port+'/__emergency';
+  const ready=()=>page.waitForFunction(()=>window.__rescueHouse?.story().phase==='hunt'&&!window.__rescueHouse.snapshot().paused,null,{timeout:90000,polling:250});
+  const save=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('emy-easy-checkpoint')));
+  const choose=async value=>{await page.evaluate(value=>{const field=document.querySelector('[data-setting="difficulty"]');field.value=value;field.dispatchEvent(new Event('input',{bubbles:true}));},value);assert.equal(await page.evaluate(()=>window.__rescueHouse.story().pursuer.difficulty),value);};
+  const trigger=()=>page.evaluate(()=>{const api=window.__rescueHouse;api.setPose({x:5.65,y:0,z:12.8,yaw:2.2,pitch:0});api.placeThreat({x:6.15,y:0,z:12.38,yaw:-.8});return api.captureFixture();});
+  await page.goto(url);await ready();await choose('easy');
+  for(let attempt=1;attempt<=3;attempt++){
+   if(attempt===3){await page.reload();await ready();assert.equal(await page.evaluate(()=>window.__rescueHouse.story().pursuer.difficulty),'easy');}
+   const result=await trigger();assert.deepEqual(result,{lives:3,emyRescue:true,easy:true});
+   assert.equal((await save()).lives,3);assert.equal((await save()).emyRescueUsed,false);
+   if(attempt===1){
+    for(const [name,t] of [['01-preparacion',.96],['02-salto',1.42],['03-impacto',1.83],['04-aterrizaje',2.34],['05-proteccion',3.05]]){
+     await page.waitForFunction(t=>window.__rescueHouse.emergencyRescue()?.elapsed>=t,t,{polling:100,timeout:90000});
+     const state=await page.evaluate(()=>window.__rescueHouse.emergencyRescue());assert(state&&!state.kind.includes('occluded'),'Open exterior should show rescue');assert(state.pose.cat.y>=0);await shot(name);
+    }
+   }
+   await page.waitForFunction(()=>!window.__rescueHouse.emergencyRescue()&&!document.querySelector('#lab3d').classList.contains('house-capture-active'),null,{polling:250,timeout:90000});
+   if(attempt===1){
+    await page.waitForFunction(()=>window.__rescueHouse.story().tutorial==='lives');
+    await shot('06-guia-vidas');await page.locator('.field-overlay [data-field-close]').click();
+   }
+   assert.equal((await save()).lives,3);assert((await save()).picked.includes('key'));assert((await save()).tutorials.includes('lives'));
+   console.log('PASS easy capture '+attempt+' no debit, same checkpoint, Emy rescue');
+  }
+  await choose('normal');
+  const standard=await trigger();assert.deepEqual(standard,{lives:2,emyRescue:false,easy:false});assert.equal((await save()).lives,2);
+  assert.equal(await page.locator('#lab-canvas').evaluate(canvas=>canvas.getContext('webgl').getError()),0);
+  assert.deepEqual(errors,[]);console.log('PASS repeat rescue, reload preference, return to original difficulty and actual WebGL');
+ }catch(error){try{console.error('EMERGENCY_QA',await page?.evaluate(()=>({shot:window.__rescueHouse?.emergencyRescue(),story:window.__rescueHouse?.story()})));}catch{}throw error;}
+ finally{await browser?.close();await server.close();}
+})().catch(error=>{console.error(error);process.exitCode=1});
