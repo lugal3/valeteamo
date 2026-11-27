@@ -27,10 +27,13 @@ async function main(){
    // Advance the same mounted page across Chilean civil midnights.
    await page.clock.setFixedTime(new Date(Date.UTC(2026,10,27+i,3)));
    await page.locator('main.birthday-countdown[data-daily-theme="'+themes[i]+'"]').waitFor();
+   await page.waitForFunction(expected=>document.querySelector('.birthday-time dd')?.textContent===expected,String(8-i).padStart(2,'0'));
    assert.equal(await page.getByRole('timer').locator('dd').first().innerText(),String(8-i).padStart(2,'0'));
    assert.equal(await page.getByRole('button',{name:'Abrir mi sorpresa'}).count(),0);
    assert.equal(await page.locator('.daily-preview').count(),0,'public has no theme selector');
    messages.add(await root.locator('.daily-message p').innerText());
+   assert.equal(await root.locator('.daily-particle').count(),32,'bounded themed particle field');
+   assert.equal(await root.locator('.daily-art').count(),1,'individual decorative composition');
    assert(await root.locator('.birthday-time').evaluate(el=>el.scrollWidth<=el.clientWidth+1),'timer fits viewport');
    await page.screenshot({path:'artifacts/daily-'+(i+1)+'-'+themes[i]+'.png'});
   }
