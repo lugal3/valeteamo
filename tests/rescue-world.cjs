@@ -185,3 +185,20 @@ assert.equal(world.canopyAlpha(1,true,30,true),.28);
 assert.equal(world.canopyAlpha(.28,false,30,true),1);
 assert(world.canopyAlpha(1,true,30,false)<1);
 assert(world.canopyAlpha(.28,false,30,false)>.28);
+
+// Epilogue follows the same collision rules in the four original maps.
+const routeJs=ts.transpileModule(fs.readFileSync('src/demo/epilogue-route.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+const routeContext={exports:{},require(name){if(name==='./rescue-overworld')return world;throw Error(name);}};
+vm.runInNewContext(routeJs,routeContext);
+for(const [stage,chapter] of Object.entries(routeContext.exports.EPILOGUE_CHAPTERS)){
+ const valid=p=>{const c=world.constrainRescue(p,chapter.map);return Math.hypot(c.u-p.u,c.v-p.v)<1e-6;};
+ assert(valid(chapter.spawn),stage+' spawn is walkable');assert(valid(chapter.target),stage+' destination is walkable');
+ const start={u:Math.round(chapter.spawn.u*4),v:Math.round(chapter.spawn.v*4)},queue=[start],seen=new Set([start.u+','+start.v]);let reached=false;
+ for(let i=0;i<queue.length&&i<18000;i++){
+  const p=queue[i];if(Math.hypot(p.u/4-chapter.target.u,p.v/4-chapter.target.v)<.8){reached=true;break;}
+  for(const [du,dv] of [[1,0],[-1,0],[0,1],[0,-1]]){
+   const u=p.u+du,v=p.v+dv,k=u+','+v;if(seen.has(k)||!valid({u:u/4,v:v/4}))continue;seen.add(k);queue.push({u,v});
+  }
+ }
+ assert(reached,stage+' has a walkable route to the return marker');
+}
