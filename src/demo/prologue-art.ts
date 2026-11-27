@@ -56,21 +56,24 @@ export function paintLuisChibi(
  const rows=(y:number,spans:readonly (readonly [number,number])[],color:string)=>spans.forEach(([x,w],j)=>b(x,y+j,w,1,color));
  // Compact green shirt and dark trousers. Feet anchor at y=61.
  const ink='#302c30',dark='#353238',sole='#494447',hair=p.hair,soft='#303033';
- b(15+step,52,9,8,ink);b(24-step,52,9,8,ink);
- b(16+step,53,7,5,dark);b(25-step,53,7,5,dark);
- b(13+step,58,11,3,ink);b(24-step,58,11,3,ink);
- b(14+step,60,9,1,sole);b(25-step,60,9,1,sole);
- const y=39+bob;
- b(17,y-2,14,4,ink);b(15,y+1,18,13,ink);
- b(16,y+2,16,11,p.top);
+ const liftL=step<0?2:0,liftR=step>0?2:0;
+ b(15,52-liftL,9,8,ink);b(24,52-liftR,9,8,ink);
+ b(16,53-liftL,7,5,dark);b(25,53-liftR,7,5,dark);
+ b(13,58-liftL,11,3,ink);b(24,58-liftR,11,3,ink);
+ b(14,60-liftL,9,1,sole);b(25,60-liftR,9,1,sole);
+ const y=37+bob;
+ b(19,y-3,10,4,p.skinShade);b(20,y-3,8,3,p.skin);
+ b(17,y-1,14,4,ink);b(15,y+1,18,15,ink);
+ b(16,y+2,16,13,p.top);
  b(17,y+3,13,8,'#79a95a');
- b(17,y+11,14,2,'#53783e');
+ b(17,y+13,14,2,'#53783e');
  if(back)b(20,y+2,8,2,'#6c964c');
  if(pose==='idle'&&i===1)b(18,y+4,2,4,'#84ae66');
  // Small, rounded hands; left-arm ink stays a tiny detail, not a dark sleeve.
  const raised=waving&&i!==0;
  for(const [x,offset,tattoo] of [[10,swing,back],[32,-swing,!back]] as const){
   const lift=raised&&x===32?-8:0,ay=y+4+offset+lift;
+  if(lift){b(31,ay+6,5,8,ink);b(32,ay+6,3,7,p.skin);}
   b(x+1,ay,5,3,ink);b(x,ay+2,7,7,ink);
   b(x+1,ay+3,5,5,p.skin);b(x+2,ay+3,3,4,p.skinLight);
   b(x+2,ay+8,3,1,ink);
@@ -84,15 +87,17 @@ export function paintLuisChibi(
  if(!back){
   rows(h+14,[[12,25],[10,29],[8,33],[7,35],[6,37],[6,38],[5,39],[5,39],[5,39],[5,39],[6,37],[7,35],[8,33],[9,31],[11,27],[13,23],[16,17],[19,11]],p.skinShade);
   rows(h+15,[[13,23],[11,28],[9,31],[8,33],[7,35],[7,36],[6,37],[6,37],[6,37],[7,35],[8,33],[10,30],[12,26],[14,22],[17,16],[20,9]],p.skin);
-  rows(h+19,[[10,28],[8,33],[8,34],[8,34],[9,33],[9,32],[11,29],[13,25],[15,21],[18,15]],p.skinLight);
+  rows(h+19,[[10,28],[8,33],[8,34],[8,34],[9,33],[9,32],[10,31],[11,29],[12,27],[14,23],[16,19],[19,13],[21,9]],p.skinLight);
+  rows(h+30,[[15,21],[17,17],[20,11],[22,7]],p.skinShade);
+  rows(h+30,[[17,17],[19,13],[22,7]],p.skinLight);
   if(!side){
    // Clean dark rectangular frames with round lower corners, brown eyes.
    for(const x of [8,26]){
-    b(x+2,h+17,11,2,p.glass);b(x,h+19,2,9,p.glass);
-    b(x+12,h+19,2,9,p.glass);b(x+2,h+28,10,2,p.glass);
-    b(x+1,h+27,2,2,p.glass);b(x+11,h+27,2,2,p.glass);
+    b(x+2,h+17,11,2,p.glass);b(x,h+19,2,7,p.glass);
+    b(x+12,h+19,2,7,p.glass);b(x+2,h+26,10,2,p.glass);
+    b(x+1,h+25,2,2,p.glass);b(x+11,h+25,2,2,p.glass);
     if(blink){b(x+4,h+24,6,1,'#57423b');}
-    else{b(x+4,h+21,6,6,'#4a3a35');b(x+4,h+22,2,2,'#fff2db');b(x+8,h+25,2,2,'#84634d');}
+    else{b(x+4,h+20,6,5,'#4a3a35');b(x+4,h+22,2,2,'#fff2db');b(x+8,h+23,2,2,'#84634d');}
    }
    b(22,h+21,4,2,p.glass);
    b(23,h+27,2,1,'#d79e82');
