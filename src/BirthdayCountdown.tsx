@@ -7,13 +7,16 @@ const CosmosExperience=lazy(()=>import('./experience/CosmosExperience'));
 const opensAt = Date.parse('2026-12-05T00:00:00-03:00');
 const remaining = () => Math.max(0,Math.ceil((opensAt-Date.now())/1000));
 
-export function BirthdayCountdown({children}:{children:ReactNode}){
+type Simulation={onExit:()=>void;onEnterGame:()=>void};
+export function BirthdayCountdown({children,simulation}:{children:ReactNode;simulation?:Simulation}){
+ const simulationTarget=useRef(Date.now()+10000);
+ const getRemaining=()=>simulation?Math.max(0,Math.ceil((simulationTarget.current-Date.now())/1000)):remaining();
  const [entered,setEntered]=useState(false);
  const [launchClassic,setLaunchClassic]=useState(false);
  const [adminMode,setAdminMode]=useState(false);
  const [giftLaunched,setGiftLaunched]=useState(false);
  const [installOpen,setInstallOpen]=useState(false);
- const [seconds,setSeconds]=useState(remaining);
+ const [seconds,setSeconds]=useState(getRemaining);
  const [code,setCode]=useState('');
  const [invalid,setInvalid]=useState(false);
  const dialog=useRef<HTMLDialogElement>(null);
@@ -21,7 +24,7 @@ export function BirthdayCountdown({children}:{children:ReactNode}){
 
  useEffect(()=>{
   if(!locked)return;
-  const refresh=()=>setSeconds(remaining());
+  const refresh=()=>setSeconds(getRemaining());
   const timer=window.setInterval(refresh,250);
   document.addEventListener('visibilitychange',refresh);
   return ()=>{
@@ -51,7 +54,7 @@ export function BirthdayCountdown({children}:{children:ReactNode}){
    ?cloneElement(children as ReactElement<{initialRoute?:'classic'|'rescue'|'tests'}>,{initialRoute})
    :children;
  }
- if(giftLaunched)return <Suspense fallback={<main className="birthday-countdown" role="status">Abriendo el universo…</main>}><CosmosExperience startAt="gift" onExit={()=>setEntered(true)} onEnterGame={()=>{setLaunchClassic(true);setEntered(true);}}/></Suspense>;
+ if(giftLaunched)return <Suspense fallback={<main className="birthday-countdown" role="status">Abriendo el universo…</main>}><CosmosExperience preview={!!simulation} startAt="gift" onExit={simulation?.onExit??(()=>setEntered(true))} onEnterGame={simulation?.onEnterGame??(()=>{setLaunchClassic(true);setEntered(true);})}/></Suspense>;
  const parts=[
   ['Días',Math.floor(seconds/86400)],
   ['Horas',Math.floor(seconds/3600)%24],
@@ -64,12 +67,12 @@ export function BirthdayCountdown({children}:{children:ReactNode}){
    <span className="blossom-glow blossom-glow-a"/><span className="blossom-glow blossom-glow-b"/>
    {Array.from({length:18},(_,i)=><i key={i} className="blossom-petal" style={{left:((i*41+9)%100)+'%',top:((i*67+8)%100)+'%',animationDelay:(-i*.41)+'s',animationDuration:(6+i%5)+'s'}}/>)}
   </div>
-  <button className="birthday-admin-toggle" type="button" aria-label="Administración" aria-haspopup="dialog" onClick={openAdmin}>
+  {simulation?<button className="birthday-admin-toggle" type="button" onClick={simulation.onExit} aria-label="Volver a pruebas">←</button>:<button className="birthday-admin-toggle" type="button" aria-label="Administración" aria-haspopup="dialog" onClick={openAdmin}>
    <span aria-hidden="true">⚙</span>
-  </button>
+  </button>}
   <section className="birthday-countdown-content" aria-labelledby="birthday-countdown-title">
    <div className="birthday-countdown-emblem" aria-hidden="true">✿ <span>♡</span> ✧</div>
-   <span className="birthday-cosmic-label">UNA AVENTURA PARA DOS · ♡</span>
+   <span className="birthday-cosmic-label">{simulation?'LP · SIMULACIÓN T−10 s':'UNA AVENTURA PARA DOS · ♡'}</span>
    <h1 id="birthday-countdown-title">Feliz cumpleaños <em>Vale</em></h1>
    <p><time dateTime="2026-12-05">5 de diciembre</time> · El universo espera por ti</p>
    {seconds>0?<dl className="birthday-time" role="timer" aria-label="Tiempo para abrir el regalo">

@@ -6,9 +6,11 @@ import {advance,goTo,initialProgress,readProgress,writeProgress,type StoryProgre
 import {Sound} from './audio';
 import {FullscreenControl} from './FullscreenControl';
 import {Splash} from './demo/Splash';
-import {loadRescue,resetRescue} from './demo/progression.js';
-import {loadPrologue,resetPrologue} from './demo/prologue-story.js';
+import {loadRescue} from './demo/progression.js';
+import {loadPrologue} from './demo/prologue-story.js';
 import {PlaytestHouse,PlaytestMenu} from './PlaytestMenu';
+import {BirthdayCountdown} from './BirthdayCountdown';
+import type {EpilogueStage} from './demo/epilogue-progress.js';
 import type {HouseTrialId} from './lab/house-trials';
 import './story.css';
 import {stopWelcomeMelody} from './demo/welcome-melody';
@@ -40,11 +42,13 @@ export function StoryApp({ClassicApp,initialRoute}:{ClassicApp:ComponentType;ini
  const container=useRef<HTMLDivElement>(null);
  const audio=useRef<Sound>(new Sound());
  const [progress,setProgress]=useState<StoryProgress>(()=>readProgress(STORY.length));
- const [screen,setScreen]=useState<'splash'|'cover'|'story'|'game'|'classic'|'rescue'|'tests'|'arcade'|'cosmos'|'cosmos-return'>(()=>
+ const [screen,setScreen]=useState<'splash'|'cover'|'story'|'game'|'classic'|'rescue'|'tests'|'arcade'|'cosmos'|'cosmos-return'|'full-flow'>(()=>
   initialRoute==='rescue'?(hasRescueProgress()?'rescue':'splash'):initialRoute==='classic'?'classic':initialRoute==='tests'?'tests':'cover');
  const [splashTarget,setSplashTarget]=useState<'rescue'|null>(screen==='splash'?'rescue':null);
  const [adminGranted]=useState(initialRoute==='tests');
- const [demoEntry,setDemoEntry]=useState<'garden'|'abduction'|'trail'|'house'|'drawer'|'lock'|'rescue'|'mirror'>('garden');
+ const [demoEntry,setDemoEntry]=useState<'garden'|'feeding'|'abduction'|'trail'|'house'|'drawer'|'lock'|'rescue'|'mirror'>('garden');
+ const [fullTrial,setFullTrial]=useState(false);
+ const [epilogueEntry,setEpilogueEntry]=useState<Exclude<EpilogueStage,'complete'>|undefined>();
  const [demoTrial,setDemoTrial]=useState(false);const [saved,setSaved]=useState(progress.started);const [storageOK,setStorageOK]=useState(true);
  const [houseTrial,setHouseTrial]=useState<HouseTrialId|null>(null);
  const [cosmosEntry,setCosmosEntry]=useState<'countdown'|'gift'|'intro'|'loading'|'galaxy'>('countdown');
@@ -70,22 +74,29 @@ export function StoryApp({ClassicApp,initialRoute}:{ClassicApp:ComponentType;ini
  const unlockAudio=()=>{if(!progress.muted)tryAudio();};
  // El picnic sólo acompaña al comienzo del rescate 2D, no al menú ni a las pruebas 3D.
  const resumeRescue=screen==='cover'&&hasRescueProgress();
- const openDemo=(entry:typeof demoEntry,trial:boolean)=>{
-  const welcome=entry==='garden'&&(trial||!hasRescueProgress());
-  setDemoEntry(entry);setDemoTrial(trial);audio.current.destroy();stopWelcomeMelody();
+ const openDemo=(entry:typeof demoEntry,trial:boolean,epilogue?:Exclude<EpilogueStage,'complete'>)=>{
+  const welcome=!epilogue&&entry==='garden'&&(trial||!hasRescueProgress());
+  setEpilogueEntry(epilogue);setDemoEntry(entry);setDemoTrial(trial);audio.current.destroy();stopWelcomeMelody();
   setSplashTarget(welcome?'rescue':null);setScreen(welcome?'splash':'rescue');
  };
  if(screen==='splash')return <Splash muted={progress.muted} onStart={()=>{if(splashTarget==='rescue'){setSplashTarget(null);setScreen('rescue');}else{if(!progress.muted)tryAudio(true);setScreen('cover');}}}/>;
+ if(screen==='full-flow')return <BirthdayCountdown simulation={{onExit:()=>{setFullTrial(false);setScreen('tests');},onEnterGame:()=>openDemo('garden',true)}}>{null}</BirthdayCountdown>;
  if(screen==='cosmos')return <Suspense fallback={<main role="status" style={{display:'grid',placeItems:'center',background:'#0a0719',color:'#ffddf1'}}>Preparando las estrellas…</main>}><CosmosExperience preview startAt={cosmosEntry} onExit={()=>setScreen('tests')} onEnterGame={()=>{ // Heart always opens ACT I in 2D, not the old saved 3D checkpoint.
    // These keys belong only to the rescue story; classic Corazones is untouched.
-   resetPrologue();resetRescue();openDemo('garden',false);
+   openDemo('garden',true);
   }}/></Suspense>;
- if(screen==='cosmos-return')return <Suspense fallback={<main role="status" className="playtest-loading">Regresando a las estrellas…</main>}><CosmosExperience startAt="galaxy" onExit={()=>setScreen('cover')} onEnterGame={()=>openDemo('garden',false)}/></Suspense>;
- if(screen==='rescue')return <Suspense fallback={<main className="playtest-loading" role="status">Preparando el rescate 2D…</main>}><RescueDemo key={demoEntry+(demoTrial?'-trial':'-story')} entry={demoEntry} test={demoTrial} onComplete={()=>setScreen(demoTrial?'tests':'cosmos-return')} onExit={()=>{setScreen(demoTrial?'tests':'cover');if(!demoTrial)unlockAudio();}}/></Suspense>;
+ if(screen==='cosmos-return')return <Suspense fallback={<main role="status" className="playtest-loading">Regresando a las estrellas…</main>}><CosmosExperience preview={fullTrial} startAt="galaxy" onExit={()=>{setScreen(fullTrial?'tests':'cover');setFullTrial(false);}} onEnterGame={()=>openDemo('garden',fullTrial)}/></Suspense>;
+ if(screen==='rescue')return <Suspense fallback={<main className="playtest-loading" role="status">Preparando el rescate 2D…</main>}><RescueDemo key={demoEntry+(demoTrial?'-trial':'-story')} entry={demoEntry} epilogueEntry={epilogueEntry} test={demoTrial} onComplete={()=>setScreen(demoTrial&&!fullTrial?'tests':'cosmos-return')} onExit={()=>{setScreen(demoTrial?'tests':'cover');if(!demoTrial)unlockAudio();}}/></Suspense>;
  if(screen==='tests')return houseTrial?<PlaytestHouse key={houseTrial} id={houseTrial} onExit={closeHouseTrial}/>:<PlaytestMenu
   onExit={()=>{unlockAudio();setScreen('cover');}}
   onSelect={id=>{
+   setFullTrial(false);
    switch(id){
+    case 'full-flow':setFullTrial(true);setScreen('full-flow');break;
+    case '2d-feeding':openDemo('feeding',true);break;
+    case '2d-abduction':openDemo('abduction',true);break;
+    case '2d-trail':openDemo('trail',true);break;
+    case 'epilogue-outside':case 'epilogue-return-path':case 'epilogue-reunion':case 'epilogue-celebration':openDemo('garden',true,id.slice(9) as Exclude<EpilogueStage,'complete'>);break;
     case 'cosmos-countdown':case 'cosmos-gift':case 'cosmos-intro':case 'cosmos-loading':case 'cosmos-galaxy':
      setCosmosEntry(id==='cosmos-gift'?'gift':id==='cosmos-intro'?'intro':id==='cosmos-loading'?'loading':id==='cosmos-galaxy'?'galaxy':'countdown');setScreen('cosmos');break;
     case 'house':openDemo('house',true);break;

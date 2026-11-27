@@ -7,13 +7,13 @@ import {START,advanceRescue,loadRescue,saveRescue,resetRescue,openRescueHouseSav
 import '../lab/lab.css';
 import './rescue.css';
 
-type Entry='garden'|'abduction'|'trail'|'house'|'drawer'|'lock'|'rescue'|'mirror';
+type Entry='garden'|'feeding'|'abduction'|'trail'|'house'|'drawer'|'lock'|'rescue'|'mirror';
 type RescueEvent='heart'|'abduction'|'trail'|'house'|'rescue';
 
 // Los checkpoints antiguos siguen disponibles para las pruebas. Todos los
 // tramos jugables 2D usan el mismo prólogo isométrico (no otra escena plana).
 const initial=(entry:Entry,test:boolean):RescueState=>{
- if(entry==='garden')return test?{...START}:loadRescue();
+ if(entry==='garden'||entry==='feeding')return test?{...START}:loadRescue();
  if(!test)return loadRescue();
  let s={...START};
  s=advanceRescue(s,'heart');
@@ -24,13 +24,13 @@ const initial=(entry:Entry,test:boolean):RescueState=>{
 };
 
 const checkpointFor=(entry:Entry):PrologueCheckpoint=>
- entry==='abduction'?'walk-together':entry==='trail'?'ribbon':'intro';
+ entry==='feeding'?'feed-cat':entry==='abduction'?'walk-together':entry==='trail'?'ribbon':'intro';
 
-export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false}:{onExit:()=>void;onComplete?:()=>void;entry?:Entry;test?:boolean}){
+export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,epilogueEntry}:{onExit:()=>void;onComplete?:()=>void;entry?:Entry;test?:boolean;epilogueEntry?:Exclude<EpilogueStage,'complete'>}){
  const [progress]=useState(()=>initial(entry,test));
  const [epilogueStore]=useState(()=>({current:!test&&progress.rescued?openEpilogueSave():undefined}));
- const [epilogue,setEpilogue]=useState<EpilogueState>(()=>epilogueStore.current?.state??{...EPILOGUE_START});
- const [mode,setMode]=useState<'garden'|'house'|'epilogue'|'end'>(progress.rescued?(epilogue.stage==='complete'?'end':'epilogue'):progress.house?'house':'garden');
+ const [epilogue,setEpilogue]=useState<EpilogueState>(()=>epilogueStore.current?.state??{...EPILOGUE_START,stage:test&&epilogueEntry?epilogueEntry:EPILOGUE_START.stage});
+ const [mode,setMode]=useState<'garden'|'house'|'epilogue'|'end'>(test&&epilogueEntry?'epilogue':progress.rescued?(epilogue.stage==='complete'?'end':'epilogue'):progress.house?'house':'garden');
  const [error,setError]=useState(''),[saveWarning,setSaveWarning]=useState(false);
  const phaseRef=useRef(progress),entering=useRef(false),finishing=useRef(false),epilogueRef=useRef(epilogue);
  const completeEpilogue=(next:EpilogueStage)=>{

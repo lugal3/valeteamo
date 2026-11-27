@@ -30,7 +30,7 @@ const RESCUE_SAMPLES={cat:catSound,churu:churuSound,'van-door':vanDoorSound,'van
 type HouseNavigation={distance:number;heading:number;guided:boolean;near:boolean;vanInspected:boolean;vanDistance:number};
 export type PrologueCheckpoint='intro'|'feed-cat'|'walk-together'|'ribbon';
 const initial=(test:boolean,checkpoint:PrologueCheckpoint):PrologueState=>
- test?{...PROLOGUE_START,stage:checkpoint}:loadPrologue();
+ test?{...PROLOGUE_START,stage:checkpoint,fedGreyCat:checkpoint==='walk-together'||checkpoint==='ribbon',metCouple:checkpoint==='walk-together'||checkpoint==='ribbon'}:loadPrologue();
 
 const label=(speaker:string)=>speaker;
 
