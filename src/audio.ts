@@ -123,7 +123,8 @@ export class Sound {
   const now=ctx.currentTime;
   for(const [node,target] of [[this.rescueMusicBus,mix.music],[this.rescueAmbientBus,mix.ambience]] as const){
    const param=node.gain,value=this.muted?0:target;
-   param.cancelScheduledValues(now);
+   if(typeof param.cancelAndHoldAtTime==='function')param.cancelAndHoldAtTime(now);
+   else{const held=param.value;param.cancelScheduledValues(now);param.setValueAtTime(held,now);}
    if(immediate||this.muted)param.setValueAtTime(value,now);
    else param.setTargetAtTime(value,now,mix.mood==='silence'?.18:.45);
   }
@@ -245,7 +246,7 @@ export class Sound {
   if(this.timer!==undefined)clearInterval(this.timer);
   this.timer=undefined;
   this.loading?.abort();
-  this.samples.clear();
+  this.samples.clear();this.userSpriteReady=false;
   this.stopSamples();
   const context=this.ctx;
   this.ctx=undefined;

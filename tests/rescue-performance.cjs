@@ -65,7 +65,7 @@ assert.deepEqual({...P.storyActorIdle(1200,true)},{frame:0,lean:0,breath:0},
 const scene=fs.readFileSync('src/iso-game.ts','utf8').replace(/\r\n/g,'\n');
 for(const part of ['this.updateStoryPerformance(dt)','kidnappingReaction(frame.phase,prior)',
  'this.showStoryBubble(\'luis\',\'farewell\')',
- 'storyActorIdle(this.clock,this.reducedMotion)','this.storyDramaOffset=smoothCinematicFocus',
+ 'storyActorIdle(this.clock+1570,this.reducedMotion)','this.storyDramaOffset=smoothCinematicFocus',
  'this.showStoryBubble(\'target\',stage===\'door\'',
  'this.clearStoryBubbles()']){
  assert(scene.includes(part),'real Phaser story scene integrates: '+part);
