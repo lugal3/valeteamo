@@ -40,5 +40,13 @@ const assert=require('node:assert/strict');
  const turn=Math.atan2(Math.sin(louis.yaw-before),Math.cos(louis.yaw-before));
  assert(Math.abs(turn)<.15,'following must not snap Louis to Kitty');
  assert(Number.isFinite(louis.yaw)&&Number.isFinite(louis.speed));
+ // A real conversation holds Louis in place during Kitty's lines and pauses,
+ // but cannot prevent him from following once the player leaves the radius.
+ louis.dialogueEngaged=true;louis.dialogueSpeaking=false;louis.followMoving=true;
+ const talkPosition={x:louis.x,z:louis.z};
+ for(let i=0;i<30;i++)updateLouisEscape(louis,1/60,{x:talkPosition.x+.6,y:louis.y,z:talkPosition.z+1.45});
+ assert(Math.hypot(louis.x-talkPosition.x,louis.z-talkPosition.z)<.001,'listener holds position for the entire dialogue');
+ updateLouisEscape(louis,1/60,{x:talkPosition.x,y:louis.y,z:talkPosition.z+4});
+ assert(louis.followMoving,'leaving conversation range releases follower');
  console.log('PASS V2 phase 09: Photo-A preserved, three untie beats, physical route, crouch, smooth follow');
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -1092,6 +1092,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  function loisTalkTarget(){
  if(!ready||isPaused()||phone.open||remoteInUse()||loisShotDirector||finalCutscene&&!finalCutscene.playable||heldNoise)return null;
+ // Optional conversations never lock the escape when the threat returns.
+ if(pursuer?.active&&pursuer.mode==='chase'&&!finalCutscene)return null;
  const actor=louis||world.objects.find(o=>o.id==='captive-louis'&&!o.taken),context=loisDialogueContext(actor,events.phase,!!finalCutscene?.playable);
  return canTalkToLois(actor,s,context,target=>!lineBlocked(world.boxes,cameraOf(s),target))?{actor,context}:null;
 }
@@ -2064,7 +2066,7 @@ function runAction(act,node){
       const together=settled&&facingKitty&&Math.hypot(mark.x-louis.x,mark.z-louis.z)<.27;
       shot.rejoinAge=together?(shot.rejoinAge||0)+dt:0;
       shot.reunionBlend=clamp((shot.reunionBlend||0)+(settled?dt*2.4:-dt*4),0,1);
-      if(shot.rejoinAge>=.28&&!shot.reunionHeard){shot.reunionHeard=true;play('cat-purr',cat,.48,view);if(!loisDialogue.active)startLoisReaction(louis,'relief');}
+      if(shot.rejoinAge>=.28&&!shot.reunionHeard){shot.reunionHeard=true;play('cat-purr',cat,.48,view);if(!loisDialogue.active)startLoisReaction(louis,'relief');caption('Emy ronronea. Louis respira aliviado.');}
      cat.age+=dt;poseEmy(cat,{walking:moved>.001,mode:moved>.001?'walk':'idle',phase:cat.age,reduced:reducedMotion.matches,reunion:shot.reunionBlend});
      if(shot.gardenView&&shot.rejoinAge>=2.1&&!loisDialogue.active){
       events.phase='safe';resetInput();

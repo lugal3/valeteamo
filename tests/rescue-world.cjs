@@ -188,7 +188,7 @@ assert(world.canopyAlpha(.28,false,30,false)>.28);
 
 // Epilogue follows the same collision rules in the four original maps.
 const routeJs=ts.transpileModule(fs.readFileSync('src/demo/epilogue-route.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-const routeContext={exports:{},require(name){if(name==='./rescue-overworld')return world;throw Error(name);}};
+const routeContext={exports:{},require(name){if(name==='./rescue-overworld')return world;if(name==='./night-house-layout')return nightExports;throw Error(name);}};
 vm.runInNewContext(routeJs,routeContext);
 for(const [stage,chapter] of Object.entries(routeContext.exports.EPILOGUE_CHAPTERS)){
  const valid=p=>{const c=world.constrainRescue(p,chapter.map);return Math.hypot(c.u-p.u,c.v-p.v)<1e-6;};

@@ -30,7 +30,7 @@ export function sampleLoisMotion(actor={},reduced=false){
  const state=phase==='untying'?'restrained':phase==='hide'?'lowering':phase==='hidden'?'concealed':
   speaking?'speaking':phase==='climb'&&slope>.13?'ascending':crouch>.1?'rising':weight>.08?(speed>2.35?'hurried':'walking'):'watchful';
  const scan=reduced?0:(Math.sin(age*.93)+.28*Math.sin(age*1.91+.8))*.23;
- const focus=live?.attention?.75:0;
+ const focus=live?.attention?(actor.dialogueEngaged?1:.75):0;
  return {state,speed,slope,weight,stride,leftLift,rightLift,cycle,
   lookYaw:clamp((live?.lookYaw??0)*focus+scan*(1-focus)*(1-.65*weight),-.70,.70),
   lookPitch:clamp((live?.lookPitch??0)*focus+slope*.12,-.35,.35),

@@ -1105,7 +1105,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    npc.setAngle(idle.lean+(talking?Math.sin(this.clock/230)*.9:0));
    npc.setScale(1.3*(1+idle.breath),1.3*(1-idle.breath));
   }
-  const remaining:typeof this.storyBubbles=[];
+  const remaining:IsoAdventure['storyBubbles']=[];
   for(const bubble of this.storyBubbles){
    const age=this.clock-bubble.at;
    if(age>=1200||!bubble.sprite.active){bubble.sprite.destroy();continue;}

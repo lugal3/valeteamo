@@ -40,3 +40,8 @@ Base publicada: d28fc0eaa26ddc348f60b4e9704aaf275f8fb4c0. Rama independiente fea
 - Cortina compartida de campaña (#0b0a16) desde la ventana; el 3D revela su escena tras el primer render exitoso, no al terminar el import. Error gráfico sigue accesible; la salida final tiene fundido cancelable y guardia contra doble acción, sin tocar LP 3D independiente.
 - El regreso 2D comienza en el portón compartido de la referencia espacial (no en el porche), coherente con la reunión exterior 3D. Se conserva el recorrido y se adapta objetivo/diálogo. Regresión del checkpoint comprueba la posición real de arranque.
 - No se afirma igualdad métrica entre proyecciones ni se ha medido la calidad visual. CI y revisión pendientes; no merge.
+
+## Fase 3 — conversación y correcciones de CI
+- CI de 544eb74: TS2304 en anotación de burbujas (1108); sustituida por tipo indexado de IsoAdventure. CI de 1d737aa: prueba rescue-world no conocía la dependencia night-house-layout; usa el mismo módulo ya cargado para verificar colisiones. El navegador del epílogo pasó en ambas revisiones; no se confunde con compilación aprobada.
+- Louis conserva atención y posición durante toda la conversación opcional (incluidas frases de Kitty y espera de lectura), gira suavemente hacia ella, y recupera seguimiento al alejarse. Cierre/reset libera estado. Conversación disponible solo fuera de persecución directa; no pausa IA ni elimina peligro. Se conserva rig, rutas, velocidad y puzles.
+- Reencuentro exterior: señal narrativa coordinada con ronroneo y alivio ya existentes. Pruebas de sesión de conversación y seguimiento añadidas. Revalidación del nuevo SHA pendiente; no publicación.
