@@ -54,17 +54,17 @@ export function createInputSession(root,onMode=()=>{}){
   reset();
   const panel=document.createElement('dialog');panel.className='vt-pad-calibration';panel.setAttribute('aria-label','Calibrar mando');
   panel.innerHTML='<h2>Calibrar mando</h2><p data-pad-prompt>Conecta el mando y pulsa un botón.</p><p data-pad-progress></p><div><button data-pad-skip hidden>Omitir botón opcional</button><button data-pad-cancel>Cancelar</button></div>';
-  root.append(panel);panel.showModal();
+  root.append(panel);try{panel.showModal();}catch{panel.remove();return;}
   const status=panel.querySelector('[data-pad-prompt]'),progress=panel.querySelector('[data-pad-progress]'),skip=panel.querySelector('[data-pad-skip]');
   const axisNames=['stick izquierdo hacia la derecha','stick izquierdo hacia abajo','stick derecho hacia la derecha','stick derecho hacia abajo'];
   const names=['X (cruz)','círculo','cuadrado','triángulo','L1','R1','L2','R2','SHARE','OPTIONS','L3','R3','cruceta arriba','cruceta abajo','cruceta izquierda','cruceta derecha','PS'];
-  let chosen=null,centers=[],axes=[],buttons=Array(17).fill(null),step=-1,neutralSince=0,armed=false,raf=0,waiting=true;
+  let chosen=null,centers=[],axes=[],buttons=Array(17).fill(null),step=-1,neutralSince=0,armed=false,raf=0;
   const required=new Set([0,1,2,3,9]);
   function close(){cancelAnimationFrame(raf);panel.close();panel.remove();calibration=null;reset();}
   calibration={close};
   panel.addEventListener('cancel',e=>{e.preventDefault();close();});
   panel.querySelector('[data-pad-cancel]').onclick=close;
-  function next(){step++;armed=false;neutralSince=0;waiting=true;
+  function next(){step++;armed=false;neutralSince=0;
    if(step===21){const p=pads().find(p=>p.index===chosen.index&&p.id===chosen.id),record={axes,buttons};
     if(validPadProfile(record,p)){profiles.set(p.id,record);try{localStorage.setItem(profileKey(p.id),JSON.stringify(record));}catch{}index=null;switchMode('gamepad');close();}else{status.textContent='No se pudo validar el perfil. Cancela y vuelve a intentarlo.';cancelAnimationFrame(raf);}return;}
    progress.textContent=(step+1)+' / 21';
@@ -80,7 +80,7 @@ export function createInputSession(root,onMode=()=>{}){
    if(step>=21)return;
    const values=Array.from(p.axes,(v,i)=>v-(centers[i]||0)),down=p.buttons.map(b=>b.pressed||b.value>.55);
    const neutral=!down.some(Boolean)&&values.every(v=>Math.abs(v)<.25);
-   if(!armed){if(!neutral){neutralSince=0;return;}if(!neutralSince)neutralSince=now;if(now-neutralSince<220)return;armed=true;waiting=false;}
+   if(!armed){if(!neutral){neutralSince=0;return;}if(!neutralSince)neutralSince=now;if(now-neutralSince<220)return;armed=true;}
    if(step<4){let best=-1;for(let i=0;i<values.length;i++)if(!axes.some(a=>a.index===i)&&Math.abs(values[i])>.65&&(best<0||Math.abs(values[i])>Math.abs(values[best])))best=i;
     if(best>=0){axes.push({index:best,sign:Math.sign(values[best]),center:centers[best]});next();}}
    else{const pressed=down.findIndex((b,i)=>b&&!buttons.includes(i));if(pressed>=0){buttons[step-4]=pressed;next();}}

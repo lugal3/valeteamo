@@ -1569,7 +1569,7 @@ function runAction(act,node){
   const movementLocked=!!(finalCutscene?.gardenView||s.hidden||s.lying||phone.open&&!phone.canWalk||events.phase==='arrival'||events.phase==='safe'||events.phase==='failed');
   const intent=movementLocked?{forward:0,side:0}:advanceMoveIntent(velocity,forward,side,dt);
   velocity.forward=intent.forward;velocity.side=intent.side;
-  const wantsSprint=padState.buttons[10]||joystick.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight');
+  const wantsSprint=!!padState.buttons[10]||joystick.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight');
   if(!wantsSprint)s.exhausted=false;
   const steepSteps=isOnStairs(s,getStairDirection,inHatch);
   const sprint=!phone.open&&wantsSprint&&length>.08&&!steepSteps&&!s.crouched&&!s.exhausted&&s.stamina>0;
@@ -2436,7 +2436,7 @@ function runAction(act,node){
  function endLook(e){if(e.pointerId!==lookPointer)return;const pointer=lookPointer;lookPointer=null;lookPointerType=null;releaseCapture($('lab-look'),pointer);}
  const stick=$('lab-joystick'),look=$('lab-look');
  function syncPointerMode(){
-  root.classList.toggle('house-desktop',padSession.mode==='keyboard');
+  root.classList.toggle('house-desktop',padSession.mode==='keyboard'&&desktop.matches);
   root.classList.toggle('house-keyboard',padSession.mode==='keyboard');
   root.classList.toggle('house-gamepad',padSession.mode==='gamepad');
   $('lab-interact').querySelector('kbd').textContent=padSession.mode==='gamepad'?'□':'E';
@@ -2513,7 +2513,6 @@ function runAction(act,node){
   if(key==='mute')sound.set('muted',field.checked);
   root.querySelectorAll('[data-setting="'+key+'"]').forEach(el=>{if(el!==field){if(field.type==='checkbox')el.checked=field.checked;else el.value=field.value;}});
  },{signal});
- root.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')root.classList.remove('house-keyboard');},true);
  window.addEventListener('keydown',e=>{
   if(!active||padSession.calibrating||e.altKey||e.ctrlKey||e.metaKey||e.isComposing)return;
   if(manual.key(e))return;
@@ -2521,7 +2520,6 @@ function runAction(act,node){
   if(e.key.toLowerCase()==='l'&&!e.repeat&&!isPaused()&&!phone.open&&!['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName)){e.preventDefault();runAction('lois:talk');return;}
   if(e.key.toLowerCase()==='v'&&hidePeekSupported(s?.hidden)&&!isPaused()&&!phone.open){e.preventDefault();peekHeld=true;return;}
   if(captureShot&&!contextLost){e.preventDefault();return;}
-  root.classList.add('house-keyboard');
   if(e.isTrusted&&!e.repeat)unlockSound();
   const focused=e.target?.tagName;
   if(emyMenuOpen){

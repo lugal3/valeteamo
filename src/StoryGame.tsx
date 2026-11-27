@@ -36,14 +36,14 @@ export function StoryGame({level,character,onComplete,onExit,muted,audio,audioNo
    if(session.calibrating){s.controllerInput=EMPTY_PAD;return;}
    if(helpRef.current&&now-lastDiagnostic>200){lastDiagnostic=now;setPadInfo(session.diagnostic().map(p=>p.id+' · '+p.mapping+' · ejes '+p.axes.join(', ')+' · botones '+p.buttons.join(', ')).join('\n'));}
    const menu=Array.from(root.querySelectorAll<HTMLElement>('.adventure-controls-help,.prologue-dialog-backdrop,.epilogue-dialog,.emy-feeding,.item-backdrop,.adventure-overlay,.garden-postcard[open],[role="dialog"][aria-modal="true"]')).find(el=>el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden');
-   if(menu){s.controllerInput=EMPTY_PAD;if(menu.matches('.emy-feeding'))menu.dispatchEvent(new CustomEvent('vt-pad-feed',{detail:pad}));else padMenu(menu,pad);return;}
+   if(menu){s.controllerInput=EMPTY_PAD;if(menu.matches('.emy-feeding'))menu.dispatchEvent(new CustomEvent('vt-pad-feed',{detail:pad}));else if(menu.matches('.prologue-dialog-backdrop,.epilogue-dialog')&&pad.pressed[2])padMenu(menu,{...pad,pressed:pad.pressed.map((v,i)=>i===0||v)});else padMenu(menu,pad);return;}
    if(session.mode!=='gamepad'){s.controllerInput=EMPTY_PAD;return;}
    s.controllerInput=pad;
    if(pad.pressed[9]&&!s.story?.locked()){s.controllerInput=EMPTY_PAD;s.setPaused(!s.paused);return;}
    if(pad.pressed[2]){
-    const focused=document.activeElement as HTMLElement|null;
-    if(focused&&root.contains(focused)&&focused.matches('button:focus-visible')&&!focused.matches(':disabled'))focused.click();else s.storyInteract();
+    s.storyInteract();
    }
+   if(pad.pressed[0]){const focused=document.activeElement as HTMLElement|null;if(focused&&root.contains(focused)&&focused.matches('button:focus-visible:not(:disabled)'))focused.click();}
    if(pad.pressed[3])root.querySelector<HTMLElement>('.prologue-moment button:not(:disabled),.epilogue-picnic-tools button:not(:disabled)')?.click();
    if(pad.pressed[12]||pad.pressed[13]||pad.pressed[14]||pad.pressed[15])padMenu(root,pad);
   };raf=requestAnimationFrame(frame);return()=>{cancelAnimationFrame(raf);session.destroy();inputSession.current=null;};
@@ -82,7 +82,7 @@ export function StoryGame({level,character,onComplete,onExit,muted,audio,audioNo
   {!loading&&!error&&<><div className="adventure-hud"><button onClick={pauseManually} aria-label="Pausar aventura">Ⅱ</button><AdventureHearts hp={hud?.hp??6}/>{hud?.shield&&<span className="adventure-shield" title="Manto listo" aria-label="Manto listo">✧</span>}<span className="adventure-objective">{hud?.objective} {!story&&<b>{hud?.complete??0}/{hud?.total??3}</b>}</span><span className="adventure-hud-spacer"/><button onClick={onToggleAudio} aria-label={muted?'Activar sonido':'Silenciar sonido'}>{muted?'♪̸':'♪'}</button>{story&&<button aria-label="Controles y mando" onClick={()=>setControlHelp(true)}>?</button>}<FullscreenControl compact/><button onClick={onExit}>Salir</button></div>
    {!story&&hud?.bossHp!==undefined&&<div className="adventure-boss" aria-label={`Desafío final: ${Math.max(0,hud.bossHp)} de ${hud.bossMax} de vida`}><span>EL ECLIPSE DEL JARDÍN</span><div><i style={{width:`${Math.max(0,hud.bossHp)/(hud.bossMax||1)*100}%`}}/></div></div>}
    {level>1&&!story&&<button className="adventure-bomb" aria-label="Usar destello" onClick={()=>scene.current?.bomb()}>✦<small>{hud?.bombs??0}</small></button>}
-   {(!story||inputMode==='gamepad')&&<div className="adventure-hint">{story?(inputMode==='gamepad'?'L · Mover   R · Corazones   □ · Interactuar':inputMode==='touch'?'Arrastra a los lados para mover y disparar':'WASD · Mover   Flechas / ratón · Corazones   E · Interactuar'):level===1?'Arrastra a la izquierda para moverte':'Izquierda: mover · derecha: disparar'} {!story&&<span>· WASD{level>1?' + flechas · B: destello':''}</span>}</div>}</>
+   {(!story||inputMode==='gamepad')&&<div className="adventure-hint">{story?(inputMode==='gamepad'?'L · Mover   R · Corazones   □ · Interactuar':inputMode==='touch'?'Arrastra a los lados para mover y disparar':'WASD · Mover   Flechas / ratón · Corazones   E · Interactuar'):level===1?'Arrastra a la izquierda para moverte':'Izquierda: mover · derecha: disparar'} {!story&&<span>· WASD{level>1?' + flechas · B: destello':''}</span>}</div>}</>}
   {epilogueUI&&!loading&&!paused&&!dead&&!error&&<div className="adventure-epilogue-ui" style={{position:'absolute',inset:0,zIndex:3,pointerEvents:'none'}}>{epilogueUI}</div>}
   {loading&&<div className="adventure-overlay"><div className="pixel-flower">✿</div><p role={error?'alert':'status'}>{error||'Preparando un pequeño mundo…'}</p>{error?<><button className="story-button" onClick={()=>retry(v=>v+1)}>Reintentar</button><button onClick={onExit}>Volver al capítulo</button></>:<div className="adventure-progress" role="progressbar" aria-label="Preparando el jardín" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><i style={{width:`${progress}%`}}/></div>}</div>}
   {audioNotice&&!loading&&<div className="adventure-audio-notice" role="status">{audioNotice}</div>}
