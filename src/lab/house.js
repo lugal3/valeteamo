@@ -352,7 +352,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   resetInput();
   poseFurniture(world.entryWindow,0);sound.setTension(.32);
   cinematic={elapsed:0,establishAge:0,cues:new Set()};root.classList.add('lab-intro-active');$('lab-window-intro').classList.remove('lab-hidden');
-  $('lab-intro-caption').textContent='La fachada: la puerta y todas las ventanas tapiadas, salvo una…';
+  $('lab-intro-caption').textContent='La puerta principal y una sola ventana sin tablas…';
  }
  function beginEmyShot(door){
   if(!emyCompanion||emyCompanion.stage!=='waiting')return false;
@@ -2073,7 +2073,7 @@ function runAction(act,node){
       if(shot.rejoinAge>=.28&&!shot.reunionHeard){shot.reunionHeard=true;play('cat-purr',cat,.48,view);if(!loisDialogue.active)startLoisReaction(louis,'relief');caption('Emy ronronea. Louis respira aliviado.');}
      cat.age+=dt;poseEmy(cat,{walking:moved>.001,mode:moved>.001?'walk':'idle',phase:cat.age,reduced:reducedMotion.matches,reunion:shot.reunionBlend});
      if(shot.gardenView&&shot.rejoinAge>=2.1&&!loisDialogue.active&&!shot.facadeLookFrom){
-      shot.facadeLookFrom={...shot.lastView};shot.facadeLookAge=0;resetInput();
+      shot.facadeLookFrom=reunionView(shot.gardenView,louis,world.emy,shot.reunionTime,reducedMotion.matches);shot.facadeLookAge=0;resetInput();
      }
      if(shot.facadeLookFrom){shot.facadeLookAge+=shotDelta;}
      if(shot.facadeLookFrom&&(reducedMotion.matches||shot.facadeLookAge>=FACADE_LOOKBACK_SECONDS)){

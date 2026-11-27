@@ -56,6 +56,7 @@ export function shouldPlayWindowIntro({demo=false,checkpoint='ground',reducedMot
  export function windowEstablishCamera(elapsed){
   const t=clamp01(elapsed/WINDOW_ESTABLISH_SECONDS),a=easeInOut(t/.62),b=easeInOut((t-.20)/.80);
   const end=windowIntroCamera(0),mix=(x,y,w)=>x+(y-x)*w;
+  if(t>=1)return end;
   return {x:mix(5.9,end.x,a),y:mix(1.68,end.y,b),z:mix(20.0,end.z,b),yaw:Math.PI,pitch:mix(.18,end.pitch,b)};
  }
  export function windowSequenceCamera(shot){
