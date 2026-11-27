@@ -375,9 +375,14 @@ async function run(){
   finally{await page.keyboard.up('w');}
   await page.getByRole('dialog',{name:/Kitty y Louis escaparon/}).waitFor({timeout:30000});
   await page.getByRole('button',{name:'Ver final',exact:true}).click();
-  await page.getByRole('heading',{name:'¡Louis está a salvo!'}).waitFor();
+  const epilogue=require('./helpers/epilogue-walk.cjs');
+  await epilogue.waitScene(page,'outside');
+  await page.locator('#lab3d').waitFor({state:'detached'});
   assert.equal((await read(RESCUE_KEY)).phase,'end');
   assert.equal((await read(RESCUE_KEY)).houseCheckpoint,undefined);
+  for(const chapter of epilogue.stages)await epilogue.completeChapter(page,chapter,SHOTS);
+  assert.equal((await read(RESCUE_KEY)).epilogue.stage,'complete');
+  page.once('dialog',dialog=>dialog.accept());
   await page.getByRole('button',{name:'Volver a jugar',exact:true}).click();
   await page.locator('.story-prologue[data-prologue-stage="intro"]').waitFor();
   await waitForPrologue();

@@ -2,7 +2,8 @@ import type Phaser from 'phaser';
 
 export const CHURU_TEXTURE='rescue-churu';
 export const greyCatTexture=(pose:'idle'|'eat'|'walk'|'love'|'love-walk',frame:number)=>`rescue-grey-cat-${pose}-${frame%4}`;
-export const valeTexture=(walking:boolean,frame:number)=>`rescue-vale-${walking?'walk':'idle'}-${frame%4}`;
+export const valeTexture=(walking:boolean,frame:number,facing:'down'|'right'|'up'='down')=>`rescue-vale-${walking?'walk':'idle'}-${frame%4}${facing==='down'?'':'-'+facing}`;
+export const valeTalkTexture=(frame:number,facing:'down'|'right'|'up'='down')=>`rescue-vale-talk-${frame%3}${facing==='down'?'':'-'+facing}`;
 
 export function installRescueIntroArt(scene:Phaser.Scene){
  type Block=(x:number,y:number,w:number,h:number,color:string)=>void;
@@ -61,38 +62,97 @@ export function installRescueIntroArt(scene:Phaser.Scene){
 
  // Vale matches the reference card: long black hair, red top and dark trousers.
  // Keep the same texture keys, four-frame timing and foot anchor for the couple.
- for(const walking of [false,true])for(let frame=0;frame<4;frame++){
-  sprite(valeTexture(walking,frame),43,58,b=>{
+ for(const facing of ['down','right','up'] as const)for(const pose of ['idle','walk','talk'] as const)for(let frame=0;frame<(pose==='talk'?3:4);frame++){
+  const walking=pose==='walk',talking=pose==='talk';
+  sprite(talking?valeTalkTexture(frame,facing):valeTexture(walking,frame,facing),43,58,b=>{
    const ink='#25252d',hair='#202126',shine='#37383d',skin='#e9b48f',light='#fbd4af',top='#b93d51';
-   const bob=frame===1||frame===3?1:0,step=walking?[2,0,-2,0][frame]:0;
+   // Four distinct step/idle frames; speaking has its own small nod.
+   const bob=walking?[0,1,0,2][frame]:talking?[0,1,-1][frame]:[0,1,-1,1][frame],step=walking?[2,0,-2,0][frame]:0;
+   const back=facing==='up',side=facing==='right';
+   const cluster=(x:number,y:number,rows:readonly (readonly [number,number])[],color:string)=>rows.forEach(([offset,width],i)=>b(x+offset,y+i,width,1,color));
    // Long hair behind the shoulders, with rounded ends.
-   b(7,13+bob,29,30,ink);b(5,24+bob,33,15,ink);
-   b(8,15+bob,27,27,hair);b(7,36+bob,9,8,hair);b(28,36+bob,8,8,hair);
-   b(8,25+bob,2,12,shine);b(33,24+bob,2,13,shine);
+   b(7,12+bob,29,32,ink);b(4,25+bob,35,14,ink);
+   b(5,33+bob,14,13,hair);b(25,32+bob,13,14,hair);
+   b(7,15+bob,29,27,hair);b(8,43+bob,8,4,hair);b(28,43+bob,7,4,hair);
+   // Curled locks framing the shoulders, wider and darker than the torso.
+   cluster(3,27+bob,[[3,7],[1,9],[0,10],[0,11],[0,12],[0,12],[1,12],[1,11],[0,12],[0,11],[1,10],[2,8],[3,5],[4,3]],ink);
+   cluster(29,26+bob,[[1,7],[2,9],[2,10],[2,11],[2,11],[1,12],[1,12],[1,11],[2,11],[3,10],[2,9],[2,8],[1,7],[1,5],[2,3]],ink);
+   cluster(5,26+bob,[[3,5],[2,6],[1,7],[1,7],[0,8],[0,8],[1,7],[2,6],[2,6],[1,7],[1,7],[2,5],[3,4]],'#303035');
+   cluster(31,27+bob,[[0,5],[1,6],[2,6],[2,6],[2,7],[1,7],[0,7],[0,6],[1,6],[2,5],[2,4],[1,3]],'#303035');
+   cluster(6,30+bob,[[0,2],[0,2],[1,2],[1,2],[2,2],[2,2],[1,2],[0,2],[0,2]],shine);
+   cluster(34,28+bob,[[0,2],[1,2],[2,2],[2,2],[2,2],[1,2],[0,2],[0,2]],shine);
+   // Side profile has a narrow torso and staggered feet in screen X.
+   if(side){
+    const stride=walking?[3,0,-3,0][frame]:0;
+    b(15-stride,43,7,10,ink);b(16-stride,44,5,7,'#30333a');
+    b(15-stride,51,10,3,'#1c2026');b(16-stride,53,8,1,'#ddd6d0');
+    b(19+stride,43,7,10,ink);b(20+stride,44,5,7,'#30333a');
+    b(19+stride,51,10,3,'#1c2026');b(20+stride,53,8,1,'#ddd6d0');
+    b(16,31+bob,13,15,ink);b(17,32+bob,11,12,top);
+    b(18,34+bob,6,7,'#d55464');b(17,41+bob,11,3,'#8f2e43');
+    b(21,29+bob,5,5,skin);b(20,33+bob,5,1,'#782a3b');
+    b(19+Math.sign(stride),34+bob,6,10,ink);
+    b(20+Math.sign(stride),35+bob,4,8,skin);b(21+Math.sign(stride),36+bob,2,5,light);
+   }else{
    // Dark pants and little black shoes, feet stay inside the existing frame.
    b(12,43+step,8,11,ink);b(23,43-step,8,11,ink);
    b(13,44+step,6,7,'#30333a');b(24,44-step,6,7,'#30333a');
    b(11,51+step,10,3,'#1c2026');b(23,51-step,10,3,'#1c2026');
-   b(12,30+bob,19,16,ink);b(14,31+bob,15,13,top);
-   b(14,41+bob,15,3,'#8f2e43');
+   b(13,31+bob,18,15,ink);b(15,32+bob,14,12,top);
+   b(15,41+bob,14,3,'#8f2e43');
+   cluster(15,34+bob,[[1,8],[0,10],[0,11],[0,7],[1,3]],'#d55464');
+   b(27,36+bob,1,5,'#a83249');
    b(18,29+bob,7,5,skin);b(18,33+bob,7,1,'#782a3b');
    b(9,32+bob,5,12,ink);b(29,32+bob,5,12,ink);
    b(10,33+bob,3,10,skin);b(30,33+bob,3,10,skin);
    b(11,34+bob,2,6,light);b(30,34+bob,2,6,light);
+   }
    // Oversized chibi head and big dark eyes.
-   b(10,5+bob,23,26,ink);b(7,10+bob,29,17,ink);
-   b(11,11+bob,21,18,skin);b(13,15+bob,17,13,light);
-   b(16,28+bob,12,2,skin);
-   const blink=frame===2&&!walking;
-   b(14,19+bob,5,blink?1:6,ink);b(25,19+bob,5,blink?1:6,ink);
+   b(9,5+bob,26,26,ink);b(5,10+bob,34,17,ink);
+   b(8,24+bob,28,5,ink);b(12,29+bob,20,3,ink);
+   b(9,13+bob,25,15,skin);b(11,16+bob,22,12,light);
+   b(13,27+bob,18,3,light);b(17,30+bob,10,1,skin);
+   const blink=frame===3&&!walking&&!talking;
+   b(13,19+bob,6,blink?1:6,ink);b(25,19+bob,6,blink?1:6,ink);
+   if(!blink){b(14,23+bob,4,2,'#57413f');b(26,23+bob,4,2,'#57413f');}
    if(!blink){b(15,19+bob,2,2,'#fff8ef');b(26,19+bob,2,2,'#fff8ef');}
-   b(12,25+bob,4,2,'#efa0a0');b(29,25+bob,3,2,'#efa0a0');
+   cluster(10,25+bob,[[2,4],[1,5],[2,3]],'#e7a09b');cluster(28,25+bob,[[1,4],[0,5],[1,3]],'#e7a09b');
    b(19,26+bob,6,1,'#925c62');b(20,27+bob,4,1,'#925c62');
+   if(talking&&frame>0){b(19,26+bob,6,frame===1?2:3,'#824b58');b(21,27+bob,2,1,'#e7a4a1');}
    // Black fringe, no bow or hair accessory in the supplied reference.
-   b(11,4+bob,21,10,hair);b(8,9+bob,27,8,hair);
-   b(14,3+bob,15,3,hair);b(13,6+bob,15,2,shine);
-   b(9,14+bob,5,9,hair);b(14,13+bob,4,6,hair);
-   b(20,13+bob,4,5,hair);b(27,13+bob,5,8,hair);
+   b(10,4+bob,25,10,hair);b(6,8+bob,32,10,hair);
+   b(5,12+bob,5,11,hair);b(35,12+bob,4,12,hair);
+   b(14,3+bob,16,3,hair);
+   cluster(9,5+bob,[[5,12],[3,15],[1,12],[0,8],[0,6],[1,4]],'#303035');
+   cluster(18,5+bob,[[3,9],[1,11],[0,9],[0,6],[1,4],[2,3]],shine);
+   cluster(29,8+bob,[[0,5],[1,5],[2,5],[3,4],[4,3]],'#303035');
+   cluster(13,6+bob,[[2,5],[0,5],[0,3]],'#454345');
+   b(8,14+bob,5,9,hair);b(14,13+bob,4,7,hair);
+   b(20,13+bob,4,7,hair);b(27,13+bob,5,8,hair);
+   b(17,18+bob,2,3,hair);b(23,17+bob,2,3,hair);
+   cluster(14,13+bob,[[0,3],[0,3],[1,3],[1,2]],'#2c2b30');
+   cluster(26,12+bob,[[0,4],[0,4],[1,3],[1,2]],'#303035');
+   // Directional variants retain the original palette and silhouette.
+   if(back){
+    b(7,13+bob,29,19,hair);b(8,28+bob,28,9,hair);
+    b(9,23+bob,3,14,hair);b(32,23+bob,3,14,hair);
+    cluster(10,15+bob,[[3,9],[2,10],[1,10],[1,9],[0,9],[0,8],[1,7],[2,5],[2,4]],shine);
+    cluster(24,15+bob,[[2,5],[2,6],[2,7],[1,7],[0,7],[0,6],[1,5],[2,3]],'#303035');
+    b(15,34+bob,14,5,hair);b(17,39+bob,10,2,'#303035');
+    if(frame%2)b(11,34+bob,2,7,shine);else b(29,33+bob,2,7,shine);
+    if(frame===3)b(26,36+bob,2,4,shine);
+   }else if(side){
+    b(7,14+bob,17,18,hair);b(9,24+bob,15,12,hair);
+    b(13,17+bob,9,10,hair);
+    cluster(9,19+bob,[[2,6],[1,7],[0,7],[0,6],[1,5],[1,4]],shine);
+    b(24,18+bob,9,11,light);b(25,19+bob,5,blink?1:6,ink);
+    if(!blink)b(26,19+bob,2,1,'#fff8ef');
+    b(31,23+bob,3,3,skin);b(33,24+bob,2,2,light);
+    b(29,25+bob,3,1,'#e7a09b');b(30,27+bob,3,talking&&frame>0?frame:1,'#925c62');
+    b(20,28+bob,4,5,hair);
+   }
+   // White soles from the reference card, existing feet anchors.
+   if(!side){b(12,53+step,8,1,'#ddd6d0');b(24,53-step,8,1,'#ddd6d0');}
   });
  }
 }

@@ -25,6 +25,13 @@ export const NIGHT_HOUSE={
  road:{u:71.1,v:4.65},
  start:{u:65.7,v:4.45}
 } as const;
+// Neighbors have distinct silhouettes/colors and ground footprints, shared
+// by rendering and both manual/assisted navigation.
+export const NIGHT_NEIGHBORS=[
+ {u:68.2,v:2.9,style:'sage',halfU:.85,halfV:.62},
+ {u:72.1,v:2.5,style:'rose',halfU:.85,halfV:.62},
+ {u:81,v:3.7,style:'blue',halfU:.85,halfV:.62}
+] as const;
 export type NightDestination='door'|'window';
 export const NIGHT_INTERACTION_RADIUS=1.75;
 export const NIGHT_WINDOW_INTERACTION_RADIUS=1.35;
@@ -44,7 +51,8 @@ export function nightRouteLimits(u:number):{min:number;max:number}{
 export function nightHouseBlocks(p:IsoPoint):boolean{
  // Building footprint is above the walkable porch. A soft solid facade makes
  // Kitty slide along the side of the house instead of disappearing into a wall.
- return p.u>=76.15&&p.u<=81.50&&p.v>=5.25&&p.v<=9.05;
+ return (p.u>=76.15&&p.u<=81.50&&p.v>=5.25&&p.v<=9.05)||
+  NIGHT_NEIGHBORS.some(h=>Math.abs(p.u-h.u)<=h.halfU&&Math.abs(p.v-h.v)<=h.halfV);
 }
 export function nightWalkable(p:IsoPoint):boolean{
  if(p.u<65.35||p.u>81.50)return false;

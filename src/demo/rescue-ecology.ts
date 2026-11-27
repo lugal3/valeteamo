@@ -77,12 +77,17 @@ export function ecologyFloraFrame(seed:FloraSeed,elapsed:number,player:IsoPoint,
   glow:clamp(.15+reaction*.38,0,.53)
  };
 }
+// Fast bend when approached, slower elastic recovery as Kitty walks away.
+export function ecoLean(current:number,target:number,deltaMs:number){
+ const tau=Math.abs(target)>Math.abs(current)?100:290;
+ return target+(current-target)*Math.exp(-clamp(deltaMs,0,70)/tau);
+}
 export function ecologyWildlifeStep(
  seed:WildlifeSeed,state:WildlifeState,elapsed:number,
- deltaMs:number,player:IsoPoint,reduced=false
+ deltaMs:number,player:IsoPoint,reduced=false,tension=0
 ):{state:WildlifeState;frame:WildlifeFrame}{
  const distance=Math.hypot(seed.p.u-player.u,seed.p.v-player.v);
- const active=clamp((2.65-distance)/1.55,0,1);
+ const active=Math.max(clamp((2.65-distance)/1.55,0,1),clamp(tension,0,1)*.78);
  const dt=clamp(deltaMs,0,70)/1000;
  const smooth=1-Math.exp(-dt/(active>.02?.18:1.05));
  const alarm=clamp(state.alarm+(active-state.alarm)*smooth,0,1);
@@ -119,7 +124,7 @@ export function ecologyMicroEvent(
 }
 export function ecologyAmbientCue(map:RescueMapId,
  elapsed:number,player:IsoPoint,
- minU:number,maxU:number,center:(u:number)=>number
+ minU:number,maxU:number,center:(u:number)=>number,tension=0
 ):AmbientCue|null{
  if(elapsed<ECOLOGY_CAPS.minAmbientGapMs)return null;
  const tick=Math.floor(elapsed/ECOLOGY_CAPS.minAmbientGapMs);
@@ -127,7 +132,7 @@ export function ecologyAmbientCue(map:RescueMapId,
  let kind:AmbientKind;
  if(map==='morning_garden')kind=player.u>9.2&&player.u<16.8?'river':
   pick>.48?'birdsong':'breeze';
- else if(map==='afternoon_meeting')kind=pick>.34?'birdsong':'breeze';
+ else if(map==='afternoon_meeting')kind=tension>.25?(pick>.5?'insects':'night-breeze'):pick>.34?'birdsong':'breeze';
  else if(map==='dusk_search')kind=pick>.30?'insects':'breeze';
  else kind=pick>.58?'distant-engine':pick>.2?'night-breeze':'insects';
  const x=minU+(maxU-minU)*ecologyHash(tick,salt,47);

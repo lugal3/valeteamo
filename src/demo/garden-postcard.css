@@ -1,0 +1,11 @@
+.garden-postcard{box-sizing:border-box;width:min(92vw,720px);max-height:92dvh;overflow:auto;margin:auto;padding:13px 16px;border:1px solid #d7a7ba;border-radius:18px;background:#fff5e9;color:#765266;box-shadow:0 12px 50px #25192e90;font-family:system-ui;overscroll-behavior:contain}
+.garden-postcard::backdrop{background:#2a2039aa}
+.garden-postcard header{display:flex;justify-content:space-between;align-items:center;color:#a36687;font-size:12px;letter-spacing:.08em}
+.garden-postcard h2{font:600 20px Georgia,serif;text-align:center;margin:4px 0 10px}
+.garden-postcard img{display:block;width:100%;max-height:56dvh;object-fit:contain;image-rendering:pixelated}
+.garden-postcard p{text-align:center;padding:20px}
+.garden-postcard footer{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+.garden-postcard button,.garden-postcard a{border:1px solid #d9a8bb;border-radius:10px;background:#f7dce6;color:#794c69;padding:10px 13px;min-height:44px;box-sizing:border-box;font:600 13px system-ui;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+.garden-postcard header button{width:44px;font-size:22px;padding:0}
+.garden-postcard :focus-visible{outline:2px solid #8d5877;outline-offset:2px}
+@media(max-height:450px){.garden-postcard{padding:8px 12px}.garden-postcard h2{font-size:16px;margin:0 0 4px}.garden-postcard img{max-height:49dvh}.garden-postcard footer{margin-top:5px}}

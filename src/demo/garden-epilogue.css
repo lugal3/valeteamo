@@ -1,0 +1,53 @@
+.garden-epilogue{position:absolute;inset:0;overflow:hidden;background:#e9d8b9;color:#fff9e7}
+.garden-epilogue .adventure-wrap{width:100%;height:100%}
+.garden-epilogue .adventure-hint{display:none}
+.garden-epilogue .adventure-hearts,.garden-epilogue .adventure-objective{display:none}
+.epilogue-sunlight{position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(ellipse at 80% 0%,#ffe2a435,transparent 70%);mix-blend-mode:screen}
+.epilogue-location{position:absolute;left:max(12px,env(safe-area-inset-left));top:64px;z-index:4;pointer-events:none;padding:9px 13px;color:#fff9e6;text-shadow:0 2px 4px #493c3c;background:#59445599;border-radius:11px}
+.epilogue-location span{font:600 10px system-ui;letter-spacing:.14em}.epilogue-location h1{font:700 clamp(18px,3vw,25px) Georgia;margin:4px 0}.epilogue-location p{font:12px system-ui;margin:0}
+.epilogue-action{position:absolute;z-index:5;bottom:max(15px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);min-height:44px;padding:10px 16px;border:1px solid #cda5af;border-radius:12px;background:#fff3df;color:#8c536a;font:600 14px system-ui;cursor:pointer;box-shadow:0 3px 0 #80627460}
+.epilogue-action:focus-visible{outline:2px solid #9a617f;outline-offset:2px}
+.epilogue-fade{position:absolute;inset:0;z-index:80;pointer-events:none;background:#211a29;animation:epilogue-in .68s ease-out both}
+.garden-epilogue[data-epilogue-leaving="true"] .epilogue-fade{animation:epilogue-out .68s ease-in both;pointer-events:auto}
+@keyframes epilogue-in{from{opacity:1}to{opacity:0}}@keyframes epilogue-out{from{opacity:0}to{opacity:1}}
+@media(max-height:450px){.epilogue-location{top:49px;padding:6px 10px}.epilogue-location p{font-size:11px}}
+@media(prefers-reduced-motion:reduce){.epilogue-fade,.garden-epilogue[data-epilogue-leaving="true"] .epilogue-fade{animation:none;opacity:0}}
+
+.epilogue-dialog,.epilogue-celebration{position:absolute;z-index:12;bottom:max(12px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:min(88vw,640px);box-sizing:border-box;border:1px solid #d5abbc;border-radius:16px;background:#fff3e8f5;color:#6f485f;box-shadow:0 4px 22px #39283860;padding:12px}
+.epilogue-dialog{display:flex;align-items:center;gap:12px}.epilogue-dialog img{width:62px;height:62px;object-fit:contain;image-rendering:pixelated}.epilogue-dialog>div{flex:1;min-width:0}.epilogue-dialog p{font:14px/1.4 system-ui;margin:4px 0;min-height:2.8em}.epilogue-dialog small{font-size:10px;color:#a17b8e}
+.epilogue-dialog button,.epilogue-celebration button{border:1px solid #d0a0b2;border-radius:9px;background:#f6dce3;color:#794d66;padding:8px 12px;min-height:44px;font:600 12px system-ui;cursor:pointer}
+.epilogue-celebration{text-align:center;width:min(92vw,520px);padding:10px}.epilogue-celebration h2{font:700 clamp(18px,3vw,26px) Georgia;margin:3px 0 8px}.epilogue-celebration-actions{display:flex;justify-content:center;gap:6px;flex-wrap:wrap}.epilogue-letter{font:italic 14px/1.45 Georgia;margin:8px auto;max-width:400px}.epilogue-confetti{position:absolute;inset:0;overflow:visible;pointer-events:none}.epilogue-confetti i{position:absolute;top:0;width:5px;height:9px;background:#db9eb8;animation:epilogue-confetti 1.3s ease-out both}.epilogue-confetti i:nth-child(3n){background:#edd08f}.epilogue-confetti i:nth-child(3n+1){background:#b0c9a0}@keyframes epilogue-confetti{0%{opacity:1;transform:translateY(0) rotate(0)}100%{opacity:0;transform:translateY(-100px) rotate(180deg)}}
+@media(max-height:450px){.epilogue-dialog,.epilogue-celebration{padding:8px}.epilogue-dialog img{width:46px;height:46px}.epilogue-dialog p{font-size:12px}.epilogue-letter{font-size:12px}}
+@media(prefers-reduced-motion:reduce){.epilogue-confetti{display:none}}
+
+/* Own stacking context for the entire return chapter. Phaser may give its
+   canvas a high z-index; it must never overtake the narrative UI. */
+.garden-epilogue{isolation:isolate}
+.garden-epilogue>.adventure-wrap{position:relative;z-index:0;isolation:isolate}
+.garden-epilogue .epilogue-action{z-index:20;pointer-events:auto;touch-action:manipulation;max-width:calc(100% - 28px);white-space:normal;text-align:center}
+.garden-epilogue .epilogue-dialog,.garden-epilogue .epilogue-celebration{z-index:30;pointer-events:auto;max-height:calc(100dvh - 78px);overflow:auto;overscroll-behavior:contain}
+.garden-epilogue .epilogue-dialog button,.garden-epilogue .epilogue-celebration button{touch-action:manipulation}
+/* Narrative interface now lives inside StoryGame above its isolated canvas.
+   The normal pause/loading overlay is a separate higher layer. */
+.garden-epilogue .adventure-epilogue-ui{isolation:isolate}
+.garden-epilogue .adventure-overlay{z-index:40}
+.garden-epilogue .adventure-hud{z-index:4}
+.garden-epilogue .epilogue-location{background:#503b49db;border:1px solid #eed4b370;box-shadow:0 3px 12px #34293626;max-width:min(54vw,380px)}
+.garden-epilogue .epilogue-location h1{color:#fff2d5}
+.garden-epilogue .epilogue-location p{line-height:1.4}
+.garden-epilogue .epilogue-action{background:#fff1de;border:1px solid #b8859c;color:#70445c}
+.garden-epilogue .epilogue-celebration h2{color:#8a4e6d}
+.garden-epilogue .epilogue-celebration-actions button:last-child{background:#89536e;color:#fff5e9;border-color:#89536e}
+.garden-epilogue .epilogue-letter{padding:9px 12px;border:1px solid #e4c6b4;background:#fff9ee;border-radius:8px}
+@media(max-height:450px){.garden-epilogue .epilogue-location{max-width:47vw}.garden-epilogue .epilogue-location span{font-size:9px}.garden-epilogue .epilogue-location h1{font-size:17px}.garden-epilogue .epilogue-location p{font-size:10px}}
+
+/* Preserve the postcard's native dialog hit-testing even within the HUD. */
+.garden-epilogue .garden-postcard{pointer-events:auto}
+
+/* Stable native hit regions: center with margins, not transform. The shared
+ adventure button active rule must never move an epilogue target away from a finger. */
+.garden-epilogue .epilogue-action{left:0;right:0;margin-inline:auto;width:max-content;transform:none;transition:background-color .12s,color .12s}
+.garden-epilogue .epilogue-action:active,.garden-epilogue .epilogue-action:hover{transform:none;filter:none}
+.garden-epilogue .epilogue-dialog,.garden-epilogue .epilogue-celebration{left:0;right:0;margin-inline:auto;transform:none}
+.garden-epilogue .epilogue-dialog button:active,.garden-epilogue .epilogue-celebration button:active{transform:none}
+.garden-epilogue .epilogue-dialog button,.garden-epilogue .epilogue-celebration button{transition:background-color .12s,color .12s}

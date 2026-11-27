@@ -9,16 +9,18 @@ export function EmyFeeding({audio,onComplete,onCancel}:{audio:Sound;onComplete:(
  const [tip,setTip]=useState({x:.76,y:.68}),[progress,setProgress]=useState(0);
  const [holding,setHolding]=useState(false),[blink,setBlink]=useState(false);
  const [clock,setClock]=useState(0);
+ const [reaction,setReaction]=useState(0);
  const stage=useRef<HTMLDivElement>(null),tube=useRef<HTMLButtonElement>(null);
  const live=useRef({tip,progress:0,holding:false,done:false,lastSound:0});
- const drag=useRef<number|null>(null),completion=useRef(onComplete),cancel=useRef(onCancel);
+ const drag=useRef<number|null>(null),grab=useRef({x:0,y:0}),completion=useRef(onComplete),cancel=useRef(onCancel);
  const reduced=useRef(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
  completion.current=onComplete;cancel.current=onCancel;
  const aim=(x:number,y:number)=>{const point={x:Math.max(.06,Math.min(.94,x)),y:Math.max(.12,Math.min(.84,y))};live.current.tip=point;setTip(point);};
  const hold=(value:boolean)=>{live.current.holding=value;setHolding(value);};
  const move=(e:ReactPointerEvent)=>{
   const r=stage.current?.getBoundingClientRect();if(!r)return;
-  aim((e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height);
+  if(!r.width||!r.height)return;
+  aim((e.clientX-r.left)/r.width+grab.current.x,(e.clientY-r.top)/r.height+grab.current.y);
  };
  useEffect(()=>{
   const previous=document.activeElement as HTMLElement|null;tube.current?.focus();
@@ -29,7 +31,12 @@ export function EmyFeeding({audio,onComplete,onCancel}:{audio:Sound;onComplete:(
    const dt=(now-last)/1000;last=now;
    const s=live.current;
    if(!document.hidden&&!s.done){
-    setClock(now);setBlink(now%4200>4010);
+    const near=churuInReach(s.tip.x,s.tip.y);
+    if(!reduced.current){
+     if(s.holding&&near)setClock(Math.floor(now/120)*120);
+     setBlink(now%3900>3700);
+    }
+    setReaction(near?2:s.holding?1:0);
     // Never display 100% while the completion state is still 99.6%.
     // A player releasing the treat at the displayed 100% would leave the
     // Churu dialog stuck forever. Snap the final half-percent to done.
@@ -50,7 +57,7 @@ export function EmyFeeding({audio,onComplete,onCancel}:{audio:Sound;onComplete:(
      },reduced.current?900:1550);
     }
    }
-   raf=requestAnimationFrame(frame);
+   if(!s.done)raf=requestAnimationFrame(frame);
   };
   raf=requestAnimationFrame(frame);
   const key=(e:KeyboardEvent)=>{
@@ -67,18 +74,24 @@ export function EmyFeeding({audio,onComplete,onCancel}:{audio:Sound;onComplete:(
   return()=>{cancelAnimationFrame(raf);clearTimeout(finishTimer);window.removeEventListener('blur',stop);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('keydown',key,true);previous?.focus();};
  },[audio]);
  const full=progress>=100,eating=holding&&churuInReach(tip.x,tip.y)&&!full;
- const expression=full?'love':blink?'blink':eating&&Math.floor(clock/150)%2?'lick':'idle';
- return <section className={'emy-feeding'+(full?' is-full':'')} role="dialog" aria-modal="true" aria-labelledby="emy-title" data-progress={Math.round(progress)} data-eating={eating}>
-  <header><div><span>UN RATITO CON EMY</span><h2 id="emy-title">{full?'¡Emy te quiere!':'Un Churu para Emy'}</h2></div>
-   <button type="button" onClick={onCancel} disabled={full} aria-label="Volver al jardín">Cerrar</button></header>
-  <p className="emy-instruction" role="status">{full?'Gracias por cuidarla ♡':'Arrastra la punta del Churu hasta su boquita y mantenla cerca.'}</p>
-  <div className="emy-stage" ref={stage}>
-   <div className={'emy-pet'+(eating?' is-eating':'')}><img src={`./sprites/emy-${expression}.png`} alt="Emy, gatita gris de pelo largo y ojos verdes" draggable={false}/></div>
-   {full&&<div className="emy-love" aria-hidden="true">♥　♡　♥</div>}
+ const expression=full?'love':eating?(reduced.current||Math.floor(clock/120)%2?'lick':'idle'):blink&&!reduced.current?'blink':'idle';
+ const lookX=reduced.current?0:Math.max(-1,Math.min(1,(tip.x-EMY_MOUTH.x)*3));
+ const lookY=reduced.current?0:Math.max(-1,Math.min(1,(tip.y-EMY_MOUTH.y)*3));
+ return <section className={'emy-feeding'+(full?' is-full':'')} role="dialog" aria-modal="true" aria-labelledby="emy-title" data-progress={Math.floor(progress)} data-eating={eating}>
+  <div className="emy-scene">
+  <header><div className="emy-heading"><span aria-hidden="true">♡</span><h2 id="emy-title">{full?'¡Emy te quiere!':'Un Churu para Emy'}</h2></div>
+   <button type="button" className="emy-close" onClick={onCancel} disabled={full} aria-label="Volver al jardín">×</button></header>
+  <div className="emy-stage" ref={stage} data-reaction={full?'love':eating?'eating':reaction?'curious':'idle'}>
+   <div className="emy-ground" aria-hidden="true"/>
+   <div className={'emy-pet'+(full?' is-happy':eating?' is-eating':reaction?' is-curious':'')} style={{'--look-x':lookX+'px','--look-y':lookY+'px'} as React.CSSProperties}>
+    <img src={`./sprites/emy-${expression}.png`} alt="Emy, gatita gris de pelo largo y ojos verdes" draggable={false}/>
+   </div>
+   {(reaction>0||full||eating)&&<div className="emy-speech" role="status">{full?'¡Miau! ♡':eating?'Ñam…': '¿Miau?'}</div>}
+   {full&&<div className="emy-love" aria-hidden="true"><i>♥</i><i>♡</i><i>♥</i></div>}
    {!full&&<span className={'emy-mouth-guide'+(eating?' is-eating':'')} style={{left:EMY_MOUTH.x*100+'%',top:EMY_MOUTH.y*100+'%'}} aria-hidden="true"/>}
    <button ref={tube} type="button" className={'emy-churu'+(full?' is-empty':'')} aria-label="Mover Churu: flechas; mantén espacio o Enter para alimentar" aria-describedby="emy-keys" disabled={full}
     style={{left:tip.x*100+'%',top:tip.y*100+'%','--remaining':String(1-progress/150)} as React.CSSProperties}
-    onPointerDown={e=>{if(drag.current!==null||e.button!==0)return;e.preventDefault();e.stopPropagation();drag.current=e.pointerId;e.currentTarget.setPointerCapture(e.pointerId);hold(true);move(e);void audio.start();}}
+    onPointerDown={e=>{if(drag.current!==null||e.button!==0)return;const r=stage.current?.getBoundingClientRect();if(!r||!r.width||!r.height)return;e.preventDefault();e.stopPropagation();grab.current={x:live.current.tip.x-(e.clientX-r.left)/r.width,y:live.current.tip.y-(e.clientY-r.top)/r.height};drag.current=e.pointerId;e.currentTarget.setPointerCapture(e.pointerId);hold(true);void audio.start();}}
     onPointerMove={e=>{if(drag.current===e.pointerId)move(e);}}
     onPointerUp={e=>{if(drag.current===e.pointerId){hold(false);drag.current=null;}}}
     onPointerCancel={()=>{hold(false);drag.current=null;}} onLostPointerCapture={()=>{hold(false);drag.current=null;}}
@@ -93,7 +106,8 @@ export function EmyFeeding({audio,onComplete,onCancel}:{audio:Sound;onComplete:(
     <i className="emy-paste"/><span className="emy-wrapper"><b>Churu</b><small>♡</small></span><span className="emy-kitty-paw"/>
    </button>
   </div>
-  <footer><div className="emy-meter" role="progressbar" aria-label="Emy alimentada" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}><span style={{width:progress+'%'}}/></div><strong>{Math.floor(progress)}%</strong></footer>
-  <p id="emy-keys" className="emy-keys">PC: mueve con las flechas y mantén espacio. En celular: arrastra y mantén el Churu.</p>
+  <footer><div className="emy-progress-row"><img src="./sprites/emy-idle.png" alt="" aria-hidden="true"/><div className="emy-meter" role="progressbar" aria-label="Emy alimentada" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.floor(progress)}><span style={{width:progress+'%'}}/></div><span className="emy-progress-heart" aria-hidden="true">♥</span></div>
+   <p id="emy-keys" className="emy-keys">{full?'Gracias por cuidarla ♡':holding?'Mantén el Churu cerca de su boca':'Arrastra el Churu · Flechas + espacio en PC'}</p></footer>
+  </div>
  </section>;
 }

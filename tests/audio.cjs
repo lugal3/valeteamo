@@ -9,6 +9,17 @@ class AudioContextMock{
 }
 const code=ts.transpileModule(fs.readFileSync('src/audio.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 const ctx={exports:{},window:{AudioContext:AudioContextMock,setInterval(fn){ticks.push(fn);return ticks.length;}},clearInterval:id=>cleared.push(id),Promise};vm.runInNewContext(code,ctx);
+const profile=ctx.exports.rescueMixFor;
+const daylight=profile('intro','morning_garden',0,false);
+assert.equal(daylight.mood,'garden');assert(daylight.birds);
+assert(profile('meet-couple','afternoon_meeting',.1,true).music<daylight.music*.5);
+const interrupted=profile('disappearance','afternoon_meeting',.3,true);
+assert.equal(interrupted.music,0);assert.equal(interrupted.ambience,0);
+assert(!interrupted.birds);
+const forest=profile('ribbon','dusk_search',.42,false);
+assert(forest.music<daylight.music&&!forest.birds);
+assert.equal(profile('door','night_neighborhood',.7,false).mood,'street');
+assert.equal(profile('defend','afternoon_meeting',.1,false).mood,'battle');
 (async()=>{const sound=new ctx.exports.Sound();assert.equal(created,0);assert.equal(await sound.start(),true);assert.equal(created,1);assert.equal(ticks.length,1);ticks[0]();assert(notes>0);const beforeUi=notes;sound.ui();assert.equal(notes,beforeUi+2,'button feedback plays two quiet notes');const ambienceBefore=notes;assert.equal(sound.playRescueAmbience('river',-.5),true);
  assert.equal(notes,ambienceBefore+2,'ambient river is a pair of very quiet synthesis tones');
  assert.equal(sound.playRescueAmbience('birdsong',.4),false,'ambient cooldown suppresses sound spam');

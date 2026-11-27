@@ -1,0 +1,92 @@
+/* Editorial countdown — approved horizontal prototypes, scoped to public countdown. */
+.birthday-countdown.ed-countdown{padding:0;display:flex;flex-direction:column;justify-content:center;align-items:stretch;overflow:auto;background:#1d1e21;min-height:100dvh}
+.birthday-countdown.ed-countdown:before{display:none}
+.ed-countdown .ed-layout{--bg:#efc9c6;--ink:#422e31;--accent:#9d4d56;--line:#ac777788;position:relative;isolation:isolate;width:100%;min-height:calc(100dvh - 48px);container-type:inline-size;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;padding:18px 4% 12px;box-sizing:border-box;font-family:Arial,sans-serif}
+.ed-layout.ed-constellation{--bg:#101b28;--ink:#ece5d5;--accent:#d5b88a;--line:#d5b88a44}
+.ed-layout.ed-letter{--bg:#e9dfce;--ink:#45382c;--accent:#9c513c;--line:#8d746966}
+.ed-layout.ed-garden{--bg:#dce3cb;--ink:#334733;--accent:#5f7851;--line:#71866c66}
+.ed-layout.ed-pixel{--bg:#262d39;--ink:#f5e8d2;--accent:#e7a2a8;--line:#a5a9b044}
+.ed-layout.ed-aurora{--bg:#172f37;--ink:#e9e9d7;--accent:#b4dfc6;--line:#b4dfc644}
+.ed-layout.ed-music{--bg:#ded1b9;--ink:#2c302c;--accent:#8d4b3b;--line:#3c403c55}
+.ed-layout.ed-finale{--bg:#221f28;--ink:#eee4cc;--accent:#d8b174;--line:#d8b17455}
+.ed-top,.ed-bottom{display:flex;justify-content:space-between;gap:12px;align-items:center;font:500 clamp(9px,1.05cqw,13px)/1.3 Arial,sans-serif;letter-spacing:.13em;text-transform:uppercase;z-index:1}
+.ed-top{border-bottom:1px solid var(--line);padding:0 54px 12px 0}.ed-bottom{border-top:1px solid var(--line);padding-top:10px}
+.ed-main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:5%;align-items:center;padding:18px 1%;min-height:0}
+.ed-copy{min-width:0;position:relative;z-index:2}.ed-eyebrow{font:600 clamp(9px,1.1cqw,13px)/1.5 Arial;letter-spacing:.2em;text-transform:uppercase;color:var(--accent)}
+.ed-layout h1{font:400 clamp(33px,5.5cqw,88px)/.97 Georgia,serif;letter-spacing:-.055em;margin:10px 0 13px;color:var(--ink);text-shadow:none}.ed-layout h1 em{font-weight:400;color:inherit}
+.ed-layout .daily-message{animation:none;margin:0;max-width:38cqw;text-align:left}.ed-layout .daily-message p{font:400 clamp(12px,1.55cqw,19px)/1.55 Arial;margin:0 0 15px;color:var(--ink);opacity:.87}
+.ed-layout .birthday-time{display:flex!important;gap:clamp(9px,1.4cqw,20px);align-items:baseline;justify-content:flex-start;margin:0;width:100%;font-variant-numeric:tabular-nums}
+.ed-layout .birthday-time>div{display:flex;flex-direction:column-reverse;gap:4px;min-height:0!important;min-width:0;aspect-ratio:auto!important;width:auto!important;background:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;animation:none;padding:0!important;backdrop-filter:none}
+.ed-layout .birthday-time>div:before{display:none}.ed-layout .birthday-time dd{font:400 clamp(27px,3.9cqw,58px)/.95 Georgia!important;color:var(--ink)!important;text-shadow:none;letter-spacing:-.06em;margin:0}
+.ed-layout .birthday-time dt{font:500 clamp(8px,.88cqw,12px)/1 Arial!important;color:var(--ink)!important;background:none!important;padding:0!important;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+.ed-blossom .birthday-time{border-top:1px solid var(--line);padding-top:12px}
+.ed-layout .ed-action{border:1px solid var(--ink);background:transparent;color:var(--ink);padding:7px 15px;border-radius:99px;font:500 clamp(11px,1.2cqw,15px) Arial;margin-top:14px;min-height:36px;touch-action:manipulation;cursor:pointer}
+.ed-layout .ed-action:hover{background:var(--ink);color:var(--bg)}.ed-layout .ed-action:active{transform:none}
+.ed-object{position:relative;display:grid;place-items:center;min-width:0;width:100%;aspect-ratio:4/3;max-height:58dvh}
+.ed-layout .ed-art{position:static;width:100%;height:100%;opacity:1;filter:none;overflow:visible}
+.ed-object [role=button]{cursor:pointer;outline:none;touch-action:manipulation}.ed-object [role=button]:focus-visible{outline:2px solid var(--accent)}
+.ed-hint{position:absolute;bottom:3px;left:0;right:0;text-align:center;font:500 clamp(8px,1cqw,12px) Arial;letter-spacing:.05em;color:var(--ink);opacity:.75;pointer-events:none}
+.ed-dust{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:-1;background:radial-gradient(ellipse at 15% 20%,#ffffff0a,transparent 65%)}
+.ed-dust .daily-particle{position:absolute;border-radius:50%;width:2px;height:2px;background:var(--accent);opacity:.35;animation:ed-drift 8s infinite ease-in-out}
+@keyframes ed-drift{50%{transform:translate(12px,-20px);opacity:.8}}
+.ed-progress{font:12px/1.4 Arial;margin:7px 0 0;min-height:17px;color:var(--accent)}
+.ed-blossom .ed-object{background:#e4b5b6;border:1px solid #ab7d7a;border-radius:49% 49% 5% 5%;overflow:hidden}
+.ed-branch{transform-origin:50% 100%;animation:ed-sway 7s ease-in-out infinite}.ed-flower{transform-box:fill-box;transform-origin:center;transition:transform .3s}.ed-flower:hover,.ed-flower.hit{transform:scale(1.1)}
+@keyframes ed-sway{50%{transform:rotate(1.8deg)}}.ed-bloom{animation:ed-bloom .5s ease-out both}@keyframes ed-bloom{from{opacity:0}to{opacity:1}}
+.ed-constellation .ed-main{grid-template-columns:42% 53%}.ed-star-node{transition:r .2s;filter:drop-shadow(0 0 4px #e5c99466)}
+.ed-letter .ed-main{grid-template-columns:42% 53%}.ed-envelope{position:absolute;width:84%;height:67%;background:#cba98a;box-shadow:10px 12px 0 #4c302b18;border:1px solid #a98564;cursor:pointer;transform:rotate(-3deg);overflow:hidden}
+.ed-envelope:before,.ed-envelope:after{content:'';position:absolute;inset:0;background:#e4ccb0;clip-path:polygon(0 0,50% 65%,100% 0)}.ed-envelope:after{background:#dbc09f;clip-path:polygon(0 100%,50% 45%,100% 100%)}
+.ed-seal{position:absolute;z-index:2;left:43%;top:42%;width:14%;aspect-ratio:1;border-radius:48%;background:#913f37;color:#eed3b9;display:grid;place-items:center;box-shadow:inset 0 0 0 4px #a9534a;font:clamp(16px,2.8cqw,34px) Georgia}
+.ed-letter-dialog{background:#fff8e9;color:#4a3d32;border:1px solid #c5b398;padding:26px 32px;width:min(440px,88vw);max-height:85dvh;box-shadow:0 12px 45px #533b3044}.ed-letter-dialog[open]{animation:ed-unfold .5s ease both}.ed-letter-dialog::backdrop{background:#32251b66}.ed-letter-dialog h2{font:italic 30px Georgia;margin:0 0 16px}.ed-letter-dialog p{font:17px/1.6 Georgia}.ed-letter-dialog button{float:right;border:0;background:none;font-size:24px;color:inherit;cursor:pointer}
+@keyframes ed-unfold{from{transform:translateY(12px) rotate(-2deg);opacity:0}to{transform:translateY(0);opacity:1}}
+.ed-garden .ed-main,.ed-music .ed-main{grid-template-columns:52% 43%}.ed-garden .ed-copy,.ed-music .ed-copy{grid-column:2;grid-row:1}.ed-garden .ed-object,.ed-music .ed-object{grid-column:1;grid-row:1}
+.ed-garden .ed-object{background:#c9d4b6;border:1px solid #9bac8e;overflow:hidden}.ed-plant{transform-box:fill-box;transform-origin:bottom;transition:transform .5s}.ed-plant:not(.grown){transform:scaleY(.25)}.ed-butterfly{animation:ed-flight 7s ease-in-out infinite}@keyframes ed-flight{50%{transform:translate(80px,-30px)}}
+.ed-pixel h1,.ed-pixel .birthday-time dd{font-family:monospace!important;letter-spacing:-.08em}.ed-pixel h1{font-size:clamp(29px,4.7cqw,70px);line-height:1.1}.ed-pixel .ed-object{background:#151c28;border:4px solid #a8adb3;box-shadow:5px 5px 0 #10141b;border-radius:5px;overflow:hidden}.ed-pixel .ed-action{border-radius:0;font-family:monospace}.ed-heart{position:absolute;background:none;border:0;color:#f7a6b0;font:clamp(22px,3cqw,40px) monospace;cursor:pointer;min-width:36px;min-height:36px;padding:0;animation:ed-bob 2s ease-in-out infinite}
+@keyframes ed-bob{50%{transform:translateY(-4px)}}
+.ed-aurora .ed-object{background:#10282e;border-radius:50% 50% 0 0;border:1px solid #9bd5bc55;overflow:hidden;touch-action:none}.ed-aurora canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}.ed-aurora-wave{animation:ed-wave 9s ease-in-out infinite;transform-origin:50% 50%}@keyframes ed-wave{50%{transform:translateY(8px) rotate(2deg)}}
+.ed-deck{position:absolute;width:95%;height:85%;background:#b7a58a;border:1px solid #776d5b;border-radius:8px;box-shadow:0 7px 0 #6b6355}.ed-record{width:65%;aspect-ratio:1;background:repeating-radial-gradient(circle,#181b1b 0 2px,#343635 3px 4px,#1c1e1e 5px 8px);border-radius:50%;box-shadow:0 5px 14px #0006;position:absolute;left:6%;top:7%;display:grid;place-items:center}.ed-record:after{content:'VALE / 07';font:600 clamp(8px,.9cqw,12px) monospace;color:#5b4036;background:#d3a98e;width:36%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center}.ed-deck.playing .ed-record{animation:ed-spin 3s linear infinite}@keyframes ed-spin{to{transform:rotate(360deg)}}
+.ed-arm{position:absolute;right:7%;top:9%;height:70%;width:3%;background:#e5ddca;border:1px solid #68695d;border-radius:8px;transform:rotate(15deg);transform-origin:top center;transition:transform .4s}.ed-arm:before{content:'';position:absolute;left:-80%;top:-4%;width:260%;aspect-ratio:1;background:#777b72;border-radius:50%}.ed-deck.playing .ed-arm{transform:rotate(33deg)}.ed-deck button{position:absolute;right:7%;bottom:8%;background:#333a34;color:white;border:0;border-radius:3px;padding:7px 12px;min-height:36px;cursor:pointer}.ed-audio-controls{display:grid;gap:4px;margin-top:6px;font:10px Arial}.ed-audio-controls label{display:flex;gap:5px;align-items:center;min-width:0}.ed-audio-controls input{min-width:0;max-width:100%;font-size:10px;accent-color:#8d4b3b}.ed-track{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ed-finale .ed-object{border:1px solid #d8b17455;border-radius:50% 50% 0 0}.ed-wish{transition:fill .4s}.ed-wish.lit{fill:#f3d18c;filter:drop-shadow(0 0 7px #e3b56e)}
+.ed-countdown .ed-tools{background:#1d1e21;color:#ddd;padding:6px 4%;text-align:center;width:100%;box-sizing:border-box}.ed-countdown .daily-preview{margin:0 0 5px;gap:5px}.ed-countdown .daily-preview button{border:1px solid #62646a;background:#303238;color:#eee;min-height:30px}.ed-countdown .daily-preview button[aria-pressed=true]{background:#eee3d7;color:#222}.ed-countdown .birthday-iphone-help{color:#ddd;margin:0;font-size:10px}.ed-countdown .birthday-admin-toggle{top:9px;right:12px}
+@media(max-height:460px) and (orientation:landscape){.birthday-countdown.ed-countdown .ed-layout{padding:12px 4% 8px;min-height:calc(100dvh - 37px)}.ed-main{padding:9px 1%;gap:4%}.ed-top{padding-bottom:8px}.ed-bottom{padding-top:6px}.ed-layout h1{font-size:clamp(29px,5cqw,47px);margin:7px 0 9px}.ed-layout .daily-message p{font-size:12px;margin-bottom:10px}.ed-layout .ed-action{margin-top:8px;min-height:32px}.ed-object{max-height:57dvh}.ed-countdown:has(.daily-preview) .ed-layout{min-height:calc(100dvh - 78px)}}
+@media(orientation:portrait){.ed-main{grid-template-columns:1fr!important}.ed-copy,.ed-object{grid-column:1!important;grid-row:auto!important}.ed-layout .daily-message{max-width:100%}.ed-object{max-height:none}.ed-layout h1{font-size:clamp(34px,8cqw,60px)}}
+@media(prefers-reduced-motion:reduce){.ed-layout *,.ed-layout *:before,.ed-layout *:after{animation:none!important;transition:none!important}}
+
+/* Ensure legacy countdown rules cannot dim the approved vectors. */
+.ed-countdown .ed-layout .ed-art{position:static;opacity:1;filter:none}
+.ed-countdown:not(:has(.daily-preview)) .ed-tools{background:var(--ed-public-bg,#efc9c6);color:var(--ed-public-ink,#422e31)}
+.ed-countdown:not(:has(.daily-preview)) .birthday-iphone-help{color:inherit}
+.ed-countdown[data-daily-theme=constellation]{--ed-public-bg:#101b28;--ed-public-ink:#ece5d5}
+.ed-countdown[data-daily-theme=letter]{--ed-public-bg:#e9dfce;--ed-public-ink:#45382c}
+.ed-countdown[data-daily-theme=garden]{--ed-public-bg:#dce3cb;--ed-public-ink:#334733}
+.ed-countdown[data-daily-theme=pixel]{--ed-public-bg:#262d39;--ed-public-ink:#f5e8d2}
+.ed-countdown[data-daily-theme=aurora]{--ed-public-bg:#172f37;--ed-public-ink:#e9e9d7}
+.ed-countdown[data-daily-theme=music]{--ed-public-bg:#ded1b9;--ed-public-ink:#2c302c}
+.ed-countdown[data-daily-theme=finale]{--ed-public-bg:#221f28;--ed-public-ink:#eee4cc}
+.ed-tools .daily-preview button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+
+/* Blossom final art direction: warm paper, botanical vector illustration,
+   falling petals and subtle gold accents. Noninteractive layers ignore input. */
+.ed-countdown .ed-layout{flex-shrink:0;overflow:hidden}
+.ed-countdown .ed-object{min-height:0;isolation:isolate}
+.ed-countdown .ed-layout .ed-art{position:absolute;inset:0;width:100%;height:100%;max-width:100%;max-height:100%;overflow:hidden;pointer-events:none}
+.ed-countdown .ed-art [role=button]{pointer-events:auto}
+.ed-countdown .ed-tools{position:relative;z-index:5;flex-shrink:0;isolation:isolate}
+.ed-countdown .ed-layout.ed-blossom{--bg:#efc0b8;background:radial-gradient(ellipse at 26% 12%,#ffe0c8 0%,transparent 52%),radial-gradient(ellipse at 83% 85%,#cf8695 0%,transparent 50%),#edbcb6}
+.ed-blossom .ed-object{background:#c78d90;border:1px solid #f9dbc6;box-shadow:0 0 0 3px #f7d9c450,0 12px 32px #94515f28,inset 0 0 26px #fbe6c63a;border-radius:49% 49% 5% 5%}
+.ed-blossom .ed-art{border-radius:inherit}
+.ed-blossom .ed-hint{z-index:2;background:#f4d3bfbf;padding:5px 2px;bottom:0;color:#633e42}
+.ed-blossom .ed-copy h1{color:#4b2d2b}.ed-blossom .daily-message{border-block:1px solid #a65a6050;padding:10px 0;margin-bottom:10px}.ed-blossom .daily-message p{margin:0}
+.ed-blossom .birthday-time{border-top:0;padding-top:3px}
+.ed-blossom .ed-action{background:#fff0df30;border-color:#8b4e52;box-shadow:0 3px 10px #9b5c6120}
+.ed-petal-field{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:1}
+.ed-falling-petal{position:absolute;top:-26px;border-radius:68% 20% 65% 35%;background:linear-gradient(130deg,#fff2db,#e8969d 60%,#b65d76);box-shadow:0 1px 3px #a8586430;opacity:.7;animation:ed-petal-fall 12s linear infinite;will-change:transform}
+.ed-falling-petal:nth-child(3n){filter:blur(1px);opacity:.4}.ed-falling-petal:nth-child(4n){background:linear-gradient(145deg,#ffe9ce,#d87889)}
+@keyframes ed-petal-fall{0%{transform:translate3d(-20px,-4vh,0) rotate(-35deg)}50%{transform:translate3d(36px,52vh,0) rotate(135deg)}100%{transform:translate3d(-28px,110vh,0) rotate(310deg)}}
+.ed-warm-spark{position:absolute;color:#fff3bf;font:12px Georgia;animation:ed-warm-twinkle 4s ease-in-out infinite;text-shadow:0 0 8px #fff0a0;opacity:.5}
+@keyframes ed-warm-twinkle{0%,100%{opacity:.18;transform:scale(.7)}50%{opacity:.85;transform:scale(1.2)}}
+.ed-golden-orbit{animation:ed-orbit-glow 6s ease-in-out infinite}@keyframes ed-orbit-glow{50%{opacity:.25}}
+.ed-heart-burst{animation:ed-heart-rise 1.1s ease-out both}@keyframes ed-heart-rise{from{opacity:0;transform:translateY(14px) scale(.7)}to{opacity:1;transform:translateY(-7px) scale(1)}}
+.ed-countdown[data-daily-theme=blossom]{--ed-public-bg:#edbcb6}
+@media(max-height:460px) and (orientation:landscape){.ed-blossom .daily-message{padding:6px 0;margin-bottom:5px}.ed-blossom .ed-copy h1{font-size:clamp(30px,5.2cqw,52px)}}
+@media(prefers-reduced-motion:reduce){.ed-falling-petal{top:35%;transform:rotate(25deg);opacity:.42}}

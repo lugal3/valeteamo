@@ -18,6 +18,28 @@ async function main(){
   page.on('pageerror',e=>errors.push(e.message));
   fs.mkdirSync('artifacts',{recursive:true});
 
+  const themes=['blossom','constellation','letter','garden','pixel','aurora','music','finale'];
+  await page.clock.setFixedTime(new Date('2026-11-27T15:00:00Z'));
+  await page.goto('http://127.0.0.1:'+port+'/');
+  const root=page.locator('main.birthday-countdown');
+  const messages=new Set();
+  for(let i=0;i<themes.length;i++){
+   // Advance the same mounted page across Chilean civil midnights.
+   await page.clock.setFixedTime(new Date(Date.UTC(2026,10,27+i,3)));
+   await page.locator('main.birthday-countdown[data-daily-theme="'+themes[i]+'"]').waitFor();
+   await page.waitForFunction(expected=>document.querySelector('.birthday-time dd')?.textContent===expected,String(8-i).padStart(2,'0'));
+   assert.equal(await page.getByRole('timer').locator('dd').first().innerText(),String(8-i).padStart(2,'0'));
+   assert.equal(await page.getByRole('button',{name:'Abrir mi sorpresa'}).count(),0);
+   assert.equal(await page.locator('.daily-preview').count(),0,'public has no theme selector');
+   messages.add(await root.locator('.daily-message p').innerText());
+   assert.equal(await root.locator('.daily-particle').count(),32,'bounded themed particle field');
+   assert.equal(await root.locator('.daily-art').count(),1,'individual decorative composition');
+   if(i===0){assert.equal(await root.locator('.ed-falling-petal').count(),18);assert.equal(await root.locator('.ed-warm-spark').count(),14);}
+   assert(await root.locator('.birthday-time').evaluate(el=>el.scrollWidth<=el.clientWidth+1),'timer fits viewport');
+   await page.screenshot({path:'artifacts/daily-'+(i+1)+'-'+themes[i]+'.png'});
+  }
+  assert.equal(messages.size,8,'eight distinct public messages');
+
   // Simulate Chilean midnight on Dec 5 without touching the project date,
   // production config, visitor storage, or actual server clock.
   await page.clock.setFixedTime(new Date('2026-12-05T02:59:58.000Z'));

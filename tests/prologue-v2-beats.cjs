@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
 (async()=>{
  const {PROLOGUE_ACTS,prologueAct,prologueProgress,HOUSE_HANDOFF_MS}=await import('../src/demo/prologue-beats.js');
  const {PROLOGUE_START,STAGES,advancePrologue,parsePrologue}=await import('../src/demo/prologue-story.js');
- assert.equal(PROLOGUE_ACTS.length,4);
+ assert.equal(PROLOGUE_ACTS.length,6);
  const covered=PROLOGUE_ACTS.flatMap(act=>act.stages);
  assert.deepEqual([...covered].sort(),[...STAGES].sort(),'each stage belongs to exactly one act');
  assert.equal(new Set(covered).size,covered.length);
@@ -13,6 +13,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   assert(p.label&&p.title);
  }
  assert.equal(prologueAct('intro').id,'morning');
+ assert.equal(prologueAct('meet-couple').id,'meeting');
+ assert.equal(prologueAct('walk-together').id,'friend');
+ assert(!/terror|3D|casa/i.test(PROLOGUE_ACTS.slice(0,3).map(act=>act.title).join(' ')),'no opening title spoils the genre switch');
  assert.equal(prologueAct('disappearance').id,'abduction');
  assert.equal(prologueAct('ribbon').id,'dusk');
  assert.equal(prologueAct('window').id,'night');

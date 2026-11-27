@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
  const story=await import('../src/demo/prologue-story.js');
  const {
   PROLOGUE_START,PROLOGUE_DIALOGUES,PROLOGUE_OBJECTIVES,PROLOGUE_SAVE_KEY,
-  parsePrologue,advancePrologue,hurtPrologue,healPrologue
+  parsePrologue,advancePrologue,hurtPrologue,healPrologue,recordPrologueDiscovery
  }=story;
  assert(PROLOGUE_SAVE_KEY!== 'valeteamo-rescue-v2','new storyline save must not touch old rescue save');
  assert(PROLOGUE_SAVE_KEY!== 'valeteamo-story-v1','new storyline save must not overwrite earlier chapters');
@@ -27,6 +27,13 @@ const assert=require('node:assert/strict');
  assert.deepEqual(parsePrologue(JSON.stringify(current)),current);
  assert.equal(current.fedGreyCat,true);
  assert.equal(current.metCouple,true);
+ const visited=recordPrologueDiscovery(current,'quiet-grove');
+ assert.equal(visited.stage,current.stage);
+ assert.equal(visited.clues,current.clues);
+ assert.equal(recordPrologueDiscovery(visited,'quiet-grove'),visited);
+ assert.equal(recordPrologueDiscovery(visited,'not-a-real-place'),visited);
+ assert.deepEqual(parsePrologue(JSON.stringify(visited)),visited);
+ assert.deepEqual(parsePrologue(JSON.stringify({...visited,discoveries:['quiet-grove','quiet-grove','invalid']})).discoveries,['quiet-grove']);
  const old=parsePrologue(JSON.stringify({version:1,stage:'talk-louis',hp:4}));
  assert.equal(old.stage,'talk-louis','old saves keep the current checkpoint');
  assert.equal(old.fedGreyCat,false,'the migration cannot award an unfinished new event');
@@ -43,9 +50,15 @@ const assert=require('node:assert/strict');
  assert.equal(healPrologue(hurtPrologue(PROLOGUE_START,5),3).hp,4);
  for(const key of ['couple','victory','luis','warning','abducted','ribbon','petals','wheel','locked','window']){
   assert(PROLOGUE_DIALOGUES[key].length>=1&&PROLOGUE_DIALOGUES[key].length<=2,
-   key+' should have 1–2 editable, quick story placeholders');
+   key+' must remain a compact 1–2 line story beat');
  }
- const voices=Object.values(PROLOGUE_DIALOGUES).flat().map(v=>v.speaker);
+ const allLines=Object.values(PROLOGUE_DIALOGUES).flat();
+ assert(allLines.length<=14,'short prologue, no additional mandatory dialogue scenes');
+ assert(allLines.reduce((n,line)=>n+line.text.split(/\s+/).length,0)<=225,'brief script word budget');
+ assert(!/3D|terror|secuestrador/i.test(PROLOGUE_OBJECTIVES.intro),'opening does not spoil genre shift');
+ assert(PROLOGUE_DIALOGUES.couple.some(line=>line.speaker==='Luis'&&line.text.includes('teléfono')));
+ assert(PROLOGUE_DIALOGUES.wheel.some(line=>line.text.includes('Luis')),'later phone support has an earlier narrative cause');
+ const voices=allLines.map(v=>v.speaker);
  assert(voices.includes('Luis')&&voices.includes('Vale')&&voices.includes('Louis')&&voices.includes('Kitty'));
  assert.deepEqual(PROLOGUE_DIALOGUES.couple.map(line=>line.speaker),['Vale','Luis']);
  assert(PROLOGUE_DIALOGUES.warning.some(line=>line.speaker==='Louis'),

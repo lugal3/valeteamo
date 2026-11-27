@@ -16,9 +16,36 @@ const MELODIES:Record<MusicTheme,number[]>={
  battle:[329.63,392,440,493.88,523.25,440,392,329.63,349.23,440,493.88,587.33,523.25,493.88,440,392],
  final:[261.63,329.63,392,493.88,523.25,659.25,587.33,493.88,440,523.25,587.33,659.25,783.99,659.25,523.25,392]
 };
+// Rescue-only mix. The classic mode continues to use the original melody,
+// timer, note volumes and effects unless a narrative scene opts in.
+export type RescueMood='garden'|'battle'|'unease'|'silence'|'forest'|'street';
+export type RescueMix={mood:RescueMood;music:number;ambience:number;birds:boolean};
+export function rescueMixFor(stage:string,map:string,dark:number,dialogue:boolean):RescueMix{
+ const duck=dialogue?.32:1;
+ if(stage==='disappearance')return {mood:'silence',music:0,ambience:0,birds:false};
+ if(map==='night_neighborhood')return {mood:'street',music:.32*duck,ambience:.68*duck,birds:false};
+ if(map==='dusk_search')return {mood:'forest',music:.25*duck,ambience:.62*duck,birds:false};
+ if(['ribbon','petals','wheel','door','window','house'].includes(stage))
+  return {mood:'forest',music:.20*duck,ambience:.40*duck,birds:false};
+ if(stage==='defend')return {mood:'battle',music:.74*duck,ambience:.40*duck,birds:true};
+ if(stage==='walk-together'&&dark>.17){
+  const t=Math.max(0,Math.min(1,(dark-.17)/.04));
+  return {mood:t>.55?'unease':'garden',music:(.86-.60*t)*duck,ambience:(1-.72*t)*duck,birds:t<.55};
+ }
+ return {mood:'garden',music:.90*duck,ambience:1*duck,birds:true};
+}
+const RESCUE_SCORE:Record<'unease'|'forest'|'street',readonly number[]>={
+ unease:[329.63,0,311.13,0,246.94,0,0,0],
+ forest:[130.81,0,0,0,146.83,0,0,0,138.59,0,0,0,0,0,0,0],
+ street:[110,0,0,0,116.54,0,0,0,0,0,130.81,0,0,0,0,0]
+};
 export class Sound {
  ctx?:AudioContext;timer?:number;step=0;lastHit=0;lastAmbient=-100;theme:MusicTheme='story';
  private silent=false;
+ private rescueMix?:RescueMix;
+ private rescueMusicBus?:GainNode;
+ private rescueAmbientBus?:GainNode;
+ private rescueStep=0;
  private readonly samples=new Map<string,AudioBuffer>();
  private userSpriteReady=false;
  private readonly voices=new Set<AudioBufferSourceNode>();
@@ -26,7 +53,7 @@ export class Sound {
  constructor(private readonly sampleUrls:Readonly<Record<string,string>>={},
   private readonly spriteUrl?:string,private readonly spriteFallbackUrl?:string){}
  get muted(){return this.silent;}
- set muted(value:boolean){this.silent=value;if(value)this.stopSamples();}
+ set muted(value:boolean){this.silent=value;if(value)this.stopSamples();this.applyRescueGains(true);}
  private loadSamples(context:AudioContext){
   const entries=Object.entries(this.sampleUrls);
   if(!entries.length)return;
@@ -81,11 +108,60 @@ export class Sound {
   this.voices.clear();
  }
  setTheme(theme:MusicTheme){if(this.theme!==theme){this.theme=theme;this.step=0;}}
+ setRescueMix(mix:RescueMix){
+  const old=this.rescueMix;
+  if(old&&old.mood===mix.mood&&old.birds===mix.birds&&
+   Math.abs(old.music-mix.music)<.018&&Math.abs(old.ambience-mix.ambience)<.018)return;
+  if(!old||old.mood!==mix.mood)this.rescueStep=0;
+  this.rescueMix=mix;this.applyRescueGains(false);
+ }
+ private applyRescueGains(immediate:boolean){
+  const ctx=this.ctx,mix=this.rescueMix;
+  if(!ctx||!mix||ctx.state==='closed')return;
+  if(!this.rescueMusicBus){this.rescueMusicBus=ctx.createGain();this.rescueMusicBus.gain.value=0;this.rescueMusicBus.connect(ctx.destination);}
+  if(!this.rescueAmbientBus){this.rescueAmbientBus=ctx.createGain();this.rescueAmbientBus.gain.value=0;this.rescueAmbientBus.connect(ctx.destination);}
+  const now=ctx.currentTime;
+  for(const [node,target] of [[this.rescueMusicBus,mix.music],[this.rescueAmbientBus,mix.ambience]] as const){
+   const param=node.gain,value=this.muted?0:target;
+   if(typeof param.cancelAndHoldAtTime==='function')param.cancelAndHoldAtTime(now);
+   else{const held=param.value;param.cancelScheduledValues(now);param.setValueAtTime(held,now);}
+   if(immediate||this.muted)param.setValueAtTime(value,now);
+   else param.setTargetAtTime(value,now,mix.mood==='silence'?.18:.45);
+  }
+ }
+ private rescueNote(f:number,d:number,v:number,type:OscillatorType){
+  const ctx=this.ctx,bus=this.rescueMusicBus;
+  if(!ctx||!bus||this.muted||ctx.state!=='running'||f<=0)return;
+  const o=ctx.createOscillator(),g=ctx.createGain(),at=ctx.currentTime;
+  o.type=type;o.frequency.value=f;
+  g.gain.setValueAtTime(.0001,at);
+  g.gain.linearRampToValueAtTime(v,at+Math.min(.08,d/4));
+  g.gain.exponentialRampToValueAtTime(.0001,at+d);
+  o.connect(g);g.connect(bus);
+  o.onended=()=>{o.disconnect();g.disconnect();};
+  o.start(at);o.stop(at+d);
+ }
+ private playRescueStep(){
+  const mix=this.rescueMix;
+  if(!mix||mix.mood==='silence')return;
+  const mood=mix.mood;
+  if(mood==='garden'||mood==='battle'){
+   const melody=MELODIES[mood],i=this.rescueStep++%melody.length,note=melody[i];
+   this.rescueNote(note,.31,.035,'triangle');
+   if(i%4===0){this.rescueNote(note/2,.60,.020,'sine');this.rescueNote(note*1.5,.34,.008,'sine');}
+   else if(i%4===2)this.rescueNote(note*1.25,.24,.007,'sine');
+   return;
+  }
+  const melody=RESCUE_SCORE[mood],i=this.rescueStep++%melody.length,note=melody[i];
+  // Sparse, original motifs with real rests, not another upbeat melody.
+  if(note){this.rescueNote(note,mood==='unease'?.7:1.15,.034,'sine');
+   this.rescueNote(note*(mood==='unease'?1.5:2),.8,.009,'triangle');}
+ }
  start():Promise<boolean>{
   try{
    const AudioCtor=window.AudioContext||(window as typeof window&{webkitAudioContext?:typeof AudioContext}).webkitAudioContext;
    if(!AudioCtor)return Promise.resolve(false);
-   if(!this.ctx||this.ctx.state==='closed'){this.ctx=new AudioCtor();this.loadSamples(this.ctx);}
+   if(!this.ctx||this.ctx.state==='closed'){this.rescueMusicBus=undefined;this.rescueAmbientBus=undefined;this.ctx=new AudioCtor();this.loadSamples(this.ctx);this.applyRescueGains(false);}
    const context=this.ctx;
    const resumed=context.state==='running'?Promise.resolve():context.resume();
    if(this.timer===undefined)this.timer=window.setInterval(()=>this.playStep(),360);
@@ -94,6 +170,7 @@ export class Sound {
  }
  private playStep(){
   if(!this.ctx||this.muted||this.ctx.state!=='running')return;
+  if(this.rescueMix){this.playRescueStep();return;}
   const melody=MELODIES[this.theme],index=this.step++%melody.length,note=melody[index];
   this.tone(note,.28,.035,'triangle');if(index%4===0){this.tone(note/2,.58,.022,'sine');this.tone(note*1.5,.33,.009,'sine');}else if(index%4===2)this.tone(note*1.25,.24,.007,'sine');
  }
@@ -132,6 +209,8 @@ export class Sound {
   const ctx=this.ctx;
   if(!ctx||this.muted||ctx.state!=='running'||
    ctx.currentTime-this.lastAmbient<2.4)return false;
+  const mix=this.rescueMix;
+  if(mix&&(mix.ambience<.015||(kind==='birdsong'&&!mix.birds)))return false;
   this.lastAmbient=ctx.currentTime;
   const presets:Record<AmbientKind,readonly [number,number,number,OscillatorType][]>={
    river:[[155,.58,.0024,'sine'],[218,.38,.0014,'sine']],
@@ -151,10 +230,12 @@ export class Sound {
    gain.gain.linearRampToValueAtTime(volume,start+Math.min(.08,duration/3));
    gain.gain.exponentialRampToValueAtTime(.001,start+duration);
    oscillator.connect(gain);
+   const destination=this.rescueAmbientBus??ctx.destination;
    if(stereo){
     stereo.pan.setValueAtTime(Math.max(-.85,Math.min(.85,pan)),start);
-    gain.connect(stereo);stereo.connect(ctx.destination);
-   }else gain.connect(ctx.destination);
+    gain.connect(stereo);stereo.connect(destination);
+   }else gain.connect(destination);
+   oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();stereo?.disconnect();};
    oscillator.start(start);oscillator.stop(start+duration);
   }
   return true;
@@ -165,10 +246,13 @@ export class Sound {
   if(this.timer!==undefined)clearInterval(this.timer);
   this.timer=undefined;
   this.loading?.abort();
-  this.samples.clear();
+  this.samples.clear();this.userSpriteReady=false;
   this.stopSamples();
   const context=this.ctx;
   this.ctx=undefined;
+  this.rescueMusicBus?.disconnect();this.rescueAmbientBus?.disconnect();
+  this.rescueMusicBus=undefined;this.rescueAmbientBus=undefined;this.rescueStep=0;
+  this.lastAmbient=-100;
   if(context&&context.state!=='closed')void context.close().catch(()=>{});
  }
 }

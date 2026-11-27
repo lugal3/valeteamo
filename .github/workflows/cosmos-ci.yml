@@ -33,6 +33,8 @@ on:
       - 'src/PlaytestMenu.tsx'
       - 'src/playtest-menu.css'
       - 'tests/admin-panel-browser.cjs'
+      - 'tests/epilogue-browser.cjs'
+      - 'tests/helpers/epilogue-walk.cjs'
       - 'src/birthday-countdown.css'
       - 'tests/cosmos.cjs'
       - 'tests/galaxy-arrival.cjs'
@@ -76,6 +78,8 @@ on:
       - 'src/PlaytestMenu.tsx'
       - 'src/playtest-menu.css'
       - 'tests/admin-panel-browser.cjs'
+      - 'tests/epilogue-browser.cjs'
+      - 'tests/helpers/epilogue-walk.cjs'
       - 'src/birthday-countdown.css'
       - 'tests/cosmos.cjs'
       - 'tests/galaxy-arrival.cjs'
@@ -119,5 +123,24 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cosmos-visual-check
+          path: artifacts/
+          if-no-files-found: ignore
+  epilogue-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install chromium --with-deps
+      - run: node tests/epilogue-browser.cjs
+      - name: Guardar capturas del epílogo
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: epilogue-visual-check
           path: artifacts/
           if-no-files-found: ignore

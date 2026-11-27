@@ -28,7 +28,7 @@ async function verifyDesktop(){
     u:s.p.u,v:s.p.v};
   });
   assert.equal(scene.key,'iso-adventure','desktop uses original Phaser Corazones engine');
-  assert.equal(scene.zoom,Math.min(scene.width/800,scene.height/450)*1.08,
+  assert(Math.abs(scene.zoom-Math.min(scene.width/800,scene.height/450)*1.08*1.12)<.00001,
    'desktop uses same original camera formula');
   assert.equal(scene.world,'morning_garden');
   const rect=await page.locator('.story-prologue .adventure-canvas canvas')

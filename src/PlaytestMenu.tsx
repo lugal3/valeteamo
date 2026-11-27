@@ -1,18 +1,20 @@
-import {useEffect,useState} from 'react';
+import {useEffect,useState,type CSSProperties} from 'react';
 import {HOUSE_TRIALS,milestoneIds,type HouseTrial,type HouseTrialId} from './lab/house-trials';
 import './playtest-menu.css';
 
-type MenuAction='cosmos-countdown'|'cosmos-gift'|'cosmos-intro'|'cosmos-loading'|'cosmos-galaxy'|'house'|'rescue'|'arcade'|'classic'|'story'|HouseTrialId;
+export type MenuAction='daily-countdown'|'full-flow'|'2d-feeding'|'2d-abduction'|'2d-trail'|'epilogue-outside'|'epilogue-return-path'|'epilogue-reunion'|'epilogue-celebration'|'cosmos-countdown'|'cosmos-gift'|'cosmos-intro'|'cosmos-loading'|'cosmos-galaxy'|'house'|'rescue'|'arcade'|'classic'|'story'|HouseTrialId;
 type MenuCard={id:MenuAction;title:string;description:string};
 type AdvancedGroup={title:string;cards:MenuCard[]};
 type Area={id:string;number:string;title:string;subtitle:string;cards:MenuCard[];advanced:AdvancedGroup[]};
 
 const checkpoint=(id:HouseTrialId):MenuCard=>({id,...HOUSE_TRIALS[id]});
 const areas:Area[]=[
+ {id:'flujo',number:'00',title:'Flujo integral',subtitle:'Comprueba la experiencia real de principio a fin, con avance de rescate en memoria.',cards:[{id:'full-flow',title:'Experiencia completa · T−10 s',description:'Contador, regalo, universo, prólogo, casa, epílogo y retorno. Sin alterar la fecha ni el guardado del rescate.'}],advanced:[]},
  {
   id:'universo',number:'01',title:'Universo',
   subtitle:'El regalo, la formación de la galaxia y los recuerdos. Recorre la experiencia en orden.',
   cards:[
+   {id:'daily-countdown',title:'Contador · Ocho diseños diarios',description:'Galería interactiva de los ocho días: flores, estrellas, carta, jardín, corazones, aurora, disco y última noche.'},
    {id:'cosmos-countdown',title:'Contador y colores',description:'Reloj, paleta y vista previa de la apertura.'},
    {id:'cosmos-loading',title:'Animación de partículas',description:'Viaje por el túnel y formación del corazón.'},
    {id:'cosmos-galaxy',title:'Galaxia rosa del video',description:'Corazón interactivo, recuerdos y navegación por el cosmos.'}
@@ -30,7 +32,10 @@ const areas:Area[]=[
    {id:'arcade',title:'2D · Corazones',description:'Prueba directa del combate y los proyectiles.'},
    {id:'classic',title:'Aventura clásica',description:'Las seis salas originales, con tienda, objetos y enemigos.'}
   ],
-  advanced:[{title:'Narrativa',cards:[
+  advanced:[{title:'Checkpoints narrativos',cards:[
+   {id:'2d-feeding',title:'Emy · Alimentación',description:'En el jardín, con Churu disponible para alimentar a Emy.'},
+   {id:'2d-abduction',title:'Secuestro · Paseo con Louis',description:'Comienza antes de la escena; camina hasta el encuentro real.'},
+   {id:'2d-trail',title:'Bosque · Búsqueda de pistas',description:'Tras el secuestro, sigue la pulsera y los demás indicios.'},
    {id:'story',title:'Historia y preguntas',description:'Capítulos, fotografías, decisiones y recuerdos.'}
   ]}]
  },
@@ -42,50 +47,59 @@ const areas:Area[]=[
    ...milestoneIds.map(checkpoint)
   ],
   advanced:[
-   {title:'Escenas y mecánicas aisladas',cards:[checkpoint('mirror'),checkpoint('bedroom'),checkpoint('arrival'),checkpoint('basement'),checkpoint('car'),checkpoint('wardrobe'),checkpoint('wake')]},
+   {title:'Checkpoints de encuentros y mecánicas',cards:[checkpoint('mirror'),checkpoint('bedroom'),checkpoint('arrival'),checkpoint('basement'),checkpoint('car'),checkpoint('wardrobe'),checkpoint('wake')]},
    {title:'Pistas y objetos',cards:[checkpoint('drawer'),checkpoint('safe'),checkpoint('mirror-note')]},
    {title:'Interacciones y sonido',cards:[checkpoint('battery'),checkpoint('power'),checkpoint('piano'),checkpoint('television')]}
   ]
- }
+ },
+ {id:'epilogo',number:'04',title:'Epílogo',subtitle:'Regreso al jardín después del rescate. Cada checkpoint carga el escenario jugable completo.',cards:[
+  {id:'epilogue-outside',title:'Exterior · Amanecer',description:'Salida de la casa con Louis y Emy, regreso al bosque.'},
+  {id:'epilogue-return-path',title:'Bosque · Regreso',description:'Acompañantes, movimiento y transición al jardín.'},
+  {id:'epilogue-reunion',title:'Cerezos · Reencuentro',description:'Encuentro y diálogo con Luis y Vale.'},
+  {id:'epilogue-celebration',title:'Picnic · Celebración',description:'Torta, velas, carta, postal grupal y cierre.'}
+ ],advanced:[]}
 ];
 
+const ACCENTS:Record<string,string>={flujo:'#a3ce75',universo:'#a99be8','dos-d':'#6ec5ad','tres-d':'#e4b36d',epilogo:'#dca0bd'};
+const normalize=(value:string)=>value.toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const matches=(item:MenuCard,q:string)=>[item.title,item.description,item.id].some(s=>normalize(s).includes(q));
 function TrialCard({item,onSelect}:{item:MenuCard;onSelect:(id:MenuAction)=>void}){
- return <button type="button" className="playtest-card" onClick={()=>onSelect(item.id)}
+ return <button type="button" className="playtest-card lp-endpoint" data-trial-id={item.id} onClick={()=>onSelect(item.id)}
   aria-labelledby={`trial-${item.id}`} aria-describedby={`trial-${item.id}-description`}>
-  <strong id={`trial-${item.id}`}>{item.title}</strong>
-  <span className="playtest-arrow" aria-hidden="true">↗</span>
-  <span className="playtest-description" id={`trial-${item.id}-description`}>{item.description}</span>
+  <span className="lp-method" aria-hidden="true">{item.id==='full-flow'?'RUN':'PLAY'}</span>
+  <span className="lp-endpoint-copy"><strong id={`trial-${item.id}`}>{item.title}</strong><code>{item.id}</code><span className="playtest-description" id={`trial-${item.id}-description`}>{item.description}</span></span>
+  <span className="lp-execute" aria-hidden="true">Abrir <span>↗</span></span>
  </button>;
 }
 
 export function PlaytestMenu({onSelect,onExit}:{onSelect:(id:MenuAction)=>void;onExit:()=>void}){
- return <main className="playtest-menu" data-admin-panel="lp" aria-labelledby="playtest-title">
+ const [query,setQuery]=useState(''),[closed,setClosed]=useState<string[]>([]),[advanced,setAdvanced]=useState(false);
+ const q=normalize(query.trim());
+ const filtered=areas.map(area=>({...area,cards:area.cards.filter(item=>matches(item,q)),advanced:area.advanced.map(group=>({...group,cards:group.cards.filter(item=>matches(item,q))})).filter(group=>group.cards.length)})).filter(area=>area.cards.length||area.advanced.length);
+ const count=filtered.reduce((n,area)=>n+area.cards.length+area.advanced.reduce((sum,group)=>sum+group.cards.length,0),0);
+ return <main className="playtest-menu lp-swagger" data-admin-panel="lp" aria-labelledby="playtest-title">
   <div className="playtest-shell">
    <header className="playtest-header">
-    <div className="playtest-kicker"><span className="playtest-status" aria-hidden="true"/>VALETEAMO / LABORATORIO <span className="playtest-build">ACCESO LP</span></div>
-    <div className="playtest-header-main">
-     <div><h1 id="playtest-title">Pruebas</h1><p>Panel de control · Escenas organizadas por etapa de la experiencia.</p></div>
-     <button type="button" className="playtest-back" onClick={onExit}>← Volver a Feliz cumpleaños</button>
-    </div>
-    <nav className="playtest-nav" aria-label="Secciones del laboratorio">
-     {areas.map(area=><a key={area.id} href={`#lp-${area.id}`}><span>{area.number}</span>{area.title}</a>)}
-    </nav>
+    <div className="playtest-kicker"><span className="playtest-status" aria-hidden="true"/>VALETEAMO / LABORATORIO <span className="playtest-build">ACCESO LP · QA</span></div>
+    <div className="playtest-header-main"><div><h1 id="playtest-title">Pruebas</h1><p>Explorador de checkpoints · Experiencia real, no reproducciones aisladas.</p></div><button type="button" className="playtest-back" onClick={onExit}>← Volver a Feliz cumpleaños</button></div>
+    <div className="lp-environment"><span>ENTORNO</span><strong>Laboratorio local</strong><span>Rescate de prueba en memoria · fecha pública intacta</span></div>
+    <nav className="playtest-nav" aria-label="Secciones del laboratorio">{areas.map(area=><a key={area.id} href={`#lp-${area.id}`} onClick={()=>{setQuery('');setClosed(old=>old.filter(x=>x!==area.id));}} style={{'--lp-accent':ACCENTS[area.id]} as CSSProperties}><span>{area.number}</span>{area.title}</a>)}</nav>
+    <div className="lp-toolbar"><label htmlFor="lp-filter">Filtrar checkpoints</label><input id="lp-filter" type="search" placeholder="Ej. Emy, espejo, cumpleaños…" value={query} onChange={e=>setQuery(e.target.value)}/><span aria-live="polite">{count} accesos</span><button type="button" onClick={()=>{setQuery('');setClosed([]);setAdvanced(true);}}>Expandir</button><button type="button" onClick={()=>{setQuery('');setClosed(areas.map(a=>a.id));setAdvanced(false);}}>Contraer</button></div>
    </header>
-   {areas.map(area=><section key={area.id} id={`lp-${area.id}`} className="playtest-section" aria-labelledby={`lp-heading-${area.id}`}>
-    <div className="playtest-section-heading">
-     <span className="playtest-section-number" aria-hidden="true">{area.number} / 03</span>
-     <div><h2 id={`lp-heading-${area.id}`}>{area.title}</h2><p>{area.subtitle}</p></div>
-     <span className="playtest-section-count">{area.cards.length} accesos principales</span>
-    </div>
-    <div className="playtest-grid">
-     {area.cards.map(item=><TrialCard key={item.id} item={item} onSelect={onSelect}/>)}
-    </div>
-    {area.advanced.map(extra=><details className="playtest-advanced" key={extra.title}>
-     <summary><span>{extra.title}</span><span className="playtest-advanced-count">{extra.cards.length} escenas <i aria-hidden="true">⌄</i></span></summary>
-     <div className="playtest-grid playtest-grid-advanced">{extra.cards.map(item=><TrialCard key={item.id} item={item} onSelect={onSelect}/>)}</div>
-    </details>)}
-   </section>)}
-   <footer className="playtest-footer"><span>LP / ENTORNO DE PRUEBAS</span><span>Los motores 2D y 3D se cargan cuando eliges una experiencia.</span></footer>
+   {!filtered.length&&<p role="status" className="lp-empty">No hay checkpoints que coincidan con tu búsqueda.</p>}
+   {filtered.map(area=>{
+    const isOpen=!!q||!closed.includes(area.id);
+    return <section key={area.id} id={`lp-${area.id}`} className="playtest-section" style={{'--lp-accent':ACCENTS[area.id]} as CSSProperties} aria-labelledby={`lp-heading-${area.id}`}>
+     <button type="button" className="lp-tag" aria-expanded={isOpen} aria-controls={`lp-body-${area.id}`} onClick={()=>{if(q){setQuery('');setClosed(old=>[...old.filter(x=>x!==area.id),area.id]);}else setClosed(old=>old.includes(area.id)?old.filter(x=>x!==area.id):[...old,area.id]);}}>
+      <span className="lp-tag-number">{area.number}</span><span className="lp-tag-copy"><strong id={`lp-heading-${area.id}`}>{area.title}</strong><small>{area.subtitle}</small></span><span className="lp-tag-count">{area.cards.length+area.advanced.reduce((n,g)=>n+g.cards.length,0)}</span><span aria-hidden="true">{isOpen?'⌄':'›'}</span>
+     </button>
+     <div id={`lp-body-${area.id}`} hidden={!isOpen}>
+      <div className="lp-endpoints">{area.cards.map(item=><TrialCard key={item.id} item={item} onSelect={onSelect}/>)}</div>
+      {area.advanced.map(group=><details className="playtest-advanced" key={group.title+'-'+advanced+'-'+!!q} open={advanced||!!q||undefined}><summary><span>{group.title}</span><span className="playtest-advanced-count">{group.cards.length} checkpoints <i aria-hidden="true">⌄</i></span></summary><div className="lp-endpoints">{group.cards.map(item=><TrialCard key={item.id} item={item} onSelect={onSelect}/>)}</div></details>)}
+     </div>
+    </section>;
+   })}
+   <footer className="playtest-footer"><span>LP / ENTORNO DE PRUEBAS</span><span>Los checkpoints cargan el juego y sus condiciones reales.</span></footer>
   </div>
  </main>;
 }

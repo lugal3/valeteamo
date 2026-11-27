@@ -45,8 +45,8 @@ async function play(){
     usingOriginalFloor:!!scene.floor,usingOriginalCharacter:scene.player.texture.key.startsWith('chibi-kitty-')};
   });
   assert.equal(realScene.key,'iso-adventure','rescue must be the ACTUAL Corazones Phaser class');
-  assert.equal(realScene.zoom,Math.min(realScene.width/800,realScene.height/450)*1.08,
-   'rescue must keep the IDENTICAL Corazones camera zoom formula');
+  assert(Math.abs(realScene.zoom-Math.min(realScene.width/800,realScene.height/450)*1.08*1.12)<.00001,
+   'story-only close-up preserves classic base zoom');
   assert(realScene.usingOriginalFloor&&realScene.usingOriginalCharacter,
    'rescue must use the original diamond floor and Kitty sprite system');
   assert.equal(await game.getAttribute('data-prologue-stage'),'intro');
@@ -129,18 +129,18 @@ async function play(){
     }
     await btn.click();
     if(stage==='meet-couple'){
-     await page.waitForFunction(()=>{
-      const key=window.__valePrologue?.scene()?.storyLuis?.texture?.key??'';
-      return /story-person-luis-(down|up|right)-talk-\d$/.test(key);
-     },null,{timeout:6000});
-     await page.screenshot({path:'artifacts/story-luis-chibi-talking.png'});
-    }
-    if(stage==='meet-couple'){
      await convo.waitFor({state:'visible'});
      await page.waitForFunction(()=>Number(document.querySelector('.prologue-dialog-backdrop')?.dataset.revealed)>0);
      assert.equal(await convo.getAttribute('data-speaker'),'Vale');
+     await page.waitForFunction(()=>{
+      const s=window.__valePrologue.scene();
+      return /rescue-vale-talk-/.test(s.storyVale?.texture?.key)&&/story-person-luis-.*-idle-/.test(s.storyLuis?.texture?.key);
+     },null,{timeout:6000});
      assert.equal(await convo.locator('.prologue-portrait img').count(),1);
      assert.equal(await convo.getAttribute('data-complete'),'false');
+     const geometry=await convo.locator('.prologue-dialog').boundingBox();
+     assert(geometry.width<844*.85&&geometry.height<390*.42,'dialogue remains compact on landscape mobile');
+     assert.equal(await page.locator('.adventure-hud').isVisible(),false,'conversation hides competing HUD');
      await page.screenshot({path:'artifacts/story-dialogue-writing.png'});
      // Real touch on the scenery (outside the card) finishes, then advances.
      await page.touchscreen.tap(10,35);
@@ -150,6 +150,11 @@ async function play(){
      await page.touchscreen.tap(10,35);
      await page.waitForFunction(()=>document.querySelector('.prologue-dialog-backdrop')?.dataset.speaker==='Luis');
      assert.equal(await convo.getAttribute('data-line'),'1');
+     await page.waitForFunction(()=>{
+      const s=window.__valePrologue.scene();
+      return /story-person-luis-.*-talk-/.test(s.storyLuis?.texture?.key)&&/rescue-vale-idle-/.test(s.storyVale?.texture?.key);
+     },null,{timeout:6000});
+     await page.screenshot({path:'artifacts/story-luis-chibi-talking.png'});
      await page.screenshot({path:'artifacts/story-dialogue-luis.png'});
     }
     await finishDialogue();
@@ -198,6 +203,11 @@ async function play(){
   await page.getByRole('button',{name:/Alimentar a Emy/}).tap();
   const feeding=page.getByRole('dialog',{name:'Un Churu para Emy',exact:true});
   await feeding.waitFor();
+  const compact=await feeding.evaluate(el=>{const scene=el.querySelector('.emy-scene'),stage=el.querySelector('.emy-stage'),pet=el.querySelector('.emy-pet img');const cr=scene.getBoundingClientRect(),sr=stage.getBoundingClientRect(),er=el.getBoundingClientRect();return {scene:cr.width,viewport:er.width,stage:sr.width,within:sr.top>=er.top&&sr.bottom<=er.bottom,original:pet.src.includes('/sprites/emy-'),noCard:!el.querySelector('.emy-card')};});
+  assert(compact.scene<compact.viewport*.95&&compact.stage>=150&&compact.within&&compact.original&&compact.noCard,'garden overlay uses original sprite, no opaque card, usable stage');
+  assert.equal(await page.locator('.adventure-hud').isVisible(),false,'feeding hides competing HUD');
+  await page.screenshot({path:'artifacts/story-emy-feeding-redesign.png'});
+  await feeding.waitFor();
   assert.equal(await game.getAttribute('data-fed-grey-cat'),'false');
   await feeding.getByRole('button',{name:'Volver al jardín'}).click();
   await page.getByRole('button',{name:/Alimentar a Emy/}).click();
@@ -224,6 +234,8 @@ async function play(){
   await page.evaluate(()=>window.__valePrologue.teleport(0));
   await page.waitForFunction(()=>window.__valePrologue.scene().storyLouis?.visible&&
    window.__valePrologue.scene().enemies.length===3,null,{timeout:4000});
+  const delays=await page.evaluate(()=>{const s=window.__valePrologue.scene();return s.enemies.map(e=>e.next-s.clock);});
+  assert(delays[0]>700&&delays[1]-delays[0]>=500&&delays[2]-delays[1]>=500,'shadows have readable staggered first attacks, even late in the story');
   await page.screenshot({path:'artifacts/story-louis-helped-after-distress-call.png'});
   // Original Corazones controls: WASD for movement, arrows for hearts.
   await page.keyboard.down('ArrowRight');

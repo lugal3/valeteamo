@@ -1,10 +1,94 @@
-.emy-feeding{position:absolute;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:space-between;overflow:hidden;padding:max(12px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));background:radial-gradient(ellipse at 50% 40%,#f6e1e8,#d8bcca 75%);color:#51394b;font:16px system-ui;touch-action:none;overscroll-behavior:contain}
-.emy-feeding header{width:100%;display:flex;justify-content:space-between;align-items:center;gap:16px;z-index:2}.emy-feeding header span{font-size:12px;letter-spacing:.15em}.emy-feeding h2{margin:2px 0;font:700 clamp(20px,4vw,30px) Georgia,serif}.emy-feeding header button{border:1px solid #b1849b;border-radius:20px;background:#fff3ec;color:#51394b;padding:10px 18px;min-height:44px;font:700 14px system-ui;cursor:pointer}.emy-feeding button:focus-visible{outline:3px solid #774c70;outline-offset:4px}.emy-instruction{margin:4px;text-align:center;font-size:clamp(14px,2vw,17px);z-index:2}
-.emy-stage{position:relative;flex:0 1 auto;width:min(70dvh,84vw,600px);aspect-ratio:1;min-height:0;touch-action:none;user-select:none}.emy-pet{position:absolute;inset:0;pointer-events:none;transform-origin:50% 85%}.emy-pet img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated;user-select:none}.emy-pet.is-eating{animation:emy-nibble .32s ease-in-out infinite}.emy-mouth-guide{position:absolute;width:12%;height:10%;transform:translate(-50%,-50%);border:2px dashed #d78ca7;border-radius:50%;opacity:.55;pointer-events:none}.emy-mouth-guide.is-eating{opacity:0}
-.emy-churu{position:absolute;width:12%;height:35%;min-width:42px;transform:translateX(-50%);transform-origin:50% 0;z-index:3;border:0;background:transparent;padding:0;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}.emy-churu:active{cursor:grabbing}.emy-paste{position:absolute;top:-3%;left:43%;width:17%;height:9%;background:#d0a084;border:2px solid #9c6e66;border-radius:50% 50% 0 0}.emy-wrapper{display:flex;align-items:center;flex-direction:column;justify-content:center;position:absolute;top:5%;left:6%;width:88%;height:80%;background:linear-gradient(90deg,#bc557c,#ef90ae 30%,#ce648c 80%);border:3px solid #843c60;border-top:5px solid #ffe2cd;box-shadow:inset 4px 0 #ffbdd2;transform:scaleY(var(--remaining,1));transform-origin:50% 0;color:#fff7e9}.emy-wrapper b{font:700 clamp(12px,2vw,18px) Georgia;writing-mode:vertical-rl}.emy-wrapper small{font-size:22px}.emy-kitty-paw{position:absolute;top:57%;left:-12%;width:90%;height:25%;border:3px solid #b9a8b3;border-radius:45%;background:#fff8ed;box-shadow:inset -5px -4px #eadbe5}
-.emy-feeding footer{display:flex;gap:12px;width:min(500px,88vw);align-items:center;z-index:4}.emy-meter{flex:1;height:15px;background:#a3879c4d;border:2px solid #fff3e8;border-radius:20px;overflow:hidden}.emy-meter span{display:block;height:100%;background:linear-gradient(90deg,#b9678b,#db9cb2);border-radius:20px}.emy-feeding footer strong{min-width:46px;font-size:16px}.emy-keys{margin:5px 0 0;font-size:12px;text-align:center;color:#74576c}.emy-love{position:absolute;top:6%;left:0;right:0;text-align:center;color:#be4b7e;font-size:clamp(25px,7vw,45px);animation:emy-hearts 1.4s ease-out both}.emy-feeding.is-full{animation:emy-shake .4s ease-in-out}
-@keyframes emy-nibble{50%{transform:translateY(2px) scaleY(.995)}}@keyframes emy-shake{20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}@keyframes emy-hearts{from{transform:translateY(20px);opacity:0}to{transform:translateY(-10px);opacity:1}}
-@media(max-height:500px) and (min-width:600px){.emy-feeding{padding-top:8px;padding-bottom:6px}.emy-feeding header{position:absolute;top:10px;left:18px;right:18px;width:auto}.emy-feeding header span{display:none}.emy-instruction{position:absolute;left:15px;top:70px;width:25%;text-align:left;line-height:1.5}.emy-stage{width:min(87dvh,48vw);margin-top:0;margin-left:10vw}.emy-feeding footer{position:absolute;bottom:35px;left:25px;width:23%}.emy-keys{position:absolute;right:18px;bottom:15px;width:25%;text-align:right;font-size:12px}}
+/* Feeding is a close-up in the garden, not a separate form or opaque card. */
+.emy-feeding{position:absolute;inset:0;z-index:90;display:grid;place-items:center;box-sizing:border-box;overflow:hidden;background:radial-gradient(ellipse at 50% 49%,#f5dccb28 0%,#30263865 65%,#241f35ad 100%);color:#fff8ec;touch-action:none;overscroll-behavior:contain;padding:8px}
+.emy-scene{position:relative;display:grid;grid-template-rows:auto minmax(0,1fr) auto;justify-items:center;align-items:center;width:min(92vw,490px);height:min(95%,560px);gap:2px}
+.emy-scene header{display:flex;align-items:center;justify-content:space-between;width:100%;gap:8px;z-index:5}
+.emy-feeding h2{margin:0;font:700 clamp(17px,3.5vw,26px) Georgia,serif;text-shadow:0 2px #51374e,0 0 8px #37273c}
+.emy-close{display:grid;place-items:center;width:44px;height:44px;border:1px solid #fff0df88;border-radius:50%;background:#5a4159aa;color:#fff6ee;font:24px/1 Georgia;cursor:pointer}
+.emy-close:disabled{opacity:.35}.emy-feeding button:focus-visible{outline:3px solid #ffddba;outline-offset:2px}
+.emy-stage{position:relative;width:min(100%,66dvh,410px);aspect-ratio:1;min-height:0;touch-action:none;user-select:none}
+.emy-ground{position:absolute;left:13%;right:13%;top:77%;height:15%;border-radius:50%;background:#32263b35;filter:blur(5px);pointer-events:none}
+.emy-pet{position:absolute;inset:0;pointer-events:none;transform-origin:50% 85%;animation:emy-breathe 3.1s ease-in-out infinite}
+.emy-pet img{display:block;width:100%;height:100%;object-fit:contain;image-rendering:pixelated;user-select:none;filter:drop-shadow(0 5px 4px #2e243b55)}
+.emy-pet.is-curious{animation:emy-curious 1.7s ease-in-out infinite}
+.emy-pet.is-eating{animation:emy-nibble .24s ease-in-out infinite}
+.emy-pet.is-happy{animation:emy-happy .55s ease-in-out 2}
+.emy-speech{position:absolute;top:9%;left:67%;white-space:nowrap;border-radius:12px 12px 12px 3px;background:#fff5e9e8;color:#895778;padding:6px 10px;font:700 12px Georgia,serif;box-shadow:0 3px 8px #392a3b25;pointer-events:none;animation:emy-float 2.2s ease-in-out infinite}
+.emy-mouth-guide{position:absolute;width:12%;height:10%;transform:translate(-50%,-50%);border:1.5px dashed #f7c5dc;border-radius:50%;opacity:.75;pointer-events:none;animation:emy-pulse 1.7s ease-in-out infinite}
+.emy-mouth-guide.is-eating{opacity:0;animation:none}
+.emy-churu{position:absolute;width:13%;height:32%;min-width:34px;min-height:44px;transform:translateX(-50%);transform-origin:50% 0;z-index:3;border:0;background:transparent;padding:0;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+.emy-churu:active{cursor:grabbing}.emy-paste{position:absolute;top:-3%;left:43%;width:17%;height:9%;background:#d9aa8a;border:1px solid #a77668;border-radius:50% 50% 0 0}
+.emy-wrapper{display:flex;align-items:center;flex-direction:column;justify-content:center;position:absolute;top:5%;left:6%;width:88%;height:80%;box-sizing:border-box;background:linear-gradient(90deg,#c95f85,#f5aec4 40%,#d67599);border:1.5px solid #934c6c;border-top:4px solid #fff2df;border-radius:4px;box-shadow:inset 2px 0 #ffd1da;transform:scaleY(var(--remaining,1));transform-origin:50% 0;color:#fffaf1}
+.emy-wrapper b{font:700 clamp(10px,1.6vw,14px) Georgia;writing-mode:vertical-rl}.emy-wrapper small{font-size:16px}
+.emy-kitty-paw{position:absolute;top:57%;left:-12%;width:90%;height:25%;box-sizing:border-box;border:1.5px solid #c1a8b6;border-radius:45%;background:#fff9f0;box-shadow:inset -3px -3px #eadbe5}
+.emy-feeding footer{width:min(100%,310px);display:grid;gap:8px;z-index:4}
+.emy-meter{height:8px;background:#fff4e84d;border:1px solid #fff4e87a;border-radius:20px;overflow:hidden}
+.emy-meter span{display:block;height:100%;background:linear-gradient(90deg,#e18cab,#ffd1ba);border-radius:20px}
+.emy-keys{margin:0;text-align:center;font:12px/1.4 system-ui;color:#fff7ec;text-shadow:0 1px 3px #302237}
+.emy-love{position:absolute;inset:0;pointer-events:none;color:#ffd2e6;font:700 28px Georgia,serif;text-shadow:0 2px #b6668c}
+.emy-love i{position:absolute;top:25%;left:20%;font-style:normal;animation:emy-heart-rise 1.4s ease-out both}
+.emy-love i:nth-child(2){left:68%;top:21%;animation-delay:.12s}.emy-love i:nth-child(3){left:48%;top:12%;animation-delay:.24s}
+.emy-churu.is-empty{opacity:0;pointer-events:none}
+@keyframes emy-breathe{50%{transform:scale(1.012,.987)}}@keyframes emy-curious{0%,100%{transform:translate(var(--look-x,0),var(--look-y,0)) rotate(-.8deg)}50%{transform:translate(var(--look-x,0),var(--look-y,0)) rotate(.8deg) scale(1.012)}}@keyframes emy-nibble{50%{transform:translateY(1.5px) scaleY(.99)}}@keyframes emy-happy{50%{transform:translateY(-5px) rotate(1deg)}}@keyframes emy-float{50%{transform:translateY(-3px)}}@keyframes emy-pulse{50%{opacity:.35}}@keyframes emy-heart-rise{0%{transform:translateY(8px) scale(.65);opacity:0}30%{opacity:1}100%{transform:translateY(-32px) scale(1.1);opacity:0}}
 @media(prefers-reduced-motion:reduce){.emy-feeding,.emy-feeding *{animation:none!important;transition:none!important}}
 
-.emy-churu.is-empty{opacity:0;pointer-events:none}
+/* In the real mobile capture the scene HUD was competing with Emy.
+   Frame the existing sprite with a subtle glow and place the speech above it. */
+.emy-feeding{background:radial-gradient(ellipse at 55% 48%,#fbe1c93b 0%,#30263886 63%,#211a30c7 100%)}
+.emy-stage{isolation:isolate}
+.emy-pet{z-index:1}
+.emy-mouth-guide{z-index:2}
+.emy-speech{z-index:4;top:5%;left:66%;max-width:34%;font-size:clamp(11px,1.6vw,15px);padding:5px 9px}
+.emy-love{z-index:4}
+.emy-meter{height:9px;background:#2d233b85;box-shadow:0 1px 4px #20182d80}
+.emy-keys{font-weight:600;text-shadow:0 1px 3px #1b1426,0 0 6px #1b1426}
+
+/* Premium feeding layout: one close-up, one progress indicator. Original
+   emy sprites and normalized mouth coordinates are deliberately unchanged. */
+.emy-feeding{background:radial-gradient(ellipse at 50% 48%,#ffdfb61c 0%,#35263765 65%,#251e34bf 100%)}
+.emy-scene{width:min(92vw,680px);height:100%;max-height:650px;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;gap:0;padding:0 8px;box-sizing:border-box}
+.emy-scene header{grid-column:1;grid-row:1;width:100%;align-self:start;justify-content:space-between;flex-wrap:nowrap}
+.emy-heading{display:flex;align-items:center;gap:9px;color:#fff4e6}
+.emy-heading>span{font:22px Georgia;color:#f7b5ca}
+.emy-feeding h2{font:700 clamp(15px,2.5vw,22px) Georgia,serif}
+.emy-close{background:#49364b9e;border:1px solid #fff3e779;box-shadow:0 2px 6px #271a3830}
+.emy-stage{grid-column:1;grid-row:2;width:min(100%,calc(100dvh - 126px),420px);max-width:100%;align-self:center;justify-self:center;animation:emy-arrive .26s ease-out both}
+.emy-pet img{filter:drop-shadow(0 5px 3px #2e243b60)}
+.emy-feeding footer{grid-column:1;grid-row:3;align-self:end;padding:0 0 4px;width:min(86vw,320px);gap:5px}
+.emy-progress-row{display:flex;align-items:center;gap:7px}
+.emy-progress-row>img{width:32px;height:32px;object-fit:contain;image-rendering:pixelated}
+.emy-progress-heart{color:#f3a2bd;font-size:23px;line-height:1;text-shadow:0 2px #61384d}
+.emy-meter{flex:1;height:13px;box-sizing:border-box;border:2px solid #fff0e7;background:#4a324b;box-shadow:0 2px #422b40;border-radius:12px}
+.emy-meter span{background:linear-gradient(180deg,#ffd0df 0%,#f2a2c0 38%,#d67a9f 100%)}
+.emy-keys{text-align:center;font-size:11px;font-weight:500;line-height:1.2}
+.emy-churu{transform:translateX(-50%) rotate(-18deg)}
+.emy-churu:active{transform:translateX(-50%) rotate(-28deg)}
+.emy-speech{border:1px solid #b983a1;border-radius:12px 12px 12px 4px;box-shadow:0 2px #4b354c40}
+@keyframes emy-arrive{from{opacity:0}to{opacity:1}}
+
+/* One responsive layout: square interaction stage, no conflicting breakpoints. */
+.emy-feeding{padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))}
+.emy-scene{width:min(100%,680px);min-height:0}
+.emy-stage{width:min(100%,calc(100dvh - 145px),420px);height:auto;aspect-ratio:1}
+@media(orientation:landscape) and (max-height:500px){
+ .emy-scene{width:min(100%,720px);max-height:100%;grid-template-columns:minmax(125px,1fr) minmax(0,auto);grid-template-rows:1fr 1fr;column-gap:12px}
+ .emy-scene header{grid-column:1;grid-row:1;align-self:end}
+ .emy-stage{grid-column:2;grid-row:1/3;width:min(44vw,calc(100dvh - 40px),400px)}
+ .emy-feeding footer{grid-column:1;grid-row:2;align-self:start;width:100%;padding:10px 0 0}
+ .emy-keys{text-align:left}
+}
+@media(orientation:portrait) and (max-height:430px){
+ .emy-stage{width:min(100%,calc(100dvh - 118px),300px)}
+ .emy-progress-row>img{width:25px;height:25px}
+}
+.emy-close{flex-shrink:0}
+.emy-heading{min-width:0}
+.emy-speech{left:auto;right:1%;max-width:42%}
+.emy-paste{left:50%;top:0;transform:translate(-50%,-50%);box-sizing:border-box}
+
+/* Keep the interaction square within both safe-area and grid allocations. */
+@media(orientation:landscape) and (max-height:500px){
+ .emy-scene{grid-template-columns:minmax(125px,1fr) minmax(0,auto);grid-template-rows:minmax(0,1fr) minmax(0,1fr);height:100%;}
+ .emy-stage{width:min(44vw,calc(100dvh - 56px),400px);max-height:100%;}
+ .emy-heading{gap:5px}.emy-heading h2{overflow-wrap:anywhere}
+ .emy-feeding footer{max-width:300px;justify-self:start}
+}

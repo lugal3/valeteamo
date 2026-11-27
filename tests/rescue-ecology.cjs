@@ -88,6 +88,13 @@ assert(Math.abs(sample(30)-sample(60))<.005,
  'animal alarm response is frame-independent 30/60Hz');
 assert(Math.abs(sample(60)-sample(120))<.005,
  'animal alarm response is frame-independent 60/120Hz');
+let alarm={alarm:0,heading:1};
+for(let i=0;i<60;i++)alarm=E.ecologyWildlifeStep(seed,alarm,i*16,16,{u:30,v:30},false,1).state;
+assert(alarm.alarm>.6,'the garden wildlife reacts to narrative tension even away from Kitty');
+for(let i=1;i<10;i++){
+ const cue=E.ecologyAmbientCue('afternoon_meeting',i*5600,{u:30,v:4},23,45,()=>4,1);
+ assert(['insects','night-breeze'].includes(cue.kind),'no cheerful birdsong after the kidnapping');
+}
 assert(E.ecologyHash(3,6,7)>=0&&E.ecologyHash(3,6,7)<1);
 const executable=source.split('\n').filter(line=>!line.trimStart().startsWith('//')).join('\n');
 assert(!executable.includes('Math.random(')&&!executable.includes('setTimeout('),
@@ -113,6 +120,12 @@ assert(world.includes('ecology=createLivingEcology(scene,map')&&
  'existing RescueOverworld must drive all graphics without a second renderer');
 assert(arcade.includes('this.audio.playRescueAmbience?.('),
  'sounds are triggered by the actual story scene, not a perpetual timer');
-assert(arcade.includes('if(this.story){\n   this.updateStoryPerformance(dt);\n   const ecologyCue='),
+assert(arcade.includes('if(this.story){\n   this.updateStoryPerformance(dt);')&&arcade.includes('const ecologyCue=this.storyWorld?.update('),
  'original classic Corazones must not instantiate or tick living ecology');
 console.log('PASS phase 2: four deterministic living biomes, wildlife reactions/return at 30/60/120Hz, passive microevents, spatial audio cues, 8/18 creature/flora limits, reduced motion and classic protection.');
+
+let plant=0;for(let i=0;i<20;i++)plant=E.ecoLean(plant,6,30);
+assert(plant>5.9&&plant<=6,'plant reacts smoothly');
+const release=E.ecoLean(plant,0,30);assert(release<plant&&release>4.5,'plant does not snap upright');
+for(let i=0;i<70;i++)plant=E.ecoLean(plant,0,30);
+assert(Math.abs(plant)<.01,'plant returns to its natural position');

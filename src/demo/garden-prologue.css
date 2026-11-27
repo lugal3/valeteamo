@@ -289,3 +289,93 @@
 @media(prefers-reduced-motion:reduce){
  .story-prologue .prologue-glyph,.story-prologue .prologue-next-arrow{animation:none!important;transform:none!important}
 }
+
+/* V3.7 review of actual mobile frames: one visual focus at a time.
+   Keep the game alive behind an interaction, but remove competing HUD labels. */
+.story-prologue[data-feeding="offer"] .adventure-hud,
+.story-prologue[data-feeding="offer"] .adventure-hint,
+.story-prologue[data-feeding="offer"] .prologue-area,
+.story-prologue[data-feeding="offer"] .prologue-act,
+.story-prologue[data-feeding="offer"] .prologue-restart,
+.story-prologue[data-conversation="true"] .adventure-hud,
+.story-prologue[data-conversation="true"] .adventure-hint,
+.story-prologue[data-conversation="true"] .prologue-area,
+.story-prologue[data-conversation="true"] .prologue-act,
+.story-prologue[data-conversation="true"] .prologue-restart{visibility:hidden;pointer-events:none}
+.story-prologue .prologue-dialog-backdrop{background:linear-gradient(180deg,#231d3210 0%,transparent 35%,#251d3548 100%)}
+.story-prologue .prologue-dialog{box-sizing:border-box;width:min(680px,94vw);min-height:104px;gap:12px;padding:9px 13px;border-radius:15px;grid-template-columns:74px minmax(0,1fr) auto;box-shadow:0 3px 0 #7a5a6c,0 8px 20px #3a27463d}
+.story-prologue .prologue-portrait{width:70px;height:76px;border-radius:10px}
+.story-prologue .prologue-dialog-copy p.prologue-live-text{font-size:clamp(13px,1.7vw,16px);line-height:1.45;min-height:2.5em}
+.story-prologue .prologue-dialog-counter{margin-top:4px}
+.story-prologue .prologue-next{border-radius:12px;padding:6px 10px}
+.story-prologue .prologue-guide{max-width:min(47vw,520px)}
+@media(max-height:440px) and (min-width:540px){
+ .story-prologue .prologue-dialog{width:min(650px,82vw);grid-template-columns:58px minmax(0,1fr) auto;gap:9px;min-height:90px;padding:7px 10px}
+ .story-prologue .prologue-portrait{width:56px;height:61px}
+ .story-prologue .prologue-dialog-copy p.prologue-live-text{font-size:13px;line-height:1.35;min-height:2.5em}
+ .story-prologue .prologue-dialog-counter{font-size:9px}
+}
+@media(max-width:539px){
+ .story-prologue .prologue-dialog{width:100%;grid-template-columns:54px minmax(0,1fr);gap:8px;max-height:55dvh;overflow-y:auto}
+ .story-prologue .prologue-portrait{width:52px;height:60px}
+ .story-prologue .prologue-next{grid-column:2;justify-self:end}
+ .story-prologue .prologue-guide{max-width:66vw}
+}
+
+/* Premium dialogue: nameplate, portrait without a second opaque box, more
+   breathing room for the scene. Retains all real controls and accessibility. */
+.story-prologue .prologue-dialog{position:relative;grid-template-columns:80px minmax(0,1fr) auto;width:min(680px,90vw);padding:10px 13px;min-height:104px;gap:12px;border:1px solid #c894ad;border-radius:16px;background:#fff6eb;box-shadow:0 3px #8c6078,0 8px 24px #2d1f3738}
+.story-prologue .prologue-portrait{width:80px;height:80px;background:transparent;border:0;box-shadow:none;overflow:hidden;border-radius:12px}
+.story-prologue .prologue-portrait img{image-rendering:pixelated;width:100%;height:100%;object-fit:contain}
+.story-prologue .prologue-speaker{align-self:flex-start;background:#9f5779;color:#fff6eb;font-size:12px;font-weight:750;line-height:1.25;padding:3px 11px;border-radius:12px;margin-bottom:5px}
+.story-prologue .prologue-dialog-copy p.prologue-live-text{font-weight:550;font-size:clamp(13px,1.6vw,16px);line-height:1.4;min-height:2.5em}
+.story-prologue .prologue-next{background:#f8e5e9;border:1px solid #dfafbf;border-radius:13px;color:#87506b}
+.story-prologue .prologue-dialog-counter{opacity:.65}
+.story-prologue [data-tone="suspense"] .prologue-dialog,.story-prologue [data-tone="whisper"] .prologue-dialog,.story-prologue [data-tone="alarm"] .prologue-dialog{background:#30283b}
+.story-prologue [data-tone="suspense"] .prologue-portrait,.story-prologue [data-tone="whisper"] .prologue-portrait,.story-prologue [data-tone="alarm"] .prologue-portrait{background:transparent;border:0}
+.story-prologue [data-tone="alarm"] .prologue-speaker{background:#99586b}
+@media(max-height:440px) and (min-width:540px){.story-prologue .prologue-dialog{grid-template-columns:72px minmax(0,1fr) auto;min-height:98px;width:min(650px,84vw);padding:8px 12px}.story-prologue .prologue-portrait{width:72px;height:74px}}
+@media(max-width:539px){.story-prologue .prologue-dialog{grid-template-columns:58px minmax(0,1fr);width:100%;max-height:55dvh;gap:8px}.story-prologue .prologue-portrait{width:58px;height:66px}}
+
+/* Idle motion for dialogue portraits, plus actual sprite frames. */
+.story-prologue .prologue-portrait{animation:portrait-idle 2.8s ease-in-out infinite;transform-origin:50% 90%}
+@keyframes portrait-idle{50%{transform:translateY(-1px)}}
+@media(prefers-reduced-motion:reduce){.story-prologue .prologue-portrait{animation:none}}
+
+/* Color grade instead of a nearly opaque global dark tint. Ground pools and
+   window glass keep their contrast, while HUD and dialogue remain unaffected. */
+.story-prologue .prologue-night{
+ background:radial-gradient(ellipse at 50% 52%,rgba(96,88,130,.57) 0%,rgba(48,48,86,.78) 68%,rgba(22,26,57,.89) 100%);
+}
+.story-prologue .prologue-night[data-map="afternoon_meeting"]{
+ background:linear-gradient(142deg,rgba(118,81,118,.48),rgba(54,49,97,.72));
+}
+.story-prologue .prologue-night[data-map="dusk_search"]{
+ background:radial-gradient(ellipse at 50% 48%,rgba(87,99,125,.58),rgba(40,54,83,.81) 72%,rgba(25,34,60,.91));
+}
+.story-prologue .prologue-night[data-map="night_neighborhood"]{
+ background:radial-gradient(ellipse at 50% 47%,rgba(72,79,112,.64),rgba(32,39,71,.86) 72%,rgba(19,25,53,.95));
+}
+
+/* Narrative-only polish. The original transition duration and scene swap
+   remain unchanged, including the 720ms window handoff. */
+.story-prologue .prologue-curtain-title{gap:5px}
+.story-prologue .prologue-curtain-title span{margin-bottom:3px;color:#e7b9c7;font-weight:600;letter-spacing:.22em;text-transform:uppercase}
+.story-prologue .prologue-curtain-title strong{font-weight:500;letter-spacing:-.02em}
+.story-prologue .prologue-transition-ornament{display:flex;align-items:center;justify-content:center;gap:10px;width:118px;margin-top:7px;font-size:12px;font-style:normal;color:#e7c2c6}
+.story-prologue .prologue-transition-ornament:before,.story-prologue .prologue-transition-ornament:after{content:"";height:1px;width:42px;background:linear-gradient(90deg,transparent,#c69aaa)}
+.story-prologue .prologue-transition-ornament:after{transform:scaleX(-1)}
+.story-prologue[data-transition="out"] .prologue-curtain-title{animation:premium-title-in 420ms ease-out both}
+@keyframes premium-title-in{from{opacity:0;transform:translate(-50%,-46%)}to{opacity:1;transform:translate(-50%,-50%)}}
+.story-prologue .prologue-3d-handoff{background:radial-gradient(ellipse at center,#1c1929 0%,#0b0a16 70%)}
+.story-prologue .prologue-3d-handoff span{letter-spacing:.22em;font-weight:500}
+.story-prologue .prologue-3d-handoff strong{letter-spacing:-.02em}
+@media(prefers-reduced-motion:reduce){.story-prologue[data-transition="out"] .prologue-curtain-title{animation:none}}
+
+/* Optional moments never replace the mandatory contextual action. */
+.story-prologue .prologue-moment{position:absolute;z-index:6;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:6px;align-items:center;max-width:42vw}
+.story-prologue .prologue-moment button{border:1px solid #caa5b5;background:#fff4e9ed;color:#80536c;border-radius:10px;min-height:44px;padding:7px 10px;cursor:pointer;font:600 11px system-ui;touch-action:manipulation}
+.story-prologue .prologue-moment button:focus-visible{outline:2px solid #a36a87;outline-offset:2px}
+.story-prologue .prologue-photo-button{white-space:nowrap}
+.story-prologue[data-postcard="true"] .adventure-hud,.story-prologue[data-postcard="true"] .prologue-interact{visibility:hidden;pointer-events:none}
+@media(max-width:600px){.story-prologue .prologue-moment{bottom:70px;max-width:64vw}}

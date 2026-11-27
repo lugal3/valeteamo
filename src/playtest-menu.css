@@ -87,3 +87,25 @@
  .playtest-card{min-height:88px;padding:11px 13px}
 }
 @media(prefers-reduced-motion:reduce){.playtest-menu{scroll-behavior:auto}.playtest-card,.playtest-advanced-count i{transition:none}.playtest-card:hover{transform:none}}
+
+/* Swagger-inspired operational explorer; scoped so house fallback stays intact. */
+.lp-swagger{background:#11151b;color:#e5e8ed;--lp-accent:#a3ce75;padding-top:max(12px,env(safe-area-inset-top));font-size:13px}
+.lp-swagger .playtest-shell{max-width:1120px}
+.lp-swagger .playtest-header{padding-top:8px;border-color:#343a43}
+.lp-swagger h1{font-size:clamp(28px,4vw,40px);letter-spacing:-.035em}
+.lp-environment{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 13px;border:1px solid #343d47;border-radius:5px;background:#1a2028;font-size:12px;color:#aab6c4}
+.lp-environment>span:first-child{font:700 10px monospace;letter-spacing:.1em;color:#94a1af}.lp-environment strong{color:#c8e3ba;font-size:12px}
+.lp-swagger .playtest-nav{margin:13px 0}.lp-swagger .playtest-nav a{border-radius:4px;border-color:#39434e;color:#e1e7ed;background:#1b222a}.lp-swagger .playtest-nav a span{color:var(--lp-accent)}
+.lp-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.lp-toolbar label{font-size:11px;color:#adb8c5}.lp-toolbar input{flex:1;min-width:130px;color:#e7edf2;background:#0e1318;border:1px solid #3e4854;border-radius:5px;padding:9px 10px;font:inherit;min-height:40px}.lp-toolbar>span{font:11px monospace;color:#9eacbc}.lp-toolbar button{border:1px solid #424d5a;background:#202731;border-radius:5px;padding:7px 10px;min-height:38px;font-size:11px}
+.lp-swagger .playtest-section{margin:18px 0 0;padding:0;border:0;scroll-margin-top:8px;background:none}
+.lp-tag{width:100%;display:flex;align-items:center;gap:12px;text-align:left;padding:12px 0 10px;border:0;border-bottom:1px solid #3e4650;background:transparent}.lp-tag-number{font:700 12px monospace;color:var(--lp-accent)}.lp-tag-copy{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}.lp-tag-copy strong{font-size:21px;line-height:1.15;color:#f0f3f7}.lp-tag-copy small{color:#9daab9;font-size:11px;font-weight:400}.lp-tag-count{font:12px monospace;color:#8d9aa8}
+.lp-endpoints{display:grid;gap:7px;padding-top:9px}
+.lp-swagger .lp-endpoint{min-height:68px;width:100%;display:flex;align-items:center;gap:12px;position:relative;text-align:left;padding:10px 12px;border:1px solid var(--lp-accent);border-radius:5px;background:#1b242a;background:color-mix(in srgb,var(--lp-accent) 8%,#171d25);box-shadow:none;color:#e6ebf1;transform:none;transition:background .15s}
+.lp-swagger .lp-endpoint:hover{background:color-mix(in srgb,var(--lp-accent) 16%,#171d25);transform:none}
+.lp-method{flex:none;min-width:54px;padding:6px 7px;border-radius:4px;background:var(--lp-accent);color:#182028;font:800 11px monospace;text-align:center}
+.lp-endpoint-copy{flex:1;min-width:0;display:flex;flex-direction:column;align-items:start;gap:2px}.lp-swagger .lp-endpoint-copy strong{font:700 13px/1.3 system-ui;letter-spacing:0}.lp-endpoint-copy code{font:11px/1.3 ui-monospace,monospace;color:var(--lp-accent);overflow-wrap:anywhere}.lp-swagger .lp-endpoint-copy .playtest-description{font:400 11px/1.4 system-ui;color:#aeb8c5;margin:0;display:block;max-width:none}
+.lp-execute{display:flex;gap:7px;align-items:center;flex:none;color:var(--lp-accent);font:600 11px system-ui}.lp-execute span{font-size:16px}
+.lp-swagger .playtest-advanced{background:#161c23;border:1px solid #353e48;margin:8px 0 0;border-radius:5px}.lp-swagger .playtest-advanced summary{padding:10px 12px}.lp-swagger .playtest-advanced .lp-endpoints{padding:0 9px 9px}
+.lp-swagger [hidden]{display:none!important}.lp-empty{padding:24px;color:#abb5c0}
+@media(max-width:600px){.lp-swagger{padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right))}.lp-toolbar label{width:100%}.lp-tag-copy small{font-size:10px}.lp-swagger .lp-endpoint{gap:8px;padding:9px 8px}.lp-method{min-width:43px;font-size:10px}.lp-execute{font-size:0}.lp-execute span{font-size:16px}.lp-endpoint-copy code{font-size:10px}.lp-tag-copy strong{font-size:18px}}
+@media(prefers-reduced-motion:reduce){.lp-swagger{scroll-behavior:auto}.lp-swagger .lp-endpoint{transition:none}}

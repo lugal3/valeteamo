@@ -108,3 +108,13 @@ export function feelCompanion(
   walking:!reducedMotion&&amount>.20,
   direction:Math.abs(dx)>Math.abs(dy)?dx>0?'right':'left':dy>0?'down':'up'};
 }
+
+// Rescue-only attack timing is relative to the instant a shadow appears.
+// Staggered warnings keep this short encounter readable for a first player.
+export const RESCUE_COMBAT={firstDelay:1350,stagger:520,interval:2600,warning:650} as const;
+export function rescueFirstAttack(clock:number,index:number){
+ return clock+RESCUE_COMBAT.firstDelay+Math.max(0,index)*RESCUE_COMBAT.stagger;
+}
+export function rescueAttackWarning(clock:number,next:number){
+ return clamp(1-(next-clock)/RESCUE_COMBAT.warning,0,1);
+}

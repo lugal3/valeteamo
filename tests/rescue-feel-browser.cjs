@@ -34,8 +34,9 @@ async function check(){
      width:s.scale.width,height:s.scale.height};
    });
    assert.equal(first.world,'morning_garden');
-   assert.equal(first.zoom,Math.min(first.width/800,first.height/450)*1.08,
-    'camera retains Corazones zoom with a small bounded follow offset');
+   const classicZoom=Math.min(first.width/800,first.height/450)*1.08;
+   assert(Math.abs(first.zoom-classicZoom*1.12)<1e-8,
+    'narrative camera keeps the approved 12% close-up over the classic zoom');
    await page.keyboard.down('d');
    // Software-backed Phaser can render fewer frames than wall-clock timing suggests.
    // Keep all displacement, velocity, and footstep assertions, but wait for
