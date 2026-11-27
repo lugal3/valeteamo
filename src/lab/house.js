@@ -1580,6 +1580,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(crossed(B.enter)){play('cat',world.emy,1.15);if(options.captions!==false)captureCaption.textContent='[Emy corre hacia Kitty]';}
   if(crossed(B.launch)&&options.captions!==false)captureCaption.textContent='[¡Emy salta!]';
   if(crossed(B.impact)){play('cloth',pursuer,.95);haptics.pulse('capture');if(options.captions!==false)captureCaption.textContent='[El secuestrador retrocede y suelta a Kitty]';}
+  if(crossed(B.impact+.08)&&!shot.stage.compact)play('scratch',world.emy,.64);
   if(crossed(B.land)){play('footstep',world.emy,.45);if(options.captions!==false)captureCaption.textContent='[Emy se queda junto a Kitty]';}
   if(crossed(B.relief)){play('cat',world.emy,.45);if(options.captions!==false)captureCaption.textContent='[Kitty está a salvo]';}
   const fade=shot.stage.compact?1:Math.max(0,1-(t-(shot.stage.realStart?0:B.enter))/.26,(t-(B.end-.25))/.25);

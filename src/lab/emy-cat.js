@@ -86,7 +86,11 @@ export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.a
   for(const key of Object.keys(l.legs))for(const part of ['hip','knee','paw'])l.legs[key][part]=lerp(neutral.legs[key][part],l.legs[key][part],amount);
  }
  if(leap){
-  const {compression,flight,airborne,strike=0}=leap;
+  const {compression,flight,airborne,strike=0,grip=0,rake=0}=leap;
+  // A defensive pounce leads with the paws; retract the muzzle and keep
+  // the neck behind the contact plane. No new meshes or bone allocation.
+  l.head[2]-=.145*grip+.065*strike;l.head[1]-=.065*grip;
+  l.headRot[0]+=.20*grip;l.body[2]-=.045*grip;
   l.body[1]-=.105*compression;l.head[1]-=.13*compression;
   l.headRot[0]+=.18*compression;
   for(const [name,leg] of Object.entries(l.legs)){
@@ -102,6 +106,13 @@ export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.a
     if(front&&strike>0){const lead=name.endsWith('-1')?1:.62;
      leg.paw[2]+=.14*strike*lead;leg.paw[1]+=.045*strike*lead;
      leg.knee[2]+=.06*strike*lead;
+    }
+    if(front&&grip>0){
+     const active=name.endsWith('-1')?rake:1-rake;
+     leg.paw[2]+=.14*grip+.055*grip*active;
+     leg.paw[1]+=.09*grip-.09*grip*active;
+     leg.paw[0]+=(name.endsWith('-1')?-1:1)*.018*grip;
+     leg.knee[2]+=.045*grip;
     }
    }
   }

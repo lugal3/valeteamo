@@ -58,7 +58,8 @@ const assert=require('node:assert/strict'),fs=require('fs'),vm=require('vm'),ts=
   for(let i=0;i<fresh.length;i++)assert(Math.abs(fresh[i]-renderer.dynamicVertices[i])<.00001,mode+' actual renderer matches reference surface');
  }
  const full=createHouse();const all=geometry([...full.boxes,...(await import('../src/lab/renderer.js')).pickupGeometry(full.objects)].filter(b=>b.dynamic));
- assert(all.vertices.length/16<65536,'complete house including both Emy actors fits WebGL1 index buffers');
+ assert(all.vertices.length/16<=65530,'complete house including both Emy actors fits WebGL1 index buffers: '+all.vertices.length/16);
+ console.log('PASS WEBGL1 DYNAMIC BUDGET',all.vertices.length/16);
  for(const hz of [30,60]){
   const world=createHouse(),cat=world.emy,phases=new Set();
   const mesh=geometry(cat.parts.map(x=>x.box));assert(mesh.vertices.length/16<32000,'detailed Emy stays within the WebGL1 scene budget');

@@ -46,7 +46,7 @@ export function finaleStage(shot,enemy,reduced=false,emy=null){
  const target={x:(enemy.x+louis.x)*.5,y:1.32,z:(enemy.z+louis.z)*.5};
  // Let the framing acknowledge Emy's approach and leap without losing
  // the captive or rotating away from the real porch encounter.
- const witness=emy&&!emy.hidden ? .28*ease((t-1.02)/.35)*(1-ease((t-2.10)/.52)) : 0;
+ const witness=emy&&!emy.hidden ? .40*ease((t-1.02)/.35)*(1-ease((t-2.32)/.42)) : 0;
  if(witness>0){target.x=mix(target.x,emy.x,witness);target.y=mix(target.y,emy.y+.43,witness);target.z=mix(target.z,emy.z,witness);}
  const toward=Math.atan2(target.x-x,target.z-z),tilt=Math.atan2(target.y-y,Math.max(.1,Math.hypot(target.x-x,target.z-z)));
  const reveal=reduced?Number(t>=b.turnEnd):ease((t-b.turnStart)/(b.turnEnd-b.turnStart));
@@ -62,11 +62,12 @@ export function finaleStage(shot,enemy,reduced=false,emy=null){
 export function finaleThreat(actor,elapsed,reduced=false){
  const morph=ease((elapsed-.90)/.76),recoil=ease((elapsed-2.08)/.15)*(1-ease((elapsed-2.30)/.82)),release=ease((elapsed-2.15)/.55);
  const reach=ease((elapsed-.38)/.63)*(1-release);
+ const pawReaction=ease((elapsed-2.08)/.10)*(1-ease((elapsed-2.28)/.29));
  const face=morph*(1-ease((elapsed-2.52)/.92));
  const relax=ease((elapsed-2.70)/.65);
  // Keep the capture mesh during the recoil/morph transition but drive a
  // dedicated skeletal impact rather than the previous perpetual grab.
- return {...actor,captureReach:reach,captureLift:.12*reach+(reduced?0:.025*Math.sin(elapsed*11)*reach),finaleImpact:recoil,finalePose:ease(elapsed/.35)*(1-relax),
+ return {...actor,captureReach:reach,captureLift:.12*reach+(reduced?0:.025*Math.sin(elapsed*11)*reach),finaleImpact:Math.max(recoil,pawReaction*.85),finalePose:ease(elapsed/.35)*(1-relax),
   captureFace:{left:.44*face,right:.32*face,upper:.19*face,jaw:.34*face,bite:0,
    twitch:reduced?0:Math.sin(elapsed*17)*face*.35,glance:0,gaze:{x:0,y:1.73,z:.50},clamp:0,
    pressure:.18*face,strain:.28*face,blink:0,rupture:0},
