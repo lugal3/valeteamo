@@ -80,24 +80,28 @@ export function paintLuisChibi(
   if(tattoo)b(x+4,ay+3,1,2,'#46465d');
   if(raised&&x===32&&i===2)b(x+2,ay+2,2,1,p.skinLight);
  }
- // Front view traced against the photographed card on a 48×64 grid.
- // Irregular fringe and visible skin islands retain the printed silhouette.
+ // The front artwork is sampled from the aligned printed pixel art, then
+ // cleaned to a limited palette. Do not reconstruct its face with rectangles.
  if(facing==='down'){
-  const trace=["................................................","................................................","...............jjjjhh...........................","............jjjjjHHHHHjhhHHHHH..................","..........jjjjHHjjjjHHjHHHHHHHHHHhhh............",".......hhjjHHjjjjjjjHHHHHHHHHHjjjHHHHHh.........",".....hhhjHHHjjjhjjjjjHHHHHHHHjjjHjHHHHHHhh......","....hhjjjjjHHjjjjjjHHHHHjHHjjjjHHHHHHHjHHjjj....","...hhjHjjjjjHjjjjjjjjjjHjjHHHHHHjHHHHHjHHjjjj...","..hhjHHjjjjjHHjjjHjjhjjjjjHjHHjjjjjjHHHHHHHjjj..",".hhjHjjjjhjjjjHHjjjjhjjjjjjjjjjjjjjHjHHHHHHjhj..",".hhjHjhhjjjjjjjjjjjjjjjjHjjjjjhjHjjjjjHHHHHjjh..",".hHHjjhhjjjjjjjjjjjjjHjjjjjjhjjjjHjjjHHHHHHHjh..",".hHjjhhjHHjjjHjhhjjjjHjjHjHjjhjjjjjjjHHjjHHHjh..",".hjjjhjjHHHjjjjhhHjjhjjjHHHHjhhjjjjjjjjjjHHHHj..",".HjjhhhjjHHjjjjhjHjjjjjjHHjHjhhjjjjjjjjHHHHHHj..",".HjjhhjjjHHjjjjhhHjjjjjjHjHHjhhjjjjjjjHHHHHjHh..",".HHHHHHHHsHHHHHHHHHHHHHHHHssHHHHHHHHHHHHHHHHHs..","HHHHHHHHSSHHHHHHHHHHHHHHHSSsHHHHHHHHHHHHHHHHHH..","HHHHHHHHSSSHssHHHHHHSsHHHSSSHHHHHHHHHHHHHHHHH...","HHHHHHHHsSSsHsHHHHHHSSHHHSSsHHHSSHHHHHHHHHHHH...","HHHHHGGGGsSGGGGHHHHHsHHGGsSGGGsSSHHHHHHHHHHHH...","HHHHHGGGssGGsGGHHHHHHHGGGGGGGGGGGGHHHHHHHHHHH...","HHHHGGGGEEESsGGGHHsHHHGGsGsEEEsGGGHHHHHHHHHHH...","HHHHGGswwEEssGGGGGGGGGGGsswwEESsGGHHHHHHHHHH....",".HHHGGSSSEEEsGGsSSSSHsGGsssEEESsGGssHHHHHHHH....",".HHHGGSSSeeeGGGsSSSSssGGGsseeeSsGGSSsHHHHHHsS...","..HHGGGSSSsGGGSSSSSSSsGGGssGSSsGGSSssHHHHHssS...","..HHGGGGGGGGGSSSSSSSSssGGGGsSsGGSSSsHHHHHsSS....","...sssGGGGGsSSSSSSSSSSSGGGGGGGGSSSSsHHHHsSS.....","...SSSSSSHHSSSSSSSSSSSSSSGGGGGSSSSHHHHHsS.......","....ddssSSSSSSSSSSSSSSssSSSSSSSSSssdd...........",".....ddssSSSSSSSSSSSSSSSSSSSSSSssdd.............","......ddssSSSSSSSmmmmmmmmSSSSSSSssdd............",".......ddssSSSSSSSnnnnnnSSSSSSSssdd.............",".........ddssssssssssssssssssssdd...............","...........ddssssssssssssssssdd.................",".............dddddddddddddddd...................",".................dddddddddd....................."] as const;
-  const colors:Record<string,string>={H:p.hair,h:'#2e2e30',j:'#29292b',G:'#29272c',E:'#54453d',e:'#82624c',S:p.skinLight,s:p.skin,d:p.skinShade,w:'#fff2db',m:'#a46f57',n:'#bd876b'};
-  for(let row=0;row<trace.length;row++)for(let x=0;x<trace[row].length;x++){
-   const color=colors[trace[row][x]];
-   if(color)b(x,row+bob,1,1,color);
+  c.clearRect(0,0,48,64);
+  const bitmap=["0000000000011123211111133000000000","0000000000111111111111111113000000","0000000111111111111111111111130000","0000011122211111111111111111112000","0000121111111111111111111111111200","0001121112112222111111122111111200","0012221111111211111222111111111120","0132211111112112111221111111111120","0232111112211212111222211111111111","1321111112211212111122221111111112","1322111212211112111123211111111113","1311111112212111112223211111111113","2321331112211111114322211111111110","1221552331221131136432331211111110","1211464321221231134333541221111110","1111111111111111212233321211111110","1117777777122127377756422211111110","1177423417756427443266434421111145","1176642427688577244256746641211245","1176643317688677344357768511112545","1177777778888867222345686411126540","0224333388888886337776885221255400","0688833888888888833388888654444000","0068888888888869888888866653000000","0006888888699998888888866530000000","0000068888888888888886654300000000","0000000668888888886655430000000000","0000000004456666555543000000000000","0000000000004444333330000000000000","00000000000ABCCCCCCC00000000000000","0000000000AACCCCCCCCC0000000000000","0000000000BACCCCCCCACC000000000000","000000000ABACCCCCCCAADD00000000000","00000000DBACCCCCCCCCBD665000000000","000000066BACCCCCCCCCDD666000000000","000000066BACCCCCCCCCAB666500000000","000000055BACCCCCCCCCABD56500000000","00000000DBACCCCCCCAAABAB4000000000","000000000ABBBBBBBBBBBBA00000000000","0000000000EEFEFEFFFFE0000000000000","0000000000FEEEFFFFFEE0000000000000","0000000000FEEFFFFFFFE0000000000000","0000000000EFFFFFFFFFE0000000000000","0000000000FFFFFFFFFFF0000000000000","000000000FFFFFFFEFEFF0000000000000","000000000GGEEEEEGGGEFE000000000000","00000000FFFEEFEEEEEEFF000000000000","00000000GGGGGGGGGGGGGG000000000000"] as const;
+  const palette=["","#282526","#343033","#3f393a","#c89775","#eab68c","#f8d2a5","#554b43","#ffe5bd","#a36e52","#7fa74e","#5e533d","#8db755","#709345","#403b39","#353232","#57504a"] as const;
+  // Keep the reference's original proportions and the shared foot baseline.
+  for(let row=0;row<bitmap.length;row++)for(let x=0;x<bitmap[row].length;x++){
+   const color=palette[parseInt(bitmap[row][x],16)];
+   if(!color)continue;
+   const leg=walking&&row>=39?(x<16?liftL:liftR):0;
+   b(x+7,row+13+(row<39?bob:-leg),1,1,color);
   }
-  // Keep the existing glass palette visible at the rim, not the hair.
-  b(7,28+bob,4,1,p.glass);b(25,29+bob,5,1,p.glass);
-  if(blink){
-   b(7,24+bob,5,3,p.skin);b(8,25+bob,4,1,'#57423b');
-   b(26,24+bob,5,3,p.skin);b(26,25+bob,5,1,'#57423b');
-  }
-  if(talking&&i>0){
-   b(17,33+bob,8,i===2?3:2,'#995e53');
-   b(19,34+bob,4,1,'#e0a48d');
+  // Small pose edits to the bitmap, not a new facial silhouette.
+  if(blink){b(11,31+bob,5,1,'#554b43');b(26,32+bob,5,1,'#554b43');}
+  if(talking&&i>0){b(19,37+bob,4,i===2?2:1,'#a36e52');}
+  if(pose==='idle'&&i===1)b(21,45,2,1,'#7fa74e');
+  if(waving&&i!==0){
+   b(29,46,3,4,'#709345');
+   b(32,40,3,7,'#554b43');b(33,40,2,6,'#eab68c');
+   b(32,38-(i===2?1:0),4,4,'#c89775');
+   b(33,38-(i===2?1:0),2,3,'#ffe5bd');
   }
   return canvas;
  }
