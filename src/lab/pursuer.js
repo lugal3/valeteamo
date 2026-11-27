@@ -45,7 +45,8 @@ export class Pursuer{
   if(this.mode!=='noise-investigate'||this.noiseSource!=='emy'||!cat||cat.hidden||Math.abs(cat.y-this.y)>.5)return false;
   const gap=dist(this,cat);
   if(gap>3.5||lineBlocked(this.world.boxes,{x:this.x,y:this.y+1.25,z:this.z},{x:cat.x,y:cat.y+.35,z:cat.z}))return false;
-  const ratio=gap>.95?1-.80/gap:0;
+  if(gap<=.95){this.path=[];this.noiseGoal={x:this.x,y:this.y,z:this.z};this.goal={...this.noiseGoal};this.replan=.3;this.yaw=Math.atan2(cat.x-this.x,cat.z-this.z);return true;}
+  const ratio=1-.80/gap;
   const goal={x:this.x+(cat.x-this.x)*ratio,y:cat.y,z:this.z+(cat.z-this.z)*ratio};
   if(!this.noiseGoal||dist(goal,this.noiseGoal)>.38){this.noiseGoal=goal;this.replan=0;this.path=[];}
   this.yaw=Math.atan2(cat.x-this.x,cat.z-this.z);return true;

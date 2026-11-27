@@ -209,6 +209,25 @@ const assert=require('node:assert/strict');
  }
  assert(finished&&rings>=13,'Emy must distract for roughly 25 s and return to follow');
  assert.equal(closeCat.stage,'following');
+ const {distractionEscapePoint}=await import('../src/lab/emy-companion.js');
+ const chaseWorld=createHouse(),chaseCat=createEmyCompanion(chaseWorld.emy,{waiting:false});
+ Object.assign(chaseCat.cat,{x:5.9,y:0,z:8.1,yaw:0});
+ const foeCat=new Pursuer(chaseWorld);foeCat.start();Object.assign(foeCat,{x:5.9,y:0,z:9.2,mode:'noise-investigate',noiseSource:'emy',noiseRemaining:8});
+ const lure={goal:{x:5.9,y:0,z:8.1},remaining:25,arrived:true,nextNoise:0,orbitSide:1};
+ assert(distractionEscapePoint(chaseWorld,chaseCat.cat,lure,foeCat,{x:2,y:HEIGHT,z:2}),'Real collision-safe escape near enemy');
+ chaseCat.stage='distract';chaseCat.distraction=lure;
+ let travelled=0;
+ for(let i=0;i<180;i++){
+  const previous={x:chaseCat.cat.x,z:chaseCat.cat.z};
+  updateEmyCompanion(chaseCat,1/60,{world:chaseWorld,player:{x:2,y:HEIGHT,z:2,hidden:true},threat:foeCat});
+  foeCat.trackEmyDistraction(chaseCat.cat);
+  foeCat.update(1/60,{x:2,y:HEIGHT,z:2,hidden:true});
+  travelled+=Math.hypot(chaseCat.cat.x-previous.x,chaseCat.cat.z-previous.z);
+  assert(!blocked(chaseWorld.boxes,chaseCat.cat.x,chaseCat.cat.y,chaseCat.cat.z,.14,.62),'Avoid wall during evasive motion');
+ }
+ assert(travelled>.6,'Emy visibly evades rather than staying fixed');
+ foeCat.endEmyDistraction();assert.notEqual(foeCat.mode,'noise-investigate');
+ console.log('PASS Emy local pursuit: actual evasive movement, collision checks, and independent cooldown');
  // A thrown object near Emy triggers an actual collision-safe animated sidestep,
  // rather than instantly moving or replacing the cat model.
  const dodgeWorld=createHouse(),dodgeCat=createEmyCompanion(dodgeWorld.emy,{waiting:false});

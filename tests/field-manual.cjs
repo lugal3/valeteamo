@@ -33,6 +33,15 @@ const assert=require('node:assert/strict');
  assert.deepEqual(wake.advance(.99,false),[],'Phone notification precedes the wake-up cutaway');
  assert.deepEqual(wake.advance(.011,false),['wake']);
  assert.deepEqual(wake.advance(.5,false),[],'Wake cue fires only once');
+ const {createEmyCompanion,updateEmyCompanion}=await import('../src/lab/emy-companion.js');
+ const bed=world.objects.find(o=>o.id==='underbed'),cat=createEmyCompanion(world.emy,{waiting:false});
+ Object.assign(cat.cat,{x:bed.returnX,y:HEIGHT,z:bed.returnZ+.05,yaw:Math.PI});
+ const hiding={x:bed.returnX,y:HEIGHT,z:bed.returnZ,hidden:{objectId:'underbed',returnX:bed.returnX,returnZ:bed.returnZ}};
+ for(let i=0;i<180&&cat.stage!=='hiding';i++)updateEmyCompanion(cat,1/60,{world,player:hiding,scriptedHide:true,reduced:true});
+ assert.equal(cat.stage,'hiding','Nearby Emy shares the initial bed hiding scene');
+ assert(cat.sharedBed&&cat.cat.parts.some(p=>!p.box.hiddenGeometry),'Cat remains visually present under bed');
+ hiding.hidden=null;for(let i=0;i<180&&cat.stage!=='following';i++)updateEmyCompanion(cat,1/60,{world,player:hiding,reduced:true});
+ assert.equal(cat.stage,'following','Emy exits independently');
  assert.equal(TUTORIALS.length,10);
  assert.equal(new Set(TUTORIALS.map(t=>t.id)).size,10);
  for(const t of TUTORIALS){for(const touch of [false,true]){const html=tutorialCardHTML(t.id,touch);assert(html.includes('data-field-close')&&html.includes('JUEGO PAUSADO')&&html.includes('viewBox='));}}

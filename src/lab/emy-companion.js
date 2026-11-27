@@ -234,6 +234,7 @@ export function sendEmyDistract(companion,world,goal){
 }
 export function snapshotEmyCompanion(companion){
  const {cat,stage}=companion;
+ if(companion.sharedBed)return {stage:stage==='hiding'?'hiding':'following',...companion.sharedBed.from,yaw:cat.yaw};
  if(stage==='closet-entry')return {stage:'following',x:companion.closetEntry.x,y:cat.y,z:companion.closetEntry.z,yaw:cat.yaw};
  if(stage==='fetch'&&['leap-in','crawl','leap-out'].includes(companion.fetch.phase))return {stage:'following',...companion.fetch.vent.takeoff,yaw:0};
  return {stage:['entrance','fetch','distract','distract-recover','hold'].includes(stage)?'following':stage==='trunk-enter'?'trunk':stage,
@@ -242,7 +243,7 @@ export function snapshotEmyCompanion(companion){
 export function restoreEmyCompanion(companion,saved,storyPhase='explore'){
  const valid=['waiting','following','stay','hiding','trunk-run','trunk'];
  const stage=valid.includes(saved?.stage)?saved.stage:storyPhase==='explore'?'waiting':['sleep','patrol','hide','resting','arrival'].includes(storyPhase)?'following':'trunk';
- companion.stage=stage;clearNavigation(companion);companion.refuge=null;companion.distraction=null;companion.idleAge=0;companion.wardrobeAttempt=0;companion.closetEntry=null;companion.cat.dodge=null;companion.altarWait=false;
+ companion.stage=stage;clearNavigation(companion);companion.refuge=null;companion.distraction=null;companion.idleAge=0;companion.wardrobeAttempt=0;companion.closetEntry=null;companion.sharedBed=null;companion.cat.dodge=null;companion.altarWait=false;
  if(['following','stay','hiding','trunk-run'].includes(stage)&&[saved?.x,saved?.y,saved?.z,saved?.yaw].every(Number.isFinite))
   Object.assign(companion.cat,{x:saved.x,y:saved.y,z:saved.z,yaw:saved.yaw});
  else if(stage==='trunk')Object.assign(companion.cat,TRUNK_APPROACH,{yaw:-Math.PI/2});
@@ -388,6 +389,23 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  if((world.hatch?.open||player?.y<-.02)&&!['waiting','trunk','trunk-run','trunk-enter'].includes(companion.stage))sendEmyToTrunk(companion);
  if(companion.stage==='waiting'||companion.stage==='trunk')return null;
  companion.age+=dt;cat.age+=dt;
+ if(['bed-entry','bed-exit'].includes(companion.stage)){
+  const entry=companion.sharedBed;
+  if(!entry){companion.stage='following';return null;}
+  const entering=companion.stage==='bed-entry'&&!!(enteringHide||player?.hidden);
+  entry.t=Math.max(0,Math.min(1,entry.t+dt/.68*(entering?1:-1)));
+  const t=smooth(entry.t);
+  cat.x=entry.from.x+(entry.to.x-entry.from.x)*t;cat.z=entry.from.z+(entry.to.z-entry.from.z)*t;cat.y=entry.from.y;
+  cat.yaw=Math.atan2(entry.to.x-entry.from.x,entry.to.z-entry.from.z);cat.alarm=0;
+  poseEmy(cat,{mode:'crouch',walking:entry.t>0&&entry.t<1,phase:cat.age,reduced,leap:{compression:1,flight:0,airborne:false},blend:1});
+  if(entry.t===1&&entering){
+   companion.stage='hiding';companion.hiddenAt='underbed';cat.hidden=true;
+   for(const {box} of cat.parts)box.hiddenGeometry=false;
+   return 'hid';
+  }
+  if(entry.t===0&&!entering){companion.sharedBed=null;companion.stage='following';companion.hiddenAt=null;clearNavigation(companion);setVisibility(companion,false);}
+  return null;
+ }
  if(companion.stage==='closet-entry'){
   const step=companion.closetEntry;
   const t=smooth((step.time+=dt)/.76);
@@ -458,7 +476,9 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
   let walking=false;
   if(nearEnemy){
    job.orbitSide??=1;
-   if(!job.escape||distance(cat,job.escape)<.18||distance(job.escape,threat)<.68||!clearPassage(world,cat,job.escape))job.escape=distractionEscapePoint(world,cat,job,threat,player);
+   if((!job.escape||distance(cat,job.escape)<.18||distance(job.escape,threat)<.68)&&companion.age>=(job.nextEscapeAt||0)){
+    job.escape=distractionEscapePoint(world,cat,job,threat,player);job.nextEscapeAt=companion.age+.24;
+   }
    if(job.escape)walking=moveToward(companion,world,job.escape,dt,2.7);
    if(!walking)job.escape=null;
   }else job.escape=null;
@@ -508,6 +528,7 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  let following=companion.stage==='following';
  if(following&&hide)cat.reaction=0;
  if(companion.stage==='hiding'&&!hide){
+  if(companion.sharedBed){companion.stage='bed-exit';setVisibility(companion,false);return null;}
   companion.stage='following';companion.hiddenAt=null;following=true;clearNavigation(companion);
   // She reappears at the safe floor position where she followed Kitty in.
   setVisibility(companion,false);
@@ -521,7 +542,10 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  }
  if(companion.stage==='trunk-run'&&!companion.route.length&&companion.age>=(companion.nextPlanAt||0)&&(distance(cat,TRUNK_APPROACH)>.42||Math.abs(cat.y)>.25))
   planRoute(companion,world,TRUNK_APPROACH);
- if(companion.stage==='hiding')return null;
+ if(companion.stage==='hiding'){
+  if(companion.sharedBed){cat.alarm=0;poseEmy(cat,{mode:'crouch',phase:cat.age,reduced,leap:{compression:1,flight:0,airborne:false},blend:1});}
+  return null;
+ }
  const hideDoor=hide&&player?{x:hide.returnX??player.x,y:player.y,z:hide.returnZ??player.z}:null;
  const heading=following?(hideDoor||player):TRUNK_APPROACH;
  if(!heading)return null;
@@ -620,10 +644,17 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  if(companion.stage==='following'&&hide&&companion.direct&&distance(cat,heading)<.38&&Math.abs(cat.y-heading.y)<.45){
   if(hide.objectId==='wardrobe'&&(enteringHide||player?.hidden?.objectId==='wardrobe')){
    const closet=world.objects.find(o=>o.id===hide.objectId);
-   companion.closetEntry={x:cat.x,z:cat.z,time:0,inside:closet.hideCamera};
+   companion.closetEntry={x:cat.x,z:cat.z,time:0,inside:closet.hideCamera,shared:scriptedHide};
    companion.stage='closet-entry';return null;
   }
-  if(scriptedHide&&hide.objectId==='underbed'&&companion.wardrobeAttempt<.65){poseEmy(cat,{mode:'crouch',reduced});return null;}
+  if(scriptedHide&&hide.objectId==='underbed'){
+   const bed=world.objects.find(o=>o.id==='underbed');
+   const from={x:cat.x,y:cat.y,z:cat.z};
+   const to=[0,.16,-.16,.25,-.25].map(dx=>({x:bed.hideCamera.x+dx,y:cat.y,z:bed.hideCamera.z+.35}))
+    .find(p=>Array.from({length:19},(_,i)=>i/18).every(t=>!blocked(world.boxes,from.x+(p.x-from.x)*t,from.y,from.z+(p.z-from.z)*t,.14,.40)));
+   if(to){companion.sharedBed={from,to,t:0};companion.stage='bed-entry';return null;}
+   beginIndependentCover(companion,world,player,threat);return null;
+  }
   companion.stage='hiding';companion.hiddenAt=hide.objectId;setVisibility(companion,true);return 'hid';
  }
  if(companion.altarWait&&following&&!walking){cat.yaw+=deltaAngle(cat.yaw,Math.atan2(12.27-cat.x,.44-cat.z))*(1-Math.exp(-4*dt));}
