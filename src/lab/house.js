@@ -1847,7 +1847,7 @@ function runAction(act,node){
    if(emyCompanion){
     const enteringHide=poseTransition?.entering?{objectId:poseTransition.object.id,returnX:poseTransition.outside.x,returnZ:poseTransition.outside.z}:null;
     updateEmySenses(emyCompanion,s,world,pursuer,objectives.active,shotDelta,flashlightBeam());
-    const cue=updateEmyCompanion(emyCompanion,emyShot&&reducedMotion.matches?shotDelta*3:shotDelta,{world,player:s,enteringHide,reduced:reducedMotion.matches,finale:world.greyCat.active,threat:pursuer,distractCooldown:emyAbilities.distractCooldown,scriptedHide:events.phase==='hide'&&events.remaining>1.1});
+    const cue=updateEmyCompanion(emyCompanion,shotDelta,{world,player:s,enteringHide,reduced:reducedMotion.matches,finale:world.greyCat.active,threat:pursuer,distractCooldown:emyAbilities.distractCooldown,scriptedHide:events.phase==='hide'&&events.remaining>1.1});
     if(emyCompanion.stage==='closet-entry'&&emyCompanion.closetEntry.shared&&s.hidden?.objectId==='wardrobe'&&!poseTransition){
      poseFurniture(world.objects.find(o=>o.id==='wardrobe'),Math.sin(Math.PI*Math.min(1,emyCompanion.closetEntry.time/.76)));renderer.updateVisibility();
     }
