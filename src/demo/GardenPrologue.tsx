@@ -296,6 +296,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   setPostcard({title:memory.title,image:'',error:false});
   const finish=(image:string,error=false)=>{
    if(postcardRequest.current!==request)return;
+   postcardRequest.current++;
    window.clearTimeout(postcardTimer.current);
    setPostcard({title:memory.title,image,error});
   };

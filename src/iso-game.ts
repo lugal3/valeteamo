@@ -633,6 +633,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    const xy=toScreen(constrainRescue({u:start.u+4.5*distance,v:start.v-.65*distance},this.storyMap));
    cat.setPosition(xy.x,xy.y).setDepth(xy.y).setAlpha(Math.min(1,(1-distance)*5))
     .setTexture(greyCatTexture(distance>0?'love-walk':'love',frame));
+   if(this.storyPetUntil>this.clock&&distance<.8)cat.setAngle(this.reducedMotion?0:Math.sin(this.clock/190)*2);else cat.setAngle(0);
    this.storyChuru?.setPosition(this.player.x+15,this.player.y-26).setAngle(this.reducedMotion?0:Math.sin(elapsed/110)*19).setDepth(this.player.y+2).setVisible(elapsed<1700);
   }else{
    // Only approach on the same bank: Emy never crosses the water/bridge.

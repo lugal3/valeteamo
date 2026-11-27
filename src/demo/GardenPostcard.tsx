@@ -28,7 +28,7 @@ export function GardenPostcard({title,image,error,onClose}:{title:string;image:s
  },[]);
  useEffect(()=>{
   // No game shortcuts reach the underlying Phaser scene while reading.
-  const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();onClose();}else if(e.key!=='Tab'){e.stopImmediatePropagation();}};
+  const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();onClose();}else if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','e'].includes(e.key.toLowerCase())||e.key.startsWith('Arrow')){e.stopImmediatePropagation();}};
   window.addEventListener('keydown',key,true);return()=>window.removeEventListener('keydown',key,true);
  },[onClose]);
  return <dialog ref={box} className="garden-postcard" aria-labelledby="garden-postcard-title" onCancel={e=>{e.preventDefault();onClose();}}>
