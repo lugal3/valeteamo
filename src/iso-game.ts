@@ -20,8 +20,8 @@ import {installProloguePeople,luisTextureKey,luisAnimationFrame,
  type LuisFacing,type LuisPose} from './demo/prologue-art';
 import {LUIS_BEATS,makeLuisMotion,luisEntryPoint,luisPointOnPath,
  luisMotionIsBlocking,type LuisMotion} from './demo/luis-choreography';
-import {CHURU_TEXTURE,greyCatTexture,installRescueIntroArt,valeTexture} from './demo/rescue-intro-art';
-import type {PrologueStage} from './demo/prologue-story.js';
+import {CHURU_TEXTURE,greyCatTexture,installRescueIntroArt,valeTexture,valeTalkTexture} from './demo/rescue-intro-art';
+import type {PrologueStage,PrologueCharacter} from './demo/prologue-story.js';
 import {buildRescueOverworld,constrainRescue,darknessAt,STORY_POSITIONS,storyArrivalPoint,nearbyRescueLandmark,
  mapForStage,exitReady,RESCUE_SCENES,stepRescueFollower,
  type RescueMapId,type RescueOverworld,type RouteArea} from './demo/rescue-overworld';
@@ -45,6 +45,7 @@ export type IsoStoryBridge={
  near:(label:string)=>void;
  discoveries?:()=>readonly string[];
  discover?:(id:string)=>void;
+ speaker?:()=>PrologueCharacter|undefined;
  ready:()=>void;
  interact:(stage:IsoStoryStage)=>void;
  victory:()=>void;
@@ -513,8 +514,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    }
   }else{
    facing=dy< -46&&Math.abs(dx)<27?'up':Math.abs(dx)>32?'right':'down';
-   // During the RPG dialogue Luis keeps speaking (even while player input locks).
-   if(this.story.locked())pose='talk';
+   // Only the actual speaker animates speech; listeners keep their idle pose.
+   if(this.story.speaker?.()==='Luis')pose='talk';
   }
   const clock=motion?motion.elapsed:this.clock;
   const frame=luisAnimationFrame(clock,pose,this.reducedMotion);
@@ -528,11 +529,12 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   // stays beside Luis while her own step cycle and posture follow his pace.
   const walking=pose==='walk',offset=this.reducedMotion?0:walking?Math.sin(clock/160)*1.8:Math.sin(clock/1050)*.8;
   const valeFrame=luisAnimationFrame(clock+85,walking?'walk':'idle',this.reducedMotion);
-  const valeKey=valeTexture(walking,valeFrame);
+  const valeSpeaking=!motion&&this.story.speaker?.()==='Vale';
+  const valeKey=valeSpeaking?valeTalkTexture(this.reducedMotion?0:Math.floor(clock/170)%3):valeTexture(walking,valeFrame);
   if(vale.texture.key!==valeKey&&this.textures.exists(valeKey))vale.setTexture(valeKey);
   vale.setPosition(npc.x-30+offset,npc.y+2).setDepth(npc.y+2).setAlpha(alpha)
    .setFlipX(facing==='right'&&dx<0)
-   .setAngle(this.reducedMotion?0:walking?Math.sin(clock/160)*1.6:0);
+   .setAngle(this.reducedMotion?0:walking?Math.sin(clock/160)*1.6:valeSpeaking?Math.sin(clock/230)*1.2:0);
   this.storyValeShadow?.setPosition(vale.x,vale.y+2).setDepth(vale.y-1).setAlpha(alpha);
   npc.setAlpha(alpha);this.storyLuisShadow?.setAlpha(alpha);
   hands.clear().setDepth(npc.y+3);
@@ -859,10 +861,12 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    const face=storyActorFacing(kitty.x-npc.x,kitty.y-npc.y,this.storyLouisFacing);
    this.storyLouisFacing=face;
    const idle=storyActorIdle(this.clock,this.reducedMotion);
-   const texture=`chibi-louis-${face==='left'?'right':face}-${idle.frame}`;
+   const talking=this.story.speaker?.()==='Louis'&&!this.reducedMotion;
+   const frame=talking?6+Math.floor(this.clock/160)%2:idle.frame;
+   const texture=`chibi-louis-${face==='left'?'right':face}-${frame}`;
    if(this.textures.exists(texture)&&npc.texture.key!==texture)npc.setTexture(texture);
    npc.setFlipX(face==='left');
-   npc.setAngle(idle.lean);
+   npc.setAngle(idle.lean+(talking?Math.sin(this.clock/230)*.9:0));
    npc.setScale(1.3*(1+idle.breath),1.3*(1-idle.breath));
   }
   const remaining:typeof this.storyBubbles=[];

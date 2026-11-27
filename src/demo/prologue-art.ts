@@ -238,7 +238,7 @@ export function paintStoryLouis(facing:LuisFacing='down',frame=0):HTMLCanvasElem
   b(17,h+10,6,1,hair);b(17,h+12,6,4,'#fff0e3');
   b(20,h+12,3,4,frame===5?ink:blue);b(21,h+12,1,1,'#fff7e6');
   if(frame===5)b(17,h+13,6,2,ink);
-  b(22,h+18,4,1,'#9b5960');b(13,h+18,3,1,shadow);
+  b(22,h+18,4,frame===7?3:1,'#9b5960');b(13,h+18,3,1,shadow);
  }else{
   // Narrow friendly blue eyes, asymmetric eyebrows and crooked smile.
   b(8,h+10,6,1,hair);b(18,h+9,6,1,hair);
@@ -249,6 +249,7 @@ export function paintStoryLouis(facing:LuisFacing='down',frame=0):HTMLCanvasElem
   }
   b(15,h+15,2,2,shadow);b(8,h+17,3,1,'#e5a48f');b(22,h+17,3,1,'#e5a48f');
   b(12,h+18,8,1,'#9b5960');b(14,h+18,5,1,'#fff2df');b(15,h+19,4,1,'#b66d65');
+  if(frame===7){b(14,h+18,5,3,'#824b58');b(15,h+20,3,1,'#d88f95');}
  }
  // The sweeping fringe descends on the viewer's left, not a bowl cut.
  b(8,h+1,16,4,shade);b(6,h+3,20,5,hair);b(5,h+6,22,4,hair);
@@ -284,7 +285,7 @@ export function installProloguePeople(scene:Phaser.Scene){
  }
  // This installer is invoked exclusively under if(this.story) in IsoAdventure.
  // Replace only this scene's Louis NPC frames; preserve the classic asset files.
- for(const facing of LUIS_FACINGS)for(let frame=0;frame<6;frame++){
+ for(const facing of LUIS_FACINGS)for(let frame=0;frame<8;frame++){
   const key=`chibi-louis-${facing}-${frame}`;
   if(scene.textures.exists(key))scene.textures.remove(key);
   scene.textures.addCanvas(key,paintStoryLouis(facing,frame));

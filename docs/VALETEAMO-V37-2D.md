@@ -29,3 +29,6 @@ El 2D es un prólogo breve y encantador que prepara un giro sorpresa al 3D, jueg
 - Descubrimientos opcionales persistentes en el guardado del prólogo (IDs validados, deduplicados, compatibles con versión 2 y guardados antiguos), sin alterar objetivos o claves.
 - Louis sigue migas de la trayectoria real con colisiones y velocidad acotada, mira a Kitty al parar, parpadea y reacciona al paseo sin diálogo obligatorio.
 - Pulsera, pétalos pisados y huellas de ruedas dibujados como objetos físicos; destello discreto por proximidad o tras 12 s. El objetivo y las etapas se conservan. Pruebas geométricas y de migración agregadas; pendientes CI y revisión visual.
+
+## Actuaciones sincronizadas
+El interlocutor activo de la burbuja controla la pose real de los personajes. Luis deja de mover la boca mientras habla Vale; Vale tiene 3 cuadros de habla y Louis 2 cuadros adicionales por dirección. Los retratos siguen siendo los sprites reales y el diálogo no cambia de longitud. Pruebas de alternancia en navegador añadidas.

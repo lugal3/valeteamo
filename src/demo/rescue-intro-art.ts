@@ -3,6 +3,7 @@ import type Phaser from 'phaser';
 export const CHURU_TEXTURE='rescue-churu';
 export const greyCatTexture=(pose:'idle'|'eat'|'walk'|'love'|'love-walk',frame:number)=>`rescue-grey-cat-${pose}-${frame%4}`;
 export const valeTexture=(walking:boolean,frame:number)=>`rescue-vale-${walking?'walk':'idle'}-${frame%4}`;
+export const valeTalkTexture=(frame:number)=>`rescue-vale-talk-${frame%3}`;
 
 export function installRescueIntroArt(scene:Phaser.Scene){
  type Block=(x:number,y:number,w:number,h:number,color:string)=>void;
@@ -61,8 +62,9 @@ export function installRescueIntroArt(scene:Phaser.Scene){
 
  // Vale matches the reference card: long black hair, red top and dark trousers.
  // Keep the same texture keys, four-frame timing and foot anchor for the couple.
- for(const walking of [false,true])for(let frame=0;frame<4;frame++){
-  sprite(valeTexture(walking,frame),43,58,b=>{
+ for(const pose of ['idle','walk','talk'] as const)for(let frame=0;frame<(pose==='talk'?3:4);frame++){
+  const walking=pose==='walk',talking=pose==='talk';
+  sprite(talking?valeTalkTexture(frame):valeTexture(walking,frame),43,58,b=>{
    const ink='#25252d',hair='#202126',shine='#37383d',skin='#e9b48f',light='#fbd4af',top='#b93d51';
    const bob=frame===1||frame===3?1:0,step=walking?[2,0,-2,0][frame]:0;
    // Long hair behind the shoulders, with rounded ends.
@@ -85,11 +87,12 @@ export function installRescueIntroArt(scene:Phaser.Scene){
    b(8,24+bob,28,5,ink);b(12,29+bob,20,3,ink);
    b(9,13+bob,25,15,skin);b(11,16+bob,22,12,light);
    b(13,27+bob,18,3,light);b(17,30+bob,10,1,skin);
-   const blink=frame===2&&!walking;
+   const blink=frame===2&&!walking&&!talking;
    b(14,19+bob,5,blink?1:6,ink);b(25,19+bob,5,blink?1:6,ink);
    if(!blink){b(15,19+bob,2,2,'#fff8ef');b(26,19+bob,2,2,'#fff8ef');}
    b(12,25+bob,4,2,'#efa0a0');b(29,25+bob,3,2,'#efa0a0');
    b(19,26+bob,6,1,'#925c62');b(20,27+bob,4,1,'#925c62');
+   if(talking&&frame>0){b(19,26+bob,6,frame===1?2:3,'#824b58');b(21,27+bob,2,1,'#e7a4a1');}
    // Black fringe, no bow or hair accessory in the supplied reference.
    b(10,4+bob,25,10,hair);b(6,8+bob,32,10,hair);
    b(5,12+bob,5,11,hair);b(35,12+bob,4,12,hair);

@@ -78,12 +78,12 @@ for(const facing of art.LUIS_FACINGS)
   for(let frame=0;frame<art.LUIS_FRAME_COUNTS[pose];frame++)
    assert(textures.has(art.luisTextureKey(facing,pose,frame)),
     'each pre-rendered sprite is loaded into the original Phaser texture manager');
-assert.equal(textures.size,65,'45 Luis frames, 18 Louis NPC frames and 2 portraits');
+assert.equal(textures.size,71,'45 Luis frames, 24 Louis NPC frames and 2 portraits');
 for(const facing of art.LUIS_FACINGS){
  const frames=Array.from({length:6},(_,i)=>art.paintStoryLouis(facing,i));
  assert(frames.every(frame=>frame.width===32&&frame.height===40));
  assert(new Set(frames.map(signature)).size>=4,'Louis directional movement needs distinct frames');
- for(let frame=0;frame<6;frame++)assert.equal(signature(textures.get('chibi-louis-'+facing+'-'+frame)),signature(frames[frame]));
+ for(let frame=0;frame<8;frame++)assert.equal(signature(textures.get('chibi-louis-'+facing+'-'+frame)),signature(art.paintStoryLouis(facing,frame)));
 }
 assert.notEqual(signature(art.paintStoryLouis('down')),signature(art.paintStoryLouis('right')));
 assert.notEqual(signature(art.paintStoryLouis('down')),signature(art.paintStoryLouis('up')));
@@ -106,9 +106,12 @@ for(const walking of [false,true]){
  const palette=new Set(frames[0].pixels.flat());
  for(const color of ['#202126','#b93d51','#ddd6d0'])assert(palette.has(color),'Vale card hair, red shirt, shoe soles');
 }
+assert.notEqual(signature(art.paintStoryLouis('down',6)),signature(art.paintStoryLouis('down',7)),'Louis has separate mouth poses');
+const talkFrames=Array.from({length:3},(_,i)=>vals.get(introContext.exports.valeTalkTexture(i)));
+assert(new Set(talkFrames.map(signature)).size===3,'Vale has three speaking frames');
 const arcade=fs.readFileSync('src/iso-game.ts','utf8');
 assert(arcade.includes('this.animateStoryLuis();')&&
- arcade.includes("if(this.story.locked())pose='talk'")&&
+ arcade.includes("if(this.story.speaker?.()==='Luis')pose='talk'")&&
  arcade.includes("npc.setFlipX(facing==='right'&&dx<0)")&&
  arcade.includes('const frame=luisAnimationFrame(clock,pose,this.reducedMotion);'),
  'runtime changes Luis expressions, direction and frames inside original Corazones engine');
@@ -119,4 +122,4 @@ assert(src.includes('return person===\'luis\'?paintLuisChibi')&&
  arcade.includes("'chibi-louis-down-0'"),
  'Luis and Louis stay distinct and the story uses the established NPC keys');
 assert(arcade.includes("if(this.story){\n   if(!CHARACTERS.louis.chibiSpriteSheet)installReferenceCharacter(this,'louis');\n   installProloguePeople(this);"),'new Louis frames only install for story');
-console.log('PASS: 45 Luis frames, 18 Louis frames, 8 Vale frames, actual portrait parity and classic protected.');
+console.log('PASS: 45 Luis frames, 24 Louis frames, 11 Vale frames, actual portrait parity and classic protected.');

@@ -129,16 +129,13 @@ async function play(){
     }
     await btn.click();
     if(stage==='meet-couple'){
-     await page.waitForFunction(()=>{
-      const key=window.__valePrologue?.scene()?.storyLuis?.texture?.key??'';
-      return /story-person-luis-(down|up|right)-talk-\d$/.test(key);
-     },null,{timeout:6000});
-     await page.screenshot({path:'artifacts/story-luis-chibi-talking.png'});
-    }
-    if(stage==='meet-couple'){
      await convo.waitFor({state:'visible'});
      await page.waitForFunction(()=>Number(document.querySelector('.prologue-dialog-backdrop')?.dataset.revealed)>0);
      assert.equal(await convo.getAttribute('data-speaker'),'Vale');
+     await page.waitForFunction(()=>{
+      const s=window.__valePrologue.scene();
+      return /rescue-vale-talk-/.test(s.storyVale?.texture?.key)&&/story-person-luis-.*-idle-/.test(s.storyLuis?.texture?.key);
+     },null,{timeout:6000});
      assert.equal(await convo.locator('.prologue-portrait img').count(),1);
      assert.equal(await convo.getAttribute('data-complete'),'false');
      await page.screenshot({path:'artifacts/story-dialogue-writing.png'});
@@ -150,6 +147,11 @@ async function play(){
      await page.touchscreen.tap(10,35);
      await page.waitForFunction(()=>document.querySelector('.prologue-dialog-backdrop')?.dataset.speaker==='Luis');
      assert.equal(await convo.getAttribute('data-line'),'1');
+     await page.waitForFunction(()=>{
+      const s=window.__valePrologue.scene();
+      return /story-person-luis-.*-talk-/.test(s.storyLuis?.texture?.key)&&/rescue-vale-idle-/.test(s.storyVale?.texture?.key);
+     },null,{timeout:6000});
+     await page.screenshot({path:'artifacts/story-luis-chibi-talking.png'});
      await page.screenshot({path:'artifacts/story-dialogue-luis.png'});
     }
     await finishDialogue();

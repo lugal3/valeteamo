@@ -253,6 +253,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   locked:()=>lockedRef.current||enteringRef.current||travelingRef.current,
   near:(value)=>setNear(current=>current===value?current:value),
   discoveries:()=>phaseRef.current.discoveries??[],
+  speaker:()=>{const current=dialogRef.current;return current?.lines[current.index]?.speaker;},
   discover:(id)=>{
    const current=phaseRef.current,next=recordPrologueDiscovery(current,id);
    if(current===next)return;
