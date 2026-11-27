@@ -41,7 +41,7 @@ export function finaleStage(shot,enemy,reduced=false,emy=null){
   crouch:mix(from?.crouch??0,.22,approach)*(1-release)+.09*struggle,
   speed:run>0&&run<1?2.15:Math.min(3,walkIn+walkOut),
   walk:shot.louisStride+distance*approach+release*escapeDistance+run*2.8,
-  age:(shot.louisAge??0)+t,
+  age:(shot.louisAge??0)+t,visualMotion:null,followMoving:false,
   visualReaction:t<b.run?{type:'finale-captive',age:t,duration:b.run}:null};
  const target={x:(enemy.x+louis.x)*.5,y:1.32,z:(enemy.z+louis.z)*.5};
  // Let the framing acknowledge Emy's approach and leap without losing

@@ -5,6 +5,7 @@ import {LOIS_VISUAL_ID} from './lois-ps2-profile.js';
 import {buildLoisPs2Model} from './lois-ps2-model.js';
 import {startLoisReaction,advanceLoisReaction} from './lois-ps2-reactions.js';
 import {KITCHEN_HIDE_APPROACH,KITCHEN_HIDE_SPOT} from './kitchen-hide-layout.js';
+import {advanceLoisMotion} from './lois-motion.js';
 
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 const turnTowards=(current,target,dt,speed=7)=>{
@@ -36,6 +37,12 @@ export function createLouisEscape(world){
 }
 export function updateLouisEscape(louis,dt,kitty=null){
  if(!louis||dt<=0)return null;
+ const before={x:louis.x,y:louis.y,z:louis.z};
+ const cue=advanceLouisEscape(louis,dt,kitty);
+ advanceLoisMotion(louis,dt,before,kitty);
+ return cue;
+}
+function advanceLouisEscape(louis,dt,kitty){
  louis.age+=dt;
  advanceLoisReaction(louis,dt);
  louis.blink=sampleBlink(louis.age+.61,{reduced:false,firstAt:1.43});
@@ -108,10 +115,14 @@ export function updateLouisEscape(louis,dt,kitty=null){
   }
  }
  if(louis.phase==='follow'&&kitty){
-  const behind={x:kitty.x-Math.sin(kitty.yaw)*.90,z:kitty.z-Math.cos(kitty.yaw)*.90};
-  const dx=behind.x-louis.x,dz=behind.z-louis.z,d=Math.hypot(dx,dz);
-  if(d>.55&&Math.abs(kitty.y-louis.y)<.7){
-   const step=Math.min(d-.47,dt*3),body={x:louis.x,y:louis.y,z:louis.z};
+  // Follow Kitty's physical position, never an orbiting camera-relative point.
+  const dx=kitty.x-louis.x,dz=kitty.z-louis.z,d=Math.hypot(dx,dz);
+  const sameFloor=Math.abs(kitty.y-louis.y)<.7;
+  louis.followMoving=sameFloor&&(louis.followMoving?d>1.05:d>1.42);
+  if(louis.followMoving){
+   const desired=Math.min(2.9,Math.max(.65,(d-1.0)*2.1));
+   const speed=Math.min(desired,(louis.visualMotion?.speed??0)+dt*6.5);
+   const step=Math.min(d-1.02,dt*Math.max(.18,speed)),body={x:louis.x,y:louis.y,z:louis.z};
    const moved=navigate(body,louis.world,dx/d*step,dz/d*step,1.60);
    louis.x=body.x;louis.y=body.y;louis.z=body.z;louis.walk+=moved;louis.speed=moved/Math.max(dt,.0001);
    louis.yaw=turnTowards(louis.yaw,Math.atan2(dx,dz),dt,7);
@@ -121,7 +132,7 @@ export function updateLouisEscape(louis,dt,kitty=null){
 }
 export function freeLouis(louis){
  if(louis?.phase!=='hidden')return false;
- louis.phase='follow';louis.concealed=false;louis.speed=0;louis.age=0;
+ louis.phase='follow';louis.concealed=false;louis.speed=0;louis.age=0;louis.followMoving=false;louis.visualMotion=null;
  louis.exitRouteActive=true;louis.exitWaypoint=0;
  startLoisReaction(louis,'relief');
  return true;
