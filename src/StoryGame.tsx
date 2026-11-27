@@ -38,7 +38,10 @@ export function StoryGame({level,character,onComplete,onExit,muted,audio,audioNo
    if(session.mode!=='gamepad'){s.controllerInput=EMPTY_PAD;return;}
    s.controllerInput=pad;
    if(pad.pressed[9]&&!s.story?.locked()){s.controllerInput=EMPTY_PAD;s.setPaused(!s.paused);return;}
-   if(pad.pressed[0])s.storyInteract();
+   if(pad.pressed[0]){
+    const focused=document.activeElement as HTMLElement|null;
+    if(focused&&root.contains(focused)&&focused.matches('button:focus-visible')&&!focused.matches(':disabled'))focused.click();else s.storyInteract();
+   }
    if(pad.pressed[3])root.querySelector<HTMLElement>('.prologue-moment button:not(:disabled),.epilogue-picnic-tools button:not(:disabled)')?.click();
    if(pad.pressed[12]||pad.pressed[13]||pad.pressed[14]||pad.pressed[15])padMenu(root,pad);
   };raf=requestAnimationFrame(frame);return()=>{cancelAnimationFrame(raf);session.destroy();};

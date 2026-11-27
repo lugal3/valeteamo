@@ -566,3 +566,5 @@
 #lab3d .lab-buttons .house-hide-peek{position:absolute;right:0;bottom:calc(100% + 8px);display:flex;flex-direction:row;justify-content:center;gap:6px;min-width:max-content;min-height:44px;padding:8px 11px;font:600 11px system-ui;border-radius:12px;touch-action:none}
 #lab3d .lab-buttons .house-hide-peek[hidden]{display:none!important}
 #lab3d .lab-buttons .house-hide-peek svg{width:22px;height:22px}
+
+#lab3d.house-gamepad .lab-joystick{visibility:hidden;pointer-events:none}#lab3d.house-gamepad #lab-interact kbd{display:inline-block}#lab3d.house-gamepad .house-hotbar small{display:none}#lab3d.house-gamepad #lab-focus:not(:empty){position:absolute;left:50%;bottom:8px;transform:translateX(-50%);max-width:65vw;font:10px system-ui;color:#fff;background:#141019b8;padding:4px 8px;border-radius:6px;pointer-events:none;visibility:visible}#lab3d.house-gamepad :focus-visible{outline:2px solid #ffc9e5;outline-offset:3px}

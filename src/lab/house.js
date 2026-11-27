@@ -1,3 +1,4 @@
+import {createInputSession,EMPTY_PAD,padMenu} from '../adaptive-input.js';
 import {trialCheckpoint,trialStartPose,trialEmyStage} from './trial-checkpoint.js';
 import {removeVentCover,advanceVentCover,poseVentCover} from './study-vent.js';
 import {HouseEvents} from './story-events.js';
@@ -216,7 +217,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const tutorialEnabled=demo&&config.fieldTutorials===true;
  const pendingTutorials=[];
  function queueTutorial(id){if(tutorialEnabled&&!manual.seen.includes(id)&&manual.active!==id&&!pendingTutorials.includes(id))pendingTutorials.push(id);}
- const manual=createFieldManual(root,{touch:()=>!desktop.matches,onSeen:()=>{if(phone.app==='manual')phone.last='';if(lastSafeCheckpoint){lastSafeCheckpoint={...lastSafeCheckpoint,tutorials:manual.seen};persistCheckpoint(lastSafeCheckpoint);}},onClose:()=>{resetInput();last=performance.now();if(!isSuspended())sound.resume();}});
+ const manual=createFieldManual(root,{touch:()=>padSession.mode==='touch',onSeen:()=>{if(phone.app==='manual')phone.last='';if(lastSafeCheckpoint){lastSafeCheckpoint={...lastSafeCheckpoint,tutorials:manual.seen};persistCheckpoint(lastSafeCheckpoint);}},onClose:()=>{resetInput();last=performance.now();if(!isSuspended())sound.resume();}});
  function tutorial(id,replay=false){if((!tutorialEnabled&&!replay)||(replay&&events.phase==='hide'))return false;if(!manual.show(id,replay))return false;releaseMouse();resetInput();sound.pause();return true;}
  const countdown=document.createElement('div');countdown.className='field-countdown';countdown.hidden=true;countdown.innerHTML='<small>⚠ ESCÓNDETE</small><strong>10 s</strong><i></i>';root.append(countdown);
  const saveNotice=document.createElement('div');saveNotice.className='house-save-notice';saveNotice.hidden=true;saveNotice.setAttribute('role','status');saveNotice.innerHTML='<svg viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="7" cy="11" rx="3.7" ry="4.6" transform="rotate(-22 7 11)"/><ellipse cx="14" cy="6" rx="3.6" ry="4.7"/><ellipse cx="22" cy="8" rx="3.6" ry="4.7" transform="rotate(16 22 8)"/><ellipse cx="27" cy="15" rx="3.3" ry="4.2" transform="rotate(26 27 15)"/><path d="M6 24Q6 19 12 15Q17 11 22 16Q28 20 26 25Q24 30 17 27Q11 30 7 27Z"/></svg><span>Progreso guardado</span>';root.append(saveNotice);
@@ -275,6 +276,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const flashlightBeam=()=>!heldNoise&&s.flashlight&&batterySwap===null&&equipment==='flashlight'&&!s.hidden&&!s.lying&&!animator.performing&&!phone.open&&events.phase!=='arrival';
  const torchMarker=$('torch-outline');
  const desktop=window.matchMedia('(any-hover: hover) and (any-pointer: fine)');
+ let padState=EMPTY_PAD;
+ const padSession=createInputSession(root,mode=>{resetInput();if(mode!=='keyboard')releaseMouse();syncPointerMode();});
  const remoteInUse=()=>['driving','deploying'].includes(rc?.mode);
  const canLook=()=>!isPaused()&&!finalCutscene?.gardenView&&(!finalCutscene||finalCutscene.playable)&&(!phone.open||phone.canWalk)&&events.phase!=='arrival'&&!remoteInUse();
  const canHop=()=>canLook()&&!phone.open&&!finalCutscene&&!loisShotDirector&&!s.hidden&&!s.lying&&!s.crouched&&!animator.performing&&$('house-emotes').hidden&&
@@ -1402,7 +1405,7 @@ function runAction(act,node){
   if(interactButton.dataset.icon!==actionIcon){interactButton.dataset.icon=actionIcon;interactButton.querySelector('.house-action-icon').innerHTML=feedbackIcon(actionIcon);}
   root.classList.toggle('house-immersive',options.immersive!==false&&!scenario);
   root.classList.toggle('house-action-ready',canInteract);
-  const focusLabel='';
+  const focusLabel=padSession.mode==='gamepad'&&!isPaused()&&!remoteInUse()?'L · Mover  R · Mirar  ✕ · Interactuar  ○ · Agachar  △ · Usar  L1/R1 · Equipo':'';
   if($('lab-focus').textContent!==focusLabel)$('lab-focus').textContent=focusLabel;
   const remote=rc?.mode==='driving';
   const deploying=rc?.mode==='deploying';
@@ -1414,7 +1417,7 @@ function runAction(act,node){
    const status=(rc.noise>0?'📣 Señuelo · '+Math.ceil(rc.noise)+' s · ':'')+'Señal '+Math.round(strength*100)+'% · '+Math.round(Math.abs(rc.velocity)*10)/10+' m/s';
    $('house-rc-status').dataset.bars=String(bars);
    if($('house-rc-status').textContent!==status)$('house-rc-status').textContent=status;
-   const help=rcControlHint(!desktop.matches,rc.noise,canTrapPursuer(pursuer,world.hatch,rcTrap.armed));
+   const help=padSession.mode==='gamepad'?'L · Conducir  ✕ · Bocina  △ · Escotilla  ○ · Guardar':rcControlHint(padSession.mode==='touch',rc.noise,canTrapPursuer(pursuer,world.hatch,rcTrap.armed));
    if($('house-rc-hint').textContent!==help)$('house-rc-hint').textContent=help;
    $('rc-trap-button').hidden=!canTrapPursuer(pursuer,world.hatch,rcTrap.armed);
    interactButton.hidden=true;
@@ -1470,6 +1473,33 @@ function runAction(act,node){
    default:return target.label||'Examinar';
   }
  }
+ function pollHousePad(){
+  const pad=padSession.poll();padState=EMPTY_PAD;
+  if(padSession.mode!=='gamepad'||!hasFocus||document.hidden||isPortrait()||handoffFinishing||contextLost)return;
+  if(manual.active){if(pad.pressed[0]||pad.pressed[1])manual.close();return;}
+  if(loisDialogue.active){if(pad.pressed[0])runAction('lois:next');if(pad.pressed[1])runAction('lois:close');return;}
+  if(modal||intro||emyMenuOpen||phone.open||phone.editing||$('lab-camera-settings').open){
+   const scope=modal||intro?dialog:emyMenuOpen?($('house-emy-map').hidden?$('house-emy-menu'):$('house-emy-map')):phone.open||phone.editing?phone.host:$('lab-camera-settings');
+   if(pad.pressed[1]){if(emyMenuOpen)closeEmyMenu();else if(phone.open&&!phone.editing){phone.close();resetInput();}else if(modal&&!intro&&events.phase!=='safe'&&events.phase!=='failed'){paused=false;modalClose();}return;}
+   if(scope)padMenu(scope,pad);return;
+  }
+  if(cinematic){if(pad.pressed[9])runAction('pause');return;}
+  if(isPaused()||finalCutscene&&!finalCutscene.playable)return;
+  if(pad.pressed[9]){togglePause();return;}
+  if(rc?.mode==='driving'){padState=pad;if(pad.pressed[0])runAction('rc:noise');if(pad.pressed[3])runAction('rc:trap');if(pad.pressed[1])runAction('rc:stop');return;}
+  padState=pad;
+  if(pad.pressed[0])runAction('interact');
+  if(pad.pressed[1])runAction('crouch');
+  if(pad.pressed[2])runAction('hop');
+  if(pad.pressed[3])runAction('flash');
+  if(pad.pressed[7])runAction('noise:throw');
+  if(pad.pressed[8])runAction('bag');
+  if(pad.pressed[4]||pad.pressed[5]){
+   const slots=Array.from(phone.visibleSlots()).filter(b=>!b.disabled);
+   const i=slots.findIndex(b=>b.dataset.equip===equipment);
+   if(slots.length&&!remoteInUse())equip(slots[(i+(pad.pressed[4]?-1:1)+slots.length)%slots.length].dataset.equip,true);
+  }
+ }
  function tick(dt){
   if(isPaused()||finalCutscene&&!finalCutscene.playable)return;
   updateFurniture(world.objects,dt,s);
@@ -1490,8 +1520,8 @@ function runAction(act,node){
   if(rc){
    updateRC(rc,dt);
    if(rc.mode==='driving'){
-    const steer=Number(keys.has('d')||keys.has('ArrowRight'))-Number(keys.has('a')||keys.has('ArrowLeft'))+joystick.x;
-    const throttle=Number(keys.has('w')||keys.has('ArrowUp'))-Number(keys.has('s')||keys.has('ArrowDown'))-joystick.z;
+    const steer=Number(keys.has('d')||keys.has('ArrowRight'))-Number(keys.has('a')||keys.has('ArrowLeft'))+joystick.x+padState.moveX;
+    const throttle=Number(keys.has('w')||keys.has('ArrowUp'))-Number(keys.has('s')||keys.has('ArrowDown'))-joystick.z-padState.moveY;
     driveRC(rc,world,{steer,throttle},dt);return;
    }
    if(rc.mode==='deploying')return;
@@ -1507,8 +1537,8 @@ function runAction(act,node){
   handAction=Math.max(0,handAction-dt*3.5);
   clickAction=Math.max(0,clickAction-dt*6.0);
   const turn=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0);
-  lookTarget.yaw+=turn*dt*1.65;
-  lookTarget.pitch=clamp(lookTarget.pitch+((keys.has('ArrowUp')?1:0)-(keys.has('ArrowDown')?1:0))*dt*1.12,-1.10,1.10);
+  lookTarget.yaw+=(turn+padState.aimX)*dt*1.65;
+  lookTarget.pitch=clamp(lookTarget.pitch+((keys.has('ArrowUp')?1:0)-(keys.has('ArrowDown')?1:0)-padState.aimY)*dt*1.12,-1.10,1.10);
   if(s.hidden){const limits=hideLookBounds(s.hidden,peekHeld||s.hidePeek>.1);lookTarget.yaw=clamp(lookTarget.yaw,s.hidden.yaw-limits.yaw,s.hidden.yaw+limits.yaw);lookTarget.pitch=clamp(lookTarget.pitch,-limits.pitch,limits.pitch);}
   const follow=followLook(s,lookTarget,dt,20);s.yaw=follow.yaw;s.pitch=follow.pitch;
   const targetDriftX=clamp(-(lookTarget.yaw-s.yaw)*.04,-.03,.03);
@@ -1518,8 +1548,8 @@ function runAction(act,node){
   const ay=(targetDriftY-handDrift.y)*springK-handDrift.vy*dampingC;
   handDrift.vx+=ax*dt;handDrift.x=clamp(handDrift.x+handDrift.vx*dt,-.04,.04);
   handDrift.vy+=ay*dt;handDrift.y=clamp(handDrift.y+handDrift.vy*dt,-.03,.03);
-  let forward=Number(keys.has('w'))-Number(keys.has('s'))-joystick.z;
-  let side=Number(keys.has('d'))-Number(keys.has('a'))+joystick.x;
+  let forward=Number(keys.has('w'))-Number(keys.has('s'))-joystick.z-padState.moveY;
+  let side=Number(keys.has('d'))-Number(keys.has('a'))+joystick.x+padState.moveX;
   if(s.hidden||s.lying||phone.open&&!phone.canWalk||events.phase==='arrival'||events.phase==='safe'||events.phase==='failed'){forward=side=0;}
   const length=Math.hypot(forward,side);if(length>1){forward/=length;side/=length;}
   if(stickPointer===null)drawStick(side,-forward);
@@ -1528,7 +1558,7 @@ function runAction(act,node){
   const movementLocked=!!(finalCutscene?.gardenView||s.hidden||s.lying||phone.open&&!phone.canWalk||events.phase==='arrival'||events.phase==='safe'||events.phase==='failed');
   const intent=movementLocked?{forward:0,side:0}:advanceMoveIntent(velocity,forward,side,dt);
   velocity.forward=intent.forward;velocity.side=intent.side;
-  const wantsSprint=joystick.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight');
+  const wantsSprint=padState.buttons[10]||joystick.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight');
   if(!wantsSprint)s.exhausted=false;
   const steepSteps=isOnStairs(s,getStairDirection,inHatch);
   const sprint=!phone.open&&wantsSprint&&length>.08&&!steepSteps&&!s.crouched&&!s.exhausted&&s.stamina>0;
@@ -1812,6 +1842,7 @@ function runAction(act,node){
   if(now-lastPaint<limit-2)return;
   const shotDelta=Math.min(.1,Math.max(0,(now-last)/1000||0)),dt=Math.min(.055,shotDelta);last=now;lastPaint=now;
   if(!s||!renderer)return;
+  pollHousePad();
   if(recoveryFadeLeft>0&&!isSuspended())recoveryFadeLeft=Math.max(0,recoveryFadeLeft-shotDelta);
   if(recoveryFadeLeft>0&&!reducedMotion.matches){recoveryVeil.hidden=false;recoveryVeil.style.opacity=String((recoveryFadeLeft/.58)**1.5);}else recoveryVeil.hidden=true;
   if(saveNoticeLeft>0&&!isSuspended()&&!cinematic&&!finalCutscene)saveNoticeLeft=Math.max(0,saveNoticeLeft-shotDelta);
@@ -2394,8 +2425,11 @@ function runAction(act,node){
  function endLook(e){if(e.pointerId!==lookPointer)return;const pointer=lookPointer;lookPointer=null;lookPointerType=null;releaseCapture($('lab-look'),pointer);}
  const stick=$('lab-joystick'),look=$('lab-look');
  function syncPointerMode(){
-  root.classList.toggle('house-desktop',desktop.matches);
-  $('house-lock-mouse').hidden=!desktop.matches||!canvas.requestPointerLock;
+  root.classList.toggle('house-desktop',padSession.mode==='keyboard');
+  root.classList.toggle('house-keyboard',padSession.mode==='keyboard');
+  root.classList.toggle('house-gamepad',padSession.mode==='gamepad');
+  $('lab-interact').querySelector('kbd').textContent=padSession.mode==='gamepad'?'✕':'E';
+  $('house-lock-mouse').hidden=padSession.mode!=='keyboard'||!canvas.requestPointerLock;
   const locked=mouseLocked();
   root.classList.toggle('house-mouse-locked',locked);
   $('house-mouse-status').hidden=!locked;
@@ -2703,7 +2737,7 @@ function runAction(act,node){
   if(idleWarm!==null&&typeof window.cancelIdleCallback==='function')window.cancelIdleCallback(idleWarm);
   // A GPU/audio teardown must never strand the LP React route. Each resource
   // is independent; detach the root even if a browser rejects one disposal.
-  for(const dispose of [()=>haptics.stop(),closeInspection,clearMiniatureInput,releaseMouse,()=>cancelAnimationFrame(raf),()=>controller.abort(),()=>television.destroy(),()=>phone.destroy(),()=>sound.destroy(),()=>renderer?.destroy()]){
+  for(const dispose of [()=>haptics.stop(),closeInspection,clearMiniatureInput,releaseMouse,()=>cancelAnimationFrame(raf),()=>padSession.destroy(),()=>controller.abort(),()=>television.destroy(),()=>phone.destroy(),()=>sound.destroy(),()=>renderer?.destroy()]){
    try{dispose();}catch(error){console.warn('House cleanup:',error);}
   }
   if(window.__rescueHouse)delete window.__rescueHouse;root.remove();

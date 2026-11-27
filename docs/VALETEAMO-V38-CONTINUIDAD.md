@@ -72,3 +72,6 @@ Base publicada: d28fc0eaa26ddc348f60b4e9704aaf275f8fb4c0. Rama independiente fea
 
 ## Ampliación — lectura 2D y entrada común
 - Sesión por uso real de teclado/ratón, táctil o mando estándar, deadzone radial y pulsaciones por flanco. Primer adaptador narrativo 2D: movimiento/tiro/interacción/pausa, diálogos y navegación básica, diagnóstico de mando en manual de campo. No se cambia Corazones original. Zoom 1.42 frente a 1.12, menos letreros y rótulos duplicados, conserva pistas. Pendientes adaptación 3D, remapeo no estándar, minijuegos, comprobación física y CI.
+
+## Adaptador inicial 3D
+- Ejes del mando estándar integrados en la locomoción, cámara y auto RC reales; botones para interacción, agachar, salto, uso de equipo, lanzar, inventario, ranuras, sprint y pausa. Cruceta/confirmación en modales básicos, manual y conversaciones de Louis. UI de modo y hints RC adaptables. No se altera el mapa ni los puzzles. Faltan minijuegos y menús especializados, calibración no estándar, glifos por familia, pruebas de navegador y mando físico. No publicar.

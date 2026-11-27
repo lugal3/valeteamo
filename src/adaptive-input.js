@@ -27,7 +27,7 @@ export function createInputSession(root,onMode=()=>{}){
  function poll(){
   if(document.hidden||!document.hasFocus()){reset();return EMPTY_PAD;}
   const available=pads(),current=available.find(p=>p.index===index&&p.mapping==='standard');
-  const chosen=current??available.find(p=>p.mapping==='standard'&&active(samplePad(p)));
+  const chosen=current??available.find(p=>p.mapping==='standard'&&active(samplePad(p)))??available.find(p=>p.mapping==='standard');
   if(!chosen){if(index!==null){index=null;previous=[];blocked=false;if(mode==='gamepad')switchMode(initialInputMode());}else if(!available.some(p=>p.mapping==='standard'))blocked=false;return EMPTY_PAD;}
   if(index!==chosen.index){index=chosen.index;previous=[];}
   const sample=samplePad(chosen,previous);previous=sample.buttons;
