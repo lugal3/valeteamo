@@ -10,7 +10,7 @@ const turn=(a,b,w)=>a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*w;
 const heading=(a,b)=>Math.atan2(b.x-a.x,b.z-a.z);
 const interpolate=(a,b,t)=>({x:mix(a.x,b.x,t),y:mix(a.y,b.y,t),z:mix(a.z,b.z,t)});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
-const clearPath=(world,a,b,r,h)=>[0,.25,.5,.75,1].every(t=>{
+const clearPath=(world,a,b,r,h)=>Array.from({length:Math.max(2,Math.ceil(distance(a,b)/.075)+1)},(_,i)=>i/Math.max(1,Math.ceil(distance(a,b)/.075))).every(t=>{
  const p=interpolate(a,b,t);
  return !blocked(world.boxes,p.x,p.y,p.z,r,h)&&Math.abs(groundHeight(p.x,p.z,p.y,world.hatch?.amount>.92)-p.y)<.17;
 });
@@ -32,10 +32,10 @@ export function planEmyRescueShot(world,kitty,attacker,from,actualCat=null){
   const safe=point(kitty,-dx*shape.back,-dz*shape.back);
   // A nearby following Emy starts at her real location if the short run is clear.
   const realStart=actualCat&&!actualCat.hidden&&Math.abs(actualCat.y-kitty.y)<.15&&distance(actualCat,takeoff)<1.7&&distance(actualCat,kitty)>.37&&clearPath(world,actualCat,takeoff,.14,.48);
-  if(realStart)start={x:actualCat.x,y:actualCat.y,z:actualCat.z};
+  if(realStart&&[0,.25,.5,.75,1].every(t=>distance(interpolate(actualCat,takeoff,t),kitty)>.34))start={x:actualCat.x,y:actualCat.y,z:actualCat.z};
   if(!clearPath(world,foe,recoil,.17,1.72)||!clearPath(world,start,takeoff,.14,.48)||!clearPath(world,land,land,.14,.48)||!clearPath(world,kitty,safe,.19,1.65))continue;
   // Validate the exact authored flight, including the curved rebound segment.
-  const staged={kitty:{...kitty,yaw:angle},foe,recoil,start,takeoff,hit,land,safe,side,angle,arc:shape.arc,kind:shape.kind,compact:false,realStart};
+  const staged={kitty:{...kitty,yaw:angle},foe,recoil,start,takeoff,hit,land,safe,side,angle,arc:shape.arc,kind:shape.kind,compact:false,realStart:!!realStart&&start.x===actualCat.x&&start.z===actualCat.z};
   if(!Array.from({length:33},(_,i)=>i/32).every(u=>{
    const t=mix(EMY_RESCUE_BEATS.launch,EMY_RESCUE_BEATS.land,u),p=sampleEmergencyRescue(t,staged).cat;
    return !blocked(world.boxes,p.x,p.y,p.z,.15,.40);
