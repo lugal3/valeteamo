@@ -320,6 +320,32 @@ function paintGroundTexture(g:Phaser.GameObjects.Graphics,u:number,v:number,
   g.fillEllipse(p.x-2,p.y+6,12,4);
  }
 }
+// Static terrain accents: clustered silhouettes and restrained palette.
+// No additional colliders, game objects, textures or per-frame allocation.
+function premiumGroundAccent(g:Phaser.GameObjects.Graphics,u:number,v:number,p:{x:number;y:number},map:RescueMapId,onPath:boolean){
+ const n=hashCell(u,v,67),t=hashCell(u,v,68);
+ if(onPath){
+  if(n>.42){
+   g.fillStyle(map==='dusk_search'?0x666475:0xae977c,.24);
+   g.fillRect(p.x-12+t*14,p.y-2,3,1);g.fillRect(p.x+8,p.y+4,2,1);
+   g.fillStyle(map==='dusk_search'?0xd2c5ba:0xfff0cb,.34);
+   g.fillRect(p.x-11+t*14,p.y-3,3,1);
+  }
+  return;
+ }
+ if(map==='night_neighborhood')return;
+ const palette=map==='morning_garden'?[0x769b70,0xa8bd82,0xf2c9a9,0xf6d4da]:map==='afternoon_meeting'?[0x7e946c,0xa8af78,0xe5b391,0xeab2c6]:[0x506e67,0x94a18a,0xbb9e86,0xbd9eae];
+ if(n>.36)for(let i=0;i<3;i++){
+  const x=p.x-13+Math.floor(hashCell(u,v,71+i)*26),y=p.y-4+Math.floor(hashCell(u,v,80+i)*10);
+  const h=3+Math.floor(hashCell(u,v,91+i)*5);
+  g.fillStyle(palette[0],.50).fillRect(x,y-h,1,h).fillRect(x-2,y-h+2,2,1).fillRect(x+1,y-h+1,2,1);
+  g.fillStyle(palette[1],.55).fillRect(x+1,y-h+1,1,h-1);
+  if(n>.73&&i===1){
+   g.fillStyle(palette[3],.85).fillRect(x-2,y-h-2,5,3).fillRect(x-1,y-h-3,3,5);
+   g.fillStyle(palette[2],.90).fillRect(x,y-h-1,1,1);
+  }
+ }
+}
 // Scenery deliberately sits on the shoulders, rather than blocking Kitty.
 // All objects belong to the map's disposable scene collection.
 function picketFence(scene:Phaser.Scene,u:number,v:number,planks=6){
@@ -335,21 +361,28 @@ function picketFence(scene:Phaser.Scene,u:number,v:number,planks=6){
 }
 function cherryTree(scene:Phaser.Scene,u:number,v:number,dusk=false){
  const p=toScreen({u,v}),g=scene.add.graphics().setDepth(p.y);
- g.fillStyle(0x594e62,.22).fillEllipse(p.x,p.y,70,17);
- g.fillStyle(0x745c5d).fillRect(p.x-6,p.y-50,13,50);
- g.fillStyle(0x9b7374).fillRect(p.x-3,p.y-47,4,44);
- g.fillStyle(0x805c6e).fillRect(p.x-25,p.y-56,24,6);
- g.fillStyle(0x805c6e).fillRect(p.x+3,p.y-68,24,6);
- const palette=dusk?[0x9d759a,0xab829e,0xcda4b7,0xebbecd]:
-  [0xdca1b9,0xe9b5c5,0xf0c6d4,0xffe0df];
- for(let k=0;k<17;k++){
-  const angle=k*2.4,r=20+((k*7)%19);
-  const x=p.x+Math.cos(angle)*r,y=p.y-77+Math.sin(angle)*r*.47;
-  g.fillStyle(palette[k%palette.length],.95).fillEllipse(x,y,29+(k%3)*4,17+(k%4)*3);
+ const x=p.x,y=p.y;
+ g.fillStyle(0x473d52,.12).fillEllipse(x+13,y+3,99,21);
+ g.fillStyle(0x473d52,.19).fillEllipse(x+5,y,68,15);
+ g.fillStyle(0x473d52,.28).fillEllipse(x,y,34,9);
+ poly(g,0x634b52,[[x-9,y],[x-6,y-51],[x-12,y-65],[x-6,y-69],[x+3,y-53],[x+9,y-70],[x+14,y-68],[x+6,y-48],[x+8,y],[x+17,y+3],[x-17,y+3]]);
+ poly(g,0xa37971,[[x-5,y-3],[x-2,y-48],[x+2,y-44],[x+3,y-5]]);
+ g.fillStyle(0x805a60).fillRect(x-5,y-23,2,12).fillRect(x+4,y-38,2,9);
+ const palette=dusk?[0x665d79,0x826780,0x9e7893,0xbb8ea5,0xd5acb6]:[0xa56a86,0xc58aa3,0xe2a9bb,0xf0c1cc,0xffe2d7];
+ // Layer the canopy from shadow up to lit crowns; no uniform ellipse grid.
+ g.fillStyle(palette[0],.98).fillEllipse(x,y-67,94,46);
+ for(let k=0;k<18;k++){
+  const angle=k*2.4,r=19+((k*7)%22);
+  const cx=Math.round(x+Math.cos(angle)*r),cy=Math.round(y-78+Math.sin(angle)*r*.52);
+  const w=23+(k%4)*5,h=13+(k%3)*5;
+  g.fillStyle(palette[cy>y-76?1:2]).fillEllipse(cx,cy,w,h);
+  g.fillStyle(palette[cy>y-76?2:3],.91).fillEllipse(cx-3,cy-4,w*.73,h*.66);
+  if(k%3!==1)g.fillStyle(palette[4],.83).fillRect(cx-7,cy-7,6,2).fillRect(cx-6,cy-8,3,4);
  }
- for(let k=0;k<15;k++){
-  const x=p.x+((k*37)%80)-40,y=p.y-94+((k*19)%42);
-  g.fillStyle(k%2?0xffe5e2:0xe9a5bc,.83).fillRect(x,y,4,3);
+ for(let k=0;k<13;k++){
+  const cx=x+((k*37)%77)-38,cy=y-92+((k*19)%35);
+  if(Math.pow((cx-x)/45,2)+Math.pow((cy-(y-79))/24,2)>1)continue;
+  g.fillStyle(palette[4],.76).fillRect(cx,cy,3,2).fillRect(cx+1,cy-1,1,4);
  }
 }
 function gardenFeature(scene:Phaser.Scene,u:number,v:number,kind:'planter'|'rock'|'lantern'|'picnic'){
@@ -439,6 +472,17 @@ function frontalRescueHouse(scene:Phaser.Scene){
   [left+width*.5,top-6]]);
  g.lineStyle(4,0xefc5d5).lineBetween(left-19,top+3,left+width*.5,top-61);
  g.lineBetween(left+width*.5,top-61,right+19,top+3);
+ // Roof tile bands follow the triangular roof, not the bounding rectangle.
+ for(let row=0;row<6;row++){
+  const y=top-53+row*9,half=width*.5*(row+1)/6;
+  for(let col=-half+8;col<half-4;col+=19){
+   const x=left+width*.5+col+(row%2)*5;
+   g.lineStyle(1,0x3c3048,.42).lineBetween(x,y,x+12,y+1);
+   g.lineStyle(1,0xc49cab,.32).lineBetween(x,y+2,x+9,y+2);
+  }
+ }
+ g.fillStyle(0x5a4a60).fillRect(left-12,top+25,width+24,5);
+ g.fillStyle(0x9a778a).fillRect(left-12,top+24,width+24,2);
  // Soft brickwork: low contrast so the actual entrances are the focal point.
  for(let row=0;row<7;row++)for(let col=0;col<8;col++){
   const x=left+12+col*40+(row%2)*15,y=top+34+row*19;
@@ -456,7 +500,9 @@ function frontalRescueHouse(scene:Phaser.Scene){
    g.fillStyle(0xe2e7da).fillRect(cx-1,cy-22,3,46);
    g.fillRect(cx-14,cy-1,29,3);
   }
-  g.fillStyle(0xf1d5df).fillRect(cx-23,cy+28,46,5);
+  g.fillStyle(0xb68e9e).fillRect(cx-23,cy+30,46,3);
+  g.fillStyle(0xf1d5df).fillRect(cx-23,cy+28,46,3);
+  if(!open){g.fillStyle(0x8c8fa6,.5).fillRect(cx-12,cy-20,10,18);g.fillStyle(0xe6d9cb,.26).fillRect(cx+3,cy+3,8,17);}
  };
  // Match the upstairs bedroom / landing / music windows in house-layout.js.
  for(const x of [2.2,6.1,12.1])pane(px(x),top+62,false);
@@ -468,6 +514,8 @@ function frontalRescueHouse(scene:Phaser.Scene){
  g.fillStyle(0x765367).fillRect(doorX-27,base-84,54,81);
  g.fillStyle(0x342c43).fillRect(doorX-21,base-78,42,74);
  g.fillStyle(0xdfb79b).fillRect(doorX+12,base-40,5,5);
+ g.fillStyle(0x594757).fillRect(doorX-19,base-70,38,2).fillRect(doorX-19,base-20,38,2);
+ g.lineStyle(1,0x745b6f,.75).strokeRect(doorX-15,base-64,29,30);
  g.fillStyle(0xc3adbd).fillRect(doorX-31,base-3,64,7);
  for(const lampX of [doorX-43,doorX+43]){
   g.fillStyle(0xfce5bb,.52).fillCircle(lampX,base-76,12);
@@ -719,6 +767,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   }
   diamond(g,u,v,c);
   paintGroundTexture(g,u,v,p,map,isPath);
+  premiumGroundAccent(g,u,v,p,map,isPath||edge);
   if((u*7+v*13)%17===0){
    g.fillStyle(map==='morning_garden'?0xf4c0ce:0xe2bcbd,.52).fillRect(p.x+6,p.y+1,3,3);
   }
@@ -728,6 +777,20 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   // Cobblestone seams on the residential street; walkway is kept visible.
   if(map==='night_neighborhood'&&v>=5.8&&v<=10.7&&variation>.72){
    g.lineStyle(1,0xa5a0a4,.25).lineBetween(p.x-11,p.y+5,p.x+10,p.y+5);
+  }
+ }
+ // Continuous edge accents: broken clusters at the path's shoulders.
+ // Use route limits to avoid bridge water and keep landmarks readable.
+ if(map!=='night_neighborhood')for(let u=low+.4;u<high-.4;u+=.55){
+  if(map==='morning_garden'&&u>9.35&&u<16.6)continue;
+  const center=routeCenter(u),lim=routeLimits(u);
+  for(const side of [-1,1]){
+   const v=center+side*(1.66+Math.sin(u*2.1)*.19);
+   if(v<lim.min+.22||v>lim.max-.22)continue;
+   const p=toScreen({u,v}),seed=hashCell(Math.round(u*10),side,77);
+   const c=map==='dusk_search'?0x71877d:map==='afternoon_meeting'?0xa4a16d:0x90b27c;
+   g.fillStyle(c,.38).fillEllipse(p.x,p.y,10+seed*7,4);
+   if(seed>.45)g.fillStyle(map==='dusk_search'?0xb6a0a9:0xe7a9b9,.65).fillRect(p.x-2,p.y-2,3,2).fillRect(p.x+4,p.y,2,1);
   }
  }
  // Paint the actual secondary paths as continuous ground ribbons, using
@@ -749,6 +812,17 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   poly(g,trailPalette[map][1],[...inner,...innerOther.reverse()],.92);
   const p=sideTrailLandmark(trail),xy=toScreen(p);
   g.fillStyle(trailPalette[map][1],.6).fillEllipse(xy.x,xy.y,92,42);
+ }
+ // Micro-compositions around existing landmarks. Everything is a ground
+ // decal inside the existing ground layer, never a new navigational barrier.
+ for(const landmark of rescueLandmarks(map)){
+  const xy=toScreen(landmark.point),seed=hashCell(Math.round(landmark.point.u*10),4,90);
+  for(let k=0;k<12;k++){
+   const a=k*2.4+seed,r=24+(k%4)*7,x=xy.x+Math.cos(a)*r,y=xy.y+Math.sin(a)*r*.42;
+   const dark=map==='dusk_search'?0x687b72:0x8d9e70;
+   g.fillStyle(dark,.38).fillEllipse(x,y,8+(k%3)*3,4);
+   g.fillStyle(map==='dusk_search'?0xb39b9c:0xe9b1bd,.65).fillRect(x-1,y-3,3,2);
+  }
  }
  // Irregular shoulders: no single rectangular floor exposed to the player.
  for(let u=low+1;u<high;u+=2){
@@ -808,6 +882,11 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   const plaza=scene.add.graphics().setDepth(.8),p=toScreen({u:29.3,v:4.6});
   plaza.fillStyle(0xf7e0bb,.23).fillEllipse(p.x,p.y,230,115);
   plaza.lineStyle(4,0xd7b2a7,.34).strokeEllipse(p.x,p.y,215,102);
+  for(let k=0;k<20;k++){
+   const a=k*Math.PI/10,x=p.x+Math.cos(a)*101,y=p.y+Math.sin(a)*46;
+   plaza.fillStyle(k%2?0xe6b9a3:0xf7ddbd,.68).fillEllipse(x,y,12,5);
+   plaza.fillStyle(0xf8dfd7,.85).fillRect(x-1,y-3,3,2);
+  }
   picketFence(scene,25.1,8.9,5);picketFence(scene,41.3,8.9,5);
  }else if(map==='dusk_search'){
   sign(scene,49,.2,'SILENCIO');
@@ -819,7 +898,8 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   // Solid trees and rocks are drawn from RESCUE_SCENERY.
   for(const [u,v] of [[49,9.9],[53,10],[57,9.9],[60,9.5]])
    reeds(scene,u,v);
-  // Keep the creek banks visually open.
+  // Keep creek banks open, with irregular wet stones on the existing buffer.
+  for(let u=49;u<60;u+=.7){const p=toScreen({u,v:routeLimits(u).max+.68});creek.fillStyle(0x516b69,.55).fillEllipse(p.x,p.y+3,17,5);creek.fillStyle(0xa8b6ac,.35).fillEllipse(p.x-2,p.y+1,9,3);}
  }else{
   sign(scene,68,.3,'VILLA');
   for(const u of [67,72,77,81])lamp(scene,u,1.8);
