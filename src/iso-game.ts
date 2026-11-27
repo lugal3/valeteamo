@@ -11,7 +11,7 @@ import {RESCUE_FEEL,feelMotion,feelGait,feelCameraOffset,
  type FeelSurface} from './demo/rescue-game-feel';
 import {storyBubble,storyboardBeat,kidnappingReaction,
  storyActorFacing,storyActorIdle,kidnappingFrameFocus,
- smoothCinematicFocus,type RescueEmotion} from './demo/rescue-performance';
+ smoothCinematicFocus,attentiveFacing,companionReady,storyLightStep,type RescueEmotion} from './demo/rescue-performance';
 import {ABDUCTION_TIMING,abductionFrame,captorFrame,captorTexture,
  installRescueAbductionTextures,vanTexture,VAN_NIGHT_POSITION,VAN_PLATE,
  type AbductionPhase} from './demo/abduction-van';
@@ -98,7 +98,8 @@ export class IsoAdventure extends Phaser.Scene {
  storyLuisShadow?:Phaser.GameObjects.Ellipse;
  storyLuisMotion?:LuisMotion;storyLuisReady=false;storyLuisArriving=false;
  storyLuisFarewell=false;
- storyWorld?:RescueOverworld;storyDusk=0;storyGuideStep=-1;
+ storyWorld?:RescueOverworld;storyDusk=0;private storyDuskReported=0;storyGuideStep=-1;
+ private companionWaitAt:number|null=null;
  storyArea:RouteArea='sendero';storyMap:RescueMapId='morning_garden';storyExitPending=false;
  storyActionPressed=false;storyNear='';storyWalkTriggered=false;storyVictoryEmitted=false;
  storyOptional?:ReturnType<typeof nearbyRescueLandmark>;storyVisited=new Set<string>();
@@ -180,7 +181,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(this.storyStage!=='intro')this.setStoryStage(this.storyStage,true);
   this.story.map(map);this.story.area(this.storyWorld.area(this.p.u));
   const dusk=darknessAt(this.p.u,this.storyStage,map);
-  this.storyDusk=dusk;this.story.dusk(dusk);
+  this.storyDusk=dusk;this.storyDuskReported=dusk;this.story.dusk(dusk);
  }
  checkStoryExit(){
   if(!this.story||this.storyExitPending)return false;
@@ -204,7 +205,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.endStoryPhoto();
   this.storyStage=stage;this.storyStageAt=this.clock;
   this.storyBeatPlayed=false;this.storyTargetCuePlayed=false;
-  this.storyWalkTriggered=false;this.storyVictoryEmitted=false;
+  this.storyWalkTriggered=false;this.storyVictoryEmitted=false;this.companionWaitAt=null;
   this.storyActionPressed=false;this.storyNear='';this.storyOptional=undefined;this.storyClueHint=undefined;this.storyPractice=undefined;
   this.storyMomentId='';this.storyPetUntil=0;this.storyRestUntil=0;this.storyMomentCooldown=0;this.story?.moment?.(null);
   this.houseRoute=[];this.houseLastHint='';
@@ -340,7 +341,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(['meet-couple','talk-louis'].includes(stage))marker('✧',this.storyTarget);
   if(stage==='door'||stage==='window')marker(stage==='door'?'⚿':'✧',this.storyTarget);
   const dark=darknessAt(this.p.u,stage,this.storyMap);
-  if(Math.abs(dark-this.storyDusk)>.01){this.storyDusk=dark;this.story.dusk(dark);}
+  if(force){this.storyDusk=dark;this.storyDuskReported=dark;this.story.dusk(dark);}
   // Music follows narrative tension and map, not an arbitrary coordinate.
   const eerie=this.storyMap==='dusk_search'||this.storyMap==='night_neighborhood'||
    stage==='disappearance'||dark>.30;
@@ -382,7 +383,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.storyObjects.push(ring,heart);
   if(chapter.next==='complete')this.decorateEpiloguePicnic();
   if(!this.reducedMotion)this.tweens.add({targets:ring,alpha:.60,scaleX:1.08,scaleY:1.08,duration:1050,yoyo:true,repeat:-1});
-  this.storyDusk=chapter.light;this.story?.dusk(chapter.light);this.story?.map(chapter.map);this.story?.guide(chapter.objective);
+  this.storyDusk=chapter.light;this.storyDuskReported=chapter.light;this.story?.dusk(chapter.light);this.story?.map(chapter.map);this.story?.guide(chapter.objective);
   this.story?.area(this.storyWorld?.area(this.p.u)??'sendero');
   this.total=0;this.collected=0;this.audio.setTheme('garden');
   this.audio.setRescueMix({mood:'garden',music:.85,ambience:.65,birds:true});this.sync();
@@ -915,10 +916,6 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const stage=this.storyStage;
   const area=this.storyWorld?.area(this.p.u);
   if(area&&area!==this.storyArea){this.storyArea=area;this.story.area(area);}
-  const dusk=darknessAt(this.p.u,stage,this.storyMap);
-  if(Math.abs(dusk-this.storyDusk)>.018){
-   this.storyDusk=dusk;this.story.dusk(dusk);
-  }
   if(stage==='defend'&&!this.storyWalkTriggered){
    const distance=isoDistance(this.p,this.storyTarget);
    if(distance<5&&!this.storyTargetCuePlayed){
@@ -961,11 +958,11 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    npc.setPosition(xy.x,xy.y).setDepth(xy.y);
    if(state.walking){
     this.storyCompanionClock+=dt;
-    this.storyCompanionFacing=feelFacingToTarget(dx,dy,this.storyCompanionFacing);
+    this.storyCompanionFacing=attentiveFacing(dx,dy,this.storyCompanionFacing);
    }else{
     this.storyCompanionClock=0;
     const kitty=toScreen(this.p);
-    this.storyCompanionFacing=feelFacingToTarget(kitty.x-xy.x,kitty.y-xy.y,this.storyCompanionFacing);
+    this.storyCompanionFacing=attentiveFacing(kitty.x-xy.x,kitty.y-xy.y,this.storyCompanionFacing);
    }
    // A brief nonblocking reaction during the shared walk, not extra dialogue.
    if(!this.storyFollowCue&&this.clock-this.storyStageAt>1400&&isoDistance(this.p,state.position)<2){
@@ -979,9 +976,15 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    // Louis also has a tiny idle posture; he doesn't moonwalk in place.
    npc.setAngle(this.reducedMotion?0:state.walking?
     Math.sin(this.storyCompanionClock/160*Math.PI)*1.4:Math.sin(this.clock/950)*.4);
-   if(!this.storyWalkTriggered&&isoDistance(this.p,this.storyTarget)<.98){
-    this.storyWalkTriggered=true;this.story.clearing();
-   }
+   const breath=state.walking?0:storyActorIdle(this.clock+1570,this.reducedMotion).breath;
+   npc.setScale(1.3*(1+breath),1.3*(1-breath));
+   const atClearing=isoDistance(this.p,this.storyTarget)<.98;
+   if(!this.storyWalkTriggered&&atClearing){
+    this.companionWaitAt??=this.clock;
+    if(companionReady(isoDistance(this.p,state.position),this.clock-this.companionWaitAt)){
+     this.storyWalkTriggered=true;this.story.clearing();
+    }
+   }else this.companionWaitAt=null;
   }
   const meeting=stage==='meet-couple'||stage==='talk-luis';
   if(meeting&&!this.storyLuisReady&&!this.storyLuisArriving&&
@@ -1069,6 +1072,11 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  updateStoryPerformance(dt:number){
   if(!this.story)return;
   if(this.story.epilogue){if(this.story.locked())this.animateEpilogueTalk();return;}
+  const speaker=this.story.speaker?.();
+  if(speaker&&!this.storyAbduction&&!luisMotionIsBlocking(this.storyLuisMotion)){
+   const actor=speaker==='Louis'?this.storyLouis:speaker==='Luis'?this.storyLuis:speaker==='Vale'?this.storyVale:undefined;
+   if(actor?.active&&actor.visible){const kitty=toScreen(this.p);this.facing=attentiveFacing(actor.x-kitty.x,actor.y-kitty.y,this.facing);}
+  }
   const beat=storyboardBeat(this.storyStage,this.clock-this.storyStageAt);
   if(beat&&!this.storyBeatPlayed){
    const target=this.storyStage==='talk-luis'?'luis':
@@ -1082,7 +1090,10 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(!this.storyLouisWalk&&!this.storyAbduction&&this.storyLouis?.active&&
    this.storyStage!=='walk-together'){
    const npc=this.storyLouis,kitty=toScreen(this.p);
-   const face=storyActorFacing(kitty.x-npc.x,kitty.y-npc.y,this.storyLouisFacing);
+   const speaker=this.story.speaker?.();
+   const listenerTarget=speaker==='Luis'&&this.storyLuis?.visible?this.storyLuis:
+    speaker==='Vale'&&this.storyVale?.visible?this.storyVale:kitty;
+   const face=attentiveFacing(listenerTarget.x-npc.x,listenerTarget.y-npc.y,this.storyLouisFacing);
    this.storyLouisFacing=face;
    const idle=storyActorIdle(this.clock+1570,this.reducedMotion);
    const talking=this.story.speaker?.()==='Louis'&&(this.story.speaking?.()??true)&&!this.reducedMotion;
@@ -1241,9 +1252,17 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(this.storyPhoto||this.paused||this.pendingOffer||this.ended)return;const dt=Math.min(delta,40),seconds=dt/1000;this.clock+=dt;
   if(this.story){
    this.updateStoryPerformance(dt);
+   // Continue light transitions during dialogue and scripted motion.
+   if(!this.story.epilogue){
+    const targetLight=darknessAt(this.p.u,this.storyStage,this.storyMap);
+    this.storyDusk=storyLightStep(this.storyDusk,targetLight,dt,this.reducedMotion);
+    if(Math.abs(this.storyDusk-this.storyDuskReported)>=.009||(this.storyDusk!==this.storyDuskReported&&this.storyDusk===targetLight)){
+     this.storyDuskReported=this.storyDusk;this.story.dusk(this.storyDusk);
+    }
+   }
    // The scene clock, not an extra audio interval, controls narrative dynamics.
    // Dialogue ducks only music/ambience; real samples and clue effects stay audible.
-   this.refreshStoryMix(this.storyStage,this.storyDusk);
+   this.refreshStoryMix(this.storyStage,this.story.epilogue?this.storyDusk:this.storyDuskReported);
    const ecologyCue=this.storyWorld?.update(this.clock,this.storyDusk,this.p);
    if(ecologyCue&&!this.story.epilogue)this.audio.playRescueAmbience?.(ecologyCue.kind,ecologyCue.pan);
    if(ecologyCue&&this.story.epilogue)this.audio.playRescueAmbience?.(this.storyMap==='morning_garden'?'river':'birdsong',ecologyCue.pan);

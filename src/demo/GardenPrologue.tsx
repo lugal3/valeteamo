@@ -86,7 +86,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
 
  const showDialog=useCallback((lines:PrologueLine[],done?:()=>void)=>{
   if(!lines.length){done?.();return;}
-  lockedRef.current=true;dialogDone.current=done??null;
+  lockedRef.current=true;sceneRef.current?.clearInput();dialogDone.current=done??null;
   const next={lines,index:0};dialogRef.current=next;setDialog(next);reveal(0);setSpeechPulse(0);
  },[reveal]);
  const offerChuru=()=>{

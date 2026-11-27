@@ -30,3 +30,8 @@ Base publicada: d28fc0eaa26ddc348f60b4e9704aaf275f8fb4c0. Rama independiente fea
 - La fase 1 sigue pendiente de pruebas del SHA. Medición DEV del inicio de StoryGame hasta el callback real de escena lista; el navegador del epílogo registra cuatro tiempos en epilogue-load-timings.json. No equivale a tiempo de primer fotograma visible ni FPS físico.
 - El prólogo confirma memoria de viaje al completar la ventana; el epílogo recuerda Churu, encuentro y descubrimientos válidos mediante sustitución de frases ya existentes. Previews directas y guardados antiguos sin hechos confirmados usan diálogo neutro. La línea de ventana anticipa los mensajes de teléfono existentes sin cambiar el teléfono ni las etapas.
 - Se amplían tests puros de memoria, compatibilidad y datos desconocidos. Pendientes CI, ritmo/actuaciones y verificación visual. No merge/publicación.
+
+## Fase 2 — actuaciones y continuidad de ambiente
+- Kitty mira al interlocutor real; Louis orienta la mirada al hablante presente. Histéresis de dirección y respiración en reposo durante paseo. El claro permite hasta 1.8 s de acercamiento antes de la advertencia sin bloqueo permanente. Limpieza de entrada al iniciar diálogo.
+- Oscurecimiento gradual durante desaparición incluso con controles bloqueados; notificación por umbral y cambio inmediato con movimiento reducido. Pruebas puras de dirección, espera y luz.
+- Auditorías anteriores interrumpidas por commits posteriores; epílogo de 22de79c pasó. Pendiente CI de esta revisión, rendimiento y revisión visual. No publicar.
