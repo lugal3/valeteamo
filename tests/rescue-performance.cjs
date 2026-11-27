@@ -62,6 +62,13 @@ const blink=P.storyActorIdle(P.ACTING_LIMITS.blinkPeriodMs-75);
 assert.equal(blink.frame,5,'Louis periodically blinks when standing still');
 assert.deepEqual({...P.storyActorIdle(1200,true)},{frame:0,lean:0,breath:0},
  'reduce-motion NPC breathing and flutter are disabled');
+assert.equal(P.attentiveFacing(10,10,'right'),'right');
+assert.equal(P.attentiveFacing(10,10,'down'),'down');
+assert.equal(P.attentiveFacing(-40,2,'down'),'left');
+assert.equal(P.companionReady(3,1799),false);assert(P.companionReady(3,1800));assert(P.companionReady(2,0));
+assert.equal(P.storyLightStep(.1,.4,16,true),.4);
+let light=.1;for(let i=0;i<120;i++){const next=P.storyLightStep(light,.4,16);assert(next>=light&&next<=.4);light=next;}
+assert(light>.39);assert(P.storyLightStep(.4,.1,16)<.4);
 const scene=fs.readFileSync('src/iso-game.ts','utf8').replace(/\r\n/g,'\n');
 for(const part of ['this.updateStoryPerformance(dt)','kidnappingReaction(frame.phase,prior)',
  'this.showStoryBubble(\'luis\',\'farewell\')',

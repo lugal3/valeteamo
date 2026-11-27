@@ -4,7 +4,7 @@ import {createLivingEcology,type LivingWorld} from './rescue-ecology-render';
 import type {AmbientCue} from './rescue-ecology';
 import {ISO,toScreen,type IsoPoint} from '../isometric';
 import {HOUSE_3D_REFERENCE,NIGHT_HOUSE,nightRouteCenter,nightRouteLimits,nightHouseBlocks,
- nightWalkable,NIGHT_NEIGHBORS} from './night-house-layout';
+ nightWalkable,NIGHT_NEIGHBORS,FRONT_FACADE_WIDTH,frontFacadeOffset,NIGHT_STREET,NIGHT_LAMPS,nightStreetSurface,NIGHT_ROAD_HALF,NIGHT_PAVEMENT_HALF} from './night-house-layout';
 
 // Cuatro mapas cargados POR SEPARADO dentro de IsoAdventure. Ningún mapa crea
 // Phaser.Game, cámara, controles ni sprites: todo sigue siendo 2D Corazones.
@@ -273,6 +273,10 @@ function lightPool(g:Phaser.GameObjects.Graphics,x:number,y:number,w:number,h:nu
   g.fillStyle(color,strength*[.15,.20,.28,.37][i]).fillEllipse(x,y,w*f,h*f);
  }
 }
+function blendTerrain(a:number,b:number,amount:number):number{
+ const channel=(shift:number)=>Math.round(((a>>shift)&255)*(1-amount)+((b>>shift)&255)*amount);
+ return (channel(16)<<16)|(channel(8)<<8)|channel(0);
+}
 function diamond(g:Phaser.GameObjects.Graphics,u:number,v:number,c:number,a=1){
  const p=toScreen({u,v}),w=ISO.tileW/2,h=ISO.tileH/2;
  poly(g,c,[[p.x,p.y-h],[p.x+w,p.y],[p.x,p.y+h],[p.x-w,p.y]],a);
@@ -480,11 +484,11 @@ function sign(scene:Phaser.Scene,u:number,v:number,title:string){
 // All proportions and the two-storey rhythm derive from HOUSE_3D_REFERENCE.
 // Crucially the door/window centers share the same projected ground baseline.
 function frontalRescueHouse(scene:Phaser.Scene,dawn=false){
- const ground=toScreen(NIGHT_HOUSE.door),width=340;
- const left=ground.x-width*(HOUSE_3D_REFERENCE.frontDoorX/HOUSE_3D_REFERENCE.width);
+ const ground=toScreen(NIGHT_HOUSE.door),width=FRONT_FACADE_WIDTH;
+ const left=ground.x+frontFacadeOffset(HOUSE_3D_REFERENCE.width);
  const top=ground.y-203,right=left+width,base=ground.y-8;
- const g=scene.add.graphics().setDepth(dawn?ground.y-8:ground.y-125);
- const px=(realX:number)=>left+width*realX/HOUSE_3D_REFERENCE.width;
+ const g=scene.add.graphics().setDepth(ground.y-8);
+ const px=(realX:number)=>ground.x+frontFacadeOffset(realX);
  // Dark foundation, sturdy level outlines, readable two-storey windows.
  g.fillStyle(0x5c5065,.9).fillRect(left-8,base-1,width+16,9);
  g.fillStyle(0xc6b6c9).fillRect(left,top,width,base-top);
@@ -519,8 +523,8 @@ function frontalRescueHouse(scene:Phaser.Scene,dawn=false){
   g.fillStyle(0x756375).fillRect(cx-19,cy-27,38,56);
   g.fillStyle(open?0x332b49:0xbfc7bc).fillRect(cx-14,cy-22,28,45);
   if(open){
-   // Open sash on left: Kitty enters from the FRONT patio.
-   g.fillStyle(0xf3c8d7).fillRect(cx-18,cy-22,5,46);
+   // The hinge at smaller world X appears on the viewer's right.
+   g.fillStyle(0xf3c8d7).fillRect(cx+13,cy-22,5,46);
    g.fillStyle(0xffe9a9,.18).fillRect(cx-11,cy-19,20,39);
   }else{
    g.fillStyle(0xe2e7da).fillRect(cx-1,cy-22,3,46);
@@ -528,7 +532,15 @@ function frontalRescueHouse(scene:Phaser.Scene,dawn=false){
   }
   g.fillStyle(0xb68e9e).fillRect(cx-23,cy+30,46,3);
   g.fillStyle(0xf1d5df).fillRect(cx-23,cy+28,46,3);
-  if(!open){g.fillStyle(0x8c8fa6,.5).fillRect(cx-12,cy-20,10,18);g.fillStyle(0xe6d9cb,.26).fillRect(cx+3,cy+3,8,17);}
+  if(!open){
+   g.fillStyle(0x8c8fa6,.5).fillRect(cx-12,cy-20,10,18);g.fillStyle(0xe6d9cb,.26).fillRect(cx+3,cy+3,8,17);
+   // Two rough boards match the actual 3D exterior barricades, not intact glass.
+   for(const [i,y] of [cy-12,cy+6].entries()){
+    g.fillStyle(i?0x76513e:0x634638).fillRect(cx-22,y,44,8);
+    g.lineStyle(1,0xb48b6b,.72).lineBetween(cx-20,y+2,cx+20,y+2);
+    for(const x of [cx-16,cx+16])g.fillStyle(0x383238).fillCircle(x,y+4,1.5);
+   }
+  }
  };
  // Match the upstairs bedroom / landing / music windows in house-layout.js.
  for(const x of [2.2,6.1,12.1])pane(px(x),top+62,false);
@@ -538,8 +550,9 @@ function frontalRescueHouse(scene:Phaser.Scene,dawn=false){
  if(!dawn)g.lineStyle(3,0xa9f9db,.92).strokeRect(windowX-21,base-83,42,59);
  const doorX=px(HOUSE_3D_REFERENCE.frontDoorX);
  g.fillStyle(0x765367).fillRect(doorX-27,base-84,54,81);
- g.fillStyle(0x342c43).fillRect(doorX-21,base-78,42,74);
- g.fillStyle(0xdfb79b).fillRect(doorX+12,base-40,5,5);
+ g.fillStyle(dawn?0x211b28:0x624334).fillRect(doorX-21,base-78,42,74);
+ if(dawn){poly(g,0x694938,[[doorX-21,base-78],[doorX-4,base-65],[doorX-4,base-8],[doorX-21,base-4]]);}
+ else g.fillStyle(0xdfb79b).fillRect(doorX-17,base-40,5,5);
  g.fillStyle(0x594757).fillRect(doorX-19,base-70,38,2).fillRect(doorX-19,base-20,38,2);
  g.lineStyle(1,0x745b6f,.75).strokeRect(doorX-15,base-64,29,30);
  g.fillStyle(0xc3adbd).fillRect(doorX-31,base-3,64,7);
@@ -552,7 +565,7 @@ function frontalRescueHouse(scene:Phaser.Scene,dawn=false){
  scene.add.text(left+width*.77,top+22,'CASA 14 ♡',{
   fontFamily:'monospace',fontSize:'13px',fontStyle:'bold',
   color:'#fff6e9',stroke:'#4b3a53',strokeThickness:4
- }).setOrigin(.5).setDepth(ground.y-110);
+ }).setOrigin(.5).setDepth(ground.y-7);
 }
 function house(scene:Phaser.Scene,u:number,v:number,main:boolean,style:'sage'|'rose'|'blue'='rose'){
  if(main){frontalRescueHouse(scene);return;}
@@ -743,8 +756,9 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   poly(g,0x9ecdc5,[waterBand(9.6,-14),waterBand(16.2,-14),waterBand(16.2,25),waterBand(9.6,25)],.90);
   poly(g,0x79bdc5,[waterBand(10.2,-14),waterBand(15.8,-14),waterBand(15.8,25),waterBand(10.2,25)],.75);
  }
- for(let u=low;u<=high;u++)for(let v=-4;v<=16;v++){
-  const lim=routeLimits(u);
+ for(let u=low-5;u<=high+5;u++)for(let v=-10;v<=22;v++){
+  const sample=clamp(u,low,high),lim=routeLimits(sample);
+  const extension=u<low||u>high||v<Math.floor(lim.min-1)||v>Math.ceil(lim.max+1);
   const rag=((u*7+v*13)%9===0?-.45:0)+((u*11+v*3)%11===0?.36:0);
   const onLand=v>=Math.floor(lim.min-1.0+rag)&&v<=Math.ceil(lim.max+1.0+rag);
   const bridge=map==='morning_garden'&&u>=10&&u<16;
@@ -763,7 +777,22 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    }
    continue;
   }
-  if(!onLand)continue;
+  if(!onLand||extension){
+   // Noninteractive painted extension: keep the visual ground continuous
+   // without changing physical bounds, NPCs, particles or collision.
+   if(v>=lim.min-4.6&&v<=lim.max+4.6){
+    const n=hashCell(u,v,89),p=toScreen({u,v});
+    // Close palette and sparse painted grass blend the walkable meadow
+    // into the horizon. No new actors, hitboxes or per-frame work.
+    const meadow=blendTerrain(inner,outer,.25);
+    diamond(g,u,v,blendTerrain(meadow,n>.5?outer:inner,.22));
+    if(n>.67){
+     g.fillStyle(canopy,.13).fillEllipse(p.x-8+n*12,p.y,15+n*13,5);
+     paintGroundTexture(g,u,v,p,map,false);
+    }
+   }
+   continue;
+  }
   tiles++;
   const p=toScreen({u,v}),center=routeCenter(u),distance=Math.abs(v-center);
   // Nonrepeating, seeded micro-palette avoids giant checkerboard squares.
@@ -787,10 +816,10 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    else if(edge)c=0x92979e;
    // Three distinct 3D-inspired outdoor materials: asphalt (street), stone
    // pavement and the front path, with a flowered forecourt in front of the wall.
-   if(v>=4.4&&v<5.8)c=variation>.55?0x545d6f:0x626876;
-   if(v>=5.8&&v<6.95)c=variation>.5?0xa49a9a:0xb7aaa7;
-   if(u>=73.7&&u<=79.5&&v>=7.0&&v<=10.35)c=variation>.5?0xd4bfad:0xbda9a2;
-   if(u>=76.1&&u<=81.5&&v>=9.2&&v<=11.4)c=variation>.5?0xdac0b0:0xcab4a5;
+   const surface=nightStreetSurface({u,v});
+   if(surface==='road')c=variation>.55?0x545d6f:0x626876;
+   else if(surface==='sidewalk')c=variation>.5?0xa49a9a:0xb7aaa7;
+   else if(surface==='yard')c=variation>.5?0xd4bfad:0xbda9a2;
   }
   diamond(g,u,v,c);
   paintGroundTexture(g,u,v,p,map,isPath);
@@ -798,11 +827,9 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   if((u*7+v*13)%17===0){
    g.fillStyle(map==='morning_garden'?0xf4c0ce:0xe2bcbd,.52).fillRect(p.x+6,p.y+1,3,3);
   }
-  if(map==='night_neighborhood'&&v>=4.4&&v<=5.8&&u%4===0){
-   g.fillStyle(0xded5b8,.57).fillRect(p.x-13,p.y-2,20,3);
-  }
-  // Cobblestone seams on the residential street; walkway is kept visible.
-  if(map==='night_neighborhood'&&v>=5.8&&v<=10.7&&variation>.72){
+  // No obsolete road marking behind the house. Paving seams only on the
+  // shared sidewalk; the actual lane markings are drawn on the centerline.
+  if(map==='night_neighborhood'&&nightStreetSurface({u,v})==='sidewalk'&&variation>.72){
    g.lineStyle(1,0xa5a0a4,.25).lineBetween(p.x-11,p.y+5,p.x+10,p.y+5);
   }
  }
@@ -909,14 +936,12 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   }
  }
  if(map==='morning_garden'){
-  sign(scene,8,1.3,'RÍO ♡');
   // Welcoming flowered path and riparian details; solid props are drawn below.
   for(const [u,v] of [[9.6,2.2],[10.6,8.4],[12.3,1.6],[14.2,9.4],[15.5,1.6]])
    reeds(scene,u,v);
   picketFence(scene,4.2,9.2,5);picketFence(scene,6.8,9.6,4);
   // River lookout furniture is now attached to the new trail.
  }else if(map==='afternoon_meeting'){
-  sign(scene,25,1,'CEREZOS');
   // An oval plaza gives room to approach people from different directions.
   const plaza=scene.add.graphics().setDepth(.8),p=toScreen({u:29.3,v:4.6});
   plaza.fillStyle(0xf7e0bb,.23).fillEllipse(p.x,p.y,230,115);
@@ -928,7 +953,6 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   }
   picketFence(scene,25.1,8.9,5);picketFence(scene,41.3,8.9,5);
  }else if(map==='dusk_search'){
-  sign(scene,49,.2,'SILENCIO');
   const creek=scene.add.graphics().setDepth(.4);
   for(let u=49;u<60;u++){
    const p=toScreen({u,v:routeLimits(u).max+.4});
@@ -940,9 +964,8 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   // Keep creek banks open, with irregular wet stones on the existing buffer.
   for(let u=49;u<60;u+=.7){const p=toScreen({u,v:routeLimits(u).max+.68});creek.fillStyle(0x516b69,.55).fillEllipse(p.x,p.y+3,17,5);creek.fillStyle(0xa8b6ac,.35).fillEllipse(p.x-2,p.y+1,9,3);}
  }else{
-  sign(scene,68,.3,'VILLA');
-  for(const u of [67,72,77,81])lamp(scene,u,1.8);
-  // Neighboring houses stay across the ROAD, not on Kitty's way to the door.
+  for(const point of NIGHT_LAMPS)lamp(scene,point.u,point.v);
+  // Neighboring homes are outside the main house's street-facing path.
   for(const neighbor of NIGHT_NEIGHBORS)house(scene,neighbor.u,neighbor.v,false,neighbor.style);
   // Main house façade mirrors the actual double-storey 3D floorplan.
   if(dawn)frontalRescueHouse(scene,true);
@@ -961,20 +984,31 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   }).setOrigin(.5).setDepth(vanPlace.y+17);
   }
   const sidewalk=scene.add.graphics().setDepth(.65);
-  for(const u of [67,72,77,81]){
-   const light=toScreen({u,v:4.75});
-   sidewalk.fillStyle(0xe0aa83,.16).fillEllipse(light.x,light.y,82,20);
-   for(let i=0;i<3;i++){
-    sidewalk.fillStyle(0xffd6a2,.23-i*.05)
-     .fillRect(light.x-15+i*4,light.y-4+i*4,29-i*7,2);
+  // The road is a continuous surface in front of both openings. Use the
+  // same normal and dimensions for collision-space classification and art.
+  const streetBand=(half:number,color:number)=>{
+   for(let i=1;i<NIGHT_STREET.length;i++){
+    const a=NIGHT_STREET[i-1],b=NIGHT_STREET[i],du=b.u-a.u,dv=b.v-a.v,len=Math.hypot(du,dv);
+    const nu=-dv/len*half,nv=du/len*half;
+    poly(sidewalk,color,[[a.u+nu,a.v+nv],[b.u+nu,b.v+nv],[b.u-nu,b.v-nv],[a.u-nu,a.v-nv]].map(([u,v])=>{const p=toScreen({u,v});return [p.x,p.y] as [number,number];}));
+   }
+   for(const point of NIGHT_STREET){const p=toScreen(point);sidewalk.fillStyle(color).fillEllipse(p.x,p.y,Math.SQRT2*ISO.tileW*half,Math.SQRT2*ISO.tileH*half);}
+  };
+  streetBand(NIGHT_PAVEMENT_HALF,dawn?0xc5b8a5:0xb7aaa7);
+  streetBand(NIGHT_ROAD_HALF+.07,0x8d8890);
+  streetBand(NIGHT_ROAD_HALF,dawn?0x777c84:0x545d6f);
+  for(let i=1;i<NIGHT_STREET.length;i++){
+   const a=NIGHT_STREET[i-1],b=NIGHT_STREET[i],len=Math.hypot(b.u-a.u,b.v-a.v);
+   const steps=Math.max(1,Math.floor(len/.95));
+   for(let j=0;j<steps;j++){
+    const t=(j+.15)/steps,end=(j+.58)/steps;
+    const p=toScreen({u:a.u+(b.u-a.u)*t,v:a.v+(b.v-a.v)*t});
+    const q=toScreen({u:a.u+(b.u-a.u)*end,v:a.v+(b.v-a.v)*end});
+    sidewalk.lineStyle(2,0xe7d7b4,.74).lineBetween(p.x,p.y,q.x,q.y);
    }
   }
-  // Stone pavement and the 3D x=5.9 front-path / porch. Each paving stone is
-  // placed on traversable ground so it visually teaches the actual route.
-  for(let u=68;u<=81;u+=.65){
-   const p=toScreen({u,v:6.15});
-   sidewalk.lineStyle(2,0xf6e9d6,.51).lineBetween(p.x-19,p.y-2,p.x+21,p.y+2);
-  }
+  // Straight front path from the sidewalk to the door; the last segment
+  // continues along the porch to the only unboarded window.
   const paving=[NIGHT_HOUSE.sidewalk,NIGHT_HOUSE.gate,NIGHT_HOUSE.yard,
    NIGHT_HOUSE.porch,NIGHT_HOUSE.door,NIGHT_HOUSE.window];
   for(let i=0;i<paving.length-1;i++){
@@ -984,15 +1018,15 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    sidewalk.lineStyle(2,0xe1bca3,.62);
    sidewalk.lineBetween(a.x,a.y,b.x,b.y);
   }
-  for(const [u,v] of [[68.0,9.8],[71.4,10.8]])picketFence(scene,u,v,5);
-  for(const [u,v] of [[71.1,9.8],[74.1,11.1],[80.6,11.35]])
-   gardenFeature(scene,u,v,'planter');
+  // Keep fences and plants outside the street and the straight front walk.
+  for(const [u,v] of [[68.0,9.8],[71.0,11.4]])if(nightStreetSurface({u,v})==='grass')picketFence(scene,u,v,5);
+  for(const [u,v] of [[71.1,11.5],[74.1,13.1],[80.6,11.95]])
+   if(nightStreetSurface({u,v})==='grass')gardenFeature(scene,u,v,'planter');
   gardenFeature(scene,66.8,8.4,'rock');
   gardenFeature(scene,73.3,2.1,'lantern');
   gardenFeature(scene,80.3,3.0,'lantern');
   // The first clear sign points toward the porch rather than to an invisible
   // interaction hidden behind the building's graphic.
-  sign(scene,NIGHT_HOUSE.gate.u,NIGHT_HOUSE.gate.v-1.0,'CASA ♡');
   if(!dawn){
   const targets=scene.add.graphics().setDepth(toScreen(NIGHT_HOUSE.door).y+18);
   for(const [where,color] of [[NIGHT_HOUSE.door,0xffd69e],
@@ -1022,10 +1056,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
  for(const landmark of rescueLandmarks(map)){
   const {u,v}=landmark.point;
   gardenFeature(scene,u,v,landmark.landmark);
-  const p=toScreen({u,v}),side=Math.sign(landmark.offset);
-  scene.add.text(p.x,p.y-58,landmark.title,{
-   fontFamily:'Georgia',fontSize:'12px',color:'#fff0d2',stroke:'#655568',strokeThickness:3
-  }).setOrigin(.5).setDepth(p.y+1);
+  const side=Math.sign(landmark.offset);
   // Quiet edge flowers flank the path, not its walkable lane.
   ornaments.flower(u-.65,v+side*.5);
   ornaments.flower(u+.65,v+side*.5);
@@ -1062,10 +1093,8 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
  }
  // A spatially legible exit: pearly luminous boundary leading to another map.
  if(cfg.exit&&!dawn){
-  sign(scene,cfg.exit.u-1.1,cfg.exit.v-2.9,'➜');
   const p=toScreen(cfg.exit);
-  scene.add.text(p.x,p.y-49,'✧  SIGUE  ✧',{fontFamily:'Georgia',fontSize:'15px',
-   color:'#fff4d9',stroke:'#a3778b',strokeThickness:3}).setOrigin(.5).setDepth(p.y+4);
+  const marker=scene.add.graphics().setDepth(p.y-2);marker.lineStyle(2,0xfff0d2,.65).strokeEllipse(p.x,p.y,44,17);
  }
  // Living flowers, small animals and lighting share the existing Phaser scene.
  const ecology=createLivingEcology(scene,map,cfg.minU,cfg.maxU,
@@ -1083,7 +1112,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
  const riverShimmers=map==='morning_garden'?Array.from({length:11},(_,i)=>toScreen({u:10+hashCell(i,7,2)*6,v:i%2?1.2:9.2})):[];
  const afternoonPools=map==='afternoon_meeting'?Array.from({length:5},(_,i)=>{const u=26+i*3.7;return toScreen({u,v:routeCenter(u)+(i%2?1.8:-1.6)});}):[];
  const forestMist=map==='dusk_search'?Array.from({length:8},(_,i)=>{const u=48+i*1.85,lim=routeLimits(u);return toScreen({u,v:i%2?lim.max+.4:lim.min-.4});}):[];
- const streetPools=map==='night_neighborhood'?[67,72,77,81].map(u=>({u,p:toScreen({u,v:1.8}),street:toScreen({u,v:4.65})})):[];
+ const streetPools=map==='night_neighborhood'?NIGHT_LAMPS.map((point,i)=>({u:i,p:toScreen(point),street:toScreen(NIGHT_STREET[Math.min(i+1,NIGHT_STREET.length-1)])})):[];
  const doorLight=toScreen(NIGHT_HOUSE.door),gateLight=toScreen(NIGHT_HOUSE.gate);
  const exitLight=!dawn&&cfg.exit?toScreen(cfg.exit):undefined;
  const update=(elapsed:number,night:number,player:IsoPoint=cfg.spawn):AmbientCue|null=>{

@@ -49,3 +49,17 @@ export function windowIntroState(progress){
 export function shouldPlayWindowIntro({demo=false,checkpoint='ground',reducedMotion=false}={}){
  return !!demo&&checkpoint==='ground'&&!reducedMotion;
 }
+
+ // Extra establishing shot before the original ten-second contact timeline.
+ // The camera stands in the actual front path, not at the rear of the house.
+ export const WINDOW_ESTABLISH_SECONDS=3.6;
+ export function windowEstablishCamera(elapsed){
+  const t=clamp01(elapsed/WINDOW_ESTABLISH_SECONDS),a=easeInOut(t/.62),b=easeInOut((t-.20)/.80);
+  const end=windowIntroCamera(0),mix=(x,y,w)=>x+(y-x)*w;
+  if(t>=1)return end;
+  return {x:mix(5.9,end.x,a),y:mix(1.68,end.y,b),z:mix(20.0,end.z,b),yaw:Math.PI,pitch:mix(.18,end.pitch,b)};
+ }
+ export function windowSequenceCamera(shot){
+  return (shot.establishAge??WINDOW_ESTABLISH_SECONDS)<WINDOW_ESTABLISH_SECONDS
+   ?windowEstablishCamera(shot.establishAge):windowIntroCamera(shot.elapsed/WINDOW_SHOT_SECONDS);
+ }

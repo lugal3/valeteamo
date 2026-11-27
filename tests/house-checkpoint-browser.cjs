@@ -377,6 +377,8 @@ async function run(){
   await page.getByRole('button',{name:'Ver final',exact:true}).click();
   const epilogue=require('./helpers/epilogue-walk.cjs');
   await epilogue.waitScene(page,'outside');
+  const exterior=await page.evaluate(async()=>{const {NIGHT_HOUSE}=await import('/src/demo/night-house-layout.ts');return {spawn:window.__valeEpilogue().p,gate:NIGHT_HOUSE.gate};});
+  assert(Math.hypot(exterior.spawn.u-exterior.gate.u,exterior.spawn.v-exterior.gate.v)<.2,'The 2D return begins at the exterior gate, not back at the front door');
   await page.locator('#lab3d').waitFor({state:'detached'});
   assert.equal((await read(RESCUE_KEY)).phase,'end');
   assert.equal((await read(RESCUE_KEY)).houseCheckpoint,undefined);

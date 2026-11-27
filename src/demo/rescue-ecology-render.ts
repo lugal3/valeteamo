@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import {toScreen,type IsoPoint} from '../isometric';
-import {NIGHT_HOUSE,HOUSE_3D_REFERENCE} from './night-house-layout';
+import {NIGHT_HOUSE,HOUSE_3D_REFERENCE,NIGHT_LAMPS,NIGHT_STREET} from './night-house-layout';
 import type {RescueMapId} from './rescue-overworld';
 import {ECOLOGY_CAPS,ecologySeeds,ecologyFloraFrame,ecologyWildlifeStep,
  ecologyAmbientCue,ecologyMicroEvent,ecoLean,type AmbientCue,type WildlifeKind,
@@ -154,8 +154,8 @@ export function createLivingEcology(
  let visibleWildlife=0,reactiveFlora=0,alarmedWildlife=0;
  let previousElapsed=0,lastStaticNight=NaN;
  const daylightPositions=map==='morning_garden'?Array.from({length:5},(_,i)=>toScreen({u:10.25+i*1.15,v:i%2?8.2:1.6})):map==='afternoon_meeting'?Array.from({length:6},(_,i)=>{const u=25+i*3.3;return toScreen({u,v:center(u)+(i%2?2.7:-2.4)});}):map==='dusk_search'?Array.from({length:8},(_,i)=>{const u=48+i*1.8;return toScreen({u,v:center(u)+(i%2?3.3:-2.8)});}):[];
- const streetLights=map==='night_neighborhood'?[67,72,77,81].map(u=>toScreen({u,v:1.8})):[];
- const porchFog=map==='night_neighborhood'?Array.from({length:5},(_,i)=>toScreen({u:68+i*2.7,v:5.75})):[];
+ const streetLights=map==='night_neighborhood'?NIGHT_LAMPS.map(toScreen):[];
+ const porchFog=map==='night_neighborhood'?NIGHT_STREET.map(toScreen):[];
  const update=(elapsed:number,player:IsoPoint,night:number):AmbientCue|null=>{
   const dt=clamp(elapsed-previousElapsed,0,70);
   previousElapsed=elapsed;updates++;

@@ -109,7 +109,31 @@ async function completeChapter(page,stage,shots){
   if(shots)await page.screenshot({path:shots+'/epilogue-postcard.png'});
   await physicalClick(page,postal.getByRole('button',{name:'Volver al jardín'}));
   await physicalClick(page,page.getByRole('button',{name:'Terminar aventura'}));
-  await page.locator('[data-epilogue-stage="complete"]').waitFor({timeout:20000});
+  await page.locator('.garden-epilogue[data-epilogue-stage="complete"][data-picnic-live="true"]').waitFor({timeout:20000});
+  const before=await page.evaluate(()=>window.__valeEpilogue());
+  await page.waitForFunction(clock=>window.__valeEpilogue()?.clock>clock+500,before.clock);
+  await page.setViewportSize({width:844,height:390});
+  await physicalClick(page,page.getByRole('button',{name:'Sentarse',exact:true}));
+  await page.waitForFunction(()=>window.__valeEpilogue()?.texture==='rescue-kitty-seat-2');
+  const sitting=await page.evaluate(()=>window.__valeEpilogue());
+  await page.waitForFunction(clock=>window.__valeEpilogue()?.clock>clock+1600,sitting.clock);
+  assert.equal((await page.evaluate(()=>window.__valeEpilogue())).texture,'rescue-kitty-seat-2','Kitty can sit indefinitely');
+  // Move with native WASD after the final save. The live map must remain
+  // responsive, without direct Phaser calls or changing saved progress.
+  let moved=false;
+  for(const key of ['d','w','a','s']){
+   const start=await page.evaluate(()=>window.__valeEpilogue());
+   await page.keyboard.down(key);
+   try{await page.waitForFunction(clock=>window.__valeEpilogue()?.clock>clock+520,start.clock);}finally{await page.keyboard.up(key);}
+   const end=await page.evaluate(()=>window.__valeEpilogue());
+   if(Math.hypot(end.p.u-start.p.u,end.p.v-start.p.v)>.2){moved=true;break;}
+  }
+  assert(moved,'completed picnic remains physically walkable');
+  assert(!(await page.evaluate(()=>window.__valeEpilogue())).texture.startsWith('rescue-kitty-seat-'),'moving stands Kitty up');
+  const freeTouchArea=await page.locator('.adventure-canvas canvas').evaluate(canvas=>{const r=canvas.getBoundingClientRect();return document.elementFromPoint(r.left+r.width*.16,r.top+r.height*.80)===canvas;});
+  assert(freeTouchArea,'left thumb area remains available for mobile movement');
+  assert.equal((await page.evaluate(()=>window.__valeEpilogue())).enemies,0);
+  if(shots)await page.screenshot({path:shots+'/epilogue-live-picnic.png'});
  }else await waitScene(page,stages[stages.indexOf(stage)+1]);
 }
 module.exports={completeChapter,waitScene,stages};

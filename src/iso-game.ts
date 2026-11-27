@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {EMPTY_PAD,type PadSample} from './adaptive-input.js';
 import {CHARACTERS,type CharacterId} from './characters';
 import {buildArt} from './art';
 import {buildChibi} from './chibi-art';
@@ -11,7 +12,7 @@ import {RESCUE_FEEL,feelMotion,feelGait,feelCameraOffset,
  type FeelSurface} from './demo/rescue-game-feel';
 import {storyBubble,storyboardBeat,kidnappingReaction,
  storyActorFacing,storyActorIdle,kidnappingFrameFocus,
- smoothCinematicFocus,type RescueEmotion} from './demo/rescue-performance';
+ smoothCinematicFocus,attentiveFacing,companionReady,storyLightStep,type RescueEmotion} from './demo/rescue-performance';
 import {ABDUCTION_TIMING,abductionFrame,captorFrame,captorTexture,
  installRescueAbductionTextures,vanTexture,VAN_NIGHT_POSITION,VAN_PLATE,
  type AbductionPhase} from './demo/abduction-van';
@@ -98,7 +99,9 @@ export class IsoAdventure extends Phaser.Scene {
  storyLuisShadow?:Phaser.GameObjects.Ellipse;
  storyLuisMotion?:LuisMotion;storyLuisReady=false;storyLuisArriving=false;
  storyLuisFarewell=false;
- storyWorld?:RescueOverworld;storyDusk=0;storyGuideStep=-1;
+ storyWorld?:RescueOverworld;storyDusk=0;private storyDuskReported=0;storyGuideStep=-1;
+ private companionWaitAt:number|null=null;
+ controllerInput:PadSample=EMPTY_PAD;
  storyArea:RouteArea='sendero';storyMap:RescueMapId='morning_garden';storyExitPending=false;
  storyActionPressed=false;storyNear='';storyWalkTriggered=false;storyVictoryEmitted=false;
  storyOptional?:ReturnType<typeof nearbyRescueLandmark>;storyVisited=new Set<string>();
@@ -106,6 +109,9 @@ export class IsoAdventure extends Phaser.Scene {
  storyMomentId='';storyPetUntil=0;storyRestUntil=0;storyMomentCooldown=0;
  private photoActors:PhotoRestore[]=[];private storyPhoto=false;
  private epilogueFlames?:Phaser.GameObjects.Graphics;
+ private picnicSince:number|null=null;
+ private picnicSittingAt:number|null=null;
+ private picnicMarker:Phaser.GameObjects.GameObject[]=[];
  private epilogueFollowers:{actor:StoryActor;point:IsoPoint;trail:IsoPoint[];kind:'louis'|'emy'|'luis'|'vale';facing:'up'|'down'|'left'|'right';walk:number}[]=[];
  private storyMixStage='';private storyMixMap='';private storyMixDark=NaN;private storyMixDialogue=false;
  storyPractice?:{point:IsoPoint;marker:Phaser.GameObjects.Graphics};storyPracticeDone=false;
@@ -180,7 +186,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(this.storyStage!=='intro')this.setStoryStage(this.storyStage,true);
   this.story.map(map);this.story.area(this.storyWorld.area(this.p.u));
   const dusk=darknessAt(this.p.u,this.storyStage,map);
-  this.storyDusk=dusk;this.story.dusk(dusk);
+  this.storyDusk=dusk;this.storyDuskReported=dusk;this.story.dusk(dusk);
  }
  checkStoryExit(){
   if(!this.story||this.storyExitPending)return false;
@@ -204,7 +210,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.endStoryPhoto();
   this.storyStage=stage;this.storyStageAt=this.clock;
   this.storyBeatPlayed=false;this.storyTargetCuePlayed=false;
-  this.storyWalkTriggered=false;this.storyVictoryEmitted=false;
+  this.storyWalkTriggered=false;this.storyVictoryEmitted=false;this.companionWaitAt=null;
   this.storyActionPressed=false;this.storyNear='';this.storyOptional=undefined;this.storyClueHint=undefined;this.storyPractice=undefined;
   this.storyMomentId='';this.storyPetUntil=0;this.storyRestUntil=0;this.storyMomentCooldown=0;this.story?.moment?.(null);
   this.houseRoute=[];this.houseLastHint='';
@@ -220,7 +226,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.storyLuisShadow=undefined;this.storyLuisMotion=undefined;
   this.storyLuisReady=false;this.storyLuisArriving=false;this.storyLuisFarewell=false;
   this.story.near('');
-  this.epilogueFollowers=[];this.epilogueFlames=undefined;
+  this.epilogueFollowers=[];this.epilogueFlames=undefined;this.picnicSince=null;this.picnicSittingAt=null;this.picnicMarker=[];
   if(this.story.epilogue){this.setupEpilogue(this.story.epilogue);return;}
   if(force)this.p=mapForStage(stage)===this.storyMap?storyArrivalPoint(stage):{...RESCUE_SCENES[this.storyMap].spawn};
   this.p=constrainRescue(this.p,this.storyMap);this.positionPlayer();
@@ -340,7 +346,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(['meet-couple','talk-louis'].includes(stage))marker('✧',this.storyTarget);
   if(stage==='door'||stage==='window')marker(stage==='door'?'⚿':'✧',this.storyTarget);
   const dark=darknessAt(this.p.u,stage,this.storyMap);
-  if(Math.abs(dark-this.storyDusk)>.01){this.storyDusk=dark;this.story.dusk(dark);}
+  if(force){this.storyDusk=dark;this.storyDuskReported=dark;this.story.dusk(dark);}
   // Music follows narrative tension and map, not an arbitrary coordinate.
   const eerie=this.storyMap==='dusk_search'||this.storyMap==='night_neighborhood'||
    stage==='disappearance'||dark>.30;
@@ -380,9 +386,9 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const ring=this.add.ellipse(xy.x,xy.y,76,31,0xffe9ad,.30).setStrokeStyle(2,0xfff4cb,.95).setDepth(xy.y-1);
   const heart=this.add.text(xy.x,xy.y-20,'♡',{fontFamily:'Georgia',fontSize:'29px',color:'#fff7df',stroke:'#a4758b',strokeThickness:3}).setOrigin(.5,1).setDepth(xy.y+4);
   this.storyObjects.push(ring,heart);
-  if(chapter.next==='complete')this.decorateEpiloguePicnic();
+  if(chapter.next==='complete'){this.picnicMarker=[ring,heart];this.decorateEpiloguePicnic();}
   if(!this.reducedMotion)this.tweens.add({targets:ring,alpha:.60,scaleX:1.08,scaleY:1.08,duration:1050,yoyo:true,repeat:-1});
-  this.storyDusk=chapter.light;this.story?.dusk(chapter.light);this.story?.map(chapter.map);this.story?.guide(chapter.objective);
+  this.storyDusk=chapter.light;this.storyDuskReported=chapter.light;this.story?.dusk(chapter.light);this.story?.map(chapter.map);this.story?.guide(chapter.objective);
   this.story?.area(this.storyWorld?.area(this.p.u)??'sendero');
   this.total=0;this.collected=0;this.audio.setTheme('garden');
   this.audio.setRescueMix({mood:'garden',music:.85,ambience:.65,birds:true});this.sync();
@@ -411,7 +417,12 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   bunting.lineStyle(1,0x9b7381).lineBetween(at.x-58,at.y-77,at.x,at.y-67).lineBetween(at.x,at.y-67,at.x+58,at.y-77);
   for(let i=0;i<8;i++){const x=at.x-52+i*14,y=at.y-76+10*(1-Math.abs(x-at.x)/58);
    bunting.fillStyle([0xeaa4ba,0xf4cf93,0xc2d4a7][i%3]).fillTriangle(x,y,x+10,y+1,x+5,y+12);}
-  this.storyObjects.push(g,cake,bunting,flames);
+  const treats=this.add.graphics().setDepth(at.y);
+  treats.fillStyle(0x9e7352).fillRoundedRect(at.x-43,at.y-20,19,13,3);
+  treats.lineStyle(2,0xb78862).strokeEllipse(at.x-33,at.y-21,15,16);
+  for(const dx of [-23,23,34]){treats.fillStyle(0xfff0dc).fillEllipse(at.x+dx,at.y-4,12,5);treats.fillStyle(0xc8849a).fillCircle(at.x+dx,at.y-5,3);}
+  treats.fillStyle(0xc4ac83).fillRoundedRect(at.x+27,at.y-25,16,11,2);treats.fillStyle(0xffdf9b).fillRect(at.x+34,at.y-25,2,11).fillRect(at.x+27,at.y-20,16,2);
+  this.storyObjects.push(g,cake,bunting,flames,treats);
  }
  blowEpilogueCandles(){
   if(!this.story?.epilogue||!this.epilogueFlames?.active||!this.epilogueFlames.visible)return;
@@ -419,6 +430,16 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(!this.reducedMotion)this.tweens.add({targets:this.player,angle:-3,duration:180,yoyo:true});
   this.audio.tone(660,.25,.03);this.audio.tone(990,.45,.02);
  }
+ startEpiloguePicnic(celebrate=true){
+  if(this.story?.epilogue?.next!=='complete'||this.picnicSince!==null)return;
+  this.picnicSince=this.clock;
+  for(const marker of this.picnicMarker){this.tweens.killTweensOf(marker);if(marker instanceof Phaser.GameObjects.Ellipse||marker instanceof Phaser.GameObjects.Text)marker.setVisible(false);}
+  if(celebrate){this.blowEpilogueCandles();this.burst(this.storyTarget,0xffd78c);this.burst(this.storyTarget,0xe9a9bf);}
+  else this.epilogueFlames?.setVisible(false);
+  for(const follower of this.epilogueFollowers)follower.trail=[];
+ }
+ picnicRest(){if(this.picnicSince===null||this.paused||this.storyPhoto)return;this.clearInput();this.storyVelocity={u:0,v:0};this.picnicSittingAt=this.clock;}
+ picnicPet(){if(this.picnicSince===null||this.paused||this.storyPhoto||!this.storyNear||!this.storyCat)return;this.storyPetUntil=this.clock+2000;this.burst(this.storyCatPoint,0xe9a9bf);this.audio.tone(780,.14,.018);}
  private animateEpilogueTalk(){
   const speaker=this.story?.speaker?.(),talking=this.story?.speaking?.()??false,frame=this.reducedMotion?0:Math.floor(this.clock/160);
   if(this.storyLuis){const speaks=speaker==='Luis'&&talking;this.storyLuis.setTexture(luisTextureKey('down',speaks?'talk':'idle',speaks?frame%3:0));}
@@ -430,7 +451,12 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   // Each companion retains a separate short trail and follows real walkable
   // samples. Distinct final spacing keeps their silhouettes readable.
   for(const follower of this.epilogueFollowers){
-   const lead=follower.kind==='emy'?this.epilogueFollowers[0]?.point??this.p:this.p;
+   const picnic=this.picnicSince!==null;
+   const age=picnic?this.clock-(this.picnicSince??0):0;
+   const offset=follower.kind==='emy'?{u:.15,v:-.85}:{u:.72,v:.80};
+   const visit=picnic&&!this.reducedMotion&&Math.floor(age/7000)%2===1;
+   const goal=constrainRescue({u:this.storyTarget.u+offset.u+(visit?.35:0),v:this.storyTarget.v+offset.v},this.storyMap);
+   const lead=picnic?goal:follower.kind==='emy'?this.epilogueFollowers[0]?.point??this.p:this.p;
    const state=stepRescueFollower(follower.point,lead,follower.trail,dt,this.storyMap);
    follower.trail=state.trail;follower.point=state.position;
    const xy=toScreen(state.position),dx=xy.x-follower.actor.x,dy=xy.y-follower.actor.y;
@@ -438,7 +464,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    else follower.walk=0;
    const dir=follower.facing==='left'?'right':follower.facing;
    const frame=this.reducedMotion?0:state.walking?1+Math.floor(follower.walk/150)%4:storyActorIdle(this.clock+1570,false).frame;
-   const key=follower.kind==='emy'?greyCatTexture(state.walking?'walk':'idle',this.reducedMotion?0:Math.floor((state.walking?follower.walk:this.clock)/180)%4):`chibi-louis-${dir}-${frame}`;
+   const key=follower.kind==='emy'?greyCatTexture(state.walking?'walk':this.storyPetUntil>this.clock?'love':'idle',this.reducedMotion?0:Math.floor((state.walking?follower.walk:this.clock)/180)%4):`chibi-louis-${dir}-${frame}`;
    follower.actor.setPosition(xy.x,xy.y).setDepth(xy.y).setFlipX(follower.facing==='left');
    if(this.textures.exists(key)&&follower.actor.texture.key!==key)follower.actor.setTexture(key);
    if(follower.kind==='emy')this.storyCatPoint=state.position;
@@ -446,7 +472,14 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const idle=luisAnimationFrame(this.clock,'idle',this.reducedMotion);
   this.storyLuis?.setTexture(luisTextureKey('down','idle',idle));
   this.storyVale?.setTexture(valeTexture(false,luisAnimationFrame(this.clock+710,'idle',this.reducedMotion)));
-  const together=chapter.next!=='complete'||this.epilogueFollowers.every(f=>isoDistance(f.point,this.p)<2.5);
+  if(this.picnicSince!==null){
+   const age=this.clock-this.picnicSince,turn=Math.floor(age/4200)%3;
+   const talkFrame=this.reducedMotion?0:Math.floor(age/170)%3;
+   if(turn===0)this.storyLuis?.setTexture(luisTextureKey('down','talk',talkFrame));
+   if(turn===1)this.storyVale?.setTexture(valeTalkTexture(talkFrame));
+   if(turn===2&&this.storyLouis&&this.textures.exists('chibi-louis-down-6'))this.storyLouis.setTexture('chibi-louis-down-'+(this.reducedMotion?0:6+talkFrame%2));
+  }
+  const together=chapter.next!=='complete'||this.picnicSince!==null||this.epilogueFollowers.every(f=>isoDistance(f.point,this.p)<2.5);
   const label=isoDistance(this.p,this.storyTarget)<1.25&&together?chapter.action:'';
   if(label!==this.storyNear){this.storyNear=label;this.story?.near(label);}
  }
@@ -679,7 +712,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    this.luisHeart(meeting);
   }else if(completed==='greeting'){
    this.storyLuisMotion=undefined;this.storyLuisReady=true;
-   this.story.guide(this.storyVale?'Luis y Vale están aquí. Pulsa E o toca el botón para saludarlos.':
+   this.story.guide(this.storyVale?'Luis y Vale están aquí. Acércate a saludarlos.':
     'Acércate a Luis y pulsa E para hablar.');
   }else if(completed==='farewell-wave'){
    this.storyLuisMotion=makeLuisMotion('farewell-walk',meeting,done);
@@ -915,10 +948,6 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const stage=this.storyStage;
   const area=this.storyWorld?.area(this.p.u);
   if(area&&area!==this.storyArea){this.storyArea=area;this.story.area(area);}
-  const dusk=darknessAt(this.p.u,stage,this.storyMap);
-  if(Math.abs(dusk-this.storyDusk)>.018){
-   this.storyDusk=dusk;this.story.dusk(dusk);
-  }
   if(stage==='defend'&&!this.storyWalkTriggered){
    const distance=isoDistance(this.p,this.storyTarget);
    if(distance<5&&!this.storyTargetCuePlayed){
@@ -936,7 +965,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
     for(const p of [{u:34.1,v:3.1},{u:35.6,v:5.75},{u:36.05,v:4.0}])
      this.spawnEnemy(p,false);
     this.audio.tone(460,.29,.055,'sawtooth');
-    this.story.guide('¡Defiéndelo! Dispara corazones con las flechas o el joystick derecho.');
+    this.story.guide('¡Defiéndelo con corazones!');
    }
   }
   if(stage==='intro'){
@@ -944,8 +973,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    if(step!==this.storyGuideStep){
     this.storyGuideStep=step;
     const hints=[
-     'Camina por el sendero · WASD o joystick izquierdo',
-     'Hay un Churu sobre el paño rosa. Pulsa E o toca el botón para recogerlo.',
+     '',
+     'Hay un Churu sobre el paño rosa.',
      'El Churu quedó junto al sendero, antes del puente de madera.'
     ];
     this.story.guide(hints[step]);
@@ -961,11 +990,11 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    npc.setPosition(xy.x,xy.y).setDepth(xy.y);
    if(state.walking){
     this.storyCompanionClock+=dt;
-    this.storyCompanionFacing=feelFacingToTarget(dx,dy,this.storyCompanionFacing);
+    this.storyCompanionFacing=attentiveFacing(dx,dy,this.storyCompanionFacing);
    }else{
     this.storyCompanionClock=0;
     const kitty=toScreen(this.p);
-    this.storyCompanionFacing=feelFacingToTarget(kitty.x-xy.x,kitty.y-xy.y,this.storyCompanionFacing);
+    this.storyCompanionFacing=attentiveFacing(kitty.x-xy.x,kitty.y-xy.y,this.storyCompanionFacing);
    }
    // A brief nonblocking reaction during the shared walk, not extra dialogue.
    if(!this.storyFollowCue&&this.clock-this.storyStageAt>1400&&isoDistance(this.p,state.position)<2){
@@ -979,9 +1008,15 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    // Louis also has a tiny idle posture; he doesn't moonwalk in place.
    npc.setAngle(this.reducedMotion?0:state.walking?
     Math.sin(this.storyCompanionClock/160*Math.PI)*1.4:Math.sin(this.clock/950)*.4);
-   if(!this.storyWalkTriggered&&isoDistance(this.p,this.storyTarget)<.98){
-    this.storyWalkTriggered=true;this.story.clearing();
-   }
+   const breath=state.walking?0:storyActorIdle(this.clock+1570,this.reducedMotion).breath;
+   npc.setScale(1.3*(1+breath),1.3*(1-breath));
+   const atClearing=isoDistance(this.p,this.storyTarget)<.98;
+   if(!this.storyWalkTriggered&&atClearing){
+    this.companionWaitAt??=this.clock;
+    if(companionReady(isoDistance(this.p,state.position),this.clock-this.companionWaitAt)){
+     this.storyWalkTriggered=true;this.story.clearing();
+    }
+   }else this.companionWaitAt=null;
   }
   const meeting=stage==='meet-couple'||stage==='talk-luis';
   if(meeting&&!this.storyLuisReady&&!this.storyLuisArriving&&
@@ -1069,6 +1104,11 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  updateStoryPerformance(dt:number){
   if(!this.story)return;
   if(this.story.epilogue){if(this.story.locked())this.animateEpilogueTalk();return;}
+  const speaker=this.story.speaker?.();
+  if(speaker&&!this.storyAbduction&&!luisMotionIsBlocking(this.storyLuisMotion)){
+   const actor=speaker==='Louis'?this.storyLouis:speaker==='Luis'?this.storyLuis:speaker==='Vale'?this.storyVale:undefined;
+   if(actor?.active&&actor.visible){const kitty=toScreen(this.p);this.facing=attentiveFacing(actor.x-kitty.x,actor.y-kitty.y,this.facing);}
+  }
   const beat=storyboardBeat(this.storyStage,this.clock-this.storyStageAt);
   if(beat&&!this.storyBeatPlayed){
    const target=this.storyStage==='talk-luis'?'luis':
@@ -1082,7 +1122,10 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(!this.storyLouisWalk&&!this.storyAbduction&&this.storyLouis?.active&&
    this.storyStage!=='walk-together'){
    const npc=this.storyLouis,kitty=toScreen(this.p);
-   const face=storyActorFacing(kitty.x-npc.x,kitty.y-npc.y,this.storyLouisFacing);
+   const speaker=this.story.speaker?.();
+   const listenerTarget=speaker==='Luis'&&this.storyLuis?.visible?this.storyLuis:
+    speaker==='Vale'&&this.storyVale?.visible?this.storyVale:kitty;
+   const face=attentiveFacing(listenerTarget.x-npc.x,listenerTarget.y-npc.y,this.storyLouisFacing);
    this.storyLouisFacing=face;
    const idle=storyActorIdle(this.clock+1570,this.reducedMotion);
    const talking=this.story.speaker?.()==='Louis'&&(this.story.speaking?.()??true)&&!this.reducedMotion;
@@ -1094,7 +1137,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    npc.setAngle(idle.lean+(talking?Math.sin(this.clock/230)*.9:0));
    npc.setScale(1.3*(1+idle.breath),1.3*(1-idle.breath));
   }
-  const remaining:typeof this.storyBubbles=[];
+  const remaining:IsoAdventure['storyBubbles']=[];
   for(const bubble of this.storyBubbles){
    const age=this.clock-bubble.at;
    if(age>=1200||!bubble.sprite.active){bubble.sprite.destroy();continue;}
@@ -1122,7 +1165,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  }
  updateStoryCameraFeel(dt:number){
   this.storyLookAhead=feelCameraOffset(this.storyLookAhead,this.storyVelocity,dt,this.reducedMotion);
-  // Preserve exactly the original zoom/follow formula; no camera shake or
+  // Preserve the narrative zoom; no camera shake or
   // dramatic forced pans during ordinary exploration.
   const abduction=this.storyAbduction,kitty=toScreen(this.p);
   const shot=abduction?abductionFrame(abduction.elapsed,abduction.origin):undefined;
@@ -1160,15 +1203,17 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const speaking=this.story?.speaker?.()==='Kitty'&&(this.story.speaking?.()??true)&&!this.reducedMotion;
   const frame=touch?0:gait.frame;
   const restAge=1200-(this.storyRestUntil-this.clock);
-  const seatStep=restAge<150?0:restAge<300?1:restAge>1050?0:restAge>900?1:2;
-  const seated=!moving&&!firing&&!hurt&&this.storyRestUntil>this.clock&&this.textures.exists(kittySeatKey(seatStep));
+  const picnicRest=this.picnicSittingAt!==null;
+  const sitAge=this.clock-(this.picnicSittingAt??this.clock);
+  const seatStep=picnicRest?(sitAge<150?0:sitAge<300?1:2):restAge<150?0:restAge<300?1:restAge>1050?0:restAge>900?1:2;
+  const seated=!moving&&!firing&&!hurt&&(picnicRest||this.storyRestUntil>this.clock)&&this.textures.exists(kittySeatKey(seatStep));
   const hurtKey=`chibi-${this.character}-hurt`;
   const texture=seated?kittySeatKey(this.reducedMotion?2:seatStep):hurt&&this.textures.exists(hurtKey)?hurtKey:
    `chibi-${this.character}-${dir}-${hurt?5:frame}${firing&&!hurt?'-shoot':''}`;
   this.positionPlayer();
   const duration=RESCUE_FEEL.interactMs,progress=touch?
    Math.min(1,(this.storyInteractUntil-this.clock)/duration):0;
-  if(!this.reducedMotion){
+  if(!this.reducedMotion&&!seated){
    this.player.y-=gait.footLift+Math.sin((1-progress)*Math.PI)*2.3*(touch?1:0);
   }
   if(this.player.texture.key!==texture)this.player.setTexture(texture);
@@ -1185,11 +1230,12 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  }
  fitCamera(width:number,height:number){if(width<=0||height<=0)return;
   const camera=this.cameras.main;
-  // Preserve classic zoom; only the narrative scene gets a 12% closer framing.
+  // Classic stays unchanged. Narrative framing limits wide displays to a
+  // maximum visible world width; no cropping or stretching of the canvas.
   camera.setZoom(Math.min(width/800,height/450)*1.08);
   if(this.story&&this.player){
-   // A modest narrative-only close-up improves character readability on phones.
-   camera.setZoom(camera.zoom*1.12);
+   // Keep Kitty large even on ultrawide phones without changing physics.
+   camera.setZoom(Math.max(camera.zoom*1.42,width/640));
    camera.startFollow(this.player,false,.12,.12);
   }
   else camera.centerOn(400,225);
@@ -1241,9 +1287,17 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(this.storyPhoto||this.paused||this.pendingOffer||this.ended)return;const dt=Math.min(delta,40),seconds=dt/1000;this.clock+=dt;
   if(this.story){
    this.updateStoryPerformance(dt);
+   // Continue light transitions during dialogue and scripted motion.
+   if(!this.story.epilogue){
+    const targetLight=darknessAt(this.p.u,this.storyStage,this.storyMap);
+    this.storyDusk=storyLightStep(this.storyDusk,targetLight,dt,this.reducedMotion);
+    if(Math.abs(this.storyDusk-this.storyDuskReported)>=.009||(this.storyDusk!==this.storyDuskReported&&this.storyDusk===targetLight)){
+     this.storyDuskReported=this.storyDusk;this.story.dusk(this.storyDusk);
+    }
+   }
    // The scene clock, not an extra audio interval, controls narrative dynamics.
    // Dialogue ducks only music/ambience; real samples and clue effects stay audible.
-   this.refreshStoryMix(this.storyStage,this.storyDusk);
+   this.refreshStoryMix(this.storyStage,this.story.epilogue?this.storyDusk:this.storyDuskReported);
    const ecologyCue=this.storyWorld?.update(this.clock,this.storyDusk,this.p);
    if(ecologyCue&&!this.story.epilogue)this.audio.playRescueAmbience?.(ecologyCue.kind,ecologyCue.pan);
    if(ecologyCue&&this.story.epilogue)this.audio.playRescueAmbience?.(this.storyMap==='morning_garden'?'river':'birdsong',ecologyCue.pan);
@@ -1273,12 +1327,14 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    // stays byte-identical in the else branch.
    let x=+this.keys.D.isDown-+this.keys.A.isDown,
     y=+this.keys.S.isDown-+this.keys.W.isDown;
-   if(this.left){
+   const padMove=Math.hypot(this.controllerInput.moveX,this.controllerInput.moveY);
+   if(padMove>.01){x=this.controllerInput.moveX;y=this.controllerInput.moveY;}
+   else if(this.left){
     x=this.left.dx;y=this.left.dy;
     if(Math.hypot(x,y)<7)x=y=0;
    }
    const manual=Math.hypot(x,y)>.1;
-   if(manual)this.storyRestUntil=0;
+   if(manual){this.storyRestUntil=0;this.picnicSittingAt=null;}
    if(manual&&this.houseRoute.length)this.houseRoute=[];
    let guidePoint=this.houseRoute[0];
    if(guidePoint&&isoDistance(this.p,guidePoint)<.17){
@@ -1288,7 +1344,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
     const from=toScreen(this.p),to=toScreen(guidePoint);
     x=to.x-from.x;y=to.y-from.y;
    }
-   const intent=screenVector(x,y),strength=this.left&&!guidePoint?
+   const intent=screenVector(x,y),strength=guidePoint?1:padMove>.01?padMove:this.left?
     Math.min(1,Math.hypot(x,y)/45):Math.hypot(x,y)>.1?1:0;
    const previous={...this.p};
    const velocity=guidePoint?{...this.storyVelocity}:
@@ -1368,7 +1424,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    }else{this.moveClock=0;this.lastStep=0;}
   }
   let ax=+this.keys.RIGHT.isDown-+this.keys.LEFT.isDown,ay=+this.keys.DOWN.isDown-+this.keys.UP.isDown;
-  if(this.right){ax=this.right.dx;ay=this.right.dy;if(Math.hypot(ax,ay)<8)ax=ay=0;}else if(this.mouse){const point=toScreen(this.p),aim=this.cameras.main.getWorldPoint(this.input.activePointer.x,this.input.activePointer.y);ax=aim.x-point.x;ay=aim.y-point.y;}
+  if(this.story&&Math.hypot(this.controllerInput.aimX,this.controllerInput.aimY)>.01){ax=this.controllerInput.aimX;ay=this.controllerInput.aimY;}else if(this.right){ax=this.right.dx;ay=this.right.dy;if(Math.hypot(ax,ay)<8)ax=ay=0;}else if(this.mouse){const point=toScreen(this.p),aim=this.cameras.main.getWorldPoint(this.input.activePointer.x,this.input.activePointer.y);ax=aim.x-point.x;ay=aim.y-point.y;}
   const firing=!this.story?.epilogue&&Math.hypot(ax,ay)>.1&&this.level!==1;if(firing){this.facing=facingOf(ax,ay,this.facing);if(this.clock-this.last>300){this.last=this.clock;const aim=screenVector(ax,ay),length=Math.hypot(ax,ay);this.shotDir={x:ax/length,y:ay/length};this.shoot(this.p,aim.u*4,aim.v*4);this.audio.tone(700,.04,.015);}}
   const hurt=this.clock<this.inv&&this.clock>this.inv-300;
   const recoil=!this.reducedMotion&&this.last?Math.max(0,1-(this.clock-this.last)/100):0;

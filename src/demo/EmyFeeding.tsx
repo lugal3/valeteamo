@@ -1,5 +1,6 @@
 import {useEffect,useRef,useState,type PointerEvent as ReactPointerEvent} from 'react';
 import type {Sound} from '../audio';
+import type {PadSample} from '../adaptive-input.js';
 import {advanceEmyFeeding,churuInReach,EMY_MOUTH} from './emy-feeding-state';
 import './emy-feeding.css';
 
@@ -25,11 +26,18 @@ export function EmyFeeding({audio,onComplete,onCancel}:{audio:Sound;onComplete:(
  useEffect(()=>{
   const previous=document.activeElement as HTMLElement|null;tube.current?.focus();
   for(const pose of ['idle','blink','lick','love']){const image=new Image();image.src=`./sprites/emy-${pose}.png`;}
-  let raf=0,last=performance.now(),finishTimer=0;
+  let raf=0,last=performance.now(),finishTimer=0,padHolding=false,lastPad=0;
+  const panel=stage.current?.closest('.emy-feeding');
+  const gamepad=(e:Event)=>{const p=(e as CustomEvent<PadSample>).detail,s=live.current;if(s.done)return;const now=performance.now(),dt=Math.min(.05,(now-(lastPad||now))/1000);lastPad=now;
+   if(p.pressed[1]){cancel.current();return;}
+   if(Math.hypot(p.moveX,p.moveY)>.02){aim(s.tip.x+p.moveX*dt*.65,s.tip.y+p.moveY*dt*.65);}
+   const held=!!p.buttons[0]||!!p.buttons[2];if(held!==padHolding){padHolding=held;hold(held);}
+  };panel?.addEventListener('vt-pad-feed',gamepad);
   const stop=()=>{live.current.holding=false;setHolding(false);drag.current=null;};
   const frame=(now:number)=>{
    const dt=(now-last)/1000;last=now;
    const s=live.current;
+   if(padHolding&&now-lastPad>150){padHolding=false;hold(false);}
    if(!document.hidden&&!s.done){
     const near=churuInReach(s.tip.x,s.tip.y);
     if(!reduced.current){
@@ -71,7 +79,7 @@ export function EmyFeeding({audio,onComplete,onCancel}:{audio:Sound;onComplete:(
   const visibility=()=>{if(document.hidden)stop();};
   window.addEventListener('blur',stop);document.addEventListener('visibilitychange',visibility);
   window.addEventListener('keydown',key,true);
-  return()=>{cancelAnimationFrame(raf);clearTimeout(finishTimer);window.removeEventListener('blur',stop);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('keydown',key,true);previous?.focus();};
+  return()=>{panel?.removeEventListener('vt-pad-feed',gamepad);cancelAnimationFrame(raf);clearTimeout(finishTimer);window.removeEventListener('blur',stop);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('keydown',key,true);previous?.focus();};
  },[audio]);
  const full=progress>=100,eating=holding&&churuInReach(tip.x,tip.y)&&!full;
  const expression=full?'love':eating?(reduced.current||Math.floor(clock/120)%2?'lick':'idle'):blink&&!reduced.current?'blink':'idle';
@@ -107,7 +115,7 @@ export function EmyFeeding({audio,onComplete,onCancel}:{audio:Sound;onComplete:(
    </button>
   </div>
   <footer><div className="emy-progress-row"><img src="./sprites/emy-idle.png" alt="" aria-hidden="true"/><div className="emy-meter" role="progressbar" aria-label="Emy alimentada" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.floor(progress)}><span style={{width:progress+'%'}}/></div><span className="emy-progress-heart" aria-hidden="true">♥</span></div>
-   <p id="emy-keys" className="emy-keys">{full?'Gracias por cuidarla ♡':holding?'Mantén el Churu cerca de su boca':'Arrastra el Churu · Flechas + espacio en PC'}</p></footer>
+   <p id="emy-keys" className="emy-keys">{full?'Gracias por cuidarla ♡':holding?'Mantén el Churu cerca de su boca':'Arrastra el Churu · Flechas + espacio · Mando: stick + X/cuadrado'}</p></footer>
   </div>
  </section>;
 }

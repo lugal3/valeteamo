@@ -24,7 +24,7 @@ assert(house.nightWalkable(layout.door)&&house.nightWalkable(layout.window),
  'both quest targets must be ON traversable floor');
 assert(!house.nightHouseBlocks(layout.door)&&!house.nightHouseBlocks(layout.window),
  'quest targets must be outside the facade hitbox');
-assert(house.nightHouseBlocks({u:78.4,v:8}), 'house walls are solid and not traversable');
+assert(house.nightHouseBlocks(layout.center), 'house walls are solid and not traversable');
 assert.equal(new Set(house.NIGHT_NEIGHBORS.map(h=>h.style)).size,3);
 for(const neighbor of house.NIGHT_NEIGHBORS){
  assert(house.nightHouseBlocks(neighbor),'neighbor houses have physical footprints');
@@ -34,17 +34,31 @@ assert(house.nightWalkable(layout.yard)&&house.nightWalkable(layout.gate),
  'house entry path and garden gate must be traversable');
 assert(house.nightNavigationDistance(layout.door,layout.window)>1.3,
  'door and window are distinct physically separated interactions');
-assert(layout.window.u<layout.door.u,'window is west of the locked door, as in the 3D model');
+assert(layout.window.u-layout.window.v>layout.door.u-layout.door.v,'from the street the window is right of the door');
+assert(Math.abs(layout.window.u+layout.window.v-layout.door.u-layout.door.v)<1e-8,'shared front baseline');
+const depth=p=>p.u+p.v;
+assert(depth(layout.road)>depth(layout.sidewalk)&&depth(layout.sidewalk)>depth(layout.gate)&&depth(layout.gate)>depth(layout.door),'street, sidewalk, yard, porch and facade face the same direction');
+assert.equal(house.nightStreetSurface(layout.road),'road');
+assert.equal(house.nightStreetSurface(layout.sidewalk),'sidewalk');
+assert.equal(house.nightStreetSurface(layout.door),'yard');
+assert.equal(house.nightStreetSurface(house.NIGHT_VAN),'road');
+assert(house.nightWalkable(house.NIGHT_VAN),'van sits on the accessible street');
+for(const side of [-3,0,3]){const street=house.frontOfHouse(4,side);assert.equal(house.nightStreetSurface(street),'road');assert(house.nightWalkable(street),'street spans the entire front');}
+assert.equal(house.nightStreetSurface(layout.center),'grass','no asphalt behind the facade');
 function safeSegment(a,b,label){
- const steps=Math.max(1,Math.ceil(house.nightNavigationDistance(a,b)/.09));
+ assert(house.nightSegmentClear(a,b),label+' intersects an exact collision footprint');
+ const steps=Math.max(1,Math.ceil(house.nightNavigationDistance(a,b)/.025));
  for(let i=0;i<=steps;i++){
   const t=i/steps,p={u:a.u+(b.u-a.u)*t,v:a.v+(b.v-a.v)*t};
   assert(house.nightWalkable(p),label+' path went through a wall / outside the level at '+JSON.stringify(p));
  }
 }
+safeSegment(layout.road,layout.door,'straight front approach');
+safeSegment(layout.door,layout.window,'porch');
+assert(!house.nightSegmentClear({u:74.6,v:10},{u:75.2,v:10}),'short segment cannot graze the projected facade corner');
 const starts=[
- layout.start,layout.road,layout.sidewalk,layout.gate,layout.yard,
- {u:73.5,v:4.45},{u:75.0,v:7.0},{u:77.3,v:10.8},{u:80.7,v:10.65},
+ layout.start,layout.road,layout.sidewalk,layout.gate,layout.yard,house.NIGHT_VAN,
+ {u:73.5,v:4.45},{u:74.0,v:9.5},{u:77.3,v:10.8},{u:80.7,v:10.65},
  {u:78.6,v:11.2},layout.door,layout.window
 ];
 for(const [i,start] of starts.entries()){
@@ -62,7 +76,7 @@ for(const [i,start] of starts.entries()){
   assert(house.nightNavigationDistance(route.at(-1),dest)<.001,'route reaches exact interaction target');
  }
 }
-assert.equal(house.nightAutoRoute({u:79,v:8},layout.door).length,0,
+assert.equal(house.nightAutoRoute(layout.center,layout.door).length,0,
  'guidance refuses to navigate from inside forbidden house walls');
 assert.equal(house.NIGHT_INTERACTION_RADIUS>=1.5,true,
  'mobile NPC actions must have forgiving pickup distance');
@@ -73,8 +87,8 @@ for(const needle of [
  "nightWalkable(alongU)",
  "nightWalkable(alongV)",
  "setDepth(y-(main?145:100))",
- "HOUSE_3D_REFERENCE.frontDoorX/HOUSE_3D_REFERENCE.width",
- "'PUERTA'","'VENTANA'","'CASA ♡'"
+ "frontFacadeOffset(realX)",
+ "'PUERTA'","'VENTANA'","nightStreetSurface"
 ])assert(iso.includes(needle),'night scene does not implement geometry/wayfinding: '+needle);
 for(const needle of [
  "startHouseGuide(){",
@@ -89,4 +103,4 @@ assert(react.includes('Guiarme caminando')&&react.includes('Detener guía')&&
  'real mobile/desktop user must have a visible, directional optional guide');
 assert(!iso.includes('new Phaser.Game')&&!scene.includes('new Phaser.Game'),
  'must not fork Corazones arcade or instantiate a second renderer');
-console.log('PASS: 3D-faithful entrance and neighborhood, 24 safe A* routes from 12 positions, no wall clipping, responsive guidance and original Corazones engine.');
+console.log('PASS: 3D-faithful entrance and neighborhood, 26 safe A* routes from 13 positions, no wall clipping, responsive guidance and original Corazones engine.');

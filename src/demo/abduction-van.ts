@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import type {IsoPoint} from '../isometric';
+import {NIGHT_VAN} from './night-house-layout';
 
 // ORIGINAL story artwork, shared by the daylight kidnapping and the night
 // neighborhood. The vehicle's crescent/LUNA-07 plate is an actual repeating clue.
@@ -12,7 +13,7 @@ export const ABDUCTION_TIMING={
  struggle:4870,load:5940,board:6640,close:7140,escape:8900
 } as const;
 export const VAN_PLATE='LUNA-07';
-export const VAN_NIGHT_POSITION:IsoPoint={u:73.9,v:5.15};
+export const VAN_NIGHT_POSITION:IsoPoint={...NIGHT_VAN};
 
 const ease=(t:number)=>{const s=Math.max(0,Math.min(1,t));return s*s*(3-2*s);};
 const lerp=(a:number,b:number,t:number)=>a+(b-a)*t;

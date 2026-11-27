@@ -122,7 +122,7 @@ function advanceLouisEscape(louis,dt,kitty,gardenGoal){
   const goal=gardenGoal??kitty,dx=goal.x-louis.x,dz=goal.z-louis.z,d=Math.hypot(dx,dz);
   const sameFloor=Math.abs(kitty.y-louis.y)<.7;
   const stop=gardenGoal ? .10 : 1.05,resume=gardenGoal ? .23 : 1.42;
-  const chatting=louis.dialogueSpeaking&&Math.hypot(kitty.x-louis.x,kitty.z-louis.z)<1.85;
+  const chatting=louis.dialogueEngaged&&sameFloor&&Math.hypot(kitty.x-louis.x,kitty.z-louis.z)<=1.85;
   louis.followMoving=sameFloor&&!chatting&&d>(louis.followMoving?stop:resume);
   if(louis.followMoving){
    const desired=clamp((d-stop)*2.4,.34,3.25);
@@ -135,7 +135,7 @@ function advanceLouisEscape(louis,dt,kitty,gardenGoal){
    louis.yaw=turnTowards(louis.yaw,heading,dt,7);
   }else{
    louis.followSpeed=0;
-   if(gardenGoal)louis.yaw=turnTowards(louis.yaw,Math.atan2(kitty.x-louis.x,kitty.z-louis.z),dt,4);
+   if(gardenGoal||chatting)louis.yaw=turnTowards(louis.yaw,Math.atan2(kitty.x-louis.x,kitty.z-louis.z),dt,4);
   }
  }
  return null;

@@ -1,0 +1,96 @@
+# V3.8 — Continuidad, inmersión y cierre narrativo
+
+Base publicada: d28fc0eaa26ddc348f60b4e9704aaf275f8fb4c0. Rama independiente feature/v38-continuidad-inmersion-final. No fusionar ni desplegar hasta completar validación y recibir autorización. Conservar Corazones 2 original, fecha pública del cumpleaños (05/12 00:00 Chile), mecánicas, estilos aprobados, guardados y motores.
+
+## Cinco fases amplias
+1. Estabilidad y continuidad técnica: línea base, fallos UI, transiciones, carga progresiva, audio y recuperación/guardados; medir rendimiento sin cambiar por intuición. 
+2. Narrativa y prólogo 2D vivo: continuidad de personajes, pistas, estados y recuerdos, actuaciones, ambiente reactivo, secuestro y ritmo breve.
+3. Enlace 2D/3D y casa: correspondencia espacial, transición de ventana y regreso, audio y tensión, lógica de puzles, Emy y Louis, contactos y cinematografía.
+4. Epílogo y universo: picnic vivo libre sin objetivos obligatorios, velas, carta, foto, retorno con recuerdo y revisita. Mantener final alternativo separado. Extras de bajo coste solo si no comprometen calidad.
+5. Cierre integral: recorrido real sin atajos, Chromium/WebKit, PC/móvil, guardados, presupuesto de recursos, pruebas de compilación y rendimiento, capturas antes/después y revisión. Solo después considerar merge y publicación.
+
+## Fase 1 — primer bloque
+- Evidencia: publicación de base exitosa (46067796614); cosmos-browser falló en el corazón de 01 DIC por bounding box animado (46067796778). Epílogo independiente pasó.
+- Corazón conserva la animación en un span visual sin eventos y un botón fijo de 44 px; regresión exige tamaño, animación visual y clic normal.
+- Al confirmar entrada por ventana, se inicia importación de casa durante el fundido existente; no se adelanta el avance ni se inicia el motor durante el prólogo. Estado de preparación explícito mientras se importa y monta la casa; se conserva salida y error existente. No afirmar que el primer frame esté garantizado por la resolución del import.
+- Pendientes de fase 1: CI de este SHA, capturas reales, medición tiempos entre escenas y FPS, audio y persistencia, revisión de recuperación y controles. No declarar fase completa con solo cambios estáticos.
+
+## Fase 1 — segundo bloque
+- Preferencia de silencio compartida para prólogo, casa y epílogo públicos; conserva canales del mezclador 3D y no añade escrituras de preferencias desde las pantallas 2D de LP. La casa de prueba conserva sus preferencias anteriores. Se pasa el estado real de silencio al salir de la casa. El modo privado/bloqueado sigue funcionando en memoria.
+- Epílogo: una instancia Sound compartida entre sus cuatro mapas, sin reiniciar la música en cada cambio. Destrucción al abandonar el epílogo. No se modifica Corazones 2.
+- Precarga del módulo del rescate durante splash existente; no se inicializa ningún motor en paralelo. Limpieza de entrada 2D al perder foco y pausa si el documento se oculta durante la carga. Regresión del epílogo comprueba silencio conservado tras cambiar capítulo y recargar.
+- Verificación pendiente de CI exacto. No se ha medido continuidad sonora, tiempo al primer frame ni FPS en teléfono físico. Persistencia narrativa y auditoría de carga siguen pendientes.
+
+## Fase 1 — tercer bloque
+- CI del commit bc4a4fc detectó TS2353 en HouseLaunchOptions: se declara initialMuted y el argumento opcional de onRescue, compatible con callbacks sin argumentos.
+- Guardado de prólogo y handoff a casa con snapshot: una pestaña antigua no puede escribir sobre checkpoint interior, rescate terminado ni reinicio. Se informa de fallo y se permite jugar en memoria. Un final cuyo guardado perdió el lease no adopta el epílogo de otra partida. No se cambia versión ni claves.
+- Cobertura en rescue.cjs y prologue.cjs de competencia entre pestañas, reinicio, rescate completo, guardado bloqueado y recuperación. Pendiente ejecutar suite de esta revisión; no se da fase por validada.
+
+## Fase 1/2 — instrumentación y primeros enlaces narrativos
+- La fase 1 sigue pendiente de pruebas del SHA. Medición DEV del inicio de StoryGame hasta el callback real de escena lista; el navegador del epílogo registra cuatro tiempos en epilogue-load-timings.json. No equivale a tiempo de primer fotograma visible ni FPS físico.
+- El prólogo confirma memoria de viaje al completar la ventana; el epílogo recuerda Churu, encuentro y descubrimientos válidos mediante sustitución de frases ya existentes. Previews directas y guardados antiguos sin hechos confirmados usan diálogo neutro. La línea de ventana anticipa los mensajes de teléfono existentes sin cambiar el teléfono ni las etapas.
+- Se amplían tests puros de memoria, compatibilidad y datos desconocidos. Pendientes CI, ritmo/actuaciones y verificación visual. No merge/publicación.
+
+## Fase 2 — actuaciones y continuidad de ambiente
+- Kitty mira al interlocutor real; Louis orienta la mirada al hablante presente. Histéresis de dirección y respiración en reposo durante paseo. El claro permite hasta 1.8 s de acercamiento antes de la advertencia sin bloqueo permanente. Limpieza de entrada al iniciar diálogo.
+- Oscurecimiento gradual durante desaparición incluso con controles bloqueados; notificación por umbral y cambio inmediato con movimiento reducido. Pruebas puras de dirección, espera y luz.
+- Auditorías anteriores interrumpidas por commits posteriores; epílogo de 22de79c pasó. Pendiente CI de esta revisión, rendimiento y revisión visual. No publicar.
+
+## Fase 3 — enlace entre motores
+- Cortina compartida de campaña (#0b0a16) desde la ventana; el 3D revela su escena tras el primer render exitoso, no al terminar el import. Error gráfico sigue accesible; la salida final tiene fundido cancelable y guardia contra doble acción, sin tocar LP 3D independiente.
+- El regreso 2D comienza en el portón compartido de la referencia espacial (no en el porche), coherente con la reunión exterior 3D. Se conserva el recorrido y se adapta objetivo/diálogo. Regresión del checkpoint comprueba la posición real de arranque.
+- No se afirma igualdad métrica entre proyecciones ni se ha medido la calidad visual. CI y revisión pendientes; no merge.
+
+## Fase 3 — conversación y correcciones de CI
+- CI de 544eb74: TS2304 en anotación de burbujas (1108); sustituida por tipo indexado de IsoAdventure. CI de 1d737aa: prueba rescue-world no conocía la dependencia night-house-layout; usa el mismo módulo ya cargado para verificar colisiones. El navegador del epílogo pasó en ambas revisiones; no se confunde con compilación aprobada.
+- Louis conserva atención y posición durante toda la conversación opcional (incluidas frases de Kitty y espera de lectura), gira suavemente hacia ella, y recupera seguimiento al alejarse. Cierre/reset libera estado. Conversación disponible solo fuera de persecución directa; no pausa IA ni elimina peligro. Se conserva rig, rutas, velocidad y puzles.
+- Reencuentro exterior: señal narrativa coordinada con ronroneo y alivio ya existentes. Pruebas de sesión de conversación y seguimiento añadidas. Revalidación del nuevo SHA pendiente; no publicación.
+
+## Fase 4 — picnic vivo y regreso
+- Tras soplar las velas, Kitty recupera el movimiento; actores permanecen cerca del picnic, alternan gestos/conversación sin diálogo obligatorio. Decoración física adicional, descanso y caricia de Emy. La acción Terminar aventura guarda complete sin destruir Phaser; regreso al universo o reinicio explícito. Guardado completo abre de nuevo el picnic sin repetir rescate/velas. El corazón público reconoce complete; previews aisladas.
+- Se conservan carta, fotografía real y descarga. Controles compactos laterales; sin enemigo ni límite temporal. Tests de escena viva, reapertura y persistencia ampliados. CI y capturas aún pendientes; no afirmar resultado visual probado.
+
+## Fase 5 — primera revisión de cierre
+- Corrección de recreación del escenario después de velas: la escena restaurada mantiene el estado del picnic, en lugar de reactivar las llamas tras reintentar.
+- Sentarse ahora persiste hasta una orden de movimiento; los botones de picnic se sitúan arriba a la derecha, liberan el área táctil izquierda y mantienen objetivos de 44px. Prueba real de teclado tras completar, asiento prolongado y comprobación DOM de zona táctil a 844×390.
+- Evidencia del SHA 1f368fe: lógica/compilación de auditoría integral y epilogue-browser exitosos; ramas de navegador canceladas al siguiente commit. En 2baab67 se observaron altar y retrato Louis exitosos, otros jobs aún en curso. Nueva revisión requiere CI propio. No declarar FPS físico ni capturas aprobadas. No fusionar ni publicar antes de verificar.
+
+## Corrección solicitada — orientación real de la fachada
+- Se mantiene el muro 3D z=12 con puerta x=5.9 y ventana x=2.2. La base de cámara mirando desde la calle (yaw PI) demuestra que la ventana se ve a la derecha. El plano y dibujo frontal 2D comparten esa orientación, anchura y huella proyectada; ruta exterior pasa por el lateral libre hasta el porche. Furgoneta queda visible en la calle, portón de regreso delante de la fachada. Tres ventanas superiores muestran dos tablones cada una; al amanecer se dibuja puerta abierta.
+- Plano de establecimiento 3D de 3.6 s antes de los contactos originales; no se cambian los 10 s de cinemática de ventana, anclajes de mano, colisiones interiores, puertas ni puzzles. Tras reunión real del grupo, mirada breve hacia la fachada original desde el jardín (sin mover jugador), antes del final. Movimiento reducido conserva el salto existente.
+- Pruebas de proyección real, tablas, ruta y orientación de cierre ampliadas; falta CI y comparación visual del nuevo SHA. No fusionar/publicar.
+
+## Corrección adicional solicitada: la fachada debe dar a la calle
+- No se limita a reflejar la fachada. Asfalto, vereda y camino de entrada se definen ahora por una línea de calle continua delante del muro, paralela a ambas aberturas y conectada al bosque por un tramo lateral. Orden exterior explícito: fachada, porche, patio delantero, vereda, calle. Se elimina el asfalto anterior detrás de la casa.
+- Furgoneta en la calle, faroles y ambiente en la misma referencia; regreso por el patio delantero. Límites de navegación ampliados únicamente para abarcar la calle real, sin quitar colisión de la casa. Se conserva la geometría 3D y las cinemáticas recién corregidas.
+- Regresiones geométricas de calle, vereda, furgoneta, ruta recta y porche. CI y capturas reales pendientes; sin merge ni publicación.
+
+- El objetivo del regreso 2D está en la calle delantera (NIGHT_STREET[3]), de modo que el camino desde el portón no intenta atravesar la huella de la casa. Se adaptan las dependencias de los tests puros al nuevo punto de furgoneta compartido.
+
+## QA exterior
+- CI 46074312909/46074312912 detectó un roce de esquina entre muestras de navegación. Se usa intersección exacta de segmento contra huella proyectada y vecinos, muestreo fino para límites, se conserva nodo inicial de A* y se valida cada tramo simplificado. Se añade caso corto de esquina y verificación de 26 rutas. Calle y fachada no se mueven. Revalidación pendiente.
+
+## Ampliación — lectura 2D y entrada común
+- Sesión por uso real de teclado/ratón, táctil o mando estándar, deadzone radial y pulsaciones por flanco. Primer adaptador narrativo 2D: movimiento/tiro/interacción/pausa, diálogos y navegación básica, diagnóstico de mando en manual de campo. No se cambia Corazones original. Zoom 1.42 frente a 1.12, menos letreros y rótulos duplicados, conserva pistas. Pendientes adaptación 3D, remapeo no estándar, minijuegos, comprobación física y CI.
+
+## Adaptador inicial 3D
+- Ejes del mando estándar integrados en la locomoción, cámara y auto RC reales; botones para interacción, agachar, salto, uso de equipo, lanzar, inventario, ranuras, sprint y pausa. Cruceta/confirmación en modales básicos, manual y conversaciones de Louis. UI de modo y hints RC adaptables. No se altera el mapa ni los puzzles. Faltan minijuegos y menús especializados, calibración no estándar, glifos por familia, pruebas de navegador y mando físico. No publicar.
+
+## Lectura y encuadre 2D — cierre del bloque
+- Cuadrado (estándar 2) interactúa en los dos motores; X (0) salta en 3D y confirma menús. El 2D no tiene salto jugable; no se introduce uno artificial. Auto RC conserva acciones contextuales. Hints y manual actualizados.
+- Se elimina el recordatorio permanente de teclado/táctil en el relato, quedan objetivo, interacción contextual y avisos breves de hasta 6.5 s. Manual inicial y ? se conservan. Zoom narrativo 1.42 y límite de anchura visible 640 unidades para ultrawide. Suelo decorativo se prolonga sin cambiar límites físicos. Epílogo reduce rótulos.
+- CI anterior falló por cargador de pruebas TS al importar adaptive-input.js; se admite extensión real. Pruebas de navegador actualizan fórmula y miden tamaño de sprite, y siguen generando capturas. Aún falta ejecutar CI e inspeccionar capturas, no se afirma revisión visual física. Calibración no estándar pendiente.
+
+## Mandos alternativos y minijuegos
+- Calibración manual de cuatro ejes y 17 botones (opcionales pueden omitirse), con neutralización entre pasos y perfil validado por identificador de mando en almacenamiento local. Disponible en manual 2D y pausa 3D. Compatible con mandos expuestos por Gamepad API; no promete soporte a protocolos no reconocidos, crucetas expuestas exclusivamente como ejes ni mandos Bluetooth incompatibles con iOS.
+- Churu: stick izquierdo y mantener X/cuadrado, círculo cancelar; piano: cruceta selecciona tecla y X la toca; Snake: cruceta. Se conservan teclado/táctil y acciones contextuales. Pruebas puras perfil y mapeo ampliadas, aserciones HUD actualizadas. CI epílogo anterior no abrió escenario; se añade diagnóstico de errores de página, causa aún por confirmar. No se afirma validación visual o física.
+
+## QA de carga y táctil
+- CI del SHA eb8839b: lógica general superada; compilación falló TS1005 en StoryGame.tsx por llave JSX de cierre de HUD ausente. Se corrige (causa de que el 2D/epílogo no abrieran en navegadores). La auditoría móvil y WebKit detectó sprint táctil; se conserva geometría del joystick en pantallas táctiles aunque se use teclado externo, y se eliminan cambios redundantes de clase. Cuadrado siempre acción contextual; X confirma botón enfocado, y cuadrado permite avanzar diálogo. Revalidación del nuevo SHA pendiente. No se afirma captura visual ni mando físico.
+
+## Cierre visual específico del 2D
+- SHA cd9b8ec: auditoría de narrativa 2D en móvil y escritorio y epilogue-browser PASS. Artefactos reales 15235926915 y 15236065868 revisados visualmente: Kitty ocupa aproximadamente 1/6 del alto; suelo cubre encuadre; calle frente a fachada. No es una prueba de rendimiento físico.
+- Último pulido: suaviza contraste de rombos decorativos con microtextura estática; elimina aviso redundante inicial y solapes con momentos opcionales; manual único de cuatro acciones con estética plano, sin ampliación de mando. Prueba de apertura/pausa/cierre de manual y captura en las dos dimensiones. Se mantienen zoom, física, historia, Corazones original, controles y publicación intactos. Revalidación de este último ajuste pendiente.
+
+## Preparación de merge autorizada
+- SHA 74ce4f5: lógica, compilación, 2D móvil/escritorio, epílogo, checkpoints, RC, Emy (Chromium/WebKit), altar y amenaza aprobados. Dos fallos residuales: landscape-gate buscaba un cartel deliberadamente retirado; fallback WebGL dejaba activa la sesión de entrada tras retirar HUD. Se actualiza prueba al manual real y al objetivo, y se elimina sesión de entrada antes de sustituir HUD. Usuario autoriza merge. Revalidación de este ajuste requerida en CI; no afirmar despliegue hasta resultado de workflow live.

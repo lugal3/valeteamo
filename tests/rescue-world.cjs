@@ -8,7 +8,7 @@ const nightExports={};vm.runInNewContext(nightJs,{exports:nightExports});
 const vanJs=ts.transpileModule(fs.readFileSync('src/demo/abduction-van.ts','utf8'),{
  compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}
 }).outputText;
-const vanExports={};vm.runInNewContext(vanJs,{exports:vanExports});
+const vanExports={};vm.runInNewContext(vanJs,{exports:vanExports,require(name){if(name==='./night-house-layout')return nightExports;throw Error(name);}});
 const context={exports:{},require(name){
  if(name==='./night-house-layout')return nightExports;
  if(name==='./abduction-van')return vanExports;
@@ -74,16 +74,16 @@ for(let i=1;i<stages.length;i++){
  assert(world.STORY_POSITIONS[stages[i]].u>world.STORY_POSITIONS[stages[i-1]].u,
   'separate scenes retain forward narrative progression');
 }
-assert(world.STORY_POSITIONS.window.u<world.STORY_POSITIONS.door.u,
- 'Kitty must return WEST along the front/south facade to the accessible window');
+assert(world.STORY_POSITIONS.window.u>world.STORY_POSITIONS.door.u,
+ 'Kitty walks to the right-hand window when facing the house from the street');
 const toPixel=p=>({x:400+(p.u-p.v)*41,y:68+(p.u+p.v)*20});
 const width=340,reference=toPixel(world.STORY_POSITIONS.door);
-const frontLeft=reference.x-width*5.9/14;
-const frontDoor={x:frontLeft+width*5.9/14,y:reference.y};
+const frontLeft=reference.x-width*(14-5.9)/14;
+const frontDoor={x:frontLeft+width*(14-5.9)/14,y:reference.y};
 const portalDoor=toPixel(world.STORY_POSITIONS.door);
 assert(Math.hypot(portalDoor.x-frontDoor.x,portalDoor.y-frontDoor.y)<2,
  'locked door aligns with south/front 3D facade entrance');
-const westWindow={x:frontLeft+width*2.2/14,y:reference.y};
+const westWindow={x:frontLeft+width*(14-2.2)/14,y:reference.y};
 const portalWindow=toPixel(world.STORY_POSITIONS.window);
 assert(Math.hypot(portalWindow.x-westWindow.x,portalWindow.y-westWindow.y)<2,
  'window target aligns with front south-west 3D opening, not the rear wall');
@@ -166,7 +166,7 @@ assert(src.includes('drawBridge(scene)')&&src.includes('water.clear()')&&
  'animated river, accurate two-storey home and controlled scene cleanup');
 const house=fs.readFileSync('src/lab/house-layout.js','utf8');
 assert(house.includes('width:14,depth:12')&&house.includes('HEIGHT=3.15')&&
- src.includes('14×12 metres, 3.15m per floor')&&src.includes('HOUSE_3D_REFERENCE.frontDoorX/HOUSE_3D_REFERENCE.width')&&
+ src.includes('14×12 metres, 3.15m per floor')&&src.includes('frontFacadeOffset(realX)')&&
  src.includes('the OPEN intro window in')&&src.includes('The other south windows have barricade boards.'),
  'isometric entrance, facade and floor proportions must match the 3D layout');
 assert(!src.includes('new Phaser.Game'),'no new Phaser game or secondary renderer');
@@ -188,7 +188,7 @@ assert(world.canopyAlpha(.28,false,30,false)>.28);
 
 // Epilogue follows the same collision rules in the four original maps.
 const routeJs=ts.transpileModule(fs.readFileSync('src/demo/epilogue-route.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-const routeContext={exports:{},require(name){if(name==='./rescue-overworld')return world;throw Error(name);}};
+const routeContext={exports:{},require(name){if(name==='./rescue-overworld')return world;if(name==='./night-house-layout')return nightExports;throw Error(name);}};
 vm.runInNewContext(routeJs,routeContext);
 for(const [stage,chapter] of Object.entries(routeContext.exports.EPILOGUE_CHAPTERS)){
  const valid=p=>{const c=world.constrainRescue(p,chapter.map);return Math.hypot(c.u-p.u,c.v-p.v)<1e-6;};

@@ -16,6 +16,11 @@ export function parsePrologue(raw:string|null):PrologueState;
 export function loadPrologue():PrologueState;
 export function savePrologue(state:PrologueState):boolean;
 export function resetPrologue():void;
+export function openPrologueSave(storage?:Storage):{readonly state:PrologueState;save:(state:PrologueState)=>boolean;reset:()=>boolean}|undefined;
 
 export const OPTIONAL_DISCOVERIES:readonly string[];
 export function recordPrologueDiscovery(state:PrologueState,id:string):PrologueState;
+
+export type JourneyMemory={fedEmy:boolean;metCouple:boolean;discoveries:readonly string[]};
+export function journeyMemory(state?:PrologueState):JourneyMemory;
+export function journeyEcho(memory?:JourneyMemory):string;

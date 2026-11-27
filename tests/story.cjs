@@ -1,7 +1,7 @@
 // Real story state and isometric game logic with a minimal headless Phaser surface.
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict'),ts=require('typescript');
 const cache={};const Phaser={default:{Scene:class{},Geom:{Point:class{constructor(x,y){this.x=x;this.y=y;}}}}};
-function load(name){if(cache[name])return cache[name];const code=ts.transpileModule(fs.readFileSync('src/'+name+'.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+function load(name){if(cache[name])return cache[name];const code=ts.transpileModule(fs.readFileSync('src/'+name+(name.endsWith('.js')?'':'.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
  const ctx={exports:{},require:n=>n==='phaser'?Phaser:load(path.posix.normalize(path.posix.join(path.posix.dirname(name),n))),console,window:{matchMedia:()=>({matches:false})},document:{createElement:()=>({getContext:()=>({fillStyle:'',fillRect(){}})})}};vm.runInNewContext(code,ctx);return cache[name]=ctx.exports;}
 const progress=load('story-progress'),chapters=load('story-content').STORY,iso=load('isometric');
 assert.equal(chapters.filter(c=>c.kind==='game').length,3);assert.equal(progress.parseProgress('invalid',chapters.length).index,0);assert.equal(progress.parseProgress('{"version":2}',chapters.length).index,0);

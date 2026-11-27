@@ -28,13 +28,20 @@ async function verifyDesktop(){
     u:s.p.u,v:s.p.v};
   });
   assert.equal(scene.key,'iso-adventure','desktop uses original Phaser Corazones engine');
-  assert(Math.abs(scene.zoom-Math.min(scene.width/800,scene.height/450)*1.08*1.12)<.00001,
-   'desktop uses same original camera formula');
+  assert(Math.abs(scene.zoom-Math.max(Math.min(scene.width/800,scene.height/450)*1.08*1.42,scene.width/640))<.00001,
+   'desktop uses narrative close-up without stretching');
   assert.equal(scene.world,'morning_garden');
   const rect=await page.locator('.story-prologue .adventure-canvas canvas')
    .evaluate(x=>{const r=x.getBoundingClientRect();return {width:r.width,height:r.height}});
   assert(rect.width>600&&rect.height>300,'canvas scales correctly to desktop viewport');
   await page.screenshot({path:'artifacts/story-desktop-morning.png'});
+  await page.getByRole('button',{name:'Controles y mando'}).click();
+  const manual=page.getByRole('dialog',{name:'Manual de controles del jardín'});
+  await manual.waitFor();await page.waitForFunction(()=>window.__valePrologue.scene().paused);
+  assert.equal(await manual.locator('.adventure-manual-grid p').count(),4);
+  await page.screenshot({path:'artifacts/story-desktop-field-manual.png'});
+  await manual.getByRole('button',{name:'Entendido'}).click();
+  await page.waitForFunction(()=>!window.__valePrologue.scene().paused);
   // Keyboard movement must remain fluid after new environment / cinematic code.
   await page.keyboard.down('d');
   await page.waitForTimeout(620);

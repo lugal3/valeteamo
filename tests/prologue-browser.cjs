@@ -42,14 +42,23 @@ async function play(){
   const realScene=await page.evaluate(()=>{
    const scene=window.__valePrologue.scene();
    return {key:scene.scene.key,zoom:scene.cameras.main.zoom,width:scene.scale.width,height:scene.scale.height,
-    usingOriginalFloor:!!scene.floor,usingOriginalCharacter:scene.player.texture.key.startsWith('chibi-kitty-')};
+    spriteHeight:scene.player.displayHeight*scene.cameras.main.zoom,usingOriginalFloor:!!scene.floor,usingOriginalCharacter:scene.player.texture.key.startsWith('chibi-kitty-')};
   });
+  assert(realScene.spriteHeight>realScene.height*.085,'Kitty must occupy a readable portion of the viewport');
   assert.equal(realScene.key,'iso-adventure','rescue must be the ACTUAL Corazones Phaser class');
-  assert(Math.abs(realScene.zoom-Math.min(realScene.width/800,realScene.height/450)*1.08*1.12)<.00001,
-   'story-only close-up preserves classic base zoom');
+  assert(Math.abs(realScene.zoom-Math.max(Math.min(realScene.width/800,realScene.height/450)*1.08*1.42,realScene.width/640))<.00001,
+   'story close-up and ultrawide cap');
   assert(realScene.usingOriginalFloor&&realScene.usingOriginalCharacter,
    'rescue must use the original diamond floor and Kitty sprite system');
   assert.equal(await game.getAttribute('data-prologue-stage'),'intro');
+  assert(!await page.locator('.prologue-guide').isVisible(),'No redundant first walking instruction');
+  await page.getByRole('button',{name:'Controles y mando'}).click();
+  const manual=page.getByRole('dialog',{name:'Manual de controles del jardín'});
+  await manual.waitFor();await page.waitForFunction(()=>window.__valePrologue.scene().paused);
+  assert.equal(await manual.locator('.adventure-manual-grid p').count(),4,'one four-control field card');
+  await page.screenshot({path:'artifacts/story-mobile-field-manual.png'});
+  await manual.getByRole('button',{name:'Entendido'}).click();
+  await page.waitForFunction(()=>!window.__valePrologue.scene().paused);
   assert.equal(await game.getAttribute('data-story-act'),'morning',
    'Act I starts in the original Corazones scene');
   const convo=page.getByRole('dialog',{name:'Conversación'});
@@ -376,13 +385,13 @@ async function play(){
   assert.equal(await game.getAttribute('data-story-act'),'night',
    'Window approach is part of Act III, not a new game');
   await houseCard.getByText('Ventana abierta').waitFor({timeout:6000});
-  // A second leg of navigation goes WEST toward the actual open 3D window.
+  // A second leg of navigation goes screen-right along the same front.
   const windowDistance=await page.evaluate(()=>window.__valePrologue.houseRoute().distance);
   if(windowDistance>=1.35){
    await houseCard.getByRole('button',{name:/Guiarme caminando/}).click();
    await page.waitForFunction(()=>window.__valePrologue.houseRoute().distance<.9,null,{timeout:13000});
   }
-  await page.screenshot({path:'artifacts/story-night-open-west-window.png'});
+  await page.screenshot({path:'artifacts/story-night-open-front-window.png'});
   await page.getByRole('button',{name:/Entrar por la ventana/}).click();
   await finishDialogue();
   await page.locator('#lab-canvas').waitFor({state:'visible',timeout:26000});

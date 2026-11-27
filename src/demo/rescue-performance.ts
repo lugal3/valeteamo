@@ -100,3 +100,21 @@ export function smoothCinematicFocus(
 export function cinematicCuePosition(
  p:IsoPoint,offset:number
 ):IsoPoint{return {u:p.u,v:p.v+offset};}
+
+export type StoryFacing='up'|'down'|'left'|'right';
+// Hysteresis prevents oscillation around diagonal directions.
+export function attentiveFacing(dx:number,dy:number,previous:StoryFacing):StoryFacing{
+ if(Math.hypot(dx,dy)<3)return previous;
+ const horizontal=previous==='left'||previous==='right';
+ const threshold=horizontal?.9:1.35;
+ return Math.abs(dx)>Math.abs(dy)*threshold?(dx<0?'left':'right'):(dy<0?'up':'down');
+}
+export function companionReady(distance:number,waitMs:number):boolean{
+ return distance<=2.2||waitMs>=1800;
+}
+export function storyLightStep(current:number,target:number,dtMs:number,reduced=false):number{
+ const t=clamp(target,0,1);
+ if(reduced)return t;
+ const next=clamp(current,0,1)+(t-clamp(current,0,1))*(1-Math.exp(-clamp(dtMs,0,65)/470));
+ return Math.abs(next-t)<.001?t:next;
+}

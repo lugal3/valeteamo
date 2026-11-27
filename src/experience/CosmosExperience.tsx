@@ -4,6 +4,7 @@ import {VideoGalaxyCanvas} from './VideoGalaxyCanvas';
 import {InteractivePostcard} from './InteractivePostcard';
 import {GalaxyCouple} from './ReferenceCharacters';
 import {createPreviewBridge} from './game-bridge';
+import {hasCompletedEpilogue} from '../demo/epilogue-progress.js';
 import {ASSET_GUIDE,DEFAULT_PALETTE,MEMORIES,PALETTES,UNLOCK_AT,countdownParts,secondsUntil,type CosmosPalette,type CosmosScene,type GalaxyMemory,type Quality} from './cosmos-config';
 import './cosmos.css';
 import './video-reference.css';
@@ -54,6 +55,7 @@ function useAmbientSound(scene:CosmosScene){
 }
 export default function CosmosExperience({preview=false,startAt='countdown',onExit,onEnterGame}:Props){
  const [scene,setScene]=useState<CosmosScene>(startAt);
+ const [finishedJourney]=useState(()=>!preview&&hasCompletedEpilogue());
  const [palette,setPalette]=useState<CosmosPalette>(DEFAULT_PALETTE);
  const [quality,setQuality]=useState<Quality>('auto');
  const [clock,setClock]=useState(()=>secondsUntil());
@@ -224,9 +226,9 @@ export default function CosmosExperience({preview=false,startAt='countdown',onEx
   {heartMenuOpen&&scene==='galaxy'&&arrivalReady&&<div className="cosmos-heart-backdrop" onClick={e=>{if(e.target===e.currentTarget)setHeartMenuOpen(false);}}>
    <section className="cosmos-heart-menu" role="dialog" aria-modal="true" aria-labelledby="cosmos-heart-menu-title">
     <span className="cosmos-heart-menu-icon" aria-hidden="true">♡</span>
-    <h2 id="cosmos-heart-menu-title">¿Comenzamos nuestra aventura?</h2>
-    <p>La historia continúa en el juego 2D original.</p>
-    <button type="button" className="cosmos-heart-start" onClick={()=>{setHeartMenuOpen(false);enterGame();}}>Comenzar juego 2D <span aria-hidden="true">↗</span></button>
+    <h2 id="cosmos-heart-menu-title">{finishedJourney?'Un recuerdo que sigue vivo':'¿Comenzamos nuestra aventura?'}</h2>
+    <p>{finishedJourney?'Todos están a salvo. Puedes volver al picnic cuando quieras.':'La historia continúa en el juego 2D original.'}</p>
+    <button type="button" className="cosmos-heart-start" onClick={()=>{setHeartMenuOpen(false);enterGame();}}>{finishedJourney?'Volver al picnic':'Comenzar juego 2D'} <span aria-hidden="true">↗</span></button>
     <button type="button" className="cosmos-heart-continue" onClick={()=>setHeartMenuOpen(false)}>Seguir explorando</button>
    </section>
   </div>}

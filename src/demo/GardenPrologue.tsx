@@ -17,7 +17,7 @@ import {valeTexture} from './rescue-intro-art';
 import {prologueProgress,HOUSE_HANDOFF_MS} from './prologue-beats.js';
 import {
  PROLOGUE_START,PROLOGUE_DIALOGUES,PROLOGUE_OBJECTIVES,
- advancePrologue,loadPrologue,savePrologue,resetPrologue,recordPrologueDiscovery,
+ advancePrologue,loadPrologue,openPrologueSave,recordPrologueDiscovery,
  type PrologueState,type PrologueEvent,type PrologueLine
 } from './prologue-story.js';
 import {dialogueGlyphs,dialogueDelay,dialogueVoice,dialogueWords} from './dialogue-feel.js';
@@ -34,13 +34,15 @@ const initial=(test:boolean,checkpoint:PrologueCheckpoint):PrologueState=>
 
 const label=(speaker:string)=>speaker;
 
-export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHouse}:{
- test?:boolean;checkpoint?:PrologueCheckpoint;onExit:()=>void;onEnterHouse:()=>void;
+export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHouse,onPrepareHouse,muted=false,onMute,onSaveWarning,onRememberJourney}:{
+ test?:boolean;checkpoint?:PrologueCheckpoint;onExit:()=>void;onEnterHouse:()=>void;onPrepareHouse?:()=>void;muted?:boolean;onMute?:(muted:boolean)=>void;onSaveWarning?:()=>void;onRememberJourney?:(state:PrologueState)=>void;
 }){
- const [run,setRun]=useState<PrologueState>(()=>initial(test,checkpoint));
+ const [prologueStore]=useState(()=>test?undefined:openPrologueSave());
+ const [run,setRun]=useState<PrologueState>(()=>prologueStore?.state??initial(test,checkpoint));
+ const persist=useCallback((state:PrologueState)=>{if(!test&&!prologueStore?.save(state))onSaveWarning?.();},[test,prologueStore,onSaveWarning]);
  const [dialog,setDialog]=useState<Dialog|null>(null),[letters,setLetters]=useState(0);
  const [feeding,setFeeding]=useState<Feeding|null>(null);
- const [near,setNear]=useState(''),[muted,setMuted]=useState(false);
+ const [near,setNear]=useState('');
  const [houseNav,setHouseNav]=useState<HouseNavigation|null>(null);
  const [guide,setGuide]=useState(''),[dusk,setDusk]=useState(0),[area,setArea]=useState<RouteArea>('sendero');
  const [map,setMap]=useState<RescueMapId>('morning_garden');
@@ -68,7 +70,8 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  const feedingRef=useRef<Feeding|null>(null);
  const lockedRef=useRef(false),enteringRef=useRef(false),nextDialogRef=useRef<()=>void>(()=>{});
  const travelingRef=useRef(false),travelTimers=useRef<number[]>([]);
- const [audio]=useState(()=>new Sound(RESCUE_SAMPLES,userSpriteUrl,userSpriteMP3Url));
+ const [audio]=useState(()=>{const sound=new Sound(RESCUE_SAMPLES,userSpriteUrl,userSpriteMP3Url);sound.muted=muted;return sound;});
+ useEffect(()=>{audio.muted=muted;},[audio,muted]);
  const showFeeding=useCallback((phase:Feeding|null)=>{
   feedingRef.current=phase;lockedRef.current=phase!==null;setFeeding(phase);
  },[]);
@@ -76,14 +79,14 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  const changed=useCallback((event:PrologueEvent)=>{
   const current=phaseRef.current,next=advancePrologue(current,event);
   if(next.stage===current.stage)return current;
-  phaseRef.current=next;setRun(next);if(!test)savePrologue(next);
+  phaseRef.current=next;setRun(next);persist(next);
   sceneRef.current?.setStoryStage(next.stage);
   return next;
- },[test]);
+ },[persist]);
 
  const showDialog=useCallback((lines:PrologueLine[],done?:()=>void)=>{
   if(!lines.length){done?.();return;}
-  lockedRef.current=true;dialogDone.current=done??null;
+  lockedRef.current=true;sceneRef.current?.clearInput();dialogDone.current=done??null;
   const next={lines,index:0};dialogRef.current=next;setDialog(next);reveal(0);setSpeechPulse(0);
  },[reveal]);
  const offerChuru=()=>{
@@ -180,7 +183,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
     setPortraits(avatars);
     if(test&&checkpoint==='feed-cat')scene.storyTeleportForTest(0);
    }
-   if(phaseRef.current.stage==='intro')setGuide('Camina por el sendero · WASD o joystick izquierdo');
+   if(phaseRef.current.stage==='intro')setGuide('');
    // El inicio no tiene NPC ni diálogos bloqueantes. La aventura comienza al andar.
   },
   arrive:()=>{
@@ -243,6 +246,9 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
     showDialog(PROLOGUE_DIALOGUES.window,()=>{
      if(enteringRef.current)return;
      enteringRef.current=true;changed('enter');setHouseHandoff(true);
+     onRememberJourney?.(phaseRef.current);
+     // Begin loading only once the player has committed to the window entry.
+     onPrepareHouse?.();
       // Finish the 2D window transition before mounting the 3D scene.
       const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if(reduced)onEnterHouse();
@@ -278,7 +284,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   discover:(id)=>{
    const current=phaseRef.current,next=recordPrologueDiscovery(current,id);
    if(current===next)return;
-   phaseRef.current=next;setRun(next);if(!test)savePrologue(next);
+   phaseRef.current=next;setRun(next);persist(next);
   },
   ready:()=>actions.current.ready(),
   interact:(stage)=>actions.current.interact(stage),
@@ -325,15 +331,15 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   }catch{finish('',true);}
  };
  const toggleAudio=()=>{
-  const next=!muted;audio.muted=next;setMuted(next);
+  const next=!muted;audio.muted=next;onMute?.(next);
   if(!next)void audio.start();
  };
  const restart=()=>{
   closePostcard();setMoment(null);
   for(const timer of travelTimers.current)window.clearTimeout(timer);
   travelTimers.current=[];travelingRef.current=false;setTransition(null);setHouseHandoff(false);
-  if(!test)resetPrologue();
-  const next=initial(test,checkpoint);
+  if(!test&&!prologueStore?.reset())onSaveWarning?.();
+  const next=test?initial(true,checkpoint):{...PROLOGUE_START};
   phaseRef.current=next;setRun(next);setDialog(null);reveal(0);setSpeechPulse(0);
   showFeeding(null);
   dialogRef.current=null;dialogDone.current=null;lockedRef.current=false;enteringRef.current=false;
@@ -348,9 +354,9 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  },[]);
  useEffect(()=>{
   if(run.stage==='house'&&!test&&!enteringRef.current){
-   enteringRef.current=true;onEnterHouse();
+   enteringRef.current=true;onRememberJourney?.(phaseRef.current);onEnterHouse();
   }
- },[run.stage,test,onEnterHouse]);
+ },[run.stage,test,onEnterHouse,onRememberJourney]);
  useEffect(()=>{
   const update=()=>{
    const scene=sceneRef.current,stage=phaseRef.current.stage;
@@ -387,6 +393,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  const phase=person==='vale'?710:person==='louis'?1570:person==='kitty'?2330:0;
  const blink=!reduce&&(portraitClock+phase)%4320>=4080;
  const portrait=(blink?portraits[person+'-blink']:mouth?portraits[person+'-talk-'+mouth]??portraits[person+'-talk-1']:undefined)??portraits[person];
+ useEffect(()=>{if(!guide)return;const timeout=window.setTimeout(()=>setGuide(''),6500);return()=>window.clearTimeout(timeout);},[guide]);
  const chapter=prologueProgress(run.stage);
 
  return <main className="story-prologue" aria-label="Rescate con el motor original de Corazones"
@@ -398,7 +405,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
     void audio.start();
    }
   }}>
-  <StoryGame key={restartKey} level={2} character="kitty"
+  <StoryGame key={restartKey} level={2} character="kitty" teachControls={!test&&run.stage==='intro'}
    story={story} audio={audio} muted={muted} audioNotice=""
    onUnlockAudio={()=>{void audio.start();}}
    onToggleAudio={toggleAudio} onExit={onExit} onComplete={()=>{}}
@@ -444,7 +451,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   <div className="prologue-night" data-map={map} style={{opacity:dusk}} aria-hidden="true"/>
    {houseHandoff&&<div className="prologue-3d-handoff" role="status" aria-live="polite">
      <span>✧ CAPÍTULO V ✧</span><strong>La casa</strong>
-     <small>Kitty entra por la ventana…</small>
+     <small>Kitty se acerca a la ventana…</small>
     </div>}
   <div className={'prologue-curtain'+(transition?.phase==='out'?' is-dark':'')}
    data-fade={transition?.phase??'none'} aria-hidden="true"/>
@@ -488,9 +495,9 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
      setHouseNav(previous=>previous?{...previous,guided:started}:previous);
     }}>{houseNav.guided?'✕ Detener guía':'♡ Guiarme caminando'}</button>}
   </aside>}
-  {!dialog&&!feeding&&!houseNav&&guide&&<div className="prologue-guide" role="status">{guide}</div>}
+  {!dialog&&!feeding&&!houseNav&&!near&&!moment&&guide&&guide!==PROLOGUE_OBJECTIVES[run.stage]&&<div className="prologue-guide" role="status">{guide}</div>}
   {!dialog&&!feeding&&near&&<button type="button" className="prologue-interact"
-   onClick={()=>sceneRef.current?.storyInteract()}>{near} · E</button>}
+   onClick={()=>sceneRef.current?.storyInteract()}>{near}<span className="input-key-hint"> · E</span><span className="input-pad-hint"> · □</span></button>}
   {moment&&!dialog&&!feeding&&!transition&&!houseHandoff&&!postcard&&<div className="prologue-moment" aria-label="Momentos opcionales">
    <button type="button" onClick={()=>sceneRef.current?.enjoyStoryMoment()}>{moment.label}</button>
    <button type="button" className="prologue-photo-button" aria-label="Crear postal del jardín" onClick={openPostcard}>▣ Postal</button>

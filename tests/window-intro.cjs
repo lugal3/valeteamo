@@ -2,6 +2,12 @@ const assert=require('node:assert/strict');
 (async()=>{
  const w=await import('../src/lab/world.js');
  const {windowIntroCamera,windowIntroState,WINDOW_LANDING,shouldPlayWindowIntro,easeInOut,windowIntroLighting}=await import('../src/lab/window-intro.js');
+ const {WINDOW_ESTABLISH_SECONDS,windowEstablishCamera,windowSequenceCamera}=await import('../src/lab/window-intro.js');
+ const {captureBasis}=await import('../src/lab/capture-shot.js');
+ const wide=windowEstablishCamera(0),basis=captureBasis(wide);
+ assert(wide.z>w.HOUSE.depth+6&&basis.forward[2]<-.9,'Establishing shot from street, facing south facade');
+ assert((2.2-5.9)*basis.right[0]>0,'Real 3D window is to the right of the front door');
+ assert.deepEqual(windowEstablishCamera(WINDOW_ESTABLISH_SECONDS),windowIntroCamera(0));
  const before=windowIntroCamera(0),after=windowIntroCamera(1);
  assert(before.z>10.8,'Starts outdoors');
  assert(after.z<w.HOUSE.depth,'Ends indoors');
@@ -20,6 +26,10 @@ const assert=require('node:assert/strict');
  assert(!shouldPlayWindowIntro({demo:true,checkpoint:'ground',reducedMotion:true}));
  assert(!shouldPlayWindowIntro({demo:true,checkpoint:'upstairs'}));
  const house=w.createHouse('ground');
+ assert.equal(house.boxes.filter(b=>b.id.startsWith('south-0-board-')).length,0,'Only ground front window is unboarded');
+ assert.equal(house.boxes.filter(b=>b.id.startsWith('south-3.15-board-')).length,6,'Three upper windows have two boards each');
+ for(let i=0;i<=120;i++){const camera=windowEstablishCamera(i/120*WINDOW_ESTABLISH_SECONDS);assert(!w.blocked(house.boxes,camera.x,camera.y-.1,camera.z,.08,.2),'Facade approach clears garden geometry');}
+ assert.deepEqual(windowSequenceCamera({elapsed:0,establishAge:0}),wide);
  assert(!w.blocked(house.boxes,WINDOW_LANDING.x,WINDOW_LANDING.y,WINDOW_LANDING.z,.155,1.64),'Window landing must be accessible');
  assert(!w.blocked(house.boxes,WINDOW_LANDING.x,1.4,w.HOUSE.depth,.12,.35),'Living-room window gap is physically open at camera height');
  for(let t=0;t<=1;t+=.005){const p=windowIntroCamera(t);assert(!w.blocked(house.boxes,p.x,p.y-.1,p.z,.08,.2),'Camera clears the sill, sash and furniture at '+t);}

@@ -1,11 +1,11 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
-function load(path){
+function load(path,dependencies={}){
  const source=fs.readFileSync(path,'utf8');
  const js=ts.transpileModule(source,{compilerOptions:{
   module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022
  }}).outputText;
- const context={exports:{},document:{createElement(type){
+ const context={exports:{},require(name){if(name in dependencies)return dependencies[name];throw Error(name);},document:{createElement(type){
   assert.equal(type,'canvas');
   const ops=[];
   const c={fillStyle:'',font:'',imageSmoothingEnabled:true,
@@ -18,7 +18,7 @@ function load(path){
  vm.runInNewContext(js,context,{filename:path});
  return context.exports;
 }
-const van=load('src/demo/abduction-van.ts'),night=load('src/demo/night-house-layout.ts');
+const night=load('src/demo/night-house-layout.ts'),van=load('src/demo/abduction-van.ts',{'./night-house-layout':night});
 const T=van.ABDUCTION_TIMING;
 const expected=['arrival','doors','disembark','approach','struggle',
  'load','board','close','escape','done'];

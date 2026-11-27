@@ -61,6 +61,9 @@ export function StoryApp({ClassicApp,initialRoute}:{ClassicApp:ComponentType;ini
  const chapter=STORY[progress.index];
  const answer=progress.answers[chapter.id]??null;
  useEffect(()=>{container.current?.scrollTo({top:0,behavior:'auto'});},[progress.index,screen]);
+ // The player has chosen the adventure; warm only its JS module while the
+ // existing splash is visible. Do not instantiate Phaser or WebGL here.
+ useEffect(()=>{if(screen==='splash'&&splashTarget==='rescue')void import('./demo/RescueDemo').catch(()=>{});},[screen,splashTarget]);
  useEffect(()=>{audio.current.setTheme(screen==='arcade'?'battle':screen==='game'&&chapter.kind==='game'?(chapter.level===3?'final':chapter.level===2?'battle':'garden'):'story');},[progress.index,screen]);
  useEffect(()=>{if(['rescue','tests','classic'].includes(screen)){audio.current.destroy();stopWelcomeMelody();}},[screen]);
  useEffect(()=>{const visibility=()=>{if(document.hidden)audio.current.suspend();};document.addEventListener('visibilitychange',visibility);const sound=audio.current;return()=>{document.removeEventListener('visibilitychange',visibility);sound.destroy();stopWelcomeMelody();};},[]);

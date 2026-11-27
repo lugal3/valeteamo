@@ -22,9 +22,9 @@ export function createLoisDialogue(){
  let session=null;const visits={};
  const quiet=()=>{if(session){session.actor.dialogueSpeaking=false;if(session.actor.visualReaction?.type==='speak')session.actor.visualReaction=null;}};
  const load=()=>{const line=session.lines[session.index];Object.assign(session,{line,glyphs:dialogueGlyphs(line.text),shown:0,remaining:0});session.remaining=dialogueDelay(session.glyphs,0,line.tone);session.actor.dialogueSpeaking=line.speaker==='Louis';if(session.actor.dialogueSpeaking)startLoisReaction(session.actor,'speak',Math.min(8,Math.max(.5,session.glyphs.length*.065)));};
- const close=()=>{quiet();session=null;};
+ const close=()=>{quiet();if(session)session.actor.dialogueEngaged=false;session=null;};
  return {get active(){return session;},
- open(actor,context){if(!scripts[context]||session)return false;const groups=scripts[context],i=Math.min(visits[context]||0,groups.length-1);visits[context]=(visits[context]||0)+1;session={actor,context,lines:groups[i],index:0};load();return true;},
+ open(actor,context){if(!scripts[context]||session)return false;const groups=scripts[context],i=Math.min(visits[context]||0,groups.length-1);visits[context]=(visits[context]||0)+1;session={actor,context,lines:groups[i],index:0};actor.dialogueEngaged=true;load();return true;},
  tick(ms,voice=()=>{}){if(!session||!Number.isFinite(ms)||ms<=0)return;session.remaining-=Math.min(ms,150);let chirps=0;while(session.shown<session.glyphs.length&&session.remaining<=0){const i=session.shown++,v=dialogueVoice(session.glyphs,i,session.line.speaker,session.line.tone);if(v&&chirps++<2)voice(v);session.remaining+=dialogueDelay(session.glyphs,session.shown,session.line.tone);}if(session.shown===session.glyphs.length)quiet();},
  next(){if(!session)return false;if(session.shown<session.glyphs.length){session.shown=session.glyphs.length;quiet();return true;}quiet();if(++session.index>=session.lines.length){close();return false;}load();return true;},close,reset(){close();for(const k of Object.keys(visits))delete visits[k];}};
 }

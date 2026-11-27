@@ -379,3 +379,11 @@
 .story-prologue .prologue-photo-button{white-space:nowrap}
 .story-prologue[data-postcard="true"] .adventure-hud,.story-prologue[data-postcard="true"] .prologue-interact{visibility:hidden;pointer-events:none}
 @media(max-width:600px){.story-prologue .prologue-moment{bottom:70px;max-width:64vw}}
+
+.story-prologue .prologue-act,.story-prologue .prologue-area{display:none}.story-prologue .prologue-guide{background:none;box-shadow:none;border:0;opacity:.85;max-width:44vw;font-size:10px}.story-prologue .adventure-hint{background:#fff8ebbd;font-size:10px}.story-prologue .prologue-house-nav{max-width:min(205px,28vw);padding:7px}.story-prologue .prologue-van-clue,.story-prologue .prologue-house-heading small{font-size:10px}
+
+/* Short contextual cue instead of an always-visible tutorial panel. */
+.story-prologue .prologue-guide{top:auto;bottom:max(13px,env(safe-area-inset-bottom));left:50%;right:auto;transform:translateX(-50%);max-width:55vw;padding:4px 10px;color:#fff3dc;background:#352b3e9c;border-radius:7px;text-align:center;pointer-events:none;box-shadow:none;font-size:11px}.story-prologue[data-input-mode=gamepad] .prologue-guide{bottom:36px}.story-prologue .adventure-objective{max-width:48vw;white-space:normal;line-height:1.25;font-size:11px;padding:5px 9px}.story-prologue[data-input-mode=touch] .input-key-hint,.story-prologue[data-input-mode=touch] .input-pad-hint{display:none}
+
+/* During the field card only the tutorial remains visible. */
+.story-prologue:has(.adventure-controls-help) :is(.prologue-guide,.prologue-interact,.prologue-house-nav,.prologue-moment,.prologue-restart,.adventure-hud){visibility:hidden;pointer-events:none}
