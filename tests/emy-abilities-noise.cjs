@@ -219,7 +219,8 @@ const assert=require('node:assert/strict');
  let travelled=0,minGap=Infinity;
  for(let i=0;i<180;i++){
   const previous={x:chaseCat.cat.x,z:chaseCat.cat.z};
-  updateEmyCompanion(chaseCat,1/60,{world:chaseWorld,player:{x:2,y:HEIGHT,z:2,hidden:true},threat:foeCat});
+  const cue=updateEmyCompanion(chaseCat,1/60,{world:chaseWorld,player:{x:2,y:HEIGHT,z:2,hidden:true},threat:foeCat});
+  if(cue==='distract-noise')foeCat.hearNoise(chaseCat.cat,1.5,'emy');
   foeCat.trackEmyDistraction(chaseCat.cat);
   foeCat.update(1/60,{x:2,y:HEIGHT,z:2,hidden:true});
   travelled+=Math.hypot(chaseCat.cat.x-previous.x,chaseCat.cat.z-previous.z);
