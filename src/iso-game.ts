@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {EMPTY_PAD,type PadSample} from './adaptive-input.js';
 import {CHARACTERS,type CharacterId} from './characters';
 import {buildArt} from './art';
 import {buildChibi} from './chibi-art';
@@ -100,6 +101,7 @@ export class IsoAdventure extends Phaser.Scene {
  storyLuisFarewell=false;
  storyWorld?:RescueOverworld;storyDusk=0;private storyDuskReported=0;storyGuideStep=-1;
  private companionWaitAt:number|null=null;
+ controllerInput:PadSample=EMPTY_PAD;
  storyArea:RouteArea='sendero';storyMap:RescueMapId='morning_garden';storyExitPending=false;
  storyActionPressed=false;storyNear='';storyWalkTriggered=false;storyVictoryEmitted=false;
  storyOptional?:ReturnType<typeof nearbyRescueLandmark>;storyVisited=new Set<string>();
@@ -1232,7 +1234,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   camera.setZoom(Math.min(width/800,height/450)*1.08);
   if(this.story&&this.player){
    // A modest narrative-only close-up improves character readability on phones.
-   camera.setZoom(camera.zoom*1.12);
+   camera.setZoom(camera.zoom*1.42);
    camera.startFollow(this.player,false,.12,.12);
   }
   else camera.centerOn(400,225);
@@ -1324,7 +1326,9 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    // stays byte-identical in the else branch.
    let x=+this.keys.D.isDown-+this.keys.A.isDown,
     y=+this.keys.S.isDown-+this.keys.W.isDown;
-   if(this.left){
+   const padMove=Math.hypot(this.controllerInput.moveX,this.controllerInput.moveY);
+   if(padMove>.01){x=this.controllerInput.moveX;y=this.controllerInput.moveY;}
+   else if(this.left){
     x=this.left.dx;y=this.left.dy;
     if(Math.hypot(x,y)<7)x=y=0;
    }
@@ -1339,7 +1343,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
     const from=toScreen(this.p),to=toScreen(guidePoint);
     x=to.x-from.x;y=to.y-from.y;
    }
-   const intent=screenVector(x,y),strength=this.left&&!guidePoint?
+   const intent=screenVector(x,y),strength=guidePoint?1:padMove>.01?padMove:this.left?
     Math.min(1,Math.hypot(x,y)/45):Math.hypot(x,y)>.1?1:0;
    const previous={...this.p};
    const velocity=guidePoint?{...this.storyVelocity}:
@@ -1419,7 +1423,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    }else{this.moveClock=0;this.lastStep=0;}
   }
   let ax=+this.keys.RIGHT.isDown-+this.keys.LEFT.isDown,ay=+this.keys.DOWN.isDown-+this.keys.UP.isDown;
-  if(this.right){ax=this.right.dx;ay=this.right.dy;if(Math.hypot(ax,ay)<8)ax=ay=0;}else if(this.mouse){const point=toScreen(this.p),aim=this.cameras.main.getWorldPoint(this.input.activePointer.x,this.input.activePointer.y);ax=aim.x-point.x;ay=aim.y-point.y;}
+  if(this.story&&Math.hypot(this.controllerInput.aimX,this.controllerInput.aimY)>.01){ax=this.controllerInput.aimX;ay=this.controllerInput.aimY;}else if(this.right){ax=this.right.dx;ay=this.right.dy;if(Math.hypot(ax,ay)<8)ax=ay=0;}else if(this.mouse){const point=toScreen(this.p),aim=this.cameras.main.getWorldPoint(this.input.activePointer.x,this.input.activePointer.y);ax=aim.x-point.x;ay=aim.y-point.y;}
   const firing=!this.story?.epilogue&&Math.hypot(ax,ay)>.1&&this.level!==1;if(firing){this.facing=facingOf(ax,ay,this.facing);if(this.clock-this.last>300){this.last=this.clock;const aim=screenVector(ax,ay),length=Math.hypot(ax,ay);this.shotDir={x:ax/length,y:ay/length};this.shoot(this.p,aim.u*4,aim.v*4);this.audio.tone(700,.04,.015);}}
   const hurt=this.clock<this.inv&&this.clock>this.inv-300;
   const recoil=!this.reducedMotion&&this.last?Math.max(0,1-(this.clock-this.last)/100):0;

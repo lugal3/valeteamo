@@ -404,7 +404,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
     void audio.start();
    }
   }}>
-  <StoryGame key={restartKey} level={2} character="kitty"
+  <StoryGame key={restartKey} level={2} character="kitty" teachControls={!test&&run.stage==='intro'}
    story={story} audio={audio} muted={muted} audioNotice=""
    onUnlockAudio={()=>{void audio.start();}}
    onToggleAudio={toggleAudio} onExit={onExit} onComplete={()=>{}}
@@ -496,7 +496,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   </aside>}
   {!dialog&&!feeding&&!houseNav&&guide&&<div className="prologue-guide" role="status">{guide}</div>}
   {!dialog&&!feeding&&near&&<button type="button" className="prologue-interact"
-   onClick={()=>sceneRef.current?.storyInteract()}>{near} · E</button>}
+   onClick={()=>sceneRef.current?.storyInteract()}>{near}<span className="input-key-hint"> · E</span><span className="input-pad-hint"> · ✕</span></button>}
   {moment&&!dialog&&!feeding&&!transition&&!houseHandoff&&!postcard&&<div className="prologue-moment" aria-label="Momentos opcionales">
    <button type="button" onClick={()=>sceneRef.current?.enjoyStoryMoment()}>{moment.label}</button>
    <button type="button" className="prologue-photo-button" aria-label="Crear postal del jardín" onClick={openPostcard}>▣ Postal</button>

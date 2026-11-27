@@ -88,7 +88,7 @@ for(const needle of [
  "nightWalkable(alongV)",
  "setDepth(y-(main?145:100))",
  "frontFacadeOffset(realX)",
- "'PUERTA'","'VENTANA'","'CASA ♡'"
+ "'PUERTA'","'VENTANA'","nightStreetSurface"
 ])assert(iso.includes(needle),'night scene does not implement geometry/wayfinding: '+needle);
 for(const needle of [
  "startHouseGuide(){",

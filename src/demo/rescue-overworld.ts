@@ -916,14 +916,12 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   }
  }
  if(map==='morning_garden'){
-  sign(scene,8,1.3,'RÍO ♡');
   // Welcoming flowered path and riparian details; solid props are drawn below.
   for(const [u,v] of [[9.6,2.2],[10.6,8.4],[12.3,1.6],[14.2,9.4],[15.5,1.6]])
    reeds(scene,u,v);
   picketFence(scene,4.2,9.2,5);picketFence(scene,6.8,9.6,4);
   // River lookout furniture is now attached to the new trail.
  }else if(map==='afternoon_meeting'){
-  sign(scene,25,1,'CEREZOS');
   // An oval plaza gives room to approach people from different directions.
   const plaza=scene.add.graphics().setDepth(.8),p=toScreen({u:29.3,v:4.6});
   plaza.fillStyle(0xf7e0bb,.23).fillEllipse(p.x,p.y,230,115);
@@ -935,7 +933,6 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   }
   picketFence(scene,25.1,8.9,5);picketFence(scene,41.3,8.9,5);
  }else if(map==='dusk_search'){
-  sign(scene,49,.2,'SILENCIO');
   const creek=scene.add.graphics().setDepth(.4);
   for(let u=49;u<60;u++){
    const p=toScreen({u,v:routeLimits(u).max+.4});
@@ -947,7 +944,6 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   // Keep creek banks open, with irregular wet stones on the existing buffer.
   for(let u=49;u<60;u+=.7){const p=toScreen({u,v:routeLimits(u).max+.68});creek.fillStyle(0x516b69,.55).fillEllipse(p.x,p.y+3,17,5);creek.fillStyle(0xa8b6ac,.35).fillEllipse(p.x-2,p.y+1,9,3);}
  }else{
-  sign(scene,68,.3,'VILLA');
   for(const point of NIGHT_LAMPS)lamp(scene,point.u,point.v);
   // Neighboring homes are outside the main house's street-facing path.
   for(const neighbor of NIGHT_NEIGHBORS)house(scene,neighbor.u,neighbor.v,false,neighbor.style);
@@ -1011,7 +1007,6 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   gardenFeature(scene,80.3,3.0,'lantern');
   // The first clear sign points toward the porch rather than to an invisible
   // interaction hidden behind the building's graphic.
-  sign(scene,NIGHT_HOUSE.gate.u,NIGHT_HOUSE.gate.v-1.0,'CASA ♡');
   if(!dawn){
   const targets=scene.add.graphics().setDepth(toScreen(NIGHT_HOUSE.door).y+18);
   for(const [where,color] of [[NIGHT_HOUSE.door,0xffd69e],
@@ -1041,10 +1036,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
  for(const landmark of rescueLandmarks(map)){
   const {u,v}=landmark.point;
   gardenFeature(scene,u,v,landmark.landmark);
-  const p=toScreen({u,v}),side=Math.sign(landmark.offset);
-  scene.add.text(p.x,p.y-58,landmark.title,{
-   fontFamily:'Georgia',fontSize:'12px',color:'#fff0d2',stroke:'#655568',strokeThickness:3
-  }).setOrigin(.5).setDepth(p.y+1);
+  const side=Math.sign(landmark.offset);
   // Quiet edge flowers flank the path, not its walkable lane.
   ornaments.flower(u-.65,v+side*.5);
   ornaments.flower(u+.65,v+side*.5);
@@ -1081,10 +1073,8 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
  }
  // A spatially legible exit: pearly luminous boundary leading to another map.
  if(cfg.exit&&!dawn){
-  sign(scene,cfg.exit.u-1.1,cfg.exit.v-2.9,'➜');
   const p=toScreen(cfg.exit);
-  scene.add.text(p.x,p.y-49,'✧  SIGUE  ✧',{fontFamily:'Georgia',fontSize:'15px',
-   color:'#fff4d9',stroke:'#a3778b',strokeThickness:3}).setOrigin(.5).setDepth(p.y+4);
+  const marker=scene.add.graphics().setDepth(p.y-2);marker.lineStyle(2,0xfff0d2,.65).strokeEllipse(p.x,p.y,44,17);
  }
  // Living flowers, small animals and lighting share the existing Phaser scene.
  const ecology=createLivingEcology(scene,map,cfg.minU,cfg.maxU,

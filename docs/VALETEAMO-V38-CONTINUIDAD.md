@@ -69,3 +69,6 @@ Base publicada: d28fc0eaa26ddc348f60b4e9704aaf275f8fb4c0. Rama independiente fea
 
 ## QA exterior
 - CI 46074312909/46074312912 detectó un roce de esquina entre muestras de navegación. Se usa intersección exacta de segmento contra huella proyectada y vecinos, muestreo fino para límites, se conserva nodo inicial de A* y se valida cada tramo simplificado. Se añade caso corto de esquina y verificación de 26 rutas. Calle y fachada no se mueven. Revalidación pendiente.
+
+## Ampliación — lectura 2D y entrada común
+- Sesión por uso real de teclado/ratón, táctil o mando estándar, deadzone radial y pulsaciones por flanco. Primer adaptador narrativo 2D: movimiento/tiro/interacción/pausa, diálogos y navegación básica, diagnóstico de mando en manual de campo. No se cambia Corazones original. Zoom 1.42 frente a 1.12, menos letreros y rótulos duplicados, conserva pistas. Pendientes adaptación 3D, remapeo no estándar, minijuegos, comprobación física y CI.

@@ -379,3 +379,5 @@
 .story-prologue .prologue-photo-button{white-space:nowrap}
 .story-prologue[data-postcard="true"] .adventure-hud,.story-prologue[data-postcard="true"] .prologue-interact{visibility:hidden;pointer-events:none}
 @media(max-width:600px){.story-prologue .prologue-moment{bottom:70px;max-width:64vw}}
+
+.story-prologue .prologue-act,.story-prologue .prologue-area{display:none}.story-prologue .prologue-guide{background:none;box-shadow:none;border:0;opacity:.85;max-width:44vw;font-size:10px}.story-prologue .adventure-hint{background:#fff8ebbd;font-size:10px}.story-prologue .prologue-house-nav{max-width:min(205px,28vw);padding:7px}.story-prologue .prologue-van-clue,.story-prologue .prologue-house-heading small{font-size:10px}
