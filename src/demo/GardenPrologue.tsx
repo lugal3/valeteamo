@@ -34,8 +34,8 @@ const initial=(test:boolean,checkpoint:PrologueCheckpoint):PrologueState=>
 
 const label=(speaker:string)=>speaker;
 
-export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHouse}:{
- test?:boolean;checkpoint?:PrologueCheckpoint;onExit:()=>void;onEnterHouse:()=>void;
+export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHouse,onPrepareHouse}:{
+ test?:boolean;checkpoint?:PrologueCheckpoint;onExit:()=>void;onEnterHouse:()=>void;onPrepareHouse?:()=>void;
 }){
  const [run,setRun]=useState<PrologueState>(()=>initial(test,checkpoint));
  const [dialog,setDialog]=useState<Dialog|null>(null),[letters,setLetters]=useState(0);
@@ -243,6 +243,8 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
     showDialog(PROLOGUE_DIALOGUES.window,()=>{
      if(enteringRef.current)return;
      enteringRef.current=true;changed('enter');setHouseHandoff(true);
+     // Begin loading only once the player has committed to the window entry.
+     onPrepareHouse?.();
       // Finish the 2D window transition before mounting the 3D scene.
       const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if(reduced)onEnterHouse();

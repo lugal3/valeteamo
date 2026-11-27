@@ -46,7 +46,13 @@ async function main(){
   await page.getByRole('button',{name:'Cultivar flor 1',exact:true}).click();
   await page.locator('.ed-plant.grown').waitFor();
   await styles.getByRole('button',{name:'01 DIC'}).click();
-  await page.getByRole('button',{name:'Atrapar corazón 1',exact:true}).click();
+  const animatedHeart=page.getByRole('button',{name:'Atrapar corazón 1',exact:true});
+  await animatedHeart.waitFor();
+  const heartBounds=await animatedHeart.boundingBox();
+  assert(heartBounds&&heartBounds.width>=44&&heartBounds.height>=44,'heart keeps a generous touch target');
+  assert.equal(await animatedHeart.evaluate(el=>getComputedStyle(el).animationName),'none','button does not animate its hitbox');
+  assert.equal(await animatedHeart.locator('.ed-heart-art').evaluate(el=>getComputedStyle(el).animationName),'ed-bob','visual bobbing is preserved');
+  await animatedHeart.click();
   assert.equal(await page.locator('.ed-heart').count(),4);
   await styles.getByRole('button',{name:'02 DIC'}).click();
   const drawing=page.locator('canvas[aria-label="Lienzo para dibujar"]');

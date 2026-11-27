@@ -31,6 +31,7 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
  const [epilogueStore]=useState(()=>({current:!test&&progress.rescued?openEpilogueSave():undefined}));
  const [epilogue,setEpilogue]=useState<EpilogueState>(()=>epilogueStore.current?.state??{...EPILOGUE_START,stage:test&&epilogueEntry?epilogueEntry:EPILOGUE_START.stage});
  const [mode,setMode]=useState<'garden'|'house'|'epilogue'|'end'>(test&&epilogueEntry?'epilogue':progress.rescued?(epilogue.stage==='complete'?'end':'epilogue'):progress.house?'house':'garden');
+ const [houseReady,setHouseReady]=useState(false);
  const [error,setError]=useState(''),[saveWarning,setSaveWarning]=useState(false),[epilogueMuted,setEpilogueMuted]=useState(false);
  const phaseRef=useRef(progress),entering=useRef(false),finishing=useRef(false),epilogueRef=useRef(epilogue);
  const completeEpilogue=(next:EpilogueStage)=>{
@@ -43,7 +44,7 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
 
  const enterHouse=()=>{
   if(entering.current)return;
-  entering.current=true;
+  entering.current=true;setHouseReady(false);
   // Mantiene la clave histórica del rescate sincronizada con el nuevo
   // prólogo; la clave y los guardados del arcade original no se tocan.
   const events:RescueEvent[]=['heart','abduction','trail','house'];
@@ -80,6 +81,7 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
       epilogueRef.current=next;setEpilogue(next);setMode(next.stage==='complete'?'end':'epilogue');
      }
     });
+    if(!cancelled)setHouseReady(true);
    }catch(e){if(!cancelled)setError(String(e));}
   };
   void boot();
@@ -91,12 +93,12 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
  const reset=()=>{
   if(!test){resetRescue();resetPrologue();}
   phaseRef.current={...START};epilogueStore.current=undefined;epilogueRef.current={...EPILOGUE_START};setEpilogue(epilogueRef.current);
-  entering.current=false;finishing.current=false;setSaveWarning(false);setError('');setMode('garden');
+  entering.current=false;finishing.current=false;setSaveWarning(false);setError('');setHouseReady(false);setMode('garden');
  };
 
  return <div className="rescue-demo" aria-label="Demo jugable de rescate">
   {mode==='garden'&&<GardenPrologue key={entry+(test?'-trial':'-story')}
-   test={test} checkpoint={checkpointFor(entry)} onExit={onExit} onEnterHouse={enterHouse}/>}
+   test={test} checkpoint={checkpointFor(entry)} onExit={onExit} onEnterHouse={enterHouse} onPrepareHouse={()=>{void import('../lab/house.js').catch(()=>{});}}/>}
   {mode==='epilogue'&&epilogue.stage!=='complete'&&<GardenEpilogue key={epilogue.stage} stage={epilogue.stage} onAdvance={completeEpilogue} onExit={onExit} muted={epilogueMuted} onMute={setEpilogueMuted}/>}
   {mode==='end'&&<div className="rescue-transition rescue-final" data-epilogue-stage="complete">
    <span>♥ ✿ ♥</span><h1>Feliz cumpleaños, <em>Vale</em></h1>
@@ -105,7 +107,9 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
    <button className="secondary" onClick={()=>{if(test||window.confirm('¿Volver a jugar desde el principio? Se reiniciará el progreso del rescate.'))reset();}}>Volver a jugar</button>
   </div>}
   {saveWarning&&<p className="rescue-save-warning" role="status">Puedes continuar, pero el avance de esta sesión no pudo guardarse.</p>}
-  {mode==='house'&&<div className="rescue-under-house" aria-live="polite">Exploración en primera persona</div>}
+  {mode==='house'&&!houseReady&&!error&&<div className="rescue-transition" role="status" aria-live="polite" style={{background:'#171823'}}>
+   <span aria-hidden="true">✧</span><p>Kitty se acerca a la ventana…</p><small>Preparando la casa</small><button className="secondary" onClick={onExit}>Volver</button>
+  </div>}
   {error&&<div className="rescue-error" role="alert">{error}<button onClick={onExit}>Volver</button></div>}
  </div>;
 }
