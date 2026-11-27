@@ -109,7 +109,12 @@ async function completeChapter(page,stage,shots){
   if(shots)await page.screenshot({path:shots+'/epilogue-postcard.png'});
   await physicalClick(page,postal.getByRole('button',{name:'Volver al jardín'}));
   await physicalClick(page,page.getByRole('button',{name:'Terminar aventura'}));
-  await page.locator('[data-epilogue-stage="complete"]').waitFor({timeout:20000});
+  await page.locator('.garden-epilogue[data-epilogue-stage="complete"][data-picnic-live="true"]').waitFor({timeout:20000});
+  const before=await page.evaluate(()=>window.__valeEpilogue());
+  await page.waitForFunction(clock=>window.__valeEpilogue()?.clock>clock+500,before.clock);
+  await page.getByRole('button',{name:'Sentarse',exact:true}).waitFor();
+  assert.equal((await page.evaluate(()=>window.__valeEpilogue())).enemies,0);
+  if(shots)await page.screenshot({path:shots+'/epilogue-live-picnic.png'});
  }else await waitScene(page,stages[stages.indexOf(stage)+1]);
 }
 module.exports={completeChapter,waitScene,stages};

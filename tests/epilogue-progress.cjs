@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');
 (async()=>{
  const {START,advanceRescue,RESCUE_SAVE_KEY}=await import('../src/demo/progression.js');
- const {EPILOGUE_START,EPILOGUE_STAGES,parseEpilogue,advanceEpilogue,openEpilogueSave}=await import('../src/demo/epilogue-progress.js');
+ const {EPILOGUE_START,EPILOGUE_STAGES,parseEpilogue,advanceEpilogue,openEpilogueSave,hasCompletedEpilogue}=await import('../src/demo/epilogue-progress.js');
  const house=['heart','abduction','trail','house'].reduce(advanceRescue,START);
  const rescued=advanceRescue(house,'rescue');
  assert.equal(parseEpilogue(null),null);
@@ -20,8 +20,8 @@ const assert=require('node:assert/strict');
  assert.equal(openEpilogueSave(storage).state.stage,'return-path');
  assert(first.advance('reunion'));assert(first.advance('celebration'));assert(first.advance('complete'));
  assert.equal(JSON.parse(record.get(RESCUE_SAVE_KEY)).rescued,true);
- assert.equal(openEpilogueSave(storage).state.stage,'complete');
- record.delete(RESCUE_SAVE_KEY);
+ assert.equal(openEpilogueSave(storage).state.stage,'complete');assert(hasCompletedEpilogue(storage));
+ record.delete(RESCUE_SAVE_KEY);assert.equal(hasCompletedEpilogue(storage),false);
  assert.equal(openEpilogueSave(storage),undefined);
  assert(!first.advance('outside'));
  console.log('PASS: epilogue sequential progression, rescue gate, legacy migration, reload, stale tab and reset');

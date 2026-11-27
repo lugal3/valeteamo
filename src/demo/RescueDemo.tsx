@@ -34,11 +34,11 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
  const [memory,setMemory]=useState<JourneyMemory>(()=>journeyMemory(test?undefined:loadPrologue()));
  const [epilogueStore]=useState(()=>({current:!test&&progress.rescued?openEpilogueSave():undefined}));
  const [epilogue,setEpilogue]=useState<EpilogueState>(()=>epilogueStore.current?.state??{...EPILOGUE_START,stage:test&&epilogueEntry?epilogueEntry:EPILOGUE_START.stage});
- const [mode,setMode]=useState<'garden'|'house'|'epilogue'|'end'>(test&&epilogueEntry?'epilogue':progress.rescued?(epilogue.stage==='complete'?'end':'epilogue'):progress.house?'house':'garden');
+ const [mode,setMode]=useState<'garden'|'house'|'epilogue'|'end'>(test&&epilogueEntry?'epilogue':progress.rescued?'epilogue':progress.house?'house':'garden');
  const [houseReady,setHouseReady]=useState(false);
  const [error,setError]=useState(''),[saveWarning,setSaveWarning]=useState(false),[campaignMuted,setCampaignMuted]=useState(()=>test?false:readCampaignMute());
  const muteRef=useRef(campaignMuted);
- const [epilogueAudio]=useState(()=>{const sound=new Sound();sound.muted=campaignMuted;return sound;});
+ const [epilogueAudio,setEpilogueAudio]=useState(()=>{const sound=new Sound();sound.muted=campaignMuted;return sound;});
  const updateMuted=(value:boolean)=>{
   muteRef.current=value;setCampaignMuted(value);epilogueAudio.muted=value;
   if(!test)writeCampaignMute(value);
@@ -52,7 +52,7 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
   if(advanced===current)return;
   if(!test&&!epilogueStore.current?.advance(next))setSaveWarning(true);
   epilogueRef.current=advanced;setEpilogue(advanced);
-  if(next==='complete')setMode('end');
+  // The completed save stays in the live celebration scene.
  };
 
  const enterHouse=()=>{
@@ -96,7 +96,7 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
       epilogueStore.current=!test&&committed?openEpilogueSave():undefined;
       if(!test&&!epilogueStore.current)setSaveWarning(true);
       const next=epilogueStore.current?.state??{...EPILOGUE_START};
-      epilogueRef.current=next;setEpilogue(next);setMode(next.stage==='complete'?'end':'epilogue');
+      epilogueRef.current=next;setEpilogue(next);setMode('epilogue');
      }
     });
     if(!cancelled)setHouseReady(true);
@@ -109,6 +109,7 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
  },[mode]);
 
  const reset=()=>{
+  const nextAudio=new Sound();nextAudio.muted=muteRef.current;setEpilogueAudio(nextAudio);
   if(!test){resetRescue();resetPrologue();entryStore.current=openRescueEntrySave();}
   setMemory(journeyMemory());phaseRef.current={...START};epilogueStore.current=undefined;epilogueRef.current={...EPILOGUE_START};setEpilogue(epilogueRef.current);
   entering.current=false;finishing.current=false;setSaveWarning(false);setError('');setHouseReady(false);setMode('garden');
@@ -117,7 +118,7 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
  return <div className="rescue-demo" aria-label="Demo jugable de rescate">
   {mode==='garden'&&<GardenPrologue key={entry+(test?'-trial':'-story')}
    test={test} checkpoint={checkpointFor(entry)} onExit={onExit} onEnterHouse={enterHouse} muted={campaignMuted} onMute={updateMuted} onSaveWarning={()=>setSaveWarning(true)} onRememberJourney={state=>setMemory(journeyMemory(state))} onPrepareHouse={()=>{void import('../lab/house.js').catch(()=>{});}}/>}
-  {mode==='epilogue'&&epilogue.stage!=='complete'&&<GardenEpilogue key={epilogue.stage} stage={epilogue.stage} onAdvance={completeEpilogue} onExit={onExit} muted={campaignMuted} onMute={updateMuted} audio={epilogueAudio} memory={memory}/>}
+  {mode==='epilogue'&&<GardenEpilogue key={epilogue.stage==='complete'?'celebration':epilogue.stage} stage={epilogue.stage==='complete'?'celebration':epilogue.stage} completed={epilogue.stage==='complete'} onAdvance={completeEpilogue} onExit={onExit} onReturn={onComplete} returnLabel={returnToUniverse?'Regresar al universo':'Volver a pruebas'} onReplay={()=>{if(test||window.confirm('¿Volver a jugar desde el principio? Se reiniciará el progreso del rescate.'))reset();}} muted={campaignMuted} onMute={updateMuted} audio={epilogueAudio} memory={memory}/>}
   {mode==='end'&&<div className="rescue-transition rescue-final" data-epilogue-stage="complete">
    <span>♥ ✿ ♥</span><h1>Feliz cumpleaños, <em>Vale</em></h1>
    <p>Louis está a salvo. Emy, Kitty, Luis y Vale vuelven a estar juntos. Gracias por recorrer esta pequeña aventura.</p>

@@ -107,6 +107,8 @@ export class IsoAdventure extends Phaser.Scene {
  storyMomentId='';storyPetUntil=0;storyRestUntil=0;storyMomentCooldown=0;
  private photoActors:PhotoRestore[]=[];private storyPhoto=false;
  private epilogueFlames?:Phaser.GameObjects.Graphics;
+ private picnicSince:number|null=null;
+ private picnicMarker:Phaser.GameObjects.GameObject[]=[];
  private epilogueFollowers:{actor:StoryActor;point:IsoPoint;trail:IsoPoint[];kind:'louis'|'emy'|'luis'|'vale';facing:'up'|'down'|'left'|'right';walk:number}[]=[];
  private storyMixStage='';private storyMixMap='';private storyMixDark=NaN;private storyMixDialogue=false;
  storyPractice?:{point:IsoPoint;marker:Phaser.GameObjects.Graphics};storyPracticeDone=false;
@@ -221,7 +223,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.storyLuisShadow=undefined;this.storyLuisMotion=undefined;
   this.storyLuisReady=false;this.storyLuisArriving=false;this.storyLuisFarewell=false;
   this.story.near('');
-  this.epilogueFollowers=[];this.epilogueFlames=undefined;
+  this.epilogueFollowers=[];this.epilogueFlames=undefined;this.picnicSince=null;this.picnicMarker=[];
   if(this.story.epilogue){this.setupEpilogue(this.story.epilogue);return;}
   if(force)this.p=mapForStage(stage)===this.storyMap?storyArrivalPoint(stage):{...RESCUE_SCENES[this.storyMap].spawn};
   this.p=constrainRescue(this.p,this.storyMap);this.positionPlayer();
@@ -381,7 +383,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const ring=this.add.ellipse(xy.x,xy.y,76,31,0xffe9ad,.30).setStrokeStyle(2,0xfff4cb,.95).setDepth(xy.y-1);
   const heart=this.add.text(xy.x,xy.y-20,'♡',{fontFamily:'Georgia',fontSize:'29px',color:'#fff7df',stroke:'#a4758b',strokeThickness:3}).setOrigin(.5,1).setDepth(xy.y+4);
   this.storyObjects.push(ring,heart);
-  if(chapter.next==='complete')this.decorateEpiloguePicnic();
+  if(chapter.next==='complete'){this.picnicMarker=[ring,heart];this.decorateEpiloguePicnic();}
   if(!this.reducedMotion)this.tweens.add({targets:ring,alpha:.60,scaleX:1.08,scaleY:1.08,duration:1050,yoyo:true,repeat:-1});
   this.storyDusk=chapter.light;this.storyDuskReported=chapter.light;this.story?.dusk(chapter.light);this.story?.map(chapter.map);this.story?.guide(chapter.objective);
   this.story?.area(this.storyWorld?.area(this.p.u)??'sendero');
@@ -412,7 +414,12 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   bunting.lineStyle(1,0x9b7381).lineBetween(at.x-58,at.y-77,at.x,at.y-67).lineBetween(at.x,at.y-67,at.x+58,at.y-77);
   for(let i=0;i<8;i++){const x=at.x-52+i*14,y=at.y-76+10*(1-Math.abs(x-at.x)/58);
    bunting.fillStyle([0xeaa4ba,0xf4cf93,0xc2d4a7][i%3]).fillTriangle(x,y,x+10,y+1,x+5,y+12);}
-  this.storyObjects.push(g,cake,bunting,flames);
+  const treats=this.add.graphics().setDepth(at.y);
+  treats.fillStyle(0x9e7352).fillRoundedRect(at.x-43,at.y-20,19,13,3);
+  treats.lineStyle(2,0xb78862).strokeEllipse(at.x-33,at.y-21,15,16);
+  for(const dx of [-23,23,34]){treats.fillStyle(0xfff0dc).fillEllipse(at.x+dx,at.y-4,12,5);treats.fillStyle(0xc8849a).fillCircle(at.x+dx,at.y-5,3);}
+  treats.fillStyle(0xc4ac83).fillRoundedRect(at.x+27,at.y-25,16,11,2);treats.fillStyle(0xffdf9b).fillRect(at.x+34,at.y-25,2,11).fillRect(at.x+27,at.y-20,16,2);
+  this.storyObjects.push(g,cake,bunting,flames,treats);
  }
  blowEpilogueCandles(){
   if(!this.story?.epilogue||!this.epilogueFlames?.active||!this.epilogueFlames.visible)return;
@@ -420,6 +427,16 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(!this.reducedMotion)this.tweens.add({targets:this.player,angle:-3,duration:180,yoyo:true});
   this.audio.tone(660,.25,.03);this.audio.tone(990,.45,.02);
  }
+ startEpiloguePicnic(celebrate=true){
+  if(this.story?.epilogue?.next!=='complete'||this.picnicSince!==null)return;
+  this.picnicSince=this.clock;
+  for(const marker of this.picnicMarker){this.tweens.killTweensOf(marker);if(marker instanceof Phaser.GameObjects.Ellipse||marker instanceof Phaser.GameObjects.Text)marker.setVisible(false);}
+  if(celebrate){this.blowEpilogueCandles();this.burst(this.storyTarget,0xffd78c);this.burst(this.storyTarget,0xe9a9bf);}
+  else this.epilogueFlames?.setVisible(false);
+  for(const follower of this.epilogueFollowers)follower.trail=[];
+ }
+ picnicRest(){if(this.picnicSince===null||this.paused||this.storyPhoto)return;this.clearInput();this.storyVelocity={u:0,v:0};this.storyRestUntil=this.clock+1200;}
+ picnicPet(){if(this.picnicSince===null||this.paused||this.storyPhoto||!this.storyNear||!this.storyCat)return;this.storyPetUntil=this.clock+2000;this.burst(this.storyCatPoint,0xe9a9bf);this.audio.tone(780,.14,.018);}
  private animateEpilogueTalk(){
   const speaker=this.story?.speaker?.(),talking=this.story?.speaking?.()??false,frame=this.reducedMotion?0:Math.floor(this.clock/160);
   if(this.storyLuis){const speaks=speaker==='Luis'&&talking;this.storyLuis.setTexture(luisTextureKey('down',speaks?'talk':'idle',speaks?frame%3:0));}
@@ -431,7 +448,12 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   // Each companion retains a separate short trail and follows real walkable
   // samples. Distinct final spacing keeps their silhouettes readable.
   for(const follower of this.epilogueFollowers){
-   const lead=follower.kind==='emy'?this.epilogueFollowers[0]?.point??this.p:this.p;
+   const picnic=this.picnicSince!==null;
+   const age=picnic?this.clock-(this.picnicSince??0):0;
+   const offset=follower.kind==='emy'?{u:.15,v:-.85}:{u:.72,v:.80};
+   const visit=picnic&&!this.reducedMotion&&Math.floor(age/7000)%2===1;
+   const goal=constrainRescue({u:this.storyTarget.u+offset.u+(visit?.35:0),v:this.storyTarget.v+offset.v},this.storyMap);
+   const lead=picnic?goal:follower.kind==='emy'?this.epilogueFollowers[0]?.point??this.p:this.p;
    const state=stepRescueFollower(follower.point,lead,follower.trail,dt,this.storyMap);
    follower.trail=state.trail;follower.point=state.position;
    const xy=toScreen(state.position),dx=xy.x-follower.actor.x,dy=xy.y-follower.actor.y;
@@ -439,7 +461,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    else follower.walk=0;
    const dir=follower.facing==='left'?'right':follower.facing;
    const frame=this.reducedMotion?0:state.walking?1+Math.floor(follower.walk/150)%4:storyActorIdle(this.clock+1570,false).frame;
-   const key=follower.kind==='emy'?greyCatTexture(state.walking?'walk':'idle',this.reducedMotion?0:Math.floor((state.walking?follower.walk:this.clock)/180)%4):`chibi-louis-${dir}-${frame}`;
+   const key=follower.kind==='emy'?greyCatTexture(state.walking?'walk':this.storyPetUntil>this.clock?'love':'idle',this.reducedMotion?0:Math.floor((state.walking?follower.walk:this.clock)/180)%4):`chibi-louis-${dir}-${frame}`;
    follower.actor.setPosition(xy.x,xy.y).setDepth(xy.y).setFlipX(follower.facing==='left');
    if(this.textures.exists(key)&&follower.actor.texture.key!==key)follower.actor.setTexture(key);
    if(follower.kind==='emy')this.storyCatPoint=state.position;
@@ -447,7 +469,14 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const idle=luisAnimationFrame(this.clock,'idle',this.reducedMotion);
   this.storyLuis?.setTexture(luisTextureKey('down','idle',idle));
   this.storyVale?.setTexture(valeTexture(false,luisAnimationFrame(this.clock+710,'idle',this.reducedMotion)));
-  const together=chapter.next!=='complete'||this.epilogueFollowers.every(f=>isoDistance(f.point,this.p)<2.5);
+  if(this.picnicSince!==null){
+   const age=this.clock-this.picnicSince,turn=Math.floor(age/4200)%3;
+   const talkFrame=this.reducedMotion?0:Math.floor(age/170)%3;
+   if(turn===0)this.storyLuis?.setTexture(luisTextureKey('down','talk',talkFrame));
+   if(turn===1)this.storyVale?.setTexture(valeTalkTexture(talkFrame));
+   if(turn===2&&this.storyLouis&&this.textures.exists('chibi-louis-down-6'))this.storyLouis.setTexture('chibi-louis-down-'+(this.reducedMotion?0:6+talkFrame%2));
+  }
+  const together=chapter.next!=='complete'||this.picnicSince!==null||this.epilogueFollowers.every(f=>isoDistance(f.point,this.p)<2.5);
   const label=isoDistance(this.p,this.storyTarget)<1.25&&together?chapter.action:'';
   if(label!==this.storyNear){this.storyNear=label;this.story?.near(label);}
  }

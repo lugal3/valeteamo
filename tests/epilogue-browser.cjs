@@ -46,6 +46,8 @@ async function main(){
     await page.getByRole('button',{name:'Activar sonido'}).waitFor();
    }
   }
+  await resume();await page.locator('.garden-epilogue[data-epilogue-stage="complete"][data-picnic-live="true"]').waitFor();
+  await page.waitForFunction(()=>window.__valeEpilogue?.()?.ready);
   await page.getByRole('button',{name:'Regresar al universo'}).click();
   await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="explore"]').waitFor({timeout:30000});
   assert.equal((await read()).epilogue.stage,'complete');

@@ -41,3 +41,5 @@ export function openEpilogueSave(storage=globalThis.localStorage){
   };
  }catch{return undefined;}
 }
+
+export function hasCompletedEpilogue(storage){try{return parseEpilogue((storage??globalThis.localStorage).getItem(RESCUE_SAVE_KEY))?.stage==='complete';}catch{return false;}}
