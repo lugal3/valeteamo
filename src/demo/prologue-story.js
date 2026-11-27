@@ -81,37 +81,37 @@ export function resetPrologue(){
 // These are intentionally concise so the player can reach/test scenes quickly.
 export const PROLOGUE_DIALOGUES={
  couple:[
-  {speaker:'Vale',text:'¡Kitty! Oímos un grito detrás de los cerezos. Hay alguien pidiendo auxilio.'},
-  {speaker:'Luis',text:'Vamos a buscar ayuda al pueblo. Tú puedes seguir el camino iluminado, pero ve con cuidado.'}
+  {speaker:'Vale',tone:'warm',text:'¡Kitty! Oímos un grito detrás de los cerezos. Hay alguien pidiendo auxilio.'},
+  {speaker:'Luis',tone:'calm',text:'Vamos a buscar ayuda al pueblo. Tú puedes seguir el camino iluminado, pero ve con cuidado.'}
  ],
  victory:[
-  {speaker:'Louis',text:'¡Gracias! Soy Louis. Venía de ensayar para mi último concierto y me perdí por este sendero.'},
-  {speaker:'Kitty',text:'Soy Kitty. No te conocía, pero vi que esas sombras te rodeaban. Te acompaño hasta un lugar seguro.'}
+  {speaker:'Louis',tone:'warm',text:'¡Gracias! Soy Louis. Venía de ensayar para mi último concierto y me perdí por este sendero.'},
+  {speaker:'Kitty',tone:'warm',text:'Soy Kitty. No te conocía, pero vi que esas sombras te rodeaban. Te acompaño hasta un lugar seguro.'}
  ],
  luis:[
-  {speaker:'Luis',text:'Voy a revisar el camino. Cuídate, Kitty.'},
-  {speaker:'Kitty',text:'Cuídate. Louis y yo seguimos hacia el claro.'}
+  {speaker:'Luis',tone:'calm',text:'Voy a revisar el camino. Cuídate, Kitty.'},
+  {speaker:'Kitty',tone:'warm',text:'Cuídate. Louis y yo seguimos hacia el claro.'}
  ],
  warning:[
-  {speaker:'Louis',text:'Kitty, ¿ves esa furgoneta? Lleva siguiéndonos desde el camino del concierto…'}
+  {speaker:'Louis',tone:'suspense',text:'Kitty, ¿ves esa furgoneta? Lleva siguiéndonos desde el camino del concierto…'}
  ],
  abducted:[
-  {speaker:'Kitty',text:'¡No! Dos personas con máscaras lo subieron a la fuerza. Vi una media luna y la matrícula LUNA-07.'}
+  {speaker:'Kitty',tone:'alarm',text:'¡No! Dos personas con máscaras lo subieron a la fuerza. Vi una media luna y la matrícula LUNA-07.'}
  ],
  ribbon:[
-  {speaker:'Kitty',text:'Una pulsera como la que llevaba Louis. Se le cayó cuando trató de soltarse.'}
+  {speaker:'Kitty',tone:'suspense',text:'Una pulsera como la que llevaba Louis. Se le cayó cuando trató de soltarse.'}
  ],
  petals:[
-  {speaker:'Kitty',text:'Entre los pétalos hay marcas recientes. Es el camino que siguió la furgoneta.'}
+  {speaker:'Kitty',tone:'suspense',text:'Entre los pétalos hay marcas recientes. Es el camino que siguió la furgoneta.'}
  ],
  wheel:[
-  {speaker:'Kitty',text:'Huellas de ruedas en el barro… conducen a las casas. Tengo que buscar la matrícula.'}
+  {speaker:'Kitty',tone:'suspense',text:'Huellas de ruedas en el barro… conducen a las casas. Tengo que buscar la matrícula.'}
  ],
  locked:[
-  {speaker:'Kitty',text:'Es la misma furgoneta, LUNA-07. La puerta frontal está cerrada; tal vez haya una ventana abierta.'}
+  {speaker:'Kitty',tone:'whisper',text:'Es la misma furgoneta, LUNA-07. La puerta frontal está cerrada; tal vez haya una ventana abierta.'}
  ],
  window:[
-  {speaker:'Kitty',text:'La ventana del frente está entreabierta. Entraré sin hacer ruido. Louis, voy por ti.'}
+  {speaker:'Kitty',tone:'whisper',text:'La ventana del frente está entreabierta. Entraré sin hacer ruido. Louis, voy por ti.'}
  ]
 };
 export const PROLOGUE_OBJECTIVES={

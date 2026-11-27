@@ -1,7 +1,7 @@
 export type PrologueStage='intro'|'feed-cat'|'cat-fed'|'meet-couple'|'defend'|'talk-louis'|'talk-luis'|'walk-together'|'disappearance'|'ribbon'|'petals'|'wheel'|'door'|'window'|'house';
 export type PrologueEvent='churu'|'fed'|'arrived'|'met'|'victory'|'louis'|'luis'|'clearing'|'abducted'|'ribbon'|'petals'|'wheel'|'locked'|'enter';
 export type PrologueCharacter='Kitty'|'Luis'|'Vale'|'Louis';
-export type PrologueLine={speaker:PrologueCharacter;text:string};
+export type PrologueLine={speaker:PrologueCharacter;text:string;tone?:import('./dialogue-feel.js').DialogueTone};
 export type PrologueState={version:number;stage:PrologueStage;hp:number;clues:number;completed:boolean;fedGreyCat:boolean;metCouple:boolean};
 export const PROLOGUE_SAVE_KEY:string;
 export const PROLOGUE_VERSION:number;

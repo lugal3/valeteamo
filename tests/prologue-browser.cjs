@@ -129,6 +129,22 @@ async function play(){
      },null,{timeout:6000});
      await page.screenshot({path:'artifacts/story-luis-chibi-talking.png'});
     }
+    if(stage==='meet-couple'){
+     await convo.waitFor({state:'visible'});
+     await page.waitForFunction(()=>Number(document.querySelector('.prologue-dialog-backdrop')?.dataset.revealed)>0);
+     assert.equal(await convo.getAttribute('data-speaker'),'Vale');
+     assert.equal(await convo.locator('.prologue-portrait img').count(),1);
+     assert.equal(await convo.getAttribute('data-complete'),'false');
+     await page.screenshot({path:'artifacts/story-dialogue-writing.png'});
+     // Real touch on the scenery (outside the card) finishes, then advances.
+     await page.touchscreen.tap(10,35);
+     assert.equal(await convo.getAttribute('data-line'),'0');
+     assert.equal(await convo.getAttribute('data-complete'),'true');
+     await page.touchscreen.tap(10,35);
+     await page.waitForFunction(()=>document.querySelector('.prologue-dialog-backdrop')?.dataset.speaker==='Luis');
+     assert.equal(await convo.getAttribute('data-line'),'1');
+     await page.screenshot({path:'artifacts/story-dialogue-luis.png'});
+    }
     await finishDialogue();
     if(stage==='meet-couple'){
      // Farewell is a distinct 2-beat animation: hand wave and exit walking,
