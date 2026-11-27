@@ -325,6 +325,23 @@ function moveToward(companion,world,goal,dt,speed){
  }
  return moved;
 }
+// A short collision-checked orbit in the commanded room, away from Kitty.
+export function distractionEscapePoint(world,cat,job,threat,player){
+ const center=job.goal,angle=Math.atan2(cat.x-center.x,cat.z-center.z);
+ const room=roomAt(center.x,center.z,center.y),danger=distance(cat,threat);
+ let best=null,score=-Infinity;
+ for(const radius of [.85,1.25,1.65])for(const offset of [Math.PI/3,-Math.PI/3,Math.PI/2,-Math.PI/2,Math.PI,0]){
+  const a=angle+offset,x=center.x+Math.sin(a)*radius,z=center.z+Math.cos(a)*radius;
+  const y=emyGroundHeight(x,z,cat.y,world.hatch?.amount>.92),p={x,y,z};
+  if(!Number.isFinite(y)||Math.abs(y-cat.y)>.12||roomAt(x,z,y)!==room||room==='Sala de música'||distance(p,cat)<.35||!clearPassage(world,cat,p))continue;
+  const gap=distance(p,threat);
+  if(gap<Math.max(.75,danger-.08))continue;
+  if(player&&Math.abs(player.y-y)<.5&&distance(p,player)<Math.min(2,distance(cat,player)))continue;
+  const rank=gap-.20*distance(cat,p)+.15*(Math.sign(offset)===(job.orbitSide||1)?1:0);
+  if(rank>score){score=rank;best=p;}
+ }
+ return best;
+}
 // A local refuge is a real, traversable floor point screened by furniture.
 // No invisible relocation and no navigation toward Kitty's hiding spot.
 export function findEmyRefuge(world,cat,player,threat){
@@ -363,7 +380,7 @@ function updateIndependentCover(companion,world,dt,reduced){
  }
  companion.refuge=null;companionIdle(companion,dt,{reduced,quiet:true});
 }
-export function updateEmyCompanion(companion,delta,{world,player,enteringHide=null,reduced=false,finale=false,threat=null,distractCooldown=0}={}){
+export function updateEmyCompanion(companion,delta,{world,player,enteringHide=null,reduced=false,finale=false,threat=null,distractCooldown=0,scriptedHide=false}={}){
  const cat=companion.cat,dt=Number.isFinite(delta)?Math.max(0,Math.min(.1,delta)):0;
  if(finale){setVisibility(companion,true);return null;}
  // Story priority also applies after a restore or an interrupted command.
@@ -437,14 +454,21 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
    return null;
   }
   job.remaining-=dt;job.nextNoise-=dt;
-  cat.yaw+=deltaAngle(cat.yaw,Math.PI*.5)*(1-Math.exp(-dt*4));
-  poseEmy(cat,{mode:'idle',walking:false,phase:cat.age,reduced,blend:1-Math.exp(-9*dt)});
+  const nearEnemy=threat?.active&&threat.mode==='noise-investigate'&&threat.noiseSource==='emy'&&Math.abs(cat.y-threat.y)<.48&&distance(cat,threat)<3.2;
+  let walking=false;
+  if(nearEnemy){
+   job.orbitSide??=1;
+   if(!job.escape||distance(cat,job.escape)<.18||distance(job.escape,threat)<.68||!clearPassage(world,cat,job.escape))job.escape=distractionEscapePoint(world,cat,job,threat,player);
+   if(job.escape)walking=moveToward(companion,world,job.escape,dt,2.7);
+   if(!walking)job.escape=null;
+  }else job.escape=null;
+  if(!walking)cat.yaw+=deltaAngle(cat.yaw,nearEnemy?Math.atan2(threat.x-cat.x,threat.z-cat.z):Math.PI*.5)*(1-Math.exp(-dt*4));
+  poseEmy(cat,{mode:walking?'walk':nearEnemy?'alert':'idle',walking,phase:cat.age,reduced,blend:1-Math.exp(-9*dt)});
   if(job.remaining<=0){
    // The noise finishes at the commanded room even when Kitty is hidden on
    // another floor. Do NOT automatically path back toward a live hiding spot:
    // that creates unfair noise and exposes Kitty's wardrobe to the pursuer.
    companion.distraction=null;clearNavigation(companion);
-   if(distractCooldown>0){companion.stage='distract-recover';companion.idleAge=0;return 'distract-rest';}
    if(enteringHide||player?.hidden)beginIndependentCover(companion,world,player,threat);
    else companion.stage='following';
    return 'distract-done';
@@ -453,7 +477,6 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
   return null;
  }
  if(companion.stage==='distract-recover'){
-  if(distractCooldown>0){companionIdle(companion,dt,{reduced,quiet:!!(enteringHide||player?.hidden)});return null;}
   if(enteringHide||player?.hidden)beginIndependentCover(companion,world,player,threat);
   else {companion.stage='following';clearNavigation(companion);}
   return 'distract-done';
@@ -476,7 +499,7 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  companion.wardrobeAttempt=hide&&companion.stage==='following'?(companion.wardrobeAttempt||0)+dt:0;
  const sharedDoor=hide&&player?{x:hide.returnX??player.x,y:player.y,z:hide.returnZ??player.z}:null;
  if(companion.stage==='following'&&hide&&player&&
-  (hide.objectId!=='wardrobe'||Math.abs(cat.y-player.y)>.48||distance(cat,sharedDoor)>2.1||companion.wardrobeAttempt>3.0||
+  ((hide.objectId!=='wardrobe'&&!(scriptedHide&&hide.objectId==='underbed'))||Math.abs(cat.y-player.y)>.48||distance(cat,sharedDoor)>(scriptedHide?3.5:2.1)||companion.wardrobeAttempt>(scriptedHide?6:3.0)||
    (roomAt(cat.x,cat.z,cat.y)!==roomAt(sharedDoor.x,sharedDoor.z,sharedDoor.y)&&!clearPassage(world,cat,sharedDoor)))){
   beginIndependentCover(companion,world,player,threat);
   updateIndependentCover(companion,world,dt,reduced);
@@ -600,6 +623,7 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
    companion.closetEntry={x:cat.x,z:cat.z,time:0,inside:closet.hideCamera};
    companion.stage='closet-entry';return null;
   }
+  if(scriptedHide&&hide.objectId==='underbed'&&companion.wardrobeAttempt<.65){poseEmy(cat,{mode:'crouch',reduced});return null;}
   companion.stage='hiding';companion.hiddenAt=hide.objectId;setVisibility(companion,true);return 'hid';
  }
  if(companion.altarWait&&following&&!walking){cat.yaw+=deltaAngle(cat.yaw,Math.atan2(12.27-cat.x,.44-cat.z))*(1-Math.exp(-4*dt));}

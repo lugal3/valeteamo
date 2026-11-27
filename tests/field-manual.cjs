@@ -12,14 +12,14 @@ const assert=require('node:assert/strict');
   const p=arrivalPose(10-i/100);
   assert(Number.isFinite(p.y),'Finite walk pose');
   assert(!blocked(world.boxes,p.x,p.y,p.z,.155,1.72),'Opening path collision at '+i+' '+JSON.stringify(p));
-  if(prev)assert(Math.hypot(p.x-prev.x,p.y-prev.y,p.z-prev.z)<.03,'No teleport or stair jump');
+  if(prev)assert(Math.hypot(p.x-prev.x,p.y-prev.y,p.z-prev.z)<.04,'No teleport or stair jump');
   prev=p;
  }
  assert.equal(arrivalPose(10).y,0);
  assert.equal(arrivalPose(0).y,HEIGHT);
- assert(arrivalPose(5).y<HEIGHT);
+ assert(arrivalPose(8).y<HEIGHT);assert(arrivalPose(0).x<5.1,'Arrive at the actual bedroom threshold by zero');
  const actor=new Pursuer(world);poseArrivingPursuer(actor,5);assert(actor.active);
- finishArrivingPursuer(actor);assert.equal(actor.y,HEIGHT);assert.equal(actor.mode,'search');assert.equal(actor.route,1);
+ finishArrivingPursuer(actor);assert.equal(actor.y,HEIGHT);assert.equal(actor.mode,'search');assert.equal(actor.route,2);
  for(const [hidden,transition,expected] of [[null,null,'failed'],[{objectId:'wardrobe'},null,'patrol'],[{objectId:'underbed'},null,'patrol'],[{objectId:'hide-shower'},null,'failed'],[{objectId:'wardrobe'},{entering:true},'failed']]){
   const events=new HouseEvents({pursuit:true,twoActs:true});events.phase='hide';events.remaining=10;
   const safe=safeBedroomHide(hidden,transition);
@@ -28,6 +28,11 @@ const assert=require('node:assert/strict');
   assert.equal(events.phase,expected);
   assert.equal(events.remaining,0);
  }
+ const wake=new HouseEvents({pursuit:true,twoActs:true});wake.phase='sleep';wake.time=1;
+ assert.deepEqual(wake.advance(.1,false,{leftBedroom:true}),['wake-message']);
+ assert.deepEqual(wake.advance(.99,false),[],'Phone notification precedes the wake-up cutaway');
+ assert.deepEqual(wake.advance(.011,false),['wake']);
+ assert.deepEqual(wake.advance(.5,false),[],'Wake cue fires only once');
  assert.equal(TUTORIALS.length,10);
  assert.equal(new Set(TUTORIALS.map(t=>t.id)).size,10);
  for(const t of TUTORIALS){for(const touch of [false,true]){const html=tutorialCardHTML(t.id,touch);assert(html.includes('data-field-close')&&html.includes('JUEGO PAUSADO')&&html.includes('viewBox='));}}

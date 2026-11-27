@@ -203,7 +203,7 @@ const assert=require('node:assert/strict');
  assert(sendEmyDistract(closeCat,closeWorld,closeGoal));
  let rings=0,finished=false;
  for(let i=0;i<1650;i++){
-  const cue=updateEmyCompanion(closeCat,1/60,{world:closeWorld,player:{x:5.1,y:0,z:10.65}});
+  const cue=updateEmyCompanion(closeCat,1/60,{world:closeWorld,player:{x:5.1,y:0,z:10.65},distractCooldown:35});
   if(cue==='distract-noise')rings++;
   if(cue==='distract-done'){finished=true;break;}
  }

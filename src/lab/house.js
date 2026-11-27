@@ -853,19 +853,19 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  }
  function safeAction(action){
   if(modal!=='Caja fuerte'||!activeSafe)return;
-  const feedback=$('safe-feedback');
+  const feedback=$('safe-feedback'),uiSound=(kind,digit=0)=>sound.safeKeypad(kind,digit,()=>active&&!contextLost&&hasFocus&&!document.hidden&&(modal==='Caja fuerte'||kind==='success'));
   if(action==='submit'){
-   if(safeInput.length!==4){feedback.textContent='Faltan cifras: la combinación tiene cuatro.';return;}
-   if(demo&&(!scenario||scenario.milestone)&&!mirrorSafe.revealed){feedback.textContent='Primero descifra la nota frente al espejo del baño.';return;}
+   if(safeInput.length!==4){uiSound('error');feedback.textContent='Faltan cifras: la combinación tiene cuatro.';return;}
+   if(demo&&(!scenario||scenario.milestone)&&!mirrorSafe.revealed){uiSound('error');feedback.textContent='Primero descifra la nota frente al espejo del baño.';return;}
    const object=activeSafe,result=mirrorSafe.submit(safeInput,()=>animateFurniture(object,true,{player:s,reducedMotion:reducedMotion.matches}).started);
-   if(result==='wrong'){safeInput='';feedback.textContent='La combinación no coincide. Puedes volver a intentarlo.';play('latch',object);}
-   if(result==='blocked'){feedback.textContent='Deja un poco de espacio delante de la caja para abrirla.';return;}
+   if(result==='wrong'){uiSound('error');safeInput='';feedback.textContent='La combinación no coincide. Puedes volver a intentarlo.';play('latch',object);}
+   if(result==='blocked'){uiSound('error');feedback.textContent='Deja un poco de espacio delante de la caja para abrirla.';return;}
    if(result==='opened'){
     if(demo)puzzle=puzzleEvent(puzzle,'symbol');
      world.pianoSheet.concealed=false;world.pianoSheet.interactable=true;renderer.updateVisibility();saveCheckpoint();
-    modalClose();play('keys',object);say('Caja abierta · recoge la partitura',4);return;
+    modalClose();uiSound('success');play('keys',object);say('Caja abierta · recoge la partitura',4);return;
    }
-  }else{feedback.textContent='';if(action==='clear')safeInput='';else if(action==='back')safeInput=safeInput.slice(0,-1);else if(/^\d$/.test(action)&&safeInput.length<4)safeInput+=action;}
+  }else{feedback.textContent='';if(action==='clear'){safeInput='';uiSound('erase');}else if(action==='back'){safeInput=safeInput.slice(0,-1);uiSound('erase');}else if(/^\d$/.test(action)&&safeInput.length<4){safeInput+=action;uiSound('digit',Number(action));}}
   $('safe-code').textContent=(safeInput+'····').slice(0,4).split('').join(' ');
  }
  function bag(){
@@ -1741,8 +1741,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(cue==='patrol'){if(wasHide)finishArrivingPursuer(pursuer);else pursuer.start();saveCheckpoint();queueTutorial('stealth');if(options.threatText===true)say('Está en la planta alta. Espera en silencio.',4);}
    if(cue==='resting')pursuer.goToBed();
    if(cue==='sleep'){sound.setThreat(false);saveCheckpoint();say('Se durmió. Investiga el dormitorio antes de salir.',5);}
+   if(cue==='wake-message'){sound.sequence('notification',true);caption('Notificación del teléfono');say('Nuevo mensaje de Luis',1.2);}
    if(cue==='wake'){
-    phone.close();resetInput();pursuer.wake();sound.sequence('notification',true);sound.setThreat(true);
+    phone.close();resetInput();pursuer.wake();sound.setThreat(true);
     if(options.threatText===true)say('¡El mensaje lo despertó!',3);
    }
    if(cue==='hunt'){pursuer.resumeSearch();saveCheckpoint();queueTutorial('stealth');}
@@ -1809,14 +1810,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(emyCompanion){
     const enteringHide=poseTransition?.entering?{objectId:poseTransition.object.id,returnX:poseTransition.outside.x,returnZ:poseTransition.outside.z}:null;
     updateEmySenses(emyCompanion,s,world,pursuer,objectives.active,shotDelta,flashlightBeam());
-    const cue=updateEmyCompanion(emyCompanion,emyShot&&reducedMotion.matches?shotDelta*3:shotDelta,{world,player:s,enteringHide,reduced:reducedMotion.matches,finale:world.greyCat.active,threat:pursuer,distractCooldown:emyAbilities.distractCooldown});
+    const cue=updateEmyCompanion(emyCompanion,emyShot&&reducedMotion.matches?shotDelta*3:shotDelta,{world,player:s,enteringHide,reduced:reducedMotion.matches,finale:world.greyCat.active,threat:pursuer,distractCooldown:emyAbilities.distractCooldown,scriptedHide:['hide','patrol'].includes(events.phase)});
     if(cue==='scratch')play('scratch',world.emy,.8);
     if(cue==='distract-noise'){
      play('cat',world.emy,.95);caption('Emy está maullando para distraer al secuestrador');
-     pursuer.hearNoise({x:world.emy.x,y:world.emy.y,z:world.emy.z},1.5);
+     pursuer.hearNoise({x:world.emy.x,y:world.emy.y,z:world.emy.z},1.5,'emy');
     }
-    if(cue==='distract-rest')say('Emy terminó la distracción. Descansará hasta que se recargue su habilidad.',4);
-    if(cue==='distract-done')say(s.hidden||enteringHide?'Emy terminó y se mantiene a cubierto.':'Emy vuelve contigo.',4);
+    if(emyCompanion.stage==='distract'&&emyCompanion.distraction?.arrived)pursuer.trackEmyDistraction(world.emy);
+    if(cue==='distract-done'){pursuer.endEmyDistraction();say(s.hidden||enteringHide?'Emy terminó y se mantiene a cubierto.':'Emy vuelve contigo.',4);}
     if(cue==='distract-failed'){emyAbilities.distractCooldown=0;say('Emy no logró llegar. Puedes intentarlo de nuevo.',4);}
     if(cue==='delivered'){
      world.objects.find(o=>o.id==='key').taken=true;
