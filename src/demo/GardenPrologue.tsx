@@ -10,7 +10,8 @@ import userSpriteUrl from '../lab/audio/user-sprite.ogg';
 import userSpriteMP3Url from '../lab/audio/user-sprite.mp3';
 import {toScreen} from '../isometric';
 import {VAN_NIGHT_POSITION} from './abduction-van';
-import type {IsoAdventure,IsoStoryBridge,IsoStoryStage} from '../iso-game';
+import type {IsoAdventure,IsoStoryBridge,IsoStoryStage,StoryMoment} from '../iso-game';
+import {GardenPostcard,makeGardenPostcard} from './GardenPostcard';
 import {RESCUE_SCENES,type RescueMapId,type RouteArea} from './rescue-overworld';
 import {valeTexture} from './rescue-intro-art';
 import {prologueProgress,HOUSE_HANDOFF_MS} from './prologue-beats.js';
@@ -47,6 +48,9 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  const [houseHandoff,setHouseHandoff]=useState(false);
  const [portraits,setPortraits]=useState<Record<string,string>>({});
  const [restartKey,setRestartKey]=useState(0);
+ const [moment,setMoment]=useState<StoryMoment|null>(null);
+ const [postcard,setPostcard]=useState<null|{title:string;image:string;error:boolean}>(null);
+ const postcardRequest=useRef(0),postcardTimer=useRef(0),postcardOpen=useRef(false);
 
  const sceneRef=useRef<IsoAdventure|null>(null),phaseRef=useRef(run);
  const dialogRef=useRef<Dialog|null>(null),dialogDone=useRef<null|(()=>void)>(null);
@@ -255,7 +259,8 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  const story=useMemo<IsoStoryBridge>(()=>({
   stage:()=>phaseRef.current.stage as IsoStoryStage,
   objective:(stage)=>PROLOGUE_OBJECTIVES[stage]??'Sigue la historia',
-  locked:()=>lockedRef.current||enteringRef.current||travelingRef.current,
+  locked:()=>lockedRef.current||enteringRef.current||travelingRef.current||postcardOpen.current,
+  moment:setMoment,
   near:(value)=>setNear(current=>current===value?current:value),
   discoveries:()=>phaseRef.current.discoveries??[],
   speaker:()=>{const current=dialogRef.current;return current?.lines[current.index]?.speaker;},
@@ -279,11 +284,41 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   travel:(zone,commit)=>actions.current.travel(zone,commit)
  }),[]);
 
+ const closePostcard=useCallback(()=>{
+  postcardRequest.current++;window.clearTimeout(postcardTimer.current);
+  postcardOpen.current=false;setPostcard(null);sceneRef.current?.clearInput();
+ },[]);
+ const openPostcard=()=>{
+  const scene=sceneRef.current,memory=scene?.availableStoryMoment();
+  if(!scene||!memory||postcardOpen.current)return;
+  postcardOpen.current=true;scene.clearInput();
+  const request=++postcardRequest.current;
+  setPostcard({title:memory.title,image:'',error:false});
+  const finish=(image:string,error=false)=>{
+   if(postcardRequest.current!==request)return;
+   window.clearTimeout(postcardTimer.current);
+   setPostcard({title:memory.title,image,error});
+  };
+  postcardTimer.current=window.setTimeout(()=>finish('',true),1800);
+  // Phaser snapshots after the next render, so WebGL's cleared buffer is
+  // never read with a direct canvas.toDataURL call.
+  try{
+   const renderer=scene.game.renderer;
+   if(!renderer){finish('',true);return;}
+   renderer.snapshot(result=>{
+    if(postcardRequest.current!==request)return;
+    if(!(result instanceof HTMLImageElement)){finish('',true);return;}
+    try{finish(makeGardenPostcard(result,memory.title));}
+    catch{finish('',true);}
+   });
+  }catch{finish('',true);}
+ };
  const toggleAudio=()=>{
   const next=!muted;audio.muted=next;setMuted(next);
   if(!next)void audio.start();
  };
  const restart=()=>{
+  closePostcard();setMoment(null);
   for(const timer of travelTimers.current)window.clearTimeout(timer);
   travelTimers.current=[];travelingRef.current=false;setTransition(null);setHouseHandoff(false);
   if(!test)resetPrologue();
@@ -295,6 +330,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   setRestartKey(value=>value+1);
  };
  useEffect(()=>()=>{for(const timer of travelTimers.current)window.clearTimeout(timer);
+  postcardRequest.current++;window.clearTimeout(postcardTimer.current);
   audio.destroy();
   if(import.meta.env.DEV)delete (window as Window&{__valePrologue?:unknown}).__valePrologue;
  },[]);
@@ -343,7 +379,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  return <main className="story-prologue" aria-label="Rescate con el motor original de Corazones"
   data-prologue-stage={run.stage} data-rescue-map={map} data-transition={transition?.phase??'none'}
    data-story-act={chapter.id} data-house-handoff={houseHandoff}
-  data-fed-grey-cat={run.fedGreyCat} data-feeding={feeding??'none'} data-conversation={!!dialog}
+  data-fed-grey-cat={run.fedGreyCat} data-feeding={feeding??'none'} data-conversation={!!dialog} data-postcard={!!postcard}
   onClickCapture={event=>{
    if(!muted&&event.target instanceof Element&&!event.target.closest('.adventure-wrap')){
     void audio.start();
@@ -442,6 +478,11 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   {!dialog&&!feeding&&!houseNav&&guide&&<div className="prologue-guide" role="status">{guide}</div>}
   {!dialog&&!feeding&&near&&<button type="button" className="prologue-interact"
    onClick={()=>sceneRef.current?.storyInteract()}>{near} · E</button>}
+  {moment&&!dialog&&!feeding&&!transition&&!houseHandoff&&!postcard&&<div className="prologue-moment" aria-label="Momentos opcionales">
+   <button type="button" onClick={()=>sceneRef.current?.enjoyStoryMoment()}>{moment.label}</button>
+   <button type="button" className="prologue-photo-button" aria-label="Crear postal del jardín" onClick={openPostcard}>▣ Postal</button>
+  </div>}
+  {postcard&&<GardenPostcard title={postcard.title} image={postcard.image} error={postcard.error} onClose={closePostcard}/>}
   {feeding==='offer'&&<EmyFeeding audio={audio} onComplete={offerChuru} onCancel={()=>showFeeding(null)}/>}
   {currentLine&&<div className="prologue-dialog-backdrop" role="dialog"
    aria-modal="true" aria-label="Conversación" data-tone={currentLine.tone??'calm'}

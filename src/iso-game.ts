@@ -38,6 +38,7 @@ type FloatingNote={s:Phaser.GameObjects.Text,y:number,at:number};
 // La historia es una extensión optativa de ESTA MISMA escena Phaser.
 // Sin bridge, 2D Corazones conserva exactamente su juego, controles y cámara.
 export type IsoStoryStage=PrologueStage;
+export type StoryMoment={id:'emy'|'couple'|'louis'|'river'|'rest'|'flowers';label:string;title:string;point:IsoPoint};
 export type IsoStoryBridge={
  stage:()=>IsoStoryStage;
  objective:(stage:IsoStoryStage)=>string;
@@ -45,6 +46,7 @@ export type IsoStoryBridge={
  near:(label:string)=>void;
  discoveries?:()=>readonly string[];
  discover?:(id:string)=>void;
+ moment?:(moment:StoryMoment|null)=>void;
  speaker?:()=>PrologueCharacter|undefined;
  speaking?:()=>boolean;
  ready:()=>void;
@@ -95,6 +97,7 @@ export class IsoAdventure extends Phaser.Scene {
  storyActionPressed=false;storyNear='';storyWalkTriggered=false;storyVictoryEmitted=false;
  storyOptional?:ReturnType<typeof nearbyRescueLandmark>;storyVisited=new Set<string>();
  storyClueHint?:Phaser.GameObjects.Text;
+ storyMomentId='';storyPetUntil=0;storyRestUntil=0;storyMomentCooldown=0;
  storyPractice?:{point:IsoPoint;marker:Phaser.GameObjects.Graphics};storyPracticeDone=false;
  storyTarget:IsoPoint={u:22,v:4.5};
  houseRoute:IsoPoint[]=[];houseLastHint='';
@@ -191,6 +194,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.storyBeatPlayed=false;this.storyTargetCuePlayed=false;
   this.storyWalkTriggered=false;this.storyVictoryEmitted=false;
   this.storyActionPressed=false;this.storyNear='';this.storyOptional=undefined;this.storyClueHint=undefined;this.storyPractice=undefined;
+  this.storyMomentId='';this.storyPetUntil=0;this.storyRestUntil=0;this.storyMomentCooldown=0;this.story?.moment?.(null);
   this.houseRoute=[];this.houseLastHint='';
   this.resetStoryFeel();this.clearStoryBubbles();
   for(const o of this.storyObjects){this.tweens.killTweensOf(o);o.destroy();}this.storyObjects=[];
@@ -359,6 +363,45 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const hint=this.add.text(xy.x,xy.y-10,'✧',{fontFamily:'Georgia',fontSize:'16px',
    color:'#ffe2ad',stroke:'#76556d',strokeThickness:2}).setOrigin(.5,1).setDepth(xy.y+4).setAlpha(0);
   this.storyObjects.push(hint);this.storyClueHint=hint;
+ }
+ // Optional memories use existing actors and landmarks. There is no story
+ // event, HP reward, forced wait or new checkpoint for any of these actions.
+ availableStoryMoment():StoryMoment|null{
+  if(!this.story||this.paused||this.story.locked()||this.storyExitPending||
+   this.storyAbduction||this.storyFeeding||this.storyLouisWalk||
+   luisMotionIsBlocking(this.storyLuisMotion)||this.enemies.length||
+   !['intro','feed-cat','cat-fed','meet-couple','talk-louis','walk-together'].includes(this.storyStage))return null;
+  const at=toScreen(this.p);
+  const nearActor=(actor:StoryActor|undefined)=>!!actor?.active&&actor.visible&&actor.alpha>.65&&
+   Math.hypot((actor.x-at.x)/41,(actor.y-at.y)/20)<1.85;
+  if(this.storyCat&&nearActor(this.storyCat))return {id:'emy',label:'Acariciar a Emy',title:'Un ratito con Emy',point:{...this.storyCatPoint}};
+  if(this.storyLuisReady&&nearActor(this.storyLuis)&&nearActor(this.storyVale))
+   return {id:'couple',label:'Compartir un momento',title:'Con Luis y Vale',point:{...this.p}};
+  if(nearActor(this.storyLouis))return {id:'louis',label:'Compartir un momento',title:'Un paseo con Louis',point:{...this.p}};
+  const landmark=nearbyRescueLandmark(this.storyMap,this.p);
+  if(!landmark)return null;
+  if(landmark.id==='river-lookout')return {id:'river',label:'Contemplar el río',title:'Río de los pétalos',point:landmark.point};
+  if(landmark.id==='quiet-grove')return {id:'rest',label:'Descansar',title:'Un instante en el jardín',point:landmark.point};
+  if(['flower-nook','cherry-court'].includes(landmark.id))return {id:'flowers',label:'Disfrutar las flores',title:landmark.title,point:landmark.point};
+  return null;
+ }
+ enjoyStoryMoment(){
+  const moment=this.availableStoryMoment();
+  if(!moment||this.clock<this.storyMomentCooldown)return false;
+  this.storyMomentCooldown=this.clock+900;
+  const a=toScreen(this.p),b=toScreen(moment.point);
+  if(Math.hypot(b.x-a.x,b.y-a.y)>2)this.facing=feelFacingToTarget(b.x-a.x,b.y-a.y,this.facing);
+  this.storyInteractUntil=this.clock+RESCUE_FEEL.interactMs;
+  this.storyVelocity={u:0,v:0};this.storyStepTravel=0;this.clearInput();
+  if(moment.id==='emy'){
+   this.storyPetUntil=this.clock+1100;
+   if(!this.audio.playSample?.('cat',.1))this.audio.tone(720,.12,.018,'triangle');
+  }else if(moment.id==='rest'||moment.id==='river')this.storyRestUntil=this.clock+1200;
+  else if(moment.id==='louis')this.showStoryBubble('louis','affection');
+  else if(moment.id==='couple')this.showStoryBubble('luis','affection');
+  this.showStoryBubble('kitty','affection');this.burst(moment.point,0xf7c0d2);
+  this.audio.tone(790,.11,.018,'triangle');
+  return true;
  }
  storyInteract(){
   if(!this.story||this.story.locked()||luisMotionIsBlocking(this.storyLuisMotion)||!this.storyNear)return;
@@ -579,6 +622,11 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   }
   const elapsed=this.clock-this.storyStageAt,frame=this.reducedMotion?0:Math.floor(elapsed/280);
   const idleFrame=this.reducedMotion?0:elapsed%4200>4010?3:Math.floor(elapsed/360)%3;
+  if(this.storyPetUntil>this.clock&&this.storyStage!=='cat-fed'){
+   cat.setTexture(greyCatTexture('love',this.reducedMotion?0:Math.floor(this.clock/170)));
+   cat.setAngle(this.reducedMotion?0:Math.sin(this.clock/190)*2);
+   return;
+  }
   if(this.storyStage==='cat-fed'){
    const distance=Math.min(1,Math.max(0,(elapsed-450)/2300));
    const start=this.storyCatPoint;
@@ -834,6 +882,9 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
     this.audio.tone(645,.13,.015);
    }
   }
+  const moment=this.availableStoryMoment();
+  const momentId=moment?.id??'';
+  if(momentId!==this.storyMomentId){this.storyMomentId=momentId;this.story.moment?.(moment);}
   this.checkStoryExit();
  }
  // Small expressive glyphs are NOT RPG dialogue and cannot block input.
@@ -966,9 +1017,10 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   }
   if(this.player.texture.key!==texture)this.player.setTexture(texture);
   const reach=touch&&!this.reducedMotion?Math.sin((1-progress)*Math.PI):0;
+  const resting=!moving&&this.storyRestUntil>this.clock&&!this.reducedMotion?Math.min(1,(this.storyRestUntil-this.clock)/220):0;
   this.player.setFlipX(this.facing==='left')
    .setScale(1.3*(1+recoil*.06+gait.squash+reach*.033),
-    1.3*(1-recoil*.08-gait.squash-reach*.055))
+    1.3*(1-recoil*.08-gait.squash-reach*.055-resting*.075))
    .setAlpha(this.clock<this.inv?
     (this.reducedMotion?.7:Math.floor(this.clock/90)%2?.45:1):1)
    .setAngle(hurt&&!this.reducedMotion?Math.sin(this.clock/35)*10:

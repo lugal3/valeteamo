@@ -371,3 +371,11 @@
 .story-prologue .prologue-3d-handoff span{letter-spacing:.22em;font-weight:500}
 .story-prologue .prologue-3d-handoff strong{letter-spacing:-.02em}
 @media(prefers-reduced-motion:reduce){.story-prologue[data-transition="out"] .prologue-curtain-title{animation:none}}
+
+/* Optional moments never replace the mandatory contextual action. */
+.story-prologue .prologue-moment{position:absolute;z-index:6;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:6px;align-items:center;max-width:42vw}
+.story-prologue .prologue-moment button{border:1px solid #caa5b5;background:#fff4e9ed;color:#80536c;border-radius:10px;min-height:44px;padding:7px 10px;cursor:pointer;font:600 11px system-ui;touch-action:manipulation}
+.story-prologue .prologue-moment button:focus-visible{outline:2px solid #a36a87;outline-offset:2px}
+.story-prologue .prologue-photo-button{white-space:nowrap}
+.story-prologue[data-postcard="true"] .adventure-hud,.story-prologue[data-postcard="true"] .prologue-interact{visibility:hidden;pointer-events:none}
+@media(max-width:600px){.story-prologue .prologue-moment{bottom:70px;max-width:64vw}}
