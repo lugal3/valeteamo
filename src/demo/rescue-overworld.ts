@@ -4,7 +4,7 @@ import {createLivingEcology,type LivingWorld} from './rescue-ecology-render';
 import type {AmbientCue} from './rescue-ecology';
 import {ISO,toScreen,type IsoPoint} from '../isometric';
 import {HOUSE_3D_REFERENCE,NIGHT_HOUSE,nightRouteCenter,nightRouteLimits,nightHouseBlocks,
- nightWalkable} from './night-house-layout';
+ nightWalkable,NIGHT_NEIGHBORS} from './night-house-layout';
 
 // Cuatro mapas cargados POR SEPARADO dentro de IsoAdventure. Ningún mapa crea
 // Phaser.Game, cámara, controles ni sprites: todo sigue siendo 2D Corazones.
@@ -99,13 +99,43 @@ export function sideTrailLandmark(trail:SideTrail):IsoPoint{
  // Set furniture to the outside of the path, with a clear walking lane.
  return {u,v:sideTrailPoint(trail,u).v+Math.sign(trail.offset)*1.0};
 }
+const landmarkCache=new Map<RescueMapId,ReturnType<typeof buildLandmarks>>();
+function buildLandmarks(map:RescueMapId){
+ return SIDE_TRAILS.filter(trail=>trail.map===map).map(trail=>({...trail,point:sideTrailLandmark(trail)}));
+}
 export function rescueLandmarks(map:RescueMapId){
- return SIDE_TRAILS.filter(trail=>trail.map===map).map(trail=>({
-  ...trail,point:sideTrailLandmark(trail)
- }));
+ let found=landmarkCache.get(map);
+ if(!found){found=buildLandmarks(map);landmarkCache.set(map,found);}
+ return found;
+}
+type SceneryKind='tree'|'bench'|'planter'|'rock'|'picnic'|'lantern';
+type SceneryProp={point:IsoPoint;kind:SceneryKind;radius:number};
+const prop=(u:number,v:number,kind:SceneryKind):SceneryProp=>({
+ point:{u,v},kind,radius:{tree:.29,bench:.42,planter:.44,rock:.38,picnic:.58,lantern:.23}[kind]
+});
+// Former decorative objects now have explicit footprints. Two old props on
+// the river lookout path were relocated rather than blocking the new trail.
+export const RESCUE_SCENERY:Record<RescueMapId,readonly SceneryProp[]>={
+ morning_garden:[prop(18,8.5,'bench'),prop(3.1,1.1,'tree'),prop(7.6,8.2,'tree'),
+  prop(18.4,9.4,'tree'),prop(21.3,1,'tree'),prop(3.7,8.7,'planter'),
+  prop(7.4,1.5,'rock'),prop(19,7.3,'rock')],
+ afternoon_meeting:[prop(28,9.8,'bench'),prop(36,.2,'bench'),prop(26.1,-.1,'tree'),
+  prop(29,10.1,'tree'),prop(35.2,-.4,'tree'),prop(39.1,9.7,'tree'),prop(42.3,0,'tree'),
+  prop(27.7,-.1,'planter'),prop(31.8,10.7,'planter'),prop(35.8,9.8,'planter'),
+  prop(42.6,8.4,'planter'),prop(32.5,11.1,'picnic'),prop(24.9,1.8,'rock')],
+ dusk_search:[prop(56,8.7,'bench'),prop(47,9.3,'tree'),prop(51,-.5,'tree'),
+  prop(56,9.9,'tree'),prop(61,.3,'tree'),prop(50.1,-.1,'rock'),prop(54,.5,'rock'),
+  prop(59,.6,'rock'),prop(63,9.3,'rock'),prop(60,9.2,'lantern')],
+ night_neighborhood:[]
+};
+const obstacleCache=new Map<RescueMapId,readonly {point:IsoPoint;radius:number}[]>();
+export function rescueObstacleList(map:RescueMapId){
+ let found=obstacleCache.get(map);
+ if(!found){found=[...rescueLandmarks(map),...RESCUE_SCENERY[map]];obstacleCache.set(map,found);}
+ return found;
 }
 export function rescueLandmarkBlocks(p:IsoPoint,map:RescueMapId):boolean{
- return rescueLandmarks(map).some(o=>Math.hypot(p.u-o.point.u,p.v-o.point.v)<o.radius+.17);
+ return rescueObstacleList(map).some(o=>Math.hypot(p.u-o.point.u,p.v-o.point.v)<o.radius+.17);
 }
 function baseRouteLimits(u:number):{min:number;max:number}{
  const center=routeCenter(u),map=sceneForPosition(u);
@@ -150,9 +180,15 @@ export function constrainRescue(
   }
   // Loaded checkpoints / test positions inside a new prop are moved to
   // its inner side, never through the map edge or onto the bridge water.
-  const blocked=rescueLandmarks(map).find(o=>Math.hypot(next.u-o.point.u,next.v-o.point.v)<o.radius+.17);
-  if(blocked)return {u:next.u,v:blocked.point.v-Math.sign(blocked.offset)*(blocked.radius+.20)};
-  return next;
+  const valid=(q:IsoPoint)=>{const b=routeLimits(q.u);return q.u>=def.minU+.35&&q.u<=def.maxU-.5&&q.v>=b.min+.20&&q.v<=b.max-.20&&!rescueLandmarkBlocks(q,map);};
+  // Nearest free sample; prefer the side toward the main path. Multiple
+  // overlapping props and terrain edges are checked before accepting it.
+  const angle=routeCenter(next.u)>next.v?Math.PI/2:-Math.PI/2;
+  for(let radius=.2;radius<=2.4;radius+=.2)for(let j=0;j<16;j++){
+   const a=angle+j*Math.PI/8,q={u:next.u+Math.cos(a)*radius,v:next.v+Math.sin(a)*radius};
+   if(valid(q))return q;
+  }
+  return {u:next.u,v:routeCenter(next.u)};
  }
  if(!nightHouseBlocks(next))return next;
  // Slide against the house wall instead of teleporting Kitty or trapping her.
@@ -161,6 +197,12 @@ export function constrainRescue(
   if(nightWalkable(alongU))return alongU;
   if(nightWalkable(alongV))return alongV;
   return {...previous};
+ }
+ // For neighbor houses recover locally toward the road rather than jumping
+ // to the main house porch. Preserve the existing main-house fallback.
+ for(let radius=.2;radius<=2.4;radius+=.2){
+  const q={u:next.u,v:next.v+radius};
+  if(nightWalkable(q))return q;
  }
  return {u:next.u,v:clamp(Math.max(next.v,9.20),limit.min+.20,limit.max-.20)};
 }
@@ -396,7 +438,7 @@ function frontalRescueHouse(scene:Phaser.Scene){
   color:'#fff6e9',stroke:'#4b3a53',strokeThickness:4
  }).setOrigin(.5).setDepth(ground.y-110);
 }
-function house(scene:Phaser.Scene,u:number,v:number,main:boolean){
+function house(scene:Phaser.Scene,u:number,v:number,main:boolean,style:'sage'|'rose'|'blue'='rose'){
  if(main){frontalRescueHouse(scene);return;}
  const p=toScreen({u,v}),x=p.x,y=p.y;
  // A building must never paint OVER Kitty or the front-porch hotspot.
@@ -408,14 +450,15 @@ function house(scene:Phaser.Scene,u:number,v:number,main:boolean){
  // west study/living (x<4.4), central hall (x≈5.9), east kitchen/bath,
  // south entry at x=5.9; south windows at x=2.2, upstairs 2.2/6.1/12.1.
  const left=x-w*.58,middle=x,front=x+w*.48;
+ const palette={sage:[0xbfcdb6,0x93a99e,0x617d72,0x4e655f,0xffe7bd],rose:[0xdbcccc,0xc5bfbd,0x86758b,0x74677d,0xb9d9d8],blue:[0xc1cbdc,0x96a5bf,0x65718c,0x4b5976,0xe7d4aa]}[style];
  // South/west facade, two storeys and projecting east facade.
- poly(g,main?0xe2c6c4:0xdbcccc,[[left,y-h],[middle,y-h+d*.31],[middle,y+d*.31],[left,y]]);
- poly(g,main?0xb9b1c6:0xc5bfbd,[[middle,y-h+d*.31],[front,y-h-7],[front,y-7],[middle,y+d*.31]]);
+ poly(g,main?0xe2c6c4:palette[0],[[left,y-h],[middle,y-h+d*.31],[middle,y+d*.31],[left,y]]);
+ poly(g,main?0xb9b1c6:palette[1],[[middle,y-h+d*.31],[front,y-h-7],[front,y-7],[middle,y+d*.31]]);
  g.lineStyle(main?5:3,0xb38f9f).lineBetween(left,y-h*.45,middle,y-h*.45+d*.31);
  g.lineStyle(main?5:3,0x99879e).lineBetween(middle,y-h*.45+d*.31,front,y-h*.45-7);
  // Roof is a pitched gable as in world.js, not the former flat-box hut.
- poly(g,main?0x735b73:0x86758b,[[left-9,y-h],[x-9,y-h-roof],[front+10,y-h-11],[middle+2,y-h+d*.31+9]]);
- poly(g,main?0x5c4b69:0x74677d,[[left-9,y-h],[x-13,y-h-roof-5],[middle+2,y-h+d*.31+9]]);
+ poly(g,main?0x735b73:palette[2],[[left-9,y-h],[x-9,y-h-roof],[front+10,y-h-11],[middle+2,y-h+d*.31+9]]);
+ poly(g,main?0x5c4b69:palette[3],[[left-9,y-h],[x-13,y-h-roof-5],[middle+2,y-h+d*.31+9]]);
  g.lineStyle(3,0xe2b4bd).lineBetween(left-9,y-h,middle+2,y-h+d*.31+9);
  // Soft hand-painted brick joints. They stay on the solid walls, never
  // in front of the window or doorway interaction points.
@@ -456,7 +499,7 @@ function house(scene:Phaser.Scene,u:number,v:number,main:boolean){
  for(let i=0;i<panes.length;i++){
   const [xx,yy]=panes[i],wx=x+xx*w,wy=y+yy*h+d*(xx<0?.16:.11),ww=main?19:13,hh=main?23:16;
   g.fillStyle(0x716b88).fillRect(wx,wy,ww,hh);
-  g.fillStyle(main?0xf4d9b5:0xb9d9d8,.92).fillRect(wx+2,wy+2,ww-4,hh-4);
+  g.fillStyle(main?0xf4d9b5:palette[4],.92).fillRect(wx+2,wy+2,ww-4,hh-4);
   g.fillStyle(0xf6e8d5).fillRect(wx+ww/2-1,wy,2,hh);
   g.fillStyle(0xf6e8d5).fillRect(wx,wy+hh/2,ww,2);
   g.fillStyle(0xd6a1b8).fillRect(wx-3,wy+hh,ww+6,3);
@@ -502,10 +545,19 @@ function house(scene:Phaser.Scene,u:number,v:number,main:boolean){
  }else{
   g.fillStyle(0x755b67).fillRect(x-21,y-23,17,26);
   g.fillStyle(0xe7d5c0).fillRect(x-23,y+1,22,3);
+  if(style==='sage'){
+   for(const dx of [-42,39]){g.fillStyle(0x667f70).fillEllipse(x+dx,y-8,25,19);g.fillStyle(0xdacbad).fillRect(x+dx-5,y-4,10,6);}
+  }else if(style==='blue'){
+   g.fillStyle(0x555d73).fillRect(x+25,y-h-roof+5,12,22);
+   g.fillStyle(0xd4c0b0).fillRect(x+23,y-h-roof+3,16,4);
+  }else{
+   g.fillStyle(0xca9fa0).fillRect(x-45,y-31,19,5);
+   g.fillStyle(0xf3c1bd).fillEllipse(x-37,y-36,17,8);
+  }
  }
 }
 function drawBridge(scene:Phaser.Scene){
- const deck=scene.add.graphics().setDepth(1),rail=scene.add.graphics().setDepth(1600);
+ const deck=scene.add.graphics().setDepth(1);
  for(let u=10;u<16;u++){
   for(let v=3;v<=6;v++){
    diamond(deck,u,v,(u+v)%2?0xc39d85:0xd7b39a);
@@ -513,7 +565,9 @@ function drawBridge(scene:Phaser.Scene){
    deck.lineStyle(1,0x907281,.22).lineBetween(p.x-25,p.y,p.x+25,p.y);
   }
   for(const v of [2.6,6.4]){
-   const p=toScreen({u,v});
+   const p=toScreen({u,v}),rail=scene.add.graphics().setDepth(p.y);
+   // Back rail goes behind Kitty; foreground rail covers her feet only
+   // when her own depth is behind it, not across the entire map.
    rail.fillStyle(0x806c68).fillRect(p.x-3,p.y-24,6,26);
    rail.fillStyle(0xf5d7bc).fillRect(p.x-5,p.y-28,10,4);
   }
@@ -701,49 +755,34 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
  }
  if(map==='morning_garden'){
   sign(scene,8,1.3,'RÍO ♡');
-  bench(scene,18,8.5);
-  // Welcoming flowered path, cherry arch and riparian details.
-  for(const [u,v] of [[3.1,1.1],[7.6,8.2],[18.4,9.4],[21.3,1.0]])
-   cherryTree(scene,u,v);
+  // Welcoming flowered path and riparian details; solid props are drawn below.
   for(const [u,v] of [[9.6,2.2],[10.6,8.4],[12.3,1.6],[14.2,9.4],[15.5,1.6]])
    reeds(scene,u,v);
   picketFence(scene,4.2,9.2,5);picketFence(scene,6.8,9.6,4);
-  gardenFeature(scene,3.7,8.7,'planter');gardenFeature(scene,18.2,.25,'picnic');
-  gardenFeature(scene,7.4,1.5,'rock');gardenFeature(scene,19,1.2,'rock');
+  // River lookout furniture is now attached to the new trail.
  }else if(map==='afternoon_meeting'){
-  bench(scene,28,9.8);bench(scene,36,.2);
   sign(scene,25,1,'CEREZOS');
   // An oval plaza gives room to approach people from different directions.
   const plaza=scene.add.graphics().setDepth(.8),p=toScreen({u:29.3,v:4.6});
   plaza.fillStyle(0xf7e0bb,.23).fillEllipse(p.x,p.y,230,115);
   plaza.lineStyle(4,0xd7b2a7,.34).strokeEllipse(p.x,p.y,215,102);
-  for(const [u,v] of [[26.1,-.1],[29,10.1],[35.2,-.4],[39.1,9.7],[42.3,0]])
-   cherryTree(scene,u,v);
-  for(const [u,v] of [[27.7,.8],[31.8,10.7],[35.8,9.8],[42.6,8.4]])
-   gardenFeature(scene,u,v,'planter');
-  gardenFeature(scene,32.5,11.1,'picnic');
   picketFence(scene,25.1,8.9,5);picketFence(scene,41.3,8.9,5);
-  gardenFeature(scene,24.9,1.8,'rock');
  }else if(map==='dusk_search'){
   sign(scene,49,.2,'SILENCIO');
-  bench(scene,56,8.7);
   const creek=scene.add.graphics().setDepth(.4);
   for(let u=49;u<60;u++){
    const p=toScreen({u,v:routeLimits(u).max+.4});
    creek.fillStyle((u%2)?0x659ca5:0x7eacaf,.65).fillEllipse(p.x,p.y,85,17);
   }
-  for(const [u,v] of [[47,9.3],[51,-.5],[56,9.9],[61,.3]])
-   cherryTree(scene,u,v,true);
+  // Solid trees and rocks are drawn from RESCUE_SCENERY.
   for(const [u,v] of [[49,9.9],[53,10],[57,9.9],[60,9.5]])
    reeds(scene,u,v);
-  for(const [u,v] of [[50.1,-.1],[54,.5],[59,.6],[63,9.3]])
-   gardenFeature(scene,u,v,'rock');
-  gardenFeature(scene,60,9.2,'lantern');
+  // Keep the creek banks visually open.
  }else{
   sign(scene,68,.3,'VILLA');
   for(const u of [67,72,77,81])lamp(scene,u,1.8);
   // Neighboring houses stay across the ROAD, not on Kitty's way to the door.
-  for(const [u,v] of [[68.2,2.9],[72.1,2.5],[81,3.7]])house(scene,u,v,false);
+  for(const neighbor of NIGHT_NEIGHBORS)house(scene,neighbor.u,neighbor.v,false,neighbor.style);
   // Main house façade mirrors the actual double-storey 3D floorplan.
   house(scene,NIGHT_HOUSE.center.u,NIGHT_HOUSE.center.v,true);
   // Same marked vehicle as in the filmed capture. Its wheels rest by
@@ -805,6 +844,13 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    'VENTANA',{fontFamily:'monospace',fontSize:'10px',fontStyle:'bold',
     color:'#ffe7fa',stroke:'#4b3853',strokeThickness:3})
    .setOrigin(.5).setDepth(toScreen(NIGHT_HOUSE.window).y+18);
+ }
+ // Solid existing scenery and collision use the same coordinates.
+ for(const item of RESCUE_SCENERY[map]){
+  const {u,v}=item.point;
+  if(item.kind==='tree')cherryTree(scene,u,v,map==='dusk_search');
+  else if(item.kind==='bench')bench(scene,u,v);
+  else gardenFeature(scene,u,v,item.kind);
  }
  // Landmarks are drawn from the same world-space records used by collision.
  for(const landmark of rescueLandmarks(map)){

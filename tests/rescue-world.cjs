@@ -115,7 +115,19 @@ for(const stage of stages){
  const p=world.STORY_POSITIONS[stage],map=world.mapForStage(stage);
  assert(!world.rescueLandmarkBlocks(p,map),'mandatory story target remains accessible '+stage);
 }
-assert.equal(world.rescueLandmarks('night_neighborhood').length,0,'existing night navigation remains unchanged');
+assert.equal(world.rescueLandmarks('night_neighborhood').length,0,'no new side trail obstructs the house');
+assert(world.RESCUE_SCENERY.morning_garden.length>=8&&world.RESCUE_SCENERY.afternoon_meeting.length>=10);
+for(const id of ids.slice(0,3)){
+ const cfg=world.RESCUE_SCENES[id];
+ assert.equal(world.rescueObstacleList(id),world.rescueObstacleList(id),'no per-frame obstacle allocation');
+ for(const prop of world.RESCUE_SCENERY[id])assert(world.rescueLandmarkBlocks(prop.point,id),'solid old furniture');
+ for(let u=cfg.spawn.u;u<=cfg.exit.u;u+=.1){
+  const p={u,v:world.routeCenter(u)};
+  assert(!world.rescueLandmarkBlocks(p,id),'main route must remain clear '+id+' '+u);
+ }
+}
+assert(src.includes('rail=scene.add.graphics().setDepth(p.y)'),'bridge railing uses local depth');
+assert(src.includes('neighbor.style'),'night houses have distinctive shared render records');
 const arcade=fs.readFileSync('src/iso-game.ts','utf8'),pro=fs.readFileSync('src/demo/GardenPrologue.tsx','utf8');
 assert(arcade.includes('buildRescueOverworld(this,this.floor')&&arcade.includes('constrainRescue(candidate,this.storyMap,this.p)'),
  'four maps belong to the original IsoAdventure and use its motion');

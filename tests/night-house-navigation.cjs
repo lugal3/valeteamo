@@ -25,6 +25,11 @@ assert(house.nightWalkable(layout.door)&&house.nightWalkable(layout.window),
 assert(!house.nightHouseBlocks(layout.door)&&!house.nightHouseBlocks(layout.window),
  'quest targets must be outside the facade hitbox');
 assert(house.nightHouseBlocks({u:78.4,v:8}), 'house walls are solid and not traversable');
+assert.equal(new Set(house.NIGHT_NEIGHBORS.map(h=>h.style)).size,3);
+for(const neighbor of house.NIGHT_NEIGHBORS){
+ assert(house.nightHouseBlocks(neighbor),'neighbor houses have physical footprints');
+ assert(!house.nightWalkable(neighbor));
+}
 assert(house.nightWalkable(layout.yard)&&house.nightWalkable(layout.gate),
  'house entry path and garden gate must be traversable');
 assert(house.nightNavigationDistance(layout.door,layout.window)>1.3,
