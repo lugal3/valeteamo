@@ -198,8 +198,8 @@ async function play(){
   await page.getByRole('button',{name:/Alimentar a Emy/}).tap();
   const feeding=page.getByRole('dialog',{name:'Un Churu para Emy',exact:true});
   await feeding.waitFor();
-  const compact=await feeding.evaluate(el=>{const card=el.querySelector('.emy-card'),stage=el.querySelector('.emy-stage');const cr=card.getBoundingClientRect(),sr=stage.getBoundingClientRect(),er=el.getBoundingClientRect();return {card:cr.width,viewport:er.width,stage:sr.width,within:sr.top>=cr.top&&sr.bottom<=cr.bottom};});
-  assert(compact.card<compact.viewport*.9&&compact.stage>=150&&compact.within,'compact feeding UI fits mobile landscape and preserves usable interaction');
+  const compact=await feeding.evaluate(el=>{const scene=el.querySelector('.emy-scene'),stage=el.querySelector('.emy-stage'),pet=el.querySelector('.emy-pet img');const cr=scene.getBoundingClientRect(),sr=stage.getBoundingClientRect(),er=el.getBoundingClientRect();return {scene:cr.width,viewport:er.width,stage:sr.width,within:sr.top>=er.top&&sr.bottom<=er.bottom,original:pet.src.includes('/sprites/emy-'),noCard:!el.querySelector('.emy-card')};});
+  assert(compact.scene<compact.viewport*.95&&compact.stage>=150&&compact.within&&compact.original&&compact.noCard,'garden overlay uses original sprite, no opaque card, usable stage');
   await page.screenshot({path:'artifacts/story-emy-feeding-redesign.png'});
   await feeding.waitFor();
   assert.equal(await game.getAttribute('data-fed-grey-cat'),'false');

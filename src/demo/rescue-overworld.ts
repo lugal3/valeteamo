@@ -103,6 +103,22 @@ const landmarkCache=new Map<RescueMapId,ReturnType<typeof buildLandmarks>>();
 function buildLandmarks(map:RescueMapId){
  return SIDE_TRAILS.filter(trail=>trail.map===map).map(trail=>({...trail,point:sideTrailLandmark(trail)}));
 }
+const LANDMARK_NOTES:Record<string,{action:string;message:string}>={
+ 'flower-nook':{action:'Oler las flores',message:'¡Huelen a primavera! ♡'},
+ 'river-lookout':{action:'Mirar el río',message:'El agua brilla como los recuerdos.'},
+ 'cherry-court':{action:'Mirar los cerezos',message:'Una lluvia de pétalos rosas…'},
+ 'quiet-grove':{action:'Descansar un momento',message:'Qué bonito lugar para estar juntos.'},
+ 'woodland-loop':{action:'Observar el sendero',message:'El bosque está demasiado silencioso.'},
+ 'lantern-clearing':{action:'Examinar el farol',message:'La luz apunta hacia el camino del barrio.'}
+};
+export function nearbyRescueLandmark(map:RescueMapId,p:IsoPoint){
+ let nearest:ReturnType<typeof buildLandmarks>[number]|undefined,dist=1.35;
+ for(const landmark of rescueLandmarks(map)){
+  const delta=Math.hypot(p.u-landmark.point.u,p.v-landmark.point.v);
+  if(delta<dist){dist=delta;nearest=landmark;}
+ }
+ return nearest?{...nearest,...LANDMARK_NOTES[nearest.id]}:undefined;
+}
 export function rescueLandmarks(map:RescueMapId){
  let found=landmarkCache.get(map);
  if(!found){found=buildLandmarks(map);landmarkCache.set(map,found);}

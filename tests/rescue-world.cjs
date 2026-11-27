@@ -106,6 +106,9 @@ for(const trail of world.SIDE_TRAILS){
   assert(!world.rescueLandmarkBlocks(p,trail.map),'landmark must not block the path');
  }
  const landmark=world.sideTrailLandmark(trail);
+ const discovery=world.nearbyRescueLandmark(trail.map,center);
+ assert.equal(discovery?.id,trail.id,'optional interaction is reachable beside solid scenery');
+ assert(discovery.action&&discovery.message);
  assert(world.rescueLandmarkBlocks(landmark,trail.map));
  const corrected=world.constrainRescue(landmark,trail.map,center);
  assert(!world.rescueLandmarkBlocks(corrected,trail.map),'player cannot walk through landmark '+trail.id);
@@ -116,6 +119,7 @@ for(const stage of stages){
  assert(!world.rescueLandmarkBlocks(p,map),'mandatory story target remains accessible '+stage);
 }
 assert.equal(world.rescueLandmarks('night_neighborhood').length,0,'no new side trail obstructs the house');
+assert.equal(world.nearbyRescueLandmark('night_neighborhood',{u:74,v:6}),undefined);
 assert(world.RESCUE_SCENERY.morning_garden.length>=8&&world.RESCUE_SCENERY.afternoon_meeting.length>=10);
 for(const id of ids.slice(0,3)){
  const cfg=world.RESCUE_SCENES[id];

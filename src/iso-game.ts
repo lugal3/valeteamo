@@ -22,7 +22,7 @@ import {LUIS_BEATS,makeLuisMotion,luisEntryPoint,luisPointOnPath,
  luisMotionIsBlocking,type LuisMotion} from './demo/luis-choreography';
 import {CHURU_TEXTURE,greyCatTexture,installRescueIntroArt,valeTexture} from './demo/rescue-intro-art';
 import type {PrologueStage} from './demo/prologue-story.js';
-import {buildRescueOverworld,constrainRescue,darknessAt,STORY_POSITIONS,storyArrivalPoint,
+import {buildRescueOverworld,constrainRescue,darknessAt,STORY_POSITIONS,storyArrivalPoint,nearbyRescueLandmark,
  mapForStage,exitReady,RESCUE_SCENES,
  type RescueMapId,type RescueOverworld,type RouteArea} from './demo/rescue-overworld';
 
@@ -89,6 +89,7 @@ export class IsoAdventure extends Phaser.Scene {
  storyWorld?:RescueOverworld;storyDusk=0;storyGuideStep=-1;
  storyArea:RouteArea='sendero';storyMap:RescueMapId='morning_garden';storyExitPending=false;
  storyActionPressed=false;storyNear='';storyWalkTriggered=false;storyVictoryEmitted=false;
+ storyOptional?:ReturnType<typeof nearbyRescueLandmark>;storyVisited=new Set<string>();
  storyTarget:IsoPoint={u:22,v:4.5};
  houseRoute:IsoPoint[]=[];houseLastHint='';
  storyVelocity:IsoPoint={u:0,v:0};
@@ -181,7 +182,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.storyStage=stage;this.storyStageAt=this.clock;
   this.storyBeatPlayed=false;this.storyTargetCuePlayed=false;
   this.storyWalkTriggered=false;this.storyVictoryEmitted=false;
-  this.storyActionPressed=false;this.storyNear='';
+  this.storyActionPressed=false;this.storyNear='';this.storyOptional=undefined;
   this.houseRoute=[];this.houseLastHint='';
   this.resetStoryFeel();this.clearStoryBubbles();
   for(const o of this.storyObjects)o.destroy();this.storyObjects=[];
@@ -318,7 +319,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  }
  storyInteract(){
   if(!this.story||this.story.locked()||luisMotionIsBlocking(this.storyLuisMotion)||!this.storyNear)return;
-  const interactionAt=this.storyVanNear?VAN_NIGHT_POSITION:
+  const optional=this.storyOptional;
+  const interactionAt=optional?optional.point:this.storyVanNear?VAN_NIGHT_POSITION:
    this.storyStage==='intro'?CHURU_POSITION:this.storyStage==='feed-cat'?this.storyCatPoint:
    meetingPoint(this.storyTarget,this.storyStage);
   const foot=toScreen(this.p),target=toScreen(interactionAt);
@@ -327,6 +329,13 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.storyVelocity={u:0,v:0};this.storyStepTravel=0;
   this.showStoryBubble('kitty','discover');
   this.audio.tone(810,.085,.010,'sine');
+  if(optional){
+   // No new story stage, reward gate, modal or forced wait.
+   this.storyVisited.add(optional.id);this.burst(optional.point,0xffd9b5);
+   this.floatNote(optional.point,'♡','#bc6d91');
+   this.story.guide(optional.message);this.audio.tone(740,.12,.018,'triangle');
+   this.storyOptional=undefined;this.storyNear='';this.story.near('');return;
+  }
   if(this.storyVanNear){
    this.storyVanInspected=true;this.houseRoute=[];
    this.audio.ui();this.audio.tone(460,.19,.033,'triangle');
@@ -744,7 +753,12 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    this.storyTargetCuePlayed=true;
    this.showStoryBubble('target',stage==='door'?'uneasy':'discover');
   }
-  const target=mainTarget||(this.storyVanNear?'Inspeccionar furgoneta':'');
+  // Mandatory story target and vehicle always win; no distractions during combat.
+  const optional=!mainTarget&&!this.storyVanNear&&
+   ['intro','feed-cat','cat-fed','meet-couple','walk-together','ribbon','petals','wheel'].includes(stage)?
+   nearbyRescueLandmark(this.storyMap,this.p):undefined;
+  this.storyOptional=optional&&!this.storyVisited.has(optional.id)?optional:undefined;
+  const target=mainTarget||(this.storyVanNear?'Inspeccionar furgoneta':this.storyOptional?.action??'');
   if(target!==this.storyNear){
    this.storyNear=target;this.story.near(target);
    if(target&&this.storyMap==='night_neighborhood'){

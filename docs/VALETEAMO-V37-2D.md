@@ -20,3 +20,7 @@ El 2D es un prólogo breve y encantador que prepara un giro sorpresa al 3D, jueg
 - Ruta principal 3–5 min orientativos, opcionales 5–8; mantener todas las mejoras previas sin obligar desvíos.
 - Revisión de proporciones Vale/Luis según tarjeta; no prometer identidad exacta hasta revisar capturas. Louis toma como referencia estética One Direction 2012–13 (flequillo castaño lateral, ojos azules, rayas y pantalón rojo), 18 cuadros en tres direcciones, retrato de la misma textura; solo se registra en escena del prólogo.
 - Alimentación Emy: tarjeta compacta sobre jardín visible, retrato protagonista, instrucción y progreso simplificados, controles de arrastre/teclado y duración intactos. Prueba de disposición en móvil y test de cuadros. Auditoría anterior: código/2D correctos, 3D-checkpoints falló; no se modifica el 3D sin permiso.
+
+## Bloque A iteración 2 + inicio B
+- Se elimina tarjeta opaca de Emy: escena sobre jardín, PNG originales idle/blink/lick/love, respiración, curiosidad, lamidos, salto alegre, burbuja y corazones. No se modifican imágenes originales ni el contrato de alimentación. Prueba de overlay y sprite real.
+- Seis interacciones opcionales de los caminos laterales con reacción, sonido y observación; sin modal, sin alterar etapas ni requerir desvíos. Se recuerdan durante la sesión de Phaser; persistencia entre recargas pendiente. Prioridad de interacción principal y vehículo, sin opcionales en combate.
