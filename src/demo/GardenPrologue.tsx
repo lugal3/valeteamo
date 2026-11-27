@@ -399,8 +399,9 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   <div className={'prologue-curtain'+(transition?.phase==='out'?' is-dark':'')}
    data-fade={transition?.phase??'none'} aria-hidden="true"/>
   {transition&&<div className="prologue-curtain-title" role="status">
-    <span>✧ {RESCUE_SCENES[transition.target].time} ✧</span>
+    <span>{RESCUE_SCENES[transition.target].time}</span>
     <strong>{RESCUE_SCENES[transition.target].label}</strong>
+    <i className="prologue-transition-ornament" aria-hidden="true">✧</i>
    </div>}
   <span className="prologue-act" aria-label={`${chapter.label}: ${chapter.title}`}>
     <strong>{chapter.label}</strong><small>{chapter.title}</small>

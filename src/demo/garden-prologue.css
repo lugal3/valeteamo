@@ -356,3 +356,18 @@
 .story-prologue .prologue-night[data-map="night_neighborhood"]{
  background:radial-gradient(ellipse at 50% 47%,rgba(72,79,112,.64),rgba(32,39,71,.86) 72%,rgba(19,25,53,.95));
 }
+
+/* Narrative-only polish. The original transition duration and scene swap
+   remain unchanged, including the 720ms window handoff. */
+.story-prologue .prologue-curtain-title{gap:5px}
+.story-prologue .prologue-curtain-title span{margin-bottom:3px;color:#e7b9c7;font-weight:600;letter-spacing:.22em;text-transform:uppercase}
+.story-prologue .prologue-curtain-title strong{font-weight:500;letter-spacing:-.02em}
+.story-prologue .prologue-transition-ornament{display:flex;align-items:center;justify-content:center;gap:10px;width:118px;margin-top:7px;font-size:12px;font-style:normal;color:#e7c2c6}
+.story-prologue .prologue-transition-ornament:before,.story-prologue .prologue-transition-ornament:after{content:"";height:1px;width:42px;background:linear-gradient(90deg,transparent,#c69aaa)}
+.story-prologue .prologue-transition-ornament:after{transform:scaleX(-1)}
+.story-prologue[data-transition="out"] .prologue-curtain-title{animation:premium-title-in 420ms ease-out both}
+@keyframes premium-title-in{from{opacity:0;transform:translate(-50%,-46%)}to{opacity:1;transform:translate(-50%,-50%)}}
+.story-prologue .prologue-3d-handoff{background:radial-gradient(ellipse at center,#1c1929 0%,#0b0a16 70%)}
+.story-prologue .prologue-3d-handoff span{letter-spacing:.22em;font-weight:500}
+.story-prologue .prologue-3d-handoff strong{letter-spacing:-.02em}
+@media(prefers-reduced-motion:reduce){.story-prologue[data-transition="out"] .prologue-curtain-title{animation:none}}
