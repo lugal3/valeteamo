@@ -208,6 +208,18 @@ export function pursuerPose(actor,reduced=false){
    joints['forearm'+side]={py:ELBOW,pitch:-1.32-beat*.5,roll:side*.14};
   }
  }
+ // Emergency rescue uses the ordinary mesh, not the horror capture face.
+ if(actor.rescueGrip!==undefined){
+  const hold=clamp(actor.rescueGrip,0,1),hit=clamp(actor.rescueImpact||0,0,1),side=actor.rescueSide||1;
+  joints.chest.pitch+=.16*hold-.22*hit;
+  joints.chest.roll+=side*.12*hit;
+  joints.head.pitch+=.18*hold-.20*hit;
+  joints.head.yaw+=side*.24*hit;
+  for(const sign of [-1,1]){
+   const a=joints['arm'+sign],f=joints['forearm'+sign];
+   if(a&&f){a.pitch-=1.08*hold;a.roll=(a.roll||0)+sign*(.12*hold+.30*hit);f.pitch-=.75*hold;f.roll=(f.roll||0)+sign*.18*hit;}
+  }
+ }
  return joints;
 }
 
