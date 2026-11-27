@@ -312,7 +312,7 @@ function clearPassage(world,from,to){
  }
  return Math.abs(floor-to.y)<.23;
 }
-function moveToward(companion,world,goal,dt,speed){
+function moveToward(companion,world,goal,dt,speed,avoid=null){
  const cat=companion.cat,dx=goal.x-cat.x,dz=goal.z-cat.z,d=Math.hypot(dx,dz);
  if(d<.055)return false;
  const turn=deltaAngle(cat.yaw,Math.atan2(dx,dz));
@@ -323,6 +323,10 @@ function moveToward(companion,world,goal,dt,speed){
   const nx=cat.x+dx/d*step/pieces,nz=cat.z+dz/d*step/pieces,y=emyGroundHeight(nx,nz,cat.y,world.hatch?.amount>.92);
   if(roomAt(cat.x,cat.z,cat.y)!=='Sala de música'&&roomAt(nx,nz,y)==='Sala de música')break;
   if(!Number.isFinite(y)||Math.abs(y-cat.y)>.12||blocked(world.boxes,nx,y,nz,.16,.62))break;
+  if(avoid&&Math.abs(y-avoid.y)<.48){
+   const before=distance(cat,avoid),after=Math.hypot(nx-avoid.x,nz-avoid.z);
+   if(after<.75&&after<before)break;
+  }
   cat.x=nx;cat.y=y;cat.z=nz;moved=true;
  }
  return moved;
@@ -331,13 +335,17 @@ function moveToward(companion,world,goal,dt,speed){
 export function distractionEscapePoint(world,cat,job,threat,player){
  const center=job.goal,angle=Math.atan2(cat.x-center.x,cat.z-center.z);
  const room=roomAt(center.x,center.z,center.y),danger=distance(cat,threat);
+ const boxes=world.boxes.filter(b=>b.solid&&Math.abs(b.y-cat.y)<b.h/2+1.2&&distance(b,cat)<4+Math.hypot(b.w,b.d)/2);
+ const localWorld={...world,boxes};
  let best=null,score=-Infinity;
  for(const radius of [.85,1.25,1.65])for(const offset of [Math.PI/3,-Math.PI/3,Math.PI/2,-Math.PI/2,Math.PI,0]){
   const a=angle+offset,x=center.x+Math.sin(a)*radius,z=center.z+Math.cos(a)*radius;
   const y=emyGroundHeight(x,z,cat.y,world.hatch?.amount>.92),p={x,y,z};
-  if(!Number.isFinite(y)||Math.abs(y-cat.y)>.12||roomAt(x,z,y)!==room||room==='Sala de música'||distance(p,cat)<.35||!clearPassage(world,cat,p))continue;
+  if(!Number.isFinite(y)||Math.abs(y-cat.y)>.12||roomAt(x,z,y)!==room||room==='Sala de música'||distance(p,cat)<.35||!clearPassage(localWorld,cat,p))continue;
   const gap=distance(p,threat);
   if(gap<Math.max(.75,danger-.08))continue;
+  const vx=p.x-cat.x,vz=p.z-cat.z,t=Math.max(0,Math.min(1,((threat.x-cat.x)*vx+(threat.z-cat.z)*vz)/(vx*vx+vz*vz)));
+  if(Math.hypot(cat.x+vx*t-threat.x,cat.z+vz*t-threat.z)<Math.min(.75,danger)-.002)continue;
   if(player&&Math.abs(player.y-y)<.5&&distance(p,player)<Math.min(2,distance(cat,player)))continue;
   const rank=gap-.20*distance(cat,p)+.15*(Math.sign(offset)===(job.orbitSide||1)?1:0);
   if(rank>score){score=rank;best=p;}
@@ -473,14 +481,14 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
    return null;
   }
   job.remaining-=dt;job.nextNoise-=dt;
-  const nearEnemy=threat?.active&&threat.mode==='noise-investigate'&&threat.noiseSource==='emy'&&Math.abs(cat.y-threat.y)<.48&&distance(cat,threat)<3.2;
+  const nearEnemy=threat?.active&&Math.abs(cat.y-threat.y)<.48&&((threat.mode==='noise-investigate'&&threat.noiseSource==='emy'&&distance(cat,threat)<3.2)||distance(cat,threat)<1.45);
   let walking=false;
   if(nearEnemy){
    job.orbitSide??=1;
    if((!job.escape||distance(cat,job.escape)<.18||distance(job.escape,threat)<.68)&&companion.age>=(job.nextEscapeAt||0)){
     job.escape=distractionEscapePoint(world,cat,job,threat,player);job.nextEscapeAt=companion.age+.24;
    }
-   if(job.escape)walking=moveToward(companion,world,job.escape,dt,2.7);
+   if(job.escape)walking=moveToward(companion,world,job.escape,dt,2.7,threat);
    if(!walking)job.escape=null;
   }else job.escape=null;
   if(!walking)cat.yaw+=deltaAngle(cat.yaw,nearEnemy?Math.atan2(threat.x-cat.x,threat.z-cat.z):Math.PI*.5)*(1-Math.exp(-dt*4));

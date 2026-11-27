@@ -184,8 +184,9 @@ async function run(){
   await page.locator('button[data-app=manual]').waitFor({state:'visible'});
   await clickTrialButton(page.locator('button[data-app=manual]'));
   assert.equal(await page.locator('[data-manual=movement]').count(),1);assert.equal(await page.locator('[data-manual=hide]').count(),0);
-  await page.locator('[data-manual=movement]').click();await dismissField('movement');
-  await page.locator('.phone-shell [data-app=close]').click();
+  await clickTrialButton(page.locator('[data-manual=movement]'));await dismissField('movement');
+  await clickTrialButton(page.locator('.phone-shell [data-app=close]'));
+  await page.waitForFunction(()=>!window.__rescueHouse.snapshot().paused,null,{timeout:30000});
   await require('./helpers/fetch-ribbon.cjs')(page);
   await dismissField('threat');
   assert.equal((await snapshot()).puzzle.note,false,'The study key needs no hall note');

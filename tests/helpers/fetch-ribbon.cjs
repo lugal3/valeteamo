@@ -1,8 +1,11 @@
 module.exports=async page=>{
  const use=id=>page.evaluate(id=>window.__rescueHouse.interactWith(id),id);
  if(await page.evaluate(()=>window.__rescueHouse.emy().companion==='waiting')){
-  await use('salon');
-  await page.waitForFunction(()=>window.__rescueHouse.emy().companion==='following');
+  try{
+   await page.waitForFunction(()=>!window.__rescueHouse.snapshot().paused,null,{timeout:30000});
+   await use('salon');
+   await page.waitForFunction(()=>window.__rescueHouse.emy().companion==='following',null,{timeout:90000});
+  }catch(error){console.log('RIBBON_ENTRANCE_DIAGNOSTIC',JSON.stringify(await page.evaluate(()=>({emy:window.__rescueHouse.emy(),story:window.__rescueHouse.story(),snapshot:window.__rescueHouse.snapshot(),visibleOverlay:document.querySelector('.field-overlay:not([hidden])')?.textContent}))));throw error;}
  }
  const studyOpen=await page.evaluate(()=>window.__rescueHouse.snapshot().doors.find(o=>o.id==='estudio').open);
  if(!studyOpen)await use('estudio');
