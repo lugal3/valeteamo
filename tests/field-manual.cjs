@@ -28,12 +28,13 @@ const assert=require('node:assert/strict');
   assert.equal(events.phase,expected);
   assert.equal(events.remaining,0);
  }
- assert.equal(TUTORIALS.length,6);
- assert.equal(new Set(TUTORIALS.map(t=>t.id)).size,6);
+ assert.equal(TUTORIALS.length,10);
+ assert.equal(new Set(TUTORIALS.map(t=>t.id)).size,10);
  for(const t of TUTORIALS){for(const touch of [false,true]){const html=tutorialCardHTML(t.id,touch);assert(html.includes('data-field-close')&&html.includes('JUEGO PAUSADO')&&html.includes('viewBox='));}}
  assert.notEqual(tutorialCardHTML('movement',true),tutorialCardHTML('movement',false));
  assert.deepEqual(sanitizeTutorials(['hide','movement','hide','unknown']),['movement','hide']);
  assert(!manualListHTML(['movement']).includes('data-manual="hide"'));
  assert(manualListHTML(['movement']).includes('data-manual="movement"'));
- console.log('PASS field manual: six adaptive illustrated cards, discovered-only history, strict deadline and collision-safe stairs');
+ for(const id of ['stealth','lives','throw','collectibles']){assert(TUTORIALS.some(t=>t.id===id));assert(!tutorialCardHTML(id).includes('undefined'));assert(manualListHTML([id]).includes('data-manual="'+id+'"'));}
+ console.log('PASS field manual: ten adaptive illustrated cards, discovered-only history, strict deadline and collision-safe stairs');
 })().catch(e=>{console.error(e);process.exitCode=1});
