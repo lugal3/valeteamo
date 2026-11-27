@@ -202,6 +202,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  <section id="lois-chat" class="lois-chat" role="region" aria-label="Conversación con Louis" hidden><img class="lois-chat-face" src="${loisPortrait}" alt="Retrato de Louis"><div><strong id="lois-chat-speaker"></strong><p id="lois-chat-text"></p><span id="lois-chat-live" style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)" aria-live="polite"></span><div class="lois-chat-actions"><button data-act="lois:close">Cerrar</button><button id="lois-chat-next" data-act="lois:next">Continuar ▸</button></div></div></section>
  <div id="lab-turn" class="lab-turn"><div><span>↻</span><h2>Gira tu teléfono</h2><p>La casa se explora en horizontal. Tu lugar se conserva y el mundo queda en pausa.</p><button data-act="exit">${exitLabel}</button></div></div>
  <div id="lab-dialog" class="lab-dialog lab-hidden"></div>`;
+ const handoff=config.campaignHandoff===true?document.createElement('div'):null;
+ let handoffTimer=0,handoffFinishing=false,handoffPainted=false;
+ if(handoff){handoff.className='house-campaign-handoff';handoff.setAttribute('aria-hidden','true');root.append(handoff);}
  document.body.appendChild(root);
  const events=new HouseEvents({pursuit:config.entry!=='rescue',twoActs:true,arrivalLead:CAR_ARRIVAL_SECONDS}),floorSounds=new FloorSounds();let pursuer=null,equipment='flashlight',equipmentAge=1,encounterCheckpoint=null,thirdView=null;
  const mirrorSafe=new MirrorSafePuzzle(),television=new HouseTelevision();
@@ -1104,6 +1107,7 @@ function syncLoisDialogue(delta=0){
  const label=q.shown<q.glyphs.length?'Mostrar texto':q.index===q.lines.length-1?'Terminar ▸':'Continuar ▸';if($('lois-chat-next').textContent!==label)$('lois-chat-next').textContent=label;
 }
 function runAction(act,node){
+ if(handoffFinishing)return;
  if(act.startsWith('lois:')){
   if(act==='lois:close'){loisDialogue.close();syncLoisDialogue();return;}
   if(act==='lois:next'){loisDialogue.next();syncLoisDialogue();return;}
@@ -1211,7 +1215,11 @@ function runAction(act,node){
    world.entryWindow.latch.hiddenGeometry=true;poseFurniture(world.entryWindow,1);rebuild();sound.setThreat(true);resetInput();return;
   }
   if(act==='exit'){try{stop();}finally{onExit();}return;}
-  if(act==='finish'){config.onRescue?.(sound.settings.muted);return;}
+  if(act==='finish'){
+    if(!handoff||reducedMotion.matches){config.onRescue?.(sound.settings.muted);return;}
+    handoffFinishing=true;releaseMouse();resetInput();handoff.classList.add('is-ending');
+    sound.pause();handoffTimer=window.setTimeout(()=>{if(active)config.onRescue?.(sound.settings.muted);},420);return;
+   }
   if(act.startsWith('rc:')&&(rc?.mode!=='driving'||isPaused()))return;
   if(act==='rc:stop'){
    if(stopRC(rc)){equipment='rc';equipmentAge=0;phone.equip('rc');resetInput();say('Tablet guardada · el autito queda en el suelo. Pulsa USAR para conducir de nuevo.',4);}
@@ -2286,6 +2294,7 @@ function runAction(act,node){
    const emyMemory=!phone.emyMemory&&!world.emy.hidden&&!reducedMotion.matches&&((emyShot&&emyShot.elapsed>1.25&&emyShot.elapsed<2.6)||(pet.reaction>1&&pet.reaction<2.4&&!phone.open&&!isSuspended()));
    const cameraFlash=takingPhoto&&phone.flash;
    renderer.render(view,cameraFlash?1.4:torch,elapsed,hand,{weather:finaleWeather(finalCutscene,s),altarPulse:altarVisit.pulse,phoneTurn,captureProjection:cameraMode ? .82 : cinematicLight?.projection??1,pursuerLight:cinematicLight?.pursuer,pursuerKey:cinematicLight?.key,onWorldFrame:cameraMode||emyMemory?frame=>{if(emyMemory)phone.rememberEmy(frame);if(takingPhoto){phone.takePhoto(frame);play('click');}if(cameraMode)phone.updateCamera(frame,now);}:undefined,rcView:rc?.mode==='driving'&&!!rc,scanOutline:emyAbilities.scan>0&&pursuer.active,bob:s.bob,action:handAction,clickAction,speed:animator.speed,acceleration:animator.acceleration,walkWeight:animator.weight,reduced:s.reduceBob,swayX:handDrift.x,swayY:handDrift.y,introHands,animator,feetY:s.y,crouched:s.crouched,equipment:visualEquipment,keyTurn:keyTurn?.time,noteRaise,batterySwap,tabletLift,equipLift,hop:hopMotion,equipGesture:normalEquip&&!reducedMotion.matches?Math.sin(Math.PI*Math.min(1,equipmentAge/.38)):0,bathDoorAmount:world.objects.find(o=>o.id==='bano').amount,thirdPerson,actorTime,actorWalk,actorPiano,shotLight:cameraFlash?Math.max(.58,shotLight||0):shotLight,pursuer:finalCutscene&&!finalCutscene.playable?finaleThreat(pursuer.snapshot(),finalCutscene.elapsed,reducedMotion.matches):pursuer.snapshot(),television});
+   if(handoff&&!handoffPainted){handoffPainted=true;handoff.classList.add('is-painted');root.dataset.campaignFrame='ready';}
   }catch(e){interruptGraphics('Error de renderizado',String(e.message||e));return;}
   const mirrorDistance=Math.hypot(view.x-BATH_MIRROR.x,view.z-BATH_MIRROR.z);
   const readingMirror=mirrorLit&&inBathroom()&&renderer.mirrorDrawn&&mirrorDistance<3&&Math.abs(view.pitch-Math.atan2(BATH_MIRROR.y-view.y,mirrorDistance))<.57&&!phone.open;
@@ -2331,6 +2340,7 @@ function runAction(act,node){
   if(measuring){perfSampler.record(now,performance.now()-cpuStart);if(now-perfAt>=1000){perfAt=now;const m=perfReport();$('house-perf').textContent=m.samples?`${m.fps.toFixed(1)} FPS · 1% ${m.low1.toFixed(1)} · p95 ${m.p95.toFixed(1)} ms\nCPU p95 ${m.cpuP95.toFixed(1)} ms · >50 ms ${m.hitches} · sombras ${m.shadowPasses}\n${m.quality} · ${m.room} · ${m.samples} frames`:'Midiendo…';}}
  }
  function interruptGraphics(title,message){
+  if(handoff)handoff.hidden=true;
   contextLost=true;cancelAnimationFrame(raf);raf=0;
   if(emyMenuOpen)closeEmyMenu();
   phone.close();resetInput();
@@ -2679,7 +2689,7 @@ function runAction(act,node){
   };
  }
  function stop(){
-  if(!active)return;active=false;
+  if(!active)return;active=false;window.clearTimeout(handoffTimer);
   if(idleWarm!==null&&typeof window.cancelIdleCallback==='function')window.cancelIdleCallback(idleWarm);
   // A GPU/audio teardown must never strand the LP React route. Each resource
   // is independent; detach the root even if a browser rejects one disposal.

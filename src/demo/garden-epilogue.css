@@ -51,3 +51,6 @@
 .garden-epilogue .epilogue-dialog,.garden-epilogue .epilogue-celebration{left:0;right:0;margin-inline:auto;transform:none}
 .garden-epilogue .epilogue-dialog button:active,.garden-epilogue .epilogue-celebration button:active{transform:none}
 .garden-epilogue .epilogue-dialog button,.garden-epilogue .epilogue-celebration button{transition:background-color .12s,color .12s}
+
+/* Keep the final 3D curtain color until the 2D map is ready, then reveal it. */
+.garden-epilogue,.garden-epilogue .adventure-wrap{background:#0b0a16}.garden-epilogue .adventure-overlay:has(.adventure-progress){background:#0b0a16;color:#fff0e4}.garden-epilogue .epilogue-fade{background:#0b0a16}

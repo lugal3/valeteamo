@@ -83,6 +83,7 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
      demo:true,trial:test&&entry!=='garden',fieldTutorials:true,entry,
      checkpointStore,
      initialMuted:test?undefined:muteRef.current,
+     campaignHandoff:entry==='garden',
      onRescue:(houseMuted?:boolean)=>{
       if(cancelled||finishing.current)return;
       finishing.current=true;
@@ -124,8 +125,8 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
    <button className="secondary" onClick={()=>{if(test||window.confirm('¿Volver a jugar desde el principio? Se reiniciará el progreso del rescate.'))reset();}}>Volver a jugar</button>
   </div>}
   {saveWarning&&<p className="rescue-save-warning" role="status">Puedes continuar, pero el avance de esta sesión no pudo guardarse.</p>}
-  {mode==='house'&&!houseReady&&!error&&<div className="rescue-transition" role="status" aria-live="polite" style={{background:'#171823'}}>
-   <span aria-hidden="true">✧</span><p>Kitty se acerca a la ventana…</p><small>Preparando la casa</small><button className="secondary" onClick={onExit}>Volver</button>
+  {mode==='house'&&!houseReady&&!error&&<div className="rescue-transition rescue-house-loading" role="status" aria-live="polite">
+   <span aria-hidden="true">✧</span><p>La casa</p><small>Kitty se acerca a la ventana…</small><button className="secondary" onClick={onExit}>Volver</button>
   </div>}
   {error&&<div className="rescue-error" role="alert">{error}<button onClick={onExit}>Volver</button></div>}
  </div>;

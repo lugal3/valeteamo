@@ -35,3 +35,8 @@ Base publicada: d28fc0eaa26ddc348f60b4e9704aaf275f8fb4c0. Rama independiente fea
 - Kitty mira al interlocutor real; Louis orienta la mirada al hablante presente. Histéresis de dirección y respiración en reposo durante paseo. El claro permite hasta 1.8 s de acercamiento antes de la advertencia sin bloqueo permanente. Limpieza de entrada al iniciar diálogo.
 - Oscurecimiento gradual durante desaparición incluso con controles bloqueados; notificación por umbral y cambio inmediato con movimiento reducido. Pruebas puras de dirección, espera y luz.
 - Auditorías anteriores interrumpidas por commits posteriores; epílogo de 22de79c pasó. Pendiente CI de esta revisión, rendimiento y revisión visual. No publicar.
+
+## Fase 3 — enlace entre motores
+- Cortina compartida de campaña (#0b0a16) desde la ventana; el 3D revela su escena tras el primer render exitoso, no al terminar el import. Error gráfico sigue accesible; la salida final tiene fundido cancelable y guardia contra doble acción, sin tocar LP 3D independiente.
+- El regreso 2D comienza en el portón compartido de la referencia espacial (no en el porche), coherente con la reunión exterior 3D. Se conserva el recorrido y se adapta objetivo/diálogo. Regresión del checkpoint comprueba la posición real de arranque.
+- No se afirma igualdad métrica entre proyecciones ni se ha medido la calidad visual. CI y revisión pendientes; no merge.

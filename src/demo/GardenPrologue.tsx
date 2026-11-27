@@ -450,7 +450,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   <div className="prologue-night" data-map={map} style={{opacity:dusk}} aria-hidden="true"/>
    {houseHandoff&&<div className="prologue-3d-handoff" role="status" aria-live="polite">
      <span>✧ CAPÍTULO V ✧</span><strong>La casa</strong>
-     <small>Kitty entra por la ventana…</small>
+     <small>Kitty se acerca a la ventana…</small>
     </div>}
   <div className={'prologue-curtain'+(transition?.phase==='out'?' is-dark':'')}
    data-fade={transition?.phase??'none'} aria-hidden="true"/>
