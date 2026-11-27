@@ -49,6 +49,7 @@ jobs:
           - 3d-checkpoints
           - rc-rescue
           - threat-hide
+          - emy-emergency
           - mobile-input
           - 3d-production
           - emy-mobile
@@ -83,6 +84,7 @@ jobs:
           RC_QA_DIR: artifacts/v2/rc-rescue
           CHECKPOINT_QA_DIR: artifacts/v2/3d-checkpoints
           HOUSE_THREAT_QA_DIR: artifacts/v2/threat-hide
+          EMERGENCY_QA_DIR: artifacts/v33-emergency
           HOUSE_INPUT_QA_DIR: artifacts/v2/mobile-input
         run: |
           case "${{ matrix.scenario }}" in
@@ -90,6 +92,7 @@ jobs:
             3d-checkpoints) node tests/house-checkpoint-browser.cjs ;;
             rc-rescue) node tests/rc-browser.cjs ;;
             threat-hide) node tests/house-threat-browser.cjs ;;
+            emy-emergency) node tests/emy-emergency-browser.cjs ;;
             mobile-input) node tests/house-input-browser.cjs ;;
             3d-production) node tests/house-css-production-browser.cjs ;;
             emy-mobile|emy-desktop|emy-webkit) node tests/emy-abilities-browser.cjs ;;
