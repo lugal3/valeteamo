@@ -228,7 +228,22 @@ const assert=require('node:assert/strict');
  const {poseEmyLastChance,poseEscapeAmbush}=await import('../src/lab/emy-rescue.js');
  const finaleWorld=createHouse(),rescueCat=finaleWorld.emy;
  const foe={x:6.15,y:0,z:12.38,yaw:Math.PI,mode:'chase',speed:1.4,active:true};
+ const {planEmyRescueShot,sampleEmergencyRescue,sampleRescuedKitty,EMY_RESCUE_BEATS}=await import('../src/lab/emy-emergency-shot.js');
+ const {createPose}=await import('../src/lab/character-rig.js');
  const shot={elapsed:.20,kitty:{x:5.65,y:0,z:12.8,yaw:Math.PI},attacker:{...foe}};
+ shot.stage=planEmyRescueShot(finaleWorld,shot.kitty,shot.attacker,{x:5.65,y:1.63,z:12.8,yaw:Math.PI,pitch:0});
+ let prior;
+ for(let i=0;i<=395;i++){
+  const t=i/100,p=sampleEmergencyRescue(t,shot.stage),rig=sampleRescuedKitty(t,createPose());
+  assert([...rig].every(Number.isFinite));
+  assert([p.cat.x,p.cat.y,p.cat.z,p.foe.x,p.foe.y,p.foe.z,p.kitty.x,p.kitty.y,p.kitty.z].every(Number.isFinite));
+  assert(p.cat.y>=shot.kitty.y-.001);
+  if(prior)assert(Math.hypot(p.cat.x-prior.cat.x,p.cat.y-prior.cat.y,p.cat.z-prior.cat.z)<.10,'No discontinuous leap');
+  prior=p;
+ }
+ assert.equal(sampleEmergencyRescue(0,shot.stage).foe.grip,0);
+ assert(sampleEmergencyRescue(1,shot.stage).foe.grip>.95);
+ assert.equal(sampleEmergencyRescue(2.3,shot.stage).foe.grip,0);
  rescueCat.hidden=true;
  for(const {box} of rescueCat.parts)box.hiddenGeometry=true;
  assert(!poseEmyLastChance(shot,rescueCat,foe,true),'Emy stays hidden during the first threat beat');
