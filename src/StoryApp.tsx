@@ -40,7 +40,7 @@ export function StoryApp({ClassicApp,initialRoute}:{ClassicApp:ComponentType;ini
  const container=useRef<HTMLDivElement>(null);
  const audio=useRef<Sound>(new Sound());
  const [progress,setProgress]=useState<StoryProgress>(()=>readProgress(STORY.length));
- const [screen,setScreen]=useState<'splash'|'cover'|'story'|'game'|'classic'|'rescue'|'tests'|'arcade'|'cosmos'>(()=>
+ const [screen,setScreen]=useState<'splash'|'cover'|'story'|'game'|'classic'|'rescue'|'tests'|'arcade'|'cosmos'|'cosmos-return'>(()=>
   initialRoute==='rescue'?(hasRescueProgress()?'rescue':'splash'):initialRoute==='classic'?'classic':initialRoute==='tests'?'tests':'cover');
  const [splashTarget,setSplashTarget]=useState<'rescue'|null>(screen==='splash'?'rescue':null);
  const [adminGranted]=useState(initialRoute==='tests');
@@ -80,7 +80,8 @@ export function StoryApp({ClassicApp,initialRoute}:{ClassicApp:ComponentType;ini
    // These keys belong only to the rescue story; classic Corazones is untouched.
    resetPrologue();resetRescue();openDemo('garden',false);
   }}/></Suspense>;
- if(screen==='rescue')return <Suspense fallback={<main className="playtest-loading" role="status">Preparando el rescate 2D…</main>}><RescueDemo key={demoEntry+(demoTrial?'-trial':'-story')} entry={demoEntry} test={demoTrial} onExit={()=>{setScreen(demoTrial?'tests':'cover');if(!demoTrial)unlockAudio();}}/></Suspense>;
+ if(screen==='cosmos-return')return <Suspense fallback={<main role="status" className="playtest-loading">Regresando a las estrellas…</main>}><CosmosExperience startAt="galaxy" onExit={()=>setScreen('cover')} onEnterGame={()=>openDemo('garden',false)}/></Suspense>;
+ if(screen==='rescue')return <Suspense fallback={<main className="playtest-loading" role="status">Preparando el rescate 2D…</main>}><RescueDemo key={demoEntry+(demoTrial?'-trial':'-story')} entry={demoEntry} test={demoTrial} onComplete={()=>setScreen(demoTrial?'tests':'cosmos-return')} onExit={()=>{setScreen(demoTrial?'tests':'cover');if(!demoTrial)unlockAudio();}}/></Suspense>;
  if(screen==='tests')return houseTrial?<PlaytestHouse key={houseTrial} id={houseTrial} onExit={closeHouseTrial}/>:<PlaytestMenu
   onExit={()=>{unlockAudio();setScreen('cover');}}
   onSelect={id=>{

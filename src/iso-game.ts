@@ -105,6 +105,7 @@ export class IsoAdventure extends Phaser.Scene {
  storyClueHint?:Phaser.GameObjects.Text;
  storyMomentId='';storyPetUntil=0;storyRestUntil=0;storyMomentCooldown=0;
  private photoActors:PhotoRestore[]=[];private storyPhoto=false;
+ private epilogueFlames?:Phaser.GameObjects.Graphics;
  private epilogueFollowers:{actor:StoryActor;point:IsoPoint;trail:IsoPoint[];kind:'louis'|'emy'|'luis'|'vale';facing:'up'|'down'|'left'|'right';walk:number}[]=[];
  private storyMixStage='';private storyMixMap='';private storyMixDark=NaN;private storyMixDialogue=false;
  storyPractice?:{point:IsoPoint;marker:Phaser.GameObjects.Graphics};storyPracticeDone=false;
@@ -219,7 +220,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.storyLuisShadow=undefined;this.storyLuisMotion=undefined;
   this.storyLuisReady=false;this.storyLuisArriving=false;this.storyLuisFarewell=false;
   this.story.near('');
-  this.epilogueFollowers=[];
+  this.epilogueFollowers=[];this.epilogueFlames=undefined;
   if(this.story.epilogue){this.setupEpilogue(this.story.epilogue);return;}
   if(force)this.p=mapForStage(stage)===this.storyMap?storyArrivalPoint(stage):{...RESCUE_SCENES[this.storyMap].spawn};
   this.p=constrainRescue(this.p,this.storyMap);this.positionPlayer();
@@ -401,14 +402,22 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   cake.fillStyle(0xcd829e).fillRoundedRect(at.x-13,at.y-36,26,18,4);
   cake.fillStyle(0xffe4d7).fillEllipse(at.x,at.y-36,26,8);
   cake.fillStyle(0xc65e85).fillRect(at.x-12,at.y-27,24,3);
+  const flames=this.add.graphics().setDepth(at.y+2);this.epilogueFlames=flames;
   for(let x=-8;x<=8;x+=8){cake.fillStyle(0xfff0c1).fillRect(at.x+x-1,at.y-45,3,9);
-   cake.fillStyle(0xffb45d).fillEllipse(at.x+x,at.y-47,4,7);}
+   flames.fillStyle(0xffb45d).fillEllipse(at.x+x,at.y-47,4,7);
+   flames.fillStyle(0xffeed1).fillEllipse(at.x+x,at.y-47,2,3);}
   const bunting=this.add.graphics().setDepth(at.y-6);
   bunting.lineStyle(3,0x92736b).lineBetween(at.x-58,at.y-9,at.x-58,at.y-77).lineBetween(at.x+58,at.y-9,at.x+58,at.y-77);
   bunting.lineStyle(1,0x9b7381).lineBetween(at.x-58,at.y-77,at.x,at.y-67).lineBetween(at.x,at.y-67,at.x+58,at.y-77);
   for(let i=0;i<8;i++){const x=at.x-52+i*14,y=at.y-76+10*(1-Math.abs(x-at.x)/58);
    bunting.fillStyle([0xeaa4ba,0xf4cf93,0xc2d4a7][i%3]).fillTriangle(x,y,x+10,y+1,x+5,y+12);}
-  this.storyObjects.push(g,cake,bunting);
+  this.storyObjects.push(g,cake,bunting,flames);
+ }
+ blowEpilogueCandles(){
+  if(!this.story?.epilogue||!this.epilogueFlames?.active||!this.epilogueFlames.visible)return;
+  this.epilogueFlames.setVisible(false);
+  if(!this.reducedMotion)this.tweens.add({targets:this.player,angle:-3,duration:180,yoyo:true});
+  this.audio.tone(660,.25,.03);this.audio.tone(990,.45,.02);
  }
  private animateEpilogueTalk(){
   const speaker=this.story?.speaker?.(),talking=this.story?.speaking?.()??false,frame=this.reducedMotion?0:Math.floor(this.clock/160);

@@ -19,14 +19,14 @@ export function GardenEpilogue({stage,onAdvance,onExit}:Props){
  const [line,setLine]=useState(-1),[letters,setLetters]=useState(0),[portraits,setPortraits]=useState<Record<string,string>>({});
  const [celebrating,setCelebrating]=useState(false),[candlesOut,setCandlesOut]=useState(false),[letterOpen,setLetterOpen]=useState(false);
  const [postcard,setPostcard]=useState<null|{image:string;error:boolean}>(null);
- const scene=useRef<IsoAdventure|null>(null),locked=useRef(false),timer=useRef<number>(0);
+ const scene=useRef<IsoAdventure|null>(null),locked=useRef(false),finishing=useRef(false),timer=useRef<number>(0);
  const captureTimer=useRef(0),captureToken=useRef(0);
  const current=lines[line],glyphs=useMemo(()=>current?dialogueGlyphs(current.text):[],[current]);
  const activeLine=useRef(current),speaking=useRef(false);activeLine.current=current;speaking.current=!!current&&letters<glyphs.length;
  const advance=useRef(onAdvance);advance.current=onAdvance;
  const finish=()=>{
-  if(leaving)return;
-  locked.current=true;scene.current?.clearInput();setLeaving(true);
+  if(finishing.current)return;
+  finishing.current=true;locked.current=true;scene.current?.clearInput();setLeaving(true);
   timer.current=window.setTimeout(()=>advance.current(chapter.next),window.matchMedia('(prefers-reduced-motion: reduce)').matches?0:680);
  };
  const begin=()=>{
@@ -80,7 +80,7 @@ export function GardenEpilogue({stage,onAdvance,onExit}:Props){
   const token=++captureToken.current;setPostcard({image:'',error:false});
   const done=(image:string,error=false)=>{if(captureToken.current!==token)return;captureToken.current++;window.clearTimeout(captureTimer.current);setPostcard({image,error});};
   captureTimer.current=window.setTimeout(()=>done('',true),2200);
-  try{s.game.renderer.snapshot(result=>{if(!(result instanceof HTMLImageElement)){done('',true);return;}try{done(makeGardenPostcard(result,'Feliz cumpleaños, Vale'));}catch{done('',true);}});}catch{done('',true);}
+  try{const renderer=s.game.renderer;if(!renderer){done('',true);return;}renderer.snapshot(result=>{if(!(result instanceof HTMLImageElement)){done('',true);return;}try{done(makeGardenPostcard(result,'Feliz cumpleaños, Vale'));}catch{done('',true);}});}catch{done('',true);}
  };
  useEffect(()=>()=>{captureToken.current++;window.clearTimeout(captureTimer.current);window.clearTimeout(timer.current);audio.destroy();},[audio]);
  return <main className="garden-epilogue" data-epilogue-stage={stage} data-epilogue-leaving={leaving}>
@@ -97,7 +97,7 @@ export function GardenEpilogue({stage,onAdvance,onExit}:Props){
   </section>}
   {celebrating&&!postcard&&!leaving&&<section className="epilogue-celebration" aria-label="Celebración de cumpleaños">
    <span aria-hidden="true">♡ ✦ ♡</span><h2>Feliz cumpleaños, Vale</h2>
-   {!candlesOut?<button onClick={()=>{setCandlesOut(true);audio.tone(660,.25,.03);audio.tone(990,.45,.02);}}>Pide un deseo y sopla las velas</button>:<>
+   {!candlesOut?<button onClick={()=>{setCandlesOut(true);scene.current?.blowEpilogueCandles();}}>Pide un deseo y sopla las velas</button>:<>
     <div className="epilogue-confetti" aria-hidden="true">{Array.from({length:16},(_,i)=><i key={i} style={{left:(i*37%100)+'%',animationDelay:i%5*.14+'s'}}/>)}</div>
     {letterOpen&&<p className="epilogue-letter">{EPILOGUE_LETTER}</p>}
     <div className="epilogue-celebration-actions"><button onClick={()=>setLetterOpen(v=>!v)}>{letterOpen?'Cerrar carta':'Leer carta'}</button><button onClick={takePhoto}>Foto grupal</button><button onClick={finish}>Terminar aventura</button></div>
