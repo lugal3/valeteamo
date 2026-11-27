@@ -4,16 +4,18 @@ import type {Sound} from '../audio';
 import type {IsoAdventure,IsoStoryBridge} from '../iso-game';
 import type {EpilogueStage} from './epilogue-progress.js';
 import {EPILOGUE_CHAPTERS} from './epilogue-route';
-import {EPILOGUE_DIALOGUES,EPILOGUE_LETTER} from './epilogue-content';
+import {epilogueDialogue,EPILOGUE_LETTER} from './epilogue-content';
+import type {JourneyMemory} from './prologue-story.js';
 import {dialogueGlyphs,dialogueDelay,dialogueVoice} from './dialogue-feel.js';
 import {GardenPostcard,makeGardenPostcard} from './GardenPostcard';
 import {valeTexture} from './rescue-intro-art';
 import './garden-epilogue.css';
 
-type Props={stage:Exclude<EpilogueStage,'complete'>;onAdvance:(next:EpilogueStage)=>void;onExit:()=>void;muted:boolean;onMute:(muted:boolean)=>void;audio:Sound};
+type Props={stage:Exclude<EpilogueStage,'complete'>;onAdvance:(next:EpilogueStage)=>void;onExit:()=>void;muted:boolean;onMute:(muted:boolean)=>void;audio:Sound;memory?:JourneyMemory};
 // Parent keys by stage; one StoryGame/Phaser instance at a time.
-export function GardenEpilogue({stage,onAdvance,onExit,muted,onMute,audio}:Props){
- const chapter=EPILOGUE_CHAPTERS[stage],lines=EPILOGUE_DIALOGUES[stage];
+export function GardenEpilogue({stage,onAdvance,onExit,muted,onMute,audio,memory}:Props){
+ const chapter=EPILOGUE_CHAPTERS[stage];
+ const lines=useMemo(()=>epilogueDialogue(stage,memory),[stage,memory]);
  const [near,setNear]=useState(''),[leaving,setLeaving]=useState(false);
  const [line,setLine]=useState(-1),[letters,setLetters]=useState(0),[portraits,setPortraits]=useState<Record<string,string>>({});
  const [celebrating,setCelebrating]=useState(false),[candlesOut,setCandlesOut]=useState(false),[letterOpen,setLetterOpen]=useState(false);

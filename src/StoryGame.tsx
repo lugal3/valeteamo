@@ -16,6 +16,7 @@ function OfferDialog({offer,choose}:{offer:AdventureOffer,choose:(value:boolean)
 export function StoryGame({level,character,onComplete,onExit,muted,audio,audioNotice,onUnlockAudio,onToggleAudio,story,onSceneReady,epilogueUI}:{level:1|2|3,character:CharacterId,onComplete:()=>void,onExit:()=>void,muted:boolean,audio:Sound,audioNotice:string,onUnlockAudio:()=>void,onToggleAudio:()=>void,story?:IsoStoryBridge,onSceneReady?:(scene:IsoAdventure|null)=>void,epilogueUI?:ReactNode}){
  const host=useRef<HTMLDivElement>(null),scene=useRef<IsoAdventure|undefined>(undefined);
  const [hud,setHud]=useState<AdventureHud>(),[paused,setPaused]=useState(false),[loading,setLoading]=useState(true),[progress,setProgress]=useState(8),[error,setError]=useState(''),[dead,setDead]=useState(false),[attempt,retry]=useState(0);
+ const [sceneBootMs,setSceneBootMs]=useState<number|undefined>();
  const complete=useRef(onComplete);complete.current=onComplete;
  const portraitAutoPaused=useRef(false),userPaused=useRef(false),pausedActual=useRef(false);
  const markPaused=(value:boolean)=>{pausedActual.current=value;if(!value)userPaused.current=false;setPaused(value);};
@@ -24,10 +25,12 @@ export function StoryGame({level,character,onComplete,onExit,muted,audio,audioNo
  const choose=useCallback((value:boolean)=>scene.current?.chooseItem(value),[]);
  useEffect(()=>{
   if(!host.current)return;const el=host.current;let cancelled=false,game:Phaser.Game|undefined,observer:ResizeObserver|undefined,blur=()=>{},visibility=()=>{},orientation=()=>{};
-  setLoading(true);setProgress(8);setError('');setDead(false);markPaused(false);portraitAutoPaused.current=false;userPaused.current=false;
+  const startedAt=performance.now();
+   if(import.meta.env.DEV)setSceneBootMs(undefined);
+   setLoading(true);setProgress(8);setError('');setDead(false);markPaused(false);portraitAutoPaused.current=false;userPaused.current=false;
   const boot=async()=>{try{
    const [{default:Engine},{IsoAdventure:Adventure}]=await Promise.all([import('phaser'),import('./iso-game')]);if(cancelled)return;setProgress(60);
-   const s=new Adventure(level,character,setHud,result=>{if(result==='win')complete.current();else setDead(true);},markPaused,audio,()=>{if(cancelled)return;setLoading(false);if(document.hidden){s.setPaused(true);}if(isPhonePortrait()){portraitAutoPaused.current=true;s.setPaused(true);}},setProgress,story);scene.current=s;onSceneReady?.(s);
+   const s=new Adventure(level,character,setHud,result=>{if(result==='win')complete.current();else setDead(true);},markPaused,audio,()=>{if(cancelled)return;if(import.meta.env.DEV)setSceneBootMs(Math.round(performance.now()-startedAt));setLoading(false);if(document.hidden){s.setPaused(true);}if(isPhonePortrait()){portraitAutoPaused.current=true;s.setPaused(true);}},setProgress,story);scene.current=s;onSceneReady?.(s);
    game=new Engine.Game({type:Engine.AUTO,parent:el,width:Math.max(1,el.clientWidth),height:Math.max(1,el.clientHeight),backgroundColor:'#f1e5d2',pixelArt:true,render:{antialias:false,roundPixels:true},audio:{noAudio:true},scale:{mode:Engine.Scale.NONE,autoCenter:Engine.Scale.NO_CENTER,expandParent:false},scene:s,input:{activePointers:4}});
    const handlePortrait=()=>{
     if(isPhonePortrait()){
@@ -48,7 +51,7 @@ export function StoryGame({level,character,onComplete,onExit,muted,audio,audioNo
   }catch(e){if(!cancelled){setError('No pudimos abrir esta parte del jardín. Puedes volver a intentarlo.');console.error(e);}}};
   void boot();return()=>{cancelled=true;observer?.disconnect();window.removeEventListener('blur',blur);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('resize',orientation);window.removeEventListener('orientationchange',orientation);game?.destroy(true);scene.current=undefined;onSceneReady?.(null);};
  },[level,character,attempt]);
- return <div className="adventure-wrap" onPointerDownCapture={()=>{if(!muted&&!paused)onUnlockAudio();}} onKeyDownCapture={e=>{if(!muted&&!paused&&(e.key==='Enter'||e.key===' ')&&(e.target as HTMLElement).closest('button'))onUnlockAudio();}} onClickCapture={e=>{const button=(e.target as HTMLElement).closest('button');if(button&&!button.disabled&&button.getAttribute('aria-label')!=='Silenciar sonido'&&button.getAttribute('aria-label')!=='Activar sonido')audio.ui();}}>
+ return <div className="adventure-wrap" data-scene-boot-ms={import.meta.env.DEV?sceneBootMs:undefined} onPointerDownCapture={()=>{if(!muted&&!paused)onUnlockAudio();}} onKeyDownCapture={e=>{if(!muted&&!paused&&(e.key==='Enter'||e.key===' ')&&(e.target as HTMLElement).closest('button'))onUnlockAudio();}} onClickCapture={e=>{const button=(e.target as HTMLElement).closest('button');if(button&&!button.disabled&&button.getAttribute('aria-label')!=='Silenciar sonido'&&button.getAttribute('aria-label')!=='Activar sonido')audio.ui();}}>
   <div className="adventure-canvas" ref={host} style={epilogueUI?{zIndex:0,isolation:'isolate'}:undefined}/>
   {!loading&&!error&&<><div className="adventure-hud"><button onClick={pauseManually} aria-label="Pausar aventura">Ⅱ</button><AdventureHearts hp={hud?.hp??6}/>{hud?.shield&&<span className="adventure-shield" title="Manto listo" aria-label="Manto listo">✧</span>}<span className="adventure-objective">{hud?.objective} {!story&&<b>{hud?.complete??0}/{hud?.total??3}</b>}</span><span className="adventure-hud-spacer"/><button onClick={onToggleAudio} aria-label={muted?'Activar sonido':'Silenciar sonido'}>{muted?'♪̸':'♪'}</button><FullscreenControl compact/><button onClick={onExit}>Salir</button></div>
    {!story&&hud?.bossHp!==undefined&&<div className="adventure-boss" aria-label={`Desafío final: ${Math.max(0,hud.bossHp)} de ${hud.bossMax} de vida`}><span>EL ECLIPSE DEL JARDÍN</span><div><i style={{width:`${Math.max(0,hud.bossHp)/(hud.bossMax||1)*100}%`}}/></div></div>}

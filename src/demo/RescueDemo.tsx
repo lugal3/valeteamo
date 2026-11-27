@@ -4,7 +4,7 @@ import {GardenEpilogue} from './GardenEpilogue';
 import {Sound} from '../audio';
 import {readCampaignMute,writeCampaignMute} from './campaign-audio';
 import {EPILOGUE_START,advanceEpilogue,openEpilogueSave,type EpilogueState,type EpilogueStage} from './epilogue-progress.js';
-import {resetPrologue} from './prologue-story.js';
+import {resetPrologue,loadPrologue,journeyMemory,type JourneyMemory} from './prologue-story.js';
 import {START,advanceRescue,loadRescue,resetRescue,openRescueEntrySave,type RescueState} from './progression.js';
 import '../lab/lab.css';
 import './rescue.css';
@@ -31,6 +31,7 @@ const checkpointFor=(entry:Entry):PrologueCheckpoint=>
 export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,epilogueEntry,returnToUniverse=!test}:{onExit:()=>void;onComplete?:()=>void;entry?:Entry;test?:boolean;epilogueEntry?:Exclude<EpilogueStage,'complete'>;returnToUniverse?:boolean}){
  const [entryStore]=useState(()=>({current:test?undefined:openRescueEntrySave()}));
  const [progress]=useState(()=>entryStore.current?.state??initial(entry,test));
+ const [memory,setMemory]=useState<JourneyMemory>(()=>journeyMemory(test?undefined:loadPrologue()));
  const [epilogueStore]=useState(()=>({current:!test&&progress.rescued?openEpilogueSave():undefined}));
  const [epilogue,setEpilogue]=useState<EpilogueState>(()=>epilogueStore.current?.state??{...EPILOGUE_START,stage:test&&epilogueEntry?epilogueEntry:EPILOGUE_START.stage});
  const [mode,setMode]=useState<'garden'|'house'|'epilogue'|'end'>(test&&epilogueEntry?'epilogue':progress.rescued?(epilogue.stage==='complete'?'end':'epilogue'):progress.house?'house':'garden');
@@ -108,14 +109,14 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
 
  const reset=()=>{
   if(!test){resetRescue();resetPrologue();entryStore.current=openRescueEntrySave();}
-  phaseRef.current={...START};epilogueStore.current=undefined;epilogueRef.current={...EPILOGUE_START};setEpilogue(epilogueRef.current);
+  setMemory(journeyMemory());phaseRef.current={...START};epilogueStore.current=undefined;epilogueRef.current={...EPILOGUE_START};setEpilogue(epilogueRef.current);
   entering.current=false;finishing.current=false;setSaveWarning(false);setError('');setHouseReady(false);setMode('garden');
  };
 
  return <div className="rescue-demo" aria-label="Demo jugable de rescate">
   {mode==='garden'&&<GardenPrologue key={entry+(test?'-trial':'-story')}
-   test={test} checkpoint={checkpointFor(entry)} onExit={onExit} onEnterHouse={enterHouse} muted={campaignMuted} onMute={updateMuted} onSaveWarning={()=>setSaveWarning(true)} onPrepareHouse={()=>{void import('../lab/house.js').catch(()=>{});}}/>}
-  {mode==='epilogue'&&epilogue.stage!=='complete'&&<GardenEpilogue key={epilogue.stage} stage={epilogue.stage} onAdvance={completeEpilogue} onExit={onExit} muted={campaignMuted} onMute={updateMuted} audio={epilogueAudio}/>}
+   test={test} checkpoint={checkpointFor(entry)} onExit={onExit} onEnterHouse={enterHouse} muted={campaignMuted} onMute={updateMuted} onSaveWarning={()=>setSaveWarning(true)} onRememberJourney={state=>setMemory(journeyMemory(state))} onPrepareHouse={()=>{void import('../lab/house.js').catch(()=>{});}}/>}
+  {mode==='epilogue'&&epilogue.stage!=='complete'&&<GardenEpilogue key={epilogue.stage} stage={epilogue.stage} onAdvance={completeEpilogue} onExit={onExit} muted={campaignMuted} onMute={updateMuted} audio={epilogueAudio} memory={memory}/>}
   {mode==='end'&&<div className="rescue-transition rescue-final" data-epilogue-stage="complete">
    <span>♥ ✿ ♥</span><h1>Feliz cumpleaños, <em>Vale</em></h1>
    <p>Louis está a salvo. Emy, Kitty, Luis y Vale vuelven a estar juntos. Gracias por recorrer esta pequeña aventura.</p>

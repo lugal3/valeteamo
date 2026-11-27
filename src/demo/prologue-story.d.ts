@@ -20,3 +20,7 @@ export function openPrologueSave(storage?:Storage):{readonly state:PrologueState
 
 export const OPTIONAL_DISCOVERIES:readonly string[];
 export function recordPrologueDiscovery(state:PrologueState,id:string):PrologueState;
+
+export type JourneyMemory={fedEmy:boolean;metCouple:boolean;discoveries:readonly string[]};
+export function journeyMemory(state?:PrologueState):JourneyMemory;
+export function journeyEcho(memory?:JourneyMemory):string;

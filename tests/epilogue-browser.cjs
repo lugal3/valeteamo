@@ -23,6 +23,9 @@ async function main(){
   await page.getByRole('button',{name:'Salir',exact:true}).click();
   await page.locator('.lp-swagger').waitFor();
   assert.deepEqual(await read(),prior,'LP trial leaves the real unsuccessful rescue unchanged');
+  // Record actual load-to-ready timings (development browser, not phone FPS).
+  const timings=[];
+  const measure=async stage=>{const ms=await page.locator('.adventure-wrap').getAttribute('data-scene-boot-ms');assert(ms!==null&&Number.isFinite(Number(ms))&&Number(ms)>=0);timings.push({stage,readyMs:Number(ms)});};
   // Fixture is intentionally a successful 3D save, not a claim that the 3D
   // was played here. The separate checkpoint suite verifies its real callback.
   const rescued={...prior,phase:'end',rescued:true};
@@ -33,6 +36,7 @@ async function main(){
   if(await page.getByRole('button',{name:'Silenciar sonido'}).isVisible())await page.getByRole('button',{name:'Silenciar sonido'}).click();
   await page.getByRole('button',{name:'Activar sonido'}).waitFor();
   for(const stage of stages){
+   await waitScene(page,stage);await measure(stage);
    await completeChapter(page,stage,'artifacts');
    const expected=stages[stages.indexOf(stage)+1]??'complete';
    assert.equal((await read()).epilogue.stage,expected);
@@ -46,6 +50,7 @@ async function main(){
   await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="explore"]').waitFor({timeout:30000});
   assert.equal((await read()).epilogue.stage,'complete');
   assert.equal(await page.getByRole('button',{name:'Ajustes de la galaxia'}).count(),0,'return is public, no QA gear');
+  fs.writeFileSync('artifacts/epilogue-load-timings.json',JSON.stringify(timings,null,2));
   assert.deepEqual(errors,[]);
   console.log('PASS epilogue: actual keyboard movement, companions, dialogue, candles, letter, real PNG, resume, save isolation and return');
  }finally{await browser?.close();await server.close();}

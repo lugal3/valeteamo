@@ -25,3 +25,8 @@ Base publicada: d28fc0eaa26ddc348f60b4e9704aaf275f8fb4c0. Rama independiente fea
 - CI del commit bc4a4fc detectó TS2353 en HouseLaunchOptions: se declara initialMuted y el argumento opcional de onRescue, compatible con callbacks sin argumentos.
 - Guardado de prólogo y handoff a casa con snapshot: una pestaña antigua no puede escribir sobre checkpoint interior, rescate terminado ni reinicio. Se informa de fallo y se permite jugar en memoria. Un final cuyo guardado perdió el lease no adopta el epílogo de otra partida. No se cambia versión ni claves.
 - Cobertura en rescue.cjs y prologue.cjs de competencia entre pestañas, reinicio, rescate completo, guardado bloqueado y recuperación. Pendiente ejecutar suite de esta revisión; no se da fase por validada.
+
+## Fase 1/2 — instrumentación y primeros enlaces narrativos
+- La fase 1 sigue pendiente de pruebas del SHA. Medición DEV del inicio de StoryGame hasta el callback real de escena lista; el navegador del epílogo registra cuatro tiempos en epilogue-load-timings.json. No equivale a tiempo de primer fotograma visible ni FPS físico.
+- El prólogo confirma memoria de viaje al completar la ventana; el epílogo recuerda Churu, encuentro y descubrimientos válidos mediante sustitución de frases ya existentes. Previews directas y guardados antiguos sin hechos confirmados usan diálogo neutro. La línea de ventana anticipa los mensajes de teléfono existentes sin cambiar el teléfono ni las etapas.
+- Se amplían tests puros de memoria, compatibilidad y datos desconocidos. Pendientes CI, ritmo/actuaciones y verificación visual. No merge/publicación.

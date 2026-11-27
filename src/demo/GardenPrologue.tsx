@@ -34,8 +34,8 @@ const initial=(test:boolean,checkpoint:PrologueCheckpoint):PrologueState=>
 
 const label=(speaker:string)=>speaker;
 
-export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHouse,onPrepareHouse,muted=false,onMute,onSaveWarning}:{
- test?:boolean;checkpoint?:PrologueCheckpoint;onExit:()=>void;onEnterHouse:()=>void;onPrepareHouse?:()=>void;muted?:boolean;onMute?:(muted:boolean)=>void;onSaveWarning?:()=>void;
+export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHouse,onPrepareHouse,muted=false,onMute,onSaveWarning,onRememberJourney}:{
+ test?:boolean;checkpoint?:PrologueCheckpoint;onExit:()=>void;onEnterHouse:()=>void;onPrepareHouse?:()=>void;muted?:boolean;onMute?:(muted:boolean)=>void;onSaveWarning?:()=>void;onRememberJourney?:(state:PrologueState)=>void;
 }){
  const [prologueStore]=useState(()=>test?undefined:openPrologueSave());
  const [run,setRun]=useState<PrologueState>(()=>prologueStore?.state??initial(test,checkpoint));
@@ -246,6 +246,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
     showDialog(PROLOGUE_DIALOGUES.window,()=>{
      if(enteringRef.current)return;
      enteringRef.current=true;changed('enter');setHouseHandoff(true);
+     onRememberJourney?.(phaseRef.current);
      // Begin loading only once the player has committed to the window entry.
      onPrepareHouse?.();
       // Finish the 2D window transition before mounting the 3D scene.
@@ -353,9 +354,9 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  },[]);
  useEffect(()=>{
   if(run.stage==='house'&&!test&&!enteringRef.current){
-   enteringRef.current=true;onEnterHouse();
+   enteringRef.current=true;onRememberJourney?.(phaseRef.current);onEnterHouse();
   }
- },[run.stage,test,onEnterHouse]);
+ },[run.stage,test,onEnterHouse,onRememberJourney]);
  useEffect(()=>{
   const update=()=>{
    const scene=sceneRef.current,stage=phaseRef.current.stage;

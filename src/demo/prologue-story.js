@@ -141,9 +141,24 @@ export const PROLOGUE_DIALOGUES={
   {speaker:'Kitty',tone:'whisper',text:'LUNA-07… es aquí. La puerta está cerrada. Tiene que haber otra entrada.'}
  ],
  window:[
-  {speaker:'Kitty',tone:'whisper',text:'La ventana está entreabierta. Louis, aguanta un poquito más.'}
+  {speaker:'Kitty',tone:'whisper',text:'La ventana está entreabierta. Avisaré a Luis antes de entrar. Louis, aguanta un poco más.'}
  ]
 };
+// Only confirmed actions from this run may be referenced during the return.
+export function journeyMemory(state){
+ if(!state||state.stage!=='house'||state.completed!==true)return {fedEmy:false,metCouple:false,discoveries:[]};
+ return {fedEmy:state.fedGreyCat===true,metCouple:state.metCouple===true,discoveries:OPTIONAL_DISCOVERIES.filter(id=>(state.discoveries??[]).includes(id))};
+}
+export function journeyEcho(memory){
+ const seen=memory?.discoveries??[];
+ if(seen.includes('lantern-clearing'))return 'Ese farol nos guio de ida. Ahora nos ilumina el camino de vuelta.';
+ if(seen.includes('woodland-loop'))return 'El bosque ya no está tan silencioso. Escucha, Louis.';
+ if(seen.includes('quiet-grove'))return '¿Recuerdas aquel claro tranquilo? Volveremos a descansar allí algún día.';
+ if(seen.includes('cherry-court'))return 'Los cerezos siguen aquí. Qué alivio volver a verlos.';
+ if(seen.includes('river-lookout'))return 'Pronto volveremos a ver el río. Esta vez podemos detenernos.';
+ if(seen.includes('flower-nook'))return 'Las flores del jardín nos esperan. Volvamos juntos.';
+ return 'Vamos juntos. Nos están esperando.';
+}
 export const PROLOGUE_OBJECTIVES={
  intro:'Busca el Churu junto al sendero',
  'feed-cat':'Lleva el Churu en la mano y alimenta a Emy al cruzar el puente',
