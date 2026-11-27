@@ -1550,7 +1550,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   captureShot={from,loss,actor:pursuer.snapshot(),elapsed:0,timing:captureTiming(captureCount++),
    constrain:capturePath(world.boxes,from),lamp:flashlightBeam(),
    kitty:{x:s.x,y:s.y,z:s.z,yaw:s.yaw},attacker:{...pursuer.snapshot()}};
-  if(loss.emyRescue){captureShot.stage=planEmyRescueShot(world,captureShot.kitty,captureShot.attacker,from);captureShot.kittyPose=createPose();world.emy.hidden=true;for(const {box} of world.emy.parts)box.hiddenGeometry=true;renderer.updateVisibility();}
+  if(loss.emyRescue){captureShot.stage=planEmyRescueShot(world,captureShot.kitty,captureShot.attacker,from,world.emy);captureShot.kittyPose=createPose();if(!captureShot.stage.realStart){world.emy.hidden=true;for(const {box} of world.emy.parts)box.hiddenGeometry=true;renderer.updateVisibility();}}
   phone.close();releaseMouse();resetInput();sound.stopEmote();
   $('house-emotes').hidden=true;
   $('lab-camera-settings').open=false;
@@ -1573,7 +1573,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(crossed(B.impact)){play('cloth',pursuer,.95);haptics.pulse('capture');if(options.captions!==false)captureCaption.textContent='[El secuestrador retrocede y suelta a Kitty]';}
   if(crossed(B.land)){play('footstep',world.emy,.45);if(options.captions!==false)captureCaption.textContent='[Emy se queda junto a Kitty]';}
   if(crossed(B.relief)){play('cat',world.emy,.45);if(options.captions!==false)captureCaption.textContent='[Kitty está a salvo]';}
-  const fade=Math.max(0,1-t/.22,(t-(B.end-.25))/.25);
+  const fade=shot.stage.compact?1:Math.max(0,1-(t-(shot.stage.realStart?0:B.enter))/.26,(t-(B.end-.25))/.25);
   captureLayer.style.setProperty('--capture-edge',String(.17+.08*pose.foe.hit));
   captureLayer.style.setProperty('--capture-dark',String(Math.min(1,fade)));
   const camera=shot.stage.camera,dx=pose.focus.x-camera.x,dz=pose.focus.z-camera.z;
@@ -1581,7 +1581,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   try{
    renderer.render(view,0,elapsed+t,false,{
     reduced,shotLight:.42,pursuer:{...pursuer.snapshot(),rescueGrip:pose.foe.grip,rescueImpact:pose.foe.hit,rescueSide:shot.stage.side},
-    ...(!shot.stage.compact?{thirdPerson:pose.kitty,actorPose:sampleRescuedKitty(t,shot.kittyPose),feetY:pose.kitty.y,actorTime:t,equipment:'empty'}:{}),television});
+    ...(shot.stage.viewMode==='third'?{thirdPerson:pose.kitty,actorPose:sampleRescuedKitty(t,shot.kittyPose),feetY:pose.kitty.y,actorTime:t,equipment:'empty'}:{}),television});
   }catch(error){interruptGraphics('Error en el rescate de Emy',String(error.message||error));return;}
   if(t<B.end)return;
   const restore=shot.loss.checkpoint,messages=events.messages;
@@ -2564,6 +2564,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    performance:()=>perfReport(),
    windowIntro:()=>cinematic?{elapsed:cinematic.elapsed,amount:world.entryWindow.amount,view:windowIntroCamera(cinematic.elapsed/WINDOW_SHOT_SECONDS)}:null,
    finale:()=>finalCutscene?{elapsed:finalCutscene.elapsed,playable:finalCutscene.playable,runAge:finalCutscene.runAge,stage:finalCutscene.playable?'run':finalCutscene.stage,weather:finaleWeather(finalCutscene,s),view:finalCutscene.lastView}:null,
+   emergencyRescue:()=>captureShot?.loss.emyRescue?{elapsed:captureShot.elapsed,kind:captureShot.stage.kind,viewMode:captureShot.stage.viewMode,lives:captureShot.loss.lives,easy:!!captureShot.loss.easy,pose:sampleEmergencyRescue(captureShot.elapsed,captureShot.stage)}:null,
    intro:()=>cinematic?{elapsed:cinematic.elapsed,...windowIntroState(cinematic.elapsed/WINDOW_SHOT_SECONDS),camera:windowIntroCamera(cinematic.elapsed/WINDOW_SHOT_SECONDS)}:null,
    atmosphere:()=>({room:sound.atmosphere?.room,outdoor:sound.atmosphere?.outdoor,events:sound.atmosphere?.events,voices:sound.atmosphere?.voices.size,loops:sound.atmosphere?.loops.length,lastEvent:sound.atmosphere?.lastEvent,muted:sound.settings.muted,volume:sound.settings.ambient}),
    snapshot:()=>({puzzle:{...puzzle},hop:{age:hopAge,offset:hopCancelled?0:hopOffset(hopAge,reducedMotion.matches)},position:{x:s?.x,y:s?.y,z:s?.z},locomotion:{...velocity,eye:s?.eye,cameraGround:s?.cameraGround,stairs:s?getStairDirection(s):''},camera:{yaw:s?.yaw,pitch:s?.pitch,targetYaw:lookTarget.yaw,invertX:options.invertX},cinematic:!!cinematic,quality:options.quality,fps,target:focus?.id??null,paused:isPaused(),controls:{look:lookPointer,stick:stickPointer,joystick:{...joystick}},reduceBob:s.reduceBob,flashlight:s.flashlight,notes:s.inventory.notes.length,drawer:(()=>{const o=world.objects.find(o=>o.id==='drawer');return {state:o.state,amount:o.amount,z:o.box.z,key:world.objects.find(o=>o.id==='key').z,contentsAvailable:world.objects.find(o=>o.id==='key').interactable,contentsConcealed:world.objects.find(o=>o.id==='key').concealed}})(),doors:world.objects.filter(o=>o.kind==='door').map(o=>({id:o.id,open:o.open,state:o.state,amount:o.amount,x:o.box.x,z:o.box.z,yaw:o.box.yaw,solid:o.box.solid})),handVisible:renderer.lastShowHand,hidden:!!s.hidden,hideType:s.hidden?.hideType,hidePeek:s.hidePeek||0,poseTransition:poseTransition?{entering:poseTransition.entering,elapsed:poseTransition.elapsed}:null,view:cameraOf(s),wardrobeAmount:world.objects.find(o=>o.id==='wardrobe').amount,music:{scheduled:sound.musicStep,voices:sound.musicNodes.size,timer:sound.musicTimer!==null,volume:sound.settings.music},sound:sound.context?.state,mirror:{supported:renderer.mirrorSupported,drawn:renderer.mirrorDrawn,vertices:renderer.kittyVertices?.length/16,uploads:renderer.mirrorUploads},animation:{...animator.snapshot(),rigEvaluations:renderer.characterBinding?.evaluations},geometry:{vertices:renderer.vertexCount,triangles:renderer.triangleCount}}),
