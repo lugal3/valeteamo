@@ -98,7 +98,7 @@ export function PlaytestHouse({id,onExit}:{id:HouseTrialId;onExit:()=>void}){
   let stop:(()=>void)|undefined;
   void import('./lab/house.js').then(({launchHouse})=>{
    if(cancelled)return;
-   stop=launchHouse(onExit,trial.checkpoint??'interactions',{demo:true,trial:true,scenario:trial});
+   stop=launchHouse(onExit,trial.checkpoint??'interactions',{demo:true,trial:true,fieldTutorials:true,scenario:trial});
    setStatus('ready');
   }).catch(()=>{if(!cancelled)setStatus('failed');});
   return ()=>{cancelled=true;stop?.();};
