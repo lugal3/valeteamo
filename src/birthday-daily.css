@@ -14,54 +14,54 @@
 .daily-preview button[aria-pressed=true]{background:var(--ink);color:var(--paper)}
 @keyframes daily-arrive{from{opacity:0;translate:0 5px}to{opacity:1;translate:0 0}}
 /* 27 — petal invitation, scalloped soft pink tiles */
-[data-daily-theme=blossom] .birthday-time>div{border-radius:50% 50% 19px 19px;background:linear-gradient(155deg,#fffdf9,#ffdeec);border:1px solid #e5a9c6;box-shadow:0 5px 15px #c9789a25}
-[data-daily-theme=blossom] .birthday-countdown-content{border-radius:34px 34px 20px 20px}
+.birthday-countdown[data-daily-theme=blossom] .birthday-time>div{border-radius:50% 50% 19px 19px;background:linear-gradient(155deg,#fffdf9,#ffdeec);border:1px solid #e5a9c6;box-shadow:0 5px 15px #c9789a25}
+.birthday-countdown[data-daily-theme=blossom] .birthday-countdown-content{border-radius:34px 34px 20px 20px}
 /* 28 — a midnight star atlas, four orbital dials */
 .birthday-countdown[data-daily-theme=constellation]{--ink:#f0e7ff;--accent:#ffc2e7;--paper:#231936;--line:#74619a;background:radial-gradient(ellipse at 70% 25%,#473060,#120d29 65%,#070919);color:var(--ink)}
-[data-daily-theme=constellation] .birthday-countdown-content{background:#1a1632d9;border-color:#80669c;box-shadow:0 15px 50px #07051380;border-radius:20px}
-[data-daily-theme=constellation] .birthday-time>div{min-height:0;aspect-ratio:1;border-radius:50%;border:1px solid #b09bdf;background:radial-gradient(circle,#30254d 64%,transparent 65%),conic-gradient(from -90deg,#f7b9db var(--dial),#494065 0);box-shadow:0 0 14px #b9a0e03a;gap:4px}
-[data-daily-theme=constellation] .blossom-petal{border-radius:50%;width:4px;height:4px;background:#fff3e6;box-shadow:0 0 9px #c9afff}
+.birthday-countdown[data-daily-theme=constellation] .birthday-countdown-content{background:#1a1632d9;border-color:#80669c;box-shadow:0 15px 50px #07051380;border-radius:20px}
+.birthday-countdown[data-daily-theme=constellation] .birthday-time>div{min-height:0;aspect-ratio:1;border-radius:50%;border:1px solid #b09bdf;background:radial-gradient(circle,#30254d 64%,transparent 65%),conic-gradient(from -90deg,#f7b9db var(--dial),#494065 0);box-shadow:0 0 14px #b9a0e03a;gap:4px}
+.birthday-countdown[data-daily-theme=constellation] .blossom-petal{border-radius:50%;width:4px;height:4px;background:#fff3e6;box-shadow:0 0 9px #c9afff}
 /* 29 — folded cream paper, perforated countdown tickets */
 .birthday-countdown[data-daily-theme=letter]{--ink:#785048;--accent:#9b4d62;--paper:#fff6e6;--line:#d8b9a4;background:repeating-linear-gradient(135deg,#efdcc8 0 12px,#f5e5d5 12px 24px)}
-[data-daily-theme=letter] .birthday-countdown-content{background:linear-gradient(160deg,#fffaf0,#f9ead9);border:1px solid #c5a18c;border-radius:5px;box-shadow:0 8px 25px #91665e35}
-[data-daily-theme=letter] .birthday-time{gap:0;border:1px solid #d3b29b;border-radius:8px;background:#fffaf0}
-[data-daily-theme=letter] .birthday-time>div{border:0;border-radius:0;background:transparent;box-shadow:none;border-right:1px dashed #bd9785}
-[data-daily-theme=letter] .birthday-time>div:last-child{border-right:0}
-[data-daily-theme=letter] .daily-message{padding:8px 12px;border-block:1px dashed #d3b29b}
-[data-daily-theme=letter] .blossom-turn-background{opacity:.3}
+.birthday-countdown[data-daily-theme=letter] .birthday-countdown-content{background:linear-gradient(160deg,#fffaf0,#f9ead9);border:1px solid #c5a18c;border-radius:5px;box-shadow:0 8px 25px #91665e35}
+.birthday-countdown[data-daily-theme=letter] .birthday-time{gap:0;border:1px solid #d3b29b;border-radius:8px;background:#fffaf0}
+.birthday-countdown[data-daily-theme=letter] .birthday-time>div{border:0;border-radius:0;background:transparent;box-shadow:none;border-right:1px dashed #bd9785}
+.birthday-countdown[data-daily-theme=letter] .birthday-time>div:last-child{border-right:0}
+.birthday-countdown[data-daily-theme=letter] .daily-message{padding:8px 12px;border-block:1px dashed #d3b29b}
+.birthday-countdown[data-daily-theme=letter] .blossom-turn-background{opacity:.3}
 /* 30 — garden: a large day counter with three small stone markers */
 .birthday-countdown[data-daily-theme=garden]{--ink:#365e50;--accent:#577f58;--paper:#f4f5e3;--line:#b6c6a1;background:radial-gradient(ellipse at top,#fff0e0,#d2e5c8 55%,#a9c7b7)}
-[data-daily-theme=garden] .birthday-countdown-content{background:#f9f8e9ed;border-color:#b4c9a7;border-radius:36px 12px 36px 12px;box-shadow:0 12px 40px #66886c38}
-[data-daily-theme=garden] .birthday-time{grid-template-columns:1.35fr repeat(3,1fr);align-items:end}
-[data-daily-theme=garden] .birthday-time>div{border-radius:48% 48% 12px 12px;background:#e1ecd5;border-color:#b7c7a8;min-height:75px;gap:5px}
-[data-daily-theme=garden] .birthday-time>div:first-child{min-height:115px;background:#d0e4c4}
-[data-daily-theme=garden] .blossom-petal{background:#f8f5c8}
+.birthday-countdown[data-daily-theme=garden] .birthday-countdown-content{background:#f9f8e9ed;border-color:#b4c9a7;border-radius:36px 12px 36px 12px;box-shadow:0 12px 40px #66886c38}
+.birthday-countdown[data-daily-theme=garden] .birthday-time{grid-template-columns:1.35fr repeat(3,1fr);align-items:end}
+.birthday-countdown[data-daily-theme=garden] .birthday-time>div{border-radius:48% 48% 12px 12px;background:#e1ecd5;border-color:#b7c7a8;min-height:75px;gap:5px}
+.birthday-countdown[data-daily-theme=garden] .birthday-time>div:first-child{min-height:115px;background:#d0e4c4}
+.birthday-countdown[data-daily-theme=garden] .blossom-petal{background:#f8f5c8}
 /* 01 — Corazones / pixel-art, retro game scoreboard */
 .birthday-countdown[data-daily-theme=pixel]{--ink:#fef4d8;--accent:#ff9fbd;--paper:#332f4d;--line:#bca4c8;background:linear-gradient(180deg,#292b46,#53435e)}
-[data-daily-theme=pixel] .birthday-countdown-content{background:#29263f;border:3px solid #d9b6ca;border-radius:0;box-shadow:6px 6px 0 #15162c;backdrop-filter:none}
-[data-daily-theme=pixel] .birthday-countdown-content h1{font-family:ui-monospace,monospace;font-size:clamp(28px,4.6vw,48px);letter-spacing:-.07em}
-[data-daily-theme=pixel] .birthday-time>div{border-radius:0;border:2px solid #e2b3cf;background:#3e3655;box-shadow:3px 3px 0 #17182a}
-[data-daily-theme=pixel] .birthday-time dd{font-family:ui-monospace,monospace;font-weight:800;text-shadow:2px 2px #15162c}
-[data-daily-theme=pixel] .blossom-petal{border-radius:0;width:6px;height:6px;background:#f0a9c6}
+.birthday-countdown[data-daily-theme=pixel] .birthday-countdown-content{background:#29263f;border:3px solid #d9b6ca;border-radius:0;box-shadow:6px 6px 0 #15162c;backdrop-filter:none}
+.birthday-countdown[data-daily-theme=pixel] .birthday-countdown-content h1{font-family:ui-monospace,monospace;font-size:clamp(28px,4.6vw,48px);letter-spacing:-.07em}
+.birthday-countdown[data-daily-theme=pixel] .birthday-time>div{border-radius:0;border:2px solid #e2b3cf;background:#3e3655;box-shadow:3px 3px 0 #17182a}
+.birthday-countdown[data-daily-theme=pixel] .birthday-time dd{font-family:ui-monospace,monospace;font-weight:800;text-shadow:2px 2px #15162c}
+.birthday-countdown[data-daily-theme=pixel] .blossom-petal{border-radius:0;width:6px;height:6px;background:#f0a9c6}
 /* 02 — aurora, translucent vertical prism columns */
 .birthday-countdown[data-daily-theme=aurora]{--ink:#eaffff;--accent:#b8f3e1;--paper:#17333c;--line:#7bb9bd;background:radial-gradient(ellipse at 18% 10%,#537e91,transparent 55%),radial-gradient(ellipse at 80% 75%,#704d87,transparent 62%),#112a3a}
-[data-daily-theme=aurora] .birthday-countdown-content{background:#173243c9;border-color:#9ed7d682;border-radius:42px 42px 18px 18px;box-shadow:0 12px 45px #091a2a80}
-[data-daily-theme=aurora] .birthday-time>div{border-radius:40px 40px 12px 12px;background:linear-gradient(180deg,#9ee4dc45,#5c73aa40);border-color:#a4e6e580;box-shadow:inset 0 1px #efffff55;min-height:115px}
-[data-daily-theme=aurora] .birthday-time>div:nth-child(even){background:linear-gradient(180deg,#d8a4ec45,#6188bc38)}
+.birthday-countdown[data-daily-theme=aurora] .birthday-countdown-content{background:#173243c9;border-color:#9ed7d682;border-radius:42px 42px 18px 18px;box-shadow:0 12px 45px #091a2a80}
+.birthday-countdown[data-daily-theme=aurora] .birthday-time>div{border-radius:40px 40px 12px 12px;background:linear-gradient(180deg,#9ee4dc45,#5c73aa40);border-color:#a4e6e580;box-shadow:inset 0 1px #efffff55;min-height:115px}
+.birthday-countdown[data-daily-theme=aurora] .birthday-time>div:nth-child(even){background:linear-gradient(180deg,#d8a4ec45,#6188bc38)}
 /* 03 — music box: flip-clock display, no audio autoplay */
 .birthday-countdown[data-daily-theme=music]{--ink:#4d4264;--accent:#805d99;--paper:#f2eafa;--line:#bea8d0;background:linear-gradient(135deg,#e5dcf5,#c9c6e9 60%,#ead8e8)}
-[data-daily-theme=music] .birthday-countdown-content{background:#f7effbea;border-color:#fff;border-radius:20px;box-shadow:0 12px 40px #76678c40}
-[data-daily-theme=music] .birthday-time>div{border-radius:8px;border:1px solid #9e88b4;background:linear-gradient(#d8c9e8 49%,#8d78a7 49% 51%,#ece2f7 51%);box-shadow:0 5px 0 #b3a0c5;min-height:96px}
-[data-daily-theme=music] .birthday-time dd{font-family:ui-monospace,monospace;letter-spacing:-.08em}
-[data-daily-theme=music] .birthday-time dt{background:#eee6f6;border-radius:4px;padding:2px 5px}
+.birthday-countdown[data-daily-theme=music] .birthday-countdown-content{background:#f7effbea;border-color:#fff;border-radius:20px;box-shadow:0 12px 40px #76678c40}
+.birthday-countdown[data-daily-theme=music] .birthday-time>div{border-radius:8px;border:1px solid #9e88b4;background:linear-gradient(#d8c9e8 49%,#8d78a7 49% 51%,#ece2f7 51%);box-shadow:0 5px 0 #b3a0c5;min-height:96px}
+.birthday-countdown[data-daily-theme=music] .birthday-time dd{font-family:ui-monospace,monospace;letter-spacing:-.08em}
+.birthday-countdown[data-daily-theme=music] .birthday-time dt{background:#eee6f6;border-radius:4px;padding:2px 5px}
 /* 04 — last night: gilded black-pink cosmic jewel */
 .birthday-countdown[data-daily-theme=finale]{--ink:#fff1d7;--accent:#f7c985;--paper:#35203a;--line:#b98d6c;background:radial-gradient(ellipse at 50% 18%,#703a62,#28172f 60%,#100c1b)}
-[data-daily-theme=finale] .birthday-countdown-content{background:linear-gradient(150deg,#38243aee,#1f182cdd);border:1px solid #d6a471;border-radius:90px 90px 22px 22px;box-shadow:0 0 45px #dca27025,inset 0 0 0 5px #e7ba8615}
-[data-daily-theme=finale] .birthday-time>div{border:1px solid #ce9c76;border-radius:12px;background:linear-gradient(150deg,#69415d,#302138);box-shadow:0 0 14px #f6c48820;min-height:100px}
-[data-daily-theme=finale] .birthday-time>div:last-child{border-color:#ffe2a7;box-shadow:0 0 20px #f8c3774a}
-[data-daily-theme=finale] .blossom-petal{background:#ffdf9a;border-radius:50%;width:4px;height:4px}
-@media(max-width:480px){[data-daily-theme] .birthday-time>div{min-height:70px}[data-daily-theme=constellation] .birthday-time>div{min-height:0}[data-daily-theme=garden] .birthday-time>div:first-child{min-height:90px}.daily-message{margin-bottom:10px}}
-@media(max-height:460px) and (orientation:landscape){.daily-message{margin-bottom:8px}.daily-message p{font-size:11px;margin-top:2px}.daily-edition{font-size:8px}[data-daily-theme] .birthday-time>div{min-height:58px;padding:6px 3px}[data-daily-theme=constellation] .birthday-time{max-width:360px;margin-inline:auto}[data-daily-theme=constellation] .birthday-time>div{min-height:0;aspect-ratio:1}[data-daily-theme=garden] .birthday-time>div:first-child{min-height:72px}.daily-preview{margin-top:5px}.daily-preview button{min-height:28px}}
+.birthday-countdown[data-daily-theme=finale] .birthday-countdown-content{background:linear-gradient(150deg,#38243aee,#1f182cdd);border:1px solid #d6a471;border-radius:90px 90px 22px 22px;box-shadow:0 0 45px #dca27025,inset 0 0 0 5px #e7ba8615}
+.birthday-countdown[data-daily-theme=finale] .birthday-time>div{border:1px solid #ce9c76;border-radius:12px;background:linear-gradient(150deg,#69415d,#302138);box-shadow:0 0 14px #f6c48820;min-height:100px}
+.birthday-countdown[data-daily-theme=finale] .birthday-time>div:last-child{border-color:#ffe2a7;box-shadow:0 0 20px #f8c3774a}
+.birthday-countdown[data-daily-theme=finale] .blossom-petal{background:#ffdf9a;border-radius:50%;width:4px;height:4px}
+@media(max-width:480px){[data-daily-theme] .birthday-time>div{min-height:70px}.birthday-countdown[data-daily-theme=constellation] .birthday-time>div{min-height:0}.birthday-countdown[data-daily-theme=garden] .birthday-time>div:first-child{min-height:90px}.daily-message{margin-bottom:10px}}
+@media(max-height:460px) and (orientation:landscape){.daily-message{margin-bottom:8px}.daily-message p{font-size:11px;margin-top:2px}.daily-edition{font-size:8px}[data-daily-theme] .birthday-time>div{min-height:58px;padding:6px 3px}.birthday-countdown[data-daily-theme=constellation] .birthday-time{max-width:360px;margin-inline:auto}.birthday-countdown[data-daily-theme=constellation] .birthday-time>div{min-height:0;aspect-ratio:1}.birthday-countdown[data-daily-theme=garden] .birthday-time>div:first-child{min-height:72px}.daily-preview{margin-top:5px}.daily-preview button{min-height:28px}}
 @media(prefers-reduced-motion:reduce){.daily-message{animation:none}}
 
 /* V2: eight compositions, not just palettes. All decoration is behind the
@@ -77,48 +77,48 @@
 .daily-clock{grid-area:clock;min-width:0;align-self:center}.daily-message{grid-area:message;align-self:center;margin:0;justify-self:center;width:100%;box-sizing:border-box}.daily-footer{grid-area:footer;min-width:0}.daily-footer .birthday-countdown-divider{margin-top:2px}
 .birthday-countdown[data-daily-theme] .birthday-time{width:100%;margin:0;box-sizing:border-box}
 .birthday-countdown[data-daily-theme] .birthday-time>div{min-width:0;box-sizing:border-box;backdrop-filter:none}
-[data-daily-theme=blossom] .birthday-countdown-content{grid-template-columns:1fr 1.15fr;grid-template-areas:"heading clock" "message message" "footer footer";background:linear-gradient(140deg,#fff9f6e8,#f8d6e7ee);border:2px solid #fffaf6;border-radius:58px 15px 58px 15px;box-shadow:0 15px 60px #ab598444}
-[data-daily-theme=blossom] .daily-heading{text-align:left;padding:8px 10px 8px 0}
-[data-daily-theme=blossom] .birthday-time{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
-[data-daily-theme=blossom] .birthday-time>div{min-height:74px;border-radius:36px 36px 12px 12px;gap:3px;background:radial-gradient(ellipse at 30% 0,#fffdf9,#f5c7de)}
-[data-daily-theme=blossom] .daily-message{border-top:1px solid #dca7c0;padding-top:10px}
-[data-daily-theme=blossom] .daily-art{opacity:.42}
-[data-daily-theme=constellation] .birthday-countdown-content{background:radial-gradient(ellipse,#251e40e8,#141025b0);border:1px solid #80669c90;border-radius:50% / 12%;grid-template-areas:"heading" "clock" "message" "footer"}
-[data-daily-theme=constellation] .birthday-time{max-width:560px;margin-inline:auto;gap:10px}
-[data-daily-theme=constellation] .daily-particle,[data-daily-theme=finale] .daily-particle{animation-name:daily-twinkle}
+.birthday-countdown[data-daily-theme=blossom] .birthday-countdown-content{grid-template-columns:1fr 1.15fr;grid-template-areas:"heading clock" "message message" "footer footer";background:linear-gradient(140deg,#fff9f6e8,#f8d6e7ee);border:2px solid #fffaf6;border-radius:58px 15px 58px 15px;box-shadow:0 15px 60px #ab598444}
+.birthday-countdown[data-daily-theme=blossom] .daily-heading{text-align:left;padding:8px 10px 8px 0}
+.birthday-countdown[data-daily-theme=blossom] .birthday-time{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.birthday-countdown[data-daily-theme=blossom] .birthday-time>div{min-height:74px;border-radius:36px 36px 12px 12px;gap:3px;background:radial-gradient(ellipse at 30% 0,#fffdf9,#f5c7de)}
+.birthday-countdown[data-daily-theme=blossom] .daily-message{border-top:1px solid #dca7c0;padding-top:10px}
+.birthday-countdown[data-daily-theme=blossom] .daily-art{opacity:.42}
+.birthday-countdown[data-daily-theme=constellation] .birthday-countdown-content{background:radial-gradient(ellipse,#251e40e8,#141025b0);border:1px solid #80669c90;border-radius:50% / 12%;grid-template-areas:"heading" "clock" "message" "footer"}
+.birthday-countdown[data-daily-theme=constellation] .birthday-time{max-width:560px;margin-inline:auto;gap:10px}
+.birthday-countdown[data-daily-theme=constellation] .daily-particle,.birthday-countdown[data-daily-theme=finale] .daily-particle{animation-name:daily-twinkle}
 @keyframes daily-twinkle{0%,100%{opacity:.18;transform:scale(.65)}50%{opacity:.92;transform:scale(1.18)}}
-[data-daily-theme=letter] .birthday-countdown-content{grid-template-columns:1.12fr 1fr;grid-template-areas:"heading clock" "message clock" "footer footer";text-align:left;box-shadow:6px 9px 0 #d5b9a7,0 14px 30px #8c62572e}
-[data-daily-theme=letter] .daily-message{text-align:left;border-block:1px dashed #d3b29b;padding:8px 0}
-[data-daily-theme=letter] .birthday-time{grid-template-columns:repeat(2,minmax(0,1fr));border:0;background:#fff9ee}
-[data-daily-theme=letter] .birthday-time>div{min-height:78px;border:1px dashed #c9a38e!important;background:#fffaf0;gap:4px}
-[data-daily-theme=letter] .daily-footer{text-align:center}
-[data-daily-theme=garden] .birthday-countdown-content{grid-template-columns:1fr 1.35fr;grid-template-areas:"heading clock" "message clock" "footer footer";background:#f6f6e5dc}
-[data-daily-theme=garden] .daily-heading{text-align:left}
-[data-daily-theme=garden] .daily-message{text-align:left;align-self:start}
-[data-daily-theme=garden] .birthday-time{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;align-items:stretch}
-[data-daily-theme=garden] .birthday-time>div:first-child{grid-column:1/-1;min-height:88px;border-radius:80px 80px 12px 12px;background:linear-gradient(#e8f0d6,#c2dcb9)}
-[data-daily-theme=garden] .birthday-time>div:first-child dd{font-size:clamp(38px,6vw,64px)}
-[data-daily-theme=pixel] .birthday-countdown-content{grid-template-areas:"heading" "clock" "message" "footer";border:3px solid #d9b6ca;border-radius:0;background:#29263fe8}
-[data-daily-theme=pixel] .birthday-time{gap:8px}
-[data-daily-theme=pixel] .daily-message{background:#17182c;border:1px solid #a58aac;text-align:left;padding:10px;font-family:monospace}
-[data-daily-theme=pixel] .daily-message p{font-family:ui-monospace,monospace}
-[data-daily-theme=pixel] .daily-particle{animation-timing-function:steps(6,end);text-shadow:none}
-[data-daily-theme=aurora] .birthday-countdown-content{grid-template-areas:"heading" "message" "clock" "footer";background:linear-gradient(125deg,#142e3bd9,#382a4fd9);border-radius:12px 60px 12px 60px}
-[data-daily-theme=aurora] .birthday-time{gap:12px;align-items:end}
-[data-daily-theme=aurora] .birthday-time>div{min-height:95px}
-[data-daily-theme=aurora] .birthday-time>div:nth-child(2){min-height:112px}
-[data-daily-theme=aurora] .birthday-time>div:nth-child(3){min-height:125px}
-[data-daily-theme=aurora] .daily-art{filter:drop-shadow(0 0 10px #91f9d8);opacity:.48}
-[data-daily-theme=music] .birthday-countdown-content{grid-template-columns:.9fr 1.2fr;grid-template-areas:"heading clock" "message clock" "footer footer";background:#f7effbec}
-[data-daily-theme=music] .birthday-time{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-[data-daily-theme=music] .birthday-time>div:first-child{grid-column:1/-1;justify-self:center;aspect-ratio:1;width:clamp(78px,13vw,120px);min-height:0;border-radius:50%;background:repeating-radial-gradient(circle,#dfd1ee 0 3px,#b8a4cf 4px 5px,#e1d5f0 6px 9px);border:3px solid #9f8ab6}
-[data-daily-theme=music] .birthday-time>div:first-child dd{background:#f2eafa;border-radius:50%;padding:6px}
-[data-daily-theme=music] .birthday-time>div:not(:first-child){min-height:60px}
-[data-daily-theme=finale] .birthday-countdown-content{grid-template-areas:"heading" "clock" "message" "footer";width:min(620px,calc(100% - 20px));border-radius:120px 120px 22px 22px;padding-top:30px}
-[data-daily-theme=finale] .birthday-time{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-[data-daily-theme=finale] .birthday-time>div:first-child{grid-column:1/-1;min-height:46px;flex-direction:row-reverse;gap:12px;background:transparent;box-shadow:none;border-color:#b98d6c66}
-[data-daily-theme=finale] .birthday-time>div:not(:first-child){min-height:68px}
-[data-daily-theme=finale] .daily-art{opacity:.48}
+.birthday-countdown[data-daily-theme=letter] .birthday-countdown-content{grid-template-columns:1.12fr 1fr;grid-template-areas:"heading clock" "message clock" "footer footer";text-align:left;box-shadow:6px 9px 0 #d5b9a7,0 14px 30px #8c62572e}
+.birthday-countdown[data-daily-theme=letter] .daily-message{text-align:left;border-block:1px dashed #d3b29b;padding:8px 0}
+.birthday-countdown[data-daily-theme=letter] .birthday-time{grid-template-columns:repeat(2,minmax(0,1fr));border:0;background:#fff9ee}
+.birthday-countdown[data-daily-theme=letter] .birthday-time>div{min-height:78px;border:1px dashed #c9a38e!important;background:#fffaf0;gap:4px}
+.birthday-countdown[data-daily-theme=letter] .daily-footer{text-align:center}
+.birthday-countdown[data-daily-theme=garden] .birthday-countdown-content{grid-template-columns:1fr 1.35fr;grid-template-areas:"heading clock" "message clock" "footer footer";background:#f6f6e5dc}
+.birthday-countdown[data-daily-theme=garden] .daily-heading{text-align:left}
+.birthday-countdown[data-daily-theme=garden] .daily-message{text-align:left;align-self:start}
+.birthday-countdown[data-daily-theme=garden] .birthday-time{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;align-items:stretch}
+.birthday-countdown[data-daily-theme=garden] .birthday-time>div:first-child{grid-column:1/-1;min-height:88px;border-radius:80px 80px 12px 12px;background:linear-gradient(#e8f0d6,#c2dcb9)}
+.birthday-countdown[data-daily-theme=garden] .birthday-time>div:first-child dd{font-size:clamp(38px,6vw,64px)}
+.birthday-countdown[data-daily-theme=pixel] .birthday-countdown-content{grid-template-areas:"heading" "clock" "message" "footer";border:3px solid #d9b6ca;border-radius:0;background:#29263fe8}
+.birthday-countdown[data-daily-theme=pixel] .birthday-time{gap:8px}
+.birthday-countdown[data-daily-theme=pixel] .daily-message{background:#17182c;border:1px solid #a58aac;text-align:left;padding:10px;font-family:monospace}
+.birthday-countdown[data-daily-theme=pixel] .daily-message p{font-family:ui-monospace,monospace}
+.birthday-countdown[data-daily-theme=pixel] .daily-particle{animation-timing-function:steps(6,end);text-shadow:none}
+.birthday-countdown[data-daily-theme=aurora] .birthday-countdown-content{grid-template-areas:"heading" "message" "clock" "footer";background:linear-gradient(125deg,#142e3bd9,#382a4fd9);border-radius:12px 60px 12px 60px}
+.birthday-countdown[data-daily-theme=aurora] .birthday-time{gap:12px;align-items:end}
+.birthday-countdown[data-daily-theme=aurora] .birthday-time>div{min-height:95px}
+.birthday-countdown[data-daily-theme=aurora] .birthday-time>div:nth-child(2){min-height:112px}
+.birthday-countdown[data-daily-theme=aurora] .birthday-time>div:nth-child(3){min-height:125px}
+.birthday-countdown[data-daily-theme=aurora] .daily-art{filter:drop-shadow(0 0 10px #91f9d8);opacity:.48}
+.birthday-countdown[data-daily-theme=music] .birthday-countdown-content{grid-template-columns:.9fr 1.2fr;grid-template-areas:"heading clock" "message clock" "footer footer";background:#f7effbec}
+.birthday-countdown[data-daily-theme=music] .birthday-time{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.birthday-countdown[data-daily-theme=music] .birthday-time>div:first-child{grid-column:1/-1;justify-self:center;aspect-ratio:1;width:clamp(78px,13vw,120px);min-height:0;border-radius:50%;background:repeating-radial-gradient(circle,#dfd1ee 0 3px,#b8a4cf 4px 5px,#e1d5f0 6px 9px);border:3px solid #9f8ab6}
+.birthday-countdown[data-daily-theme=music] .birthday-time>div:first-child dd{background:#f2eafa;border-radius:50%;padding:6px}
+.birthday-countdown[data-daily-theme=music] .birthday-time>div:not(:first-child){min-height:60px}
+.birthday-countdown[data-daily-theme=finale] .birthday-countdown-content{grid-template-areas:"heading" "clock" "message" "footer";width:min(620px,calc(100% - 20px));border-radius:120px 120px 22px 22px;padding-top:30px}
+.birthday-countdown[data-daily-theme=finale] .birthday-time{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.birthday-countdown[data-daily-theme=finale] .birthday-time>div:first-child{grid-column:1/-1;min-height:46px;flex-direction:row-reverse;gap:12px;background:transparent;box-shadow:none;border-color:#b98d6c66}
+.birthday-countdown[data-daily-theme=finale] .birthday-time>div:not(:first-child){min-height:68px}
+.birthday-countdown[data-daily-theme=finale] .daily-art{opacity:.48}
 @media(max-width:560px){.birthday-countdown[data-daily-theme] .birthday-countdown-content{grid-template-columns:minmax(0,1fr);grid-template-areas:"heading" "clock" "message" "footer";padding:16px 13px;gap:10px}.daily-heading,.daily-message{text-align:center!important}.birthday-countdown[data-daily-theme] .birthday-time dd{font-size:clamp(24px,7vw,36px)}}
 @media(max-height:460px) and (orientation:landscape){.birthday-countdown[data-daily-theme] .birthday-countdown-content{padding:10px 20px;gap:7px;width:min(730px,calc(100% - 62px))}.birthday-countdown[data-daily-theme] .daily-heading h1{font-size:clamp(25px,4vw,36px)}.daily-heading>p{font-size:10px;margin:4px 0}.daily-message p{font-size:11px;line-height:1.35}.birthday-countdown[data-daily-theme] .birthday-time dd{font-size:30px}.birthday-countdown[data-daily-theme] .birthday-time>div{min-height:49px;padding:5px 3px;gap:3px}.birthday-countdown[data-daily-theme=constellation] .birthday-time>div{min-height:0;aspect-ratio:1}.birthday-countdown[data-daily-theme=music] .birthday-time>div:first-child{width:80px;min-height:0}.birthday-countdown[data-daily-theme=aurora] .birthday-time>div:nth-child(2){min-height:62px}.birthday-countdown[data-daily-theme=aurora] .birthday-time>div:nth-child(3){min-height:74px}.birthday-countdown[data-daily-theme=finale] .birthday-time>div:first-child{min-height:36px}.daily-footer .birthday-iphone-help{margin:0}.daily-footer .birthday-countdown-divider{display:none}.daily-preview button{min-height:30px}}
 @media(prefers-reduced-motion:reduce){.daily-particle{animation:none;will-change:auto;opacity:.45}}
