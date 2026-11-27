@@ -3,7 +3,7 @@ import './garden-postcard.css';
 
 // Frame the real renderer image. No reference to the 3D or cosmic scenes,
 // no network request and no new persisted gameplay state.
-export function makeGardenPostcard(image:HTMLImageElement,title:string):string{
+export function makeGardenPostcard(image:HTMLImageElement,title:string,group=false):string{
  const w=960,h=650,canvas=document.createElement('canvas');
  canvas.width=w;canvas.height=h;
  const c=canvas.getContext('2d');if(!c)throw Error('Postal no disponible');
@@ -12,8 +12,12 @@ export function makeGardenPostcard(image:HTMLImageElement,title:string):string{
  c.fillStyle='#e4d5d2';c.fillRect(27,27,906,522);
  const iw=image.naturalWidth||image.width,ih=image.naturalHeight||image.height;
  if(!iw||!ih)throw Error('La captura está vacía');
- const ratio=Math.min(906/iw,522/ih),rw=Math.round(iw*ratio),rh=Math.round(ih*ratio);
- c.imageSmoothingEnabled=false;c.drawImage(image,27+(906-rw)/2,27+(522-rh)/2,rw,rh);
+ // Group portrait uses a centered crop of the real scene so faces read
+ // better on a small phone. Ordinary garden postcards retain the full view.
+ const sw=group?Math.round(iw*.68):iw,sh=group?Math.round(ih*.68):ih;
+ const sx=Math.floor((iw-sw)/2),sy=Math.floor((ih-sh)/2);
+ const ratio=Math.min(906/sw,522/sh),rw=Math.round(sw*ratio),rh=Math.round(sh*ratio);
+ c.imageSmoothingEnabled=false;c.drawImage(image,sx,sy,sw,sh,27+(906-rw)/2,27+(522-rh)/2,rw,rh);
  c.fillStyle='#8e5d77';c.textAlign='center';c.font='bold 25px Georgia,serif';c.fillText(title,w/2,589);
  c.fillStyle='#a47b8d';c.font='15px Georgia,serif';c.fillText('♡  Un recuerdo de ValeTeAmo  ♡',w/2,619);
  return canvas.toDataURL('image/png');

@@ -80,7 +80,7 @@ export function GardenEpilogue({stage,onAdvance,onExit,muted,onMute}:Props){
   const token=++captureToken.current;setPostcard({image:'',error:false});
   const done=(image:string,error=false)=>{if(captureToken.current!==token)return;captureToken.current++;window.clearTimeout(captureTimer.current);setPostcard({image,error});};
   captureTimer.current=window.setTimeout(()=>done('',true),2200);
-  try{const renderer=s.game.renderer;if(!renderer){done('',true);return;}renderer.snapshot(result=>{if(!(result instanceof HTMLImageElement)){done('',true);return;}try{done(makeGardenPostcard(result,'Feliz cumpleaños, Vale'));}catch{done('',true);}});}catch{done('',true);}
+  try{const renderer=s.game.renderer;if(!renderer){done('',true);return;}renderer.snapshot(result=>{if(!(result instanceof HTMLImageElement)){done('',true);return;}try{done(makeGardenPostcard(result,'Feliz cumpleaños, Vale',true));}catch{done('',true);}});}catch{done('',true);}
  };
  useEffect(()=>()=>{captureToken.current++;window.clearTimeout(captureTimer.current);window.clearTimeout(timer.current);audio.destroy();},[audio]);
  return <main className="garden-epilogue" data-epilogue-stage={stage} data-epilogue-leaving={leaving}>

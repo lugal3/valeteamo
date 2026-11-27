@@ -479,11 +479,11 @@ function sign(scene:Phaser.Scene,u:number,v:number,title:string){
 // not as an angled box whose roof and side walls cover the interaction pads.
 // All proportions and the two-storey rhythm derive from HOUSE_3D_REFERENCE.
 // Crucially the door/window centers share the same projected ground baseline.
-function frontalRescueHouse(scene:Phaser.Scene){
+function frontalRescueHouse(scene:Phaser.Scene,dawn=false){
  const ground=toScreen(NIGHT_HOUSE.door),width=340;
  const left=ground.x-width*(HOUSE_3D_REFERENCE.frontDoorX/HOUSE_3D_REFERENCE.width);
  const top=ground.y-203,right=left+width,base=ground.y-8;
- const g=scene.add.graphics().setDepth(ground.y-125);
+ const g=scene.add.graphics().setDepth(dawn?ground.y-8:ground.y-125);
  const px=(realX:number)=>left+width*realX/HOUSE_3D_REFERENCE.width;
  // Dark foundation, sturdy level outlines, readable two-storey windows.
  g.fillStyle(0x5c5065,.9).fillRect(left-8,base-1,width+16,9);
@@ -535,7 +535,7 @@ function frontalRescueHouse(scene:Phaser.Scene){
  const windowX=px(HOUSE_3D_REFERENCE.openWindowX);
  pane(windowX,base-54,true);
  // A gentle cyan doorway hint marks a WINDOW rather than a hidden side wall.
- g.lineStyle(3,0xa9f9db,.92).strokeRect(windowX-21,base-83,42,59);
+ if(!dawn)g.lineStyle(3,0xa9f9db,.92).strokeRect(windowX-21,base-83,42,59);
  const doorX=px(HOUSE_3D_REFERENCE.frontDoorX);
  g.fillStyle(0x765367).fillRect(doorX-27,base-84,54,81);
  g.fillStyle(0x342c43).fillRect(doorX-21,base-78,42,74);
@@ -945,7 +945,8 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   // Neighboring houses stay across the ROAD, not on Kitty's way to the door.
   for(const neighbor of NIGHT_NEIGHBORS)house(scene,neighbor.u,neighbor.v,false,neighbor.style);
   // Main house façade mirrors the actual double-storey 3D floorplan.
-  house(scene,NIGHT_HOUSE.center.u,NIGHT_HOUSE.center.v,true);
+  if(dawn)frontalRescueHouse(scene,true);
+  else house(scene,NIGHT_HOUSE.center.u,NIGHT_HOUSE.center.v,true);
   // Same marked vehicle as in the filmed capture. Its wheels rest by
   // the curb, outside the 3D-faithful front entrance and navigable path.
   if(!dawn){
@@ -992,6 +993,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   // The first clear sign points toward the porch rather than to an invisible
   // interaction hidden behind the building's graphic.
   sign(scene,NIGHT_HOUSE.gate.u,NIGHT_HOUSE.gate.v-1.0,'CASA ♡');
+  if(!dawn){
   const targets=scene.add.graphics().setDepth(toScreen(NIGHT_HOUSE.door).y+18);
   for(const [where,color] of [[NIGHT_HOUSE.door,0xffd69e],
     [NIGHT_HOUSE.window,0xf8a6d6]] as const){
@@ -1007,6 +1009,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    'VENTANA',{fontFamily:'monospace',fontSize:'10px',fontStyle:'bold',
     color:'#ffe7fa',stroke:'#4b3853',strokeThickness:3})
    .setOrigin(.5).setDepth(toScreen(NIGHT_HOUSE.window).y+18);
+  }
  }
  // Solid existing scenery and collision use the same coordinates.
  for(const item of RESCUE_SCENERY[map]){
@@ -1058,7 +1061,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   }
  }
  // A spatially legible exit: pearly luminous boundary leading to another map.
- if(cfg.exit){
+ if(cfg.exit&&!dawn){
   sign(scene,cfg.exit.u-1.1,cfg.exit.v-2.9,'➜');
   const p=toScreen(cfg.exit);
   scene.add.text(p.x,p.y-49,'✧  SIGUE  ✧',{fontFamily:'Georgia',fontSize:'15px',
