@@ -973,7 +973,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    if(step!==this.storyGuideStep){
     this.storyGuideStep=step;
     const hints=[
-     'Camina por el sendero.',
+     '',
      'Hay un Churu sobre el paño rosa.',
      'El Churu quedó junto al sendero, antes del puente de madera.'
     ];

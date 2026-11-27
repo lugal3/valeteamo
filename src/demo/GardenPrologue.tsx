@@ -183,7 +183,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
     setPortraits(avatars);
     if(test&&checkpoint==='feed-cat')scene.storyTeleportForTest(0);
    }
-   if(phaseRef.current.stage==='intro')setGuide('Camina por el sendero.');
+   if(phaseRef.current.stage==='intro')setGuide('');
    // El inicio no tiene NPC ni diálogos bloqueantes. La aventura comienza al andar.
   },
   arrive:()=>{
@@ -495,7 +495,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
      setHouseNav(previous=>previous?{...previous,guided:started}:previous);
     }}>{houseNav.guided?'✕ Detener guía':'♡ Guiarme caminando'}</button>}
   </aside>}
-  {!dialog&&!feeding&&!houseNav&&!near&&guide&&<div className="prologue-guide" role="status">{guide}</div>}
+  {!dialog&&!feeding&&!houseNav&&!near&&!moment&&guide&&guide!==PROLOGUE_OBJECTIVES[run.stage]&&<div className="prologue-guide" role="status">{guide}</div>}
   {!dialog&&!feeding&&near&&<button type="button" className="prologue-interact"
    onClick={()=>sceneRef.current?.storyInteract()}>{near}<span className="input-key-hint"> · E</span><span className="input-pad-hint"> · □</span></button>}
   {moment&&!dialog&&!feeding&&!transition&&!houseHandoff&&!postcard&&<div className="prologue-moment" aria-label="Momentos opcionales">

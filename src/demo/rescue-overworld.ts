@@ -273,6 +273,10 @@ function lightPool(g:Phaser.GameObjects.Graphics,x:number,y:number,w:number,h:nu
   g.fillStyle(color,strength*[.15,.20,.28,.37][i]).fillEllipse(x,y,w*f,h*f);
  }
 }
+function blendTerrain(a:number,b:number,amount:number):number{
+ const channel=(shift:number)=>Math.round(((a>>shift)&255)*(1-amount)+((b>>shift)&255)*amount);
+ return (channel(16)<<16)|(channel(8)<<8)|channel(0);
+}
 function diamond(g:Phaser.GameObjects.Graphics,u:number,v:number,c:number,a=1){
  const p=toScreen({u,v}),w=ISO.tileW/2,h=ISO.tileH/2;
  poly(g,c,[[p.x,p.y-h],[p.x+w,p.y],[p.x,p.y+h],[p.x-w,p.y]],a);
@@ -778,8 +782,14 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    // without changing physical bounds, NPCs, particles or collision.
    if(v>=lim.min-4.6&&v<=lim.max+4.6){
     const n=hashCell(u,v,89),p=toScreen({u,v});
-    diamond(g,u,v,n>.55?inner:outer);
-    if(n>.8)g.fillStyle(canopy,.19).fillEllipse(p.x,p.y,28,12);
+    // Close palette and sparse painted grass blend the walkable meadow
+    // into the horizon. No new actors, hitboxes or per-frame work.
+    const meadow=blendTerrain(inner,outer,.25);
+    diamond(g,u,v,blendTerrain(meadow,n>.5?outer:inner,.22));
+    if(n>.67){
+     g.fillStyle(canopy,.13).fillEllipse(p.x-8+n*12,p.y,15+n*13,5);
+     paintGroundTexture(g,u,v,p,map,false);
+    }
    }
    continue;
   }

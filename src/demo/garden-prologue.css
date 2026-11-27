@@ -384,3 +384,6 @@
 
 /* Short contextual cue instead of an always-visible tutorial panel. */
 .story-prologue .prologue-guide{top:auto;bottom:max(13px,env(safe-area-inset-bottom));left:50%;right:auto;transform:translateX(-50%);max-width:55vw;padding:4px 10px;color:#fff3dc;background:#352b3e9c;border-radius:7px;text-align:center;pointer-events:none;box-shadow:none;font-size:11px}.story-prologue[data-input-mode=gamepad] .prologue-guide{bottom:36px}.story-prologue .adventure-objective{max-width:48vw;white-space:normal;line-height:1.25;font-size:11px;padding:5px 9px}.story-prologue[data-input-mode=touch] .input-key-hint,.story-prologue[data-input-mode=touch] .input-pad-hint{display:none}
+
+/* During the field card only the tutorial remains visible. */
+.story-prologue:has(.adventure-controls-help) :is(.prologue-guide,.prologue-interact,.prologue-house-nav,.prologue-moment,.prologue-restart,.adventure-hud){visibility:hidden;pointer-events:none}

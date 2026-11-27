@@ -51,6 +51,14 @@ async function play(){
   assert(realScene.usingOriginalFloor&&realScene.usingOriginalCharacter,
    'rescue must use the original diamond floor and Kitty sprite system');
   assert.equal(await game.getAttribute('data-prologue-stage'),'intro');
+  assert(!await page.locator('.prologue-guide').isVisible(),'No redundant first walking instruction');
+  await page.getByRole('button',{name:'Controles y mando'}).click();
+  const manual=page.getByRole('dialog',{name:'Manual de controles del jardín'});
+  await manual.waitFor();await page.waitForFunction(()=>window.__valePrologue.scene().paused);
+  assert.equal(await manual.locator('.adventure-manual-grid p').count(),4,'one four-control field card');
+  await page.screenshot({path:'artifacts/story-mobile-field-manual.png'});
+  await manual.getByRole('button',{name:'Entendido'}).click();
+  await page.waitForFunction(()=>!window.__valePrologue.scene().paused);
   assert.equal(await game.getAttribute('data-story-act'),'morning',
    'Act I starts in the original Corazones scene');
   const convo=page.getByRole('dialog',{name:'Conversación'});

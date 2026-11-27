@@ -35,6 +35,13 @@ async function verifyDesktop(){
    .evaluate(x=>{const r=x.getBoundingClientRect();return {width:r.width,height:r.height}});
   assert(rect.width>600&&rect.height>300,'canvas scales correctly to desktop viewport');
   await page.screenshot({path:'artifacts/story-desktop-morning.png'});
+  await page.getByRole('button',{name:'Controles y mando'}).click();
+  const manual=page.getByRole('dialog',{name:'Manual de controles del jardín'});
+  await manual.waitFor();await page.waitForFunction(()=>window.__valePrologue.scene().paused);
+  assert.equal(await manual.locator('.adventure-manual-grid p').count(),4);
+  await page.screenshot({path:'artifacts/story-desktop-field-manual.png'});
+  await manual.getByRole('button',{name:'Entendido'}).click();
+  await page.waitForFunction(()=>!window.__valePrologue.scene().paused);
   // Keyboard movement must remain fluid after new environment / cinematic code.
   await page.keyboard.down('d');
   await page.waitForTimeout(620);

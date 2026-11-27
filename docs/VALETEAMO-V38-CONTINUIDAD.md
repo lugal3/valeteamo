@@ -87,3 +87,7 @@ Base publicada: d28fc0eaa26ddc348f60b4e9704aaf275f8fb4c0. Rama independiente fea
 
 ## QA de carga y táctil
 - CI del SHA eb8839b: lógica general superada; compilación falló TS1005 en StoryGame.tsx por llave JSX de cierre de HUD ausente. Se corrige (causa de que el 2D/epílogo no abrieran en navegadores). La auditoría móvil y WebKit detectó sprint táctil; se conserva geometría del joystick en pantallas táctiles aunque se use teclado externo, y se eliminan cambios redundantes de clase. Cuadrado siempre acción contextual; X confirma botón enfocado, y cuadrado permite avanzar diálogo. Revalidación del nuevo SHA pendiente. No se afirma captura visual ni mando físico.
+
+## Cierre visual específico del 2D
+- SHA cd9b8ec: auditoría de narrativa 2D en móvil y escritorio y epilogue-browser PASS. Artefactos reales 15235926915 y 15236065868 revisados visualmente: Kitty ocupa aproximadamente 1/6 del alto; suelo cubre encuadre; calle frente a fachada. No es una prueba de rendimiento físico.
+- Último pulido: suaviza contraste de rombos decorativos con microtextura estática; elimina aviso redundante inicial y solapes con momentos opcionales; manual único de cuatro acciones con estética plano, sin ampliación de mando. Prueba de apertura/pausa/cierre de manual y captura en las dos dimensiones. Se mantienen zoom, física, historia, Corazones original, controles y publicación intactos. Revalidación de este último ajuste pendiente.
