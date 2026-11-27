@@ -108,14 +108,16 @@ introContext.exports.installRescueIntroArt({textures:{
 for(const facing of ['down','right','up'])for(const walking of [false,true]){
  const frames=Array.from({length:4},(_,i)=>vals.get(introContext.exports.valeTexture(walking,i,facing)));
  assert(frames.every(frame=>frame.w===43&&frame.h===58));
- assert(new Set(frames.map(signature)).size>=3,'Vale has real animated frames');
+ assert.equal(new Set(frames.map(signature)).size,4,'Vale has four distinct animated frames');
  const palette=new Set(frames[0].pixels.flat());
  for(const color of ['#202126','#b93d51','#ddd6d0'])assert(palette.has(color),'Vale card hair, red shirt, shoe soles');
 }
 assert.notEqual(signature(art.paintStoryLouis('down',6)),signature(art.paintStoryLouis('down',7)),'Louis has separate mouth poses');
 assert.notEqual(signature(art.paintStoryLouis('down',0)),signature(art.paintStoryLouis('down',6)),'intermediate speaking mouth differs from neutral');
-const talkFrames=Array.from({length:3},(_,i)=>vals.get(introContext.exports.valeTalkTexture(i)));
-assert(new Set(talkFrames.map(signature)).size===3,'Vale has three speaking frames');
+for(const facing of ['down','right','up']){
+ const talkFrames=Array.from({length:3},(_,i)=>vals.get(introContext.exports.valeTalkTexture(i,facing)));
+ assert.equal(new Set(talkFrames.map(signature)).size,3,'Vale has three distinct speaking poses: '+facing);
+}
 const arcade=fs.readFileSync('src/iso-game.ts','utf8');
 assert(arcade.includes('this.animateStoryLuis();')&&
  arcade.includes("this.story.speaker?.()==='Luis'&&(this.story.speaking?.()??true)")&&

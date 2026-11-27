@@ -66,7 +66,8 @@ export function installRescueIntroArt(scene:Phaser.Scene){
   const walking=pose==='walk',talking=pose==='talk';
   sprite(talking?valeTalkTexture(frame,facing):valeTexture(walking,frame,facing),43,58,b=>{
    const ink='#25252d',hair='#202126',shine='#37383d',skin='#e9b48f',light='#fbd4af',top='#b93d51';
-   const bob=frame===1||frame===3?1:0,step=walking?[2,0,-2,0][frame]:0;
+   // Four distinct step/idle frames; speaking has its own small nod.
+   const bob=walking?[0,1,0,2][frame]:talking?[0,1,-1][frame]:[0,1,-1,1][frame],step=walking?[2,0,-2,0][frame]:0;
    const back=facing==='up',side=facing==='right';
    const cluster=(x:number,y:number,rows:readonly (readonly [number,number])[],color:string)=>rows.forEach(([offset,width],i)=>b(x+offset,y+i,width,1,color));
    // Long hair behind the shoulders, with rounded ends.
@@ -139,6 +140,7 @@ export function installRescueIntroArt(scene:Phaser.Scene){
     cluster(24,15+bob,[[2,5],[2,6],[2,7],[1,7],[0,7],[0,6],[1,5],[2,3]],'#303035');
     b(15,34+bob,14,5,hair);b(17,39+bob,10,2,'#303035');
     if(frame%2)b(11,34+bob,2,7,shine);else b(29,33+bob,2,7,shine);
+    if(frame===3)b(26,36+bob,2,4,shine);
    }else if(side){
     b(7,14+bob,17,18,hair);b(9,24+bob,15,12,hair);
     b(13,17+bob,9,10,hair);
