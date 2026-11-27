@@ -46,7 +46,8 @@ assert(house.nightWalkable(house.NIGHT_VAN),'van sits on the accessible street')
 for(const side of [-3,0,3]){const street=house.frontOfHouse(4,side);assert.equal(house.nightStreetSurface(street),'road');assert(house.nightWalkable(street),'street spans the entire front');}
 assert.equal(house.nightStreetSurface(layout.center),'grass','no asphalt behind the facade');
 function safeSegment(a,b,label){
- const steps=Math.max(1,Math.ceil(house.nightNavigationDistance(a,b)/.09));
+ assert(house.nightSegmentClear(a,b),label+' intersects an exact collision footprint');
+ const steps=Math.max(1,Math.ceil(house.nightNavigationDistance(a,b)/.025));
  for(let i=0;i<=steps;i++){
   const t=i/steps,p={u:a.u+(b.u-a.u)*t,v:a.v+(b.v-a.v)*t};
   assert(house.nightWalkable(p),label+' path went through a wall / outside the level at '+JSON.stringify(p));
@@ -54,6 +55,7 @@ function safeSegment(a,b,label){
 }
 safeSegment(layout.road,layout.door,'straight front approach');
 safeSegment(layout.door,layout.window,'porch');
+assert(!house.nightSegmentClear({u:74.6,v:10},{u:75.2,v:10}),'short segment cannot graze the projected facade corner');
 const starts=[
  layout.start,layout.road,layout.sidewalk,layout.gate,layout.yard,house.NIGHT_VAN,
  {u:73.5,v:4.45},{u:74.0,v:9.5},{u:77.3,v:10.8},{u:80.7,v:10.65},
@@ -101,4 +103,4 @@ assert(react.includes('Guiarme caminando')&&react.includes('Detener guía')&&
  'real mobile/desktop user must have a visible, directional optional guide');
 assert(!iso.includes('new Phaser.Game')&&!scene.includes('new Phaser.Game'),
  'must not fork Corazones arcade or instantiate a second renderer');
-console.log('PASS: 3D-faithful entrance and neighborhood, 24 safe A* routes from 12 positions, no wall clipping, responsive guidance and original Corazones engine.');
+console.log('PASS: 3D-faithful entrance and neighborhood, 26 safe A* routes from 13 positions, no wall clipping, responsive guidance and original Corazones engine.');

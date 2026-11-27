@@ -107,14 +107,32 @@ export function nightTarget(stage:string):IsoPoint{
 export function nightNavigationDistance(a:IsoPoint,b:IsoPoint):number{
  return Math.hypot(a.u-b.u,a.v-b.v);
 }
-function lineClear(a:IsoPoint,b:IsoPoint):boolean{
- const length=nightNavigationDistance(a,b),steps=Math.max(1,Math.ceil(length/.12));
+// Exact segment/rectangle intersection catches even a sub-frame corner
+// crossing that point samples can miss. Use the same transformed footprint
+// as nightHouseBlocks, rather than changing the collision or street.
+function hitsRectangle(ax:number,ay:number,bx:number,by:number,x0:number,x1:number,y0:number,y1:number):boolean{
+ let enter=0,leave=1;
+ for(const [start,end,low,high] of [[ax,bx,x0,x1],[ay,by,y0,y1]]){
+  const delta=end-start;
+  if(Math.abs(delta)<1e-10){if(start<low||start>high)return false;continue;}
+  const t0=(low-start)/delta,t1=(high-start)/delta;
+  enter=Math.max(enter,Math.min(t0,t1));leave=Math.min(leave,Math.max(t0,t1));
+  if(enter>leave)return false;
+ }
+ return true;
+}
+export function nightSegmentClear(a:IsoPoint,b:IsoPoint):boolean{
+ if(!nightWalkable(a)||!nightWalkable(b))return false;
+ if(hitsRectangle(a.u+a.v,a.u-a.v,b.u+b.v,b.u-b.v,frontSum-5,frontSum-.55,frontLeft,frontLeft+FRONT_FACADE_WIDTH/41))return false;
+ for(const h of NIGHT_NEIGHBORS)if(hitsRectangle(a.u,a.v,b.u,b.v,h.u-h.halfU,h.u+h.halfU,h.v-h.halfV,h.v+h.halfV))return false;
+ const length=nightNavigationDistance(a,b),steps=Math.max(1,Math.ceil(length/.035));
  for(let j=0;j<=steps;j++){
   const t=j/steps;
   if(!nightWalkable({u:mix(a.u,b.u,t),v:mix(a.v,b.v,t)}))return false;
  }
  return true;
 }
+const lineClear=nightSegmentClear;
 export function nightAutoRoute(from:IsoPoint,to:IsoPoint):IsoPoint[]{
  // A* on the compact 0.5-unit isometric forecourt grid, then LOS smoothing.
  // A click works from ANY valid exterior point, including after the door clue.
@@ -126,8 +144,9 @@ export function nightAutoRoute(from:IsoPoint,to:IsoPoint):IsoPoint[]{
  const nearest=(p:IsoPoint):[number,number]|null=>{
   let best:null|[number,number]=null,dist=Infinity;
   for(let x=0;x<columns;x++)for(let y=0;y<rows;y++){
-   const n=node(x,y);if(!nightWalkable(n)||!lineClear(p,n))continue;
-   const d=nightNavigationDistance(n,p);if(d<dist){best=[x,y];dist=d;}
+   const n=node(x,y),d=nightNavigationDistance(n,p);
+   if(d>=dist||!nightWalkable(n)||!lineClear(p,n))continue;
+   best=[x,y];dist=d;
   }
   return best;
  };
@@ -164,12 +183,14 @@ export function nightAutoRoute(from:IsoPoint,to:IsoPoint):IsoPoint[]{
   raw.unshift(node(current%columns,Math.floor(current/columns)));
   current=prev[current];if(current<0)return [];
  }
+ raw.unshift(node(start[0],start[1]));
  raw.unshift({...from});
  // Reduce staircase-like A* to a small number of smooth, safe curve points.
  const smooth:IsoPoint[]=[];
  for(let i=0;i<raw.length-1;){
   let last=i+1;
   for(let j=raw.length-1;j>i+1;j--)if(lineClear(raw[i],raw[j])){last=j;break;}
+  if(!lineClear(raw[i],raw[last]))return [];
   smooth.push(raw[last]);i=last;
  }
  return smooth;

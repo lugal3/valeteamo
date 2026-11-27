@@ -66,3 +66,6 @@ Base publicada: d28fc0eaa26ddc348f60b4e9704aaf275f8fb4c0. Rama independiente fea
 - Regresiones geométricas de calle, vereda, furgoneta, ruta recta y porche. CI y capturas reales pendientes; sin merge ni publicación.
 
 - El objetivo del regreso 2D está en la calle delantera (NIGHT_STREET[3]), de modo que el camino desde el portón no intenta atravesar la huella de la casa. Se adaptan las dependencias de los tests puros al nuevo punto de furgoneta compartido.
+
+## QA exterior
+- CI 46074312909/46074312912 detectó un roce de esquina entre muestras de navegación. Se usa intersección exacta de segmento contra huella proyectada y vecinos, muestreo fino para límites, se conserva nodo inicial de A* y se valida cada tramo simplificado. Se añade caso corto de esquina y verificación de 26 rutas. Calle y fachada no se mueven. Revalidación pendiente.
