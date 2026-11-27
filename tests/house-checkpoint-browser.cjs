@@ -43,7 +43,7 @@ async function run(){
   const use=(id,activate=true)=>page.evaluate(([id,activate])=>window.__rescueHouse.interactWith(id,activate),[id,activate]);
   const stage=()=>page.evaluate(()=>window.__rescueHouse.story().phase);
   const field=()=>page.locator('.field-overlay:not([hidden])');
-  const dismissField=async id=>{await page.waitForFunction(id=>window.__rescueHouse?.story().tutorial===id,id);assert((await snapshot()).paused,'Field tutorial really pauses the game');await field().locator('[data-field-close]').click();await field().waitFor({state:'hidden'});};
+  const dismissField=async id=>{await page.waitForFunction(id=>window.__rescueHouse?.story().tutorial===id,id);assert((await snapshot()).paused,'Field tutorial really pauses the game');await clickTrialButton(field().locator('[data-field-close]'));await field().waitFor({state:'hidden'});};
   const checkpoint=async()=> (await read(RESCUE_KEY)).houseCheckpoint;
   const shot=async name=>{
    if(!SHOTS)return;

@@ -27,22 +27,31 @@ const {chromium}=require('playwright');
   const ready=()=>page.waitForFunction(()=>window.__rescueHouse?.story().phase==='hunt'&&!window.__rescueHouse.snapshot().paused,null,{timeout:90000,polling:250});
   const save=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('emy-easy-checkpoint')));
   const choose=async value=>{await page.evaluate(value=>{const field=document.querySelector('[data-setting="difficulty"]');field.value=value;field.dispatchEvent(new Event('input',{bubbles:true}));},value);assert.equal(await page.evaluate(()=>window.__rescueHouse.story().pursuer.difficulty),value);};
-  const trigger=()=>page.evaluate(()=>{const api=window.__rescueHouse;api.setPose({x:5.65,y:0,z:12.8,yaw:2.2,pitch:0});api.placeThreat({x:6.15,y:0,z:12.38,yaw:-.8});return api.captureFixture();});
+  const trigger=(times=[])=>page.evaluate(times=>{const api=window.__rescueHouse;api.setPose({x:5.65,y:0,z:12.8,yaw:2.2,pitch:0});api.placeThreat({x:6.15,y:0,z:12.38,yaw:-.8});return api.captureFixture(times);},times);
+  const beats=[['01-preparacion',.96],['02-salto',1.42],['03-impacto',1.83],['04-aterrizaje',2.34],['05-proteccion',3.05]];
   await page.goto(url);await ready();await choose('easy');
   for(let attempt=1;attempt<=3;attempt++){
    if(attempt===3){await page.reload();await ready();assert.equal(await page.evaluate(()=>window.__rescueHouse.story().pursuer.difficulty),'easy');}
-   const result=await trigger();assert.deepEqual(result,{lives:3,emyRescue:true,easy:true});
+   const result=await trigger(attempt===1?beats.map(([,t])=>t):[]);assert.deepEqual(result,{lives:3,emyRescue:true,easy:true});
    assert.equal((await save()).lives,3);assert.equal((await save()).emyRescueUsed,false);
-   if(attempt===1){
-    for(const [name,t] of [['01-preparacion',.96],['02-salto',1.42],['03-impacto',1.83],['04-aterrizaje',2.34],['05-proteccion',3.05]]){
-     await page.waitForFunction(t=>window.__rescueHouse.emergencyRescue()?.elapsed>=t,t,{polling:100,timeout:90000});
-     const state=await page.evaluate(()=>window.__rescueHouse.emergencyRescue());assert(state&&!state.kind.includes('occluded'),'Open exterior should show rescue');assert(state.pose.cat.y>=0);await shot(name);
-    }
-   }
    await page.waitForFunction(()=>!window.__rescueHouse.emergencyRescue()&&!document.querySelector('#lab3d').classList.contains('house-capture-active'),null,{polling:250,timeout:90000});
    if(attempt===1){
-    await page.waitForFunction(()=>window.__rescueHouse.story().tutorial==='lives');
-    await shot('06-guia-vidas');await page.locator('.field-overlay [data-field-close]').click();
+    // Read each real WebGL frame inside its rendering callback, not by
+    // taking blocking screenshots while the live timeline continues.
+    const frames=await page.evaluate(()=>window.__rescueHouse.emergencyEvidence());
+    assert.equal(frames.length,beats.length,'All five cinematic beats rendered');
+    for(const [i,frame] of frames.entries()){
+     const [name,t]=beats[i];assert.equal(frame.target,t);assert(frame.elapsed>=t&&frame.elapsed<=t+.101,'Rendered near the authored beat');
+     assert(!frame.kind.includes('occluded'),'Open exterior should show rescue');assert(frame.pose.cat.y>=0);
+     assert(frame.frame.startsWith('data:image/png;base64,'));const image=Buffer.from(frame.frame.split(',')[1],'base64');assert(image.length>100);
+     await fs.writeFile(path.join(folder,name+'.png'),image);
+    }
+    assert(frames[1].pose.cat.airborne,'Emy leaves the ground');assert(frames[2].pose.foe.hit>.5,'Attacker recoils at impact');
+    assert(!frames[3].pose.cat.airborne,'Emy lands before protecting Kitty');
+    await page.waitForFunction(()=>window.__rescueHouse.story().tutorial==='lives',null,{polling:250});
+    await shot('06-guia-vidas');const close=page.locator('.field-overlay:not([hidden]) [data-field-close]');
+    await close.waitFor({state:'visible'});const point=await close.evaluate(el=>{const r=el.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2;if(el.disabled||!el.contains(document.elementFromPoint(x,y)))throw Error('Guide close is obstructed');return {x,y};});
+    await page.mouse.click(point.x,point.y);await close.waitFor({state:'hidden'});
    }
    assert.equal((await save()).lives,3);assert((await save()).picked.includes('key'));assert((await save()).tutorials.includes('lives'));
    console.log('PASS easy capture '+attempt+' no debit, same checkpoint, Emy rescue');

@@ -226,6 +226,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  let altarVisit=createAltarVisit();
  let emyAbilities=createEmyAbilities(),emyNameCue=createEmyNameCue(),emyMenuOpen=false,emyMapFloor=-1,emyMapSelected='',miniatureView=defaultMiniatureView(),noiseProps=[],heldNoise=null;
  let resumed=false,lastSafeCheckpoint=null,captureShot=null,captureCount=0,lifeNoticeLeft=0;
+ let emergencyEvidence=[];
  let equipmentBeforeNote='empty',batterySwap=null;
  const canUseHotbar=()=>ready&&!heldNoise&&!isSuspended()&&!cinematic&&!emyShot&&events.phase!=='arrival'&&events.phase!=='failed'&&events.phase!=='safe'&&rc?.mode!=='driving'&&rc?.mode!=='deploying';
  const phone=new PhoneUI(root,(kind,toggle=true)=>equip(kind,toggle),()=>resetInput(),{canEquip:canUseHotbar,canUse:()=>canUseHotbar()&&!notePresentation&&events.phase!=='hide',onEdit:()=>{releaseMouse();resetInput();if(isSuspended())sound.pause();else sound.resume();},onPhoto:()=>{if(!isPaused()&&phone.open&&phone.app==='camera')capturePhoto=true;},onMap:()=>openHouseMap(true),onAppChange:app=>{capturePhoto=false;resetInput();if(app&&tutorialEnabled&&!manual.seen.includes('phone')&&events.phase!=='hide')queueTutorial('phone');},onManual:id=>tutorial(id,true),manualHTML:()=>manualListHTML(manual.seen),onHint:()=>phone.objective,onMusic:enabled=>sound.setPhoneMusic(enabled)});phone.equip(equipment);
@@ -1582,6 +1583,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    renderer.render(view,0,elapsed+t,false,{
     reduced,shotLight:.42,pursuer:{...pursuer.snapshot(),rescueGrip:pose.foe.grip,rescueImpact:pose.foe.hit,rescueSide:shot.stage.side},
     ...(shot.stage.viewMode==='third'?{thirdPerson:pose.kitty,actorPose:sampleRescuedKitty(t,shot.kittyPose),feetY:pose.kitty.y,actorTime:t,equipment:'empty'}:{}),television});
+   if(import.meta.env.DEV&&shot.qaTimes){
+    while(shot.qaTimes.length&&t>=shot.qaTimes[0]){
+     const target=shot.qaTimes.shift();
+     emergencyEvidence.push({target,elapsed:t,kind:shot.stage.kind,pose,frame:canvas.toDataURL('image/png')});
+    }
+   }
   }catch(error){interruptGraphics('Error en el rescate de Emy',String(error.message||error));return;}
   if(t<B.end)return;
   const restore=shot.loss.checkpoint,messages=events.messages;
@@ -2559,10 +2566,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    clearThreatFixture:()=>{pursuer.reset();sound.setThreat(false);return pursuer.snapshot();},
    // DEV-only: exercise the genuine capture handler at an existing actor
    // placement. Never expose a capture shortcut in the production bundle.
-   captureFixture:()=>{
+   captureFixture:(qaTimes=[])=>{
     if(captureShot||!ready||manual.active||!pursuer.active||!lastSafeCheckpoint)throw Error('Capture fixture not ready');
     if(!['patrol','hunt','evaded','rc-setup'].includes(events.phase))throw Error('Capture fixture needs active pursuit');
     pursuer.caught=true;events.phase='failed';beginCapture();
+    emergencyEvidence=[];
+    if(captureShot.loss.emyRescue&&Array.isArray(qaTimes))captureShot.qaTimes=qaTimes.filter(t=>Number.isFinite(t)&&t>0&&t<EMY_RESCUE_BEATS.end).slice(0,8).sort((a,b)=>a-b);
     return {lives:s.lives,emyRescue:!!captureShot.loss.emyRescue,easy:!!captureShot.loss.easy};
    },
    // DEV-only route harness for deterministic test setup; not in the production build.
@@ -2572,6 +2581,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    performance:()=>perfReport(),
    windowIntro:()=>cinematic?{elapsed:cinematic.elapsed,amount:world.entryWindow.amount,view:windowIntroCamera(cinematic.elapsed/WINDOW_SHOT_SECONDS)}:null,
    finale:()=>finalCutscene?{elapsed:finalCutscene.elapsed,playable:finalCutscene.playable,runAge:finalCutscene.runAge,stage:finalCutscene.playable?'run':finalCutscene.stage,weather:finaleWeather(finalCutscene,s),view:finalCutscene.lastView}:null,
+   emergencyEvidence:()=>emergencyEvidence.slice(),
    emergencyRescue:()=>captureShot?.loss.emyRescue?{elapsed:captureShot.elapsed,kind:captureShot.stage.kind,viewMode:captureShot.stage.viewMode,lives:captureShot.loss.lives,easy:!!captureShot.loss.easy,pose:sampleEmergencyRescue(captureShot.elapsed,captureShot.stage)}:null,
    intro:()=>cinematic?{elapsed:cinematic.elapsed,...windowIntroState(cinematic.elapsed/WINDOW_SHOT_SECONDS),camera:windowIntroCamera(cinematic.elapsed/WINDOW_SHOT_SECONDS)}:null,
    atmosphere:()=>({room:sound.atmosphere?.room,outdoor:sound.atmosphere?.outdoor,events:sound.atmosphere?.events,voices:sound.atmosphere?.voices.size,loops:sound.atmosphere?.loops.length,lastEvent:sound.atmosphere?.lastEvent,muted:sound.settings.muted,volume:sound.settings.ambient}),

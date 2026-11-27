@@ -30,12 +30,15 @@ export function planEmyRescueShot(world,kitty,attacker,from,actualCat=null){
   let start=point(kitty,sx*shape.entry-dx*.38,sz*shape.entry-dz*.38);
   const hit=point(foe,sx*shape.contact-dx*.13,sz*shape.contact-dz*.13),land=point(kitty,sx*shape.landing+dx*.16,sz*shape.landing+dz*.16);
   const safe=point(kitty,-dx*shape.back,-dz*shape.back);
+  // Grounded protective step towards Kitty; retain the landing if obstructed.
+  const candidateGuard=interpolate(land,safe,.20);
+  const guard=distance(candidateGuard,safe)>.38&&clearPath(world,land,candidateGuard,.15,.48)?candidateGuard:land;
   // A nearby following Emy starts at her real location if the short run is clear.
   const realStart=actualCat&&!actualCat.hidden&&Math.abs(actualCat.y-kitty.y)<.15&&distance(actualCat,takeoff)<1.7&&distance(actualCat,kitty)>.37&&clearPath(world,actualCat,takeoff,.14,.48);
   if(realStart&&[0,.25,.5,.75,1].every(t=>distance(interpolate(actualCat,takeoff,t),kitty)>.34))start={x:actualCat.x,y:actualCat.y,z:actualCat.z};
   if(!clearPath(world,foe,recoil,.17,1.72)||!clearPath(world,start,takeoff,.14,.48)||!clearPath(world,land,land,.14,.48)||!clearPath(world,kitty,safe,.19,1.65))continue;
   // Validate the exact authored flight, including the curved rebound segment.
-  const staged={kitty:{...kitty,yaw:angle},foe,recoil,start,takeoff,hit,land,safe,side,angle,arc:shape.arc,kind:shape.kind,compact:false,realStart:!!realStart&&start.x===actualCat.x&&start.z===actualCat.z};
+  const staged={kitty:{...kitty,yaw:angle},foe,recoil,start,takeoff,hit,land,guard,safe,side,angle,arc:shape.arc,kind:shape.kind,compact:false,realStart:!!realStart&&start.x===actualCat.x&&start.z===actualCat.z};
   if(!Array.from({length:33},(_,i)=>i/32).every(u=>{
    const t=mix(EMY_RESCUE_BEATS.launch,EMY_RESCUE_BEATS.land,u),p=sampleEmergencyRescue(t,staged).cat;
    return !blocked(world.boxes,p.x,p.y,p.z,.15,.40);
@@ -43,7 +46,7 @@ export function planEmyRescueShot(world,kitty,attacker,from,actualCat=null){
   const subject={x:(kitty.x+foe.x)/2,y:kitty.y+.91,z:(kitty.z+foe.z)/2};
   for(const radius of [2.2,1.65,1.25])for(const s of [-1,1]){
    const camera={x:subject.x+sx*radius*s-dx*.4,y:kitty.y+1.67,z:subject.z+sz*radius*s-dz*.4};
-   if(blocked(world.boxes,camera.x,camera.y-.12,camera.z,.12,.18)||lineBlocked(world.boxes,camera,subject)||lineBlocked(world.boxes,camera,{...land,y:land.y+.3})||lineBlocked(world.boxes,camera,{...foe,y:foe.y+1.2}))continue;
+   if(blocked(world.boxes,camera.x,camera.y-.12,camera.z,.12,.18)||lineBlocked(world.boxes,camera,subject)||lineBlocked(world.boxes,camera,{...land,y:land.y+.3})||lineBlocked(world.boxes,camera,{...foe,y:foe.y+1.2})||lineBlocked(world.boxes,camera,{...guard,y:guard.y+.3}))continue;
    return {...staged,camera,viewMode:'third'};
   }
   // If the side camera cannot fit, a lower first-person view can still
@@ -63,7 +66,8 @@ export function sampleEmergencyRescue(t,stage){
  const B=EMY_RESCUE_BEATS;
  const approach=ease((t-B.enter)/(B.plant-B.enter)),up=clamp((t-B.launch)/(B.impact-B.launch)),down=clamp((t-B.impact)/(B.land-B.impact));
  const flight=clamp((t-B.launch)/(B.land-B.launch)),airborne=t>=B.launch&&t<B.land&&!stage.compact;
- const cat=t<B.launch?interpolate(stage.start,stage.takeoff,approach):t<B.impact?interpolate(stage.takeoff,stage.hit,up):interpolate(stage.hit,stage.land,down*(2-down));
+ const guard=stage.guard??stage.land,guardStep=ease((t-B.protect)/.44);
+ const cat=t<B.launch?interpolate(stage.start,stage.takeoff,approach):t<B.impact?interpolate(stage.takeoff,stage.hit,up):t<B.land?interpolate(stage.hit,stage.land,down*(2-down)):interpolate(stage.land,guard,guardStep);
  cat.y+=airborne?(stage.arc??2.9)*flight*(1-flight):0;
  const strike=ease((t-1.46)/.23)*(1-ease((t-B.impact)/.27)),compression=Math.max(ease((t-B.plant)/.19)*(1-ease((t-B.launch)/.14)),ease((t-2.18)/.11)*(1-ease((t-B.land)/.23)));
  const hit=curve([[0,0],[B.impact,0],[1.83,1],[2.15,.76],[2.80,.36],[3.95,.08]],t),back=ease((t-B.impact)/.48);
@@ -71,7 +75,7 @@ export function sampleEmergencyRescue(t,stage){
  const kitty=interpolate(stage.kitty,stage.safe,ease((t-B.release)/.58));
  const focus={x:mix(kitty.x,foe.x,.48),y:kitty.y+.95,z:mix(kitty.z,foe.z,.48)};
  const runFace=heading(stage.start,stage.takeoff),catFace=heading(stage.takeoff,stage.hit),returnFace=heading(stage.land,kitty);
- return {cat:{...cat,yaw:turn(turn(runFace,catFace,ease((t-B.plant)/.27)),returnFace,ease((t-B.land)/.29)),compression,flight,airborne,strike,walking:!stage.compact&&t>=B.enter&&t<B.plant,alarm:curve([[0,0],[.75,1],[2.29,1],[3.24,.15],[B.end,0]],t)},foe:{...foe,yaw:stage.angle+Math.PI+(stage.side*.30)*back,grip,hit},kitty:{...kitty,yaw:turn(stage.angle,heading(kitty,stage.land),ease((t-2.65)/.58))},focus};
+ return {cat:{...cat,yaw:turn(turn(runFace,catFace,ease((t-B.plant)/.27)),returnFace,ease((t-B.land)/.29)),compression,flight,airborne,strike,walking:!stage.compact&&(t>=B.enter&&t<B.plant||t>=B.protect&&t<B.protect+.44&&distance(stage.land,guard)>.04),alarm:curve([[0,0],[.75,1],[2.29,1],[3.24,.15],[B.end,0]],t)},foe:{...foe,yaw:stage.angle+Math.PI+(stage.side*.30)*back,grip,hit},kitty:{...kitty,yaw:turn(stage.angle,heading(kitty,stage.land),ease((t-2.65)/.58))},focus};
 }
 export function sampleRescuedKitty(t,out){
  const B=EMY_RESCUE_BEATS,held=ease(t/.28)*(1-ease((t-B.release)/.32)),flinch=curve([[0,0],[1.68,0],[1.9,1],[2.4,.3],[3.2,0]],t),relief=ease((t-2.62)/.65);
