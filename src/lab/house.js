@@ -2557,6 +2557,14 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     restoreEmyCompanion(emyCompanion,{stage:'following',...pose},events.phase);
    },
    clearThreatFixture:()=>{pursuer.reset();sound.setThreat(false);return pursuer.snapshot();},
+   // DEV-only: exercise the genuine capture handler at an existing actor
+   // placement. Never expose a capture shortcut in the production bundle.
+   captureFixture:()=>{
+    if(captureShot||!ready||manual.active||!pursuer.active||!lastSafeCheckpoint)throw Error('Capture fixture not ready');
+    if(!['patrol','hunt','evaded','rc-setup'].includes(events.phase))throw Error('Capture fixture needs active pursuit');
+    pursuer.caught=true;events.phase='failed';beginCapture();
+    return {lives:s.lives,emyRescue:!!captureShot.loss.emyRescue,easy:!!captureShot.loss.easy};
+   },
    // DEV-only route harness for deterministic test setup; not in the production build.
    placeRC:(pose)=>{if(rc.mode!=='driving')throw Error('RC must be deployed first');const y=groundHeight(pose.x,pose.z,pose.y??rc.y,world.hatch?.amount>.92);if(!Number.isFinite(y)||blocked(world.boxes,pose.x,y,pose.z,.155,.38))throw Error('Blocked RC test position');rc.x=pose.x;rc.y=y;rc.z=pose.z;rc.yaw=pose.yaw??rc.yaw;rc.noise=0;syncRCObject(rc);return {x:rc.x,y:rc.y,z:rc.z};},
    altar:()=>({...altarVisit,waiting:!!emyCompanion?.altarWait,fear:!!emyCompanion?.altarFear,bristle:world.emy.parts.find(p=>p.id==='coat')?.box.bristle??0,earFlatten:world.emy.earFlatten??0}),
