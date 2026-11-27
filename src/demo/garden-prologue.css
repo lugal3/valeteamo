@@ -341,3 +341,18 @@
 .story-prologue .prologue-portrait{animation:portrait-idle 2.8s ease-in-out infinite;transform-origin:50% 90%}
 @keyframes portrait-idle{50%{transform:translateY(-1px)}}
 @media(prefers-reduced-motion:reduce){.story-prologue .prologue-portrait{animation:none}}
+
+/* Color grade instead of a nearly opaque global dark tint. Ground pools and
+   window glass keep their contrast, while HUD and dialogue remain unaffected. */
+.story-prologue .prologue-night{
+ background:radial-gradient(ellipse at 50% 52%,rgba(96,88,130,.57) 0%,rgba(48,48,86,.78) 68%,rgba(22,26,57,.89) 100%);
+}
+.story-prologue .prologue-night[data-map="afternoon_meeting"]{
+ background:linear-gradient(142deg,rgba(118,81,118,.48),rgba(54,49,97,.72));
+}
+.story-prologue .prologue-night[data-map="dusk_search"]{
+ background:radial-gradient(ellipse at 50% 48%,rgba(87,99,125,.58),rgba(40,54,83,.81) 72%,rgba(25,34,60,.91));
+}
+.story-prologue .prologue-night[data-map="night_neighborhood"]{
+ background:radial-gradient(ellipse at 50% 47%,rgba(72,79,112,.64),rgba(32,39,71,.86) 72%,rgba(19,25,53,.95));
+}

@@ -215,8 +215,9 @@ export function createLivingEcology(
    for(let i=0;i<panePositions.length;i++){
     const {x,y}=panePositions[i],entry=i===3;
     const flicker=Math.pow(Math.sin(t*.41+i*1.7),2);
-    const alpha=(entry?.025:.085+.045*flicker)*(.6+night*.4);
+    const alpha=(entry?.022:.17+.025*flicker)*(.6+night*.4);
     windows.fillStyle(0xffe4be,alpha).fillRect(x-12,y-20,24,40);
+    if(!entry){windows.fillStyle(0xffefd2,.15).fillRect(x-10,y+15,20,5);windows.fillStyle(0x62566b,.16).fillRect(x-12,y-20,24,4);}
     if(!entry){
      const drift=reducedMotion?0:Math.sin(t*.6+i)*2;
      windows.fillStyle(0xa68aaf,.16).fillRect(x-12+drift,y-20,5,40);
@@ -224,10 +225,10 @@ export function createLivingEcology(
     }
    }
    for(let i=0;i<4;i++){
-    const p=toScreen({u:67+i*4.5,v:1.8});
+    const p=toScreen({u:[67,72,77,81][i],v:1.8});
     light.fillStyle(0xffe4ad,.08+.05*Math.pow(Math.sin(t*.62+i),2))
      .fillEllipse(p.x,p.y-104,49,58);
-    light.fillStyle(0xffd59e,.09).fillEllipse(p.x,p.y-2,101,22);
+    // Ground falloff is already drawn in rescue-overworld; no second flat pool.
    }
    // Thin fog rolls *behind* the porch and front path.
    for(let i=0;i<5;i++){
