@@ -39,3 +39,17 @@
 @media(max-width:440px) and (orientation:portrait){#lab3d .field-card{width:86vw}#lab3d .field-rows{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){#lab3d .field-card,#lab3d .field-countdown,#lab3d .field-guide i{animation:none!important}}
 #lab3d.house-motion-reduced .field-card,#lab3d.house-motion-reduced .field-countdown,#lab3d.house-motion-reduced .field-guide i{animation:none!important}
+
+/* True blueprint: a luminous perimeter, not a dimmed world or purple HUD. */
+#lab3d .field-overlay{background:transparent}
+#lab3d .field-card,#lab3d .field-card[data-tone]{--base:#123f73;--edge:#89d4ff;--ink:#e0f5ff;
+ width:min(582px,85vw);background-color:var(--base);border:1px solid #a3e1ff;
+ background-image:linear-gradient(0deg,transparent 95%,#c6edff23 96%),linear-gradient(90deg,transparent 95%,#c6edff23 96%);
+ box-shadow:0 0 0 1px #83d9ff77,0 0 9px #7bd5ff85,0 0 24px #4ba8ff48,0 8px 25px #08294750}
+#lab3d .field-card:after{content:"";position:absolute;inset:-5px;pointer-events:none;border-radius:13px;
+ border:1px solid #a8e8ff76;box-shadow:0 0 12px #7bd5ff38;opacity:.7;animation:field-halo 3s ease-in-out infinite}
+@keyframes field-halo{50%{opacity:1;box-shadow:0 0 18px #7bd5ff65}}
+@media(max-height:420px){#lab3d .field-card,#lab3d .field-card[data-tone]{width:min(571px,84vw)}}
+@media(max-width:440px) and (orientation:portrait){#lab3d .field-card,#lab3d .field-card[data-tone]{width:90vw;max-height:calc(100dvh - 30px);overflow:auto}}
+@media(prefers-reduced-motion:reduce){#lab3d .field-card:after{animation:none}}
+#lab3d.house-motion-reduced .field-card:after{animation:none}

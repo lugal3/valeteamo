@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
+import {useCallback,useEffect,useMemo,useRef,useState,type CSSProperties} from 'react';
 import {StoryGame} from '../StoryGame';
 import {Sound} from '../audio';
 import catSound from '../lab/audio/preview-cat.wav';
@@ -19,6 +19,7 @@ import {
  advancePrologue,loadPrologue,savePrologue,resetPrologue,
  type PrologueState,type PrologueEvent,type PrologueLine
 } from './prologue-story.js';
+import {dialogueGlyphs,dialogueDelay,dialogueVoice,dialogueWords} from './dialogue-feel.js';
 import './garden-prologue.css';
 import {EmyFeeding} from './EmyFeeding';
 
@@ -49,6 +50,9 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
 
  const sceneRef=useRef<IsoAdventure|null>(null),phaseRef=useRef(run);
  const dialogRef=useRef<Dialog|null>(null),dialogDone=useRef<null|(()=>void)>(null);
+ const lettersRef=useRef(0),portraitRef=useRef<HTMLImageElement|null>(null);
+ const [speechPulse,setSpeechPulse]=useState(0);
+ const reveal=useCallback((n:number)=>{lettersRef.current=n;setLetters(n);},[]);
  const feedingRef=useRef<Feeding|null>(null);
  const lockedRef=useRef(false),enteringRef=useRef(false),nextDialogRef=useRef<()=>void>(()=>{});
  const travelingRef=useRef(false),travelTimers=useRef<number[]>([]);
@@ -68,8 +72,8 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  const showDialog=useCallback((lines:PrologueLine[],done?:()=>void)=>{
   if(!lines.length){done?.();return;}
   lockedRef.current=true;dialogDone.current=done??null;
-  const next={lines,index:0};dialogRef.current=next;setDialog(next);setLetters(0);
- },[]);
+  const next={lines,index:0};dialogRef.current=next;setDialog(next);reveal(0);setSpeechPulse(0);
+ },[reveal]);
  const offerChuru=()=>{
   const scene=sceneRef.current;
   if(feedingRef.current!=='offer'||!scene)return;
@@ -81,25 +85,39 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
 
  const nextDialog=useCallback(()=>{
   const current=dialogRef.current;if(!current)return;
-  const text=current.lines[current.index].text;
-  if(letters<Array.from(text).length){setLetters(Array.from(text).length);return;}
+  const length=dialogueGlyphs(current.lines[current.index].text).length;
+  if(lettersRef.current<length){reveal(length);return;}
   if(current.index+1<current.lines.length){
    const next={...current,index:current.index+1};
-   dialogRef.current=next;setDialog(next);setLetters(0);return;
+   dialogRef.current=next;setDialog(next);reveal(0);setSpeechPulse(0);return;
   }
-  dialogRef.current=null;setDialog(null);setLetters(0);
+  dialogRef.current=null;setDialog(null);reveal(0);setSpeechPulse(0);
   lockedRef.current=false;
   const done=dialogDone.current;dialogDone.current=null;done?.();
- },[letters]);
+ },[reveal]);
  nextDialogRef.current=nextDialog;
 
  useEffect(()=>{
   if(!dialog)return;
-  const text=dialog.lines[dialog.index].text;
-  if(letters>=Array.from(text).length)return;
-  const interval=window.setInterval(()=>setLetters(n=>Math.min(n+2,Array.from(text).length)),27);
-  return()=>window.clearInterval(interval);
- },[dialog,letters]);
+  const line=dialog.lines[dialog.index],glyphs=dialogueGlyphs(line.text),tone=line.tone??'calm';
+  if(letters>=glyphs.length)return;
+  const timer=window.setTimeout(()=>{
+   // A skip, restart or unmount may have happened before the timer fired.
+   if(dialogRef.current!==dialog||lettersRef.current!==letters)return;
+   const voice=dialogueVoice(glyphs,letters,line.speaker,tone);
+   if(voice){
+    audio.tone(voice.frequency,voice.duration,voice.volume,'triangle');
+    setSpeechPulse(n=>n+1);
+    if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+     const img=portraitRef.current;
+     img?.getAnimations().forEach(animation=>animation.cancel());
+     img?.animate([{transform:'scale(1)'},{transform:'scale(1.055,.98)'},{transform:'scale(1)'}],{duration:135,easing:'ease-out'});
+    }
+   }
+   reveal(letters+1);
+  },dialogueDelay(glyphs,letters,tone));
+  return()=>window.clearTimeout(timer);
+ },[dialog,letters,audio,reveal]);
  useEffect(()=>{
   const handler=(e:KeyboardEvent)=>{
    if(feedingRef.current==='eating'&&e.key==='Escape'){
@@ -108,7 +126,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
    }
    if(!dialogRef.current)return;
    if(['Enter',' ','e','E'].includes(e.key)){
-    e.preventDefault();e.stopImmediatePropagation();nextDialogRef.current();
+    e.preventDefault();e.stopImmediatePropagation();if(!e.repeat)nextDialogRef.current();
    }
   };
   window.addEventListener('keydown',handler,true);
@@ -135,7 +153,14 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
     ]){
      if(!scene.textures.exists(key))continue;
      const source=scene.textures.get(key).getSourceImage();
-     if(source instanceof HTMLCanvasElement)avatars[person]=source.toDataURL('image/png');
+     if(source instanceof HTMLCanvasElement||source instanceof HTMLImageElement){
+      // Close-up of the real in-world sprite, not a different character asset.
+      const canvas=document.createElement('canvas');
+      const w=source.width,h=Math.max(1,Math.round(source.height*.66));
+      canvas.width=w;canvas.height=h;
+      const ctx=canvas.getContext('2d');
+      if(ctx){ctx.imageSmoothingEnabled=false;ctx.drawImage(source,0,0,w,h,0,0,w,h);avatars[person]=canvas.toDataURL('image/png');}
+     }
     }
     setPortraits(avatars);
     if(test&&checkpoint==='feed-cat')scene.storyTeleportForTest(0);
@@ -216,7 +241,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
    // Vida de combate temporal; el checkpoint narrativo guarda solo etapas.
   },
   retry:()=>showDialog([
-   {speaker:'Kitty',text:'¡Me quedé sin corazones! Voy a intentarlo otra vez. Louis me necesita.'}
+   {speaker:'Kitty',tone:'alarm',text:'¡Me quedé sin corazones! Voy a intentarlo otra vez. Louis me necesita.'}
   ])
  };
 
@@ -250,7 +275,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   travelTimers.current=[];travelingRef.current=false;setTransition(null);setHouseHandoff(false);
   if(!test)resetPrologue();
   const next=initial(test,checkpoint);
-  phaseRef.current=next;setRun(next);setDialog(null);setLetters(0);
+  phaseRef.current=next;setRun(next);setDialog(null);reveal(0);setSpeechPulse(0);
   showFeeding(null);
   dialogRef.current=null;dialogDone.current=null;lockedRef.current=false;enteringRef.current=false;
   setNear('');setGuide('');setDusk(0);setArea('sendero');setMap('morning_garden');setHouseNav(null);
@@ -291,6 +316,9 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
 
  const currentLine=dialog?.lines[dialog.index];
  const portrait=currentLine?portraits[currentLine.speaker.toLowerCase()]:undefined;
+ const glyphs=useMemo(()=>dialogueGlyphs(currentLine?.text??''),[currentLine]);
+ const words=useMemo(()=>dialogueWords(glyphs),[glyphs]);
+ const lineComplete=letters>=glyphs.length;
  const chapter=prologueProgress(run.stage);
 
  return <main className="story-prologue" aria-label="Rescate con el motor original de Corazones"
@@ -396,18 +424,28 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
    onClick={()=>sceneRef.current?.storyInteract()}>{near} · E</button>}
   {feeding==='offer'&&<EmyFeeding audio={audio} onComplete={offerChuru} onCancel={()=>showFeeding(null)}/>}
   {currentLine&&<div className="prologue-dialog-backdrop" role="dialog"
-   aria-modal="true" aria-label="Conversación">
+   aria-modal="true" aria-label="Conversación" data-tone={currentLine.tone??'calm'}
+   data-complete={lineComplete} data-revealed={letters} data-pulse={speechPulse}
+   data-speaker={currentLine.speaker} data-line={dialog!.index}
+   onClick={event=>{event.stopPropagation();nextDialog();}}>
    <div className="prologue-dialog">
     <div className="prologue-portrait" aria-hidden="true">
-     {portrait?<img src={portrait} alt=""/>:<span className="prologue-kitty-portrait">♡</span>}
+     {portrait?<img ref={portraitRef} src={portrait} alt=""/>:<span className="prologue-kitty-portrait">♡</span>}
     </div>
     <div className="prologue-dialog-copy">
      <div className="prologue-speaker">{label(currentLine.speaker)}</div>
-     <p aria-live="polite">{Array.from(currentLine.text).slice(0,letters).join('')}</p>
-     <div className="prologue-dialog-counter">{dialog!.index+1} / {dialog!.lines.length}</div>
+     <p key={dialog!.index} className="prologue-live-text">
+      <span className="prologue-sr-only">{currentLine.text}</span>
+      <span aria-hidden="true">{words.map((word,i)=>word.length===1&&/\s/u.test(word[0].glyph)?' ':
+       <span className="prologue-word" key={i}>{word.map(({glyph,index})=>
+        <span key={index} className={'prologue-glyph'+(index<letters?' is-revealed':'')+(lineComplete?' is-settled':'')}
+         style={{'--glyph-i':index} as CSSProperties}>{glyph}</span>)}</span>)}</span>
+     </p>
+     <div className="prologue-dialog-counter"><span>{dialog!.index+1} / {dialog!.lines.length}</span>
+      <span>{lineComplete?'Toca para continuar':'Toca para mostrar todo'}</span></div>
     </div>
-    <button type="button" className="prologue-next" onClick={nextDialog} aria-label="Continuar diálogo">
-     {letters<Array.from(currentLine.text).length?'Mostrar todo':'Continuar'} ▸
+    <button type="button" className="prologue-next" onClick={event=>{event.stopPropagation();nextDialog();}} aria-label="Continuar diálogo">
+     <span>{lineComplete?'Continuar':'Mostrar todo'}</span> <span className="prologue-next-arrow" aria-hidden="true">▾</span>
     </button>
    </div>
   </div>}

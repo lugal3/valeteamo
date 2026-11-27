@@ -73,11 +73,17 @@ async function play(){
     'at least one animated wildlife species must be near Kitty in '+map);
    assert(state.stats.updates>1,'living scenery is actually updating in '+map);
   }
+  const capturedDialogues=new Set();
   async function finishDialogue(){
    await convo.waitFor({state:'visible',timeout:13000});
    for(let n=0;n<48;n++){
     if(!await convo.isVisible())return;
     const button=convo.getByRole('button',{name:/Mostrar todo|Continuar/});
+    const speaker=await convo.getAttribute('data-speaker'),tone=await convo.getAttribute('data-tone');
+    if(await convo.getAttribute('data-complete')==='true'&&speaker&&tone){
+     const key=speaker.toLowerCase()+'-'+tone;
+     if(!capturedDialogues.has(key)){assert.equal(await convo.locator('.prologue-portrait img').count(),1,'Real portrait '+speaker);await page.screenshot({path:'artifacts/story-dialogue-full-'+key+'.png'});capturedDialogues.add(key);}
+    }
     await button.click();
    }
    throw Error('Conversation did not finish in 48 clicks');
@@ -128,6 +134,23 @@ async function play(){
       return /story-person-luis-(down|up|right)-talk-\d$/.test(key);
      },null,{timeout:6000});
      await page.screenshot({path:'artifacts/story-luis-chibi-talking.png'});
+    }
+    if(stage==='meet-couple'){
+     await convo.waitFor({state:'visible'});
+     await page.waitForFunction(()=>Number(document.querySelector('.prologue-dialog-backdrop')?.dataset.revealed)>0);
+     assert.equal(await convo.getAttribute('data-speaker'),'Vale');
+     assert.equal(await convo.locator('.prologue-portrait img').count(),1);
+     assert.equal(await convo.getAttribute('data-complete'),'false');
+     await page.screenshot({path:'artifacts/story-dialogue-writing.png'});
+     // Real touch on the scenery (outside the card) finishes, then advances.
+     await page.touchscreen.tap(10,35);
+     assert.equal(await convo.getAttribute('data-line'),'0');
+     assert.equal(await convo.getAttribute('data-complete'),'true');
+     await page.screenshot({path:'artifacts/story-dialogue-full-vale-warm.png'});capturedDialogues.add('vale-warm');
+     await page.touchscreen.tap(10,35);
+     await page.waitForFunction(()=>document.querySelector('.prologue-dialog-backdrop')?.dataset.speaker==='Luis');
+     assert.equal(await convo.getAttribute('data-line'),'1');
+     await page.screenshot({path:'artifacts/story-dialogue-luis.png'});
     }
     await finishDialogue();
     if(stage==='meet-couple'){

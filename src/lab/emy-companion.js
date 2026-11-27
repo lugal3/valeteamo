@@ -113,6 +113,7 @@ export function sendEmyToTrunk(companion){
  // A shared closet animation may have temporarily moved the model inside
  // a closed prop. Resume at its recorded walkable entrance, not its camera.
  if(companion.stage==='closet-entry'&&companion.closetEntry)Object.assign(companion.cat,{x:companion.closetEntry.x,z:companion.closetEntry.z});
+ if(companion.sharedBed){Object.assign(companion.cat,companion.sharedBed.from);companion.sharedBed=null;}
  companion.stage='trunk-run';clearNavigation(companion);companion.distraction=null;companion.refuge=null;companion.hiddenAt=null;companion.closetEntry=null;companion.altarWait=false;
  companion.cat.reaction=0;
  setVisibility(companion,false);
@@ -234,6 +235,7 @@ export function sendEmyDistract(companion,world,goal){
 }
 export function snapshotEmyCompanion(companion){
  const {cat,stage}=companion;
+ if(companion.sharedBed)return {stage:stage==='hiding'?'hiding':'following',...companion.sharedBed.from,yaw:cat.yaw};
  if(stage==='closet-entry')return {stage:'following',x:companion.closetEntry.x,y:cat.y,z:companion.closetEntry.z,yaw:cat.yaw};
  if(stage==='fetch'&&['leap-in','crawl','leap-out'].includes(companion.fetch.phase))return {stage:'following',...companion.fetch.vent.takeoff,yaw:0};
  return {stage:['entrance','fetch','distract','distract-recover','hold'].includes(stage)?'following':stage==='trunk-enter'?'trunk':stage,
@@ -242,7 +244,7 @@ export function snapshotEmyCompanion(companion){
 export function restoreEmyCompanion(companion,saved,storyPhase='explore'){
  const valid=['waiting','following','stay','hiding','trunk-run','trunk'];
  const stage=valid.includes(saved?.stage)?saved.stage:storyPhase==='explore'?'waiting':['sleep','patrol','hide','resting','arrival'].includes(storyPhase)?'following':'trunk';
- companion.stage=stage;clearNavigation(companion);companion.refuge=null;companion.distraction=null;companion.idleAge=0;companion.wardrobeAttempt=0;companion.closetEntry=null;companion.cat.dodge=null;companion.altarWait=false;
+ companion.stage=stage;clearNavigation(companion);companion.refuge=null;companion.distraction=null;companion.idleAge=0;companion.wardrobeAttempt=0;companion.closetEntry=null;companion.sharedBed=null;companion.cat.dodge=null;companion.altarWait=false;
  if(['following','stay','hiding','trunk-run'].includes(stage)&&[saved?.x,saved?.y,saved?.z,saved?.yaw].every(Number.isFinite))
   Object.assign(companion.cat,{x:saved.x,y:saved.y,z:saved.z,yaw:saved.yaw});
  else if(stage==='trunk')Object.assign(companion.cat,TRUNK_APPROACH,{yaw:-Math.PI/2});
@@ -310,7 +312,7 @@ function clearPassage(world,from,to){
  }
  return Math.abs(floor-to.y)<.23;
 }
-function moveToward(companion,world,goal,dt,speed){
+function moveToward(companion,world,goal,dt,speed,avoid=null){
  const cat=companion.cat,dx=goal.x-cat.x,dz=goal.z-cat.z,d=Math.hypot(dx,dz);
  if(d<.055)return false;
  const turn=deltaAngle(cat.yaw,Math.atan2(dx,dz));
@@ -321,9 +323,34 @@ function moveToward(companion,world,goal,dt,speed){
   const nx=cat.x+dx/d*step/pieces,nz=cat.z+dz/d*step/pieces,y=emyGroundHeight(nx,nz,cat.y,world.hatch?.amount>.92);
   if(roomAt(cat.x,cat.z,cat.y)!=='Sala de música'&&roomAt(nx,nz,y)==='Sala de música')break;
   if(!Number.isFinite(y)||Math.abs(y-cat.y)>.12||blocked(world.boxes,nx,y,nz,.16,.62))break;
+  if(avoid&&Math.abs(y-avoid.y)<.48){
+   const before=distance(cat,avoid),after=Math.hypot(nx-avoid.x,nz-avoid.z);
+   if(after<.75&&after<before)break;
+  }
   cat.x=nx;cat.y=y;cat.z=nz;moved=true;
  }
  return moved;
+}
+// A short collision-checked orbit in the commanded room, away from Kitty.
+export function distractionEscapePoint(world,cat,job,threat,player){
+ const center=job.goal,angle=Math.atan2(cat.x-center.x,cat.z-center.z);
+ const room=roomAt(center.x,center.z,center.y),danger=distance(cat,threat);
+ const boxes=world.boxes.filter(b=>b.solid&&Math.abs(b.y-cat.y)<b.h/2+1.2&&distance(b,cat)<4+Math.hypot(b.w,b.d)/2);
+ const localWorld={...world,boxes};
+ let best=null,score=-Infinity;
+ for(const radius of [.85,1.25,1.65])for(const offset of [Math.PI/3,-Math.PI/3,Math.PI/2,-Math.PI/2,Math.PI,0]){
+  const a=angle+offset,x=center.x+Math.sin(a)*radius,z=center.z+Math.cos(a)*radius;
+  const y=emyGroundHeight(x,z,cat.y,world.hatch?.amount>.92),p={x,y,z};
+  if(!Number.isFinite(y)||Math.abs(y-cat.y)>.12||roomAt(x,z,y)!==room||room==='Sala de música'||distance(p,cat)<.35||!clearPassage(localWorld,cat,p))continue;
+  const gap=distance(p,threat);
+  if(gap<Math.max(.75,danger-.08))continue;
+  const vx=p.x-cat.x,vz=p.z-cat.z,t=Math.max(0,Math.min(1,((threat.x-cat.x)*vx+(threat.z-cat.z)*vz)/(vx*vx+vz*vz)));
+  if(Math.hypot(cat.x+vx*t-threat.x,cat.z+vz*t-threat.z)<Math.min(.75,danger)-.002)continue;
+  if(player&&Math.abs(player.y-y)<.5&&distance(p,player)<Math.min(2,distance(cat,player)))continue;
+  const rank=gap-.20*distance(cat,p)+.15*(Math.sign(offset)===(job.orbitSide||1)?1:0);
+  if(rank>score){score=rank;best=p;}
+ }
+ return best;
 }
 // A local refuge is a real, traversable floor point screened by furniture.
 // No invisible relocation and no navigation toward Kitty's hiding spot.
@@ -363,7 +390,7 @@ function updateIndependentCover(companion,world,dt,reduced){
  }
  companion.refuge=null;companionIdle(companion,dt,{reduced,quiet:true});
 }
-export function updateEmyCompanion(companion,delta,{world,player,enteringHide=null,reduced=false,finale=false,threat=null,distractCooldown=0}={}){
+export function updateEmyCompanion(companion,delta,{world,player,enteringHide=null,reduced=false,finale=false,threat=null,distractCooldown=0,scriptedHide=false}={}){
  const cat=companion.cat,dt=Number.isFinite(delta)?Math.max(0,Math.min(.1,delta)):0;
  if(finale){setVisibility(companion,true);return null;}
  // Story priority also applies after a restore or an interrupted command.
@@ -371,6 +398,23 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  if((world.hatch?.open||player?.y<-.02)&&!['waiting','trunk','trunk-run','trunk-enter'].includes(companion.stage))sendEmyToTrunk(companion);
  if(companion.stage==='waiting'||companion.stage==='trunk')return null;
  companion.age+=dt;cat.age+=dt;
+ if(['bed-entry','bed-exit'].includes(companion.stage)){
+  const entry=companion.sharedBed;
+  if(!entry){companion.stage='following';return null;}
+  const entering=companion.stage==='bed-entry'&&!!(enteringHide||player?.hidden);
+  entry.t=Math.max(0,Math.min(1,entry.t+dt/.68*(entering?1:-1)));
+  const t=smooth(entry.t);
+  cat.x=entry.from.x+(entry.to.x-entry.from.x)*t;cat.z=entry.from.z+(entry.to.z-entry.from.z)*t;cat.y=entry.from.y;
+  cat.yaw=Math.atan2(entry.to.x-entry.from.x,entry.to.z-entry.from.z);cat.alarm=0;
+  poseEmy(cat,{mode:'crouch',walking:entry.t>0&&entry.t<1,phase:cat.age,reduced,leap:{compression:1,flight:0,airborne:false},blend:1});
+  if(entry.t===1&&entering){
+   companion.stage='hiding';companion.hiddenAt='underbed';cat.hidden=true;
+   for(const {box} of cat.parts)box.hiddenGeometry=false;
+   return 'hid';
+  }
+  if(entry.t===0&&!entering){companion.sharedBed=null;companion.stage='following';companion.hiddenAt=null;clearNavigation(companion);setVisibility(companion,false);}
+  return null;
+ }
  if(companion.stage==='closet-entry'){
   const step=companion.closetEntry;
   const t=smooth((step.time+=dt)/.76);
@@ -437,14 +481,23 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
    return null;
   }
   job.remaining-=dt;job.nextNoise-=dt;
-  cat.yaw+=deltaAngle(cat.yaw,Math.PI*.5)*(1-Math.exp(-dt*4));
-  poseEmy(cat,{mode:'idle',walking:false,phase:cat.age,reduced,blend:1-Math.exp(-9*dt)});
+  const nearEnemy=threat?.active&&Math.abs(cat.y-threat.y)<.48&&((threat.mode==='noise-investigate'&&threat.noiseSource==='emy'&&distance(cat,threat)<3.2)||distance(cat,threat)<1.45);
+  let walking=false;
+  if(nearEnemy){
+   job.orbitSide??=1;
+   if((!job.escape||distance(cat,job.escape)<.18||distance(job.escape,threat)<.68)&&companion.age>=(job.nextEscapeAt||0)){
+    job.escape=distractionEscapePoint(world,cat,job,threat,player);job.nextEscapeAt=companion.age+.24;
+   }
+   if(job.escape)walking=moveToward(companion,world,job.escape,dt,2.7,threat);
+   if(!walking)job.escape=null;
+  }else job.escape=null;
+  if(!walking)cat.yaw+=deltaAngle(cat.yaw,nearEnemy?Math.atan2(threat.x-cat.x,threat.z-cat.z):Math.PI*.5)*(1-Math.exp(-dt*4));
+  poseEmy(cat,{mode:walking?'walk':nearEnemy?'alert':'idle',walking,phase:cat.age,reduced,blend:1-Math.exp(-9*dt)});
   if(job.remaining<=0){
    // The noise finishes at the commanded room even when Kitty is hidden on
    // another floor. Do NOT automatically path back toward a live hiding spot:
    // that creates unfair noise and exposes Kitty's wardrobe to the pursuer.
    companion.distraction=null;clearNavigation(companion);
-   if(distractCooldown>0){companion.stage='distract-recover';companion.idleAge=0;return 'distract-rest';}
    if(enteringHide||player?.hidden)beginIndependentCover(companion,world,player,threat);
    else companion.stage='following';
    return 'distract-done';
@@ -453,7 +506,6 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
   return null;
  }
  if(companion.stage==='distract-recover'){
-  if(distractCooldown>0){companionIdle(companion,dt,{reduced,quiet:!!(enteringHide||player?.hidden)});return null;}
   if(enteringHide||player?.hidden)beginIndependentCover(companion,world,player,threat);
   else {companion.stage='following';clearNavigation(companion);}
   return 'distract-done';
@@ -476,7 +528,7 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  companion.wardrobeAttempt=hide&&companion.stage==='following'?(companion.wardrobeAttempt||0)+dt:0;
  const sharedDoor=hide&&player?{x:hide.returnX??player.x,y:player.y,z:hide.returnZ??player.z}:null;
  if(companion.stage==='following'&&hide&&player&&
-  (hide.objectId!=='wardrobe'||Math.abs(cat.y-player.y)>.48||distance(cat,sharedDoor)>2.1||companion.wardrobeAttempt>3.0||
+  ((hide.objectId!=='wardrobe'&&!(scriptedHide&&hide.objectId==='underbed'))||Math.abs(cat.y-player.y)>.48||distance(cat,sharedDoor)>(scriptedHide?3.5:2.1)||companion.wardrobeAttempt>(scriptedHide?6:3.0)||
    (roomAt(cat.x,cat.z,cat.y)!==roomAt(sharedDoor.x,sharedDoor.z,sharedDoor.y)&&!clearPassage(world,cat,sharedDoor)))){
   beginIndependentCover(companion,world,player,threat);
   updateIndependentCover(companion,world,dt,reduced);
@@ -485,6 +537,7 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  let following=companion.stage==='following';
  if(following&&hide)cat.reaction=0;
  if(companion.stage==='hiding'&&!hide){
+  if(companion.sharedBed){companion.stage='bed-exit';setVisibility(companion,false);return null;}
   companion.stage='following';companion.hiddenAt=null;following=true;clearNavigation(companion);
   // She reappears at the safe floor position where she followed Kitty in.
   setVisibility(companion,false);
@@ -498,7 +551,10 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  }
  if(companion.stage==='trunk-run'&&!companion.route.length&&companion.age>=(companion.nextPlanAt||0)&&(distance(cat,TRUNK_APPROACH)>.42||Math.abs(cat.y)>.25))
   planRoute(companion,world,TRUNK_APPROACH);
- if(companion.stage==='hiding')return null;
+ if(companion.stage==='hiding'){
+  if(companion.sharedBed){cat.alarm=0;poseEmy(cat,{mode:'crouch',phase:cat.age,reduced,leap:{compression:1,flight:0,airborne:false},blend:1});}
+  return null;
+ }
  const hideDoor=hide&&player?{x:hide.returnX??player.x,y:player.y,z:hide.returnZ??player.z}:null;
  const heading=following?(hideDoor||player):TRUNK_APPROACH;
  if(!heading)return null;
@@ -597,8 +653,16 @@ export function updateEmyCompanion(companion,delta,{world,player,enteringHide=nu
  if(companion.stage==='following'&&hide&&companion.direct&&distance(cat,heading)<.38&&Math.abs(cat.y-heading.y)<.45){
   if(hide.objectId==='wardrobe'&&(enteringHide||player?.hidden?.objectId==='wardrobe')){
    const closet=world.objects.find(o=>o.id===hide.objectId);
-   companion.closetEntry={x:cat.x,z:cat.z,time:0,inside:closet.hideCamera};
+   companion.closetEntry={x:cat.x,z:cat.z,time:0,inside:closet.hideCamera,shared:scriptedHide};
    companion.stage='closet-entry';return null;
+  }
+  if(scriptedHide&&hide.objectId==='underbed'){
+   const bed=world.objects.find(o=>o.id==='underbed');
+   const from={x:cat.x,y:cat.y,z:cat.z};
+   const to=[0,.16,-.16,.25,-.25].map(dx=>({x:bed.hideCamera.x+dx,y:cat.y,z:bed.hideCamera.z+.35}))
+    .find(p=>Array.from({length:19},(_,i)=>i/18).every(t=>!blocked(world.boxes,from.x+(p.x-from.x)*t,from.y,from.z+(p.z-from.z)*t,.14,.40)));
+   if(to){companion.sharedBed={from,to,t:0};companion.stage='bed-entry';return null;}
+   beginIndependentCover(companion,world,player,threat);return null;
   }
   companion.stage='hiding';companion.hiddenAt=hide.objectId;setVisibility(companion,true);return 'hid';
  }

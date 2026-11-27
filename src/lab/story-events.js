@@ -17,8 +17,12 @@ export class HouseEvents{
   }else if(this.phase==='resting'&&threat.sleeping){this.phase='sleep';this.time=0;cues.push('sleep');}
   else if(this.phase==='sleep'){
    this.time+=dt;
-   if(this.time>.75&&threat.leftBedroom&&!hidden){this.phase='lockdown';this.messages.push({id:'wake',from:'Mi Luis ❤️',text:'Estoy abajo. Ven con cuidado.'});cues.push('wake');}
-  }else if(this.phase==='lockdown'&&threat.entranceLocked){this.phase='hunt';this.remaining=28;cues.push('hunt');}
+   if(this.time>.75&&threat.leftBedroom&&!hidden){this.phase='lockdown';this.time=0;this.messages.push({id:'wake',from:'Mi Luis ❤️',text:'Estoy abajo. Ven con cuidado.'});cues.push('wake-message');}
+  }else if(this.phase==='lockdown'){
+   this.time+=dt;
+   if(this.time>=1&&!this.cues.has('wake')){this.cues.add('wake');cues.push('wake');}
+   if(threat.entranceLocked&&this.cues.has('wake')){this.phase='hunt';this.remaining=28;cues.push('hunt');}
+  }
   else if(this.phase==='hunt'){this.remaining=Math.max(0,this.remaining-dt);if(threat.caught){this.phase='failed';cues.push('failed');}else if(this.remaining===0&&threat.clear&&threat.visited>=2){this.phase='evaded';this.messages.push({from:'Mi Luis ❤️',text:'Se ha alejado. Busca debajo del tapete rojo de la cocina.'});cues.push('evaded');}}
   return cues;
  }

@@ -58,15 +58,11 @@ const fs=require('node:fs');
   const cue=updateEmyCompanion(busy,1/60,{world:busyWorld,player:kitty,distractCooldown:abilities.distractCooldown});
   if(cue==='distract-noise')noise++;
  }
- assert(noise>=13&&busy.stage==='distract-recover','Wait for cooldown after 25 s of real distraction');
+ assert(noise>=13&&busy.stage==='following','Return immediately after 25 s, even with cooldown remaining');
  const at={x:busy.cat.x,z:busy.cat.z};
- for(let i=0;i<120;i++){
-  assert.equal(updateEmyCompanion(busy,1/60,{world:busyWorld,player:kitty,distractCooldown:10}),null);
-  assert.equal(busy.stage,'distract-recover');
- }
- assert.deepEqual({x:busy.cat.x,z:busy.cat.z},at);
- assert.equal(updateEmyCompanion(busy,.016,{world:busyWorld,player:kitty,distractCooldown:0}),'distract-done');
+ for(let i=0;i<180;i++)updateEmyCompanion(busy,1/60,{world:busyWorld,player:kitty,distractCooldown:10});
  assert.equal(busy.stage,'following');
+ assert(Math.hypot(busy.cat.x-at.x,busy.cat.z-at.z)>.1,'Walk back without a manual recall');
  assert.equal(abilities.distractCooldown,cooldown,'Recall does not change ability cooldown');
  const house=fs.readFileSync('src/lab/house.js','utf8');
  assert(house.includes('data-act="emy:stay"'));

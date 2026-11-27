@@ -43,7 +43,7 @@ async function run(){
   const use=(id,activate=true)=>page.evaluate(([id,activate])=>window.__rescueHouse.interactWith(id,activate),[id,activate]);
   const stage=()=>page.evaluate(()=>window.__rescueHouse.story().phase);
   const field=()=>page.locator('.field-overlay:not([hidden])');
-  const dismissField=async id=>{await page.waitForFunction(id=>window.__rescueHouse?.story().tutorial===id,id);assert((await snapshot()).paused,'Field tutorial really pauses the game');await field().locator('[data-field-close]').click();await field().waitFor({state:'hidden'});};
+  const dismissField=async id=>{await page.waitForFunction(id=>window.__rescueHouse?.story().tutorial===id,id);assert((await snapshot()).paused,'Field tutorial really pauses the game');await clickTrialButton(field().locator('[data-field-close]'));await field().waitFor({state:'hidden'});};
   const checkpoint=async()=> (await read(RESCUE_KEY)).houseCheckpoint;
   const shot=async name=>{
    if(!SHOTS)return;
@@ -184,8 +184,9 @@ async function run(){
   await page.locator('button[data-app=manual]').waitFor({state:'visible'});
   await clickTrialButton(page.locator('button[data-app=manual]'));
   assert.equal(await page.locator('[data-manual=movement]').count(),1);assert.equal(await page.locator('[data-manual=hide]').count(),0);
-  await page.locator('[data-manual=movement]').click();await dismissField('movement');
-  await page.locator('.phone-shell [data-app=close]').click();
+  await clickTrialButton(page.locator('[data-manual=movement]'));await dismissField('movement');
+  await clickTrialButton(page.locator('.phone-shell [data-app=close]'));
+  await page.waitForFunction(()=>!window.__rescueHouse.snapshot().paused,null,{timeout:30000});
   await require('./helpers/fetch-ribbon.cjs')(page);
   await dismissField('threat');
   assert.equal((await snapshot()).puzzle.note,false,'The study key needs no hall note');
@@ -238,7 +239,8 @@ async function run(){
   await page.waitForFunction(()=>window.__rescueHouse.story().phase==='patrol',null,{timeout:60000});
   assert.equal(await page.evaluate(()=>window.__rescueHouse.story().pursuer.y),3.15,'Pursuer has already climbed by the deadline');
   assert((await checkpoint()).tutorials.includes('hide'));
-  const seen=(await checkpoint()).tutorials;
+  await page.waitForFunction(()=>window.__rescueHouse.story().tutorial==='stealth');await shot('02c-tutorial-sigilo');await dismissField('stealth');
+  const seen=(await checkpoint()).tutorials;assert(seen.includes('stealth'));
   await write(RESCUE_KEY,{...interior,houseCheckpoint:{...interior.houseCheckpoint,tutorials:seen}});
   await reloadHouse();
   await page.waitForFunction(()=>window.__rescueHouse.story().phase==='hide',null,{timeout:60000});

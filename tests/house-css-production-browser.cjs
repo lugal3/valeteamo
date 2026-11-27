@@ -4,6 +4,23 @@ const togglePhoneSettings=require('./helpers/toggle-phone-settings.cjs');
 const assert=require('node:assert/strict');
 const {chromium,webkit}=require('playwright');
 const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
+// Honor the real LP guides; never bypass the modal or disable tutorials.
+async function clickVisible(page,locator){
+ await locator.waitFor({state:'visible'});
+ const point=await locator.evaluate(el=>{el.scrollIntoView({block:'center',inline:'center',behavior:'instant'});const r=el.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2;if(el.disabled||!el.contains(document.elementFromPoint(x,y)))throw Error('Visible control is obstructed: '+el.outerHTML.slice(0,140));return {x,y};});
+ await page.mouse.click(point.x,point.y);
+}
+async function acknowledgeGuide(page,title){
+ const guide=page.locator('.field-overlay:not([hidden])');await guide.getByRole('heading',{name:title,exact:true}).waitFor();
+ await clickVisible(page,guide.locator('[data-field-close]'));await guide.waitFor({state:'hidden'});
+}
+async function enterHouseAndReadGuides(page){
+ await page.locator('#lab-dialog [data-act=start]').click();await acknowledgeGuide(page,'Primeros pasos');
+ const phone=page.locator('[data-equip=phone]');await clickVisible(page,phone);
+ await page.waitForFunction(()=>document.querySelector('[data-equip=phone]')?.getAttribute('aria-pressed')==='true',null,{polling:250});
+ await clickVisible(page,page.getByRole('button',{name:'Usar teléfono',exact:true}));
+ await acknowledgeGuide(page,'Tu teléfono');
+}
 (async()=>{
  const {preview}=await import('vite');
  const server=await preview({configFile:false,build:{outDir:process.env.HOUSE_PREVIEW_OUT||'dist'},
@@ -91,7 +108,7 @@ const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
       assert.deepEqual(errors,[],'no unhandled JavaScript errors');
       console.log('PASS HOUSE CSS PRODUCTION',JSON.stringify({name,scene,...result}));
       if(scene==='Casa 3D'&&!matrix){
-       await page.locator('#lab-dialog [data-act=start]').click();
+       await enterHouseAndReadGuides(page);
        if(name==='Chromium'){
         // Lose the context with the real phone Settings open: the interruption
         // modal must not be covered by a stale phone or leave its pause active.
@@ -131,7 +148,7 @@ const passBirthdayCountdown=require('./helpers/pass-birthday-countdown.cjs');
         await page.waitForFunction(()=>window.testHouseAudio.every(ctx=>ctx.state==='closed'));
         if(entryNumber===0){
          await entry.click();
-         await page.locator('#lab-dialog [data-act=start]').click();
+         await enterHouseAndReadGuides(page);
          assert.equal(await page.locator('#lab3d canvas#lab-canvas').count(),1);
         }
        }

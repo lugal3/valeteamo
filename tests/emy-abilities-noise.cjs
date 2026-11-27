@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');
 (async()=>{
- const {createHouse,setDoor}=await import('../src/lab/world.js');
+ const {createHouse,setDoor,blocked,groundHeight,HEIGHT}=await import('../src/lab/world.js');
  const {Pursuer}=await import('../src/lab/pursuer.js');
  const {createEmyAbilities,activateEmyScan,advanceEmyAbilities,createEmyNameCue,advanceEmyNameCue,roomChoices,roomDestination,roomDestinations,isEmyRoomLocked,emyFloorMap,emyFloorList}=await import('../src/lab/emy-abilities.js');
  const {installNoiseProps,grabNoiseProp,holdNoiseProp,releaseNoiseProp,stepNoiseProps}=await import('../src/lab/noise-props.js');
@@ -203,12 +203,35 @@ const assert=require('node:assert/strict');
  assert(sendEmyDistract(closeCat,closeWorld,closeGoal));
  let rings=0,finished=false;
  for(let i=0;i<1650;i++){
-  const cue=updateEmyCompanion(closeCat,1/60,{world:closeWorld,player:{x:5.1,y:0,z:10.65}});
+  const cue=updateEmyCompanion(closeCat,1/60,{world:closeWorld,player:{x:5.1,y:0,z:10.65},distractCooldown:35});
   if(cue==='distract-noise')rings++;
   if(cue==='distract-done'){finished=true;break;}
  }
  assert(finished&&rings>=13,'Emy must distract for roughly 25 s and return to follow');
  assert.equal(closeCat.stage,'following');
+ const {distractionEscapePoint}=await import('../src/lab/emy-companion.js');
+ const chaseWorld=createHouse(),chaseCat=createEmyCompanion(chaseWorld.emy,{waiting:false});
+ Object.assign(chaseCat.cat,{x:5.9,y:0,z:8.1,yaw:0});
+ const foeCat=new Pursuer(chaseWorld);foeCat.start();Object.assign(foeCat,{x:5.9,y:0,z:9.2,mode:'noise-investigate',noiseSource:'emy',noiseRemaining:8});
+ const lure={goal:{x:5.9,y:0,z:8.1},remaining:25,arrived:true,nextNoise:0,orbitSide:1};
+ assert(distractionEscapePoint(chaseWorld,chaseCat.cat,lure,foeCat,{x:2,y:HEIGHT,z:2}),'Real collision-safe escape near enemy');
+ chaseCat.stage='distract';chaseCat.distraction=lure;
+ let travelled=0,minGap=Infinity;
+ for(let i=0;i<180;i++){
+  const previous={x:chaseCat.cat.x,z:chaseCat.cat.z};
+  const cue=updateEmyCompanion(chaseCat,1/60,{world:chaseWorld,player:{x:2,y:HEIGHT,z:2,hidden:true},threat:foeCat});
+  if(cue==='distract-noise')foeCat.hearNoise(chaseCat.cat,1.5,'emy');
+  foeCat.trackEmyDistraction(chaseCat.cat);
+  foeCat.update(1/60,{x:2,y:HEIGHT,z:2,hidden:true});
+  travelled+=Math.hypot(chaseCat.cat.x-previous.x,chaseCat.cat.z-previous.z);
+  minGap=Math.min(minGap,Math.hypot(foeCat.x-chaseCat.cat.x,foeCat.z-chaseCat.cat.z));
+  assert(!blocked(chaseWorld.boxes,chaseCat.cat.x,chaseCat.cat.y,chaseCat.cat.z,.14,.62),'Avoid wall during evasive motion');
+ }
+ assert(travelled>.6,'Emy visibly evades rather than staying fixed');
+ assert(minGap>.45,'Pursuer never stands directly on Emy: '+minGap);
+ console.log('Distraction QA: movement '+travelled.toFixed(2)+' m; minimum separation '+minGap.toFixed(2)+' m');
+ foeCat.endEmyDistraction();assert.notEqual(foeCat.mode,'noise-investigate');
+ console.log('PASS Emy local pursuit: actual evasive movement, collision checks, and independent cooldown');
  // A thrown object near Emy triggers an actual collision-safe animated sidestep,
  // rather than instantly moving or replacing the cat model.
  const dodgeWorld=createHouse(),dodgeCat=createEmyCompanion(dodgeWorld.emy,{waiting:false});
@@ -228,7 +251,69 @@ const assert=require('node:assert/strict');
  const {poseEmyLastChance,poseEscapeAmbush}=await import('../src/lab/emy-rescue.js');
  const finaleWorld=createHouse(),rescueCat=finaleWorld.emy;
  const foe={x:6.15,y:0,z:12.38,yaw:Math.PI,mode:'chase',speed:1.4,active:true};
+ const {planEmyRescueShot,sampleEmergencyRescue,sampleRescuedKitty,EMY_RESCUE_BEATS,scoreRescueCamera}=await import('../src/lab/emy-emergency-shot.js');
+ const {createPose}=await import('../src/lab/character-rig.js');
  const shot={elapsed:.20,kitty:{x:5.65,y:0,z:12.8,yaw:Math.PI},attacker:{...foe}};
+ shot.stage=planEmyRescueShot(finaleWorld,shot.kitty,shot.attacker,{x:5.65,y:1.63,z:12.8,yaw:Math.PI,pitch:0});
+ let prior;
+ for(let i=0;i<=395;i++){
+  const t=i/100,p=sampleEmergencyRescue(t,shot.stage),rig=sampleRescuedKitty(t,createPose());
+  assert([...rig].every(Number.isFinite));
+  assert([p.cat.x,p.cat.y,p.cat.z,p.foe.x,p.foe.y,p.foe.z,p.kitty.x,p.kitty.y,p.kitty.z].every(Number.isFinite));
+  assert(p.cat.y>=shot.kitty.y-.001);
+  if(prior)assert(Math.hypot(p.cat.x-prior.cat.x,p.cat.y-prior.cat.y,p.cat.z-prior.cat.z)<.10,'No discontinuous leap');
+  prior=p;
+ }
+ assert.equal(sampleEmergencyRescue(0,shot.stage).foe.grip,0);
+ assert(sampleEmergencyRescue(1,shot.stage).foe.grip>.95);
+ assert.equal(sampleEmergencyRescue(2.3,shot.stage).foe.grip,0);
+ // The independent forearm mesh must attach to the transformed elbow,
+ // even at maximum grip and recoil. Recoil needs actual staggered footwork.
+ let lifted=false,asymmetric=false;
+ for(let i=0;i<=395;i++){
+  const p=sampleEmergencyRescue(i/100,shot.stage).foe;
+  const rig=pursuerPose({...foe,walk:0,speed:0,turnRate:0,age:0,mode:i/100>=EMY_RESCUE_BEATS.impact?'stunned':'chase',stunned:2*p.hit,rescueGrip:p.grip,rescueImpact:p.hit,rescueSide:shot.stage.side,rescueStep:p.step,rescueDistance:p.retreatDistance},true);
+  for(const side of [-1,1]){
+   const a=rig['arm'+side],f=rig['forearm'+side],d=.30;
+   assert(Math.abs(f.x-((a.x||0)+d*Math.sin(a.roll||0)))<1e-6,'Elbow lateral attachment');
+   assert(Math.abs(f.y-((a.y||0)+d*(1-Math.cos(a.roll||0)*Math.cos(a.pitch))))<1e-6,'Elbow vertical attachment');
+   assert(Math.abs(f.z-((a.z||0)-d*Math.cos(a.roll||0)*Math.sin(a.pitch)))<1e-6,'Elbow forward attachment');
+   lifted ||= rig['foot'+side].y>.035;
+  }
+  asymmetric ||= Math.abs(rig['foot-1'].z-rig.foot1.z)>.06;
+ }
+ assert(lifted&&asymmetric,'Recoil is a staggered step, not a root slide');
+ assert(!shot.stage.compact,'Exterior stage must remain visible');
+ const landed=sampleEmergencyRescue(2.34,shot.stage).cat,protectedCat=sampleEmergencyRescue(3.12,shot.stage).cat;
+ assert.equal(landed.y,shot.kitty.y);assert.equal(protectedCat.y,shot.kitty.y);
+ assert.equal(sampleEmergencyRescue(2.34,shot.stage).cat.airborne,false);
+ assert(Math.hypot(protectedCat.x-shot.stage.safe.x,protectedCat.z-shot.stage.safe.z)<=Math.hypot(landed.x-shot.stage.safe.x,landed.z-shot.stage.safe.z)+1e-6,'Protective step moves toward Kitty');
+ assert(Math.hypot(protectedCat.x-shot.stage.safe.x,protectedCat.z-shot.stage.safe.z)>=.38,'Emy does not overlap Kitty');
+ // Regression: a large foreground Kitty head must lose to a clean angle.
+ const synthetic={cat:{x:0,y:0,z:0},kitty:{x:0,y:0,z:-.55},foe:{x:.7,y:0,z:0}};
+ const clean=scoreRescueCamera({boxes:[]},{x:1.8,y:1.65,z:0},Array(5).fill(synthetic),true);
+ const obscured=scoreRescueCamera({boxes:[]},{x:0,y:1.65,z:-1.25},Array(5).fill(synthetic),true);
+ assert(clean.penalty<obscured.penalty&&obscured.hiddenCritical===2,'Camera selection accounts for Kitty occluding Emy');
+ const stages={wide:0,tight:0,closeup:0,occluded:0};
+ const fixturePoints=[[5.65,0,12.8],[5.9,0,8.1],[9.75,0,3.34],[3.3,0,3.6],[5.74,HEIGHT,2.4],[2.39,HEIGHT,3.85],[6.9,HEIGHT,10.4],[9,HEIGHT,3.6]];
+ for(const [x,y,z] of fixturePoints){
+  if(blocked(finaleWorld.boxes,x,y,z,.19,1.65)||Math.abs(groundHeight(x,z,y)-y)>.12)continue;
+  for(const angle of [0,Math.PI/2,Math.PI,-Math.PI/2]){
+   const k={x,y,z,yaw:angle},enemy={x:x+.78*Math.sin(angle),y,z:z+.78*Math.cos(angle),yaw:angle+Math.PI};
+   const stage=planEmyRescueShot(finaleWorld,k,enemy,{x,y:y+1.63,z,yaw:angle,pitch:0});
+   stages[stage.kind]++;
+   if(stage.compact){assert.equal(stage.viewMode,'occluded');continue;}
+   for(let frame=0;frame<=198;frame++){
+    const p=sampleEmergencyRescue(frame/50,stage);
+    assert(!blocked(finaleWorld.boxes,p.cat.x,p.cat.y,p.cat.z,.13,.38),'Rescue cat must avoid solid geometry: '+JSON.stringify({kind:stage.kind,p:p.cat}));
+    assert(!blocked(finaleWorld.boxes,p.foe.x,p.foe.y,p.foe.z,.16,1.70),'Rescue actor must avoid walls');
+    assert(!blocked(finaleWorld.boxes,p.kitty.x,p.kitty.y,p.kitty.z,.18,1.63),'Kitty recovery must avoid walls');
+   }
+  }
+ }
+ assert(stages.wide+stages.tight+stages.closeup>0,'At least one real visible stage required');
+ console.log('PASS actual house rescue paths: '+JSON.stringify(stages));
+
  rescueCat.hidden=true;
  for(const {box} of rescueCat.parts)box.hiddenGeometry=true;
  assert(!poseEmyLastChance(shot,rescueCat,foe,true),'Emy stays hidden during the first threat beat');

@@ -8,7 +8,10 @@ export function checkpointLives(value){
  return Number.isInteger(value)&&value>=1&&value<=STARTING_LIVES?value:STARTING_LIVES;
 }
 
-export function captureLoss(current,safe,witnessed,emyRescueUsed=false){
+export function captureLoss(current,safe,witnessed,emyRescueUsed=false,easy=false){
+ // Easy is opt-in: every capture replays Emy's rescue without consuming a
+ // heart or the normal mode's one-time last chance. Resume the safe state.
+ if(easy&&safe){const lives=checkpointLives(current),checkpoint={...safe,lives,emyRescueUsed};if(witnessed&&checkpoint.hide===witnessed)delete checkpoint.hide;return {lives,checkpoint,emyRescue:true,emyRescueUsed,ending:null,easy:true};}
  const lives=Math.max(0,checkpointLives(current)-1);
  const bonus=!!safe&&lives===0&&!emyRescueUsed;
  const next=bonus?1:lives;

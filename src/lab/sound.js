@@ -230,6 +230,25 @@ export class HouseSound {
   if(!this.pianoVoice||clock?.offset!==offset||this.context.currentTime<clock.startedAt)return null;
   return Math.min(clock.end,clock.offset+this.context.currentTime-clock.startedAt);
  }
+ safeKeypad(kind,digit=0,isCurrent=()=>true){
+  const ctx=this.context;if(!ctx||this.settings.muted||!this.channels?.objects)return;
+  const notes=kind==='success'?[[660,0,.085],[880,.11,.10],[1180,.23,.17]]:
+   kind==='error'?[[175,0,.12],[135,.16,.17]]:
+   kind==='erase'?[[330,0,.052]]:[[620+Math.max(0,Math.min(9,digit))*38,0,.052]];
+  const strike=()=>{
+   if(this.context!==ctx||ctx.state!=='running'||this.settings.muted||!isCurrent())return;
+   this.lastSafeKeypad=kind;
+   for(const [frequency,offset,length] of notes){
+    const osc=ctx.createOscillator(),gain=ctx.createGain(),at=ctx.currentTime+offset;
+    osc.type=kind==='error'?'triangle':'sine';osc.frequency.value=frequency;
+    gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(.14,at+.007);
+    gain.gain.exponentialRampToValueAtTime(.0001,at+length);osc.connect(gain);gain.connect(this.channels.objects);
+    this.sequenceNodes.add(osc);osc.onended=()=>{this.sequenceNodes.delete(osc);osc.disconnect();gain.disconnect();};
+    osc.start(at);osc.stop(at+length+.01);
+   }
+  };
+  if(ctx.state==='running')strike();else void ctx.resume().then(strike).catch(()=>{});
+ }
  resumePiano(){if(this.context&&!this.settings.muted)void this.context.resume().catch(()=>{});}
  pianoReveal(stage){
   const ctx=this.context;

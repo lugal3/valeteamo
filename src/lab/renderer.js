@@ -804,10 +804,11 @@ export class HouseRenderer {
   }
  }
  drawActor(subject,motion){
-  const equipment=motion.actorWalk||motion.actorPiano?'empty':motion.equipment||'flashlight',gl=this.gl;
+  const equipment=motion.actorWalk||motion.actorPiano||motion.actorPose?'empty':motion.equipment||'flashlight',gl=this.gl;
   if(this.actorEquipment!==equipment){this.actorEquipment=equipment;this.actorMesh=geometry(kittyMirrorPieces(equipment));this.actorVertices=new Float32Array(this.actorMesh.vertices.length);this.actorBinding=createRigBinding(this.actorMesh.groups);}
   const animator=motion.animator;
-  if(motion.actorPiano){
+  if(motion.actorPose){evaluateRig(this.actorBinding,motion.actorPose);}
+  else if(motion.actorPiano){
    const {instrument,hands}=motion.actorPiano;
    this.actorPose??=createPose();
    evaluateRig(this.actorBinding,samplePianoPose(instrument,hands,this.actorPose));
@@ -818,7 +819,7 @@ export class HouseRenderer {
   const blink=sampleBlink(motion.actorTime??animator?.time??0,{
    reduced:animator?.reduced??motion.reduced,firstAt:motion.actorTime===undefined?undefined:.25
   });
-  poseReflectedKitty(this.actorMesh.vertices,this.actorVertices,subject,{feetY:motion.actorPiano?.instrument.floor??motion.feetY,blink},animator?this.actorBinding:null);reflectMesh(this.actorVertices);
+  poseReflectedKitty(this.actorMesh.vertices,this.actorVertices,subject,{feetY:motion.actorPiano?.instrument.floor??motion.feetY,blink},(animator||motion.actorPose||motion.actorWalk||motion.actorPiano)?this.actorBinding:null);reflectMesh(this.actorVertices);
   gl.bindBuffer(gl.ARRAY_BUFFER,this.handVbo);gl.bufferData(gl.ARRAY_BUFFER,this.actorVertices,gl.DYNAMIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.handIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,this.actorMesh.indices,gl.STATIC_DRAW);this.handIndexKind='actor';this.bind(this.handVbo,this.handIbo);gl.drawElements(gl.TRIANGLES,this.actorMesh.indices.length,gl.UNSIGNED_SHORT,0);
  }
  preparePursuerMesh(name){
