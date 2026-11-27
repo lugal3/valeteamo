@@ -216,16 +216,19 @@ const assert=require('node:assert/strict');
  const lure={goal:{x:5.9,y:0,z:8.1},remaining:25,arrived:true,nextNoise:0,orbitSide:1};
  assert(distractionEscapePoint(chaseWorld,chaseCat.cat,lure,foeCat,{x:2,y:HEIGHT,z:2}),'Real collision-safe escape near enemy');
  chaseCat.stage='distract';chaseCat.distraction=lure;
- let travelled=0;
+ let travelled=0,minGap=Infinity;
  for(let i=0;i<180;i++){
   const previous={x:chaseCat.cat.x,z:chaseCat.cat.z};
   updateEmyCompanion(chaseCat,1/60,{world:chaseWorld,player:{x:2,y:HEIGHT,z:2,hidden:true},threat:foeCat});
   foeCat.trackEmyDistraction(chaseCat.cat);
   foeCat.update(1/60,{x:2,y:HEIGHT,z:2,hidden:true});
   travelled+=Math.hypot(chaseCat.cat.x-previous.x,chaseCat.cat.z-previous.z);
+  minGap=Math.min(minGap,Math.hypot(foeCat.x-chaseCat.cat.x,foeCat.z-chaseCat.cat.z));
   assert(!blocked(chaseWorld.boxes,chaseCat.cat.x,chaseCat.cat.y,chaseCat.cat.z,.14,.62),'Avoid wall during evasive motion');
  }
  assert(travelled>.6,'Emy visibly evades rather than staying fixed');
+ assert(minGap>.45,'Pursuer never stands directly on Emy: '+minGap);
+ console.log('Distraction QA: movement '+travelled.toFixed(2)+' m; minimum separation '+minGap.toFixed(2)+' m');
  foeCat.endEmyDistraction();assert.notEqual(foeCat.mode,'noise-investigate');
  console.log('PASS Emy local pursuit: actual evasive movement, collision checks, and independent cooldown');
  // A thrown object near Emy triggers an actual collision-safe animated sidestep,

@@ -113,6 +113,7 @@ export function sendEmyToTrunk(companion){
  // A shared closet animation may have temporarily moved the model inside
  // a closed prop. Resume at its recorded walkable entrance, not its camera.
  if(companion.stage==='closet-entry'&&companion.closetEntry)Object.assign(companion.cat,{x:companion.closetEntry.x,z:companion.closetEntry.z});
+ if(companion.sharedBed){Object.assign(companion.cat,companion.sharedBed.from);companion.sharedBed=null;}
  companion.stage='trunk-run';clearNavigation(companion);companion.distraction=null;companion.refuge=null;companion.hiddenAt=null;companion.closetEntry=null;companion.altarWait=false;
  companion.cat.reaction=0;
  setVisibility(companion,false);
@@ -330,11 +331,13 @@ function moveToward(companion,world,goal,dt,speed){
 export function distractionEscapePoint(world,cat,job,threat,player){
  const center=job.goal,angle=Math.atan2(cat.x-center.x,cat.z-center.z);
  const room=roomAt(center.x,center.z,center.y),danger=distance(cat,threat);
+ const boxes=world.boxes.filter(b=>b.solid&&Math.abs(b.y-cat.y)<b.h/2+1.2&&distance(b,cat)<4+Math.hypot(b.w,b.d)/2);
+ const localWorld={...world,boxes};
  let best=null,score=-Infinity;
  for(const radius of [.85,1.25,1.65])for(const offset of [Math.PI/3,-Math.PI/3,Math.PI/2,-Math.PI/2,Math.PI,0]){
   const a=angle+offset,x=center.x+Math.sin(a)*radius,z=center.z+Math.cos(a)*radius;
   const y=emyGroundHeight(x,z,cat.y,world.hatch?.amount>.92),p={x,y,z};
-  if(!Number.isFinite(y)||Math.abs(y-cat.y)>.12||roomAt(x,z,y)!==room||room==='Sala de música'||distance(p,cat)<.35||!clearPassage(world,cat,p))continue;
+  if(!Number.isFinite(y)||Math.abs(y-cat.y)>.12||roomAt(x,z,y)!==room||room==='Sala de música'||distance(p,cat)<.35||!clearPassage(localWorld,cat,p))continue;
   const gap=distance(p,threat);
   if(gap<Math.max(.75,danger-.08))continue;
   if(player&&Math.abs(player.y-y)<.5&&distance(p,player)<Math.min(2,distance(cat,player)))continue;

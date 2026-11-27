@@ -1088,8 +1088,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(mapReadOnly&&!['emy:map:back'].includes(act)&&!act.startsWith('emy:view:')&&!act.startsWith('emy:floor:'))return;
    if(act==='emy:stay'){
      const staying=['stay','distract','distract-recover'].includes(emyCompanion?.stage);
+     const wasDistracting=emyCompanion?.stage==='distract';
      const ok=staying?rejoinEmyInPerson(emyCompanion,world,s):commandEmyStay(emyCompanion);
      if(!ok){say('Acércate a Emy para cambiar su orden.');return;}
+     if(wasDistracting)pursuer.endEmyDistraction();
      closeEmyMenu();
      say(staying?'Emy vuelve a seguir a Kitty.':'Emy se quedará aquí hasta que le indiques que te siga.',3);
      resetInput();return;
@@ -1822,7 +1824,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     }
     if(emyCompanion.stage==='distract'&&emyCompanion.distraction?.arrived)pursuer.trackEmyDistraction(world.emy);
     if(cue==='distract-done'){pursuer.endEmyDistraction();say(s.hidden||enteringHide?'Emy terminó y se mantiene a cubierto.':'Emy vuelve contigo.',4);}
-    if(cue==='distract-failed'){emyAbilities.distractCooldown=0;say('Emy no logró llegar. Puedes intentarlo de nuevo.',4);}
+    if(cue==='distract-failed'){pursuer.endEmyDistraction();emyAbilities.distractCooldown=0;say('Emy no logró llegar. Puedes intentarlo de nuevo.',4);}
     if(cue==='delivered'){
      world.objects.find(o=>o.id==='key').taken=true;
      puzzle={...puzzle,key:true};s.inventory.key=true;equip('key',false,true);handAction=1;

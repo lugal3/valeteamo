@@ -17,7 +17,7 @@ const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 export class Pursuer{
  constructor(world,navigationProfile=null){this.world=world;this.navigationProfile=navigationProfile;this.difficulty=difficultyProfile('normal',false);this.reset();}
  setDifficulty(profile){this.difficulty=profile||difficultyProfile('normal',false);}
- reset(){this.captureGrace=0;this.doorReach=0;this.doorWait=0;this.failedPlans=0;this.turnRate=0;this.breakerDelay=15;this.breakerGoal=null;this.intruderSeen=false;this.x=5.8;this.y=0;this.z=11;this.yaw=this.facing=Math.PI;this.mode='dormant';this.awareness=0;this.lost=10;this.witnessed=null;this.lastSeen=null;this.path=[];this.route=0;this.visited=0;this.replan=0;this.walk=this.speed=this.age=this.bedTime=0;this.stepDistance=0;this.caught=false;this.stuck=0;this.task=null;this.modeTime=0;this.quiet=false;this.noiseGoal=null;this.noiseSource=null;this.noiseRemaining=0;this.stunned=0;this.trailPoints=[];this.trailIndex=0;this.trailRemaining=0;this.searchPause=0;}
+ reset(){this.captureGrace=0;this.doorReach=0;this.doorWait=0;this.failedPlans=0;this.turnRate=0;this.breakerDelay=15;this.breakerGoal=null;this.intruderSeen=false;this.x=5.8;this.y=0;this.z=11;this.yaw=this.facing=Math.PI;this.mode='dormant';this.awareness=0;this.lost=10;this.witnessed=null;this.lastSeen=null;this.path=[];this.route=0;this.visited=0;this.replan=0;this.walk=this.speed=this.age=this.bedTime=0;this.stepDistance=0;this.caught=false;this.stuck=0;this.task=null;this.modeTime=0;this.quiet=false;this.noiseGoal=null;this.noiseSource=null;this.emyLure=null;this.emyTrackAt=0;this.noiseRemaining=0;this.stunned=0;this.trailPoints=[];this.trailIndex=0;this.trailRemaining=0;this.searchPause=0;}
  get active(){return this.mode!=='dormant';}
  hearNoise(position,intensity=1,sourceKind=null){
   if(!this.active||['dormant','sleeping','lying-down','rising','to-bed','to-entry','trapped','stunned','rc-chase'].includes(this.mode))return false;
@@ -31,6 +31,7 @@ export class Pursuer{
   if(!canHearNoise(origin,source,intensity,lineBlocked(this.world.boxes,origin,source)))return false;
   const changed=this.mode!=='noise-investigate'||!this.noiseGoal||dist(this.noiseGoal,position)>.6;
   this.noiseSource=sourceKind;
+  if(sourceKind!=='emy')this.emyLure=null;
   this.noiseGoal={x:position.x,y:position.y,z:position.z};
   this.noiseRemaining=Math.max(this.noiseRemaining,Math.min(9,3+intensity*2.5));
   if(changed){
@@ -44,14 +45,18 @@ export class Pursuer{
  trackEmyDistraction(cat){
   if(this.mode!=='noise-investigate'||this.noiseSource!=='emy'||!cat||cat.hidden||Math.abs(cat.y-this.y)>.5)return false;
   const gap=dist(this,cat);
-  if(gap>3.5||lineBlocked(this.world.boxes,{x:this.x,y:this.y+1.25,z:this.z},{x:cat.x,y:cat.y+.35,z:cat.z}))return false;
+  if(gap>3.5){this.emyLure=null;return false;}
+  this.emyLure=cat;
+  if(gap>.95&&lineBlocked(this.world.boxes,{x:this.x,y:this.y+1.25,z:this.z},{x:cat.x,y:cat.y+.35,z:cat.z}))return false;
   if(gap<=.95){this.path=[];this.noiseGoal={x:this.x,y:this.y,z:this.z};this.goal={...this.noiseGoal};this.replan=.3;this.yaw=Math.atan2(cat.x-this.x,cat.z-this.z);return true;}
   const ratio=1-.80/gap;
   const goal={x:this.x+(cat.x-this.x)*ratio,y:cat.y,z:this.z+(cat.z-this.z)*ratio};
-  if(!this.noiseGoal||dist(goal,this.noiseGoal)>.38){this.noiseGoal=goal;this.replan=0;this.path=[];}
+  if(this.age>=this.emyTrackAt&&(!this.noiseGoal||dist(goal,this.noiseGoal)>.38)){
+   this.noiseGoal=goal;this.replan=0;this.path=[];this.emyTrackAt=this.age+.36;
+  }
   this.yaw=Math.atan2(cat.x-this.x,cat.z-this.z);return true;
  }
- endEmyDistraction(){if(this.mode==='noise-investigate'&&this.noiseSource==='emy')this.cooldown();this.noiseSource=null;}
+ endEmyDistraction(){if(this.mode==='noise-investigate'&&this.noiseSource==='emy')this.cooldown();this.noiseSource=null;this.emyLure=null;}
  stun(seconds=2){
   if(!this.active||this.mode==='trapped')return false;
   this.stunned=Math.max(.5,Math.min(3,seconds*this.difficulty.stun/2));this.mode='stunned';this.path=[];this.speed=0;this.noiseGoal=null;this.noiseRemaining=0;
@@ -81,7 +86,7 @@ export class Pursuer{
   this.replan=0;this.path=[];this.task=null;
   return true;
  }
- cooldown(){this.clearSight();this.mode='cooldown';this.modeTime=this.difficulty.cooldown;this.replan=0;this.noiseGoal=null;this.noiseRemaining=0;}
+ cooldown(){this.clearSight();this.mode='cooldown';this.modeTime=this.difficulty.cooldown;this.replan=0;this.noiseGoal=null;this.noiseSource=null;this.emyLure=null;this.noiseRemaining=0;}
  settleUpstairs(){this.quiet=true;this.task=null;this.route=3;this.cooldown();}
  checkpoint(){
   return {x:this.x,y:this.y,z:this.z,facing:this.facing,route:this.route,visited:this.visited,
@@ -293,6 +298,9 @@ export class Pursuer{
   }
   if(this.doorWait>0){this.age+=dt;this.speed*=Math.exp(-10*dt);if(Number.isFinite(this.doorYaw)){const turn=Math.atan2(Math.sin(this.doorYaw-this.facing),Math.cos(this.doorYaw-this.facing));this.facing+=turn*(1-Math.exp(-10*dt));}return cues;}
   let moved=0;
+  if(this.mode==='noise-investigate'&&this.noiseSource==='emy'&&this.emyLure&&dist(this,this.emyLure)<.95){
+   this.path=[];this.yaw=Math.atan2(this.emyLure.x-this.x,this.emyLure.z-this.z);
+  }
   const next=this.path[0];if(next){const dx=next.x-this.x,dz=next.z-this.z,d=Math.hypot(dx,dz);if(d<.07){this.path.shift();}else{
    this.yaw=Math.atan2(dx,dz);const pace=this.mode==='rc-chase'?2.15:this.mode==='noise-investigate'&&this.noiseSource==='emy'?Math.max(1.55,this.difficulty.patrol):this.mode==='chase'?this.difficulty.chase:this.difficulty.patrol;
    const step=Math.min(d,dt*pace);moved=navigate(this,this.world,dx/d*step,dz/d*step,1.72);this.walk+=moved;this.stepDistance+=moved;this.stuck=moved<.003?this.stuck+dt:0;
