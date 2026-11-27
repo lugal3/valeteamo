@@ -67,17 +67,26 @@ export function installRescueIntroArt(scene:Phaser.Scene){
   sprite(talking?valeTalkTexture(frame):valeTexture(walking,frame),43,58,b=>{
    const ink='#25252d',hair='#202126',shine='#37383d',skin='#e9b48f',light='#fbd4af',top='#b93d51';
    const bob=frame===1||frame===3?1:0,step=walking?[2,0,-2,0][frame]:0;
+   const cluster=(x:number,y:number,rows:readonly (readonly [number,number])[],color:string)=>rows.forEach(([offset,width],i)=>b(x+offset,y+i,width,1,color));
    // Long hair behind the shoulders, with rounded ends.
    b(7,12+bob,29,32,ink);b(4,25+bob,35,14,ink);
    b(5,33+bob,14,13,hair);b(25,32+bob,13,14,hair);
    b(7,15+bob,29,27,hair);b(8,43+bob,8,4,hair);b(28,43+bob,7,4,hair);
-   b(7,28+bob,2,12,shine);b(34,27+bob,2,11,shine);
+   // Curled locks framing the shoulders, wider and darker than the torso.
+   cluster(3,27+bob,[[3,7],[1,9],[0,10],[0,11],[0,12],[0,12],[1,12],[1,11],[0,12],[0,11],[1,10],[2,8],[3,5],[4,3]],ink);
+   cluster(29,26+bob,[[1,7],[2,9],[2,10],[2,11],[2,11],[1,12],[1,12],[1,11],[2,11],[3,10],[2,9],[2,8],[1,7],[1,5],[2,3]],ink);
+   cluster(5,26+bob,[[3,5],[2,6],[1,7],[1,7],[0,8],[0,8],[1,7],[2,6],[2,6],[1,7],[1,7],[2,5],[3,4]],'#303035');
+   cluster(31,27+bob,[[0,5],[1,6],[2,6],[2,6],[2,7],[1,7],[0,7],[0,6],[1,6],[2,5],[2,4],[1,3]],'#303035');
+   cluster(6,30+bob,[[0,2],[0,2],[1,2],[1,2],[2,2],[2,2],[1,2],[0,2],[0,2]],shine);
+   cluster(34,28+bob,[[0,2],[1,2],[2,2],[2,2],[2,2],[1,2],[0,2],[0,2]],shine);
    // Dark pants and little black shoes, feet stay inside the existing frame.
    b(12,43+step,8,11,ink);b(23,43-step,8,11,ink);
    b(13,44+step,6,7,'#30333a');b(24,44-step,6,7,'#30333a');
    b(11,51+step,10,3,'#1c2026');b(23,51-step,10,3,'#1c2026');
    b(13,31+bob,18,15,ink);b(15,32+bob,14,12,top);
    b(15,41+bob,14,3,'#8f2e43');
+   cluster(15,34+bob,[[1,8],[0,10],[0,11],[0,7],[1,3]],'#d55464');
+   b(27,36+bob,1,5,'#a83249');
    b(18,29+bob,7,5,skin);b(18,33+bob,7,1,'#782a3b');
    b(9,32+bob,5,12,ink);b(29,32+bob,5,12,ink);
    b(10,33+bob,3,10,skin);b(30,33+bob,3,10,skin);
@@ -88,18 +97,25 @@ export function installRescueIntroArt(scene:Phaser.Scene){
    b(9,13+bob,25,15,skin);b(11,16+bob,22,12,light);
    b(13,27+bob,18,3,light);b(17,30+bob,10,1,skin);
    const blink=frame===2&&!walking&&!talking;
-   b(14,19+bob,5,blink?1:6,ink);b(25,19+bob,5,blink?1:6,ink);
+   b(13,19+bob,6,blink?1:6,ink);b(25,19+bob,6,blink?1:6,ink);
+   if(!blink){b(14,23+bob,4,2,'#57413f');b(26,23+bob,4,2,'#57413f');}
    if(!blink){b(15,19+bob,2,2,'#fff8ef');b(26,19+bob,2,2,'#fff8ef');}
-   b(12,25+bob,4,2,'#efa0a0');b(29,25+bob,3,2,'#efa0a0');
+   cluster(10,25+bob,[[2,4],[1,5],[2,3]],'#e7a09b');cluster(28,25+bob,[[1,4],[0,5],[1,3]],'#e7a09b');
    b(19,26+bob,6,1,'#925c62');b(20,27+bob,4,1,'#925c62');
    if(talking&&frame>0){b(19,26+bob,6,frame===1?2:3,'#824b58');b(21,27+bob,2,1,'#e7a4a1');}
    // Black fringe, no bow or hair accessory in the supplied reference.
    b(10,4+bob,25,10,hair);b(6,8+bob,32,10,hair);
    b(5,12+bob,5,11,hair);b(35,12+bob,4,12,hair);
-   b(14,3+bob,16,3,hair);b(14,6+bob,11,2,shine);
+   b(14,3+bob,16,3,hair);
+   cluster(9,5+bob,[[5,12],[3,15],[1,12],[0,8],[0,6],[1,4]],'#303035');
+   cluster(18,5+bob,[[3,9],[1,11],[0,9],[0,6],[1,4],[2,3]],shine);
+   cluster(29,8+bob,[[0,5],[1,5],[2,5],[3,4],[4,3]],'#303035');
+   cluster(13,6+bob,[[2,5],[0,5],[0,3]],'#454345');
    b(8,14+bob,5,9,hair);b(14,13+bob,4,7,hair);
    b(20,13+bob,4,7,hair);b(27,13+bob,5,8,hair);
    b(17,18+bob,2,3,hair);b(23,17+bob,2,3,hair);
+   cluster(14,13+bob,[[0,3],[0,3],[1,3],[1,2]],'#2c2b30');
+   cluster(26,12+bob,[[0,4],[0,4],[1,3],[1,2]],'#303035');
    // White soles from the reference card, existing feet anchors.
    b(12,53+step,8,1,'#ddd6d0');b(24,53-step,8,1,'#ddd6d0');
   });

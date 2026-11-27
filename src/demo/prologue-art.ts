@@ -61,6 +61,9 @@ export function paintLuisChibi(
  const b=(x:number,y:number,w:number,h:number,color:string)=>{
   c.fillStyle=color;c.fillRect(Math.round(x),Math.round(y),w,h);
  };
+ const cluster=(x:number,y:number,rows:readonly (readonly [number,number])[],color:string)=>{
+  rows.forEach(([offset,width],i)=>b(x+offset,y+i,width,1,color));
+ };
  // Feet: two shoes always grounded at y=61, including moving frames.
  b(12+gait,53,11,8,INK);b(25-gait,53,11,8,INK);
  b(14+gait,52,8,6,p.pants);b(27-gait,52,8,6,p.pants);
@@ -71,6 +74,8 @@ export function paintLuisChibi(
  const bodyY=35+bob;
  b(14,bodyY,21,19,INK);
  b(16,bodyY+2,17,16,p.top);
+ cluster(16,bodyY+5,[[1,10],[0,13],[0,14],[0,9],[0,5]],'#75a756');
+ b(30,bodyY+8,2,7,'#527e40');
  b(15,bodyY+11,19,5,p.topShade);
  b(16,bodyY+17,18,2,'#222a3d');
  if(pose==='idle'&&frameIndex===1)b(16,bodyY+5,2,4,'#7dac58');
@@ -116,6 +121,8 @@ export function paintLuisChibi(
  b(13,hy+27,25,5,p.skin);
  b(14,hy+8,23,24,p.skin);
  b(13,hy+17,25,11,p.skinLight);
+ cluster(10,hy+25,[[0,3],[1,4],[2,5],[4,5],[6,7]],'#efbd9a');
+ cluster(33,hy+25,[[3,4],[2,4],[0,5],[-2,5],[-4,5]],'#efbd9a');
  b(16,hy+28,18,3,p.skinLight);
  b(18,hy+31,14,1,p.skinShade);
  // Visible ears and small piercings distinguish his side/front views.
@@ -147,11 +154,12 @@ export function paintLuisChibi(
     b(17,hy+21,6,2,p.eye);b(30,hy+21,6,2,p.eye);
    }else{
     b(18,hy+18,5,7,p.eye);b(30,hy+18,5,7,p.eye);
+   b(18,hy+23,4,2,'#69504a');b(30,hy+23,4,2,'#69504a');
     b(20,hy+19,1,2,'#241f35');b(32,hy+19,1,2,'#241f35');
     b(18,hy+19,2,1,'#fffefd');b(30,hy+19,2,1,'#fffefd');
    }
    // Warm blush, tiny nose, soft expression, clear spectacles.
-   b(13,hy+25,6,2,'#efa0a0');b(33,hy+25,5,2,'#efa0a0');
+   cluster(13,hy+25,[[1,4],[0,5],[2,2]],'#e7a09b');cluster(32,hy+25,[[1,4],[0,5],[2,2]],'#e7a09b');
    b(24,hy+25,2,2,p.skinShade);
    if(mouthOpen){b(22,hy+28,7,frameIndex===2?3:4,'#82495a');b(24,hy+30,3,1,'#edabb0');}
    else{b(22,hy+28,7,1,'#925c62');b(24,hy+29,4,1,'#d18886');}
@@ -175,12 +183,20 @@ export function paintLuisChibi(
  b(10,hy+15,7,8,p.hair);
  b(36,hy+14,5,9,p.hair);
  b(16,hy,19,5,p.hair);
- b(18,hy+2,10,2,p.hairLight);
- b(12,hy+7,7,3,p.hairLight);
- b(25,hy+5,8,2,p.hairLight);
+ // Layered asymmetric locks: dense rounded fringe like the printed card,
+ // subtle near-black warm highlights instead of a single flat gray stripe.
+ cluster(9,hy+5,[[7,12],[4,16],[3,9],[2,7],[1,6],[0,5]],'#303035');
+ cluster(18,hy+3,[[3,10],[1,13],[0,9],[1,7],[3,4]],'#39383a');
+ cluster(29,hy+6,[[1,6],[1,8],[3,7],[4,5],[5,3]],'#303035');
+ cluster(10,hy+9,[[1,7],[0,7],[0,6],[1,4],[2,3]],'#37383d');
+ cluster(19,hy+9,[[0,7],[1,6],[1,5],[2,4],[3,2]],'#2c2b30');
+ cluster(29,hy+10,[[0,7],[0,6],[1,5],[1,4],[2,2]],'#37383d');
+ cluster(14,hy+4,[[1,4],[0,3],[0,2]],'#454345');
  b(17,hy+13,5,7,p.hair);b(24,hy+12,5,8,p.hair);
  b(31,hy+12,5,8,p.hair);
  b(19,hy+17,2,4,p.hair);b(26,hy+18,2,3,p.hair);
+ cluster(16,hy+12,[[0,4],[0,4],[1,4],[1,3],[2,2]],'#2b2a2e');
+ cluster(30,hy+12,[[0,4],[0,4],[0,3],[1,2]],'#2b2a2e');
  b(12,hy+15,4,6,'#222434');
  if(side){
   b(11,hy+9,20,5,p.hair);
@@ -188,7 +204,8 @@ export function paintLuisChibi(
   b(10,hy+16,5,9,p.hair);
  }else if(back){
   b(12,hy+16,27,13,p.hair);
-  b(14,hy+23,22,6,p.hairLight);
+  cluster(13,hy+18,[[2,7],[1,9],[0,10],[0,8],[1,6],[2,5],[3,3]],p.hairLight);
+  cluster(25,hy+17,[[1,8],[0,9],[0,8],[1,7],[2,5],[3,3]],'#303035');
   b(20,hy+27,10,4,p.hair);
   b(13,hy+11,5,17,p.hairLight);
  }
@@ -217,6 +234,7 @@ export function paintStoryLouis(facing:LuisFacing='down',frame=0):HTMLCanvasElem
  const y=23+bob;
  b(8,y,16,11,ink);b(9,y+1,14,9,shirt);
  for(const dy of [3,6,9])b(9,y+dy,14,1,stripe);
+ b(10,y+2,3,1,'#fff6e7');b(10,y+5,3,1,'#fff6e7');b(21,y+1,2,8,'#d4c7c3');
  b(13,y-2,6,4,shadow);b(14,y-2,4,3,skin);
  const swing=walk?[0,2,0,-2][frame-1]:0;
  b(5,y+1+swing,5,8,ink);b(22,y+1-swing,5,8,ink);
@@ -244,7 +262,7 @@ export function paintStoryLouis(facing:LuisFacing='down',frame=0):HTMLCanvasElem
   b(8,h+10,6,1,hair);b(18,h+9,6,1,hair);
   for(const x of [9,18]){
    b(x,h+12,6,4,'#fff0e3');b(x+2,h+12,3,4,blue);
-   b(x+3,h+13,1,2,ink);b(x+2,h+12,1,1,'#ffffff');
+   b(x+3,h+13,1,2,ink);b(x+2,h+12,1,1,'#ffffff');b(x+2,h+15,2,1,'#8dc3de');
    if(frame===5)b(x,h+13,6,2,ink);
   }
   b(15,h+15,2,2,shadow);b(8,h+17,3,1,'#e5a48f');b(22,h+17,3,1,'#e5a48f');
@@ -254,7 +272,12 @@ export function paintStoryLouis(facing:LuisFacing='down',frame=0):HTMLCanvasElem
  // The sweeping fringe descends on the viewer's left, not a bowl cut.
  b(8,h+1,16,4,shade);b(6,h+3,20,5,hair);b(5,h+6,22,4,hair);
  b(11,h,11,3,hair);b(17,h-1,6,3,hair);
- b(9,h+2,10,2,highlight);b(7,h+5,11,2,'#704b37');
+ // Swept, layered hair with tapered warm strands (2012–13 reference).
+ const lock=(x:number,y:number,rows:number[],color:string)=>rows.forEach((width,i)=>b(x+Math.floor(i/2),y+i,width,1,color));
+ lock(10,h+2,[8,12,10,7,4],highlight);
+ lock(7,h+5,[8,10,8,5,3],'#704b37');
+ lock(16,h+3,[9,9,7,5,3],'#a17b5b');
+ lock(8,h+8,[6,5,4,3],'#5b392f');
  b(6,h+8,11,3,hair);b(6,h+10,7,3,shade);b(7,h+12,3,2,hair);
  b(13,h+7,7,2,hair);b(18,h+5,7,2,hair);
  b(24,h+7,3,5,shade);
