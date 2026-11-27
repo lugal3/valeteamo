@@ -12,3 +12,6 @@ Base: V3.6 `a4e1fb5c`. Rama independiente. El arcade original, sprites de Luis, 
 
 ## Fases siguientes
 2. Guion, actuaciones, acompañantes y combate. 3. Investigación, descubrimientos, ecología, HUD y guardados. 4. Cinematografía, audio, handoff y auditoría completa. No fusionar hasta aprobación.
+
+## Alcance actualizado por el usuario (27-11-2026)
+El 2D es un prólogo breve y encantador que prepara un giro sorpresa al 3D, juego principal. Objetivo orientativo 3–5 minutos, sujeto a medición de partida real; sin relleno ni nuevas tareas obligatorias. Los caminos secundarios y futuras interacciones son opcionales. Conservar el flujo y guardados. No modificar ningún componente 3D, ni siquiera para reparar regresiones, sin autorización expresa previa. La referencia fotográfica de la tarjeta autoriza ajustar los sprites 2D de Vale y Luis: cabeza redondeada grande, pelo negro, rojo/verde, gafas Luis y suelas visibles Vale. Mantener dimensiones, anclas, claves de textura y poses existentes; no cambiar Louis ni arcade. Guion compacto revisado, conexión narrativa con teléfono sin modificar el teléfono. Pendiente revisión visual, medición de duración y validación del commit. Auditoría anterior: 2D y compilación correctos; dos fallos de navegador 3D (input y checkpoint), no se modificó 3D ni se presume causa.

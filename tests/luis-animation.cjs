@@ -79,6 +79,23 @@ for(const facing of art.LUIS_FACINGS)
    assert(textures.has(art.luisTextureKey(facing,pose,frame)),
     'each pre-rendered sprite is loaded into the original Phaser texture manager');
 assert.equal(textures.size,47,'45 animation frames + 2 existing portraits; no extra engine');
+// Vale's new artwork must keep the existing runtime keys and frame counts.
+const intro=fs.readFileSync('src/demo/rescue-intro-art.ts','utf8');
+const introCode=ts.transpileModule(intro,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+const introContext={exports:{}};vm.runInNewContext(introCode,introContext);
+const vals=new Map();
+introContext.exports.installRescueIntroArt({textures:{
+ exists:key=>vals.has(key),createCanvas(key,w,h){const pixels=Array.from({length:h},()=>Array(w).fill(''));
+ const ctx={fillStyle:'',fillRect(x,y,ww,hh){for(let yy=Math.max(0,y);yy<Math.min(h,y+hh);yy++)for(let xx=Math.max(0,x);xx<Math.min(w,x+ww);xx++)pixels[yy][xx]=this.fillStyle;}};
+ vals.set(key,{w,h,pixels});return {getContext:()=>ctx,refresh(){}};
+ }}});
+for(const walking of [false,true]){
+ const frames=Array.from({length:4},(_,i)=>vals.get(introContext.exports.valeTexture(walking,i)));
+ assert(frames.every(frame=>frame.w===43&&frame.h===58));
+ assert(new Set(frames.map(signature)).size>=3,'Vale has real animated frames');
+ const palette=new Set(frames[0].pixels.flat());
+ for(const color of ['#202126','#b93d51','#ddd6d0'])assert(palette.has(color),'Vale card hair, red shirt, shoe soles');
+}
 const arcade=fs.readFileSync('src/iso-game.ts','utf8');
 assert(arcade.includes('this.animateStoryLuis();')&&
  arcade.includes("if(this.story.locked())pose='talk'")&&

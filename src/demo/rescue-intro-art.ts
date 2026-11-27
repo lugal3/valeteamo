@@ -66,9 +66,10 @@ export function installRescueIntroArt(scene:Phaser.Scene){
    const ink='#25252d',hair='#202126',shine='#37383d',skin='#e9b48f',light='#fbd4af',top='#b93d51';
    const bob=frame===1||frame===3?1:0,step=walking?[2,0,-2,0][frame]:0;
    // Long hair behind the shoulders, with rounded ends.
-   b(7,13+bob,29,30,ink);b(5,24+bob,33,15,ink);
-   b(8,15+bob,27,27,hair);b(7,36+bob,9,8,hair);b(28,36+bob,8,8,hair);
-   b(8,25+bob,2,12,shine);b(33,24+bob,2,13,shine);
+   b(7,12+bob,29,32,ink);b(4,25+bob,35,14,ink);
+   b(5,33+bob,14,13,hair);b(25,32+bob,13,14,hair);
+   b(7,15+bob,29,27,hair);b(8,43+bob,8,4,hair);b(28,43+bob,7,4,hair);
+   b(7,28+bob,2,12,shine);b(34,27+bob,2,11,shine);
    // Dark pants and little black shoes, feet stay inside the existing frame.
    b(12,43+step,8,11,ink);b(23,43-step,8,11,ink);
    b(13,44+step,6,7,'#30333a');b(24,44-step,6,7,'#30333a');
@@ -80,19 +81,22 @@ export function installRescueIntroArt(scene:Phaser.Scene){
    b(10,33+bob,3,10,skin);b(30,33+bob,3,10,skin);
    b(11,34+bob,2,6,light);b(30,34+bob,2,6,light);
    // Oversized chibi head and big dark eyes.
-   b(10,5+bob,23,26,ink);b(7,10+bob,29,17,ink);
-   b(11,11+bob,21,18,skin);b(13,15+bob,17,13,light);
-   b(16,28+bob,12,2,skin);
+   b(10,5+bob,24,26,ink);b(6,10+bob,31,17,ink);
+   b(9,13+bob,25,15,skin);b(11,16+bob,22,12,light);
+   b(13,27+bob,18,3,light);b(17,30+bob,10,1,skin);
    const blink=frame===2&&!walking;
    b(14,19+bob,5,blink?1:6,ink);b(25,19+bob,5,blink?1:6,ink);
    if(!blink){b(15,19+bob,2,2,'#fff8ef');b(26,19+bob,2,2,'#fff8ef');}
    b(12,25+bob,4,2,'#efa0a0');b(29,25+bob,3,2,'#efa0a0');
    b(19,26+bob,6,1,'#925c62');b(20,27+bob,4,1,'#925c62');
    // Black fringe, no bow or hair accessory in the supplied reference.
-   b(11,4+bob,21,10,hair);b(8,9+bob,27,8,hair);
-   b(14,3+bob,15,3,hair);b(13,6+bob,15,2,shine);
-   b(9,14+bob,5,9,hair);b(14,13+bob,4,6,hair);
-   b(20,13+bob,4,5,hair);b(27,13+bob,5,8,hair);
+   b(10,4+bob,24,10,hair);b(7,8+bob,30,10,hair);
+   b(14,3+bob,16,3,hair);b(14,6+bob,11,2,shine);
+   b(8,14+bob,5,9,hair);b(14,13+bob,4,7,hair);
+   b(20,13+bob,4,7,hair);b(27,13+bob,5,8,hair);
+   b(17,18+bob,2,3,hair);b(23,17+bob,2,3,hair);
+   // White soles from the reference card, existing feet anchors.
+   b(12,53+step,8,1,'#ddd6d0');b(24,53-step,8,1,'#ddd6d0');
   });
  }
 }

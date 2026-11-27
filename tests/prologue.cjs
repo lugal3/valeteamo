@@ -43,9 +43,15 @@ const assert=require('node:assert/strict');
  assert.equal(healPrologue(hurtPrologue(PROLOGUE_START,5),3).hp,4);
  for(const key of ['couple','victory','luis','warning','abducted','ribbon','petals','wheel','locked','window']){
   assert(PROLOGUE_DIALOGUES[key].length>=1&&PROLOGUE_DIALOGUES[key].length<=2,
-   key+' should have 1–2 editable, quick story placeholders');
+   key+' must remain a compact 1–2 line story beat');
  }
- const voices=Object.values(PROLOGUE_DIALOGUES).flat().map(v=>v.speaker);
+ const allLines=Object.values(PROLOGUE_DIALOGUES).flat();
+ assert(allLines.length<=14,'short prologue, no additional mandatory dialogue scenes');
+ assert(allLines.reduce((n,line)=>n+line.text.split(/\s+/).length,0)<=225,'brief script word budget');
+ assert(!/3D|terror|secuestrador/i.test(PROLOGUE_OBJECTIVES.intro),'opening does not spoil genre shift');
+ assert(PROLOGUE_DIALOGUES.couple.some(line=>line.speaker==='Luis'&&line.text.includes('teléfono')));
+ assert(PROLOGUE_DIALOGUES.wheel.some(line=>line.text.includes('Luis')),'later phone support has an earlier narrative cause');
+ const voices=allLines.map(v=>v.speaker);
  assert(voices.includes('Luis')&&voices.includes('Vale')&&voices.includes('Louis')&&voices.includes('Kitty'));
  assert.deepEqual(PROLOGUE_DIALOGUES.couple.map(line=>line.speaker),['Vale','Luis']);
  assert(PROLOGUE_DIALOGUES.warning.some(line=>line.speaker==='Louis'),

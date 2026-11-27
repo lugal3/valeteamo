@@ -65,7 +65,7 @@ export function paintLuisChibi(
  b(12+gait,53,11,8,INK);b(25-gait,53,11,8,INK);
  b(14+gait,52,8,6,p.pants);b(27-gait,52,8,6,p.pants);
  b(12+gait,58,11,4,'#312d42');b(25-gait,58,11,4,'#312d42');
- b(13+gait,59,9,2,'#d7d5dc');b(26-gait,59,9,2,'#d7d5dc');
+ b(13+gait,59,9,2,'#55505a');b(26-gait,59,9,2,'#55505a');
  b(14+gait,55,7,2,p.pantsLight);b(27-gait,55,7,2,p.pantsLight);
  // Broad but short upper body + slim jeans = unmistakable chibi proportions.
  const bodyY=35+bob;
@@ -106,14 +106,16 @@ export function paintLuisChibi(
  // Hair/face have a much bigger chibi head, rounded pixel silhouette and
  // restrained shading. No scaling tricks that would distort other sprites.
  const hy=5+bob;
- b(11,hy+4,27,29,INK);
- b(9,hy+9,31,21,INK);
- b(13,hy+2,23,32,INK);
- b(11,hy+12,29,17,p.skinShade);
- b(12,hy+10,27,19,p.skin);
- b(14,hy+7,23,24,p.skin);
- b(15,hy+13,20,14,p.skinLight);
- b(16,hy+29,17,3,p.skinShade);
+ // Broad, rounded head and soft cheeks from the card.
+ b(8,hy+7,34,23,INK);
+ b(10,hy+4,30,28,INK);
+ b(14,hy+2,22,32,INK);
+ b(10,hy+13,30,16,p.skinShade);
+ b(12,hy+10,26,21,p.skin);
+ b(14,hy+8,23,24,p.skin);
+ b(13,hy+17,25,11,p.skinLight);
+ b(16,hy+28,18,3,p.skinLight);
+ b(18,hy+31,14,1,p.skinShade);
  // Visible ears and small piercings distinguish his side/front views.
  if(!back){
   b(9,hy+17,5,9,INK);b(10,hy+18,4,7,p.skin);
@@ -163,18 +165,18 @@ export function paintLuisChibi(
  }
  // Rounded black hair with long, separated bangs from the reference;
  // while the shine and fringe read correctly at 48px resolution.
- b(12,hy+4,28,10,INK);
- b(14,hy+1,23,10,p.hair);
- b(11,hy+9,30,6,p.hair);
- b(11,hy+14,7,8,p.hair);
- b(36,hy+12,5,8,p.hair);
+ b(12,hy+2,28,11,INK);
+ b(9,hy+6,33,10,p.hair);
+ b(8,hy+10,34,9,p.hair);
+ b(10,hy+15,7,8,p.hair);
+ b(36,hy+14,5,9,p.hair);
  b(16,hy,19,5,p.hair);
- b(17,hy+2,13,2,p.hairLight);
- b(14,hy+7,9,3,p.hairLight);
- b(23,hy+9,13,4,p.hair);
- b(19,hy+12,11,5,p.hair);
- b(17,hy+12,4,8,p.hair);b(25,hy+12,4,7,p.hair);
- b(32,hy+11,4,8,p.hair);b(28,hy+14,3,2,p.hairLight);
+ b(18,hy+2,10,2,p.hairLight);
+ b(12,hy+7,7,3,p.hairLight);
+ b(25,hy+5,8,2,p.hairLight);
+ b(17,hy+13,5,7,p.hair);b(24,hy+12,5,8,p.hair);
+ b(31,hy+12,5,8,p.hair);
+ b(19,hy+17,2,4,p.hair);b(26,hy+18,2,3,p.hair);
  b(12,hy+15,4,6,'#222434');
  if(side){
   b(11,hy+9,20,5,p.hair);
