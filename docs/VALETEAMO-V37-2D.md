@@ -32,3 +32,8 @@ El 2D es un prólogo breve y encantador que prepara un giro sorpresa al 3D, jueg
 
 ## Actuaciones sincronizadas
 El interlocutor activo de la burbuja controla la pose real de los personajes. Luis deja de mover la boca mientras habla Vale; Vale tiene 3 cuadros de habla y Louis 2 cuadros adicionales por dirección. Los retratos siguen siendo los sprites reales y el diálogo no cambia de longitud. Pruebas de alternancia en navegador añadidas.
+
+## Bloque D — ritmo y continuidad audiovisual
+- Seis bloques de presentación: tres capítulos cálidos, interludio, investigación y casa. Sin etapas extra ni pantallas de espera. Títulos iniciales no revelan el 3D.
+- El jardín no recupera su iluminación alegre tras el secuestro; el oscurecimiento enlaza con el bosque. Limpieza de tweens de marcadores al cambiar etapa y reacción breve durante la fuga.
+- Corregida la prueba de integración que esperaba el antiguo seguimiento por píxeles: exige el nuevo seguimiento en coordenadas del mundo y su conexión efectiva al sprite; se mantienen pruebas geométricas de ruta y colisión. No se toca el 3D.

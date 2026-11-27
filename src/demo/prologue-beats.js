@@ -1,12 +1,16 @@
-// V2 phase 08. UI-only act progression; does not change story checkpoints.
+// UI-only chapters: no new gates, checkpoints, dialogues or forced waits.
 export const PROLOGUE_ACTS=Object.freeze([
- Object.freeze({id:'morning',label:'ACTO I',title:'Un día de recuerdos',
-  stages:['intro','feed-cat','cat-fed','meet-couple','defend','talk-louis','talk-luis','walk-together']}),
+ Object.freeze({id:'morning',label:'CAPÍTULO I',title:'Un día especial',
+  stages:['intro','feed-cat','cat-fed']}),
+ Object.freeze({id:'meeting',label:'CAPÍTULO II',title:'Encuentros inesperados',
+  stages:['meet-couple','defend']}),
+ Object.freeze({id:'friend',label:'CAPÍTULO III',title:'Un nuevo amigo',
+  stages:['talk-louis','talk-luis','walk-together']}),
  Object.freeze({id:'abduction',label:'INTERLUDIO',title:'La furgoneta LUNA-07',
   stages:['disappearance']}),
- Object.freeze({id:'dusk',label:'ACTO II',title:'Las pistas de Louis',
+ Object.freeze({id:'dusk',label:'CAPÍTULO IV',title:'Tras las pistas',
   stages:['ribbon','petals','wheel']}),
- Object.freeze({id:'night',label:'ACTO III',title:'La casa en la oscuridad',
+ Object.freeze({id:'night',label:'CAPÍTULO V',title:'La casa',
   stages:['door','window','house']})
 ]);
 export function prologueAct(stage){

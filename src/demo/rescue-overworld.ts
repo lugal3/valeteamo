@@ -244,8 +244,14 @@ export function constrainRescue(
 }
 export function darknessAt(u:number,stage:string,map:RescueMapId=sceneForPosition(u)):number{
  if(map==='morning_garden')return 0;
- if(map==='afternoon_meeting')return Math.max(stage==='disappearance'?.30:.09,
-  .09+clamp((u-23)/22,0,1)*.18);
+ if(map==='afternoon_meeting'){
+  const daylight=.06+clamp((u-23)/22,0,1)*.15;
+  // Keep the garden genuinely cheerful until the interruption. The forest
+  // starts at a matching darkness, so post-abduction travel is not a reset.
+  if(stage==='disappearance')return Math.max(.30,daylight);
+  if(['ribbon','petals','wheel','door','window','house'].includes(stage))return .38;
+  return daylight;
+ }
  if(map==='dusk_search')return .38+clamp((u-46)/18,0,1)*.15;
  return .68+clamp((u-65)/17,0,1)*.05;
 }

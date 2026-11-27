@@ -382,7 +382,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
    }}/>
   <div className="prologue-night" style={{opacity:dusk}} aria-hidden="true"/>
    {houseHandoff&&<div className="prologue-3d-handoff" role="status" aria-live="polite">
-     <span>✧ ACTO III ✧</span><strong>La casa de LUNA-07</strong>
+     <span>✧ CAPÍTULO V ✧</span><strong>La casa</strong>
      <small>Kitty entra por la ventana…</small>
     </div>}
   <div className={'prologue-curtain'+(transition?.phase==='out'?' is-dark':'')}

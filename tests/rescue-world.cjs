@@ -90,6 +90,9 @@ assert(Math.hypot(portalWindow.x-westWindow.x,portalWindow.y-westWindow.y)<2,
 assert.equal(world.darknessAt(5,'intro','morning_garden'),0);
 assert(world.darknessAt(32,'defend','afternoon_meeting')>0);
 assert(world.darknessAt(44,'disappearance','afternoon_meeting')>=.28);
+assert(world.darknessAt(39,'walk-together','afternoon_meeting')<.20,'the happy garden should not reveal the horror prematurely');
+assert(world.darknessAt(41,'ribbon','afternoon_meeting')>=world.darknessAt(41,'disappearance','afternoon_meeting'),'no return to daylight after the abduction');
+assert(world.darknessAt(41,'ribbon','afternoon_meeting')<=world.darknessAt(46.8,'ribbon','dusk_search'),'continuous darkening across the forest portal');
 assert(world.darknessAt(52,'ribbon','dusk_search')>.38);
 assert(world.darknessAt(78,'door','night_neighborhood')>.68);
 assert(world.darknessAt(78,'window','night_neighborhood')>

@@ -191,7 +191,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.storyActionPressed=false;this.storyNear='';this.storyOptional=undefined;this.storyClueHint=undefined;
   this.houseRoute=[];this.houseLastHint='';
   this.resetStoryFeel();this.clearStoryBubbles();
-  for(const o of this.storyObjects)o.destroy();this.storyObjects=[];
+  for(const o of this.storyObjects){this.tweens.killTweensOf(o);o.destroy();}this.storyObjects=[];
   for(const e of this.enemies){e.s.destroy();e.shadow.destroy();}this.enemies=[];
   for(const shot of this.shots)shot.s.destroy();this.shots=[];
   for(const light of this.collectibles)light.s.destroy();this.collectibles=[];
@@ -648,6 +648,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    const reaction=kidnappingReaction(frame.phase,prior);
    if(reaction)this.showStoryBubble('kitty',reaction);
    if(frame.phase==='struggle')this.showStoryBubble('louis','fear');
+   if(frame.phase==='escape')this.story?.guide('¡Louis!… Recuerda la media luna.');
    if(frame.phase==='doors')this.audio.tone(270,.17,.036,'sawtooth');
    if(frame.phase==='struggle'){
     if(!this.reducedMotion)this.cameras.main.shake(210,.0018);
