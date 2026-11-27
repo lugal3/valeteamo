@@ -238,7 +238,8 @@ async function run(){
   await page.waitForFunction(()=>window.__rescueHouse.story().phase==='patrol',null,{timeout:60000});
   assert.equal(await page.evaluate(()=>window.__rescueHouse.story().pursuer.y),3.15,'Pursuer has already climbed by the deadline');
   assert((await checkpoint()).tutorials.includes('hide'));
-  const seen=(await checkpoint()).tutorials;
+  await page.waitForFunction(()=>window.__rescueHouse.story().tutorial==='stealth');await shot('02c-tutorial-sigilo');await dismissField('stealth');
+  const seen=(await checkpoint()).tutorials;assert(seen.includes('stealth'));
   await write(RESCUE_KEY,{...interior,houseCheckpoint:{...interior.houseCheckpoint,tutorials:seen}});
   await reloadHouse();
   await page.waitForFunction(()=>window.__rescueHouse.story().phase==='hide',null,{timeout:60000});
