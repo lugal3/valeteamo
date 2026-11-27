@@ -86,7 +86,15 @@ export function GardenEpilogue({stage,onAdvance,onExit}:Props){
  return <main className="garden-epilogue" data-epilogue-stage={stage} data-epilogue-leaving={leaving}>
   <StoryGame level={1} character="kitty" story={story} audio={audio} muted={muted} audioNotice=""
    onUnlockAudio={()=>{void audio.start();}} onToggleAudio={()=>{audio.muted=!muted;setMuted(!muted);if(muted)void audio.start();}}
-   onExit={onExit} onComplete={()=>{}} onSceneReady={value=>{scene.current=value;}}/>
+   onExit={onExit} onComplete={()=>{}} onSceneReady={value=>{
+    scene.current=value;
+    // Development-only read telemetry: no teleport, stage advance or save mutation.
+    if(import.meta.env.DEV){
+     const target=window as Window&{__valeEpilogue?:()=>unknown};
+     if(value)target.__valeEpilogue=()=>({p:{...value.p},target:{...value.storyTarget},map:value.storyMap,clock:value.clock,near:value.storyNear,velocity:{...value.storyVelocity},enemies:value.enemies.length,companions:[value.storyLouis,value.storyCat].map(actor=>!!actor?.active&&actor.visible),ready:!!value.player?.texture});
+     else delete target.__valeEpilogue;
+    }
+   }}/>
   <div className="epilogue-sunlight" aria-hidden="true"/>
   <div className="epilogue-location"><span>ACTO IV · DE VUELTA A CASA</span><h1>{chapter.title}</h1><p>{chapter.objective}</p></div>
   {near&&!leaving&&!current&&!celebrating&&<button className="epilogue-action" onClick={()=>scene.current?.storyInteract()}>{near} ♡</button>}

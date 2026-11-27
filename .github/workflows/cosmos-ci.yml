@@ -33,6 +33,8 @@ on:
       - 'src/PlaytestMenu.tsx'
       - 'src/playtest-menu.css'
       - 'tests/admin-panel-browser.cjs'
+      - 'tests/epilogue-browser.cjs'
+      - 'tests/helpers/epilogue-walk.cjs'
       - 'src/birthday-countdown.css'
       - 'tests/cosmos.cjs'
       - 'tests/galaxy-arrival.cjs'
@@ -76,6 +78,8 @@ on:
       - 'src/PlaytestMenu.tsx'
       - 'src/playtest-menu.css'
       - 'tests/admin-panel-browser.cjs'
+      - 'tests/epilogue-browser.cjs'
+      - 'tests/helpers/epilogue-walk.cjs'
       - 'src/birthday-countdown.css'
       - 'tests/cosmos.cjs'
       - 'tests/galaxy-arrival.cjs'
@@ -110,6 +114,7 @@ jobs:
       - run: node tests/landscape-gate.cjs
       - run: node tests/cosmos-browser.cjs
       - run: node tests/cosmos-public-flow.cjs
+      - run: node tests/epilogue-browser.cjs
       - run: node tests/prologue-browser.cjs
       - run: node tests/rescue-feel-browser.cjs
       - run: node tests/prologue-desktop.cjs
