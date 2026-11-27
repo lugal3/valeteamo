@@ -2401,6 +2401,9 @@ function runAction(act,node){
   showModal(title,`<p>${escapeHTML(message)}</p>`,[[exitLabel,'exit']]);
  }
  try{renderer=new HouseRenderer(canvas,options.quality);reset(checkpointStore?.checkpoint);}catch(e){
+  // No gameplay controls exist in the fallback screen. Detach adaptive
+  // input listeners before replacing the HUD so Exit cannot trigger them.
+  padSession.destroy();
   root.innerHTML=`<section class="lab-error" role="alert"><h2>No se pudo abrir la casa 3D</h2><p>${escapeHTML(String(e.message||e))}</p><button data-act="exit">${exitLabel}</button></section>`;
   root.querySelector('[data-act="exit"]').addEventListener('click',()=>{stop();onExit();},{signal});
   return stop;
