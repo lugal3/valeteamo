@@ -6,6 +6,8 @@ import {buildLoisPs2Model} from './lois-ps2-model.js';
 import {startLoisReaction,advanceLoisReaction} from './lois-ps2-reactions.js';
 import {KITCHEN_HIDE_APPROACH,KITCHEN_HIDE_SPOT} from './kitchen-hide-layout.js';
 import {advanceLoisMotion} from './lois-motion.js';
+import {UNTIE_BEATS,sampleLoisUntie} from './lois-untie.js';
+import {loisWristAnchors,poseLoisRopes} from './lois-ps2-rig.js';
 
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 const turnTowards=(current,target,dt,speed=7)=>{
@@ -13,7 +15,7 @@ const turnTowards=(current,target,dt,speed=7)=>{
  const eased=delta*Math.min(1,Math.max(0,dt)*speed);
  return current+clamp(eased,-Math.max(0,dt)*4.8,Math.max(0,dt)*4.8);
 };
-export const LOUIS_UNTIE_SECONDS=3.25;
+export const LOUIS_UNTIE_SECONDS=UNTIE_BEATS.finish;
 // Preserve the already tested basement climb, but once above ground go
 // AROUND the north tip of the rotated bar into the actual hiding lane.
 // Never pass through a collider or jump to a target behind the furniture.
@@ -33,13 +35,14 @@ export const LOUIS_HIDING_SPOT=KITCHEN_HIDE_SPOT;
 export const LOUIS_RESCUE_ROUTE=ROUTE;
 export function createLouisEscape(world){
  const point=ROUTE[0],y=groundHeight(point.x,point.z,-3.55,true);
- return {kind:'louis-companion',id:'louis-escape',label:'Louis rescatado',visualPreset:LOIS_VISUAL_ID,visualVariant:'photo-a',x:point.x,y,z:point.z,yaw:Math.PI,phase:'untying',waypoint:1,age:0,step:0,crouch:.33,concealed:false,interactable:false,walk:0,speed:0,blink:0,visualReaction:null,untieBeat:0,world};
+ return {kind:'louis-companion',id:'louis-escape',label:'Louis rescatado',visualPreset:LOIS_VISUAL_ID,visualVariant:'photo-a',x:point.x,y,z:point.z,yaw:Math.PI,phase:'untying',waypoint:1,age:0,step:0,crouch:.55,rescuePerformance:true,untieCues:new Set(),concealed:false,interactable:false,walk:0,speed:0,blink:0,visualReaction:null,untieBeat:0,world};
 }
 export function updateLouisEscape(louis,dt,kitty=null){
  if(!louis||dt<=0)return null;
- const before={x:louis.x,y:louis.y,z:louis.z};
+ const before={x:louis.x,y:louis.y,z:louis.z},wasUntying=louis.phase==='untying';
  const cue=advanceLouisEscape(louis,dt,kitty);
  advanceLoisMotion(louis,dt,before,kitty);
+ if(wasUntying&&louis.phase==='untying')poseLoisRopes(louis,louis.world.boxes);
  return cue;
 }
 function advanceLouisEscape(louis,dt,kitty){
@@ -49,7 +52,7 @@ function advanceLouisEscape(louis,dt,kitty){
  louis.speed=Math.max(0,louis.speed-dt*5);
  if(louis.phase==='follow')louis.crouch=Math.max(0,louis.crouch-dt*1.6);
  if(louis.phase==='untying'){
-  louis.crouch=.33;
+  louis.crouch=.55*sampleLoisUntie(louis.age).seated;
   // Three one-shot, rig-native emotional beats: notice Kitty's hands,
   // tense as the knot releases, then look up to recognize the rescuer.
   // Never spawn new meshes or overwrite the approved Photo-A texture.
@@ -58,7 +61,7 @@ function advanceLouisEscape(louis,dt,kitty){
     louis.untieBeat=index;startLoisReaction(louis,type);
    }
   }
-  if(louis.age>=LOUIS_UNTIE_SECONDS){louis.phase='climb';louis.age=0;louis.crouch=0;startLoisReaction(louis,'look-kitty');return 'untied';}
+  if(louis.age>=LOUIS_UNTIE_SECONDS){louis.phase='climb';louis.age=0;louis.crouch=0;louis.rescuePerformance=false;startLoisReaction(louis,'look-kitty');return 'untied';}
   return null;
  }
  if(louis.phase==='climb'){
@@ -94,7 +97,7 @@ function advanceLouisEscape(louis,dt,kitty){
   louis.yaw=turnTowards(louis.yaw,facing,dt,8);
   louis.walk+=moved;louis.speed=moved/Math.max(dt,.0001);
  }else if(louis.phase==='hide'){
-  louis.crouch=Math.min(1,louis.age/1.1);
+  const t=clamp(louis.age/1.1,0,1);louis.crouch=t*t*(3-2*t);
   const angle=Math.atan2(Math.sin(LOUIS_HIDING_SPOT.yaw-louis.yaw),
    Math.cos(LOUIS_HIDING_SPOT.yaw-louis.yaw));
   louis.yaw+=angle*Math.min(1,dt*7);
@@ -137,15 +140,24 @@ export function freeLouis(louis){
  startLoisReaction(louis,'relief');
  return true;
 }
+export function louisRescueHands(louis,reduced=false){
+ const pose=sampleLoisUntie(louis.age),[a,b]=loisWristAnchors(louis,reduced);
+ if(pose.t>=UNTIE_BEATS.release+.52)return null;
+ const mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2,z:(a.z+b.z)/2};
+ return [-1,1].map(side=>{
+  const contact=side===-1?a:b,grip=pose.reach,tug=(reduced?0:Math.sin(pose.t*10)*.024)*pose.loosen*pose.tied;
+  return {x:mid.x+side*.24*(1-grip)+(contact.x-mid.x)*grip,y:contact.y*grip+mid.y*(1-grip)-.16*(1-grip)+.018+tug,
+   z:contact.z*grip+mid.z*(1-grip)-.30*(1-grip)-.04,flex:-.27*grip,curl:.76*grip,roll:side*.16*grip};
+ });
+}
 export function louisCamera(louis){
  // The old shoulder camera crossed the narrow tunnel wall and produced a
  // pitch-black shot. Keep the lens on the physical walkable tunnel ramp.
  if(louis.phase==='untying'){
-  const z=louis.z-1.18;
-  const shot=clamp((louis.age||0)/LOUIS_UNTIE_SECONDS,0,1);
-  const ease=shot*shot*(3-2*shot);
-  // Open on Kitty's paws working the knot; finish on Louis' relieved face.
-  return {x:louis.x,y:louis.y+1.24,z,yaw:0,pitch:-.34+.28*ease};
+  const shot=sampleLoisUntie(louis.age),[a,b]=loisWristAnchors(louis);
+  const focus=1-shot.tied,x=louis.x+.15*(1-shot.rise),z=louis.z-1.18-.23*shot.rise,y=louis.y+1.08+.34*shot.rise;
+  const tx=(a.x+b.x)/2,ty=(a.y+b.y)/2*(1-focus)+(louis.y+1.36+.28*shot.rise)*focus,tz=(a.z+b.z)/2*(1-focus)+louis.z*focus;
+  return {x,y,z,yaw:Math.atan2(tx-x,tz-z),pitch:Math.atan2(ty-y,Math.hypot(tx-x,tz-z))};
  }
  if(louis.phase==='climb'&&louis.y<-.18){
   const z=Math.max(2.63,louis.z-.73);

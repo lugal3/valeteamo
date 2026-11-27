@@ -20,8 +20,15 @@ export const WINDOW_ENTRY_CUES=Object.freeze([
  {id:'release',at:7.65,sound:'cloth',source:'window',level:.36,caption:''},
  {id:'land',at:8.60,sound:'land',source:'kitty',level:.82,caption:'Kitty aterriza dentro'}
 ].map(Object.freeze));
+export const UNTIE_CUES=Object.freeze([
+ {id:'grasp-rope',at:.56,sound:'cloth',source:'louis',level:.32,caption:''},
+ {id:'loosen-rope',at:1.28,sound:'cloth',source:'louis',level:.55,caption:''},
+ {id:'release-knot',at:2.25,sound:'cloth',source:'louis',level:.84,caption:'Las cuerdas ceden.'},
+ {id:'rope-floor',at:2.82,sound:'cloth',source:'louis',level:.44,caption:''},
+ {id:'chair-rise',at:3.28,sound:'wood',source:'louis',level:.42,caption:'Louis se incorpora con cuidado.'}
+].map(Object.freeze));
 export function collectCinematicCues(track,previous,elapsed,played=new Set()){
- const cues=track==='escape'?ESCAPE_FINALE_CUES:track==='window'?WINDOW_ENTRY_CUES:[];
+ const cues=track==='escape'?ESCAPE_FINALE_CUES:track==='window'?WINDOW_ENTRY_CUES:track==='untie'?UNTIE_CUES:[];
  const lo=Number.isFinite(previous)?Math.max(0,previous):0;
  const hi=Number.isFinite(elapsed)?Math.max(0,elapsed):lo;
  if(hi<lo)return [];

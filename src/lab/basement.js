@@ -1,4 +1,5 @@
 import {LOIS_VISUAL_ID} from './lois-ps2-profile.js';
+import {poseLoisRopes} from './lois-ps2-rig.js';
 const X=8.55,START=2.53,THROAT=4.15,LANDING=8.2,END=14.8;
 export const HATCH=Object.freeze({x:X,minX:7.91,maxX:9.19,minZ:START,maxZ:THROAT,y:.023});
 const SECTIONS=[[START,THROAT,.64],[THROAT,5.8,.69],[5.8,8.5,.59],[8.5,11.5,.49],[11.5,END,1.03]];
@@ -59,15 +60,17 @@ function installCaptive(add,obj){
   part('chair-post-'+side,side*.213,.83,.222,.064,.72,.067,'wood',wood);
  }
  for(const h of [.73,.93,1.13])part('chair-back-'+h,0,h,.222,.48,.092,.066,'wood',wood);
- for(const [i,dy,dz,w] of [[0,.59,-.257,.28],[1,.61,-.262,.28],[2,.67,-.151,.436]])
-  part('rope-'+i,0,dy,dz,w,.023,.023,'trim',{color:[.55,.42,.27],roll:i===1?.06:-.035});
+ const ropes=[];
+ for(const [i,dy,dz,w] of [[0,.59,-.257,.28],[1,.61,-.262,.28],[2,.67,-.151,.28]])
+  ropes.push(part('rope-'+i,0,dy,dz,w,.023,.023,'trim',{color:[.55,.42,.27],roll:i===1?.06:-.035,dynamic:true,castShadow:false}));
  // One real actor across both sides of the rescue transition. Offset the
  // seated bind pose so his hips rest on the chair; no second head/texture.
- obj('captive-louis','louis-companion','Louis cautivo',x,y-.32,z,{
+ const captive=obj('captive-louis','louis-companion','Louis cautivo',x,y,z,{
   visualPreset:LOIS_VISUAL_ID,visualVariant:'photo-a',yaw:Math.PI,
-  phase:'untying',age:0,walk:0,speed:0,crouch:.55,blink:0,
+  phase:'untying',age:0,walk:0,speed:0,crouch:.55,blink:0,rescuePerformance:true,
   concealed:false,interactable:false,visualReaction:null
  });
+ poseLoisRopes(captive,ropes);
  add('master-key-hook',x+.55,y+1.35,z,.06,.09,.14,'brass',false);
  obj('master-key','key','Llave maestra colgada',x+.55,y+1.23,z-.04,{master:true,floor:y,tilt:Math.PI/2});
  obj('rescue-louis','rescue','Louis Tomlinson',x,y+1.02,z-.35,{floor:y});

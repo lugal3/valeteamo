@@ -57,7 +57,7 @@ import {defaultMiniatureView,changeMiniatureView,miniatureSVG,miniatureMarkers} 
 import {installNoiseProps,grabNoiseProp,holdNoiseProp,releaseNoiseProp,stepNoiseProps} from './noise-props.js';
 import {previewEmyDistract,sendEmyDistract,commandEmyStay,rejoinEmyInPerson,requestRibbonKey,EMY_ENTRANCE_SECONDS,createEmyCompanion,beginEmyEntrance,emyEntranceCamera,sendEmyToTrunk,emyOccupiesHatch,updateEmyCompanion,snapshotEmyCompanion,restoreEmyCompanion,initializeTrialEmy} from './emy-companion.js';
 import {createRC,syncRCObject,deployRC,driveRC,beepRC,updateRC,stopRC,crashRC,recoverRC,rcCamera,advanceRCCamera,rcSignalStrength,rcCameraVibration,rcDeploymentView,canTrapPursuer} from './rc-car.js';
-import {createLouisEscape,updateLouisEscape,freeLouis,louisCamera} from './louis-escape.js';
+import {createLouisEscape,updateLouisEscape,freeLouis,louisCamera,louisRescueHands,LOUIS_UNTIE_SECONDS} from './louis-escape.js';
 import {createLoisShotDirector,advanceLoisShot,finishLoisShot} from './lois-ps2-cinematics.js';
 import {createHousePuzzle,puzzleEvent,canOpenBedroom,canRescue,PUZZLE_HINTS,housePuzzleHint} from '../demo/house-puzzles.js';
 import './lab.css'; // Required for #lab3d stacking, fixed fullscreen layout, canvas sizing and HUD.
@@ -1433,7 +1433,11 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(isPaused()||finalCutscene&&!finalCutscene.playable)return;
   updateFurniture(world.objects,dt,s);
   const gifted=advanceGift(world.holiday,dt);if(gifted)showPlush(gifted);
+  const wasUntying=louis?.phase==='untying',previousUntie=louis?.age||0;
   const louisCue=updateLouisEscape(louis,dt,s);
+  if(wasUntying)for(const cue of collectCinematicCues('untie',previousUntie,louisCue==='untied'?LOUIS_UNTIE_SECONDS:louis.age,louis.untieCues)){
+   play(cue.sound,louis,cue.level);if(cue.caption)caption(cue.caption);
+  }
   if(louisCue==='untied'){
    for(const box of world.boxes)if(box.id.startsWith('captive-rope-'))box.hiddenGeometry=true;
    rebuild();play('cloth',louis);say('¡Las cuerdas cedieron! Louis sube con cuidado hacia la cocina.',5);
@@ -1950,14 +1954,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    // Kitty's flashlight illuminates the otherwise unlit tunnel and Louis'
    // face throughout this framed scene; no global house lighting is altered.
    torch=true;
-   if(louis.phase==='untying'){
-    const t=louis.age||0,reach=Math.min(1,t/.7),knot=Math.sin(t*8)*.023;
-    introHands=[-1,1].map(side=>({
-     x:louis.x+side*(.22-.09*reach),
-     y:louis.y+.58+.05*(1-reach)+knot,
-     z:louis.z-.34+.16*reach
-    }));
-   }
+   if(louis.phase==='untying')introHands=louisRescueHands(louis,reducedMotion.matches);
   }else if(loisShotDirector){
    // Blend back into Kitty's normal camera after the kitchen hiding sequence.
    const exiting=finishLoisShot(loisShotDirector,view,isSuspended()?0:shotDelta,reducedMotion.matches);

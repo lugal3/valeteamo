@@ -4,6 +4,7 @@
 import {LOIS_RIG,sampleLoisVisual} from './lois-ps2-profile.js';
 import {sampleLoisReaction} from './lois-ps2-reactions.js';
 import {sampleLoisMotion} from './lois-motion.js';
+import {sampleLoisUntie} from './lois-untie.js';
 
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,Number.isFinite(v)?v:a));
 const identity=[1,0,0,0,1,0,0,0,1];
@@ -62,6 +63,7 @@ export function sampleLoisRig(source={},reduced=false){
  // Fold the torso below the screen while the feet stay planted. Continue
  // the same fold into 'follow' and release it as crouch reaches zero.
  const lowCover=(hiding||phase==='follow')?crouch:0;
+ const rescue=untying&&source.rescuePerformance?sampleLoisUntie(t):null;
  const fear=visual.face.fear;
  const blink=clamp(visual.face.blink,0,1);
  const breath=visual.chest.breath;
@@ -75,15 +77,15 @@ export function sampleLoisRig(source={},reduced=false){
  const angles=Object.create(null),shifts=Object.create(null);
  const angle=(name,roll=0,pitch=0,yaw=0)=>{angles[name]={yaw,pitch,roll};};
  const shift=(name,x=0,y=0,z=0)=>{shifts[name]=[x,y,z];};
- shift('root',gait.sway,-.25*crouch+gait.bob,0);
- shift('pelvis',0,0,crouch*.065);
- angle('pelvis',isMoving?gait.sway*.65:0,crouch*.30,gait.counterTwist*.48);
+ shift('root',gait.sway,rescue?-.37*rescue.seated:-.25*crouch+gait.bob,rescue?rescue.lean*.12:0);
+ shift('pelvis',0,0,rescue?0:crouch*.065);
+ angle('pelvis',isMoving?gait.sway*.65:0,rescue?rescue.lean*.15:crouch*.30,gait.counterTwist*.48);
  // Lower the upper-body skeletal branch; unlike a global mesh offset, the
  // hips and ankles are retained, giving a crouch instead of a teleport.
  // Split the fold between pelvis, knees and torso; the former 72cm spine
  // slide folded the entire chest through the lap when Louis squatted.
  shift('spine',0,-.38*lowCover,0);
- angle('spine',-.07*resist+.035*pulse,(hiding?.26:untying?.055:phase==='climb'?.09+Math.max(0,gait.slope)*.16:weight*.075)+.13*brace-.21*recoil+.05*recover,0);
+ angle('spine',-.07*resist+.035*pulse,(rescue?(.07*rescue.seated+.42*rescue.lean):hiding?.26:untying?.055:phase==='climb'?.09+Math.max(0,gait.slope)*.16:weight*.075)+.13*brace-.21*recoil+.05*recover,0);
  angle('chest',(reduced?0:Math.sin(t*1.04)*.012)+.09*resist+.035*pulse,-.12*recoil,(reduced?0:Math.sin(t*.45)*.017)+.12*resist-gait.counterTwist*.83);
  shift('chest',0,breath,0);
  // A compact neck duck tucks the photographed head UNDER the 1.10 m
@@ -106,7 +108,14 @@ export function sampleLoisRig(source={},reduced=false){
   angle(name+'Hip',0,(hiding?-.72:untying?-.22:-legPhase*.49)-.22*brace+.12*side*recoil,0);
   angle(name+'Knee',0,(hiding?1.16:untying?.34:.08*weight+lift*(.68+Math.max(0,gait.slope)*.17))+.34*brace+.12*recoil,0);
   angle(name+'Ankle',0,(hiding?-.49:untying?-.12:legPhase*.25-lift*.31)-.12*brace,0);
-  if(crouch)shift(name+'Hip',0,crouch*.09,crouch*.16);
+  if(rescue){
+   angle(name+'Shoulder',-side*.28*rescue.tied,-.68*rescue.seated,side*.10*rescue.tied);
+   angle(name+'Elbow',-side*.26*rescue.tied,-.58*rescue.seated-.20*(1-rescue.tied),0);
+   angle(name+'Wrist',side*.10*rescue.tied,-.16*rescue.tied,0);
+   angle(name+'Hip',0,-1.35*rescue.seated-.12*rescue.lean,0);
+   angle(name+'Knee',0,1.40*rescue.seated+.18*rescue.lean,0);
+   angle(name+'Ankle',0,-.05*rescue.seated,0);
+  }else if(crouch)shift(name+'Hip',0,crouch*.09,crouch*.16);
  }
  const bones=Object.create(null);
  for(const bone of boneDefs){
@@ -131,6 +140,28 @@ export function sampleLoisRig(source={},reduced=false){
  return {phase,visual,bones,face:f,weight,crouch,posture:visual.posture,motionState:gait.state,gait,reducedMotion:!!reduced};
 }
 
+// Exact skinning transform for physical wrist contact, including actor yaw.
+export function loisJointPoint(actor,rig,name,offset=[0,0,0]){
+ const bone=rig.bones[name],local=bone.pivot.map((n,i)=>n+offset[i]);
+ const p=mv(bone.rotation,...local).map((n,i)=>n+bone.translation[i]);
+ const h=-(actor.yaw||0),c=Math.cos(h),s=Math.sin(h);
+ return {x:actor.x+p[0]*c-p[2]*s,y:actor.y+p[1],z:actor.z+p[0]*s+p[2]*c};
+}
+export function loisWristAnchors(actor,reduced=false){
+ const rig=sampleLoisRig(actor,reduced);
+ return ['leftWrist','rightWrist'].map(name=>loisJointPoint(actor,rig,name,[0,-.035,.018]));
+}
+export function poseLoisRopes(actor,boxes){
+ const shot=sampleLoisUntie(actor.age),[a,b]=loisWristAnchors(actor);
+ const middle={x:(a.x+b.x)/2,y:(a.y+b.y)/2,z:(a.z+b.z)/2},yaw=-Math.atan2(b.z-a.z,b.x-a.x);
+ for(const box of boxes){
+  if(!box.id.startsWith('captive-rope-'))continue;
+  const i=Number(box.id.split('-').at(-1)),side=i-1,fall=shot.fall;
+  box.x=middle.x+side*.025*fall;box.y=middle.y*(1-fall)+(actor.y+.035+side*.006)*fall+side*.020*(1-fall);
+  box.z=middle.z+Math.cos(actor.yaw)*(.022+side*.015)*(1-fall)-.12*fall;
+  box.yaw=yaw;box.roll=(i===1?.06:-.035)+side*.45*fall;
+ }
+}
 // In-place CPU deformation on the same dynamic mesh buffer already used by the
 // house. Each part moves rigidly with its parented bone, while the continuous
 // face receives a small jaw/cheek morph. No GPU texture upload per animation frame.
