@@ -379,11 +379,43 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const ring=this.add.ellipse(xy.x,xy.y,76,31,0xffe9ad,.30).setStrokeStyle(2,0xfff4cb,.95).setDepth(xy.y-1);
   const heart=this.add.text(xy.x,xy.y-20,'♡',{fontFamily:'Georgia',fontSize:'29px',color:'#fff7df',stroke:'#a4758b',strokeThickness:3}).setOrigin(.5,1).setDepth(xy.y+4);
   this.storyObjects.push(ring,heart);
+  if(chapter.next==='complete')this.decorateEpiloguePicnic();
   if(!this.reducedMotion)this.tweens.add({targets:ring,alpha:.60,scaleX:1.08,scaleY:1.08,duration:1050,yoyo:true,repeat:-1});
   this.storyDusk=chapter.light;this.story?.dusk(chapter.light);this.story?.map(chapter.map);this.story?.guide(chapter.objective);
   this.story?.area(this.storyWorld?.area(this.p.u)??'sendero');
   this.total=0;this.collected=0;this.audio.setTheme('garden');
   this.audio.setRescueMix({mood:'garden',music:.85,ambience:.65,birds:true});this.sync();
+ }
+ private decorateEpiloguePicnic(){
+  const at=toScreen(this.storyTarget),g=this.add.graphics().setDepth(at.y-2);
+  // In-world picnic blanket, cake and candles. Ground decoration only, not
+  // a new collider across the existing walkable path.
+  g.fillStyle(0x694a63,.18).fillEllipse(at.x,at.y-7,106,33);
+  for(let y=0;y<5;y++)for(let x=0;x<9;x++){
+   g.fillStyle((x+y)%2?0xe8b2c5:0xffe6d7,.94);
+   g.fillRect(at.x-45+x*10,at.y-25+y*6,10,6);
+  }
+  const cake=this.add.graphics().setDepth(at.y+1);
+  cake.fillStyle(0x765366,.25).fillEllipse(at.x,at.y-13,39,11);
+  cake.fillStyle(0xfff0dc).fillEllipse(at.x,at.y-17,34,11);
+  cake.fillStyle(0xcd829e).fillRoundedRect(at.x-13,at.y-36,26,18,4);
+  cake.fillStyle(0xffe4d7).fillEllipse(at.x,at.y-36,26,8);
+  cake.fillStyle(0xc65e85).fillRect(at.x-12,at.y-27,24,3);
+  for(let x=-8;x<=8;x+=8){cake.fillStyle(0xfff0c1).fillRect(at.x+x-1,at.y-45,3,9);
+   cake.fillStyle(0xffb45d).fillEllipse(at.x+x,at.y-47,4,7);}
+  const bunting=this.add.graphics().setDepth(at.y-6);
+  bunting.lineStyle(3,0x92736b).lineBetween(at.x-58,at.y-9,at.x-58,at.y-77).lineBetween(at.x+58,at.y-9,at.x+58,at.y-77);
+  bunting.lineStyle(1,0x9b7381).lineBetween(at.x-58,at.y-77,at.x,at.y-67).lineBetween(at.x,at.y-67,at.x+58,at.y-77);
+  for(let i=0;i<8;i++){const x=at.x-52+i*14,y=at.y-76+10*(1-Math.abs(x-at.x)/58);
+   bunting.fillStyle([0xeaa4ba,0xf4cf93,0xc2d4a7][i%3]).fillTriangle(x,y,x+10,y+1,x+5,y+12);}
+  this.storyObjects.push(g,cake,bunting);
+ }
+ private animateEpilogueTalk(){
+  const speaker=this.story?.speaker?.(),talking=this.story?.speaking?.()??false,frame=this.reducedMotion?0:Math.floor(this.clock/160);
+  if(speaker==='Luis'&&this.storyLuis)this.storyLuis.setTexture(luisTextureKey('down',talking?'talk':'idle',talking?frame%3:0));
+  if(speaker==='Vale'&&this.storyVale)this.storyVale.setTexture(talking?valeTalkTexture(frame%3):valeTexture(false,0));
+  if(speaker==='Louis'&&this.storyLouis)this.storyLouis.setTexture('chibi-louis-down-'+(talking&&!this.reducedMotion?6+frame%2:0)).setFlipX(false);
+  if(this.storyCat)this.storyCat.setTexture(greyCatTexture('love',frame%4));
  }
  private updateEpilogue(dt:number,chapter:EpilogueChapter){
   // Each companion retains a separate short trail and follows real walkable
@@ -405,7 +437,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const idle=luisAnimationFrame(this.clock,'idle',this.reducedMotion);
   this.storyLuis?.setTexture(luisTextureKey('down','idle',idle));
   this.storyVale?.setTexture(valeTexture(false,luisAnimationFrame(this.clock+710,'idle',this.reducedMotion)));
-  const label=isoDistance(this.p,this.storyTarget)<1.25?chapter.action:'';
+  const together=chapter.next!=='complete'||this.epilogueFollowers.every(f=>isoDistance(f.point,this.p)<2.5);
+  const label=isoDistance(this.p,this.storyTarget)<1.25&&together?chapter.action:'';
   if(label!==this.storyNear){this.storyNear=label;this.story?.near(label);}
  }
  drawPhysicalClue(stage:IsoStoryStage){
@@ -459,7 +492,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  // Photograph only a moment already available in the actual scene. Actors
  // keep their exact world positions and are restored before gameplay resumes.
  beginStoryPhoto(moment:StoryMoment){
-  if(this.storyPhoto||this.availableStoryMoment()?.id!==moment.id)return false;
+  const group=!!this.story?.epilogue&&this.story.epilogue.next==='complete'&&moment.id==='couple'&&!!this.storyNear;
+  if(this.storyPhoto||(!group&&this.availableStoryMoment()?.id!==moment.id))return false;
   this.clearInput();this.storyPhoto=true;this.storyVelocity={u:0,v:0};this.storyStepTravel=0;
   const pose=(actor:PhotoActor|undefined,key:string)=>{
    if(!actor?.active||!actor.visible||!this.textures.exists(key))return;
@@ -471,8 +505,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    pose(this.storyLuis,luisTextureKey('down','wave',1));
    pose(this.storyVale,valeTalkTexture(0,'down'));
   }
-  if(moment.id==='louis')pose(this.storyLouis,'chibi-louis-down-6');
-  if(moment.id==='emy')pose(this.storyCat,greyCatTexture('love',0));
+  if(moment.id==='louis'||group)pose(this.storyLouis,'chibi-louis-down-6');
+  if(moment.id==='emy'||group)pose(this.storyCat,greyCatTexture('love',0));
   if(moment.id==='river'||moment.id==='rest'){
    // Replace the waving pose, while retaining the original restore record.
    if(this.textures.exists(kittySeatKey(2)))this.player.setTexture(kittySeatKey(2));
@@ -1025,6 +1059,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  }
  updateStoryPerformance(dt:number){
   if(!this.story)return;
+  if(this.story.epilogue){if(this.story.locked())this.animateEpilogueTalk();return;}
   const beat=storyboardBeat(this.storyStage,this.clock-this.storyStageAt);
   if(beat&&!this.storyBeatPlayed){
    const target=this.storyStage==='talk-luis'?'luis':
