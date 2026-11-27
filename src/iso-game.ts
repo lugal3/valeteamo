@@ -5,7 +5,7 @@ import {buildChibi} from './chibi-art';
 import {installReferenceCharacter} from './reference-characters';
 import {facingOf,type Facing} from './animation';
 import {ISO,constrain,isoDistance,screenVector,toScreen,type IsoPoint} from './isometric';
-import {Sound} from './audio';
+import {rescueMixFor,Sound} from './audio';
 import {RESCUE_FEEL,feelMotion,feelGait,feelCameraOffset,
  feelSurfaceAt,FEEL_FOOTSTEP,feelFacingToTarget,RESCUE_COMBAT,rescueFirstAttack,rescueAttackWarning,
  type FeelSurface} from './demo/rescue-game-feel';
@@ -331,6 +331,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const eerie=this.storyMap==='dusk_search'||this.storyMap==='night_neighborhood'||
    stage==='disappearance'||dark>.30;
   this.audio.setTheme(stage==='defend'?'battle':eerie?'final':'garden');
+  this.audio.setRescueMix(rescueMixFor(stage,this.storyMap,dark,!!this.story.speaker?.()));
   if(stage==='ribbon'&&this.storyMap==='afternoon_meeting')
    this.story.guide('Busca el sendero brillante: las pistas continúan en el bosque ✧');
   if(stage==='door'&&this.storyMap==='dusk_search')
@@ -1086,6 +1087,9 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   if(this.paused||this.pendingOffer||this.ended)return;const dt=Math.min(delta,40),seconds=dt/1000;this.clock+=dt;
   if(this.story){
    this.updateStoryPerformance(dt);
+   // The scene clock, not an extra audio interval, controls narrative dynamics.
+   // Dialogue ducks only music/ambience; real samples and clue effects stay audible.
+   this.audio.setRescueMix(rescueMixFor(this.storyStage,this.storyMap,this.storyDusk,!!this.story.speaker?.()));
    const ecologyCue=this.storyWorld?.update(this.clock,this.storyDusk,this.p);
    if(ecologyCue)this.audio.playRescueAmbience?.(ecologyCue.kind,ecologyCue.pan);
    // Physical NPC and kidnapping motion keeps running during narrative locks.
