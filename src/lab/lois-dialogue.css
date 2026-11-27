@@ -1,0 +1,13 @@
+#lab3d .lois-talk{position:absolute;right:max(18px,env(safe-area-inset-right));bottom:clamp(112px,30vh,176px);z-index:9550;pointer-events:auto;border:1px solid #86c9f9;background:#15334ce8;color:#edf8ff;border-radius:12px;padding:10px 15px;font:600 13px system-ui;box-shadow:0 0 15px #60b3ef40}
+#lab3d .lois-chat{position:absolute;z-index:9551;left:50%;bottom:max(18px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(470px,52vw);box-sizing:border-box;display:grid;grid-template-columns:60px 1fr;gap:12px;padding:12px 16px;border:1px solid #82bdeb;border-radius:14px;background:linear-gradient(145deg,#17334cf5,#101b2af5);box-shadow:0 0 22px #6cb6eb40;color:#eef6ff;pointer-events:auto;font-family:system-ui}
+#lab3d .lois-chat[hidden],#lab3d .lois-talk[hidden]{display:none}
+#lab3d .lois-chat-face{width:60px;height:72px;border-radius:8px;object-fit:cover;object-position:50% 56%;border:1px solid #8abce85c;background:#15263a}
+#lab3d .lois-chat strong{font-size:12px;letter-spacing:.06em;color:#a7d5ff}
+#lab3d .lois-chat p{font-size:clamp(12px,2.5vh,16px);line-height:1.4;min-height:2.8em;margin:5px 0 9px;color:#f0f5fb}
+#lab3d .lois-chat-actions{display:flex;justify-content:flex-end;gap:8px}
+#lab3d .lois-chat button{border:1px solid #73a8d1;background:#233f57;color:#fff;border-radius:8px;padding:7px 10px;font:600 12px system-ui;min-height:32px;cursor:pointer}
+#lab3d .lois-chat button:focus-visible,#lab3d .lois-talk:focus-visible{outline:2px solid white;outline-offset:2px}
+#lab3d .lois-chat[data-speaking="true"] .lois-chat-face{animation:lois-talking .6s ease-in-out infinite alternate}
+@keyframes lois-talking{to{transform:translateY(-1px);filter:brightness(1.06)}}
+@media(prefers-reduced-motion:reduce){#lab3d .lois-chat-face{animation:none!important}}
+@media(max-height:420px){#lab3d .lois-chat{width:min(400px,52vw);grid-template-columns:44px 1fr;padding:8px 10px;gap:8px;bottom:8px}#lab3d .lois-chat-face{width:44px;height:58px}#lab3d .lois-chat p{margin:3px 0 4px}}

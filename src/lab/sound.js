@@ -230,6 +230,10 @@ export class HouseSound {
   if(!this.pianoVoice||clock?.offset!==offset||this.context.currentTime<clock.startedAt)return null;
   return Math.min(clock.end,clock.offset+this.context.currentTime-clock.startedAt);
  }
+ dialogueChirp({frequency,duration,volume}){
+  const ctx=this.context,output=this.channels?.emotes;if(!ctx||!output||this.paused||this.settings.muted||ctx.state!=='running')return;
+  const now=ctx.currentTime,osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='triangle';osc.frequency.value=frequency;gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(Math.max(.0002,volume*.7),now+.006);gain.gain.exponentialRampToValueAtTime(.0001,now+duration);osc.connect(gain);gain.connect(output);osc.start(now);osc.stop(now+duration+.01);this.sequenceNodes.add(osc);osc.onended=()=>{osc.disconnect();gain.disconnect();this.sequenceNodes.delete(osc);};
+ }
  safeKeypad(kind,digit=0,isCurrent=()=>true){
   const ctx=this.context;if(!ctx||this.settings.muted||!this.channels?.objects)return;
   const notes=kind==='success'?[[660,0,.085],[880,.11,.10],[1180,.23,.17]]:

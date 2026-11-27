@@ -109,7 +109,7 @@ export function poseEmy(cat,{walking=false,reduced=false,mode='idle',phase=cat.a
     }
     if(front&&grip>0){
      const active=name.endsWith('-1')?rake:1-rake;
-     leg.paw[2]+=.14*grip+.055*grip*active;
+     leg.paw[2]+=.14*grip+.035*grip*active;
      leg.paw[1]+=.09*grip-.09*grip*active;
      leg.paw[0]+=(name.endsWith('-1')?-1:1)*.018*grip;
      leg.knee[2]+=.045*grip;

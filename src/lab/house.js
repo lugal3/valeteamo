@@ -4,6 +4,9 @@ import {HouseEvents} from './story-events.js';
 import {createFieldManual,manualListHTML} from './field-manual.js';
 import {safeBedroomHide,poseArrivingPursuer,finishArrivingPursuer} from './field-arrival.js';
 import './field-manual.css';
+import {createLoisDialogue,loisDialogueContext,canTalkToLois} from './lois-dialogue.js';
+import './lois-dialogue.css';
+const loisPortrait=new URL('./assets/lois-option-a-reference.jpg',import.meta.url).href;
 import {HouseMessages} from './hud-messages.js';
 import {interactionIcon,feedbackIcon,createHaptics} from './hud-feedback.js';
 import {PLUSH_NAMES,holidayPowered,beginGift,advanceGift,collectPlush,collectedPlushes} from './holiday-collectibles.js';
@@ -194,6 +197,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   <div class="house-rc-actions"><button data-act="rc:noise" aria-keyshortcuts="Q" aria-label="Tocar bocina del auto RC para atraer al secuestrador">📣 Bocina <kbd>Q</kbd></button><button data-act="rc:trap" id="rc-trap-button" aria-keyshortcuts="T" hidden>Cerrar escotilla <kbd>T</kbd></button><button data-act="rc:stop" aria-keyshortcuts="X Escape">Guardar <kbd>Esc</kbd></button></div>
  </div>
  <div class="house-rc-caption" id="house-rc-caption" hidden role="status"></div>
+ <button id="lois-talk" class="lois-talk" data-act="lois:talk" aria-keyshortcuts="L" hidden>Hablar con Louis · L</button>
+ <section id="lois-chat" class="lois-chat" role="region" aria-label="Conversación con Louis" hidden><img class="lois-chat-face" src="${loisPortrait}" alt="Retrato de Louis"><div><strong id="lois-chat-speaker"></strong><p id="lois-chat-text"></p><span id="lois-chat-live" style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)" aria-live="polite"></span><div class="lois-chat-actions"><button data-act="lois:close">Cerrar</button><button id="lois-chat-next" data-act="lois:next">Continuar ▸</button></div></div></section>
  <div id="lab-turn" class="lab-turn"><div><span>↻</span><h2>Gira tu teléfono</h2><p>La casa se explora en horizontal. Tu lugar se conserva y el mundo queda en pausa.</p><button data-act="exit">${exitLabel}</button></div></div>
  <div id="lab-dialog" class="lab-dialog lab-hidden"></div>`;
  document.body.appendChild(root);
@@ -222,6 +227,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  for(const event of ['pointerup','pointercancel','lostpointercapture'])peekButton.addEventListener(event,e=>{if(e.pointerId===peekPointer)endPeek();});
  function persistCheckpoint(value){if(!checkpointStore)return false;const result=checkpointStore.save(value);if(result===true&&value){saveNoticeLeft=1.65;}return result===true;}
  const guides=['wardrobe','underbed','mirror-note','mirror-safe','dormitorio'].map(id=>{const n=document.createElement('div');n.className='field-guide';n.hidden=true;n.dataset.target=id;n.innerHTML='<i>✧</i><span></span>';root.append(n);return n;});
+ const loisDialogue=createLoisDialogue();
  let rc=null,louis=null,loisShotDirector=null,rcTrap={armed:false,closed:false},finalCutscene=null;
  let altarVisit=createAltarVisit();
  let emyAbilities=createEmyAbilities(),emyNameCue=createEmyNameCue(),emyMenuOpen=false,emyMapFloor=-1,emyMapSelected='',miniatureView=defaultMiniatureView(),noiseProps=[],heldNoise=null;
@@ -371,6 +377,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   previousToolTarget=null;autoUseTarget=null;keyTurn=null;
   lifeNoticeLeft=0;$('house-lives').hidden=true;plushNoticeLeft=0;$('house-plush-toast').hidden=true;
   television.sync(false,false);notePresentation=false;
+  loisDialogue.reset();$('lois-chat').hidden=true;$('lois-talk').hidden=true;
   louis=null;loisShotDirector=null;rcTrap={armed:false,closed:false};finalCutscene=null;
   mapReadOnly=false;mapPreview=null;mapReveal=false;emyMenuOpen=false;emyAbilities=createEmyAbilities();emyNameCue=createEmyNameCue();$('house-emy-name').hidden=true;heldNoise=null;hopAge=HOP_COOLDOWN;hopCancelled=false;previousEquipment=null;lastHapticThreat=false;lastHapticPhase='';haptics.stop();clearMiniatureInput();
   $('house-emy-menu').hidden=true;$('house-emy-map').hidden=true;$('house-emy-wave').hidden=true;
@@ -1078,7 +1085,28 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   $('house-emy-map-rooms').dataset.floor='';
   renderEmyMap();$('house-emy-tab--1').focus({preventScroll:true});
  }
- function runAction(act,node){
+ function loisTalkTarget(){
+ if(!ready||isPaused()||phone.open||remoteInUse()||loisShotDirector||finalCutscene&&!finalCutscene.playable||heldNoise)return null;
+ const actor=louis||world.objects.find(o=>o.id==='captive-louis'&&!o.taken),context=loisDialogueContext(actor,events.phase,!!finalCutscene?.playable);
+ return canTalkToLois(actor,s,context,target=>!lineBlocked(world.boxes,cameraOf(s),target))?{actor,context}:null;
+}
+function syncLoisDialogue(delta=0){
+ const candidate=loisTalkTarget(),panel=$('lois-chat');
+ if(loisDialogue.active&&(!candidate||candidate.actor!==loisDialogue.active.actor||candidate.context!==loisDialogue.active.context))loisDialogue.close();
+ if(loisDialogue.active)loisDialogue.tick(delta*1000,tone=>sound.dialogueChirp(tone));
+ const q=loisDialogue.active;$('lois-talk').hidden=!candidate||!!q;panel.hidden=!q;if(!q)return;
+ panel.dataset.speaking=String(q.actor.dialogueSpeaking===true);
+ $('lois-chat-speaker').textContent=q.line.speaker;panel.querySelector('img').style.visibility=q.line.speaker==='Louis'?'visible':'hidden';
+ const text=q.glyphs.slice(0,q.shown).join('');if($('lois-chat-text').textContent!==text)$('lois-chat-text').textContent=text;
+ if($('lois-chat-live').textContent!==q.line.text)$('lois-chat-live').textContent=q.line.text;
+ const label=q.shown<q.glyphs.length?'Mostrar texto':q.index===q.lines.length-1?'Terminar ▸':'Continuar ▸';if($('lois-chat-next').textContent!==label)$('lois-chat-next').textContent=label;
+}
+function runAction(act,node){
+ if(act.startsWith('lois:')){
+  if(act==='lois:close'){loisDialogue.close();syncLoisDialogue();return;}
+  if(act==='lois:next'){loisDialogue.next();syncLoisDialogue();return;}
+  const target=loisTalkTarget();if(target&&loisDialogue.open(target.actor,target.context)){releaseMouse();resetInput();syncLoisDialogue();$('lois-chat-next').focus({preventScroll:true});}return;
+ }
   if(manual.active)return;
   if(act.startsWith('emy:')){
    if(act==='emy:close'){
@@ -2276,6 +2304,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     }
    }
   }
+  syncLoisDialogue(isSuspended()?0:shotDelta);
   updateControls();
   if(showFPS){
    fpsWasActive=true;fpsSampler.record(now,0);
@@ -2405,6 +2434,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  window.addEventListener('keydown',e=>{
   if(!active||e.altKey||e.ctrlKey||e.metaKey||e.isComposing)return;
   if(manual.key(e))return;
+  if(loisDialogue.active&&['Escape','Enter',' '].includes(e.key)){e.preventDefault();if(!e.repeat)runAction(e.key==='Escape'?'lois:close':'lois:next');return;}
+  if(e.key.toLowerCase()==='l'&&!e.repeat&&!isPaused()&&!phone.open&&!['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName)){e.preventDefault();runAction('lois:talk');return;}
   if(e.key.toLowerCase()==='v'&&hidePeekSupported(s?.hidden)&&!isPaused()&&!phone.open){e.preventDefault();peekHeld=true;return;}
   if(captureShot&&!contextLost){e.preventDefault();return;}
   root.classList.add('house-keyboard');
@@ -2544,6 +2575,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
     duration:sound.recordings?.sprite?.duration||0,
     errors:sound.recordings?.errors.filter(error=>error.startsWith('user-sprite'))||[]}),
    rc:()=>({projection:renderer.lastProjection,mode:rc.mode,elapsed:rc.elapsed,position:{x:rc.x,y:rc.y,z:rc.z,yaw:rc.yaw},noise:rc.noise,crashes:rc.crashes,driveSpeed:rc.driveSpeed,steerAngle:rc.steerAngle,roll:rc.roll,tilt:rc.tilt,suspension:rc.suspension,signal:rc.signal,inventory:!!s.inventory.rc,trap:{...rcTrap},pursuer:{x:pursuer.x,y:pursuer.y,z:pursuer.z,mode:pursuer.mode}}),
+   loisDialogue:()=>loisDialogue.active?{context:loisDialogue.active.context,index:loisDialogue.active.index,shown:loisDialogue.active.shown,speaker:loisDialogue.active.line.speaker}:null,
    louis:()=>louis?{x:louis.x,y:louis.y,z:louis.z,phase:louis.phase,waypoint:louis.waypoint,age:louis.age,walk:louis.walk,speed:louis.speed,crouch:louis.crouch,reaction:louis.visualReaction?.type??null,motion:louis.visualMotion?{...louis.visualMotion}:null,cameraPhase:loisShotDirector?.phase??null}:null,
    emy:()=>({x:world.emy.x,y:world.emy.y,z:world.emy.z,phase:world.emy.phase,reaction:world.emy.reaction,hidden:world.emy.hidden,mood:emyCompanion?.mood,alarm:world.emy.alarm||0,refuge:emyCompanion?.refuge?{...emyCompanion.refuge}:null,companion:emyCompanion?.stage,hiddenAt:emyCompanion?.hiddenAt,sharedBed:!!emyCompanion?.sharedBed,stay:emyCompanion?.stage==='stay',ventOpen:world.studyVent.coverAmount===1,entrance:emyShot?.elapsed,trunk:emyCompanion?.stage==='trunk'}),
    emySkills:()=>({scanRendered:!!renderer?.lastScanOutline,scan:emyAbilities.scan,scanCooldown:emyAbilities.scanCooldown,distractCooldown:emyAbilities.distractCooldown,

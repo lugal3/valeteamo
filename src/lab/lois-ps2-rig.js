@@ -175,7 +175,7 @@ export function writeLoisRigPart(target,rest,start,end,box,bindActor,actor,rig){
  const looking=/^(iris|pupil|glint)-/.test(box.rigPart||'');
  const isBrow=/^brow-/.test(box.rigPart||'');
  // Preserve actual photographed eyes, mouth and jaw without animated mesh warping.
- const faceMesh=box.shape==='lois-face'&&!box.photoMapped;
+ const faceMesh=box.shape==='lois-face'&&(!box.photoMapped||actor.dialogueSpeaking===true);
  const blinkScale=eye?1-f.blink*.89:1;
  for(let v=start;v<end;v+=16){
   let x=rest[v]-bindActor[0],y=rest[v+1]-bindActor[1],z=rest[v+2]-bindActor[2];
@@ -188,8 +188,8 @@ export function writeLoisRigPart(target,rest,start,end,box,bindActor,actor,rig){
    const localY=y-1.61,localZ=z-.006;
    const chin=Math.max(0,Math.min(1,(-localY-.02)/.15));
    const front=Math.max(0,Math.min(1,(localZ-.08)/.10));
-   y-=chin*front*f.jawOpen*.019;
-   z+=chin*front*f.jawOpen*.006;
+   y-=chin*front*f.jawOpen*.019*(box.photoMapped?.45:1);
+   z+=chin*front*f.jawOpen*.006*(box.photoMapped?.45:1);
   }
   const nx=M[0]*x+M[1]*y+M[2]*z+T[0];
   const ny=M[3]*x+M[4]*y+M[5]*z+T[1];

@@ -121,7 +121,7 @@ function advanceLouisEscape(louis,dt,kitty){
   // Follow Kitty's physical position, never an orbiting camera-relative point.
   const dx=kitty.x-louis.x,dz=kitty.z-louis.z,d=Math.hypot(dx,dz);
   const sameFloor=Math.abs(kitty.y-louis.y)<.7;
-  louis.followMoving=sameFloor&&(louis.followMoving?d>1.05:d>1.42);
+  louis.followMoving=sameFloor&&(louis.dialogueSpeaking&&d<1.85?false:louis.followMoving?d>1.05:d>1.42);
   if(louis.followMoving){
    const desired=Math.min(2.9,Math.max(.65,(d-1.0)*2.1));
    const speed=Math.min(desired,(louis.visualMotion?.speed??0)+dt*6.5);

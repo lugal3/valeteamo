@@ -1,0 +1,10 @@
+const assert=require('node:assert/strict');
+(async()=>{
+ const {createLoisDialogue,loisDialogueContext,canTalkToLois}=await import('../src/lab/lois-dialogue.js');
+ const actor={id:'captive-louis',phase:'untying',x:3,y:0,z:3},player={x:4,y:0,z:3};
+ assert.equal(loisDialogueContext(actor,'evaded'),'captive');assert.equal(loisDialogueContext(actor,'hunt'),null);assert(canTalkToLois(actor,player,'captive',()=>true));assert(!canTalkToLois(actor,player,'captive',()=>false));assert(!canTalkToLois(actor,{...player,x:8},'captive',()=>true));
+ const d=createLoisDialogue();assert(d.open(actor,'captive'));let sounds=0;d.tick(80,()=>sounds++);assert(d.active.shown>0&&d.active.shown<d.active.glyphs.length);d.next();assert.equal(d.active.shown,d.active.glyphs.length);d.next();assert.equal(d.active.line.speaker,'Louis');assert(actor.dialogueSpeaking&&actor.visualReaction.type==='speak');
+ for(let i=0;i<500;i++)d.tick(16,()=>sounds++);assert.equal(d.active.shown,d.active.glyphs.length);assert(!actor.dialogueSpeaking);assert(sounds>1);d.next();assert.equal(d.active,null);assert(d.open(actor,'captive'));assert.equal(d.active.line.speaker,'Louis');d.reset();assert(!d.active);
+ actor.phase='hidden';actor.age=2;assert.equal(loisDialogueContext(actor,'rc-setup'),'hidden');actor.phase='follow';actor.exitRouteActive=true;assert.equal(loisDialogueContext(actor,'escape'),null);actor.exitRouteActive=false;assert.equal(loisDialogueContext(actor,'escape'),'follow');assert.equal(loisDialogueContext(actor,'ending',true),'garden');assert(d.open(actor,'follow'));d.close();assert(!actor.dialogueSpeaking);
+ console.log('PASS LOIS DIALOGUE: context, visibility, typewriter, skip, voice, speech reaction, cleanup');
+})().catch(e=>{console.error(e);process.exitCode=1;});
