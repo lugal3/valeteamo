@@ -230,7 +230,6 @@ const assert=require('node:assert/strict');
  const foe={x:6.15,y:0,z:12.38,yaw:Math.PI,mode:'chase',speed:1.4,active:true};
  const {planEmyRescueShot,sampleEmergencyRescue,sampleRescuedKitty,EMY_RESCUE_BEATS}=await import('../src/lab/emy-emergency-shot.js');
  const {createPose}=await import('../src/lab/character-rig.js');
- const {pursuerPose}=await import('../src/lab/pursuer-model.js');
  const shot={elapsed:.20,kitty:{x:5.65,y:0,z:12.8,yaw:Math.PI},attacker:{...foe}};
  shot.stage=planEmyRescueShot(finaleWorld,shot.kitty,shot.attacker,{x:5.65,y:1.63,z:12.8,yaw:Math.PI,pitch:0});
  let prior;
