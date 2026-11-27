@@ -24,7 +24,7 @@ export function planEmyRescueShot(world,kitty,attacker,from){
   const safe=point(kitty,-dx*.30,-dz*.30);
   if(!clearPath(world,foe,recoil,.17,1.72)||!clearPath(world,start,takeoff,.14,.48)||!clearPath(world,land,land,.14,.48)||!clearPath(world,kitty,safe,.19,1.65))continue;
   // Sample the elevated flight separately; the cat must not pass through a wall.
-  if(![0,.25,.5,.75,1].every(t=>{const p=interpolate(takeoff,land,t);return !blocked(world.boxes,p.x,p.y+2.85*t*(1-t),p.z,.15,.40);} ))continue;
+  if(!Array.from({length:17},(_,i)=>i/16).every(t=>{const p=t<.45?interpolate(takeoff,hit,t/.45):interpolate(hit,land,(t-.45)/.55);return !blocked(world.boxes,p.x,p.y+2.9*t*(1-t),p.z,.15,.40);}))continue;
   const subject={x:(kitty.x+foe.x)/2,y:kitty.y+.91,z:(kitty.z+foe.z)/2};
   for(const radius of [2.2,1.65,1.25])for(const s of [-1,1]){
    const camera={x:subject.x+sx*radius*s-dx*.4,y:kitty.y+1.67,z:subject.z+sz*radius*s-dz*.4};
