@@ -84,3 +84,11 @@
 .emy-heading{min-width:0}
 .emy-speech{left:auto;right:1%;max-width:42%}
 .emy-paste{left:50%;top:0;transform:translate(-50%,-50%);box-sizing:border-box}
+
+/* Keep the interaction square within both safe-area and grid allocations. */
+@media(orientation:landscape) and (max-height:500px){
+ .emy-scene{grid-template-columns:minmax(125px,1fr) minmax(0,auto);grid-template-rows:minmax(0,1fr) minmax(0,1fr);height:100%;}
+ .emy-stage{width:min(44vw,calc(100dvh - 56px),400px);max-height:100%;}
+ .emy-heading{gap:5px}.emy-heading h2{overflow-wrap:anywhere}
+ .emy-feeding footer{max-width:300px;justify-self:start}
+}

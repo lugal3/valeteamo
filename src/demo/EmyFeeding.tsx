@@ -12,14 +12,15 @@ export function EmyFeeding({audio,onComplete,onCancel}:{audio:Sound;onComplete:(
  const [reaction,setReaction]=useState(0);
  const stage=useRef<HTMLDivElement>(null),tube=useRef<HTMLButtonElement>(null);
  const live=useRef({tip,progress:0,holding:false,done:false,lastSound:0});
- const drag=useRef<number|null>(null),completion=useRef(onComplete),cancel=useRef(onCancel);
+ const drag=useRef<number|null>(null),grab=useRef({x:0,y:0}),completion=useRef(onComplete),cancel=useRef(onCancel);
  const reduced=useRef(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
  completion.current=onComplete;cancel.current=onCancel;
  const aim=(x:number,y:number)=>{const point={x:Math.max(.06,Math.min(.94,x)),y:Math.max(.12,Math.min(.84,y))};live.current.tip=point;setTip(point);};
  const hold=(value:boolean)=>{live.current.holding=value;setHolding(value);};
  const move=(e:ReactPointerEvent)=>{
   const r=stage.current?.getBoundingClientRect();if(!r)return;
-  aim((e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height);
+  if(!r.width||!r.height)return;
+  aim((e.clientX-r.left)/r.width+grab.current.x,(e.clientY-r.top)/r.height+grab.current.y);
  };
  useEffect(()=>{
   const previous=document.activeElement as HTMLElement|null;tube.current?.focus();
@@ -90,7 +91,7 @@ export function EmyFeeding({audio,onComplete,onCancel}:{audio:Sound;onComplete:(
    {!full&&<span className={'emy-mouth-guide'+(eating?' is-eating':'')} style={{left:EMY_MOUTH.x*100+'%',top:EMY_MOUTH.y*100+'%'}} aria-hidden="true"/>}
    <button ref={tube} type="button" className={'emy-churu'+(full?' is-empty':'')} aria-label="Mover Churu: flechas; mantén espacio o Enter para alimentar" aria-describedby="emy-keys" disabled={full}
     style={{left:tip.x*100+'%',top:tip.y*100+'%','--remaining':String(1-progress/150)} as React.CSSProperties}
-    onPointerDown={e=>{if(drag.current!==null||e.button!==0)return;e.preventDefault();e.stopPropagation();drag.current=e.pointerId;e.currentTarget.setPointerCapture(e.pointerId);hold(true);move(e);void audio.start();}}
+    onPointerDown={e=>{if(drag.current!==null||e.button!==0)return;const r=stage.current?.getBoundingClientRect();if(!r||!r.width||!r.height)return;e.preventDefault();e.stopPropagation();grab.current={x:live.current.tip.x-(e.clientX-r.left)/r.width,y:live.current.tip.y-(e.clientY-r.top)/r.height};drag.current=e.pointerId;e.currentTarget.setPointerCapture(e.pointerId);hold(true);void audio.start();}}
     onPointerMove={e=>{if(drag.current===e.pointerId)move(e);}}
     onPointerUp={e=>{if(drag.current===e.pointerId){hold(false);drag.current=null;}}}
     onPointerCancel={()=>{hold(false);drag.current=null;}} onLostPointerCapture={()=>{hold(false);drag.current=null;}}

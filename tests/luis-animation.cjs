@@ -113,6 +113,7 @@ for(const facing of ['down','right','up'])for(const walking of [false,true]){
  for(const color of ['#202126','#b93d51','#ddd6d0'])assert(palette.has(color),'Vale card hair, red shirt, shoe soles');
 }
 assert.notEqual(signature(art.paintStoryLouis('down',6)),signature(art.paintStoryLouis('down',7)),'Louis has separate mouth poses');
+assert.notEqual(signature(art.paintStoryLouis('down',0)),signature(art.paintStoryLouis('down',6)),'intermediate speaking mouth differs from neutral');
 const talkFrames=Array.from({length:3},(_,i)=>vals.get(introContext.exports.valeTalkTexture(i)));
 assert(new Set(talkFrames.map(signature)).size===3,'Vale has three speaking frames');
 const arcade=fs.readFileSync('src/iso-game.ts','utf8');

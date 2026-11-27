@@ -80,6 +80,19 @@ export function installRescueIntroArt(scene:Phaser.Scene){
    cluster(31,27+bob,[[0,5],[1,6],[2,6],[2,6],[2,7],[1,7],[0,7],[0,6],[1,6],[2,5],[2,4],[1,3]],'#303035');
    cluster(6,30+bob,[[0,2],[0,2],[1,2],[1,2],[2,2],[2,2],[1,2],[0,2],[0,2]],shine);
    cluster(34,28+bob,[[0,2],[1,2],[2,2],[2,2],[2,2],[1,2],[0,2],[0,2]],shine);
+   // Side profile has a narrow torso and staggered feet in screen X.
+   if(side){
+    const stride=walking?[3,0,-3,0][frame]:0;
+    b(15-stride,43,7,10,ink);b(16-stride,44,5,7,'#30333a');
+    b(15-stride,51,10,3,'#1c2026');b(16-stride,53,8,1,'#ddd6d0');
+    b(19+stride,43,7,10,ink);b(20+stride,44,5,7,'#30333a');
+    b(19+stride,51,10,3,'#1c2026');b(20+stride,53,8,1,'#ddd6d0');
+    b(16,31+bob,13,15,ink);b(17,32+bob,11,12,top);
+    b(18,34+bob,6,7,'#d55464');b(17,41+bob,11,3,'#8f2e43');
+    b(21,29+bob,5,5,skin);b(20,33+bob,5,1,'#782a3b');
+    b(19+Math.sign(stride),34+bob,6,10,ink);
+    b(20+Math.sign(stride),35+bob,4,8,skin);b(21+Math.sign(stride),36+bob,2,5,light);
+   }else{
    // Dark pants and little black shoes, feet stay inside the existing frame.
    b(12,43+step,8,11,ink);b(23,43-step,8,11,ink);
    b(13,44+step,6,7,'#30333a');b(24,44-step,6,7,'#30333a');
@@ -92,6 +105,7 @@ export function installRescueIntroArt(scene:Phaser.Scene){
    b(9,32+bob,5,12,ink);b(29,32+bob,5,12,ink);
    b(10,33+bob,3,10,skin);b(30,33+bob,3,10,skin);
    b(11,34+bob,2,6,light);b(30,34+bob,2,6,light);
+   }
    // Oversized chibi head and big dark eyes.
    b(9,5+bob,26,26,ink);b(5,10+bob,34,17,ink);
    b(8,24+bob,28,5,ink);b(12,29+bob,20,3,ink);
@@ -136,7 +150,7 @@ export function installRescueIntroArt(scene:Phaser.Scene){
     b(20,28+bob,4,5,hair);
    }
    // White soles from the reference card, existing feet anchors.
-   b(12,53+step,8,1,'#ddd6d0');b(24,53-step,8,1,'#ddd6d0');
+   if(!side){b(12,53+step,8,1,'#ddd6d0');b(24,53-step,8,1,'#ddd6d0');}
   });
  }
 }

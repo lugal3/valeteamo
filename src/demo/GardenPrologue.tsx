@@ -262,6 +262,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
 
  // StoryGame e IsoAdventure son LOS MISMOS componentes de 2D Corazones.
  // La extensión solo da objetivos/diálogos, no crea un motor ni un mundo aparte.
+ const lineLengthCache=useRef<{text:string;count:number}>({text:'',count:0});
  const story=useMemo<IsoStoryBridge>(()=>({
   stage:()=>phaseRef.current.stage as IsoStoryStage,
   objective:(stage)=>PROLOGUE_OBJECTIVES[stage]??'Sigue la historia',
@@ -270,7 +271,10 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   near:(value)=>setNear(current=>current===value?current:value),
   discoveries:()=>phaseRef.current.discoveries??[],
   speaker:()=>{const current=dialogRef.current;return current?.lines[current.index]?.speaker;},
-  speaking:()=>{const current=dialogRef.current;return !!current&&lettersRef.current<dialogueGlyphs(current.lines[current.index].text).length;},
+  speaking:()=>{const current=dialogRef.current;if(!current)return false;
+   const text=current.lines[current.index].text;
+   if(lineLengthCache.current.text!==text)lineLengthCache.current={text,count:dialogueGlyphs(text).length};
+   return lettersRef.current<lineLengthCache.current.count;},
   discover:(id)=>{
    const current=phaseRef.current,next=recordPrologueDiscovery(current,id);
    if(current===next)return;
@@ -292,11 +296,11 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
 
  const closePostcard=useCallback(()=>{
   postcardRequest.current++;window.clearTimeout(postcardTimer.current);
-  postcardOpen.current=false;setPostcard(null);sceneRef.current?.clearInput();
+  postcardOpen.current=false;setPostcard(null);sceneRef.current?.endStoryPhoto();
  },[]);
  const openPostcard=()=>{
   const scene=sceneRef.current,memory=scene?.availableStoryMoment();
-  if(!scene||!memory||postcardOpen.current)return;
+  if(!scene||!memory||postcardOpen.current||!scene.beginStoryPhoto(memory))return;
   postcardOpen.current=true;scene.clearInput();
   const request=++postcardRequest.current;
   setPostcard({title:memory.title,image:'',error:false});
@@ -338,6 +342,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  };
  useEffect(()=>()=>{for(const timer of travelTimers.current)window.clearTimeout(timer);
   postcardRequest.current++;window.clearTimeout(postcardTimer.current);
+  sceneRef.current?.endStoryPhoto();
   audio.destroy();
   if(import.meta.env.DEV)delete (window as Window&{__valePrologue?:unknown}).__valePrologue;
  },[]);

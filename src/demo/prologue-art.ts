@@ -61,9 +61,15 @@ export function paintLuisChibi(facing:LuisFacing='down',pose:LuisPose='idle',fra
  if(facing==='up'){
   for(let y=0;y<29;y++)for(let x=0;x<LUIS_CARD[y].length;x++){
    if(raw(x,y)==='0')continue;
-   if(y>12){const sample=raw(x,6+(y%6));rows[y][x]=sample==='2'||sample==='3'?sample:'1';}
+   if(y>=12){const sample=raw(x,6+(y%6));rows[y][x]=sample==='2'||sample==='3'?sample:'1';}
   }
-  for(let y=29;y<39;y++)for(let x=0;x<33;x++)if(rows[y][x]==='B')rows[y][x]='D';
+  for(let y=29;y<39;y++)for(let x=0;x<rows[y].length;x++)if(rows[y][x]==='B')rows[y][x]='D';
+  // In back view the tattoo belongs on viewer-left; neckline stays dark.
+  for(let y=33;y<38;y++){
+   const row=rows[y];for(let x=0;x<Math.floor(row.length/2);x++){
+    const other=row.length-1-x,tmp=row[x];row[x]=row[other];row[other]=tmp;
+   }
+  }
  }
  // Side view: narrower crown, same foot anchor, one visible eye and temple.
  if(facing==='right'){
@@ -169,7 +175,7 @@ export function paintStoryLouis(facing:LuisFacing='down',frame=0):HTMLCanvasElem
   b(17,h+10,6,1,hair);b(17,h+12,6,4,'#fff0e3');
   b(20,h+12,3,4,frame===5?ink:blue);b(21,h+12,1,1,'#fff7e6');
   if(frame===5)b(17,h+13,6,2,ink);
-  b(22,h+18,4,frame===7?3:1,'#9b5960');b(13,h+18,3,1,shadow);
+  b(22,h+18,4,frame===7?3:frame===6?2:1,'#9b5960');b(13,h+18,3,1,shadow);
  }else{
   // Narrow friendly blue eyes, asymmetric eyebrows and crooked smile.
   b(8,h+10,6,1,hair);b(18,h+9,6,1,hair);
@@ -180,6 +186,7 @@ export function paintStoryLouis(facing:LuisFacing='down',frame=0):HTMLCanvasElem
   }
   b(15,h+15,2,2,shadow);b(8,h+17,3,1,'#e5a48f');b(22,h+17,3,1,'#e5a48f');
   b(12,h+18,8,1,'#9b5960');b(14,h+18,5,1,'#fff2df');b(15,h+19,4,1,'#b66d65');
+  if(frame===6){b(13,h+18,7,2,'#824b58');b(15,h+18,4,1,'#fff2df');}
   if(frame===7){b(14,h+18,5,3,'#824b58');b(15,h+20,3,1,'#d88f95');}
  }
  // The sweeping fringe descends on the viewer's left, not a bowl cut.
