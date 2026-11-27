@@ -43,3 +43,11 @@
 
 /* Preserve the postcard's native dialog hit-testing even within the HUD. */
 .garden-epilogue .garden-postcard{pointer-events:auto}
+
+/* Stable native hit regions: center with margins, not transform. The shared
+ adventure button active rule must never move an epilogue target away from a finger. */
+.garden-epilogue .epilogue-action{left:0;right:0;margin-inline:auto;width:max-content;transform:none;transition:background-color .12s,color .12s}
+.garden-epilogue .epilogue-action:active,.garden-epilogue .epilogue-action:hover{transform:none;filter:none}
+.garden-epilogue .epilogue-dialog,.garden-epilogue .epilogue-celebration{left:0;right:0;margin-inline:auto;transform:none}
+.garden-epilogue .epilogue-dialog button:active,.garden-epilogue .epilogue-celebration button:active{transform:none}
+.garden-epilogue .epilogue-dialog button,.garden-epilogue .epilogue-celebration button{transition:background-color .12s,color .12s}

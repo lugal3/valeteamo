@@ -61,16 +61,31 @@ async function walkToMarker(page){
  }finally{await release();for(const key of keys)await page.keyboard.up(key);}
  await page.locator('.epilogue-action').waitFor({timeout:30000});
 }
+// Match the real input strategy used by the 3D checkpoint suite. Browser
+// elementFromPoint verifies the target at the coordinates immediately before
+// native mouse input; no forced click, JS click or direct state mutation.
+async function physicalClick(page,locator){
+ await locator.waitFor({state:'visible'});
+ const point=await locator.evaluate(el=>{
+  const r=el.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,top=document.elementFromPoint(x,y);
+  return {x,y,ok:!el.disabled&&el.contains(top),top:top?.outerHTML.slice(0,240),stack:document.elementsFromPoint(x,y).slice(0,8).map(n=>({tag:n.tagName,cls:n.className,z:getComputedStyle(n).zIndex,pointer:getComputedStyle(n).pointerEvents}))};
+ });
+ assert(point.ok,'epilogue target must receive native input: '+JSON.stringify(point));
+ await page.mouse.move(point.x,point.y);
+ const afterHover=await locator.evaluate((el,p)=>el.contains(document.elementFromPoint(p.x,p.y)),point);
+ assert(afterHover,'hover must not move the target under a different element');
+ await page.mouse.down();
+ try{
+  const afterDown=await locator.evaluate((el,p)=>el.contains(document.elementFromPoint(p.x,p.y)),point);
+  assert(afterDown,'active style must not move the button under the canvas');
+ }finally{await page.mouse.up();}
+}
 async function dialogue(page){
- const action=page.locator('.epilogue-action');
- await action.waitFor();
- const hit=await action.evaluate(el=>{const r=el.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,top=document.elementFromPoint(x,y);return {ok:el.contains(top),top:top?.outerHTML.slice(0,240),stack:document.elementsFromPoint(x,y).slice(0,8).map(n=>({tag:n.tagName,cls:n.className,z:getComputedStyle(n).zIndex,position:getComputedStyle(n).position,pointer:getComputedStyle(n).pointerEvents}))};});
- assert(hit.ok,'epilogue action must receive physical pointer: '+JSON.stringify(hit));
- await action.click();
+ await physicalClick(page,page.locator('.epilogue-action'));
  const box=page.locator('.epilogue-dialog');
  await box.waitFor();
  for(let i=0;i<18&&await box.isVisible();i++){
-  await box.getByRole('button',{name:/Mostrar todo|Continuar/}).click();
+  await physicalClick(page,box.getByRole('button',{name:/Mostrar todo|Continuar/}));
  }
  await box.waitFor({state:'hidden'});
 }
@@ -82,18 +97,18 @@ async function completeChapter(page,stage,shots){
  if(shots)await page.screenshot({path:shots+'/epilogue-'+stage+'.png'});
  await dialogue(page);
  if(stage==='celebration'){
-  await page.getByRole('button',{name:/sopla las velas/}).click();
-  await page.getByRole('button',{name:'Leer carta'}).click();
+  await physicalClick(page,page.getByRole('button',{name:/sopla las velas/}));
+  await physicalClick(page,page.getByRole('button',{name:'Leer carta'}));
   await page.locator('.epilogue-letter').waitFor();
-  await page.getByRole('button',{name:'Cerrar carta'}).click();
-  await page.getByRole('button',{name:'Foto grupal'}).click();
+  await physicalClick(page,page.getByRole('button',{name:'Cerrar carta'}));
+  await physicalClick(page,page.getByRole('button',{name:'Foto grupal'}));
   const postal=page.getByRole('dialog',{name:'Feliz cumpleaños, Vale'});
   await postal.locator('img').waitFor({timeout:10000});
   assert.match(await postal.locator('img').getAttribute('src'),/^data:image\/png;base64,/);
   assert.equal(await postal.getByRole('link',{name:'Guardar imagen'}).getAttribute('download'),'ValeTeAmo-postal.png');
   if(shots)await page.screenshot({path:shots+'/epilogue-postcard.png'});
-  await postal.getByRole('button',{name:'Volver al jardín'}).click();
-  await page.getByRole('button',{name:'Terminar aventura'}).click();
+  await physicalClick(page,postal.getByRole('button',{name:'Volver al jardín'}));
+  await physicalClick(page,page.getByRole('button',{name:'Terminar aventura'}));
   await page.locator('[data-epilogue-stage="complete"]').waitFor({timeout:20000});
  }else await waitScene(page,stages[stages.indexOf(stage)+1]);
 }
