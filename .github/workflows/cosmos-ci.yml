@@ -114,7 +114,6 @@ jobs:
       - run: node tests/landscape-gate.cjs
       - run: node tests/cosmos-browser.cjs
       - run: node tests/cosmos-public-flow.cjs
-      - run: node tests/epilogue-browser.cjs
       - run: node tests/prologue-browser.cjs
       - run: node tests/rescue-feel-browser.cjs
       - run: node tests/prologue-desktop.cjs
@@ -124,5 +123,24 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cosmos-visual-check
+          path: artifacts/
+          if-no-files-found: ignore
+  epilogue-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install chromium --with-deps
+      - run: node tests/epilogue-browser.cjs
+      - name: Guardar capturas del epílogo
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: epilogue-visual-check
           path: artifacts/
           if-no-files-found: ignore
