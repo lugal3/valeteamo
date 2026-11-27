@@ -1,7 +1,6 @@
-import {NIGHT_LAMPS,NIGHT_STREET} from './night-house-layout';
 import Phaser from 'phaser';
 import {toScreen,type IsoPoint} from '../isometric';
-import {NIGHT_HOUSE,HOUSE_3D_REFERENCE} from './night-house-layout';
+import {NIGHT_HOUSE,HOUSE_3D_REFERENCE,NIGHT_LAMPS,NIGHT_STREET} from './night-house-layout';
 import type {RescueMapId} from './rescue-overworld';
 import {ECOLOGY_CAPS,ecologySeeds,ecologyFloraFrame,ecologyWildlifeStep,
  ecologyAmbientCue,ecologyMicroEvent,ecoLean,type AmbientCue,type WildlifeKind,

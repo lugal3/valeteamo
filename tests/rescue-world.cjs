@@ -8,7 +8,7 @@ const nightExports={};vm.runInNewContext(nightJs,{exports:nightExports});
 const vanJs=ts.transpileModule(fs.readFileSync('src/demo/abduction-van.ts','utf8'),{
  compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}
 }).outputText;
-const vanExports={};vm.runInNewContext(vanJs,{exports:vanExports});
+const vanExports={};vm.runInNewContext(vanJs,{exports:vanExports,require(name){if(name==='./night-house-layout')return nightExports;throw Error(name);}});
 const context={exports:{},require(name){
  if(name==='./night-house-layout')return nightExports;
  if(name==='./abduction-van')return vanExports;

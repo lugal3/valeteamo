@@ -64,3 +64,5 @@ Base publicada: d28fc0eaa26ddc348f60b4e9704aaf275f8fb4c0. Rama independiente fea
 - No se limita a reflejar la fachada. Asfalto, vereda y camino de entrada se definen ahora por una línea de calle continua delante del muro, paralela a ambas aberturas y conectada al bosque por un tramo lateral. Orden exterior explícito: fachada, porche, patio delantero, vereda, calle. Se elimina el asfalto anterior detrás de la casa.
 - Furgoneta en la calle, faroles y ambiente en la misma referencia; regreso por el patio delantero. Límites de navegación ampliados únicamente para abarcar la calle real, sin quitar colisión de la casa. Se conserva la geometría 3D y las cinemáticas recién corregidas.
 - Regresiones geométricas de calle, vereda, furgoneta, ruta recta y porche. CI y capturas reales pendientes; sin merge ni publicación.
+
+- El objetivo del regreso 2D está en la calle delantera (NIGHT_STREET[3]), de modo que el camino desde el portón no intenta atravesar la huella de la casa. Se adaptan las dependencias de los tests puros al nuevo punto de furgoneta compartido.
