@@ -1,4 +1,4 @@
-import {memo,useEffect,useRef,useState,type PointerEvent,type KeyboardEvent} from 'react';
+import {memo,useEffect,useRef,useState,type PointerEvent,type KeyboardEvent,type ReactNode} from 'react';
 import type {DailyTheme} from './birthday-daily.js';
 import './birthday-editorial.css';
 export const EDITORIAL:Record<string,{title:string;em:string;action:string;hint:string;total:number;done:string}>={
@@ -16,14 +16,14 @@ const ST=[[76,185],[122,97],[206,135],[273,67],[328,166],[235,223],[152,233]];
 const WI=[[200,68],[123,116],[277,116],[102,210],[298,210],[200,247]];
 const Dust=memo(function Dust(){return <div className="ed-dust" aria-hidden="true">{Array.from({length:32},(_,i)=><i className="daily-particle" key={i} style={{left:(i*37+4)%100+'%',top:(i*61+11)%100+'%',animationDelay:-i*.7+'s',animationDuration:7+i%7+'s'}}/>)}</div>});
 function keyboard(e:KeyboardEvent,fn:()=>void){if(e.key==='Enter'||e.key===' '){e.preventDefault();fn();}}
-export function DailyEditorial({theme,preview,children}:{theme:DailyTheme;preview:boolean;children:React.ReactNode}){
- const info=EDITORIAL[theme.id], [hits,setHits]=useState<number[]>([]),[open,setOpen]=useState(false),[playing,setPlaying]=useState(false),[track,setTrack]=useState(''),[elapsed,setElapsed]=useState(0),[duration,setDuration]=useState(0),[volume,setVolume]=useState(.65),[error,setError]=useState('');
+export function DailyEditorial({theme,preview,children}:{theme:DailyTheme;preview:boolean;children:ReactNode}){
+ const info=EDITORIAL[theme.id],key='valeteamo-daily-v1:'+theme.id;
+ const [hits,setHits]=useState<number[]>(()=>{if(!preview)try{const saved=JSON.parse(localStorage.getItem(key)||'[]');if(Array.isArray(saved))return [...new Set(saved.filter(n=>Number.isInteger(n)&&n>=0&&n<info.total))] as number[];}catch{}return [];}),[open,setOpen]=useState(false),[playing,setPlaying]=useState(false),[track,setTrack]=useState(''),[elapsed,setElapsed]=useState(0),[duration,setDuration]=useState(0),[volume,setVolume]=useState(.65),[error,setError]=useState('');
  const canvas=useRef<HTMLCanvasElement>(null),last=useRef<[number,number]|null>(null),audio=useRef<HTMLAudioElement>(null),file=useRef<HTMLInputElement>(null),url=useRef<string|null>(null),letter=useRef<HTMLDialogElement>(null);
  // Preview never persists. Public interactions are scoped to the edition only.
- const key='valeteamo-daily-v1:'+theme.id;
- useEffect(()=>{if(!preview)try{const saved=JSON.parse(localStorage.getItem(key)||'[]');if(Array.isArray(saved))setHits([...new Set(saved.filter(n=>Number.isInteger(n)&&n>=0&&n<info.total))] as number[]);}catch{}},[key,preview,info.total]);
- function hit(n:number){setHits(old=>{if(old.includes(n))return old;const next=[...old,n];if(!preview)try{localStorage.setItem(key,JSON.stringify(next));}catch{}return next;});}
- useEffect(()=>()=>{audio.current?.pause();if(url.current)URL.revokeObjectURL(url.current);},[]);
+ useEffect(()=>{if(!preview)try{localStorage.setItem(key,JSON.stringify(hits));}catch{}},[hits,key,preview]);
+ function hit(n:number){setHits(old=>old.includes(n)?old:[...old,n]);}
+ useEffect(()=>{const player=audio.current;return()=>{player?.pause();if(player){player.removeAttribute('src');player.load();}if(url.current){URL.revokeObjectURL(url.current);url.current=null;}};},[]);
  function clear(){const c=canvas.current;c?.getContext('2d')?.clearRect(0,0,c.width,c.height);}
  function point(e:PointerEvent<HTMLCanvasElement>):[number,number]{const r=e.currentTarget.getBoundingClientRect();return [(e.clientX-r.left)*e.currentTarget.width/r.width,(e.clientY-r.top)*e.currentTarget.height/r.height];}
  function draw(e:PointerEvent<HTMLCanvasElement>){if(!last.current)return;const c=e.currentTarget.getContext('2d');if(!c)return;const p=point(e);c.strokeStyle='#b9f2cdaa';c.lineWidth=5;c.lineCap='round';c.shadowColor='#a1eec6';c.shadowBlur=14;c.beginPath();c.moveTo(...last.current);c.lineTo(...p);c.stroke();last.current=p;}
@@ -36,7 +36,7 @@ export function DailyEditorial({theme,preview,children}:{theme:DailyTheme;previe
  const complete=info.total>0&&hits.length===info.total;
  return <div className={'ed-layout ed-'+theme.id}>
   <Dust/>
-  <div className="ed-top"><span>VALE / una cuenta atrás</span><span>{theme.date} 2026</span></div>
+  <div className="ed-top"><span>{preview?'LP / Vista previa · VALE':'VALE / una cuenta atrás'}</span><span>{theme.date} 2026</span></div>
   <div className="ed-main">
    <div className="ed-copy">
     <div className="ed-eyebrow">5 de diciembre · 00:00</div>

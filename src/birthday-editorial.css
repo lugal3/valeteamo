@@ -51,3 +51,16 @@
 @media(max-height:460px) and (orientation:landscape){.birthday-countdown.ed-countdown .ed-layout{padding:12px 4% 8px;min-height:calc(100dvh - 37px)}.ed-main{padding:9px 1%;gap:4%}.ed-top{padding-bottom:8px}.ed-bottom{padding-top:6px}.ed-layout h1{font-size:clamp(29px,5cqw,47px);margin:7px 0 9px}.ed-layout .daily-message p{font-size:12px;margin-bottom:10px}.ed-layout .ed-action{margin-top:8px;min-height:32px}.ed-object{max-height:57dvh}.ed-countdown:has(.daily-preview) .ed-layout{min-height:calc(100dvh - 78px)}}
 @media(orientation:portrait){.ed-main{grid-template-columns:1fr!important}.ed-copy,.ed-object{grid-column:1!important;grid-row:auto!important}.ed-layout .daily-message{max-width:100%}.ed-object{max-height:none}.ed-layout h1{font-size:clamp(34px,8cqw,60px)}}
 @media(prefers-reduced-motion:reduce){.ed-layout *,.ed-layout *:before,.ed-layout *:after{animation:none!important;transition:none!important}}
+
+/* Ensure legacy countdown rules cannot dim the approved vectors. */
+.ed-countdown .ed-layout .ed-art{position:static;opacity:1;filter:none}
+.ed-countdown:not(:has(.daily-preview)) .ed-tools{background:var(--ed-public-bg,#efc9c6);color:var(--ed-public-ink,#422e31)}
+.ed-countdown:not(:has(.daily-preview)) .birthday-iphone-help{color:inherit}
+.ed-countdown[data-daily-theme=constellation]{--ed-public-bg:#101b28;--ed-public-ink:#ece5d5}
+.ed-countdown[data-daily-theme=letter]{--ed-public-bg:#e9dfce;--ed-public-ink:#45382c}
+.ed-countdown[data-daily-theme=garden]{--ed-public-bg:#dce3cb;--ed-public-ink:#334733}
+.ed-countdown[data-daily-theme=pixel]{--ed-public-bg:#262d39;--ed-public-ink:#f5e8d2}
+.ed-countdown[data-daily-theme=aurora]{--ed-public-bg:#172f37;--ed-public-ink:#e9e9d7}
+.ed-countdown[data-daily-theme=music]{--ed-public-bg:#ded1b9;--ed-public-ink:#2c302c}
+.ed-countdown[data-daily-theme=finale]{--ed-public-bg:#221f28;--ed-public-ink:#eee4cc}
+.ed-tools .daily-preview button:focus-visible{outline:2px solid #fff;outline-offset:2px}
