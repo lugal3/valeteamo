@@ -24,23 +24,33 @@ export function finaleStage(shot,enemy,reduced=false,emy=null){
  // than sliding sideways with the recoil. Use a separately planted pose.
  const detach=ease((t-2.08)/.28),heldX=start.x+.53,heldZ=Math.max(12.37,start.z-.10)+.70;
  const hold={x:mix(enemy.x-.05+sway,heldX+sway,detach),z:mix(enemy.z+.44,heldZ,detach)};
- const captive={x:mix(hold.x,start.x-.25,release),z:mix(hold.z,start.z+1.4,release)};
+ // After release he plants a foot, looks for Kitty, then strides past
+ // her shoulder while Emy clears the opposite side of the path.
+ const catchFoot={x:start.x+.72,z:start.z+1.30};
+ const lane=finaleLouisGoal(stop);
+ const launchTime=clamp((t-b.lookOut)/(b.run-b.lookOut));
+ const launch=launchTime*launchTime;
+ const passX=mix(catchFoot.x,lane.x,.68),passZ=mix(catchFoot.z,lane.z,.46);
+ const captive={x:mix(mix(hold.x,catchFoot.x,release),passX,launch),
+  z:mix(mix(hold.z,catchFoot.z,release),passZ,launch)};
  // A nearby real follower can enter the hold from his own position. Distant
  // checkpoint companions retain the existing off-camera staging fallback.
  const entry=shot.louis?.from,approach=ease(t/.86);
  const from=entry&&entry.z>=12.16&&Math.abs(entry.x-start.x)<=1.5&&Math.abs(entry.z-start.z)<=1.5&&Math.abs(entry.y??0)<.2?entry:null;
  const lx=from?mix(from.x,captive.x,approach):captive.x,lz=from?mix(from.z,captive.z,approach):captive.z;
  const distance=from?Math.hypot(heldX-from.x,heldZ-from.z):0;
- const escapeDistance=Math.hypot(start.x-.25-heldX,start.z+1.4-heldZ);
+ const escapeDistance=Math.hypot(catchFoot.x-heldX,catchFoot.z-heldZ);
  const walkIn=from&&t<.86?distance*30*(t/.86)**2*(1-t/.86)**2/.86:0;
  const rt=clamp((t-b.release)/.68);
  const walkOut=escapeDistance*30*rt**2*(1-rt)**2/.68;
- const face=-.28*struggle+.20*release*(1-run);
+ const passDistance=Math.hypot(passX-catchFoot.x,passZ-catchFoot.z);
+ const passSpeed=2*launchTime*passDistance/(b.run-b.lookOut);
+ const face=-.28*struggle-.38*release*(1-launch)+Math.atan2(passX-catchFoot.x,passZ-catchFoot.z)*launch;
  const louis={x:mix(lx,exit.x+.42,run),y:0,z:mix(lz,exit.z-.42,run),
   yaw:turn(from?turn(from.yaw??0,face,approach):face,0,run),
   crouch:mix(from?.crouch??0,.22,approach)*(1-release)+.09*struggle,
-  speed:run>0&&run<1?2.15:Math.min(3,walkIn+walkOut),
-  walk:shot.louisStride+distance*approach+release*escapeDistance+run*2.8,
+  speed:run>0&&run<1?2.15:Math.min(3,walkIn+walkOut+passSpeed),followSpeed:passSpeed,
+  walk:shot.louisStride+distance*approach+release*escapeDistance+launch*passDistance+run*2.8,
   age:(shot.louisAge??0)+t,visualMotion:null,followMoving:false,
   visualReaction:t<b.run?{type:'finale-captive',age:t,duration:b.run}:null};
  const target={x:(enemy.x+louis.x)*.5,y:1.32,z:(enemy.z+louis.z)*.5};
@@ -78,9 +88,21 @@ export function finaleThreat(actor,elapsed,reduced=false){
 // to a point just ahead and beside Kitty, within the existing exterior lane.
 // The same navigator still controls the actual motion.
 export function finaleEmyGoal(player){
- const rejoin=player.z>=17.7&&player.x>3.8&&player.x<8.0;
- return rejoin?{x:clamp(player.x+.55*Math.tanh((5.9-player.x)*2.4),4.1,7.7),z:clamp(player.z+.62,18.0,20.0),rejoin}
+ const rejoin=player.z>=17.7&&player.z<=22&&player.x>3.8&&player.x<8.0;
+ return rejoin?{x:clamp(player.x-.65,4.04,6.55),z:player.z+1.76,rejoin}
   :{x:5.38,z:Math.max(17.05,Math.min(20.0,player.z+2.4)),rejoin};
+}
+
+// Use the garden path as a reference so looking around never orbits the actors.
+export function finaleLouisGoal(player){
+ return {x:clamp(player.x+.76,4.7,7.69),z:clamp(player.z+1.54,14.1,23.54)};
+}
+
+export function reunionView(origin,louis,cat,elapsed,reduced){
+ const x=(louis.x+cat.x)*.5-origin.x,z=(louis.z+cat.z)*.5-origin.z;
+ const blend=reduced?1:ease(elapsed/1.05);
+ return {...origin,yaw:turn(origin.yaw,Math.atan2(x,z),blend),
+  pitch:mix(origin.pitch,Math.atan2(1.04-origin.y,Math.hypot(x,z)),blend)};
 }
 
 // Weather follows spatial escape progress, not a timeout that would let dawn

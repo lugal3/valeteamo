@@ -4,6 +4,7 @@ import {HouseEvents} from './story-events.js';
 import {createFieldManual,manualListHTML} from './field-manual.js';
 import {safeBedroomHide,poseArrivingPursuer,finishArrivingPursuer} from './field-arrival.js';
 import './field-manual.css';
+import {startLoisReaction} from './lois-ps2-reactions.js';
 import {createLoisDialogue,loisDialogueContext,canTalkToLois} from './lois-dialogue.js';
 import './lois-dialogue.css';
 const loisPortrait=new URL('./assets/lois-option-a-reference.jpg',import.meta.url).href;
@@ -51,7 +52,7 @@ import {poseEscapeAmbush,poseEmyLastChance,createRescueObjectives,updateEmySense
 import {EMY_RESCUE_BEATS,planEmyRescueShot,sampleEmergencyRescue,sampleRescuedKitty} from './emy-emergency-shot.js';
 import {createPose} from './character-rig.js';
 import {collectCinematicCues} from './cinematic-cues.js';
-import {FINALE_BEATS,finaleStage,finaleThreat,finaleWeather,finaleEmyGoal,finaleLighting} from './escape-finale.js';
+import {FINALE_BEATS,finaleStage,finaleThreat,finaleWeather,finaleEmyGoal,finaleLouisGoal,reunionView,finaleLighting} from './escape-finale.js';
 import {createAltarVisit,advanceAltarVisit,activateAltarRecord} from './louis-altar.js';
 import {rcControlHint,throwableHint,threatAccessibility,hopOffset,HOP_DURATION,HOP_COOLDOWN,advanceHop} from './hud-context.js';
 import {updateUpstairsEmy,petEmy,poseEmy} from './emy-cat.js';
@@ -271,7 +272,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const torchMarker=$('torch-outline');
  const desktop=window.matchMedia('(any-hover: hover) and (any-pointer: fine)');
  const remoteInUse=()=>['driving','deploying'].includes(rc?.mode);
- const canLook=()=>!isPaused()&&(!finalCutscene||finalCutscene.playable)&&(!phone.open||phone.canWalk)&&events.phase!=='arrival'&&!remoteInUse();
+ const canLook=()=>!isPaused()&&!finalCutscene?.gardenView&&(!finalCutscene||finalCutscene.playable)&&(!phone.open||phone.canWalk)&&events.phase!=='arrival'&&!remoteInUse();
  const canHop=()=>canLook()&&!phone.open&&!finalCutscene&&!loisShotDirector&&!s.hidden&&!s.lying&&!s.crouched&&!animator.performing&&$('house-emotes').hidden&&
   !['safe','failed','rc-rescue','ending'].includes(events.phase)&&!isOnStairs(s,getStairDirection,inHatch)&&
   !(world.hatch.open&&inHatch(s.x,s.z,.14))&&!blocked(world.boxes,s.x,s.y,s.z,.2,1.83);
@@ -328,7 +329,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   renderer.updateVisibility();
  }
  function saveCheckpoint(){
-  if(!demo||pursuer.caught||events.phase==='failed'||events.phase==='hide'||finalCutscene)return;
+  if(!demo||emyShot||pursuer.caught||events.phase==='failed'||events.phase==='hide'||finalCutscene)return;
   lastSafeCheckpoint=captureHouseCheckpoint({world,s,puzzle,events,mirrorSafe,rc,rcTrap,batterySwap,pursuer,emy:emyCompanion&&snapshotEmyCompanion(emyCompanion)});
   lastSafeCheckpoint.tutorials=manual.seen;
   if(lastSafeCheckpoint.hide&&lastSafeCheckpoint.hide===pursuer.witnessed)lastSafeCheckpoint.hide=undefined;
@@ -1409,9 +1410,10 @@ function runAction(act,node){
   }
   const announce=deploying||louis&&(['untying','climb','hide'].includes(louis.phase)||(louis.phase==='hidden'&&louis.age<1.6))||!!finalCutscene;
   $('house-rc-caption').hidden=!announce;
-  if(announce)$('house-rc-caption').textContent=finalCutscene?(finalCutscene.playable?'¡Sigue a Emy hacia el jardín con Louis!':finalCutscene.elapsed<.36?'¿Qué ha sido ese ruido?':finalCutscene.elapsed<1.45?'¡Louis!':finalCutscene.elapsed<2.36?'¡Emy!':'¡Ahora, al jardín!'):louis?.phase==='untying'?'Kitty desata las cuerdas mientras Louis espera en silencio…':louis?.phase==='hidden'?'Louis se agacha tras la barra americana y mira alrededor…':louis&&['climb','hide'].includes(louis.phase)?'Louis sube del sótano y busca refugio tras la barra americana…':rc.elapsed<.53?'Colocando el autito…':'Conectando la tablet…';
+  if(announce)$('house-rc-caption').textContent=finalCutscene?(finalCutscene.gardenView?'':finalCutscene.playable?'¡Sigue a Emy hacia el jardín con Louis!':finalCutscene.elapsed<.36?'¿Qué ha sido ese ruido?':finalCutscene.elapsed<1.45?'¡Louis!':finalCutscene.elapsed<2.36?'¡Emy!':'¡Ahora, al jardín!'):louis?.phase==='untying'?'Kitty desata las cuerdas mientras Louis espera en silencio…':louis?.phase==='hidden'?'Louis se agacha tras la barra americana y mira alrededor…':louis&&['climb','hide'].includes(louis.phase)?'Louis sube del sótano y busca refugio tras la barra americana…':rc.elapsed<.53?'Colocando el autito…':'Conectando la tablet…';
   root.classList.toggle('house-finale-shot',!!finalCutscene&&!finalCutscene.playable);
-  root.classList.toggle('house-finale-run',!!finalCutscene&&finalCutscene.playable);
+  root.classList.toggle('house-finale-run',!!finalCutscene&&finalCutscene.playable&&!finalCutscene.gardenView);
+  root.classList.toggle('house-finale-reunion',!!finalCutscene?.gardenView);
   root.classList.toggle('house-rc-deploying',deploying);
   root.classList.toggle('house-rc-driving',remote);
   interactButton.classList.toggle('lab-available',canInteract);
@@ -1462,7 +1464,7 @@ function runAction(act,node){
   updateFurniture(world.objects,dt,s);
   const gifted=advanceGift(world.holiday,dt);if(gifted)showPlush(gifted);
   const wasUntying=louis?.phase==='untying',previousUntie=louis?.age||0;
-  const louisCue=updateLouisEscape(louis,dt,s);
+  const louisCue=updateLouisEscape(louis,dt,s,finalCutscene?.playable?finaleLouisGoal(s):null);
   if(wasUntying)for(const cue of collectCinematicCues('untie',previousUntie,louisCue==='untied'?LOUIS_UNTIE_SECONDS:louis.age,louis.untieCues)){
    play(cue.sound,louis,cue.level);if(cue.caption)caption(cue.caption);
   }
@@ -1512,7 +1514,7 @@ function runAction(act,node){
   if(stickPointer===null)drawStick(side,-forward);
   // Movement intent is analogue and frame-rate independent. The room geometry,
   // stairs and collision checks still run through the original swept navigator.
-  const movementLocked=!!(s.hidden||s.lying||phone.open&&!phone.canWalk||events.phase==='arrival'||events.phase==='safe'||events.phase==='failed');
+  const movementLocked=!!(finalCutscene?.gardenView||s.hidden||s.lying||phone.open&&!phone.canWalk||events.phase==='arrival'||events.phase==='safe'||events.phase==='failed');
   const intent=movementLocked?{forward:0,side:0}:advanceMoveIntent(velocity,forward,side,dt);
   velocity.forward=intent.forward;velocity.side=intent.side;
   const wantsSprint=joystick.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight');
@@ -2032,27 +2034,42 @@ function runAction(act,node){
     if(!isSuspended()&&events.phase==='ending'){
      shot.runAge+=shotDelta;
      const cat=world.emy,goal=finaleEmyGoal(s);
+     if(goal.rejoin&&!shot.gardenView){
+      shot.gardenView={...view};shot.reunionTime=0;resetInput();
+     }
      const dx=goal.x-cat.x,dz=goal.z-cat.z,d=Math.hypot(dx,dz);
-     const step=d>.14?Math.min(d,2.55*dt):0;
+     const step=d>.10?Math.min(d,Math.max(.34,Math.min(2.55,2.8*d))*dt):0;
      const moved=step?navigate(cat,world,dx/d*step,dz/d*step,.40):0;
      const settled=goal.rejoin&&Math.hypot(goal.x-cat.x,goal.z-cat.z)<.23;
-      if(moved>.001)cat.yaw=Math.atan2(dx,dz);
+      if(moved>.001){
+       const heading=Math.atan2(dx,dz);
+       cat.yaw+=clamp(Math.atan2(Math.sin(heading-cat.yaw),Math.cos(heading-cat.yaw)),-dt*6,dt*6);
+      }
       else if(settled){
        const heading=Math.atan2(s.x-cat.x,s.z-cat.z);
        const angle=Math.atan2(Math.sin(heading-cat.yaw),Math.cos(heading-cat.yaw));
        cat.yaw+=clamp(angle,-dt*5,dt*5);
       }
-      shot.rejoinAge=settled?(shot.rejoinAge||0)+dt:0;
+      const mark=finaleLouisGoal(s);
+      const facingKitty=Math.cos(louis.yaw-Math.atan2(s.x-louis.x,s.z-louis.z))>.92;
+      const together=settled&&facingKitty&&Math.hypot(mark.x-louis.x,mark.z-louis.z)<.27;
+      shot.rejoinAge=together?(shot.rejoinAge||0)+dt:0;
       shot.reunionBlend=clamp((shot.reunionBlend||0)+(settled?dt*2.4:-dt*4),0,1);
-      if(shot.rejoinAge>=.28&&!shot.reunionHeard){shot.reunionHeard=true;play('cat-purr',cat,.48,view);}
+      if(shot.rejoinAge>=.28&&!shot.reunionHeard){shot.reunionHeard=true;play('cat-purr',cat,.48,view);if(!loisDialogue.active)startLoisReaction(louis,'relief');}
      cat.age+=dt;poseEmy(cat,{walking:moved>.001,mode:moved>.001?'walk':'idle',phase:cat.age,reduced:reducedMotion.matches,reunion:shot.reunionBlend});
-     if(s.z>=17.7&&s.x>3.8&&s.x<8.0&&cat.z>=17&&shot.rejoinAge>=.85&&Math.hypot(s.x-louis.x,s.z-louis.z)<2.25){
+     if(shot.gardenView&&shot.rejoinAge>=2.1&&!loisDialogue.active){
       events.phase='safe';resetInput();
       for(const cue of collectCinematicCues('escape',shot.elapsed,FINALE_BEATS.finish,shot.cues)){play(cue.sound,null,cue.level);caption(cue.caption);}
       showModal('Final 1 · ¡Kitty y Louis escaparon!',
        '<p>Emy se lanzó para proteger a Louis. Los tres cruzaron el jardín y dejaron la casa atrás.</p><p>Rescate completado · 100%</p>',
        [[config.onRescue?'Ver final':exitLabel,config.onRescue?'finish':'exit']]);
      }
+    }
+    if(shot.gardenView){
+     if(!isSuspended())shot.reunionTime+=shotDelta;
+     view=reunionView(shot.gardenView,louis,world.emy,shot.reunionTime,reducedMotion.matches);
+     shot.lastView={...view};
+     cinematicLight={projection:1-.16*(reducedMotion.matches?1:clamp(shot.reunionTime/1.05,0,1))};
     }
     // Keep a readable first-person exterior; dawn lighting is a separate phase.
     shotLight=.22;
@@ -2619,7 +2636,7 @@ function runAction(act,node){
    scanFrame:()=>renderer?.scanFrame??null,
    performance:()=>perfReport(),
    windowIntro:()=>cinematic?{elapsed:cinematic.elapsed,amount:world.entryWindow.amount,view:windowIntroCamera(cinematic.elapsed/WINDOW_SHOT_SECONDS)}:null,
-   finale:()=>finalCutscene?{elapsed:finalCutscene.elapsed,playable:finalCutscene.playable,runAge:finalCutscene.runAge,stage:finalCutscene.playable?'run':finalCutscene.stage,weather:finaleWeather(finalCutscene,s),view:finalCutscene.lastView}:null,
+   finale:()=>finalCutscene?{elapsed:finalCutscene.elapsed,playable:finalCutscene.playable,runAge:finalCutscene.runAge,stage:finalCutscene.gardenView?'reunion':finalCutscene.playable?'run':finalCutscene.stage,weather:finaleWeather(finalCutscene,s),view:finalCutscene.lastView}:null,
    emergencyEvidence:()=>emergencyEvidence.slice(),
    emergencyRescue:()=>captureShot?.loss.emyRescue?{elapsed:captureShot.elapsed,kind:captureShot.stage.kind,viewMode:captureShot.stage.viewMode,lives:captureShot.loss.lives,easy:!!captureShot.loss.easy,pose:sampleEmergencyRescue(captureShot.elapsed,captureShot.stage)}:null,
    intro:()=>cinematic?{elapsed:cinematic.elapsed,...windowIntroState(cinematic.elapsed/WINDOW_SHOT_SECONDS),camera:windowIntroCamera(cinematic.elapsed/WINDOW_SHOT_SECONDS)}:null,

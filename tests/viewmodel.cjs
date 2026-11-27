@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 
 (async () => {
- const { VIEWMODEL_CONFIG, viewModelPieces, flashlightPieces, dustPieces } = await import('../src/lab/viewmodel.js');
+ const { VIEWMODEL_CONFIG, viewModelPieces, flashlightPieces } = await import('../src/lab/viewmodel.js');
  const { geometry } = await import('../src/lab/renderer.js');
 
  // 1. Config matches Variant C
@@ -49,11 +49,8 @@ const assert = require('node:assert/strict');
  assert(piecesOn.some(p=>p.id.includes('torch-body')&&p.mat==='torchmetal'));
  assert(viewModelPieces('key').some(p=>p.mat==='brass'));
  assert(viewModelPieces('phone').some(p=>p.mat==='glass'));
- // 7. Dust pieces in beam
- const dust = dustPieces(true);
- assert.equal(dust.length, 4, '4 dust motes in beam');
-
- console.log(`PASS viewmodel: Variant C config, budget ${trisOn} <= 1500 tris, sinking switch, charm bow, lens halo, Hello Kitty mitten and dust motes`);
+ assert([...piecesOn,...piecesOff].every(p=>!p.id.includes('dust')), 'No airborne flashlight geometry');
+ console.log(`PASS viewmodel: Variant C config, budget ${trisOn} <= 1500 tris, sinking switch, charm bow, lens halo, Hello Kitty mitten`);
 })().catch(e => {
  console.error(e);
  process.exitCode = 1;

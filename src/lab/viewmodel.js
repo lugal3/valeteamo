@@ -19,14 +19,6 @@ export const VIEWMODEL_CONFIG = Object.freeze({
 });
 const noteGrip={x:.48,y:-.53,z:.92};
 
-export function dustPieces(flash=true){
- return [0,1,2,3].map(i=>{
-  const angle = i * 1.57;
-  const rad = 0.04 + (i%2)*0.03;
-  return chibiPiece('dust-'+i, Math.cos(angle)*rad, Math.sin(angle)*rad, 0.45 + i*0.18, flash?0.007:0.0001, flash?0.007:0.0001, flash?0.007:0.0001, [1,.96,.82], {segments:6,rings:3,emissive:flash});
- });
-}
-
 function rcHeldPieces(tabletOnly=false){
  const part=(id,x,y,z,w,h,d,mat,extra)=>chibiPiece(id,x,y,z,w,h,d,extra.color,{...extra,mat});
  if(!tabletOnly)return rcCarModel(part,true);
@@ -57,7 +49,7 @@ export function viewModelPieces(kind='flashlight', flash=true){
  if(kind==='paper')return placePieces(notePieces(.9,false),{...noteGrip,prefix:'view-paper-'});
  if(kind==='key'||kind==='red-key'||kind==='master-key')return placePieces(keyPieces(kind==='red-key'),{...noteGrip,prefix:'view-key-'});
  const cfg = VIEWMODEL_CONFIG[kind] || VIEWMODEL_CONFIG.flashlight;
- const base = [...torchModel(flash), ...grippingPaw(), ...dustPieces(flash)];
+ const base = [...torchModel(flash), ...grippingPaw()];
  return placePieces(base, {x: cfg.x, y: cfg.y, z: cfg.z, scale: cfg.scale, prefix: 'view-'});
 }
 
@@ -145,17 +137,8 @@ export function drawViewModel(renderer, kind='flashlight', state={}){
  for(let i=0; i<vertices.length; i+=16){
   const px = vertices[i], py = vertices[i+1], pz = vertices[i+2];
 
-  // Optional subtle dust mote floating in the flashlight beam near the front
-  let dustDx = 0, dustDy = 0, dustDz = 0;
-  if(flash && !reduced && pz > 1.35){
-   const idx = i / 16;
-   dustDx = Math.sin(time * 0.7 + idx) * 0.015;
-   dustDy = Math.cos(time * 0.9 + idx) * 0.012;
-   dustDz = Math.sin(time * 0.4 + idx * 0.5) * 0.020;
-  }
-
   const lx=px-grip.x,ly=(py-grip.y)*cp-(pz-grip.z)*sp,lz=(py-grip.y)*sp+(pz-grip.z)*cp;
-  const x=grip.x+lx*cr-ly*sr+offset.x+dustDx,y=grip.y+lx*sr+ly*cr+offset.y+dustDy,z=grip.z+lz+offset.z+dustDz;
+  const x=grip.x+lx*cr-ly*sr+offset.x,y=grip.y+lx*sr+ly*cr+offset.y,z=grip.z+lz+offset.z;
 
   vertices[i]   = camera.x + x*right[0] + y*up[0] + z*forward[0];
   vertices[i+1] = camera.y + x*right[1] + y*up[1] + z*forward[1];

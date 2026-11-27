@@ -34,5 +34,22 @@ const assert=require('node:assert/strict');
  assert(Math.hypot(actor.x-kitty.x,actor.z-kitty.z)>.95,'respects companion spacing');
  for(let i=0;i<120;i++)updateLouisEscape(actor,1/60,kitty);
  assert(actor.visualMotion.speed<.05&&sampleLoisMotion(actor).state==='watchful','settles into idle rather than walking in place');
+ const {finaleLouisGoal,finaleEmyGoal,reunionView}=await import('../src/lab/escape-finale.js');
+ for(const x of [3.85,5.9,7.8]){
+  const player={x,y:0,z:17.75},mark=finaleLouisGoal(player),cat=finaleEmyGoal(player);
+  Object.assign(actor,{x:6.3,y:0,z:14.9,yaw:0,followSpeed:0,visualMotion:null});
+  for(let frame=0;frame<360;frame++)updateLouisEscape(actor,1/60,player,mark);
+  assert(Math.hypot(actor.x-mark.x,actor.z-mark.z)<.24,'Reach the reunion from each side of the path');
+  const heading=Math.atan2(player.x-actor.x,player.z-actor.z);
+  assert(Math.cos(actor.yaw-heading)>.99,'Louis turns back to Kitty before the closing shot');
+  assert(cat.rejoin&&Math.hypot(cat.x-actor.x,cat.z-actor.z)>.55,'Give Emy and Louis separate marks');
+  const origin={...player,y:1.63,yaw:.8,pitch:0};
+  assert.deepEqual(reunionView(origin,actor,cat,0,false),origin);
+  const view=reunionView(origin,actor,cat,1.5,false);
+  for(const subject of [actor,cat]){
+   const toward=Math.atan2(subject.x-view.x,subject.z-view.z);
+   assert(Math.cos(view.yaw-toward)>.87,'Both actors fit the closing frame');
+  }
+ }
  console.log('PASS LOIS MOTION',JSON.stringify({strideMetres:1.30,peakSpeed:peak,finalDistance:Math.hypot(actor.x-kitty.x,actor.z-kitty.z),state:sampleLoisMotion(actor).state}));
 })().catch(e=>{console.error(e);process.exitCode=1;});

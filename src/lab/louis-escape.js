@@ -37,15 +37,15 @@ export function createLouisEscape(world){
  const point=ROUTE[0],y=groundHeight(point.x,point.z,-3.55,true);
  return {kind:'louis-companion',id:'louis-escape',label:'Louis rescatado',visualPreset:LOIS_VISUAL_ID,visualVariant:'photo-a',x:point.x,y,z:point.z,yaw:Math.PI,phase:'untying',waypoint:1,age:0,step:0,crouch:.55,rescuePerformance:true,untieCues:new Set(),concealed:false,interactable:false,walk:0,speed:0,blink:0,visualReaction:null,untieBeat:0,world};
 }
-export function updateLouisEscape(louis,dt,kitty=null){
+export function updateLouisEscape(louis,dt,kitty=null,gardenGoal=null){
  if(!louis||dt<=0)return null;
  const before={x:louis.x,y:louis.y,z:louis.z},wasUntying=louis.phase==='untying';
- const cue=advanceLouisEscape(louis,dt,kitty);
+ const cue=advanceLouisEscape(louis,dt,kitty,gardenGoal);
  advanceLoisMotion(louis,dt,before,kitty);
  if(wasUntying&&louis.phase==='untying')poseLoisRopes(louis,louis.world.boxes);
  return cue;
 }
-function advanceLouisEscape(louis,dt,kitty){
+function advanceLouisEscape(louis,dt,kitty,gardenGoal){
  louis.age+=dt;
  advanceLoisReaction(louis,dt);
  louis.blink=sampleBlink(louis.age+.61,{reduced:false,firstAt:1.43});
@@ -119,16 +119,23 @@ function advanceLouisEscape(louis,dt,kitty){
  }
  if(louis.phase==='follow'&&kitty){
   // Follow Kitty's physical position, never an orbiting camera-relative point.
-  const dx=kitty.x-louis.x,dz=kitty.z-louis.z,d=Math.hypot(dx,dz);
+  const goal=gardenGoal??kitty,dx=goal.x-louis.x,dz=goal.z-louis.z,d=Math.hypot(dx,dz);
   const sameFloor=Math.abs(kitty.y-louis.y)<.7;
-  louis.followMoving=sameFloor&&(louis.dialogueSpeaking&&d<1.85?false:louis.followMoving?d>1.05:d>1.42);
+  const stop=gardenGoal ? .10 : 1.05,resume=gardenGoal ? .23 : 1.42;
+  const chatting=louis.dialogueSpeaking&&Math.hypot(kitty.x-louis.x,kitty.z-louis.z)<1.85;
+  louis.followMoving=sameFloor&&!chatting&&d>(louis.followMoving?stop:resume);
   if(louis.followMoving){
-   const desired=Math.min(2.9,Math.max(.65,(d-1.0)*2.1));
-   const speed=Math.min(desired,(louis.visualMotion?.speed??0)+dt*6.5);
-   const step=Math.min(d-1.02,dt*Math.max(.18,speed)),body={x:louis.x,y:louis.y,z:louis.z};
-   const moved=navigate(body,louis.world,dx/d*step,dz/d*step,1.60);
-   louis.x=body.x;louis.y=body.y;louis.z=body.z;louis.walk+=moved;louis.speed=moved/Math.max(dt,.0001);
-   louis.yaw=turnTowards(louis.yaw,Math.atan2(dx,dz),dt,7);
+   const desired=clamp((d-stop)*2.4,.34,3.25);
+   const speed=Math.min(desired,(louis.followSpeed??0)+dt*4.8);
+   const step=Math.min(d-stop,dt*speed);
+   const moved=navigate(louis,louis.world,dx/d*step,dz/d*step,1.60);
+   louis.walk+=moved;louis.speed=moved/dt;louis.followSpeed=louis.speed;
+   const faceKitty=gardenGoal&&d<.62;
+   const heading=faceKitty?Math.atan2(kitty.x-louis.x,kitty.z-louis.z):Math.atan2(dx,dz);
+   louis.yaw=turnTowards(louis.yaw,heading,dt,7);
+  }else{
+   louis.followSpeed=0;
+   if(gardenGoal)louis.yaw=turnTowards(louis.yaw,Math.atan2(kitty.x-louis.x,kitty.z-louis.z),dt,4);
   }
  }
  return null;
