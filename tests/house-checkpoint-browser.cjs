@@ -141,6 +141,8 @@ async function run(){
     await page.waitForFunction(()=>!window.__rescueHouse.snapshot().paused);
     assert.equal((await page.evaluate(()=>window.__rescueHouse.emy())).hidden,false);
     await use('emy-upstairs');
+    await dismissField('emy');
+    assert((await page.evaluate(()=>window.__rescueHouse.story().tutorials)).includes('emy'),'LP uses the actual Emy guide');
     assert.equal((await page.evaluate(()=>window.__rescueHouse.emySkills())).menu,true,'Companion actions work in '+id);
     await shot('trial-'+id+'-emy-actions');
     await page.locator('#house-emy-menu [data-act="emy:close"]').click();
