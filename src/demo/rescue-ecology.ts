@@ -77,6 +77,11 @@ export function ecologyFloraFrame(seed:FloraSeed,elapsed:number,player:IsoPoint,
   glow:clamp(.15+reaction*.38,0,.53)
  };
 }
+// Fast bend when approached, slower elastic recovery as Kitty walks away.
+export function ecoLean(current:number,target:number,deltaMs:number){
+ const tau=Math.abs(target)>Math.abs(current)?100:290;
+ return target+(current-target)*Math.exp(-clamp(deltaMs,0,70)/tau);
+}
 export function ecologyWildlifeStep(
  seed:WildlifeSeed,state:WildlifeState,elapsed:number,
  deltaMs:number,player:IsoPoint,reduced=false,tension=0

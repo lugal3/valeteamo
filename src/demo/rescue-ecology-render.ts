@@ -3,7 +3,7 @@ import {toScreen,type IsoPoint} from '../isometric';
 import {NIGHT_HOUSE,HOUSE_3D_REFERENCE} from './night-house-layout';
 import type {RescueMapId} from './rescue-overworld';
 import {ECOLOGY_CAPS,ecologySeeds,ecologyFloraFrame,ecologyWildlifeStep,
- ecologyAmbientCue,ecologyMicroEvent,type AmbientCue,type WildlifeKind,
+ ecologyAmbientCue,ecologyMicroEvent,ecoLean,type AmbientCue,type WildlifeKind,
  type WildlifeState,type WildlifeFrame,type FloraSeed,type FloraFrame,
  type MicroEvent} from './rescue-ecology';
 
@@ -132,7 +132,7 @@ export function createLivingEcology(
  const seeds=ecologySeeds(map,minU,maxU,center);
  const flora=seeds.flora.map(seed=>{
   const pos=toScreen(seed.p);
-  return {seed,graphics:scene.add.graphics().setPosition(pos.x,pos.y)
+  return {seed,lean:0,graphics:scene.add.graphics().setPosition(pos.x,pos.y)
    .setDepth(pos.y-1)};
  });
  const wildlife=seeds.wildlife.map(seed=>{
@@ -161,10 +161,11 @@ export function createLivingEcology(
   for(const item of flora){
    const range=Math.abs(item.seed.p.u-player.u);
    item.graphics.setVisible(range<8.4);
-   if(range>=8.4)continue;
+   if(range>=8.4){item.lean=0;continue;}
    const f=ecologyFloraFrame(item.seed,elapsed,player,reducedMotion);
-   if(Math.abs(f.lean)>1.1)reactiveFlora++;
-   paintFlower(item.graphics,item.seed,f,reducedMotion);
+   item.lean=reducedMotion?0:ecoLean(item.lean,f.lean,dt);
+   if(Math.abs(item.lean)>1.1)reactiveFlora++;
+   paintFlower(item.graphics,item.seed,{...f,lean:item.lean},reducedMotion);
   }
   for(const item of wildlife){
    const range=Math.abs(item.seed.p.u-player.u);

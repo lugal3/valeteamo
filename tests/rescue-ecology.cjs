@@ -123,3 +123,9 @@ assert(arcade.includes('this.audio.playRescueAmbience?.('),
 assert(arcade.includes('if(this.story){\n   this.updateStoryPerformance(dt);\n   const ecologyCue='),
  'original classic Corazones must not instantiate or tick living ecology');
 console.log('PASS phase 2: four deterministic living biomes, wildlife reactions/return at 30/60/120Hz, passive microevents, spatial audio cues, 8/18 creature/flora limits, reduced motion and classic protection.');
+
+let plant=0;for(let i=0;i<20;i++)plant=E.ecoLean(plant,6,30);
+assert(plant>5.9&&plant<=6,'plant reacts smoothly');
+const release=E.ecoLean(plant,0,30);assert(release<plant&&release>4.5,'plant does not snap upright');
+for(let i=0;i<70;i++)plant=E.ecoLean(plant,0,30);
+assert(Math.abs(plant)<.01,'plant returns to its natural position');

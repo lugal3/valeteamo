@@ -367,31 +367,45 @@ function picketFence(scene:Phaser.Scene,u:number,v:number,planks=6){
  g.fillStyle(0xd1aea4).fillRect(p.x-planks*6,p.y-15,planks*12,4);
  g.fillStyle(0xb8908f).fillRect(p.x-planks*6,p.y-7,planks*12,3);
 }
-function cherryTree(scene:Phaser.Scene,u:number,v:number,dusk=false){
- const p=toScreen({u,v}),g=scene.add.graphics().setDepth(p.y);
+type ReactiveTree={point:IsoPoint;screen:{x:number;y:number};crown:Phaser.GameObjects.Graphics;alpha:number;phase:number};
+export function canopyOccludes(foot:{x:number;y:number},player:{x:number;y:number}){
+ // The head/body overlap the crown only if the tree is actually in front.
+ return foot.y>=player.y&&Math.abs(foot.x-player.x)<65&&player.y>=foot.y-114&&player.y<=foot.y-15;
+}
+export function canopyAlpha(current:number,occluded:boolean,dt:number,reduced=false){
+ const target=occluded?.28:1;
+ return reduced?target:target+(current-target)*Math.exp(-clamp(dt,0,70)/(occluded?85:190));
+}
+function cherryTree(scene:Phaser.Scene,u:number,v:number,dusk=false,green=false):ReactiveTree{
+ const p=toScreen({u,v}),trunk=scene.add.graphics().setDepth(p.y);
  const x=p.x,y=p.y;
+ const g=trunk;
  g.fillStyle(0x473d52,.12).fillEllipse(x+13,y+3,99,21);
  g.fillStyle(0x473d52,.19).fillEllipse(x+5,y,68,15);
  g.fillStyle(0x473d52,.28).fillEllipse(x,y,34,9);
  poly(g,0x634b52,[[x-9,y],[x-6,y-51],[x-12,y-65],[x-6,y-69],[x+3,y-53],[x+9,y-70],[x+14,y-68],[x+6,y-48],[x+8,y],[x+17,y+3],[x-17,y+3]]);
  poly(g,0xa37971,[[x-5,y-3],[x-2,y-48],[x+2,y-44],[x+3,y-5]]);
  g.fillStyle(0x805a60).fillRect(x-5,y-23,2,12).fillRect(x+4,y-38,2,9);
- const palette=dusk?[0x665d79,0x826780,0x9e7893,0xbb8ea5,0xd5acb6]:[0xa56a86,0xc58aa3,0xe2a9bb,0xf0c1cc,0xffe2d7];
+ const palette=dusk?[0x46565c,0x536c68,0x6e8079,0x8c9990,0xb5b7a0]:green?[0x597e66,0x72966c,0x94b37b,0xb7c991,0xe2dfad]:[0xa56a86,0xc58aa3,0xe2a9bb,0xf0c1cc,0xffe2d7];
+ // Local coordinates allow the crown to sway around the trunk, without
+ // rebuilding geometry or altering the tree's physical footprint.
+ const crown=scene.add.graphics().setPosition(x,y).setDepth(y+.01);
  // Layer the canopy from shadow up to lit crowns; no uniform ellipse grid.
- g.fillStyle(palette[0],.98).fillEllipse(x,y-67,94,46);
+ crown.fillStyle(palette[0],.98).fillEllipse(0,-67,94,46);
  for(let k=0;k<18;k++){
   const angle=k*2.4,r=19+((k*7)%22);
-  const cx=Math.round(x+Math.cos(angle)*r),cy=Math.round(y-78+Math.sin(angle)*r*.52);
+  const cx=Math.round(Math.cos(angle)*r),cy=Math.round(-78+Math.sin(angle)*r*.52);
   const w=23+(k%4)*5,h=13+(k%3)*5;
-  g.fillStyle(palette[cy>y-76?1:2]).fillEllipse(cx,cy,w,h);
-  g.fillStyle(palette[cy>y-76?2:3],.91).fillEllipse(cx-3,cy-4,w*.73,h*.66);
-  if(k%3!==1)g.fillStyle(palette[4],.83).fillRect(cx-7,cy-7,6,2).fillRect(cx-6,cy-8,3,4);
+  crown.fillStyle(palette[cy> -76?1:2]).fillEllipse(cx,cy,w,h);
+  crown.fillStyle(palette[cy> -76?2:3],.91).fillEllipse(cx-3,cy-4,w*.73,h*.66);
+  if(k%3!==1)crown.fillStyle(palette[4],.83).fillRect(cx-7,cy-7,6,2).fillRect(cx-6,cy-8,3,4);
  }
  for(let k=0;k<13;k++){
-  const cx=x+((k*37)%77)-38,cy=y-92+((k*19)%35);
-  if(Math.pow((cx-x)/45,2)+Math.pow((cy-(y-79))/24,2)>1)continue;
-  g.fillStyle(palette[4],.76).fillRect(cx,cy,3,2).fillRect(cx+1,cy-1,1,4);
+  const cx=((k*37)%77)-38,cy=-92+((k*19)%35);
+  if(Math.pow(cx/45,2)+Math.pow((cy+79)/24,2)>1)continue;
+  crown.fillStyle(palette[4],.76).fillRect(cx,cy,3,2).fillRect(cx+1,cy-1,1,4);
  }
+ return {point:{u,v},screen:p,crown,alpha:1,phase:hashCell(Math.round(u*10),Math.round(v*10),94)*Math.PI*2};
 }
 function gardenFeature(scene:Phaser.Scene,u:number,v:number,kind:'planter'|'rock'|'lantern'|'picnic'){
  const p=toScreen({u,v}),g=scene.add.graphics().setDepth(p.y);
@@ -680,6 +694,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   tree:(u:number,v:number)=>void;mushroom:(u:number,v:number)=>void},
  map:RescueMapId='morning_garden'):RescueOverworld{
  const before=new Set(scene.children.list),cfg=RESCUE_SCENES[map],g=ground;
+ const reactiveTrees:ReactiveTree[]=[];
  let parkedVan:Phaser.GameObjects.Image|undefined;
  g.clear();
  const back:Record<RescueMapId,number>={
@@ -880,14 +895,14 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   if(map==='morning_garden'){
    ornaments.flower(u,v);
    if(u%6===2)ornaments.shrub(u+.6,v+.4);
-   if(u%7===2&&!(u>=9&&u<=16))ornaments.tree(u,lim.min-1.1);
+   if(u%7===2&&!(u>=9&&u<=16))reactiveTrees.push(cherryTree(scene,u,lim.min-1.1,false,true));
   }else if(map==='afternoon_meeting'){
    ornaments.flower(u,v);
    if(u%5===0)ornaments.mushroom(u+.2,lim.max+.45);
-   if(u%6===1)ornaments.tree(u,lim.min-1.1);
+   if(u%6===1)reactiveTrees.push(cherryTree(scene,u,lim.min-1.1));
   }else if(map==='dusk_search'){
    ornaments.shrub(u,v);
-   if(u%4===0)ornaments.tree(u,lim.max+1.0);
+   if(u%4===0)reactiveTrees.push(cherryTree(scene,u,lim.max+1.0,true,true));
    if(u%5===0)ornaments.mushroom(u+1,lim.min-.3);
   }else{
    if(u%4===0)ornaments.shrub(u,lim.min-.5);
@@ -994,7 +1009,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
  // Solid existing scenery and collision use the same coordinates.
  for(const item of RESCUE_SCENERY[map]){
   const {u,v}=item.point;
-  if(item.kind==='tree')cherryTree(scene,u,v,map==='dusk_search');
+  if(item.kind==='tree')reactiveTrees.push(cherryTree(scene,u,v,map==='dusk_search',map==='morning_garden'));
   else if(item.kind==='bench')bench(scene,u,v);
   else gardenFeature(scene,u,v,item.kind);
  }
@@ -1052,11 +1067,30 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   routeCenter,reducedMotion);
  const created=scene.children.list.filter(x=>!before.has(x));
  let lastVisualPaint=-Infinity;
+ let lastPlayerX=toScreen(cfg.spawn).x,lastPlayerY=toScreen(cfg.spawn).y;
+ let movement=0,windDirection=1;
+ const petalBases=particles.map(p=>toScreen(p));
+ const lantern=rescueLandmarks(map).find(o=>o.id==='lantern-clearing');
+ const lanternScreen=lantern?toScreen(lantern.point):undefined;
  const update=(elapsed:number,night:number,player:IsoPoint=cfg.spawn):AmbientCue|null=>{
   // About 30 FPS for purely decorative redraw; game input and camera stay 60 FPS.
   if(elapsed-lastVisualPaint<30)return null;
+  const visualDt=Number.isFinite(lastVisualPaint)?clamp(elapsed-lastVisualPaint,0,70):30;
   lastVisualPaint=elapsed;
   const visualT=reducedMotion?0:elapsed/1000;
+  const playerScreen=toScreen(player),dx=playerScreen.x-lastPlayerX,dy=playerScreen.y-lastPlayerY;
+  const targetMovement=clamp(Math.hypot(dx,dy)/Math.max(1,visualDt)*7,0,1);
+  movement+=(targetMovement-movement)*(1-Math.exp(-visualDt/160));
+  if(Math.abs(dx)>.2)windDirection=dx>0?1:-1;
+  lastPlayerX=playerScreen.x;lastPlayerY=playerScreen.y;
+  for(const tree of reactiveTrees){
+   const near=Math.abs(tree.point.u-player.u)<7;
+   const hidden=near&&canopyOccludes(tree.screen,playerScreen);
+   tree.alpha=canopyAlpha(tree.alpha,hidden,visualDt,reducedMotion);
+   tree.crown.setAlpha(tree.alpha);
+   // Sub-pixel sway is purely visual; trunk, ground shadow and collider are fixed.
+   tree.crown.setAngle(!near||reducedMotion?0:Math.sin(visualT*.85+tree.phase)*.75);
+  }
   water.clear();atmosphere.clear();motes.clear();portalGlow.clear();
   if(map==='morning_garden'){
    for(let u=10;u<16;u++)for(let v=-2;v<=12;v++){
@@ -1100,9 +1134,8 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
     const x=p.x+Math.sin(visualT*.22+i)*17;
     lightPool(atmosphere,x,p.y-9,145,22,0xcac6dd,.10+.045*Math.pow(Math.sin(visualT*.38+i),2));
    }
-   const lantern=rescueLandmarks(map).find(o=>o.id==='lantern-clearing');
-   if(lantern){
-    const p=toScreen(lantern.point);
+   if(lanternScreen){
+    const p=lanternScreen;
     lightPool(atmosphere,p.x,p.y,105,34,0xf0c590,.32);
    }
   }
@@ -1122,11 +1155,14 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   // Same particle budget on every phone: morning butterflies/petals,
   // afternoon blossom drift, dusk leaves, night fireflies.
   for(let i=0;i<particles.length;i++){
-   const particle=particles[i],base=toScreen(particle);
+   const particle=particles[i],base=petalBases[i];
    const life=(particle.phase+visualT*particle.speed)%1;
    const swing=Math.sin(visualT*1.45+particle.wobble)*13;
-   const x=base.x+swing+(life-.5)*12;
-   const y=base.y-30+life*49+Math.sin(visualT*.5+particle.wobble)*5;
+   const px=base.x+swing+(life-.5)*12,py=base.y-30+life*49+Math.sin(visualT*.5+particle.wobble)*5;
+   // Reuse existing motes: only nearby ones drift aside in Kitty's wake.
+   const distance=Math.hypot(px-playerScreen.x,py-(playerScreen.y-13));
+   const wake=reducedMotion?0:movement*Math.pow(clamp(1-distance/67,0,1),2);
+   const x=px+wake*windDirection*15,y=py-wake*10;
    const alpha=.22+.53*Math.sin(life*Math.PI);
    if(map==='night_neighborhood'){
     const pulse=Math.pow(Math.sin(visualT*2+i*1.4),2);

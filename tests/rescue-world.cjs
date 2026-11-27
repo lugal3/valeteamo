@@ -175,3 +175,13 @@ assert(house3d.includes('if(opening)releaseMouse()')&&house3d.includes("setAttri
  css3d.includes('.house-emotes[hidden]{display:none!important'),
  '3D mouse emote fix must remain intact');
 console.log('PASS: 4 separate themed maps, three gated portals, garden-to-night time progression, 3D house facade, original Corazones and safe 3D inputs.');
+
+// Canopy overlap uses screen depth and restores normal opacity after walking out.
+assert.equal(world.canopyOccludes({x:100,y:150},{x:100,y:100}),true);
+assert.equal(world.canopyOccludes({x:100,y:150},{x:100,y:170}),false);
+assert.equal(world.canopyOccludes({x:100,y:150},{x:180,y:100}),false);
+assert.equal(world.canopyOccludes({x:100,y:150},{x:100,y:10}),false);
+assert.equal(world.canopyAlpha(1,true,30,true),.28);
+assert.equal(world.canopyAlpha(.28,false,30,true),1);
+assert(world.canopyAlpha(1,true,30,false)<1);
+assert(world.canopyAlpha(.28,false,30,false)>.28);
