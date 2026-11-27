@@ -73,7 +73,7 @@ export function sampleEmergencyRescue(t,stage){
  const hit=curve([[0,0],[B.impact,0],[1.83,1],[2.15,.76],[2.80,.36],[3.95,.08]],t),back=ease((t-B.impact)/.48);
  const foe=interpolate(stage.foe,stage.recoil,back),grip=ease((t-.05)/.29)*(1-ease((t-B.impact)/.24));
  const kitty=interpolate(stage.kitty,stage.safe,ease((t-B.release)/.58));
- const focus={x:mix(kitty.x,foe.x,.48),y:kitty.y+.95,z:mix(kitty.z,foe.z,.48)};
+ const focus={x:mix(kitty.x,foe.x,.48),y:kitty.y+.83,z:mix(kitty.z,foe.z,.48)};
  const runFace=heading(stage.start,stage.takeoff),catFace=heading(stage.takeoff,stage.hit),returnFace=heading(stage.land,kitty);
  return {cat:{...cat,yaw:turn(turn(runFace,catFace,ease((t-B.plant)/.27)),returnFace,ease((t-B.land)/.29)),compression,flight,airborne,strike,walking:!stage.compact&&(t>=B.enter&&t<B.plant||t>=B.protect&&t<B.protect+.44&&distance(stage.land,guard)>.04),alarm:curve([[0,0],[.75,1],[2.29,1],[3.24,.15],[B.end,0]],t)},foe:{...foe,yaw:stage.angle+Math.PI+(stage.side*.30)*back,grip,hit},kitty:{...kitty,yaw:turn(stage.angle,heading(kitty,stage.land),ease((t-2.65)/.58))},focus};
 }

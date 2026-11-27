@@ -1561,7 +1561,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   captureCaption.textContent=options.captions!==false?(loss.emyRescue?'[Emy escucha el peligro y corre hacia Kitty]':'[El secuestrador te agarra]'):'';
   sound.setCaptureQuiet(!loss.emyRescue);
   if(!loss.emyRescue)sound.captureCue('capture-grab');
-  else showLives(loss.easy?loss.lives:0);
+  // The old life card covered Emy at ground level. Show it only after
+  // the rescue has handed back control, not over the actual performance.
+  else{lifeNoticeLeft=0;$('house-lives').hidden=true;}
  }
  function renderEmyLastChance(delta){
   const shot=captureShot,previous=shot.elapsed;
@@ -1581,12 +1583,12 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const view=shot.stage.compact?{...shot.from}:{...camera,yaw:Math.atan2(dx,dz),pitch:Math.atan2(pose.focus.y-camera.y,Math.max(.1,Math.hypot(dx,dz)))};
   try{
    renderer.render(view,0,elapsed+t,false,{
-    reduced,shotLight:.42,pursuer:{...pursuer.snapshot(),rescueGrip:pose.foe.grip,rescueImpact:pose.foe.hit,rescueSide:shot.stage.side},
+    reduced,shotLight:.70,captureProjection:shot.stage.viewMode==='third'?.82:1,pursuer:{...pursuer.snapshot(),rescueGrip:pose.foe.grip,rescueImpact:pose.foe.hit,rescueSide:shot.stage.side},
     ...(shot.stage.viewMode==='third'?{thirdPerson:pose.kitty,actorPose:sampleRescuedKitty(t,shot.kittyPose),feetY:pose.kitty.y,actorTime:t,equipment:'empty'}:{}),television});
    if(import.meta.env.DEV&&shot.qaTimes){
     while(shot.qaTimes.length&&t>=shot.qaTimes[0]){
      const target=shot.qaTimes.shift();
-     emergencyEvidence.push({target,elapsed:t,kind:shot.stage.kind,pose,frame:canvas.toDataURL('image/png')});
+     emergencyEvidence.push({target,elapsed:t,kind:shot.stage.kind,pose,lifeNoticeHidden:$('house-lives').hidden,caption:captureCaption.textContent,frame:canvas.toDataURL('image/png')});
     }
    }
   }catch(error){interruptGraphics('Error en el rescate de Emy',String(error.message||error));return;}

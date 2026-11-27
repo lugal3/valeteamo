@@ -245,6 +245,11 @@ const assert=require('node:assert/strict');
  assert(sampleEmergencyRescue(1,shot.stage).foe.grip>.95);
  assert.equal(sampleEmergencyRescue(2.3,shot.stage).foe.grip,0);
  assert(!shot.stage.compact,'Exterior stage must remain visible');
+ const landed=sampleEmergencyRescue(2.34,shot.stage).cat,protectedCat=sampleEmergencyRescue(3.12,shot.stage).cat;
+ assert.equal(landed.y,shot.kitty.y);assert.equal(protectedCat.y,shot.kitty.y);
+ assert.equal(sampleEmergencyRescue(2.34,shot.stage).cat.airborne,false);
+ assert(Math.hypot(protectedCat.x-shot.stage.safe.x,protectedCat.z-shot.stage.safe.z)<=Math.hypot(landed.x-shot.stage.safe.x,landed.z-shot.stage.safe.z)+1e-6,'Protective step moves toward Kitty');
+ assert(Math.hypot(protectedCat.x-shot.stage.safe.x,protectedCat.z-shot.stage.safe.z)>=.38,'Emy does not overlap Kitty');
  const stages={wide:0,tight:0,closeup:0,occluded:0};
  const fixturePoints=[[5.65,0,12.8],[5.9,0,8.1],[9.75,0,3.34],[3.3,0,3.6],[5.74,HEIGHT,2.4],[2.39,HEIGHT,3.85],[6.9,HEIGHT,10.4],[9,HEIGHT,3.6]];
  for(const [x,y,z] of fixturePoints){

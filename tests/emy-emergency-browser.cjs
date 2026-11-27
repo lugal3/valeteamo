@@ -42,7 +42,7 @@ const {chromium}=require('playwright');
     assert.equal(frames.length,beats.length,'All five cinematic beats rendered');
     for(const [i,frame] of frames.entries()){
      const [name,t]=beats[i];assert.equal(frame.target,t);assert(frame.elapsed>=t&&frame.elapsed<=t+.101,'Rendered near the authored beat');
-     assert(!frame.kind.includes('occluded'),'Open exterior should show rescue');assert(frame.pose.cat.y>=0);
+     assert(!frame.kind.includes('occluded'),'Open exterior should show rescue');assert(frame.pose.cat.y>=0);assert(frame.lifeNoticeHidden,'Life HUD must not obstruct Emy during the shot');
      assert(frame.frame.startsWith('data:image/png;base64,'));const image=Buffer.from(frame.frame.split(',')[1],'base64');assert(image.length>100);
      await fs.writeFile(path.join(folder,name+'.png'),image);
     }
