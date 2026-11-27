@@ -1588,7 +1588,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(import.meta.env.DEV&&shot.qaTimes){
     while(shot.qaTimes.length&&t>=shot.qaTimes[0]){
      const target=shot.qaTimes.shift();
-     emergencyEvidence.push({target,elapsed:t,kind:shot.stage.kind,pose,lifeNoticeHidden:$('house-lives').hidden,caption:captureCaption.textContent,frame:canvas.toDataURL('image/png')});
+     emergencyEvidence.push({target,elapsed:t,kind:shot.stage.kind,visibility:shot.stage.visibility,pose,lifeNoticeHidden:$('house-lives').hidden,caption:captureCaption.textContent,frame:canvas.toDataURL('image/png')});
     }
    }
   }catch(error){interruptGraphics('Error en el rescate de Emy',String(error.message||error));return;}

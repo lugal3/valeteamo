@@ -70,6 +70,7 @@ const {chromium}=require('playwright');
     const frames=await page.evaluate(()=>window.__rescueHouse.emergencyEvidence());assert.equal(frames.length,2);
     for(const [i,frame] of frames.entries()){
      assert(!frame.kind.includes('occluded'),'Interior fixture must show Emy');assert(frame.lifeNoticeHidden);
+     assert.equal(frame.visibility?.hiddenCritical,0,'Kitty or a wall must not fully cover Emy at impact/protection');
      assert.equal(frame.pose.cat.airborne,i===0);assert(frame.pose.cat.y>=(floor==='upper'?3.15:0));
      await fs.writeFile(path.join(folder,floor+'-'+(i?'proteccion':'impacto')+'.png'),Buffer.from(frame.frame.split(',')[1],'base64'));
     }

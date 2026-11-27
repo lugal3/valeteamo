@@ -14,6 +14,35 @@ const clearPath=(world,a,b,r,h)=>Array.from({length:Math.max(2,Math.ceil(distanc
  const p=interpolate(a,b,t);
  return !blocked(world.boxes,p.x,p.y,p.z,r,h)&&Math.abs(groundHeight(p.x,p.z,p.y,world.hatch?.amount>.92)-p.y)<.17;
 });
+// A projected sight ray intersects a conservative ellipsoid around Kitty's
+// chibi head or body. This is a visibility test, not a gameplay collider.
+function actorOccludes(from,to,actor,height,rx,ry){
+ const center={x:actor.x,y:actor.y+height,z:actor.z};
+ const p=[(from.x-center.x)/rx,(from.y-center.y)/ry,(from.z-center.z)/rx];
+ const d=[(to.x-from.x)/rx,(to.y-from.y)/ry,(to.z-from.z)/rx];
+ const n=d.reduce((sum,v)=>sum+v*v,0);
+ if(n<1e-8)return false;
+ const t=clamp(-p.reduce((sum,v,i)=>sum+v*d[i],0)/n);
+ return t>.015&&t<.985&&p.reduce((sum,v,i)=>sum+(v+t*d[i])**2,0)<1;
+}
+export function scoreRescueCamera(world,camera,beats,third){
+ let penalty=0,hiddenCritical=0;
+ for(const [i,p] of beats.entries()){
+  const critical=i===2||i===4,weight=critical?4:1;
+  // Sample both head and torso of the small cat. A single center ray
+  // otherwise accepts a doorway whose jamb covers most of the silhouette.
+  const targets=[{...p.cat,y:p.cat.y+.28},{...p.cat,y:p.cat.y+.43}];
+  const hidden=targets.filter(target=>lineBlocked(world.boxes,camera,target)||(third&&(
+   actorOccludes(camera,target,p.kitty,1.23,.50,.43)||
+   actorOccludes(camera,target,p.kitty,.63,.32,.36)))).length;
+  if(critical&&hidden===2)hiddenCritical++;
+  penalty+=hidden*weight;
+  // The foe should remain readable at contact and after the release.
+  if(lineBlocked(world.boxes,camera,{...p.foe,y:p.foe.y+1.58}))penalty+=weight;
+  if(third&&lineBlocked(world.boxes,camera,{...p.kitty,y:p.kitty.y+1.24}))penalty+=1;
+ }
+ return {penalty,hiddenCritical};
+}
 // Prefer the full lateral shot; use the same action at shorter distances
 // in hallways. Never force a cat or a camera through the room geometry.
 export function planEmyRescueShot(world,kitty,attacker,from,actualCat=null){
@@ -22,7 +51,7 @@ export function planEmyRescueShot(world,kitty,attacker,from,actualCat=null){
   {reach:.79,step:.40,entry:1.05,launch:.72,contact:.40,landing:.70,back:.30,arc:2.9,kind:'wide'},
   {reach:.68,step:.22,entry:.74,launch:.57,contact:.35,landing:.54,back:.15,arc:2.15,kind:'tight'}
  ];
- let closeup=null;
+ let closeup=null,best=null;
  for(const shape of shapes)for(const angle of angles)for(const side of [-1,1]){
   const dx=Math.sin(angle),dz=Math.cos(angle),sx=Math.cos(angle)*side,sz=-Math.sin(angle)*side;
   const foe=point(kitty,dx*shape.reach,dz*shape.reach),recoil=point(foe,dx*shape.step,dz*shape.step);
@@ -44,16 +73,29 @@ export function planEmyRescueShot(world,kitty,attacker,from,actualCat=null){
    return !blocked(world.boxes,p.x,p.y,p.z,.15,.40);
   }))continue;
   const subject={x:(kitty.x+foe.x)/2,y:kitty.y+.91,z:(kitty.z+foe.z)/2};
-  for(const radius of [2.2,1.65,1.25])for(const s of [-1,1]){
-   const camera={x:subject.x+sx*radius*s-dx*.4,y:kitty.y+1.67,z:subject.z+sz*radius*s-dz*.4};
+  // Evaluate visibility with the cat on the camera side first. A clear ray
+  // through the room alone is not enough: Kitty's oversized head can hide Emy.
+  const beats=[.96,1.42,1.83,2.34,3.05].map(t=>sampleEmergencyRescue(t,staged));
+  for(const radius of [2.2,1.65,1.25])for(const s of [1,-1])for(const offset of [-.4,.10,.45]){
+   const camera={x:subject.x+sx*radius*s+dx*offset,y:kitty.y+1.67,z:subject.z+sz*radius*s+dz*offset};
    if(blocked(world.boxes,camera.x,camera.y-.12,camera.z,.12,.18)||lineBlocked(world.boxes,camera,subject)||lineBlocked(world.boxes,camera,{...land,y:land.y+.3})||lineBlocked(world.boxes,camera,{...foe,y:foe.y+1.2})||lineBlocked(world.boxes,camera,{...guard,y:guard.y+.3}))continue;
-   return {...staged,camera,viewMode:'third'};
+   const visibility=scoreRescueCamera(world,camera,beats,true);
+   const candidate={...staged,camera,viewMode:'third',visibility};
+   if(!best||visibility.penalty<best.visibility.penalty)best=candidate;
+   if(visibility.penalty<.01)return candidate;
   }
   // If the side camera cannot fit, a lower first-person view can still
   // show the jump and the attack without drawing Kitty over her own eyes.
   const eye={x:kitty.x,y:kitty.y+1.25,z:kitty.z};
-  if(!closeup&&!blocked(world.boxes,eye.x,eye.y-.08,eye.z,.09,.13)&&!lineBlocked(world.boxes,eye,{...hit,y:hit.y+.70})&&!lineBlocked(world.boxes,eye,{...foe,y:foe.y+1.10}))closeup={...staged,camera:eye,viewMode:'first',kind:'closeup'};
+  if(!blocked(world.boxes,eye.x,eye.y-.08,eye.z,.09,.13)&&!lineBlocked(world.boxes,eye,{...hit,y:hit.y+.70})&&!lineBlocked(world.boxes,eye,{...foe,y:foe.y+1.10})){
+   const visibility=scoreRescueCamera(world,eye,beats,false);
+   if(!closeup||visibility.penalty<closeup.visibility.penalty)closeup={...staged,camera:eye,viewMode:'first',kind:'closeup',visibility};
+  }
+  // Don't keep searching the entire house if the best stage already gives a
+  // clear close-up. This work runs once per capture, never per render frame.
+  if(closeup?.visibility.penalty===0&&(!best||best.visibility.penalty>=4))return closeup;
  }
+ if(best&&(!closeup||best.visibility.penalty<=closeup.visibility.penalty+1))return best;
  if(closeup)return closeup;
  // A genuinely blocked hiding nook cannot support a visible collision-free
  // leap. Do not spawn Emy inside Kitty; the impact is heard off-screen and

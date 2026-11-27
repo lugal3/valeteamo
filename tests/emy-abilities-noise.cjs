@@ -228,7 +228,7 @@ const assert=require('node:assert/strict');
  const {poseEmyLastChance,poseEscapeAmbush}=await import('../src/lab/emy-rescue.js');
  const finaleWorld=createHouse(),rescueCat=finaleWorld.emy;
  const foe={x:6.15,y:0,z:12.38,yaw:Math.PI,mode:'chase',speed:1.4,active:true};
- const {planEmyRescueShot,sampleEmergencyRescue,sampleRescuedKitty,EMY_RESCUE_BEATS}=await import('../src/lab/emy-emergency-shot.js');
+ const {planEmyRescueShot,sampleEmergencyRescue,sampleRescuedKitty,EMY_RESCUE_BEATS,scoreRescueCamera}=await import('../src/lab/emy-emergency-shot.js');
  const {createPose}=await import('../src/lab/character-rig.js');
  const shot={elapsed:.20,kitty:{x:5.65,y:0,z:12.8,yaw:Math.PI},attacker:{...foe}};
  shot.stage=planEmyRescueShot(finaleWorld,shot.kitty,shot.attacker,{x:5.65,y:1.63,z:12.8,yaw:Math.PI,pitch:0});
@@ -266,6 +266,11 @@ const assert=require('node:assert/strict');
  assert.equal(sampleEmergencyRescue(2.34,shot.stage).cat.airborne,false);
  assert(Math.hypot(protectedCat.x-shot.stage.safe.x,protectedCat.z-shot.stage.safe.z)<=Math.hypot(landed.x-shot.stage.safe.x,landed.z-shot.stage.safe.z)+1e-6,'Protective step moves toward Kitty');
  assert(Math.hypot(protectedCat.x-shot.stage.safe.x,protectedCat.z-shot.stage.safe.z)>=.38,'Emy does not overlap Kitty');
+ // Regression: a large foreground Kitty head must lose to a clean angle.
+ const synthetic={cat:{x:0,y:0,z:0},kitty:{x:0,y:0,z:-.55},foe:{x:.7,y:0,z:0}};
+ const clean=scoreRescueCamera({boxes:[]},{x:1.8,y:1.65,z:0},Array(5).fill(synthetic),true);
+ const obscured=scoreRescueCamera({boxes:[]},{x:0,y:1.65,z:-1.25},Array(5).fill(synthetic),true);
+ assert(clean.penalty<obscured.penalty&&obscured.hiddenCritical===2,'Camera selection accounts for Kitty occluding Emy');
  const stages={wide:0,tight:0,closeup:0,occluded:0};
  const fixturePoints=[[5.65,0,12.8],[5.9,0,8.1],[9.75,0,3.34],[3.3,0,3.6],[5.74,HEIGHT,2.4],[2.39,HEIGHT,3.85],[6.9,HEIGHT,10.4],[9,HEIGHT,3.6]];
  for(const [x,y,z] of fixturePoints){
