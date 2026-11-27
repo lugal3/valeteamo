@@ -4,7 +4,7 @@ import {createLivingEcology,type LivingWorld} from './rescue-ecology-render';
 import type {AmbientCue} from './rescue-ecology';
 import {ISO,toScreen,type IsoPoint} from '../isometric';
 import {HOUSE_3D_REFERENCE,NIGHT_HOUSE,nightRouteCenter,nightRouteLimits,nightHouseBlocks,
- nightWalkable,NIGHT_NEIGHBORS,FRONT_FACADE_WIDTH,frontFacadeOffset} from './night-house-layout';
+ nightWalkable,NIGHT_NEIGHBORS,FRONT_FACADE_WIDTH,frontFacadeOffset,NIGHT_STREET,NIGHT_LAMPS,nightStreetSurface,NIGHT_ROAD_HALF,NIGHT_PAVEMENT_HALF} from './night-house-layout';
 
 // Cuatro mapas cargados POR SEPARADO dentro de IsoAdventure. Ningún mapa crea
 // Phaser.Game, cámara, controles ni sprites: todo sigue siendo 2D Corazones.
@@ -796,10 +796,10 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    else if(edge)c=0x92979e;
    // Three distinct 3D-inspired outdoor materials: asphalt (street), stone
    // pavement and the front path, with a flowered forecourt in front of the wall.
-   if(v>=4.4&&v<5.8)c=variation>.55?0x545d6f:0x626876;
-   if(v>=5.8&&v<6.95)c=variation>.5?0xa49a9a:0xb7aaa7;
-   if(u>=73.7&&u<=79.5&&v>=7.0&&v<=10.35)c=variation>.5?0xd4bfad:0xbda9a2;
-   if(u>=76.1&&u<=81.5&&v>=9.2&&v<=11.4)c=variation>.5?0xdac0b0:0xcab4a5;
+   const surface=nightStreetSurface({u,v});
+   if(surface==='road')c=variation>.55?0x545d6f:0x626876;
+   else if(surface==='sidewalk')c=variation>.5?0xa49a9a:0xb7aaa7;
+   else if(surface==='yard')c=variation>.5?0xd4bfad:0xbda9a2;
   }
   diamond(g,u,v,c);
   paintGroundTexture(g,u,v,p,map,isPath);
@@ -807,11 +807,9 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   if((u*7+v*13)%17===0){
    g.fillStyle(map==='morning_garden'?0xf4c0ce:0xe2bcbd,.52).fillRect(p.x+6,p.y+1,3,3);
   }
-  if(map==='night_neighborhood'&&v>=4.4&&v<=5.8&&u%4===0){
-   g.fillStyle(0xded5b8,.57).fillRect(p.x-13,p.y-2,20,3);
-  }
-  // Cobblestone seams on the residential street; walkway is kept visible.
-  if(map==='night_neighborhood'&&v>=5.8&&v<=10.7&&variation>.72){
+  // No obsolete road marking behind the house. Paving seams only on the
+  // shared sidewalk; the actual lane markings are drawn on the centerline.
+  if(map==='night_neighborhood'&&nightStreetSurface({u,v})==='sidewalk'&&variation>.72){
    g.lineStyle(1,0xa5a0a4,.25).lineBetween(p.x-11,p.y+5,p.x+10,p.y+5);
   }
  }
@@ -950,8 +948,8 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   for(let u=49;u<60;u+=.7){const p=toScreen({u,v:routeLimits(u).max+.68});creek.fillStyle(0x516b69,.55).fillEllipse(p.x,p.y+3,17,5);creek.fillStyle(0xa8b6ac,.35).fillEllipse(p.x-2,p.y+1,9,3);}
  }else{
   sign(scene,68,.3,'VILLA');
-  for(const u of [67,72,77,81])lamp(scene,u,1.8);
-  // Neighboring houses stay across the ROAD, not on Kitty's way to the door.
+  for(const point of NIGHT_LAMPS)lamp(scene,point.u,point.v);
+  // Neighboring homes are outside the main house's street-facing path.
   for(const neighbor of NIGHT_NEIGHBORS)house(scene,neighbor.u,neighbor.v,false,neighbor.style);
   // Main house façade mirrors the actual double-storey 3D floorplan.
   if(dawn)frontalRescueHouse(scene,true);
@@ -970,20 +968,31 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   }).setOrigin(.5).setDepth(vanPlace.y+17);
   }
   const sidewalk=scene.add.graphics().setDepth(.65);
-  for(const u of [67,72,77,81]){
-   const light=toScreen({u,v:4.75});
-   sidewalk.fillStyle(0xe0aa83,.16).fillEllipse(light.x,light.y,82,20);
-   for(let i=0;i<3;i++){
-    sidewalk.fillStyle(0xffd6a2,.23-i*.05)
-     .fillRect(light.x-15+i*4,light.y-4+i*4,29-i*7,2);
+  // The road is a continuous surface in front of both openings. Use the
+  // same normal and dimensions for collision-space classification and art.
+  const streetBand=(half:number,color:number)=>{
+   for(let i=1;i<NIGHT_STREET.length;i++){
+    const a=NIGHT_STREET[i-1],b=NIGHT_STREET[i],du=b.u-a.u,dv=b.v-a.v,len=Math.hypot(du,dv);
+    const nu=-dv/len*half,nv=du/len*half;
+    poly(sidewalk,color,[[a.u+nu,a.v+nv],[b.u+nu,b.v+nv],[b.u-nu,b.v-nv],[a.u-nu,a.v-nv]].map(([u,v])=>{const p=toScreen({u,v});return [p.x,p.y] as [number,number];}));
+   }
+   for(const point of NIGHT_STREET){const p=toScreen(point);sidewalk.fillStyle(color).fillEllipse(p.x,p.y,Math.SQRT2*ISO.tileW*half,Math.SQRT2*ISO.tileH*half);}
+  };
+  streetBand(NIGHT_PAVEMENT_HALF,dawn?0xc5b8a5:0xb7aaa7);
+  streetBand(NIGHT_ROAD_HALF+.07,0x8d8890);
+  streetBand(NIGHT_ROAD_HALF,dawn?0x777c84:0x545d6f);
+  for(let i=1;i<NIGHT_STREET.length;i++){
+   const a=NIGHT_STREET[i-1],b=NIGHT_STREET[i],len=Math.hypot(b.u-a.u,b.v-a.v);
+   const steps=Math.max(1,Math.floor(len/.95));
+   for(let j=0;j<steps;j++){
+    const t=(j+.15)/steps,end=(j+.58)/steps;
+    const p=toScreen({u:a.u+(b.u-a.u)*t,v:a.v+(b.v-a.v)*t});
+    const q=toScreen({u:a.u+(b.u-a.u)*end,v:a.v+(b.v-a.v)*end});
+    sidewalk.lineStyle(2,0xe7d7b4,.74).lineBetween(p.x,p.y,q.x,q.y);
    }
   }
-  // Stone pavement and the 3D x=5.9 front-path / porch. Each paving stone is
-  // placed on traversable ground so it visually teaches the actual route.
-  for(let u=68;u<=81;u+=.65){
-   const p=toScreen({u,v:6.15});
-   sidewalk.lineStyle(2,0xf6e9d6,.51).lineBetween(p.x-19,p.y-2,p.x+21,p.y+2);
-  }
+  // Straight front path from the sidewalk to the door; the last segment
+  // continues along the porch to the only unboarded window.
   const paving=[NIGHT_HOUSE.sidewalk,NIGHT_HOUSE.gate,NIGHT_HOUSE.yard,
    NIGHT_HOUSE.porch,NIGHT_HOUSE.door,NIGHT_HOUSE.window];
   for(let i=0;i<paving.length-1;i++){
@@ -993,9 +1002,10 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    sidewalk.lineStyle(2,0xe1bca3,.62);
    sidewalk.lineBetween(a.x,a.y,b.x,b.y);
   }
-  for(const [u,v] of [[68.0,9.8],[71.4,10.8]])picketFence(scene,u,v,5);
-  for(const [u,v] of [[71.1,9.8],[74.1,11.1],[80.6,11.35]])
-   gardenFeature(scene,u,v,'planter');
+  // Keep fences and plants outside the street and the straight front walk.
+  for(const [u,v] of [[68.0,9.8],[71.0,11.4]])if(nightStreetSurface({u,v})==='grass')picketFence(scene,u,v,5);
+  for(const [u,v] of [[71.1,11.5],[74.1,13.1],[80.6,11.95]])
+   if(nightStreetSurface({u,v})==='grass')gardenFeature(scene,u,v,'planter');
   gardenFeature(scene,66.8,8.4,'rock');
   gardenFeature(scene,73.3,2.1,'lantern');
   gardenFeature(scene,80.3,3.0,'lantern');
@@ -1092,7 +1102,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
  const riverShimmers=map==='morning_garden'?Array.from({length:11},(_,i)=>toScreen({u:10+hashCell(i,7,2)*6,v:i%2?1.2:9.2})):[];
  const afternoonPools=map==='afternoon_meeting'?Array.from({length:5},(_,i)=>{const u=26+i*3.7;return toScreen({u,v:routeCenter(u)+(i%2?1.8:-1.6)});}):[];
  const forestMist=map==='dusk_search'?Array.from({length:8},(_,i)=>{const u=48+i*1.85,lim=routeLimits(u);return toScreen({u,v:i%2?lim.max+.4:lim.min-.4});}):[];
- const streetPools=map==='night_neighborhood'?[67,72,77,81].map(u=>({u,p:toScreen({u,v:1.8}),street:toScreen({u,v:4.65})})):[];
+ const streetPools=map==='night_neighborhood'?NIGHT_LAMPS.map((point,i)=>({u:i,p:toScreen(point),street:toScreen(NIGHT_STREET[Math.min(i+1,NIGHT_STREET.length-1)])})):[];
  const doorLight=toScreen(NIGHT_HOUSE.door),gateLight=toScreen(NIGHT_HOUSE.gate);
  const exitLight=!dawn&&cfg.exit?toScreen(cfg.exit):undefined;
  const update=(elapsed:number,night:number,player:IsoPoint=cfg.spawn):AmbientCue|null=>{

@@ -36,6 +36,15 @@ assert(house.nightNavigationDistance(layout.door,layout.window)>1.3,
  'door and window are distinct physically separated interactions');
 assert(layout.window.u-layout.window.v>layout.door.u-layout.door.v,'from the street the window is right of the door');
 assert(Math.abs(layout.window.u+layout.window.v-layout.door.u-layout.door.v)<1e-8,'shared front baseline');
+const depth=p=>p.u+p.v;
+assert(depth(layout.road)>depth(layout.sidewalk)&&depth(layout.sidewalk)>depth(layout.gate)&&depth(layout.gate)>depth(layout.door),'street, sidewalk, yard, porch and facade face the same direction');
+assert.equal(house.nightStreetSurface(layout.road),'road');
+assert.equal(house.nightStreetSurface(layout.sidewalk),'sidewalk');
+assert.equal(house.nightStreetSurface(layout.door),'yard');
+assert.equal(house.nightStreetSurface(house.NIGHT_VAN),'road');
+assert(house.nightWalkable(house.NIGHT_VAN),'van sits on the accessible street');
+for(const side of [-3,0,3]){const street=house.frontOfHouse(4,side);assert.equal(house.nightStreetSurface(street),'road');assert(house.nightWalkable(street),'street spans the entire front');}
+assert.equal(house.nightStreetSurface(layout.center),'grass','no asphalt behind the facade');
 function safeSegment(a,b,label){
  const steps=Math.max(1,Math.ceil(house.nightNavigationDistance(a,b)/.09));
  for(let i=0;i<=steps;i++){
@@ -43,8 +52,10 @@ function safeSegment(a,b,label){
   assert(house.nightWalkable(p),label+' path went through a wall / outside the level at '+JSON.stringify(p));
  }
 }
+safeSegment(layout.road,layout.door,'straight front approach');
+safeSegment(layout.door,layout.window,'porch');
 const starts=[
- layout.start,layout.road,layout.sidewalk,layout.gate,layout.yard,
+ layout.start,layout.road,layout.sidewalk,layout.gate,layout.yard,house.NIGHT_VAN,
  {u:73.5,v:4.45},{u:74.0,v:9.5},{u:77.3,v:10.8},{u:80.7,v:10.65},
  {u:78.6,v:11.2},layout.door,layout.window
 ];

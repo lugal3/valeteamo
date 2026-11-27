@@ -19,15 +19,44 @@ export const frontFacadeOffset=(x:number)=>(HOUSE_3D_REFERENCE.frontDoorX-x)*FRO
 const DOOR={u:77.6,v:7.9};
 const windowShift=frontFacadeOffset(HOUSE_3D_REFERENCE.openWindowX)/82;
 const frontSum=DOOR.u+DOOR.v,frontLeft=DOOR.u-DOOR.v+frontFacadeOffset(HOUSE_3D_REFERENCE.width)/41;
+// The road, sidewalk and front path must be on the SAME outward normal.
+// Iso screen Y increases with u+v: larger sums are in front of the facade.
+// Street runs across the whole facade, then bends to the forest portal on
+// the left. These are real walkable centerlines, shared with the ground art.
+export const frontOfHouse=(depth:number,side=0):IsoPoint=>({u:DOOR.u+depth/2+side/2,v:DOOR.v+depth/2-side/2});
+export const NIGHT_STREET:readonly IsoPoint[]=[
+ {u:65.7,v:4.45},{u:71.5,v:8.4},{u:74.2,v:10.7},{u:76.9,v:12.6},{u:81.3,v:8.2}
+];
+export const NIGHT_LAMPS:readonly IsoPoint[]=[
+ {u:67.4,v:4.75},{u:71.5,v:9.55},frontOfHouse(2.5,-3),frontOfHouse(2.5,3)
+];
+export const NIGHT_VAN:IsoPoint={u:76.25,v:12.14};
+export const NIGHT_ROAD_HALF=.86,NIGHT_PAVEMENT_HALF=1.48;
+export function nightStreetDistance(p:IsoPoint):number{
+ let best=Infinity;
+ for(let i=1;i<NIGHT_STREET.length;i++){
+  const a=NIGHT_STREET[i-1],b=NIGHT_STREET[i],du=b.u-a.u,dv=b.v-a.v;
+  const t=Math.max(0,Math.min(1,((p.u-a.u)*du+(p.v-a.v)*dv)/(du*du+dv*dv)));
+  best=Math.min(best,Math.hypot(p.u-a.u-t*du,p.v-a.v-t*dv));
+ }
+ return best;
+}
+export function nightStreetSurface(p:IsoPoint):'road'|'sidewalk'|'yard'|'grass'{
+ const distance=nightStreetDistance(p);
+ if(distance<=NIGHT_ROAD_HALF)return 'road';
+ if(distance<=NIGHT_PAVEMENT_HALF)return 'sidewalk';
+ if(p.u+p.v>=frontSum-.1&&p.u+p.v<=frontSum+2.5&&p.u-p.v>=frontLeft&&p.u-p.v<=frontLeft+FRONT_FACADE_WIDTH/41)return 'yard';
+ return 'grass';
+}
 export const NIGHT_HOUSE={
  center:{u:77.2,v:5.7},
  door:DOOR,
  window:{u:DOOR.u+windowShift,v:DOOR.v-windowShift},
- gate:{u:74.85,v:10.2},
- yard:{u:76.2,v:10.20},
- porch:{u:77,v:9},
- sidewalk:{u:73.5,v:8.9},
- road:{u:71.1,v:4.65},
+ gate:frontOfHouse(2.0),
+ yard:frontOfHouse(1.4),
+ porch:frontOfHouse(.65),
+ sidewalk:frontOfHouse(2.65),
+ road:frontOfHouse(4),
  start:{u:65.7,v:4.45}
 } as const;
 // Neighbors have distinct silhouettes/colors and ground footprints, shared
@@ -51,7 +80,14 @@ export function nightRouteLimits(u:number):{min:number;max:number}{
  const center=nightRouteCenter(u);
  // Broad paved street at the entrance, generous lateral forecourt at the house.
  const half=u<71?3.35:u<75?3.9:4.1;
- return {min:center-half,max:center+half};
+ // Keep the full street and its curb inside the walkable terrain, even
+ // where the approach curves toward the front of the house.
+ let streetV=center;
+ for(let i=1;i<NIGHT_STREET.length;i++){
+  const a=NIGHT_STREET[i-1],b=NIGHT_STREET[i];
+  if(u>=a.u&&u<=b.u)streetV=mix(a.v,b.v,(u-a.u)/(b.u-a.u));
+ }
+ return {min:center-half,max:Math.max(center+half,streetV+2.25)};
 }
 export function nightHouseBlocks(p:IsoPoint):boolean{
  // Building footprint is above the walkable porch. A soft solid facade makes
@@ -84,7 +120,7 @@ export function nightAutoRoute(from:IsoPoint,to:IsoPoint):IsoPoint[]{
  // A click works from ANY valid exterior point, including after the door clue.
  if(!nightWalkable(from)||!nightWalkable(to))return [];
  if(lineClear(from,to))return [{...to}];
- const step=.5,gridU=65,gridV=-1,columns=35,rows=28;
+ const step=.5,gridU=65,gridV=-1,columns=35,rows=35;
  const key=(x:number,y:number)=>y*columns+x;
  const node=(x:number,y:number):IsoPoint=>({u:gridU+x*step,v:gridV+y*step});
  const nearest=(p:IsoPoint):[number,number]|null=>{
