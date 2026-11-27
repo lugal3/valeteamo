@@ -80,6 +80,27 @@ export function paintLuisChibi(
   if(tattoo)b(x+4,ay+3,1,2,'#46465d');
   if(raised&&x===32&&i===2)b(x+2,ay+2,2,1,p.skinLight);
  }
+ // Front view traced against the photographed card on a 48×64 grid.
+ // Irregular fringe and visible skin islands retain the printed silhouette.
+ if(facing==='down'){
+  const trace=["................................................","................................................","...............jjjjhh...........................","............jjjjjHHHHHjhhHHHHH..................","..........jjjjHHjjjjHHjHHHHHHHHHHhhh............",".......hhjjHHjjjjjjjHHHHHHHHHHjjjHHHHHh.........",".....hhhjHHHjjjhjjjjjHHHHHHHHjjjHjHHHHHHhh......","....hhjjjjjHHjjjjjjHHHHHjHHjjjjHHHHHHHjHHjjj....","...hhjHjjjjjHjjjjjjjjjjHjjHHHHHHjHHHHHjHHjjjj...","..hhjHHjjjjjHHjjjHjjhjjjjjHjHHjjjjjjHHHHHHHjjj..",".hhjHjjjjhjjjjHHjjjjhjjjjjjjjjjjjjjHjHHHHHHjhj..",".hhjHjhhjjjjjjjjjjjjjjjjHjjjjjhjHjjjjjHHHHHjjh..",".hHHjjhhjjjjjjjjjjjjjHjjjjjjhjjjjHjjjHHHHHHHjh..",".hHjjhhjHHjjjHjhhjjjjHjjHjHjjhjjjjjjjHHjjHHHjh..",".hjjjhjjHHHjjjjhhHjjhjjjHHHHjhhjjjjjjjjjjHHHHj..",".HjjhhhjjHHjjjjhjHjjjjjjHHjHjhhjjjjjjjjHHHHHHj..",".HjjhhjjjHHjjjjhhHjjjjjjHjHHjhhjjjjjjjHHHHHjHh..",".HHHHHHHHsHHHHHHHHHHHHHHHHssHHHHHHHHHHHHHHHHHs..","HHHHHHHHSSHHHHHHHHHHHHHHHSSsHHHHHHHHHHHHHHHHHH..","HHHHHHHHSSSHssHHHHHHSsHHHSSSHHHHHHHHHHHHHHHHH...","HHHHHHHHsSSsHsHHHHHHSSHHHSSsHHHSSHHHHHHHHHHHH...","HHHHHGGGGsSGGGGHHHHHsHHGGsSGGGsSSHHHHHHHHHHHH...","HHHHHGGGssGGsGGHHHHHHHGGGGGGGGGGGGHHHHHHHHHHH...","HHHHGGGGEEESsGGGHHsHHHGGsGsEEEsGGGHHHHHHHHHHH...","HHHHGGswwEEssGGGGGGGGGGGsswwEESsGGHHHHHHHHHH....",".HHHGGSSSEEEsGGsSSSSHsGGsssEEESsGGssHHHHHHHH....",".HHHGGSSSeeeGGGsSSSSssGGGsseeeSsGGSSsHHHHHHsS...","..HHGGGSSSsGGGSSSSSSSsGGGssGSSsGGSSssHHHHHssS...","..HHGGGGGGGGGSSSSSSSSssGGGGsSsGGSSSsHHHHHsSS....","...sssGGGGGsSSSSSSSSSSSGGGGGGGGSSSSsHHHHsSS.....","...SSSSSSHHSSSSSSSSSSSSSSGGGGGSSSSHHHHHsS.......","....ddssSSSSSSSSSSSSSSssSSSSSSSSSssdd...........",".....ddssSSSSSSSSSSSSSSSSSSSSSSssdd.............","......ddssSSSSSSSmmmmmmmmSSSSSSSssdd............",".......ddssSSSSSSSnnnnnnSSSSSSSssdd.............",".........ddssssssssssssssssssssdd...............","...........ddssssssssssssssssdd.................",".............dddddddddddddddd...................",".................dddddddddd....................."] as const;
+  const colors:Record<string,string>={H:p.hair,h:'#2e2e30',j:'#29292b',G:'#29272c',E:'#54453d',e:'#82624c',S:p.skinLight,s:p.skin,d:p.skinShade,w:'#fff2db',m:'#a46f57',n:'#bd876b'};
+  for(let row=0;row<trace.length;row++)for(let x=0;x<trace[row].length;x++){
+   const color=colors[trace[row][x]];
+   if(color)b(x,row+bob,1,1,color);
+  }
+  // Keep the existing glass palette visible at the rim, not the hair.
+  b(7,28+bob,4,1,p.glass);b(25,29+bob,5,1,p.glass);
+  if(blink){
+   b(7,24+bob,5,3,p.skin);b(8,25+bob,4,1,'#57423b');
+   b(26,24+bob,5,3,p.skin);b(26,25+bob,5,1,'#57423b');
+  }
+  if(talking&&i>0){
+   b(17,33+bob,8,i===2?3:2,'#995e53');
+   b(19,34+bob,4,1,'#e0a48d');
+  }
+  return canvas;
+ }
  // Photo-derived head: broad, rounded bowl silhouette, smooth dark crown.
  const h=2+bob;
  rows(h,[[15,16],[11,24],[8,30],[6,34],[5,36],[4,38],[3,40],[2,42],[2,43],[1,44],[1,45],[1,45],[1,45],[1,45],[1,45],[1,45],[1,45],[1,45],[1,45],[2,44],[2,44],[3,42],[3,42],[4,40],[5,38],[6,36],[7,34],[8,32],[9,30],[11,26],[13,22],[16,16],[19,10]],hair);
