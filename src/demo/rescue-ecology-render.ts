@@ -132,14 +132,14 @@ export function createLivingEcology(
  const seeds=ecologySeeds(map,minU,maxU,center);
  const flora=seeds.flora.map(seed=>{
   const pos=toScreen(seed.p);
-  return {seed,lean:0,graphics:scene.add.graphics().setPosition(pos.x,pos.y)
+  return {seed,lean:0,painted:false,graphics:scene.add.graphics().setPosition(pos.x,pos.y)
    .setDepth(pos.y-1)};
  });
  const wildlife=seeds.wildlife.map(seed=>{
   const pos=toScreen(seed.p);
-  return {seed,state:{alarm:0,heading:1} as WildlifeState,
+  return {seed,base:pos,state:{alarm:0,heading:1} as WildlifeState,
    graphics:scene.add.graphics().setPosition(pos.x,pos.y)
-    .setDepth(pos.y+1)};
+    .setDepth(pos.y+1).setScale(seed.size)};
  });
  // Two reusable, world-space buffers, never over player input/hotspots.
  const light=scene.add.graphics().setDepth(.78),micro=scene.add.graphics().setDepth(1702);
@@ -152,7 +152,10 @@ export function createLivingEcology(
  let lastAudioPeriod=-1,lastMicroPeriod=-1;
  let event:MicroEvent|null=null,occurred=0,updates=0;
  let visibleWildlife=0,reactiveFlora=0,alarmedWildlife=0;
- let previousElapsed=0;
+ let previousElapsed=0,lastStaticNight=NaN;
+ const daylightPositions=map==='morning_garden'?Array.from({length:5},(_,i)=>toScreen({u:10.25+i*1.15,v:i%2?8.2:1.6})):map==='afternoon_meeting'?Array.from({length:6},(_,i)=>{const u=25+i*3.3;return toScreen({u,v:center(u)+(i%2?2.7:-2.4)});}):map==='dusk_search'?Array.from({length:8},(_,i)=>{const u=48+i*1.8;return toScreen({u,v:center(u)+(i%2?3.3:-2.8)});}):[];
+ const streetLights=map==='night_neighborhood'?[67,72,77,81].map(u=>toScreen({u,v:1.8})):[];
+ const porchFog=map==='night_neighborhood'?Array.from({length:5},(_,i)=>toScreen({u:68+i*2.7,v:5.75})):[];
  const update=(elapsed:number,player:IsoPoint,night:number):AmbientCue|null=>{
   const dt=clamp(elapsed-previousElapsed,0,70);
   previousElapsed=elapsed;updates++;
@@ -160,33 +163,39 @@ export function createLivingEcology(
   visibleWildlife=0;reactiveFlora=0;alarmedWildlife=0;
   for(const item of flora){
    const range=Math.abs(item.seed.p.u-player.u);
-   item.graphics.setVisible(range<8.4);
-   if(range>=8.4){item.lean=0;continue;}
+   const visible=range<8.4;
+   if(item.graphics.visible!==visible)item.graphics.setVisible(visible);
+   if(!visible){item.lean=0;continue;}
+   if(reducedMotion&&item.painted)continue;
    const f=ecologyFloraFrame(item.seed,elapsed,player,reducedMotion);
    item.lean=reducedMotion?0:ecoLean(item.lean,f.lean,dt);
    if(Math.abs(item.lean)>1.1)reactiveFlora++;
-   paintFlower(item.graphics,item.seed,{...f,lean:item.lean},reducedMotion);
+   f.lean=item.lean;paintFlower(item.graphics,item.seed,f,reducedMotion);item.painted=true;
   }
   for(const item of wildlife){
    const range=Math.abs(item.seed.p.u-player.u);
-   item.graphics.setVisible(range<8.0);
-   if(range>=8.0)continue;
+   const visible=range<8.0;
+   if(item.graphics.visible!==visible)item.graphics.setVisible(visible);
+   if(!visible)continue;
    visibleWildlife++;
    const next=ecologyWildlifeStep(item.seed,item.state,elapsed,dt,player,reducedMotion,tension);
    item.state=next.state;
    if(item.state.alarm>.25)alarmedWildlife++;
-   const base=toScreen(item.seed.p);
-   item.graphics.setPosition(base.x+next.frame.x,base.y+next.frame.y)
-    .setDepth(base.y+next.frame.y+1)
-    .setScale(item.seed.size); // Same reusable Graphics, no per-frame allocations.
+   const base=item.base;
+   // Keep alert dynamics even with reduced motion: some poses have a visible alert cue.
+   const x=base.x+next.frame.x,y=base.y+next.frame.y;
+   if(item.graphics.x!==x||item.graphics.y!==y)item.graphics.setPosition(x,y);
+   if(item.graphics.depth!==y+1)item.graphics.setDepth(y+1);
    animal(item.graphics,item.seed.kind,next.frame,item.seed.id);
   }
-  light.clear();micro.clear();windows.clear();
+  micro.clear();
+  if(!reducedMotion||lastStaticNight!==night){
+  lastStaticNight=night;light.clear();windows.clear();
   const t=reducedMotion?0:elapsed/1000;
   if(map==='morning_garden'){
    // Golden dappled sunlight plus tiny circles on the RIVER bank.
    for(let i=0;i<5;i++){
-    const u=10.25+i*1.15,pos=toScreen({u,v:i%2?8.2:1.6});
+    const pos=daylightPositions[i];
     light.fillStyle(0xfffae1,.06+.04*Math.pow(Math.sin(t*.65+i),2))
      .fillEllipse(pos.x+Math.sin(t*.9+i)*10,pos.y,78,16);
     const ripple=11+Math.sin(t*1.8+i*2)*5;
@@ -195,14 +204,14 @@ export function createLivingEcology(
   }else if(map==='afternoon_meeting'){
    // Long golden stripes in a clearing, without masking the grass path.
    for(let i=0;i<6;i++){
-    const u=25+i*3.3,pos=toScreen({u,v:center(u)+(i%2?2.7:-2.4)});
+    const pos=daylightPositions[i];
     light.fillStyle(tension>.35?0xbbb0cc:0xffdfa5,(.095+.027*Math.sin(t*.4+i))*(1-tension*.6))
      .fillEllipse(pos.x,pos.y+3,118,19);
     light.lineStyle(1,tension>.35?0xc9b8cf:0xffe5bf,.15*(1-tension*.65)).lineBetween(pos.x-24,pos.y-4,pos.x+36,pos.y-9);
    }
   }else if(map==='dusk_search'){
    for(let i=0;i<8;i++){
-    const u=48+i*1.8,pos=toScreen({u,v:center(u)+(i%2?3.3:-2.8)});
+    const pos=daylightPositions[i];
     light.fillStyle(0xdbc4dc,.035+.027*Math.sin(t*.35+i))
      .fillEllipse(pos.x+Math.sin(t*.28+i)*14,pos.y-6,119,18);
     if(i%2===0){
@@ -226,17 +235,18 @@ export function createLivingEcology(
     }
    }
    for(let i=0;i<4;i++){
-    const p=toScreen({u:[67,72,77,81][i],v:1.8});
+    const p=streetLights[i];
     light.fillStyle(0xffe4ad,.08+.05*Math.pow(Math.sin(t*.62+i),2))
      .fillEllipse(p.x,p.y-104,49,58);
     // Ground falloff is already drawn in rescue-overworld; no second flat pool.
    }
    // Thin fog rolls *behind* the porch and front path.
    for(let i=0;i<5;i++){
-    const u=68+i*2.7,p=toScreen({u,v:5.75});
+    const p=porchFog[i];
     light.fillStyle(0xc6c6d6,.025+.013*Math.sin(t*.26+i))
      .fillEllipse(p.x+Math.sin(t*.19+i)*16,p.y,115,10);
    }
+  }
   }
   const microPeriod=Math.floor(elapsed/7600);
   if(microPeriod>0&&microPeriod!==lastMicroPeriod){

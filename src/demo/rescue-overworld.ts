@@ -1066,12 +1066,21 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
  const ecology=createLivingEcology(scene,map,cfg.minU,cfg.maxU,
   routeCenter,reducedMotion);
  const created=scene.children.list.filter(x=>!before.has(x));
- let lastVisualPaint=-Infinity;
+ let lastVisualPaint=-Infinity,lastStaticNight=NaN;
  let lastPlayerX=toScreen(cfg.spawn).x,lastPlayerY=toScreen(cfg.spawn).y;
  let movement=0,windDirection=1;
  const petalBases=particles.map(p=>toScreen(p));
  const lantern=rescueLandmarks(map).find(o=>o.id==='lantern-clearing');
  const lanternScreen=lantern?toScreen(lantern.point):undefined;
+ const riverLines:{u:number;v:number;p:{x:number;y:number}}[]=[];
+ if(map==='morning_garden')for(let u=10;u<16;u++)for(let v=-2;v<=12;v++)if(v<3||v>6)riverLines.push({u,v,p:toScreen({u,v})});
+ const riverReflections=map==='morning_garden'?Array.from({length:14},(_,i)=>toScreen({u:10.35+hashCell(i,17,4)*5.2,v:i%2?7.2+hashCell(i,9,5)*4.8:-1.7+hashCell(i,9,5)*3.4})):[];
+ const riverShimmers=map==='morning_garden'?Array.from({length:11},(_,i)=>toScreen({u:10+hashCell(i,7,2)*6,v:i%2?1.2:9.2})):[];
+ const afternoonPools=map==='afternoon_meeting'?Array.from({length:5},(_,i)=>{const u=26+i*3.7;return toScreen({u,v:routeCenter(u)+(i%2?1.8:-1.6)});}):[];
+ const forestMist=map==='dusk_search'?Array.from({length:8},(_,i)=>{const u=48+i*1.85,lim=routeLimits(u);return toScreen({u,v:i%2?lim.max+.4:lim.min-.4});}):[];
+ const streetPools=map==='night_neighborhood'?[67,72,77,81].map(u=>({u,p:toScreen({u,v:1.8}),street:toScreen({u,v:4.65})})):[];
+ const doorLight=toScreen(NIGHT_HOUSE.door),gateLight=toScreen(NIGHT_HOUSE.gate);
+ const exitLight=cfg.exit?toScreen(cfg.exit):undefined;
  const update=(elapsed:number,night:number,player:IsoPoint=cfg.spawn):AmbientCue|null=>{
   // About 30 FPS for purely decorative redraw; game input and camera stay 60 FPS.
   if(elapsed-lastVisualPaint<30)return null;
@@ -1086,16 +1095,19 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   for(const tree of reactiveTrees){
    const near=Math.abs(tree.point.u-player.u)<7;
    const hidden=near&&canopyOccludes(tree.screen,playerScreen);
-   tree.alpha=canopyAlpha(tree.alpha,hidden,visualDt,reducedMotion);
-   tree.crown.setAlpha(tree.alpha);
+   const target=hidden?.28:1,next=canopyAlpha(tree.alpha,hidden,visualDt,reducedMotion);
+   const alpha=Math.abs(next-target)<.002?target:next;
+   if(tree.alpha!==alpha){tree.alpha=alpha;tree.crown.setAlpha(alpha);}
    // Sub-pixel sway is purely visual; trunk, ground shadow and collider are fixed.
-   tree.crown.setAngle(!near||reducedMotion?0:Math.sin(visualT*.85+tree.phase)*.75);
+   const angle=!near||reducedMotion?0:Math.sin(visualT*.85+tree.phase)*.75;
+   if(Math.abs(tree.crown.angle-angle)>.015||angle===0&&tree.crown.angle!==0)tree.crown.setAngle(angle);
   }
+  if(!reducedMotion||lastStaticNight!==night){
+  lastStaticNight=night;
   water.clear();atmosphere.clear();motes.clear();portalGlow.clear();
   if(map==='morning_garden'){
-   for(let u=10;u<16;u++)for(let v=-2;v<=12;v++){
-    if(v>=3&&v<=6)continue;
-    const p=toScreen({u,v}),x=p.x+Math.sin(visualT*1.5+u*.66+v*.9)*8;
+   for(const {u,v,p} of riverLines){
+    const x=p.x+Math.sin(visualT*1.5+u*.66+v*.9)*8;
     water.lineStyle(1,0xecfff7,.31+Math.sin(visualT*1.7+v)*.13).lineBetween(x-9,p.y+3,x+7,p.y+3);
     if((u+v)%4===0)water.fillStyle(0xfcffff,.3).fillRect(x+3,p.y-3,3,2);
     if((u+v)%5===0){
@@ -1104,16 +1116,15 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    }
    // Reflected sky strokes follow the existing current, not the bridge.
    // A small set of deterministic clusters is painted on the water buffer.
-   for(let i=0;i<14;i++){
-    const u=10.35+hashCell(i,17,4)*5.2,v=i%2?7.2+hashCell(i,9,5)*4.8:-1.7+hashCell(i,9,5)*3.4;
-    const p=toScreen({u,v}),drift=Math.sin(visualT*.78+i)*9;
+   for(let i=0;i<riverReflections.length;i++){
+    const p=riverReflections[i],drift=Math.sin(visualT*.78+i)*9;
     const a=.12+.09*Math.pow(Math.sin(visualT*.96+i),2);
     water.lineStyle(2,0xd2f4e1,a).lineBetween(p.x-14+drift,p.y,p.x+10+drift,p.y);
     water.lineStyle(1,0xffefcc,a*.85).lineBetween(p.x-7+drift,p.y+4,p.x+5+drift,p.y+4);
    }
    // Shimmering shallow reflections sit on the WATER, not over Kitty.
-   for(let i=0;i<11;i++){
-    const u=10+hashCell(i,7,2)*6,v=i%2?1.2:9.2,p=toScreen({u,v});
+   for(let i=0;i<riverShimmers.length;i++){
+    const p=riverShimmers[i];
     const x=p.x+Math.sin(visualT*.9+i)*17;
     atmosphere.fillStyle(0xf3f7cf,.10+Math.pow(Math.sin(visualT*1.4+i),2)*.13);
     atmosphere.fillEllipse(x,p.y,20,5);
@@ -1122,15 +1133,14 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   if(map==='afternoon_meeting'){
    // Warm pools break up the plaza; they cool and fade after the abduction.
    const tension=clamp((night-.22)/.16,0,1);
-   for(let i=0;i<5;i++){
-    const u=26+i*3.7,p=toScreen({u,v:routeCenter(u)+(i%2?1.8:-1.6)});
+   for(const p of afternoonPools){
     lightPool(atmosphere,p.x+10,p.y+2,120,32,tension>.4?0xc0b6d2:0xffe6b2,.17*(1-tension*.65));
    }
   }
   if(map==='dusk_search'){
    // Layered ground mist on the shoulders, NEVER covering actors or clues.
-   for(let i=0;i<8;i++){
-    const u=48+i*1.85,lim=routeLimits(u),p=toScreen({u,v:i%2?lim.max+.4:lim.min-.4});
+   for(let i=0;i<forestMist.length;i++){
+    const p=forestMist[i];
     const x=p.x+Math.sin(visualT*.22+i)*17;
     lightPool(atmosphere,x,p.y-9,145,22,0xcac6dd,.10+.045*Math.pow(Math.sin(visualT*.38+i),2));
    }
@@ -1142,15 +1152,13 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   if(map==='night_neighborhood'){
    // Ground pools follow the street lamps' actual foot locations.
    // Their soft centers remain readable underneath Kitty and her controls.
-   for(const u of [67,72,77,81]){
-    const p=toScreen({u,v:1.8}),street=toScreen({u,v:4.65});
+   for(const {u,p,street} of streetPools){
     const strength=.40+.018*Math.sin(visualT*.7+u);
     lightPool(atmosphere,p.x,p.y+4,150,45,0xffd5a0,strength);
     lightPool(atmosphere,street.x,street.y,110,27,0xf0c797,strength*.62);
    }
-   const door=toScreen(NIGHT_HOUSE.door),gate=toScreen(NIGHT_HOUSE.gate);
-   lightPool(atmosphere,door.x,door.y+3,128,37,0xffce9c,.28);
-   lightPool(atmosphere,gate.x,gate.y,85,26,0xe5d2bd,.14);
+   lightPool(atmosphere,doorLight.x,doorLight.y+3,128,37,0xffce9c,.28);
+   lightPool(atmosphere,gateLight.x,gateLight.y,85,26,0xe5d2bd,.14);
   }
   // Same particle budget on every phone: morning butterflies/petals,
   // afternoon blossom drift, dusk leaves, night fireflies.
@@ -1181,11 +1189,12 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
     }
    }
   }
-  if(cfg.exit){
-   const p=toScreen(cfg.exit),pulse=.36+Math.sin(visualT*2.1)*.10;
+  if(exitLight){
+   const p=exitLight,pulse=.36+Math.sin(visualT*2.1)*.10;
    portalGlow.fillStyle(0xfff6d8,.10+pulse*.15).fillEllipse(p.x,p.y-3,105,40);
    portalGlow.lineStyle(2,0xfff2c8,.33+pulse*.34).strokeEllipse(p.x,p.y-3,88,30);
    portalGlow.fillStyle(0xffeed7,.65).fillCircle(p.x,p.y-26+Math.sin(visualT*1.8)*5,3.2);
+  }
   }
   return ecology.update(elapsed,player,night);
  };

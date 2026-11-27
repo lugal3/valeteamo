@@ -98,6 +98,7 @@ export class IsoAdventure extends Phaser.Scene {
  storyOptional?:ReturnType<typeof nearbyRescueLandmark>;storyVisited=new Set<string>();
  storyClueHint?:Phaser.GameObjects.Text;
  storyMomentId='';storyPetUntil=0;storyRestUntil=0;storyMomentCooldown=0;
+ private storyMixStage='';private storyMixMap='';private storyMixDark=NaN;private storyMixDialogue=false;
  storyPractice?:{point:IsoPoint;marker:Phaser.GameObjects.Graphics};storyPracticeDone=false;
  storyTarget:IsoPoint={u:22,v:4.5};
  houseRoute:IsoPoint[]=[];houseLastHint='';
@@ -331,7 +332,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const eerie=this.storyMap==='dusk_search'||this.storyMap==='night_neighborhood'||
    stage==='disappearance'||dark>.30;
   this.audio.setTheme(stage==='defend'?'battle':eerie?'final':'garden');
-  this.audio.setRescueMix(rescueMixFor(stage,this.storyMap,dark,!!this.story.speaker?.()));
+  this.refreshStoryMix(stage,dark);
   if(stage==='ribbon'&&this.storyMap==='afternoon_meeting')
    this.story.guide('Busca el sendero brillante: las pistas continúan en el bosque ✧');
   if(stage==='door'&&this.storyMap==='dusk_search')
@@ -916,6 +917,12 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   for(const bubble of this.storyBubbles)bubble.sprite.destroy();
   this.storyBubbles=[];
  }
+ private refreshStoryMix(stage:IsoStoryStage,dark:number){
+  const dialogue=!!this.story?.speaker?.();
+  if(this.storyMixStage===stage&&this.storyMixMap===this.storyMap&&this.storyMixDark===dark&&this.storyMixDialogue===dialogue)return;
+  this.storyMixStage=stage;this.storyMixMap=this.storyMap;this.storyMixDark=dark;this.storyMixDialogue=dialogue;
+  this.audio.setRescueMix(rescueMixFor(stage,this.storyMap,dark,dialogue));
+ }
  updateStoryPerformance(dt:number){
   if(!this.story)return;
   const beat=storyboardBeat(this.storyStage,this.clock-this.storyStageAt);
@@ -1089,7 +1096,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    this.updateStoryPerformance(dt);
    // The scene clock, not an extra audio interval, controls narrative dynamics.
    // Dialogue ducks only music/ambience; real samples and clue effects stay audible.
-   this.audio.setRescueMix(rescueMixFor(this.storyStage,this.storyMap,this.storyDusk,!!this.story.speaker?.()));
+   this.refreshStoryMix(this.storyStage,this.storyDusk);
    const ecologyCue=this.storyWorld?.update(this.clock,this.storyDusk,this.p);
    if(ecologyCue)this.audio.playRescueAmbience?.(ecologyCue.kind,ecologyCue.pan);
    // Physical NPC and kidnapping motion keeps running during narrative locks.

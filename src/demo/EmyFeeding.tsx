@@ -30,8 +30,11 @@ export function EmyFeeding({audio,onComplete,onCancel}:{audio:Sound;onComplete:(
    const dt=(now-last)/1000;last=now;
    const s=live.current;
    if(!document.hidden&&!s.done){
-    setClock(Math.floor(now/120)*120);setBlink(now%3900>3700);
     const near=churuInReach(s.tip.x,s.tip.y);
+    if(!reduced.current){
+     if(s.holding&&near)setClock(Math.floor(now/120)*120);
+     setBlink(now%3900>3700);
+    }
     setReaction(near?2:s.holding?1:0);
     // Never display 100% while the completion state is still 99.6%.
     // A player releasing the treat at the displayed 100% would leave the
@@ -53,7 +56,7 @@ export function EmyFeeding({audio,onComplete,onCancel}:{audio:Sound;onComplete:(
      },reduced.current?900:1550);
     }
    }
-   raf=requestAnimationFrame(frame);
+   if(!s.done)raf=requestAnimationFrame(frame);
   };
   raf=requestAnimationFrame(frame);
   const key=(e:KeyboardEvent)=>{

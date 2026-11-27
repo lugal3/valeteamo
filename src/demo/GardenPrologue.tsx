@@ -57,7 +57,13 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  const lettersRef=useRef(0),portraitRef=useRef<HTMLImageElement|null>(null);
  const [speechPulse,setSpeechPulse]=useState(0);
  const [portraitClock,setPortraitClock]=useState(0);
- useEffect(()=>{if(!dialog)return;setPortraitClock(0);const timer=window.setInterval(()=>setPortraitClock(n=>n+120),120);return()=>window.clearInterval(timer);},[dialog]);
+ useEffect(()=>{
+  if(!dialog)return;setPortraitClock(0);
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const started=performance.now();
+  const timer=window.setInterval(()=>{if(!document.hidden)setPortraitClock(Math.floor((performance.now()-started)/120)*120);},120);
+  return()=>window.clearInterval(timer);
+ },[dialog]);
  const reveal=useCallback((n:number)=>{lettersRef.current=n;setLetters(n);},[]);
  const feedingRef=useRef<Feeding|null>(null);
  const lockedRef=useRef(false),enteringRef=useRef(false),nextDialogRef=useRef<()=>void>(()=>{});
@@ -360,9 +366,10 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
     Math.abs(previous.heading-next.heading)<4?previous:next);
   };
   update();
-  const interval=window.setInterval(update,220);
+  if(map!=='night_neighborhood'||!['door','window'].includes(run.stage))return;
+  const interval=window.setInterval(()=>{if(!document.hidden)update();},220);
   return()=>window.clearInterval(interval);
- },[restartKey]);
+ },[restartKey,map,run.stage]);
 
  const currentLine=dialog?.lines[dialog.index];
  
