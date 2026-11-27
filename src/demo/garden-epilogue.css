@@ -1,0 +1,14 @@
+.garden-epilogue{position:absolute;inset:0;overflow:hidden;background:#e9d8b9;color:#fff9e7}
+.garden-epilogue .adventure-wrap{width:100%;height:100%}
+.garden-epilogue .adventure-hint{display:none}
+.garden-epilogue .adventure-hearts,.garden-epilogue .adventure-objective{display:none}
+.epilogue-sunlight{position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(ellipse at 80% 0%,#ffe2a435,transparent 70%);mix-blend-mode:screen}
+.epilogue-location{position:absolute;left:max(12px,env(safe-area-inset-left));top:64px;z-index:4;pointer-events:none;padding:9px 13px;color:#fff9e6;text-shadow:0 2px 4px #493c3c;background:#59445599;border-radius:11px}
+.epilogue-location span{font:600 10px system-ui;letter-spacing:.14em}.epilogue-location h1{font:700 clamp(18px,3vw,25px) Georgia;margin:4px 0}.epilogue-location p{font:12px system-ui;margin:0}
+.epilogue-action{position:absolute;z-index:5;bottom:max(15px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);min-height:44px;padding:10px 16px;border:1px solid #cda5af;border-radius:12px;background:#fff3df;color:#8c536a;font:600 14px system-ui;cursor:pointer;box-shadow:0 3px 0 #80627460}
+.epilogue-action:focus-visible{outline:2px solid #9a617f;outline-offset:2px}
+.epilogue-fade{position:absolute;inset:0;z-index:80;pointer-events:none;background:#211a29;animation:epilogue-in .68s ease-out both}
+.garden-epilogue[data-epilogue-leaving="true"] .epilogue-fade{animation:epilogue-out .68s ease-in both;pointer-events:auto}
+@keyframes epilogue-in{from{opacity:1}to{opacity:0}}@keyframes epilogue-out{from{opacity:0}to{opacity:1}}
+@media(max-height:450px){.epilogue-location{top:49px;padding:6px 10px}.epilogue-location p{font-size:11px}}
+@media(prefers-reduced-motion:reduce){.epilogue-fade,.garden-epilogue[data-epilogue-leaving="true"] .epilogue-fade{animation:none;opacity:0}}

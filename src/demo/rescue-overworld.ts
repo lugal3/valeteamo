@@ -692,7 +692,7 @@ function drawBridge(scene:Phaser.Scene){
 export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObjects.Graphics,
  ornaments:{flower:(u:number,v:number)=>void;shrub:(u:number,v:number)=>void;
   tree:(u:number,v:number)=>void;mushroom:(u:number,v:number)=>void},
- map:RescueMapId='morning_garden'):RescueOverworld{
+ map:RescueMapId='morning_garden',dawn=false):RescueOverworld{
  const before=new Set(scene.children.list),cfg=RESCUE_SCENES[map],g=ground;
  const reactiveTrees:ReactiveTree[]=[];
  let parkedVan:Phaser.GameObjects.Image|undefined;
@@ -700,7 +700,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
  const back:Record<RescueMapId,number>={
   morning_garden:0xf1e9d7,afternoon_meeting:0xf2ddc3,
   dusk_search:0xb8afbd,night_neighborhood:0x6e7189};
- g.fillStyle(back[map]).fillRect(-1600,-1300,7200,4500);
+ g.fillStyle(dawn?0xf0dec4:back[map]).fillRect(-1600,-1300,7200,4500);
  let tiles=0;
  const low=Math.floor(cfg.minU),high=Math.ceil(cfg.maxU);
  // A soft, continuous landscape behind the actual walkable tiles. Former
@@ -712,7 +712,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   dusk_search:[0xa8b0aa,0x919f96,0x667f79],
   night_neighborhood:[0x79858d,0x687a81,0x566a73]
  };
- const [outer,inner,canopy]=landscape[map];
+ const [outer,inner,canopy]=dawn?[0xe0ddbd,0xbfcfa1,0x92b18b]:landscape[map];
  const shoulder=(margin:number,color:number,alpha:number)=>{
   const edges:Array<[number,number]>=[],opposite:Array<[number,number]>=[];
   for(let u=low-9;u<=high+9;u+=1){
@@ -768,7 +768,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   const p=toScreen({u,v}),center=routeCenter(u),distance=Math.abs(v-center);
   // Nonrepeating, seeded micro-palette avoids giant checkerboard squares.
   const grain=hashCell(u,v,3),variation=hashCell(u,v,4);
-  const shades=TERRAIN_PALETTES[map];
+  const shades=dawn&&map==='night_neighborhood'?[0xb5b6a0,0xc0c0aa,0xbab4a0,0xaab69e,0xc5bfa8]:dawn&&map==='dusk_search'?TERRAIN_PALETTES.morning_garden:TERRAIN_PALETTES[map];
   let c=shades[Math.floor(grain*shades.length)];
   const isPath=distance<1.38;
   const edge=distance>=1.38&&distance<2.15;
@@ -902,7 +902,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    if(u%6===1)reactiveTrees.push(cherryTree(scene,u,lim.min-1.1));
   }else if(map==='dusk_search'){
    ornaments.shrub(u,v);
-   if(u%4===0)reactiveTrees.push(cherryTree(scene,u,lim.max+1.0,true,true));
+   if(u%4===0)reactiveTrees.push(cherryTree(scene,u,lim.max+1.0,!dawn,true));
    if(u%5===0)ornaments.mushroom(u+1,lim.min-.3);
   }else{
    if(u%4===0)ornaments.shrub(u,lim.min-.5);
@@ -948,6 +948,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   house(scene,NIGHT_HOUSE.center.u,NIGHT_HOUSE.center.v,true);
   // Same marked vehicle as in the filmed capture. Its wheels rest by
   // the curb, outside the 3D-faithful front entrance and navigable path.
+  if(!dawn){
   const vanPlace=toScreen(VAN_NIGHT_POSITION);
   scene.add.ellipse(vanPlace.x,vanPlace.y+3,154,25,0x202332,.28)
    .setDepth(vanPlace.y-2);
@@ -957,6 +958,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    fontFamily:'monospace',fontSize:'12px',fontStyle:'bold',
    color:'#ffe2c2',stroke:'#392a4b',strokeThickness:4
   }).setOrigin(.5).setDepth(vanPlace.y+17);
+  }
   const sidewalk=scene.add.graphics().setDepth(.65);
   for(const u of [67,72,77,81]){
    const light=toScreen({u,v:4.75});
@@ -1009,7 +1011,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
  // Solid existing scenery and collision use the same coordinates.
  for(const item of RESCUE_SCENERY[map]){
   const {u,v}=item.point;
-  if(item.kind==='tree')reactiveTrees.push(cherryTree(scene,u,v,map==='dusk_search',map==='morning_garden'));
+  if(item.kind==='tree')reactiveTrees.push(cherryTree(scene,u,v,map==='dusk_search'&&!dawn,map==='morning_garden'||dawn&&map==='dusk_search'));
   else if(item.kind==='bench')bench(scene,u,v);
   else gardenFeature(scene,u,v,item.kind);
  }
@@ -1080,7 +1082,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
  const forestMist=map==='dusk_search'?Array.from({length:8},(_,i)=>{const u=48+i*1.85,lim=routeLimits(u);return toScreen({u,v:i%2?lim.max+.4:lim.min-.4});}):[];
  const streetPools=map==='night_neighborhood'?[67,72,77,81].map(u=>({u,p:toScreen({u,v:1.8}),street:toScreen({u,v:4.65})})):[];
  const doorLight=toScreen(NIGHT_HOUSE.door),gateLight=toScreen(NIGHT_HOUSE.gate);
- const exitLight=cfg.exit?toScreen(cfg.exit):undefined;
+ const exitLight=!dawn&&cfg.exit?toScreen(cfg.exit):undefined;
  const update=(elapsed:number,night:number,player:IsoPoint=cfg.spawn):AmbientCue|null=>{
   // About 30 FPS for purely decorative redraw; game input and camera stay 60 FPS.
   if(elapsed-lastVisualPaint<30)return null;
@@ -1198,7 +1200,7 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   }
   return ecology.update(elapsed,player,night);
  };
- update(0,darknessAt(cfg.spawn.u,'intro',map),cfg.spawn);
+ update(0,dawn?.06:darknessAt(cfg.spawn.u,'intro',map),cfg.spawn);
  return {map,area:rescueArea,water,tiles,parkedVan,update,ecology,
   destroy:()=>{for(const obj of created)if(obj.active)obj.destroy();g.clear();}};
 }
