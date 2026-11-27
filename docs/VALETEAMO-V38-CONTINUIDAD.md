@@ -49,3 +49,8 @@ Base publicada: d28fc0eaa26ddc348f60b4e9704aaf275f8fb4c0. Rama independiente fea
 ## Fase 4 — picnic vivo y regreso
 - Tras soplar las velas, Kitty recupera el movimiento; actores permanecen cerca del picnic, alternan gestos/conversación sin diálogo obligatorio. Decoración física adicional, descanso y caricia de Emy. La acción Terminar aventura guarda complete sin destruir Phaser; regreso al universo o reinicio explícito. Guardado completo abre de nuevo el picnic sin repetir rescate/velas. El corazón público reconoce complete; previews aisladas.
 - Se conservan carta, fotografía real y descarga. Controles compactos laterales; sin enemigo ni límite temporal. Tests de escena viva, reapertura y persistencia ampliados. CI y capturas aún pendientes; no afirmar resultado visual probado.
+
+## Fase 5 — primera revisión de cierre
+- Corrección de recreación del escenario después de velas: la escena restaurada mantiene el estado del picnic, en lugar de reactivar las llamas tras reintentar.
+- Sentarse ahora persiste hasta una orden de movimiento; los botones de picnic se sitúan arriba a la derecha, liberan el área táctil izquierda y mantienen objetivos de 44px. Prueba real de teclado tras completar, asiento prolongado y comprobación DOM de zona táctil a 844×390.
+- Evidencia del SHA 1f368fe: lógica/compilación de auditoría integral y epilogue-browser exitosos; ramas de navegador canceladas al siguiente commit. En 2baab67 se observaron altar y retrato Louis exitosos, otros jobs aún en curso. Nueva revisión requiere CI propio. No declarar FPS físico ni capturas aprobadas. No fusionar ni publicar antes de verificar.

@@ -20,6 +20,7 @@ export function GardenEpilogue({stage,onAdvance,onExit,muted,onMute,audio,memory
  const [near,setNear]=useState(''),[leaving,setLeaving]=useState(false);
  const [line,setLine]=useState(-1),[letters,setLetters]=useState(0),[portraits,setPortraits]=useState<Record<string,string>>({});
  const [celebrating,setCelebrating]=useState(completed),[candlesOut,setCandlesOut]=useState(completed),[letterOpen,setLetterOpen]=useState(false);
+ const picnicStarted=useRef(candlesOut);picnicStarted.current=candlesOut;
  const [postcard,setPostcard]=useState<null|{image:string;error:boolean}>(null);
  const scene=useRef<IsoAdventure|null>(null),locked=useRef(false),finishing=useRef(false),timer=useRef<number>(0);
  const captureTimer=useRef(0),captureToken=useRef(0);
@@ -58,7 +59,7 @@ export function GardenEpilogue({stage,onAdvance,onExit,muted,onMute,audio,memory
     const ctx=canvas.getContext('2d');if(ctx){ctx.drawImage(source,0,0,canvas.width,canvas.height,0,0,canvas.width,canvas.height);result[person]=canvas.toDataURL();}
    }
    setPortraits(result);
-   if(revisiting.current)s.startEpiloguePicnic(false);
+   if(picnicStarted.current)s.startEpiloguePicnic(false);
   },interact:()=>beginRef.current(),victory:()=>{},clearing:()=>{},health:()=>{},retry:()=>{},arrive:()=>{},
   guide:()=>{},dusk:()=>{},area:()=>{},map:()=>{},travel:()=>{}
  }),[chapter]);
@@ -95,7 +96,7 @@ export function GardenEpilogue({stage,onAdvance,onExit,muted,onMute,audio,memory
     // Development-only read telemetry: no teleport, stage advance or save mutation.
     if(import.meta.env.DEV){
      const target=window as Window&{__valeEpilogue?:()=>unknown};
-     if(value)target.__valeEpilogue=()=>({p:{...value.p},target:{...value.storyTarget},map:value.storyMap,clock:value.clock,near:value.storyNear,velocity:{...value.storyVelocity},enemies:value.enemies.length,companions:[value.storyLouis,value.storyCat].map(actor=>!!actor?.active&&actor.visible),ready:!!value.player?.texture});
+     if(value)target.__valeEpilogue=()=>({p:{...value.p},target:{...value.storyTarget},map:value.storyMap,clock:value.clock,near:value.storyNear,texture:value.player?.texture?.key,velocity:{...value.storyVelocity},enemies:value.enemies.length,companions:[value.storyLouis,value.storyCat].map(actor=>!!actor?.active&&actor.visible),ready:!!value.player?.texture});
      else delete target.__valeEpilogue;
     }
    }} epilogueUI={<>
@@ -109,7 +110,7 @@ export function GardenEpilogue({stage,onAdvance,onExit,muted,onMute,audio,memory
   </section>}
   {celebrating&&!postcard&&!leaving&&<section className="epilogue-celebration" style={{pointerEvents:'auto'}} aria-label="Celebración de cumpleaños">
    <span aria-hidden="true">♡ ✦ ♡</span><h2>Feliz cumpleaños, Vale</h2>
-   {!candlesOut?<button onClick={()=>{setCandlesOut(true);scene.current?.startEpiloguePicnic(true);locked.current=false;scene.current?.clearInput();}}>Pide un deseo y sopla las velas</button>:<>
+   {!candlesOut?<button onClick={()=>{picnicStarted.current=true;setCandlesOut(true);scene.current?.startEpiloguePicnic(true);locked.current=false;scene.current?.clearInput();}}>Pide un deseo y sopla las velas</button>:<>
     <div className="epilogue-confetti" aria-hidden="true">{Array.from({length:16},(_,i)=><i key={i} style={{left:(i*37%100)+'%',animationDelay:i%5*.14+'s'}}/>)}</div>
     {letterOpen&&<p className="epilogue-letter">{EPILOGUE_LETTER}</p>}
     <div className="epilogue-celebration-actions"><button onClick={()=>setLetterOpen(v=>!v)}>{letterOpen?'Cerrar carta':'Leer carta'}</button><button onClick={takePhoto} disabled={!near}>Foto grupal</button>{!completed?<button onClick={finish}>Terminar aventura</button>:<button onClick={onReturn??onExit}>{returnLabel}</button>}</div>

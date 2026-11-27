@@ -108,6 +108,7 @@ export class IsoAdventure extends Phaser.Scene {
  private photoActors:PhotoRestore[]=[];private storyPhoto=false;
  private epilogueFlames?:Phaser.GameObjects.Graphics;
  private picnicSince:number|null=null;
+ private picnicSittingAt:number|null=null;
  private picnicMarker:Phaser.GameObjects.GameObject[]=[];
  private epilogueFollowers:{actor:StoryActor;point:IsoPoint;trail:IsoPoint[];kind:'louis'|'emy'|'luis'|'vale';facing:'up'|'down'|'left'|'right';walk:number}[]=[];
  private storyMixStage='';private storyMixMap='';private storyMixDark=NaN;private storyMixDialogue=false;
@@ -223,7 +224,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   this.storyLuisShadow=undefined;this.storyLuisMotion=undefined;
   this.storyLuisReady=false;this.storyLuisArriving=false;this.storyLuisFarewell=false;
   this.story.near('');
-  this.epilogueFollowers=[];this.epilogueFlames=undefined;this.picnicSince=null;this.picnicMarker=[];
+  this.epilogueFollowers=[];this.epilogueFlames=undefined;this.picnicSince=null;this.picnicSittingAt=null;this.picnicMarker=[];
   if(this.story.epilogue){this.setupEpilogue(this.story.epilogue);return;}
   if(force)this.p=mapForStage(stage)===this.storyMap?storyArrivalPoint(stage):{...RESCUE_SCENES[this.storyMap].spawn};
   this.p=constrainRescue(this.p,this.storyMap);this.positionPlayer();
@@ -435,7 +436,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   else this.epilogueFlames?.setVisible(false);
   for(const follower of this.epilogueFollowers)follower.trail=[];
  }
- picnicRest(){if(this.picnicSince===null||this.paused||this.storyPhoto)return;this.clearInput();this.storyVelocity={u:0,v:0};this.storyRestUntil=this.clock+1200;}
+ picnicRest(){if(this.picnicSince===null||this.paused||this.storyPhoto)return;this.clearInput();this.storyVelocity={u:0,v:0};this.picnicSittingAt=this.clock;}
  picnicPet(){if(this.picnicSince===null||this.paused||this.storyPhoto||!this.storyNear||!this.storyCat)return;this.storyPetUntil=this.clock+2000;this.burst(this.storyCatPoint,0xe9a9bf);this.audio.tone(780,.14,.018);}
  private animateEpilogueTalk(){
   const speaker=this.story?.speaker?.(),talking=this.story?.speaking?.()??false,frame=this.reducedMotion?0:Math.floor(this.clock/160);
@@ -1200,15 +1201,17 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const speaking=this.story?.speaker?.()==='Kitty'&&(this.story.speaking?.()??true)&&!this.reducedMotion;
   const frame=touch?0:gait.frame;
   const restAge=1200-(this.storyRestUntil-this.clock);
-  const seatStep=restAge<150?0:restAge<300?1:restAge>1050?0:restAge>900?1:2;
-  const seated=!moving&&!firing&&!hurt&&this.storyRestUntil>this.clock&&this.textures.exists(kittySeatKey(seatStep));
+  const picnicRest=this.picnicSittingAt!==null;
+  const sitAge=this.clock-(this.picnicSittingAt??this.clock);
+  const seatStep=picnicRest?(sitAge<150?0:sitAge<300?1:2):restAge<150?0:restAge<300?1:restAge>1050?0:restAge>900?1:2;
+  const seated=!moving&&!firing&&!hurt&&(picnicRest||this.storyRestUntil>this.clock)&&this.textures.exists(kittySeatKey(seatStep));
   const hurtKey=`chibi-${this.character}-hurt`;
   const texture=seated?kittySeatKey(this.reducedMotion?2:seatStep):hurt&&this.textures.exists(hurtKey)?hurtKey:
    `chibi-${this.character}-${dir}-${hurt?5:frame}${firing&&!hurt?'-shoot':''}`;
   this.positionPlayer();
   const duration=RESCUE_FEEL.interactMs,progress=touch?
    Math.min(1,(this.storyInteractUntil-this.clock)/duration):0;
-  if(!this.reducedMotion){
+  if(!this.reducedMotion&&!seated){
    this.player.y-=gait.footLift+Math.sin((1-progress)*Math.PI)*2.3*(touch?1:0);
   }
   if(this.player.texture.key!==texture)this.player.setTexture(texture);
@@ -1326,7 +1329,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
     if(Math.hypot(x,y)<7)x=y=0;
    }
    const manual=Math.hypot(x,y)>.1;
-   if(manual)this.storyRestUntil=0;
+   if(manual){this.storyRestUntil=0;this.picnicSittingAt=null;}
    if(manual&&this.houseRoute.length)this.houseRoute=[];
    let guidePoint=this.houseRoute[0];
    if(guidePoint&&isoDistance(this.p,guidePoint)<.17){
