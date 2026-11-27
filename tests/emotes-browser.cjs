@@ -19,7 +19,7 @@ const {chromium}=require('playwright');
   await page.getByLabel('Código de acceso').fill('LP');
   await page.getByRole('dialog',{name:'Administración'}).getByRole('button',{name:'Entrar'}).click();
   // The LP panel groups the mirror scene inside its closed advanced section.
-  await page.getByText('Escenas y mecánicas aisladas',{exact:true}).click();
+  await page.getByText('Checkpoints de encuentros y mecánicas',{exact:true}).click();
   await page.getByRole('button',{name:'Espejo',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#lab-canvas')?.width>300&&!!window.__rescueHouse?.snapshot,null,{timeout:25000});
   // Keep a real mouse click and assert readiness. Save diagnostics on any

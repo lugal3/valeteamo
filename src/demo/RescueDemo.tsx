@@ -31,7 +31,7 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
  const [epilogueStore]=useState(()=>({current:!test&&progress.rescued?openEpilogueSave():undefined}));
  const [epilogue,setEpilogue]=useState<EpilogueState>(()=>epilogueStore.current?.state??{...EPILOGUE_START,stage:test&&epilogueEntry?epilogueEntry:EPILOGUE_START.stage});
  const [mode,setMode]=useState<'garden'|'house'|'epilogue'|'end'>(test&&epilogueEntry?'epilogue':progress.rescued?(epilogue.stage==='complete'?'end':'epilogue'):progress.house?'house':'garden');
- const [error,setError]=useState(''),[saveWarning,setSaveWarning]=useState(false);
+ const [error,setError]=useState(''),[saveWarning,setSaveWarning]=useState(false),[epilogueMuted,setEpilogueMuted]=useState(false);
  const phaseRef=useRef(progress),entering=useRef(false),finishing=useRef(false),epilogueRef=useRef(epilogue);
  const completeEpilogue=(next:EpilogueStage)=>{
   const current=epilogueRef.current,advanced=advanceEpilogue(current,next);
@@ -97,7 +97,7 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
  return <div className="rescue-demo" aria-label="Demo jugable de rescate">
   {mode==='garden'&&<GardenPrologue key={entry+(test?'-trial':'-story')}
    test={test} checkpoint={checkpointFor(entry)} onExit={onExit} onEnterHouse={enterHouse}/>}
-  {mode==='epilogue'&&epilogue.stage!=='complete'&&<GardenEpilogue key={epilogue.stage} stage={epilogue.stage} onAdvance={completeEpilogue} onExit={onExit}/>}
+  {mode==='epilogue'&&epilogue.stage!=='complete'&&<GardenEpilogue key={epilogue.stage} stage={epilogue.stage} onAdvance={completeEpilogue} onExit={onExit} muted={epilogueMuted} onMute={setEpilogueMuted}/>}
   {mode==='end'&&<div className="rescue-transition rescue-final" data-epilogue-stage="complete">
    <span>♥ ✿ ♥</span><h1>Feliz cumpleaños, <em>Vale</em></h1>
    <p>Louis está a salvo. Emy, Kitty, Luis y Vale vuelven a estar juntos. Gracias por recorrer esta pequeña aventura.</p>

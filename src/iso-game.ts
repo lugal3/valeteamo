@@ -421,9 +421,9 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  }
  private animateEpilogueTalk(){
   const speaker=this.story?.speaker?.(),talking=this.story?.speaking?.()??false,frame=this.reducedMotion?0:Math.floor(this.clock/160);
-  if(speaker==='Luis'&&this.storyLuis)this.storyLuis.setTexture(luisTextureKey('down',talking?'talk':'idle',talking?frame%3:0));
-  if(speaker==='Vale'&&this.storyVale)this.storyVale.setTexture(talking?valeTalkTexture(frame%3):valeTexture(false,0));
-  if(speaker==='Louis'&&this.storyLouis)this.storyLouis.setTexture('chibi-louis-down-'+(talking&&!this.reducedMotion?6+frame%2:0)).setFlipX(false);
+  if(this.storyLuis){const speaks=speaker==='Luis'&&talking;this.storyLuis.setTexture(luisTextureKey('down',speaks?'talk':'idle',speaks?frame%3:0));}
+  if(this.storyVale)this.storyVale.setTexture(speaker==='Vale'&&talking?valeTalkTexture(frame%3):valeTexture(false,0));
+  if(this.storyLouis)this.storyLouis.setTexture('chibi-louis-down-'+(speaker==='Louis'&&talking&&!this.reducedMotion?6+frame%2:0)).setFlipX(false);
   if(this.storyCat)this.storyCat.setTexture(greyCatTexture('love',frame%4));
  }
  private updateEpilogue(dt:number,chapter:EpilogueChapter){

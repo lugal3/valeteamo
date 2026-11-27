@@ -19,3 +19,20 @@
 .epilogue-celebration{text-align:center;width:min(92vw,520px);padding:10px}.epilogue-celebration h2{font:700 clamp(18px,3vw,26px) Georgia;margin:3px 0 8px}.epilogue-celebration-actions{display:flex;justify-content:center;gap:6px;flex-wrap:wrap}.epilogue-letter{font:italic 14px/1.45 Georgia;margin:8px auto;max-width:400px}.epilogue-confetti{position:absolute;inset:0;overflow:visible;pointer-events:none}.epilogue-confetti i{position:absolute;top:0;width:5px;height:9px;background:#db9eb8;animation:epilogue-confetti 1.3s ease-out both}.epilogue-confetti i:nth-child(3n){background:#edd08f}.epilogue-confetti i:nth-child(3n+1){background:#b0c9a0}@keyframes epilogue-confetti{0%{opacity:1;transform:translateY(0) rotate(0)}100%{opacity:0;transform:translateY(-100px) rotate(180deg)}}
 @media(max-height:450px){.epilogue-dialog,.epilogue-celebration{padding:8px}.epilogue-dialog img{width:46px;height:46px}.epilogue-dialog p{font-size:12px}.epilogue-letter{font-size:12px}}
 @media(prefers-reduced-motion:reduce){.epilogue-confetti{display:none}}
+
+/* Own stacking context for the entire return chapter. Phaser may give its
+   canvas a high z-index; it must never overtake the narrative UI. */
+.garden-epilogue{isolation:isolate}
+.garden-epilogue>.adventure-wrap{position:relative;z-index:0;isolation:isolate}
+.garden-epilogue .epilogue-action{z-index:20;pointer-events:auto;touch-action:manipulation;max-width:calc(100% - 28px);white-space:normal;text-align:center}
+.garden-epilogue .epilogue-dialog,.garden-epilogue .epilogue-celebration{z-index:30;pointer-events:auto;max-height:calc(100dvh - 78px);overflow:auto;overscroll-behavior:contain}
+.garden-epilogue .epilogue-dialog button,.garden-epilogue .epilogue-celebration button{touch-action:manipulation}
+.garden-epilogue:has(.adventure-overlay)>.adventure-wrap{z-index:70}
+.garden-epilogue .epilogue-location{background:#503b49db;border:1px solid #eed4b370;box-shadow:0 3px 12px #34293626;max-width:min(54vw,380px)}
+.garden-epilogue .epilogue-location h1{color:#fff2d5}
+.garden-epilogue .epilogue-location p{line-height:1.4}
+.garden-epilogue .epilogue-action{background:#fff1de;border:1px solid #b8859c;color:#70445c}
+.garden-epilogue .epilogue-celebration h2{color:#8a4e6d}
+.garden-epilogue .epilogue-celebration-actions button:last-child{background:#89536e;color:#fff5e9;border-color:#89536e}
+.garden-epilogue .epilogue-letter{padding:9px 12px;border:1px solid #e4c6b4;background:#fff9ee;border-radius:8px}
+@media(max-height:450px){.garden-epilogue .epilogue-location{max-width:47vw}.garden-epilogue .epilogue-location span{font-size:9px}.garden-epilogue .epilogue-location h1{font-size:17px}.garden-epilogue .epilogue-location p{font-size:10px}}

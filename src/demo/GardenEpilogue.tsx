@@ -10,12 +10,12 @@ import {GardenPostcard,makeGardenPostcard} from './GardenPostcard';
 import {valeTexture} from './rescue-intro-art';
 import './garden-epilogue.css';
 
-type Props={stage:Exclude<EpilogueStage,'complete'>;onAdvance:(next:EpilogueStage)=>void;onExit:()=>void};
+type Props={stage:Exclude<EpilogueStage,'complete'>;onAdvance:(next:EpilogueStage)=>void;onExit:()=>void;muted:boolean;onMute:(muted:boolean)=>void};
 // Parent keys by stage; one StoryGame/Phaser instance at a time.
-export function GardenEpilogue({stage,onAdvance,onExit}:Props){
+export function GardenEpilogue({stage,onAdvance,onExit,muted,onMute}:Props){
  const chapter=EPILOGUE_CHAPTERS[stage],lines=EPILOGUE_DIALOGUES[stage];
- const [audio]=useState(()=>new Sound());
- const [near,setNear]=useState(''),[muted,setMuted]=useState(false),[leaving,setLeaving]=useState(false);
+ const [audio]=useState(()=>{const sound=new Sound();sound.muted=muted;return sound;});
+ const [near,setNear]=useState(''),[leaving,setLeaving]=useState(false);
  const [line,setLine]=useState(-1),[letters,setLetters]=useState(0),[portraits,setPortraits]=useState<Record<string,string>>({});
  const [celebrating,setCelebrating]=useState(false),[candlesOut,setCandlesOut]=useState(false),[letterOpen,setLetterOpen]=useState(false);
  const [postcard,setPostcard]=useState<null|{image:string;error:boolean}>(null);
@@ -85,7 +85,7 @@ export function GardenEpilogue({stage,onAdvance,onExit}:Props){
  useEffect(()=>()=>{captureToken.current++;window.clearTimeout(captureTimer.current);window.clearTimeout(timer.current);audio.destroy();},[audio]);
  return <main className="garden-epilogue" data-epilogue-stage={stage} data-epilogue-leaving={leaving}>
   <StoryGame level={1} character="kitty" story={story} audio={audio} muted={muted} audioNotice=""
-   onUnlockAudio={()=>{void audio.start();}} onToggleAudio={()=>{audio.muted=!muted;setMuted(!muted);if(muted)void audio.start();}}
+   onUnlockAudio={()=>{void audio.start();}} onToggleAudio={()=>{audio.muted=!muted;onMute(!muted);if(muted)void audio.start();}}
    onExit={onExit} onComplete={()=>{}} onSceneReady={value=>{
     scene.current=value;
     // Development-only read telemetry: no teleport, stage advance or save mutation.
