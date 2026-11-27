@@ -253,9 +253,9 @@ const assert=require('node:assert/strict');
   const rig=pursuerPose({...foe,walk:0,speed:0,turnRate:0,age:0,mode:i/100>=EMY_RESCUE_BEATS.impact?'stunned':'chase',stunned:2*p.hit,rescueGrip:p.grip,rescueImpact:p.hit,rescueSide:shot.stage.side,rescueStep:p.step,rescueDistance:p.retreatDistance},true);
   for(const side of [-1,1]){
    const a=rig['arm'+side],f=rig['forearm'+side],d=.30;
-   assert(Math.abs(f.x-((a.x||0)+d*Math.sin(a.roll||0)*Math.cos(a.pitch)))<1e-6,'Elbow lateral attachment');
+   assert(Math.abs(f.x-((a.x||0)+d*Math.sin(a.roll||0)))<1e-6,'Elbow lateral attachment');
    assert(Math.abs(f.y-((a.y||0)+d*(1-Math.cos(a.roll||0)*Math.cos(a.pitch))))<1e-6,'Elbow vertical attachment');
-   assert(Math.abs(f.z-((a.z||0)-d*Math.sin(a.pitch)))<1e-6,'Elbow forward attachment');
+   assert(Math.abs(f.z-((a.z||0)-d*Math.cos(a.roll||0)*Math.sin(a.pitch)))<1e-6,'Elbow forward attachment');
    lifted ||= rig['foot'+side].y>.035;
   }
   asymmetric ||= Math.abs(rig['foot-1'].z-rig.foot1.z)>.06;
