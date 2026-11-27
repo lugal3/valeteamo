@@ -97,9 +97,16 @@ export function paintLuisChibi(facing:LuisFacing='down',pose:LuisPose='idle',fra
   b(x+7,y+13+(y<39?bob:-leg),1,1,color);
  }
  // Small edits in the actual bitmap coordinate system.
- if(facing==='down'&&blink){b(12,32+bob,4,1,'#554b43');b(27,32+bob,4,1,'#554b43');}
- if(facing==='right'&&blink)b(30,32+bob,4,1,'#554b43');
- if(talk&&i>0&&facing!=='up')b(facing==='down'?19:32,37+bob,3,i===2?2:1,'#a36e52');
+ if(facing==='down'&&blink){
+  b(11,30+bob,4,3,'#f8d2a5');b(11,32+bob,5,1,'#554b43');
+  b(26,31+bob,4,2,'#f8d2a5');b(26,32+bob,5,1,'#554b43');
+ }
+ if(facing==='right'&&blink){b(29,32+bob,4,2,'#f8d2a5');b(29,33+bob,4,1,'#554b43');}
+ if(talk&&i>0&&facing!=='up'){
+  const mx=facing==='down'?18:31;
+  b(mx,37+bob,4,i===2?2:1,'#875c48');
+  if(i===2)b(mx+1,38+bob,2,1,'#d79c82');
+ }
  if(pose==='idle'&&i===1)b(21,45,2,1,'#7fa74e');
  if(wave&&i!==0){
   // Sleeve and forearm connect to the original shoulder; no floating hand.

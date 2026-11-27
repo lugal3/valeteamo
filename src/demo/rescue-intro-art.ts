@@ -2,8 +2,8 @@ import type Phaser from 'phaser';
 
 export const CHURU_TEXTURE='rescue-churu';
 export const greyCatTexture=(pose:'idle'|'eat'|'walk'|'love'|'love-walk',frame:number)=>`rescue-grey-cat-${pose}-${frame%4}`;
-export const valeTexture=(walking:boolean,frame:number)=>`rescue-vale-${walking?'walk':'idle'}-${frame%4}`;
-export const valeTalkTexture=(frame:number)=>`rescue-vale-talk-${frame%3}`;
+export const valeTexture=(walking:boolean,frame:number,facing:'down'|'right'|'up'='down')=>`rescue-vale-${walking?'walk':'idle'}-${frame%4}${facing==='down'?'':'-'+facing}`;
+export const valeTalkTexture=(frame:number,facing:'down'|'right'|'up'='down')=>`rescue-vale-talk-${frame%3}${facing==='down'?'':'-'+facing}`;
 
 export function installRescueIntroArt(scene:Phaser.Scene){
  type Block=(x:number,y:number,w:number,h:number,color:string)=>void;
@@ -62,11 +62,12 @@ export function installRescueIntroArt(scene:Phaser.Scene){
 
  // Vale matches the reference card: long black hair, red top and dark trousers.
  // Keep the same texture keys, four-frame timing and foot anchor for the couple.
- for(const pose of ['idle','walk','talk'] as const)for(let frame=0;frame<(pose==='talk'?3:4);frame++){
+ for(const facing of ['down','right','up'] as const)for(const pose of ['idle','walk','talk'] as const)for(let frame=0;frame<(pose==='talk'?3:4);frame++){
   const walking=pose==='walk',talking=pose==='talk';
-  sprite(talking?valeTalkTexture(frame):valeTexture(walking,frame),43,58,b=>{
+  sprite(talking?valeTalkTexture(frame,facing):valeTexture(walking,frame,facing),43,58,b=>{
    const ink='#25252d',hair='#202126',shine='#37383d',skin='#e9b48f',light='#fbd4af',top='#b93d51';
    const bob=frame===1||frame===3?1:0,step=walking?[2,0,-2,0][frame]:0;
+   const back=facing==='up',side=facing==='right';
    const cluster=(x:number,y:number,rows:readonly (readonly [number,number])[],color:string)=>rows.forEach(([offset,width],i)=>b(x+offset,y+i,width,1,color));
    // Long hair behind the shoulders, with rounded ends.
    b(7,12+bob,29,32,ink);b(4,25+bob,35,14,ink);
@@ -96,7 +97,7 @@ export function installRescueIntroArt(scene:Phaser.Scene){
    b(8,24+bob,28,5,ink);b(12,29+bob,20,3,ink);
    b(9,13+bob,25,15,skin);b(11,16+bob,22,12,light);
    b(13,27+bob,18,3,light);b(17,30+bob,10,1,skin);
-   const blink=frame===2&&!walking&&!talking;
+   const blink=frame===3&&!walking&&!talking;
    b(13,19+bob,6,blink?1:6,ink);b(25,19+bob,6,blink?1:6,ink);
    if(!blink){b(14,23+bob,4,2,'#57413f');b(26,23+bob,4,2,'#57413f');}
    if(!blink){b(15,19+bob,2,2,'#fff8ef');b(26,19+bob,2,2,'#fff8ef');}
@@ -116,6 +117,19 @@ export function installRescueIntroArt(scene:Phaser.Scene){
    b(17,18+bob,2,3,hair);b(23,17+bob,2,3,hair);
    cluster(14,13+bob,[[0,3],[0,3],[1,3],[1,2]],'#2c2b30');
    cluster(26,12+bob,[[0,4],[0,4],[1,3],[1,2]],'#303035');
+   // Directional variants retain the original palette and silhouette.
+   if(back){
+    b(8,13+bob,28,17,hair);b(10,28+bob,25,8,hair);
+    cluster(10,15+bob,[[3,9],[2,10],[1,10],[1,9],[0,9],[0,8],[1,7],[2,5],[2,4]],shine);
+    cluster(24,15+bob,[[2,5],[2,6],[2,7],[1,7],[0,7],[0,6],[1,5],[2,3]],'#303035');
+    b(15,34+bob,14,5,hair);b(17,39+bob,10,2,'#303035');
+   }else if(side){
+    b(8,16+bob,15,15,hair);b(11,24+bob,13,11,hair);
+    cluster(9,19+bob,[[2,6],[1,7],[0,7],[0,6],[1,5],[1,4]],shine);
+    b(24,18+bob,9,11,light);b(25,19+bob,5,blink?1:6,ink);
+    if(!blink)b(26,19+bob,2,1,'#fff8ef');
+    b(30,24+bob,3,2,'#e7a09b');b(30,27+bob,4,talking&&frame>0?2:1,'#925c62');
+   }
    // White soles from the reference card, existing feet anchors.
    b(12,53+step,8,1,'#ddd6d0');b(24,53-step,8,1,'#ddd6d0');
   });

@@ -46,6 +46,7 @@ export type IsoStoryBridge={
  discoveries?:()=>readonly string[];
  discover?:(id:string)=>void;
  speaker?:()=>PrologueCharacter|undefined;
+ speaking?:()=>boolean;
  ready:()=>void;
  interact:(stage:IsoStoryStage)=>void;
  victory:()=>void;
@@ -524,7 +525,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   }else{
    facing=dy< -46&&Math.abs(dx)<27?'up':Math.abs(dx)>32?'right':'down';
    // Only the actual speaker animates speech; listeners keep their idle pose.
-   if(this.story.speaker?.()==='Luis')pose='talk';
+   if(this.story.speaker?.()==='Luis'&&(this.story.speaking?.()??true)){pose='talk';if(facing==='up')facing='down';}
   }
   const clock=motion?motion.elapsed:this.clock;
   const frame=luisAnimationFrame(clock,pose,this.reducedMotion);
@@ -538,14 +539,16 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   // stays beside Luis while her own step cycle and posture follow his pace.
   const walking=pose==='walk',offset=this.reducedMotion?0:walking?Math.sin(clock/160)*1.8:Math.sin(clock/1050)*.8;
   const valeFrame=luisAnimationFrame(clock+85,walking?'walk':'idle',this.reducedMotion);
-  const valeSpeaking=!motion&&this.story.speaker?.()==='Vale';
-  const valeKey=valeSpeaking?valeTalkTexture(this.reducedMotion?0:Math.floor(clock/170)%3):valeTexture(walking,valeFrame);
+  const valeSpeaking=!motion&&this.story.speaker?.()==='Vale'&&(this.story.speaking?.()??true);
+  const valeFacing=valeSpeaking&&facing==='up'?'down':facing;
+  const valeKey=valeSpeaking?valeTalkTexture(this.reducedMotion?0:Math.floor(clock/170)%3,valeFacing):valeTexture(walking,valeFrame,valeFacing);
   if(vale.texture.key!==valeKey&&this.textures.exists(valeKey))vale.setTexture(valeKey);
   vale.setPosition(npc.x-30+offset,npc.y+2).setDepth(npc.y+2).setAlpha(alpha)
    .setFlipX(facing==='right'&&dx<0)
    .setAngle(this.reducedMotion?0:walking?Math.sin(clock/160)*1.6:valeSpeaking?Math.sin(clock/230)*1.2:0);
   this.storyValeShadow?.setPosition(vale.x,vale.y+2).setDepth(vale.y-1).setAlpha(alpha);
   npc.setAlpha(alpha);this.storyLuisShadow?.setAlpha(alpha);
+  npc.setAngle(this.reducedMotion?0:pose==='talk'?Math.sin(clock/160)*1.1:pose==='wave'?Math.sin(clock/230)*.7:0);
   hands.clear().setDepth(npc.y+3);
   hands.lineStyle(4,0x634257,alpha).lineBetween(vale.x+12,vale.y-10,npc.x-12,npc.y-10);
   hands.lineStyle(2,0xf6bf99,alpha).lineBetween(vale.x+12,vale.y-10,npc.x-12,npc.y-10);
@@ -575,6 +578,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    return;
   }
   const elapsed=this.clock-this.storyStageAt,frame=this.reducedMotion?0:Math.floor(elapsed/280);
+  const idleFrame=this.reducedMotion?0:elapsed%4200>4010?3:Math.floor(elapsed/360)%3;
   if(this.storyStage==='cat-fed'){
    const distance=Math.min(1,Math.max(0,(elapsed-450)/2300));
    const start=this.storyCatPoint;
@@ -591,7 +595,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
     this.storyCatPoint={u:this.storyCatPoint.u+(target.u-this.storyCatPoint.u)*step/dist,v:this.storyCatPoint.v+(target.v-this.storyCatPoint.v)*step/dist};
    }
    const xy=toScreen(this.storyCatPoint);
-   cat.setPosition(xy.x,xy.y).setDepth(xy.y).setFlipX(xy.x<this.player.x).setTexture(greyCatTexture(step>.005?'walk':'idle',frame));
+   cat.setPosition(xy.x,xy.y).setDepth(xy.y).setFlipX(xy.x<this.player.x).setTexture(greyCatTexture(step>.005?'walk':'idle',step>.005?frame:idleFrame));
+   cat.setAngle(this.reducedMotion?0:step>.005?Math.sin(elapsed/130)*1.2:Math.sin(elapsed/900)*.4);
    this.storyTarget={...this.storyCatPoint};
    this.storyChuru?.setPosition(this.player.x+(this.facing==='left'?-13:13),this.player.y-14).setDepth(this.player.y+1).setAngle(this.facing==='left'?-15:15);
   }
@@ -871,9 +876,10 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    const face=storyActorFacing(kitty.x-npc.x,kitty.y-npc.y,this.storyLouisFacing);
    this.storyLouisFacing=face;
    const idle=storyActorIdle(this.clock,this.reducedMotion);
-   const talking=this.story.speaker?.()==='Louis'&&!this.reducedMotion;
+   const talking=this.story.speaker?.()==='Louis'&&(this.story.speaking?.()??true)&&!this.reducedMotion;
    const frame=talking?6+Math.floor(this.clock/160)%2:idle.frame;
-   const texture=`chibi-louis-${face==='left'?'right':face}-${frame}`;
+   const visibleFace=talking&&face==='up'?'down':face;
+   const texture=`chibi-louis-${visibleFace==='left'?'right':visibleFace}-${frame}`;
    if(this.textures.exists(texture)&&npc.texture.key!==texture)npc.setTexture(texture);
    npc.setFlipX(face==='left');
    npc.setAngle(idle.lean+(talking?Math.sin(this.clock/230)*.9:0));
@@ -942,6 +948,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const moving=gait.walking;
   const dir=this.facing==='left'?'right':this.facing;
   const touch=this.storyInteractUntil>this.clock;
+  const speaking=this.story?.speaker?.()==='Kitty'&&(this.story.speaking?.()??true)&&!this.reducedMotion;
   const frame=touch?0:gait.frame;
   const hurtKey=`chibi-${this.character}-hurt`;
   const texture=hurt&&this.textures.exists(hurtKey)?hurtKey:
@@ -960,7 +967,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    .setAlpha(this.clock<this.inv?
     (this.reducedMotion?.7:Math.floor(this.clock/90)%2?.45:1):1)
    .setAngle(hurt&&!this.reducedMotion?Math.sin(this.clock/35)*10:
-    this.reducedMotion?0:gait.lean+reach*(this.facing==='left'?-4:4));
+    this.reducedMotion?0:gait.lean+reach*(this.facing==='left'?-4:4)+(speaking?Math.sin(this.clock/140)*1.8:0));
   if(hurt)this.player.setTint(0xffa8bb);else this.player.clearTint();
  }
  fitCamera(width:number,height:number){if(width<=0||height<=0)return;

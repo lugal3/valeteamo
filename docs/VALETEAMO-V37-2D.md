@@ -48,3 +48,5 @@ Se inspeccionaron fotogramas reales del run 46025507103, artefacto 15211573223 (
 
 ## Premium — revisión aprobada de Luis e interfaz
 Frente basado en el bitmap alineado que aprobó el usuario; no redibujar. Perfil y espalda derivados del mismo contorno y paleta, conservando ancla y claves. Las vistas no presentes en la tarjeta son interpretaciones. Corrección de lectura de paleta (G es índice 16, base 36). Alimentación: sprite original centrado, Churu inclinado alrededor de su punta, barra con icono de Emy, texto mínimo; no se cambia mecánica. Diálogo: nombre en placa, retrato sin recuadro y caja compacta. Commit de previsualización sin actualizar referencia del PR; no ejecutar pruebas nuevas ni tocar 3D hasta revisión visual.
+## Premium — actuación 2D
+Frente aprobado de Luis intacto. Vale: 33 cuadros en tres orientaciones. Luis 45, Louis 24. Retratos animados desde las texturas reales y sincronizados con escritura; boca vuelve a reposo al terminar cada frase. Kitty se expresa corporalmente sin agregar boca. Emy conserva sprites originales, caminata y parpadeo breve. Commit de previsualización sin publicar ni ejecutar auditoría. 3D intacto.

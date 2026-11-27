@@ -336,3 +336,8 @@
 .story-prologue [data-tone="alarm"] .prologue-speaker{background:#99586b}
 @media(max-height:440px) and (min-width:540px){.story-prologue .prologue-dialog{grid-template-columns:72px minmax(0,1fr) auto;min-height:98px;width:min(650px,84vw);padding:8px 12px}.story-prologue .prologue-portrait{width:72px;height:74px}}
 @media(max-width:539px){.story-prologue .prologue-dialog{grid-template-columns:58px minmax(0,1fr);width:100%;max-height:55dvh;gap:8px}.story-prologue .prologue-portrait{width:58px;height:66px}}
+
+/* Idle motion for dialogue portraits, plus actual sprite frames. */
+.story-prologue .prologue-portrait{animation:portrait-idle 2.8s ease-in-out infinite;transform-origin:50% 90%}
+@keyframes portrait-idle{50%{transform:translateY(-1px)}}
+@media(prefers-reduced-motion:reduce){.story-prologue .prologue-portrait{animation:none}}

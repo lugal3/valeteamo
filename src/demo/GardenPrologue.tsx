@@ -52,6 +52,8 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  const dialogRef=useRef<Dialog|null>(null),dialogDone=useRef<null|(()=>void)>(null);
  const lettersRef=useRef(0),portraitRef=useRef<HTMLImageElement|null>(null);
  const [speechPulse,setSpeechPulse]=useState(0);
+ const [portraitClock,setPortraitClock]=useState(0);
+ useEffect(()=>{if(!dialog)return;setPortraitClock(0);const timer=window.setInterval(()=>setPortraitClock(n=>n+120),120);return()=>window.clearInterval(timer);},[dialog]);
  const reveal=useCallback((n:number)=>{lettersRef.current=n;setLetters(n);},[]);
  const feedingRef=useRef<Feeding|null>(null);
  const lockedRef=useRef(false),enteringRef=useRef(false),nextDialogRef=useRef<()=>void>(()=>{});
@@ -146,17 +148,20 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
    if(scene){
     const avatars:Record<string,string>={};
     for(const [person,key] of [
-     ['kitty','chibi-kitty-down-0'],
-     ['louis','chibi-louis-down-0'],
-     ['luis','story-person-luis'],
-     ['vale',valeTexture(false,0)]
+     ['kitty','chibi-kitty-down-0'],['kitty-blink','chibi-kitty-down-5'],
+     ['louis','chibi-louis-down-0'],['louis-blink','chibi-louis-down-5'],
+     ['louis-talk-1','chibi-louis-down-7'],
+     ['luis','story-person-luis'],['luis-blink','story-person-luis-down-idle-3'],
+     ['luis-talk-1','story-person-luis-down-talk-1'],['luis-talk-2','story-person-luis-down-talk-2'],
+     ['vale',valeTexture(false,0)],['vale-blink',valeTexture(false,3)],
+     ['vale-talk-1','rescue-vale-talk-1'],['vale-talk-2','rescue-vale-talk-2']
     ]){
      if(!scene.textures.exists(key))continue;
      const source=scene.textures.get(key).getSourceImage();
      if(source instanceof HTMLCanvasElement||source instanceof HTMLImageElement){
       // Close-up of the real in-world sprite, not a different character asset.
       const canvas=document.createElement('canvas');
-      const w=source.width,h=Math.max(1,Math.round(source.height*.66));
+      const w=source.width,h=Math.max(1,Math.round(source.height*(person.startsWith('luis')?.72:.66)));
       canvas.width=w;canvas.height=h;
       const ctx=canvas.getContext('2d');
       if(ctx){ctx.imageSmoothingEnabled=false;ctx.drawImage(source,0,0,w,h,0,0,w,h);avatars[person]=canvas.toDataURL('image/png');}
@@ -254,6 +259,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   near:(value)=>setNear(current=>current===value?current:value),
   discoveries:()=>phaseRef.current.discoveries??[],
   speaker:()=>{const current=dialogRef.current;return current?.lines[current.index]?.speaker;},
+  speaking:()=>{const current=dialogRef.current;return !!current&&lettersRef.current<dialogueGlyphs(current.lines[current.index].text).length;},
   discover:(id)=>{
    const current=phaseRef.current,next=recordPrologueDiscovery(current,id);
    if(current===next)return;
@@ -322,10 +328,15 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  },[restartKey]);
 
  const currentLine=dialog?.lines[dialog.index];
- const portrait=currentLine?portraits[currentLine.speaker.toLowerCase()]:undefined;
+ 
  const glyphs=useMemo(()=>dialogueGlyphs(currentLine?.text??''),[currentLine]);
  const words=useMemo(()=>dialogueWords(glyphs),[glyphs]);
  const lineComplete=letters>=glyphs.length;
+ const person=currentLine?.speaker.toLowerCase()??'';
+ const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const mouth=!lineComplete&&!reduce?Math.floor(portraitClock/120)%3:0;
+ const blink=!reduce&&portraitClock%4320>=4080;
+ const portrait=(blink?portraits[person+'-blink']:mouth?portraits[person+'-talk-'+mouth]??portraits[person+'-talk-1']:undefined)??portraits[person];
  const chapter=prologueProgress(run.stage);
 
  return <main className="story-prologue" aria-label="Rescate con el motor original de Corazones"
