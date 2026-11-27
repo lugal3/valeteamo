@@ -22,8 +22,8 @@ async function main(){
   await panel.waitFor();
   assert.equal(await page.locator('.story-cover').count(),0,'LP must not land on the pink story cover');
   assert.deepEqual(await page.locator('.lp-tag-copy strong').allTextContents(),['Flujo integral','Universo','2D','3D','Epílogo']);
-  assert.equal(await page.locator('.lp-endpoint:visible').count(),24,
-   '19 previous primary entries plus full-flow and four epilogue checkpoints');
+  assert.equal(await page.locator('.lp-endpoint:visible').count(),25,
+   '19 previous primary entries plus full-flow, four epilogue checkpoints and the daily gallery');
   assert.equal(await page.locator('[data-trial-id]').count(),new Set(await page.locator('[data-trial-id]').evaluateAll(nodes=>nodes.map(n=>n.dataset.trialId))).size,'checkpoint IDs are unique');
   assert.equal(await page.locator('.playtest-advanced').count(),5);
   assert.equal(await page.locator('canvas').count(),0,'no Phaser or 3D canvas should mount on the menu');

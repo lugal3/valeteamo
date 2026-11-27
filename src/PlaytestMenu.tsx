@@ -14,12 +14,12 @@ const areas:Area[]=[
   id:'universo',number:'01',title:'Universo',
   subtitle:'El regalo, la formación de la galaxia y los recuerdos. Recorre la experiencia en orden.',
   cards:[
+   {id:'daily-countdown',title:'Contador · Ocho diseños diarios',description:'Galería interactiva de los ocho días: flores, estrellas, carta, jardín, corazones, aurora, disco y última noche.'},
    {id:'cosmos-countdown',title:'Contador y colores',description:'Reloj, paleta y vista previa de la apertura.'},
    {id:'cosmos-loading',title:'Animación de partículas',description:'Viaje por el túnel y formación del corazón.'},
    {id:'cosmos-galaxy',title:'Galaxia rosa del video',description:'Corazón interactivo, recuerdos y navegación por el cosmos.'}
   ],
   advanced:[{title:'Escenas intermedias',cards:[
-   {id:'daily-countdown',title:'Contador · Ocho diseños diarios',description:'Revisa los ocho estilos y mensajes de 27 NOV a 04 DIC, sin cambiar la fecha pública.'},
    {id:'cosmos-gift',title:'Regalo animado',description:'Apertura de la caja de regalo.'},
    {id:'cosmos-intro',title:'Inicio del video y personajes',description:'Presentación de los personajes y entrada al universo.'}
   ]}]

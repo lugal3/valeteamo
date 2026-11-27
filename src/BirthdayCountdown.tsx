@@ -3,6 +3,7 @@ import './birthday-countdown.css';
 import './birthday-daily.css';
 import {DAILY_THEMES,dailyThemeIndex,previewSeconds} from './birthday-daily.js';
 import {DailyAtmosphere} from './DailyAtmosphere';
+import {DailyEditorial} from './DailyEditorial';
 
 const CosmosExperience=lazy(()=>import('./experience/CosmosExperience'));
 
@@ -69,11 +70,20 @@ export function BirthdayCountdown({children,simulation,stylePreview}:{children:R
   ['Segundos',seconds%60]
  ] as const;
 
- return <main className="birthday-countdown" data-daily-theme={theme.id} data-daily-date={theme.date}>
-  <DailyAtmosphere key={theme.id} theme={theme}/>
+ const editorial=seconds>0&&!simulation;
+ return <main className={editorial?"birthday-countdown ed-countdown":"birthday-countdown"} data-daily-theme={theme.id} data-daily-date={theme.date}>
+  {!editorial&&<DailyAtmosphere key={theme.id} theme={theme}/>}
   {stylePreview?<button className="birthday-admin-toggle" type="button" onClick={stylePreview.onExit} aria-label="Volver a pruebas">←</button>:simulation?<button className="birthday-admin-toggle" type="button" onClick={simulation.onExit} aria-label="Volver a pruebas">←</button>:<button className="birthday-admin-toggle" type="button" aria-label="Administración" aria-haspopup="dialog" onClick={openAdmin}>
    <span aria-hidden="true">⚙</span>
   </button>}
+  {editorial?<><DailyEditorial key={theme.id} theme={theme} preview={!!stylePreview}><dl className="birthday-time" role="timer" aria-label="Tiempo para abrir el regalo">
+    {parts.map(([label,value])=><div key={label} style={{'--dial':(value/(label==='Días'?8:label==='Horas'?24:60))*360+'deg'} as CSSProperties}>
+     <dt>{label}</dt><dd>{String(value).padStart(2,'0')}</dd>
+    </div>)}
+   </dl></DailyEditorial><div className="ed-tools">{stylePreview&&<nav className="daily-preview" aria-label="Elegir diseño diario">{DAILY_THEMES.map((item,i)=><button key={item.id} type="button" aria-pressed={i===previewIndex} onClick={()=>setPreviewIndex(i)}>{item.date}</button>)}</nav>}
+   <button className="birthday-iphone-help" type="button" onClick={()=>setInstallOpen(v=>!v)} aria-expanded={installOpen}>✦ iPhone: cómo abrir sin las barras de Safari</button>
+   {installOpen&&<div className="birthday-iphone-panel"><p>1. Abre este enlace en Safari.</p><p>2. Pulsa Compartir → Añadir a pantalla de inicio.</p><p>3. Si aparece, activa «Abrir como app web».</p><p>4. Abre el icono recién creado. La experiencia está diseñada para verse en horizontal. Gira tu iPhone para continuar.</p></div>}
+</div></>:
   <section className="birthday-countdown-content" aria-labelledby="birthday-countdown-title">
    <header className="daily-heading">
    <div className="birthday-countdown-emblem" aria-hidden="true">{theme.emblem}</div>
@@ -95,7 +105,7 @@ export function BirthdayCountdown({children,simulation,stylePreview}:{children:R
    <button className="birthday-iphone-help" type="button" onClick={()=>setInstallOpen(v=>!v)} aria-expanded={installOpen}>✦ iPhone: cómo abrir sin las barras de Safari</button>
    {installOpen&&<div className="birthday-iphone-panel"><p>1. Abre este enlace en Safari.</p><p>2. Pulsa Compartir → Añadir a pantalla de inicio.</p><p>3. Si aparece, activa «Abrir como app web».</p><p>4. Abre el icono recién creado. La experiencia está diseñada para verse en horizontal. Gira tu iPhone para continuar.</p></div>}
    </footer>
-  </section>
+  </section>}
   <dialog ref={dialog} className="birthday-admin" aria-labelledby="birthday-admin-title">
    <form onSubmit={enterAdmin}>
     <div className="birthday-admin-header">
