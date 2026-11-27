@@ -61,8 +61,14 @@ assert.notEqual(signature(front),signature(side),'side profile needs real glasse
 assert.notEqual(signature(talk),signature(blink),'speech mouth and blink are different facial poses');
 assert.notEqual(signature(front),signature(wave),'friendly wave must have raised tattooed hand');
 const palette=new Set(front.pixels.flat());
-for(const color of ['#202126','#fbd4af','#22253a','#659c48','#46465d'])
- assert(palette.has(color),'front art must include hair shine, skin, glasses, top, tattoo: '+color);
+for(const color of ['#282526','#ffe5bd','#554b43','#8db755','#57504a'])
+ assert(palette.has(color),'approved card palette: '+color);
+let masterHash=2166136261;
+for(const color of front.pixels.flat())for(const ch of color+'|')masterHash=Math.imul(masterHash^ch.charCodeAt(0),16777619)>>>0;
+assert.equal(masterHash,3568717657,'approved neutral frontal pixels are immutable');
+for(let y=0;y<64;y++)for(let x=0;x<48;x++)if(front.pixels[y][x]==='#554b43')
+ assert.equal(blink.pixels[y][x],front.pixels[y][x],'blink preserves glasses frame');
+assert.notEqual(signature(art.paintLuisChibi('down','walk',0)),signature(art.paintLuisChibi('down','walk',2)),'second footfall is a distinct pose');
 // Registration should preserve the existing 48x64 portrait key used by the RPG
 // dialog and all of Louis's own sprites; avoid unrelated sprite regressions.
 const textures=new Map();
@@ -99,8 +105,8 @@ introContext.exports.installRescueIntroArt({textures:{
  const ctx={fillStyle:'',fillRect(x,y,ww,hh){for(let yy=Math.max(0,y);yy<Math.min(h,y+hh);yy++)for(let xx=Math.max(0,x);xx<Math.min(w,x+ww);xx++)pixels[yy][xx]=this.fillStyle;}};
  vals.set(key,{w,h,pixels});return {getContext:()=>ctx,refresh(){}};
  }}});
-for(const walking of [false,true]){
- const frames=Array.from({length:4},(_,i)=>vals.get(introContext.exports.valeTexture(walking,i)));
+for(const facing of ['down','right','up'])for(const walking of [false,true]){
+ const frames=Array.from({length:4},(_,i)=>vals.get(introContext.exports.valeTexture(walking,i,facing)));
  assert(frames.every(frame=>frame.w===43&&frame.h===58));
  assert(new Set(frames.map(signature)).size>=3,'Vale has real animated frames');
  const palette=new Set(frames[0].pixels.flat());
@@ -111,7 +117,7 @@ const talkFrames=Array.from({length:3},(_,i)=>vals.get(introContext.exports.vale
 assert(new Set(talkFrames.map(signature)).size===3,'Vale has three speaking frames');
 const arcade=fs.readFileSync('src/iso-game.ts','utf8');
 assert(arcade.includes('this.animateStoryLuis();')&&
- arcade.includes("if(this.story.speaker?.()==='Luis')pose='talk'")&&
+ arcade.includes("this.story.speaker?.()==='Luis'&&(this.story.speaking?.()??true)")&&
  arcade.includes("npc.setFlipX(facing==='right'&&dx<0)")&&
  arcade.includes('const frame=luisAnimationFrame(clock,pose,this.reducedMotion);'),
  'runtime changes Luis expressions, direction and frames inside original Corazones engine');

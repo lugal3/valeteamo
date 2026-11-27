@@ -150,7 +150,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
     for(const [person,key] of [
      ['kitty','chibi-kitty-down-0'],['kitty-blink','chibi-kitty-down-5'],
      ['louis','chibi-louis-down-0'],['louis-blink','chibi-louis-down-5'],
-     ['louis-talk-1','chibi-louis-down-7'],
+     ['louis-talk-1','chibi-louis-down-6'],['louis-talk-2','chibi-louis-down-7'],
      ['luis','story-person-luis'],['luis-blink','story-person-luis-down-idle-3'],
      ['luis-talk-1','story-person-luis-down-talk-1'],['luis-talk-2','story-person-luis-down-talk-2'],
      ['vale',valeTexture(false,0)],['vale-blink',valeTexture(false,3)],
@@ -335,7 +335,8 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  const person=currentLine?.speaker.toLowerCase()??'';
  const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
  const mouth=!lineComplete&&!reduce?Math.floor(portraitClock/120)%3:0;
- const blink=!reduce&&portraitClock%4320>=4080;
+ const phase=person==='vale'?710:person==='louis'?1570:person==='kitty'?2330:0;
+ const blink=!reduce&&(portraitClock+phase)%4320>=4080;
  const portrait=(blink?portraits[person+'-blink']:mouth?portraits[person+'-talk-'+mouth]??portraits[person+'-talk-1']:undefined)??portraits[person];
  const chapter=prologueProgress(run.stage);
 

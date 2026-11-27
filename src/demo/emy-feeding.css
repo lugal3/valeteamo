@@ -29,8 +29,6 @@
 .emy-love i:nth-child(2){left:68%;top:21%;animation-delay:.12s}.emy-love i:nth-child(3){left:48%;top:12%;animation-delay:.24s}
 .emy-churu.is-empty{opacity:0;pointer-events:none}
 @keyframes emy-breathe{50%{transform:scale(1.012,.987)}}@keyframes emy-curious{0%,100%{transform:translate(var(--look-x,0),var(--look-y,0)) rotate(-.8deg)}50%{transform:translate(var(--look-x,0),var(--look-y,0)) rotate(.8deg) scale(1.012)}}@keyframes emy-nibble{50%{transform:translateY(1.5px) scaleY(.99)}}@keyframes emy-happy{50%{transform:translateY(-5px) rotate(1deg)}}@keyframes emy-float{50%{transform:translateY(-3px)}}@keyframes emy-pulse{50%{opacity:.35}}@keyframes emy-heart-rise{0%{transform:translateY(8px) scale(.65);opacity:0}30%{opacity:1}100%{transform:translateY(-32px) scale(1.1);opacity:0}}
-@media(max-height:500px) and (min-width:600px){.emy-scene{width:min(85vw,620px);height:100%;grid-template-columns:minmax(130px,1fr) minmax(0,auto);grid-template-rows:1fr 1fr;column-gap:16px}.emy-scene header{grid-column:1;grid-row:1;align-self:end;flex-wrap:wrap}.emy-stage{grid-column:2;grid-row:1/3;width:min(84dvh,49vw,360px)}.emy-feeding footer{grid-column:1;grid-row:2;align-self:start;padding-top:16px}.emy-keys{text-align:left}}
-@media(max-height:320px){.emy-stage{width:min(78dvh,60vw,250px)}}
 @media(prefers-reduced-motion:reduce){.emy-feeding,.emy-feeding *{animation:none!important;transition:none!important}}
 
 /* In the real mobile capture the scene HUD was competing with Emy.
@@ -43,11 +41,6 @@
 .emy-love{z-index:4}
 .emy-meter{height:9px;background:#2d233b85;box-shadow:0 1px 4px #20182d80}
 .emy-keys{font-weight:600;text-shadow:0 1px 3px #1b1426,0 0 6px #1b1426}
-@media(max-height:500px) and (min-width:600px){
- .emy-scene{width:min(84vw,650px);grid-template-columns:minmax(170px,1fr) auto;column-gap:22px}
- .emy-scene header{flex-wrap:nowrap}
- .emy-stage{width:min(80dvh,48vw,350px)}
-}
 
 /* Premium feeding layout: one close-up, one progress indicator. Original
    emy sprites and normalized mouth coordinates are deliberately unchanged. */
@@ -71,4 +64,23 @@
 .emy-churu:active{transform:translateX(-50%) rotate(-28deg)}
 .emy-speech{border:1px solid #b983a1;border-radius:12px 12px 12px 4px;box-shadow:0 2px #4b354c40}
 @keyframes emy-arrive{from{opacity:0;transform:translateY(5px) scale(.97)}to{opacity:1;transform:none}}
-@media(max-height:350px){.emy-stage{width:min(100%,calc(100dvh - 108px),300px)}.emy-feeding footer{gap:2px}.emy-progress-row>img{width:25px;height:25px}}
+
+/* One responsive layout: square interaction stage, no conflicting breakpoints. */
+.emy-feeding{padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))}
+.emy-scene{width:min(100%,680px);min-height:0}
+.emy-stage{width:min(100%,calc(100dvh - 145px),420px);height:auto;aspect-ratio:1}
+@media(orientation:landscape) and (max-height:500px){
+ .emy-scene{width:min(100%,720px);max-height:100%;grid-template-columns:minmax(125px,1fr) minmax(0,auto);grid-template-rows:1fr 1fr;column-gap:12px}
+ .emy-scene header{grid-column:1;grid-row:1;align-self:end}
+ .emy-stage{grid-column:2;grid-row:1/3;width:min(44vw,calc(100dvh - 40px),400px)}
+ .emy-feeding footer{grid-column:1;grid-row:2;align-self:start;width:100%;padding:10px 0 0}
+ .emy-keys{text-align:left}
+}
+@media(orientation:portrait) and (max-height:430px){
+ .emy-stage{width:min(100%,calc(100dvh - 118px),300px)}
+ .emy-progress-row>img{width:25px;height:25px}
+}
+.emy-close{flex-shrink:0}
+.emy-heading{min-width:0}
+.emy-speech{left:auto;right:1%;max-width:42%}
+.emy-paste{left:50%;top:0;transform:translate(-50%,-50%);box-sizing:border-box}

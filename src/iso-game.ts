@@ -538,7 +538,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   // The two walkers share the route, but not a single rigid gait. Vale
   // stays beside Luis while her own step cycle and posture follow his pace.
   const walking=pose==='walk',offset=this.reducedMotion?0:walking?Math.sin(clock/160)*1.8:Math.sin(clock/1050)*.8;
-  const valeFrame=luisAnimationFrame(clock+85,walking?'walk':'idle',this.reducedMotion);
+  const valeFrame=luisAnimationFrame(clock+(walking?85:710),walking?'walk':'idle',this.reducedMotion);
   const valeSpeaking=!motion&&this.story.speaker?.()==='Vale'&&(this.story.speaking?.()??true);
   const valeFacing=valeSpeaking&&facing==='up'?'down':facing;
   const valeKey=valeSpeaking?valeTalkTexture(this.reducedMotion?0:Math.floor(clock/170)%3,valeFacing):valeTexture(walking,valeFrame,valeFacing);
@@ -779,7 +779,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
     this.storyFollowCue=true;this.showStoryBubble('louis','affection');
    }
    const facing=this.storyCompanionFacing==='left'?'right':this.storyCompanionFacing;
-   const frame=this.reducedMotion?0:state.walking?1+Math.floor(this.storyCompanionClock/150)%4:storyActorIdle(this.clock,false).frame;
+   const frame=this.reducedMotion?0:state.walking?1+Math.floor(this.storyCompanionClock/150)%4:storyActorIdle(this.clock+1570,false).frame;
    const key=`chibi-louis-${facing}-${frame}`;
    if(this.textures.exists(key)&&npc.texture.key!==key)npc.setTexture(key);
    npc.setFlipX(this.storyCompanionFacing==='left');
@@ -880,7 +880,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    const npc=this.storyLouis,kitty=toScreen(this.p);
    const face=storyActorFacing(kitty.x-npc.x,kitty.y-npc.y,this.storyLouisFacing);
    this.storyLouisFacing=face;
-   const idle=storyActorIdle(this.clock,this.reducedMotion);
+   const idle=storyActorIdle(this.clock+1570,this.reducedMotion);
    const talking=this.story.speaker?.()==='Louis'&&(this.story.speaking?.()??true)&&!this.reducedMotion;
    const frame=talking?6+Math.floor(this.clock/160)%2:idle.frame;
    const visibleFace=talking&&face==='up'?'down':face;

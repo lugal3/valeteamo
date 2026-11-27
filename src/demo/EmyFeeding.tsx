@@ -70,7 +70,7 @@ export function EmyFeeding({audio,onComplete,onCancel}:{audio:Sound;onComplete:(
   return()=>{cancelAnimationFrame(raf);clearTimeout(finishTimer);window.removeEventListener('blur',stop);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('keydown',key,true);previous?.focus();};
  },[audio]);
  const full=progress>=100,eating=holding&&churuInReach(tip.x,tip.y)&&!full;
- const expression=full?'love':eating?Math.floor(clock/120)%2?'lick':'idle':blink?'blink':'idle';
+ const expression=full?'love':eating?(reduced.current||Math.floor(clock/120)%2?'lick':'idle'):blink&&!reduced.current?'blink':'idle';
  const lookX=reduced.current?0:Math.max(-1,Math.min(1,(tip.x-EMY_MOUTH.x)*3));
  const lookY=reduced.current?0:Math.max(-1,Math.min(1,(tip.y-EMY_MOUTH.y)*3));
  return <section className={'emy-feeding'+(full?' is-full':'')} role="dialog" aria-modal="true" aria-labelledby="emy-title" data-progress={Math.floor(progress)} data-eating={eating}>

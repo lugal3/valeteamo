@@ -119,16 +119,21 @@ export function installRescueIntroArt(scene:Phaser.Scene){
    cluster(26,12+bob,[[0,4],[0,4],[1,3],[1,2]],'#303035');
    // Directional variants retain the original palette and silhouette.
    if(back){
-    b(8,13+bob,28,17,hair);b(10,28+bob,25,8,hair);
+    b(7,13+bob,29,19,hair);b(8,28+bob,28,9,hair);
+    b(9,23+bob,3,14,hair);b(32,23+bob,3,14,hair);
     cluster(10,15+bob,[[3,9],[2,10],[1,10],[1,9],[0,9],[0,8],[1,7],[2,5],[2,4]],shine);
     cluster(24,15+bob,[[2,5],[2,6],[2,7],[1,7],[0,7],[0,6],[1,5],[2,3]],'#303035');
     b(15,34+bob,14,5,hair);b(17,39+bob,10,2,'#303035');
+    if(frame%2)b(11,34+bob,2,7,shine);else b(29,33+bob,2,7,shine);
    }else if(side){
-    b(8,16+bob,15,15,hair);b(11,24+bob,13,11,hair);
+    b(7,14+bob,17,18,hair);b(9,24+bob,15,12,hair);
+    b(13,17+bob,9,10,hair);
     cluster(9,19+bob,[[2,6],[1,7],[0,7],[0,6],[1,5],[1,4]],shine);
     b(24,18+bob,9,11,light);b(25,19+bob,5,blink?1:6,ink);
     if(!blink)b(26,19+bob,2,1,'#fff8ef');
-    b(30,24+bob,3,2,'#e7a09b');b(30,27+bob,4,talking&&frame>0?2:1,'#925c62');
+    b(31,23+bob,3,3,skin);b(33,24+bob,2,2,light);
+    b(29,25+bob,3,1,'#e7a09b');b(30,27+bob,3,talking&&frame>0?frame:1,'#925c62');
+    b(20,28+bob,4,5,hair);
    }
    // White soles from the reference card, existing feet anchors.
    b(12,53+step,8,1,'#ddd6d0');b(24,53-step,8,1,'#ddd6d0');
