@@ -31,7 +31,7 @@ export type PrologueCheckpoint='intro'|'feed-cat'|'walk-together'|'ribbon';
 const initial=(test:boolean,checkpoint:PrologueCheckpoint):PrologueState=>
  test?{...PROLOGUE_START,stage:checkpoint}:loadPrologue();
 
-const label=(speaker:string)=>speaker==='Louis'?'Louis · invitado':speaker;
+const label=(speaker:string)=>speaker;
 
 export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHouse}:{
  test?:boolean;checkpoint?:PrologueCheckpoint;onExit:()=>void;onEnterHouse:()=>void;

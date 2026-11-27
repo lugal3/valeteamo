@@ -48,3 +48,27 @@
  .emy-scene header{flex-wrap:nowrap}
  .emy-stage{width:min(80dvh,48vw,350px)}
 }
+
+/* Premium feeding layout: one close-up, one progress indicator. Original
+   emy sprites and normalized mouth coordinates are deliberately unchanged. */
+.emy-feeding{background:radial-gradient(ellipse at 50% 48%,#ffdfb61c 0%,#35263765 65%,#251e34bf 100%)}
+.emy-scene{width:min(92vw,680px);height:100%;max-height:650px;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;gap:0;padding:0 8px;box-sizing:border-box}
+.emy-scene header{grid-column:1;grid-row:1;width:100%;align-self:start;justify-content:space-between;flex-wrap:nowrap}
+.emy-heading{display:flex;align-items:center;gap:9px;color:#fff4e6}
+.emy-heading>span{font:22px Georgia;color:#f7b5ca}
+.emy-feeding h2{font:700 clamp(15px,2.5vw,22px) Georgia,serif}
+.emy-close{background:#49364b9e;border:1px solid #fff3e779;box-shadow:0 2px 6px #271a3830}
+.emy-stage{grid-column:1;grid-row:2;width:min(100%,calc(100dvh - 126px),420px);max-width:100%;align-self:center;justify-self:center;animation:emy-arrive .26s ease-out both}
+.emy-pet img{filter:drop-shadow(0 5px 3px #2e243b60)}
+.emy-feeding footer{grid-column:1;grid-row:3;align-self:end;padding:0 0 4px;width:min(86vw,320px);gap:5px}
+.emy-progress-row{display:flex;align-items:center;gap:7px}
+.emy-progress-row>img{width:32px;height:32px;object-fit:contain;image-rendering:pixelated}
+.emy-progress-heart{color:#f3a2bd;font-size:23px;line-height:1;text-shadow:0 2px #61384d}
+.emy-meter{flex:1;height:13px;box-sizing:border-box;border:2px solid #fff0e7;background:#4a324b;box-shadow:0 2px #422b40;border-radius:12px}
+.emy-meter span{background:linear-gradient(180deg,#ffd0df 0%,#f2a2c0 38%,#d67a9f 100%)}
+.emy-keys{text-align:center;font-size:11px;font-weight:500;line-height:1.2}
+.emy-churu{transform:translateX(-50%) rotate(-18deg)}
+.emy-churu:active{transform:translateX(-50%) rotate(-28deg)}
+.emy-speech{border:1px solid #b983a1;border-radius:12px 12px 12px 4px;box-shadow:0 2px #4b354c40}
+@keyframes emy-arrive{from{opacity:0;transform:translateY(5px) scale(.97)}to{opacity:1;transform:none}}
+@media(max-height:350px){.emy-stage{width:min(100%,calc(100dvh - 108px),300px)}.emy-feeding footer{gap:2px}.emy-progress-row>img{width:25px;height:25px}}

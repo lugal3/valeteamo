@@ -41,115 +41,72 @@ export function luisAnimationFrame(clock:number,pose:LuisPose,reducedMotion=fals
 // All poses share one consistent foot baseline and silhouette. The player
 // stays in the existing ISO/Phaser scene; phase 3 can use the walking and
 // waving frames when staging Luis's actual entrance and departure.
-export function paintLuisChibi(
- facing:LuisFacing='down',pose:LuisPose='idle',frame=0
-):HTMLCanvasElement{
+// Front master is the approved aligned card bitmap. All views use the same
+// 33x48 proportions and palette, never the earlier oversized procedural head.
+const LUIS_CARD=["0000000000011123211111133000000000","0000000000111111111111111113000000","0000000111111111111111111111130000","0000011122211111111111111111112000","0000121111111111111111111111111200","0001121112112222111111122111111200","0012221111111211111222111111111120","0132211111112112111221111111111120","0232111112211212111222211111111111","1321111112211212111122221111111112","1322111212211112111123211111111113","1311111112212111112223211111111113","2321331112211111114322211111111110","1221552331221131136432331211111110","1211464321221231134333541221111110","1111111111111111212233321211111110","1117777777122127377756422211111110","1177423417756427443266434421111145","1176642427688577244256746641211245","1176643317688677344357768511112545","1177777778888867222345686411126540","0224333388888886337776885221255400","0688833888888888833388888654444000","0068888888888869888888866653000000","0006888888699998888888866530000000","0000068888888888888886654300000000","0000000668888888886655430000000000","0000000004456666555543000000000000","0000000000004444333330000000000000","00000000000ABCCCCCCC00000000000000","0000000000AACCCCCCCCC0000000000000","0000000000BACCCCCCCACC000000000000","000000000ABACCCCCCCAADD00000000000","00000000DBACCCCCCCCCBD665000000000","000000066BACCCCCCCCCDD666000000000","000000066BACCCCCCCCCAB666500000000","000000055BACCCCCCCCCABD56500000000","00000000DBACCCCCCCAAABAB4000000000","000000000ABBBBBBBBBBBBA00000000000","0000000000EEFEFEFFFFE0000000000000","0000000000FEEEFFFFFEE0000000000000","0000000000FEEFFFFFFFE0000000000000","0000000000EFFFFFFFFFE0000000000000","0000000000FFFFFFFFFFF0000000000000","000000000FFFFFFFEFEFF0000000000000","000000000GGEEEEEGGGEFE000000000000","00000000FFFEEFEEEEEEFF000000000000","00000000GGGGGGGGGGGGGG000000000000"] as const;
+const LUIS_CARD_COLORS=["","#282526","#343033","#3f393a","#c89775","#eab68c","#f8d2a5","#554b43","#ffe5bd","#a36e52","#7fa74e","#5e533d","#8db755","#709345","#403b39","#353232","#57504a"] as const;
+export function paintLuisChibi(facing:LuisFacing='down',pose:LuisPose='idle',frame=0):HTMLCanvasElement{
  const canvas=document.createElement('canvas');canvas.width=48;canvas.height=64;
  const c=canvas.getContext('2d')!;c.imageSmoothingEnabled=false;
- const p=LUIS,side=facing==='right',back=facing==='up';
  const i=((Math.floor(frame)%LUIS_FRAME_COUNTS[pose])+LUIS_FRAME_COUNTS[pose])%LUIS_FRAME_COUNTS[pose];
- const walking=pose==='walk',talking=pose==='talk',waving=pose==='wave';
- const bob=walking?[0,-1,0,-2][i]:talking?[0,0,-1][i]:pose==='idle'&&i===2?-1:0;
- const blink=pose==='idle'&&i===3,step=walking?[0,2,0,-2][i]:0;
- const swing=walking?[0,-2,1,2][i]:0;
+ const walk=pose==='walk',talk=pose==='talk',wave=pose==='wave';
+ const bob=walk?[0,-1,0,-1][i]:talk?[0,0,-1][i]:pose==='idle'&&i===2?-1:0;
+ const blink=pose==='idle'&&i===3;
  const b=(x:number,y:number,w:number,h:number,color:string)=>{c.fillStyle=color;c.fillRect(x,y,w,h);};
- const rows=(y:number,spans:readonly (readonly [number,number])[],color:string)=>spans.forEach(([x,w],j)=>b(x,y+j,w,1,color));
- // Compact green shirt and dark trousers. Feet anchor at y=61.
- const ink='#302c30',dark='#353238',sole='#494447',hair=p.hair,soft='#303033';
- const liftL=step<0?2:0,liftR=step>0?2:0;
- b(15,52-liftL,9,8,ink);b(24,52-liftR,9,8,ink);
- b(16,53-liftL,7,5,dark);b(25,53-liftR,7,5,dark);
- b(13,58-liftL,11,3,ink);b(24,58-liftR,11,3,ink);
- b(14,60-liftL,9,1,sole);b(25,60-liftR,9,1,sole);
- const y=37+bob;
- b(19,y-3,10,4,p.skinShade);b(20,y-3,8,3,p.skin);
- b(17,y-1,14,4,ink);b(15,y+1,18,15,ink);
- b(16,y+2,16,13,p.top);
- b(17,y+3,13,8,'#79a95a');
- b(17,y+13,14,2,'#53783e');
- if(back)b(20,y+2,8,2,'#6c964c');
- if(pose==='idle'&&i===1)b(18,y+4,2,4,'#84ae66');
- // Small, rounded hands; left-arm ink stays a tiny detail, not a dark sleeve.
- const raised=waving&&i!==0;
- for(const [x,offset,tattoo] of [[10,swing,back],[32,-swing,!back]] as const){
-  const lift=raised&&x===32?-8:0,ay=y+4+offset+lift;
-  if(lift){b(31,ay+6,5,8,ink);b(32,ay+6,3,7,p.skin);}
-  b(x+1,ay,5,3,ink);b(x,ay+2,7,7,ink);
-  b(x+1,ay+3,5,5,p.skin);b(x+2,ay+3,3,4,p.skinLight);
-  b(x+2,ay+8,3,1,ink);
-  if(tattoo)b(x+4,ay+3,1,2,'#46465d');
-  if(raised&&x===32&&i===2)b(x+2,ay+2,2,1,p.skinLight);
- }
- // The front artwork is sampled from the aligned printed pixel art, then
- // cleaned to a limited palette. Do not reconstruct its face with rectangles.
- if(facing==='down'){
-  c.clearRect(0,0,48,64);
-  const bitmap=["0000000000011123211111133000000000","0000000000111111111111111113000000","0000000111111111111111111111130000","0000011122211111111111111111112000","0000121111111111111111111111111200","0001121112112222111111122111111200","0012221111111211111222111111111120","0132211111112112111221111111111120","0232111112211212111222211111111111","1321111112211212111122221111111112","1322111212211112111123211111111113","1311111112212111112223211111111113","2321331112211111114322211111111110","1221552331221131136432331211111110","1211464321221231134333541221111110","1111111111111111212233321211111110","1117777777122127377756422211111110","1177423417756427443266434421111145","1176642427688577244256746641211245","1176643317688677344357768511112545","1177777778888867222345686411126540","0224333388888886337776885221255400","0688833888888888833388888654444000","0068888888888869888888866653000000","0006888888699998888888866530000000","0000068888888888888886654300000000","0000000668888888886655430000000000","0000000004456666555543000000000000","0000000000004444333330000000000000","00000000000ABCCCCCCC00000000000000","0000000000AACCCCCCCCC0000000000000","0000000000BACCCCCCCACC000000000000","000000000ABACCCCCCCAADD00000000000","00000000DBACCCCCCCCCBD665000000000","000000066BACCCCCCCCCDD666000000000","000000066BACCCCCCCCCAB666500000000","000000055BACCCCCCCCCABD56500000000","00000000DBACCCCCCCAAABAB4000000000","000000000ABBBBBBBBBBBBA00000000000","0000000000EEFEFEFFFFE0000000000000","0000000000FEEEFFFFFEE0000000000000","0000000000FEEFFFFFFFE0000000000000","0000000000EFFFFFFFFFE0000000000000","0000000000FFFFFFFFFFF0000000000000","000000000FFFFFFFEFEFF0000000000000","000000000GGEEEEEGGGEFE000000000000","00000000FFFEEFEEEEEEFF000000000000","00000000GGGGGGGGGGGGGG000000000000"] as const;
-  const palette=["","#282526","#343033","#3f393a","#c89775","#eab68c","#f8d2a5","#554b43","#ffe5bd","#a36e52","#7fa74e","#5e533d","#8db755","#709345","#403b39","#353232","#57504a"] as const;
-  // Keep the reference's original proportions and the shared foot baseline.
-  for(let row=0;row<bitmap.length;row++)for(let x=0;x<bitmap[row].length;x++){
-   const color=palette[parseInt(bitmap[row][x],16)];
-   if(!color)continue;
-   const leg=walking&&row>=39?(x<16?liftL:liftR):0;
-   b(x+7,row+13+(row<39?bob:-leg),1,1,color);
+ const raw=(x:number,y:number)=>LUIS_CARD[y]?.[x]??'0';
+ const skin=(v:string)=>'45689'.includes(v);
+ const rows=LUIS_CARD.map(row=>row.split(''));
+ // The rear view preserves the outline of the printed head. Its color clusters
+ // are taken from the upper crown, not the face.
+ if(facing==='up'){
+  for(let y=0;y<29;y++)for(let x=0;x<33;x++){
+   if(raw(x,y)==='0')continue;
+   if(y>12){const sample=raw(x,6+(y%6));rows[y][x]=sample==='2'||sample==='3'?sample:'1';}
   }
-  // Small pose edits to the bitmap, not a new facial silhouette.
-  if(blink){b(11,31+bob,5,1,'#554b43');b(26,32+bob,5,1,'#554b43');}
-  if(talking&&i>0){b(19,37+bob,4,i===2?2:1,'#a36e52');}
-  if(pose==='idle'&&i===1)b(21,45,2,1,'#7fa74e');
-  if(waving&&i!==0){
-   b(29,46,3,4,'#709345');
-   b(32,40,3,7,'#554b43');b(33,40,2,6,'#eab68c');
-   b(32,38-(i===2?1:0),4,4,'#c89775');
-   b(33,38-(i===2?1:0),2,3,'#ffe5bd');
-  }
-  return canvas;
+  for(let y=29;y<39;y++)for(let x=0;x<33;x++)if(rows[y][x]==='B')rows[y][x]='D';
  }
- // Photo-derived head: broad, rounded bowl silhouette, smooth dark crown.
- const h=2+bob;
- rows(h,[[15,16],[11,24],[8,30],[6,34],[5,36],[4,38],[3,40],[2,42],[2,43],[1,44],[1,45],[1,45],[1,45],[1,45],[1,45],[1,45],[1,45],[1,45],[1,45],[2,44],[2,44],[3,42],[3,42],[4,40],[5,38],[6,36],[7,34],[8,32],[9,30],[11,26],[13,22],[16,16],[19,10]],hair);
- // Lower face is a gently rounded peach arc, not a rectangular mask.
- if(!back){
-  rows(h+14,[[12,25],[10,29],[8,33],[7,35],[6,37],[6,38],[5,39],[5,39],[5,39],[5,39],[6,37],[7,35],[8,33],[9,31],[11,27],[13,23],[16,17],[19,11]],p.skinShade);
-  rows(h+15,[[13,23],[11,28],[9,31],[8,33],[7,35],[7,36],[6,37],[6,37],[6,37],[7,35],[8,33],[10,30],[12,26],[14,22],[17,16],[20,9]],p.skin);
-  rows(h+19,[[10,28],[8,33],[8,34],[8,34],[9,33],[9,32],[10,31],[11,29],[12,27],[14,23],[16,19],[19,13],[21,9]],p.skinLight);
-  rows(h+30,[[15,21],[17,17],[20,11],[22,7]],p.skinShade);
-  rows(h+30,[[17,17],[19,13],[22,7]],p.skinLight);
-  if(!side){
-   // Clean dark rectangular frames with round lower corners, brown eyes.
-   for(const x of [8,26]){
-    b(x+2,h+17,11,2,p.glass);b(x,h+19,2,7,p.glass);
-    b(x+12,h+19,2,7,p.glass);b(x+2,h+26,10,2,p.glass);
-    b(x+1,h+25,2,2,p.glass);b(x+11,h+25,2,2,p.glass);
-    if(blink){b(x+4,h+24,6,1,'#57423b');}
-    else{b(x+4,h+20,6,5,'#4a3a35');b(x+4,h+22,2,2,'#fff2db');b(x+8,h+23,2,2,'#84634d');}
+ // Side view: narrower crown, same foot anchor, one visible eye and temple.
+ if(facing==='right'){
+  for(let y=0;y<29;y++){
+   const row=Array.from({length:33},()=> '0');
+   for(let x=4;x<30;x++){
+    const sx=Math.min(32,Math.floor((x-4)*33/26)),v=raw(sx,y);
+    if(v==='0')continue;
+    row[x]=y<13?v:(x<17&&y<25?'1':skin(v)?v:'1');
    }
-   b(22,h+21,4,2,p.glass);
-   b(23,h+27,2,1,'#d79e82');
-   if(talking&&i>0){b(21,h+30,6,i===2?3:2,'#995e53');b(22,h+31,3,1,'#e0a48d');}
-   else{b(21,h+30,6,1,'#a46f57');b(22,h+31,4,1,'#bd876b');}
-  }else{
-   b(27,h+18,12,2,p.glass);b(26,h+20,2,8,p.glass);b(38,h+20,2,8,p.glass);b(28,h+28,10,2,p.glass);b(15,h+21,12,2,p.glass);
-   b(31,h+22,5,blink?1:5,'#4a3a35');if(!blink)b(31,h+22,2,1,'#fff2db');
-   b(39,h+26,3,2,p.skin);b(34,h+30,5,talking&&i>0?2:1,'#a46f57');
+   rows[y]=row;
   }
-  // Solid sweeping black fringe, with a few small gaps from the card.
-  // Leave a small peach forehead between the fringe and the upper glasses rim.
-  rows(h+10,[[3,42],[3,42],[4,40],[4,40],[4,40]],hair);
-  rows(h+15,[[5,7],[5,7],[5,5],[5,4],[6,3],[6,3],[7,2]],hair);
-  rows(h+14,[[14,5],[15,4],[16,2]],hair);
-  rows(h+14,[[21,5],[21,5],[22,2]],hair);
-  rows(h+14,[[29,4],[30,3]],hair);
-  rows(h+15,[[37,6],[39,4],[40,3],[41,2],[41,2],[41,2],[41,1]],hair);
-  if(side){rows(h+16,[[6,14],[6,13],[7,12],[7,10],[8,9],[8,7],[9,5],[10,3]],hair);}
- }else{
-  rows(h+18,[[3,42],[3,42],[4,40],[4,40],[5,38],[5,38],[6,36],[7,34],[8,32],[10,28],[13,22],[16,16],[19,10]],hair);
-  b(18,h+29,12,1,soft);
+  const overlay=(y:number,x:number,v:string)=>{for(let j=0;j<v.length;j++)rows[y][x+j]=v[j];};
+  overlay(15,21,'645111');overlay(16,20,'7665711');
+  overlay(17,19,'777777776');overlay(18,15,'777766677785');
+  overlay(19,20,'7688877856');overlay(20,20,'7687977856');
+  overlay(21,20,'7777777756');overlay(22,20,'8888888656');
+  overlay(23,21,'888888866');overlay(24,22,'88898886');
+  overlay(25,23,'888865');overlay(26,23,'66554');
+  // Narrow the torso without lengthening it; keep the green shirt and dark shoes.
+  for(let y=29;y<48;y++){
+   const row=Array.from({length:33},()=> '0');
+   for(let x=10;x<=23;x++){const v=raw(Math.round(8+(x-10)*16/13),y);row[x]=v;}
+   rows[y]=row;
+  }
  }
- // Minimal tone separation in the dark crown, no shiny rectangular streaks.
- rows(h+3,[[16,10],[12,12],[10,11],[9,8],[8,6],[8,4]],soft);
- rows(h+5,[[28,7],[29,8],[31,7],[33,5],[35,3]],'#29292d');
- if(back&&blink)b(20,h+28,5,1,soft);
+ for(let y=0;y<rows.length;y++)for(let x=0;x<rows[y].length;x++){
+  const color=LUIS_CARD_COLORS[parseInt(rows[y][x],36)];
+  if(!color)continue;
+  const leg=walk&&y>=39?((i===1&&x<16)||(i===3&&x>=16)?1:0):0;
+  b(x+7,y+13+(y<39?bob:-leg),1,1,color);
+ }
+ // Small edits in the actual bitmap coordinate system.
+ if(facing==='down'&&blink){b(12,32+bob,4,1,'#554b43');b(27,32+bob,4,1,'#554b43');}
+ if(facing==='right'&&blink)b(30,32+bob,4,1,'#554b43');
+ if(talk&&i>0&&facing!=='up')b(facing==='down'?19:32,37+bob,3,i===2?2:1,'#a36e52');
+ if(pose==='idle'&&i===1)b(21,45,2,1,'#7fa74e');
+ if(wave&&i!==0){
+  // Sleeve and forearm connect to the original shoulder; no floating hand.
+  b(28,46,3,4,'#709345');b(30,44,4,5,'#5e533d');
+  b(32,40,3,7,'#554b43');b(33,40,2,6,'#eab68c');
+  b(32,38-(i===2?1:0),4,4,'#c89775');b(33,38-(i===2?1:0),2,3,'#ffe5bd');
+ }
  return canvas;
 }
 

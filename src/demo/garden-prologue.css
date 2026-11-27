@@ -321,3 +321,18 @@
  .story-prologue .prologue-next{grid-column:2;justify-self:end}
  .story-prologue .prologue-guide{max-width:66vw}
 }
+
+/* Premium dialogue: nameplate, portrait without a second opaque box, more
+   breathing room for the scene. Retains all real controls and accessibility. */
+.story-prologue .prologue-dialog{position:relative;grid-template-columns:80px minmax(0,1fr) auto;width:min(680px,90vw);padding:10px 13px;min-height:104px;gap:12px;border:1px solid #c894ad;border-radius:16px;background:#fff6eb;box-shadow:0 3px #8c6078,0 8px 24px #2d1f3738}
+.story-prologue .prologue-portrait{width:80px;height:80px;background:transparent;border:0;box-shadow:none;overflow:hidden;border-radius:12px}
+.story-prologue .prologue-portrait img{image-rendering:pixelated;width:100%;height:100%;object-fit:contain}
+.story-prologue .prologue-speaker{align-self:flex-start;background:#9f5779;color:#fff6eb;font-size:12px;font-weight:750;line-height:1.25;padding:3px 11px;border-radius:12px;margin-bottom:5px}
+.story-prologue .prologue-dialog-copy p.prologue-live-text{font-weight:550;font-size:clamp(13px,1.6vw,16px);line-height:1.4;min-height:2.5em}
+.story-prologue .prologue-next{background:#f8e5e9;border:1px solid #dfafbf;border-radius:13px;color:#87506b}
+.story-prologue .prologue-dialog-counter{opacity:.65}
+.story-prologue [data-tone="suspense"] .prologue-dialog,.story-prologue [data-tone="whisper"] .prologue-dialog,.story-prologue [data-tone="alarm"] .prologue-dialog{background:#30283b}
+.story-prologue [data-tone="suspense"] .prologue-portrait,.story-prologue [data-tone="whisper"] .prologue-portrait,.story-prologue [data-tone="alarm"] .prologue-portrait{background:transparent;border:0}
+.story-prologue [data-tone="alarm"] .prologue-speaker{background:#99586b}
+@media(max-height:440px) and (min-width:540px){.story-prologue .prologue-dialog{grid-template-columns:72px minmax(0,1fr) auto;min-height:98px;width:min(650px,84vw);padding:8px 12px}.story-prologue .prologue-portrait{width:72px;height:74px}}
+@media(max-width:539px){.story-prologue .prologue-dialog{grid-template-columns:58px minmax(0,1fr);width:100%;max-height:55dvh;gap:8px}.story-prologue .prologue-portrait{width:58px;height:66px}}
