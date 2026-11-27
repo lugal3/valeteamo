@@ -45,6 +45,8 @@ import {animateFurniture,updateFurniture,sweepClear} from './furniture-motion.js
 import {BATTERY_SWAP_SECONDS} from './viewmodel.js';
 import {rescueProgress} from './rescue-progress.js';
 import {poseEscapeAmbush,poseEmyLastChance,createRescueObjectives,updateEmySenses} from './emy-rescue.js';
+import {EMY_RESCUE_BEATS,planEmyRescueShot,sampleEmergencyRescue,sampleRescuedKitty} from './emy-emergency-shot.js';
+import {createPose} from './character-rig.js';
 import {collectCinematicCues} from './cinematic-cues.js';
 import {FINALE_BEATS,finaleStage,finaleThreat,finaleWeather,finaleEmyGoal,finaleLighting} from './escape-finale.js';
 import {createAltarVisit,advanceAltarVisit,activateAltarRecord} from './louis-altar.js';
@@ -1548,6 +1550,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   captureShot={from,loss,actor:pursuer.snapshot(),elapsed:0,timing:captureTiming(captureCount++),
    constrain:capturePath(world.boxes,from),lamp:flashlightBeam(),
    kitty:{x:s.x,y:s.y,z:s.z,yaw:s.yaw},attacker:{...pursuer.snapshot()}};
+  if(loss.emyRescue){captureShot.stage=planEmyRescueShot(world,captureShot.kitty,captureShot.attacker,from);captureShot.kittyPose=createPose();world.emy.hidden=true;for(const {box} of world.emy.parts)box.hiddenGeometry=true;renderer.updateVisibility();}
   phone.close();releaseMouse();resetInput();sound.stopEmote();
   $('house-emotes').hidden=true;
   $('lab-camera-settings').open=false;
@@ -1562,35 +1565,25 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function renderEmyLastChance(delta){
   const shot=captureShot,previous=shot.elapsed;
   if(captureRunning())shot.elapsed+=delta;
-  if(poseEmyLastChance(shot,world.emy,pursuer,reducedMotion.matches))renderer.updateVisibility();
-  if(previous<.55&&shot.elapsed>=.55){
-   play('cat',null,1.4);
-   if(options.captions!==false)captureCaption.textContent='[¡Emy salta para alejar al secuestrador!]';
-  }
-  if(previous<1.45&&shot.elapsed>=1.45)play('cloth',null,.9);
-  const marker=Math.min(1,Math.max(0,(shot.elapsed-1.55)/.65));
-  captureLayer.style.setProperty('--capture-edge',String(.17+.08*marker));
-  captureLayer.style.setProperty('--capture-dark','0');
-  // Side-on master shot: Kitty, the attacking Emy and the pursuer in-frame.
-  // Check walls and floor; never send the spectator camera into a cabinet.
-  const subject={x:(shot.kitty.x+pursuer.x)/2,y:shot.kitty.y+1.0,z:(shot.kitty.z+pursuer.z)/2};
-  const optionsCamera=[
-   {x:shot.kitty.x+2.4,y:shot.kitty.y+2.05,z:shot.kitty.z+2.5},
-   {x:shot.kitty.x-2.4,y:shot.kitty.y+2.05,z:shot.kitty.z+2.5},
-   {x:shot.kitty.x+2.1,y:shot.kitty.y+2.05,z:shot.kitty.z-2.5},
-   {x:shot.kitty.x-2.1,y:shot.kitty.y+2.05,z:shot.kitty.z-2.5}
-  ];
-  const safe=optionsCamera.find(c=>!blocked(world.boxes,c.x,c.y-.2,c.z,.16,.2)&&
-   !lineBlocked(world.boxes,c,subject));
-  const camera=safe||shot.from,dx=subject.x-camera.x,dz=subject.z-camera.z;
-  const view={...camera,yaw:Math.atan2(dx,dz),pitch:Math.atan2(subject.y-camera.y,Math.max(.1,Math.hypot(dx,dz)))};
+  const B=EMY_RESCUE_BEATS,t=shot.elapsed,reduced=reducedMotion.matches,pose=sampleEmergencyRescue(t,shot.stage);
+  if(poseEmyLastChance(shot,world.emy,pursuer,reduced))renderer.updateVisibility();
+  const crossed=at=>previous<at&&t>=at;
+  if(crossed(B.enter)){play('cat',world.emy,1.15);if(options.captions!==false)captureCaption.textContent='[Emy corre hacia Kitty]';}
+  if(crossed(B.launch)&&options.captions!==false)captureCaption.textContent='[¡Emy salta!]';
+  if(crossed(B.impact)){play('cloth',pursuer,.95);haptics.pulse('capture');if(options.captions!==false)captureCaption.textContent='[El secuestrador retrocede y suelta a Kitty]';}
+  if(crossed(B.land)){play('footstep',world.emy,.45);if(options.captions!==false)captureCaption.textContent='[Emy se queda junto a Kitty]';}
+  if(crossed(B.relief)){play('cat',world.emy,.45);if(options.captions!==false)captureCaption.textContent='[Kitty está a salvo]';}
+  const fade=Math.max(0,1-t/.22,(t-(B.end-.25))/.25);
+  captureLayer.style.setProperty('--capture-edge',String(.17+.08*pose.foe.hit));
+  captureLayer.style.setProperty('--capture-dark',String(Math.min(1,fade)));
+  const camera=shot.stage.camera,dx=pose.focus.x-camera.x,dz=pose.focus.z-camera.z;
+  const view=shot.stage.compact?{...shot.from}:{...camera,yaw:Math.atan2(dx,dz),pitch:Math.atan2(pose.focus.y-camera.y,Math.max(.1,Math.hypot(dx,dz)))};
   try{
-   renderer.render(view,0,elapsed+shot.elapsed,false,{
-    reduced:reducedMotion.matches,shotLight:.34,pursuer:pursuer.snapshot(),
-    thirdPerson:{x:shot.kitty.x,y:shot.kitty.y,z:shot.kitty.z,
-     yaw:shot.kitty.yaw,walk:0,speed:0},television});
+   renderer.render(view,0,elapsed+t,false,{
+    reduced,shotLight:.42,pursuer:{...pursuer.snapshot(),rescueGrip:pose.foe.grip,rescueImpact:pose.foe.hit,rescueSide:shot.stage.side},
+    ...(!shot.stage.compact?{thirdPerson:pose.kitty,actorPose:sampleRescuedKitty(t,shot.kittyPose),feetY:pose.kitty.y,actorTime:t,equipment:'empty'}:{}),television});
   }catch(error){interruptGraphics('Error en el rescate de Emy',String(error.message||error));return;}
-  if(shot.elapsed<3.35)return;
+  if(t<B.end)return;
   const restore=shot.loss.checkpoint,messages=events.messages;
   captureShot=null;captureLayer.hidden=true;$('capture-loss').hidden=true;
   root.classList.remove('house-capture-active');
