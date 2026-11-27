@@ -1583,7 +1583,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   const view=shot.stage.compact?{...shot.from}:{...camera,yaw:Math.atan2(dx,dz),pitch:Math.atan2(pose.focus.y-camera.y,Math.max(.1,Math.hypot(dx,dz)))};
   try{
    renderer.render(view,0,elapsed+t,false,{
-    reduced,shotLight:.70,captureProjection:shot.stage.viewMode==='third'?.82:1,pursuer:{...pursuer.snapshot(),rescueGrip:pose.foe.grip,rescueImpact:pose.foe.hit,rescueSide:shot.stage.side},
+    reduced,shotLight:.70,captureProjection:shot.stage.viewMode==='third'?.82:1,pursuer:{...pursuer.snapshot(),rescueGrip:pose.foe.grip,rescueImpact:pose.foe.hit,rescueSide:shot.stage.side,rescueStep:pose.foe.step,rescueDistance:pose.foe.retreatDistance},
     ...(shot.stage.viewMode==='third'?{thirdPerson:pose.kitty,actorPose:sampleRescuedKitty(t,shot.kittyPose),feetY:pose.kitty.y,actorTime:t,equipment:'empty'}:{}),television});
    if(import.meta.env.DEV&&shot.qaTimes){
     while(shot.qaTimes.length&&t>=shot.qaTimes[0]){

@@ -27,12 +27,25 @@ const {chromium}=require('playwright');
   const ready=()=>page.waitForFunction(()=>window.__rescueHouse?.story().phase==='hunt'&&!window.__rescueHouse.snapshot().paused,null,{timeout:90000,polling:250});
   const save=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('emy-easy-checkpoint')));
   const choose=async value=>{await page.evaluate(value=>{const field=document.querySelector('[data-setting="difficulty"]');field.value=value;field.dispatchEvent(new Event('input',{bubbles:true}));},value);assert.equal(await page.evaluate(()=>window.__rescueHouse.story().pursuer.difficulty),value);};
-  const trigger=(times=[])=>page.evaluate(times=>{const api=window.__rescueHouse;api.setPose({x:5.65,y:0,z:12.8,yaw:2.2,pitch:0});api.placeThreat({x:6.15,y:0,z:12.38,yaw:-.8});return api.captureFixture(times);},times);
+  const trigger=(times=[],floor='outside')=>page.evaluate(({times,floor})=>{
+   const api=window.__rescueHouse;
+   if(floor==='outside'){api.setPose({x:5.65,y:0,z:12.8,yaw:2.2,pitch:0});api.placeThreat({x:6.15,y:0,z:12.38,yaw:-.8});}
+   else{
+    const points=floor==='ground'?[[5.9,0,8.1],[9.75,0,3.34],[3.3,0,3.6]]:[[5.74,3.15,2.4],[2.39,3.15,3.85],[6.9,3.15,10.4],[9,3.15,3.6]];
+    let placed=false;
+    outer:for(const [x,y,z] of points)for(const angle of [0,Math.PI/2,Math.PI,-Math.PI/2]){
+     try{api.setPose({x,y,z,yaw:angle,pitch:0});api.placeThreat({x:x+.78*Math.sin(angle),y,z:z+.78*Math.cos(angle),yaw:angle+Math.PI});placed=true;break outer;}catch(error){if(!/Unsafe pursuer test pose|Blocked test pose/.test(String(error)))throw error;}
+    }
+    if(!placed)throw Error('No collision-safe interior test placement for '+floor);
+   }
+   return api.captureFixture(times);
+  },{times,floor});
   const beats=[['01-preparacion',.96],['02-salto',1.42],['03-impacto',1.83],['04-aterrizaje',2.34],['05-proteccion',3.05]];
   await page.goto(url);await ready();await choose('easy');
   for(let attempt=1;attempt<=3;attempt++){
    if(attempt===3){await page.reload();await ready();assert.equal(await page.evaluate(()=>window.__rescueHouse.story().pursuer.difficulty),'easy');}
-   const result=await trigger(attempt===1?beats.map(([,t])=>t):[]);assert.deepEqual(result,{lives:3,emyRescue:true,easy:true});
+   const floor=['outside','ground','upper'][attempt-1];
+   const result=await trigger(attempt===1?beats.map(([,t])=>t):[1.83,3.05],floor);assert.deepEqual(result,{lives:3,emyRescue:true,easy:true});
    assert.equal((await save()).lives,3);assert.equal((await save()).emyRescueUsed,false);
    await page.waitForFunction(()=>!window.__rescueHouse.emergencyRescue()&&!document.querySelector('#lab3d').classList.contains('house-capture-active'),null,{polling:250,timeout:90000});
    if(attempt===1){
@@ -53,8 +66,16 @@ const {chromium}=require('playwright');
     await close.waitFor({state:'visible'});const point=await close.evaluate(el=>{const r=el.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2;if(el.disabled||!el.contains(document.elementFromPoint(x,y)))throw Error('Guide close is obstructed');return {x,y};});
     await page.mouse.click(point.x,point.y);await close.waitFor({state:'hidden'});
    }
+   if(attempt!==1){
+    const frames=await page.evaluate(()=>window.__rescueHouse.emergencyEvidence());assert.equal(frames.length,2);
+    for(const [i,frame] of frames.entries()){
+     assert(!frame.kind.includes('occluded'),'Interior fixture must show Emy');assert(frame.lifeNoticeHidden);
+     assert.equal(frame.pose.cat.airborne,i===0);assert(frame.pose.cat.y>=(floor==='upper'?3.15:0));
+     await fs.writeFile(path.join(folder,floor+'-'+(i?'proteccion':'impacto')+'.png'),Buffer.from(frame.frame.split(',')[1],'base64'));
+    }
+   }
    assert.equal((await save()).lives,3);assert((await save()).picked.includes('key'));assert((await save()).tutorials.includes('lives'));
-   console.log('PASS easy capture '+attempt+' no debit, same checkpoint, Emy rescue');
+   console.log('PASS easy capture '+attempt+' '+floor+' no debit, same checkpoint, Emy rescue');
   }
   await choose('normal');
   const standard=await trigger();assert.deepEqual(standard,{lives:2,emyRescue:false,easy:false});assert.equal((await save()).lives,2);

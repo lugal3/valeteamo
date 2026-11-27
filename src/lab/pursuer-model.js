@@ -123,6 +123,13 @@ export function pursuerPose(actor,reduced=false){
  let hips=-.104*amount+Math.cos(2*step)*.022*amount;
  const feet=[-1,1].map(side=>{
   const cycle=(phase+(side===1?.5:0))%1,foot=footfall(cycle,amount);
+  // A cinematic recoil translates the root backwards. Keep the supporting
+  // foot planted until its own step, rather than sliding both feet together.
+  if(actor.rescueStep!==undefined){
+   const u=clamp(actor.rescueStep,0,1),span=clamp(actor.rescueDistance||0,0,.5);
+   const first=side===(actor.rescueSide||1),s=ease(first?u/.64:(u-.36)/.64);
+   foot.z=span*(ease(u)-s);foot.lift=(first?.10:.075)*Math.sin(Math.PI*s);foot.pitch=.11*Math.sin(TAU*s);
+  }
   foot.lift+=stepOffset(actor,foot.z);
   const reach=Math.sqrt((2*SEGMENT)**2-foot.z**2);
   hips=Math.min(hips,ANKLE+foot.lift+reach-HIP);
@@ -217,7 +224,18 @@ export function pursuerPose(actor,reduced=false){
   joints.head.yaw+=side*.24*hit;
   for(const sign of [-1,1]){
    const a=joints['arm'+sign],f=joints['forearm'+sign];
-   if(a&&f){a.pitch-=1.08*hold;a.roll=(a.roll||0)+sign*(.12*hold+.30*hit);f.pitch-=.75*hold;f.roll=(f.roll||0)+sign*.18*hit;}
+   if(a&&f){
+    // Aim the two arms independently, then derive the elbow from the
+    // transformed upper arm. Forearms are separate rigid mesh groups.
+    a.px=sign*.321;a.pitch-=.92*hold;a.roll=(a.roll||0)+sign*(.06*hold+.20*hit);
+    const reaction=sign===side?1:.45;
+    a.pitch-=.26*hit*reaction;f.pitch-=.70*hold+.24*hit*reaction;
+    f.px=sign*.321;f.roll=(f.roll||0)+sign*.15*hit;
+    const {r,t}=jointMatrix(a),x=sign*.321;
+    f.x=r[0]*x+r[1]*ELBOW+t[0]-x;
+    f.y=r[3]*x+r[4]*ELBOW+t[1]-ELBOW;
+    f.z=r[6]*x+r[7]*ELBOW+t[2];
+   }
   }
  }
  return joints;
