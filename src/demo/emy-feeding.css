@@ -63,7 +63,7 @@
 .emy-churu{transform:translateX(-50%) rotate(-18deg)}
 .emy-churu:active{transform:translateX(-50%) rotate(-28deg)}
 .emy-speech{border:1px solid #b983a1;border-radius:12px 12px 12px 4px;box-shadow:0 2px #4b354c40}
-@keyframes emy-arrive{from{opacity:0;transform:translateY(5px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes emy-arrive{from{opacity:0}to{opacity:1}}
 
 /* One responsive layout: square interaction stage, no conflicting breakpoints. */
 .emy-feeding{padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))}
