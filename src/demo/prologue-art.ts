@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 
 // Luis y Louis son personas DISTINTAS en el rescate: el novio tiene pelo oscuro,
-// gafas y tatuaje en el brazo izquierdo; Louis lleva otro sprite (Corazones).
+// gafas y tatuaje en el brazo izquierdo; Louis tiene su propio sprite narrativo.
 // Luis sigue la referencia de la pareja: flequillo negro, gafas y camiseta verde.
 // Este arte es pixel art 48x64, reutilizable en todas las escenas,
 // sin imágenes ajenas, red ni spritesheets grandes en memoria.
@@ -69,8 +69,8 @@ export function paintLuisChibi(
  b(14+gait,55,7,2,p.pantsLight);b(27-gait,55,7,2,p.pantsLight);
  // Broad but short upper body + slim jeans = unmistakable chibi proportions.
  const bodyY=35+bob;
- b(13,bodyY,23,19,INK);
- b(15,bodyY+2,19,16,p.top);
+ b(14,bodyY,21,19,INK);
+ b(16,bodyY+2,17,16,p.top);
  b(15,bodyY+11,19,5,p.topShade);
  b(16,bodyY+17,18,2,'#222a3d');
  if(pose==='idle'&&frameIndex===1)b(16,bodyY+5,2,4,'#7dac58');
@@ -107,11 +107,13 @@ export function paintLuisChibi(
  // restrained shading. No scaling tricks that would distort other sprites.
  const hy=5+bob;
  // Broad, rounded head and soft cheeks from the card.
- b(8,hy+7,34,23,INK);
- b(10,hy+4,30,28,INK);
- b(14,hy+2,22,32,INK);
- b(10,hy+13,30,16,p.skinShade);
- b(12,hy+10,26,21,p.skin);
+ b(6,hy+9,37,19,INK);
+ b(8,hy+5,34,26,INK);
+ b(11,hy+2,28,31,INK);
+ b(15,hy+1,20,33,INK);
+ b(8,hy+15,33,13,p.skinShade);
+ b(10,hy+13,30,17,p.skin);
+ b(13,hy+27,25,5,p.skin);
  b(14,hy+8,23,24,p.skin);
  b(13,hy+17,25,11,p.skinLight);
  b(16,hy+28,18,3,p.skinLight);
@@ -166,8 +168,10 @@ export function paintLuisChibi(
  // Rounded black hair with long, separated bangs from the reference;
  // while the shine and fringe read correctly at 48px resolution.
  b(12,hy+2,28,11,INK);
- b(9,hy+6,33,10,p.hair);
- b(8,hy+10,34,9,p.hair);
+ b(8,hy+5,35,11,p.hair);
+ b(7,hy+9,36,10,p.hair);
+ b(6,hy+13,4,8,p.hair);
+ b(40,hy+12,3,10,p.hair);
  b(10,hy+15,7,8,p.hair);
  b(36,hy+14,5,9,p.hair);
  b(16,hy,19,5,p.hair);
@@ -192,91 +196,73 @@ export function paintLuisChibi(
  return canvas;
 }
 
-// Louis keeps his established distinct identity/wardrobe; his walking and
-// combat sprites are still produced by buildChibi + installReferenceCharacter.
-// Historical Louis art is preserved unchanged; only Luis is redesigned.
-function paintLouisPortrait():HTMLCanvasElement{
- const person:ProloguePerson='louis';
- const DARK='#30243f',SKIN='#f5c9a9',SHADOW='#c38b82',HIGHLIGHT='#ffead7';
- const canvas=document.createElement('canvas');canvas.width=48;canvas.height=64;
+// Original pixel interpretation of Louis Tomlinson's 2012–13 look:
+// diagonal brown fringe, blue eyes, Breton stripes and red trousers.
+// This is a PROLOGUE-only texture set; the selectable classic Louis and
+// every 3D model remain untouched. Same 32x40 size/foot anchor as the NPC.
+export function paintStoryLouis(facing:LuisFacing='down',frame=0):HTMLCanvasElement{
+ const canvas=document.createElement('canvas');canvas.width=32;canvas.height=40;
  const c=canvas.getContext('2d')!;c.imageSmoothingEnabled=false;
- const block=(x:number,y:number,w:number,h:number,color:string)=>{
-  c.fillStyle=color;c.fillRect(x,y,w,h);
- };
- const louis=person==='louis',hair=louis?'#4b302b':'#171b2d',
-  hairLight=louis?'#795044':'#303746';
- // shoes and trousers
- block(12,57,12,4,DARK);block(26,57,12,4,DARK);
- block(13,45,10,13,louis?'#b6435c':'#303954');
- block(26,45,10,13,louis?'#b6435c':'#303954');
- block(13,51,10,2,louis?'#8b3348':'#273149');
- block(26,51,10,2,louis?'#8b3348':'#273149');
- block(12,59,12,3,'#221e34');block(25,59,13,3,'#221e34');
- // upper arms; from viewer right is the character's anatomical LEFT
- block(8,34,7,14,DARK);block(9,35,6,13,SKIN);
- block(35,34,7,14,DARK);block(35,35,6,13,SKIN);
- block(9,43,6,4,SHADOW);block(35,43,6,4,SHADOW);
- // anatomical LEFT arm tattoo of Luis, clearly visible on viewer's right
- if(!louis){
-  block(36,37,4,2,'#333446');block(35,40,5,2,'#45405a');
-  block(37,43,3,3,'#333446');block(35,46,5,1,'#32344c');
-  block(38,35,2,3,'#333446');
- }
- block(13,32,23,17,DARK);
- block(15,34,19,13,louis?'#fff7f1':'#161d32');
- if(louis){
-  for(let y=36;y<47;y+=4)block(15,y,19,2,'#455b8a');
-  block(20,33,11,2,'#faf8f6');
+ const ink='#302b34',hair='#4b302b',shade='#38272a',highlight='#89634a',
+  skin='#e7ae8d',light='#f9d1af',shadow='#c88d75',blue='#5d91b3',
+  shirt='#f5e9db',stripe='#344965',pants='#a54551';
+ const back=facing==='up',side=facing==='right',walk=frame>0&&frame<5;
+ const bob=walk?[0,-1,0,-1][frame-1]:0,step=walk?[1,2,-1,-2][frame-1]:0;
+ const b=(x:number,y:number,w:number,h:number,color:string)=>{c.fillStyle=color;c.fillRect(x,y,w,h);};
+ // Feet stay planted on the same baseline, with alternating stride.
+ b(8+step,32,7,7,ink);b(17-step,32,7,7,ink);
+ b(9+step,32,5,5,pants);b(18-step,32,5,5,pants);
+ b(9+step,36,5,1,'#783744');b(18-step,36,5,1,'#783744');
+ b(8+step,38,7,1,'#e6d9cc');b(17-step,38,7,1,'#e6d9cc');
+ const y=23+bob;
+ b(8,y,16,11,ink);b(9,y+1,14,9,shirt);
+ for(const dy of [3,6,9])b(9,y+dy,14,1,stripe);
+ b(13,y-2,6,4,shadow);b(14,y-2,4,3,skin);
+ const swing=walk?[0,2,0,-2][frame-1]:0;
+ b(5,y+1+swing,5,8,ink);b(22,y+1-swing,5,8,ink);
+ b(6,y+2+swing,3,3,stripe);b(23,y+2-swing,3,3,stripe);
+ b(6,y+5+swing,3,4,skin);b(23,y+5-swing,3,4,skin);
+ b(23,y+7-swing,2,1,'#635562'); // small bracelet
+ const h=2+bob;
+ // Rounded stepped head contour, subtle cheek/jaw planes.
+ b(8,h+2,16,20,ink);b(5,h+6,22,13,ink);b(7,h+19,18,3,ink);
+ b(7,h+7,18,12,skin);b(9,h+17,14,4,light);
+ b(8,h+10,16,8,light);b(11,h+20,10,1,shadow);
+ b(4,h+12,4,5,ink);b(5,h+13,3,3,skin);
+ b(24,h+12,4,5,ink);b(24,h+13,3,3,skin);
+ if(back){
+  b(6,h+5,20,14,hair);b(8,h+18,16,3,shade);b(10,h+7,10,2,highlight);
+  b(8,h+10,3,7,'#60412f');b(19,h+9,3,7,'#60412f');
+ }else if(side){
+  b(22,h+13,6,4,skin);b(24,h+15,4,2,light);
+  b(17,h+10,6,1,hair);b(17,h+12,6,4,'#fff0e3');
+  b(20,h+12,3,4,frame===5?ink:blue);b(21,h+12,1,1,'#fff7e6');
+  if(frame===5)b(17,h+13,6,2,ink);
+  b(22,h+18,4,1,'#9b5960');b(13,h+18,3,1,shadow);
  }else{
-  block(18,34,12,4,'#1b2539'); // sleeveless black tank
-  block(24,37,2,7,'#374460');
+  // Narrow friendly blue eyes, asymmetric eyebrows and crooked smile.
+  b(8,h+10,6,1,hair);b(18,h+9,6,1,hair);
+  for(const x of [9,18]){
+   b(x,h+12,6,4,'#fff0e3');b(x+2,h+12,3,4,blue);
+   b(x+3,h+13,1,2,ink);b(x+2,h+12,1,1,'#ffffff');
+   if(frame===5)b(x,h+13,6,2,ink);
+  }
+  b(15,h+15,2,2,shadow);b(8,h+17,3,1,'#e5a48f');b(22,h+17,3,1,'#e5a48f');
+  b(12,h+18,8,1,'#9b5960');b(14,h+18,5,1,'#fff2df');b(15,h+19,4,1,'#b66d65');
  }
- block(21,29,8,7,DARK);block(22,28,6,7,SKIN);
- // large chibi face
- block(10,9,30,25,DARK);
- block(12,10,26,23,SKIN);
- block(13,23,25,7,SHADOW);
- block(13,10,25,18,SKIN);
- block(16,27,4,2,'#eb9b9f');block(32,27,4,2,'#eb9b9f');
- // ears
- block(8,20,4,7,DARK);block(9,21,3,5,SKIN);
- block(39,20,4,7,DARK);block(39,21,3,5,SKIN);
- // eye whites + distinctive Louis blue irises, Luis warm brown
- block(16,20,8,5,'#fff5ea');block(29,20,7,5,'#fff5ea');
- block(19,21,3,4,louis?'#529ac0':'#5d453e');
- block(31,21,3,4,louis?'#529ac0':'#5d453e');
- block(20,22,1,2,'#1f233b');block(32,22,1,2,'#1f233b');
- block(18,21,1,1,HIGHLIGHT);block(31,21,1,1,HIGHLIGHT);
- // eyebrows
- block(16,18,9,2,hair);block(29,18,8,2,hair);
- // nose, smile
- block(26,25,2,2,SHADOW);
- block(22,29,8,1,'#9d5664');block(24,30,5,1,'#c47a82');
- // hair, shadowed swept bangs
- block(10,7,30,10,DARK);block(13,4,25,8,hair);
- block(11,10,30,4,hair);block(11,14,7,6,hair);
- block(34,12,6,7,hair);
- if(louis){
-  block(9,11,11,5,hairLight);block(12,6,20,5,hairLight);
-  block(18,8,19,4,hair);block(28,10,11,5,hairLight);
-  block(15,14,16,4,hair); // iconic diagonal fringe
-  block(24,16,9,3,hairLight);
-  block(11,8,5,5,hairLight);block(33,5,4,7,hair);
- }else{
-  block(12,6,24,7,hairLight);block(10,13,8,5,hair);
-  block(13,8,25,7,hair);block(17,13,11,3,hairLight);
-  // rectangular black spectacles; centers retain eye pupils
-  block(14,19,11,2,'#171c2b');block(29,19,9,2,'#171c2b');
-  block(14,19,2,8,'#171c2b');block(23,19,2,8,'#171c2b');
-  block(29,19,2,8,'#171c2b');block(36,19,2,8,'#171c2b');
-  block(25,21,4,2,'#171c2b');block(11,21,3,2,'#171c2b');
-  block(38,21,3,2,'#171c2b');
-  block(17,20,2,1,'#dde8ef');block(32,20,2,1,'#dde8ef');
- }
+ // The sweeping fringe descends on the viewer's left, not a bowl cut.
+ b(8,h+1,16,4,shade);b(6,h+3,20,5,hair);b(5,h+6,22,4,hair);
+ b(11,h,11,3,hair);b(17,h-1,6,3,hair);
+ b(9,h+2,10,2,highlight);b(7,h+5,11,2,'#704b37');
+ b(6,h+8,11,3,hair);b(6,h+10,7,3,shade);b(7,h+12,3,2,hair);
+ b(13,h+7,7,2,hair);b(18,h+5,7,2,hair);
+ b(24,h+7,3,5,shade);
+ if(side){b(6,h+9,12,4,hair);b(7,h+13,5,5,shade);b(12,h+9,8,2,'#704b37');}
+ if(back){b(7,h+8,18,11,hair);b(8,h+10,4,7,highlight);b(16,h+12,6,5,'#60412f');}
  return canvas;
 }
 export function paintProloguePerson(person:ProloguePerson):HTMLCanvasElement{
- return person==='luis'?paintLuisChibi('down','idle',0):paintLouisPortrait();
+ return person==='luis'?paintLuisChibi('down','idle',0):paintStoryLouis();
 }
 export function installProloguePeople(scene:Phaser.Scene){
  const portraits:Record<ProloguePerson,string>={luis:'',louis:''};
@@ -295,6 +281,13 @@ export function installProloguePeople(scene:Phaser.Scene){
     scene.textures.addCanvas(key,paintLuisChibi(facing,pose,frame));
    }
   }
+ }
+ // This installer is invoked exclusively under if(this.story) in IsoAdventure.
+ // Replace only this scene's Louis NPC frames; preserve the classic asset files.
+ for(const facing of LUIS_FACINGS)for(let frame=0;frame<6;frame++){
+  const key=`chibi-louis-${facing}-${frame}`;
+  if(scene.textures.exists(key))scene.textures.remove(key);
+  scene.textures.addCanvas(key,paintStoryLouis(facing,frame));
  }
  return portraits;
 }

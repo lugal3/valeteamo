@@ -74,14 +74,15 @@ export function installRescueIntroArt(scene:Phaser.Scene){
    b(12,43+step,8,11,ink);b(23,43-step,8,11,ink);
    b(13,44+step,6,7,'#30333a');b(24,44-step,6,7,'#30333a');
    b(11,51+step,10,3,'#1c2026');b(23,51-step,10,3,'#1c2026');
-   b(12,30+bob,19,16,ink);b(14,31+bob,15,13,top);
-   b(14,41+bob,15,3,'#8f2e43');
+   b(13,31+bob,18,15,ink);b(15,32+bob,14,12,top);
+   b(15,41+bob,14,3,'#8f2e43');
    b(18,29+bob,7,5,skin);b(18,33+bob,7,1,'#782a3b');
    b(9,32+bob,5,12,ink);b(29,32+bob,5,12,ink);
    b(10,33+bob,3,10,skin);b(30,33+bob,3,10,skin);
    b(11,34+bob,2,6,light);b(30,34+bob,2,6,light);
    // Oversized chibi head and big dark eyes.
-   b(10,5+bob,24,26,ink);b(6,10+bob,31,17,ink);
+   b(9,5+bob,26,26,ink);b(5,10+bob,34,17,ink);
+   b(8,24+bob,28,5,ink);b(12,29+bob,20,3,ink);
    b(9,13+bob,25,15,skin);b(11,16+bob,22,12,light);
    b(13,27+bob,18,3,light);b(17,30+bob,10,1,skin);
    const blink=frame===2&&!walking;
@@ -90,7 +91,8 @@ export function installRescueIntroArt(scene:Phaser.Scene){
    b(12,25+bob,4,2,'#efa0a0');b(29,25+bob,3,2,'#efa0a0');
    b(19,26+bob,6,1,'#925c62');b(20,27+bob,4,1,'#925c62');
    // Black fringe, no bow or hair accessory in the supplied reference.
-   b(10,4+bob,24,10,hair);b(7,8+bob,30,10,hair);
+   b(10,4+bob,25,10,hair);b(6,8+bob,32,10,hair);
+   b(5,12+bob,5,11,hair);b(35,12+bob,4,12,hair);
    b(14,3+bob,16,3,hair);b(14,6+bob,11,2,shine);
    b(8,14+bob,5,9,hair);b(14,13+bob,4,7,hair);
    b(20,13+bob,4,7,hair);b(27,13+bob,5,8,hair);

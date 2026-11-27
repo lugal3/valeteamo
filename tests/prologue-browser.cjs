@@ -198,6 +198,10 @@ async function play(){
   await page.getByRole('button',{name:/Alimentar a Emy/}).tap();
   const feeding=page.getByRole('dialog',{name:'Un Churu para Emy',exact:true});
   await feeding.waitFor();
+  const compact=await feeding.evaluate(el=>{const card=el.querySelector('.emy-card'),stage=el.querySelector('.emy-stage');const cr=card.getBoundingClientRect(),sr=stage.getBoundingClientRect(),er=el.getBoundingClientRect();return {card:cr.width,viewport:er.width,stage:sr.width,within:sr.top>=cr.top&&sr.bottom<=cr.bottom};});
+  assert(compact.card<compact.viewport*.9&&compact.stage>=150&&compact.within,'compact feeding UI fits mobile landscape and preserves usable interaction');
+  await page.screenshot({path:'artifacts/story-emy-feeding-redesign.png'});
+  await feeding.waitFor();
   assert.equal(await game.getAttribute('data-fed-grey-cat'),'false');
   await feeding.getByRole('button',{name:'Volver al jardín'}).click();
   await page.getByRole('button',{name:/Alimentar a Emy/}).click();

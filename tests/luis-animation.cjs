@@ -78,7 +78,17 @@ for(const facing of art.LUIS_FACINGS)
   for(let frame=0;frame<art.LUIS_FRAME_COUNTS[pose];frame++)
    assert(textures.has(art.luisTextureKey(facing,pose,frame)),
     'each pre-rendered sprite is loaded into the original Phaser texture manager');
-assert.equal(textures.size,47,'45 animation frames + 2 existing portraits; no extra engine');
+assert.equal(textures.size,65,'45 Luis frames, 18 Louis NPC frames and 2 portraits');
+for(const facing of art.LUIS_FACINGS){
+ const frames=Array.from({length:6},(_,i)=>art.paintStoryLouis(facing,i));
+ assert(frames.every(frame=>frame.width===32&&frame.height===40));
+ assert(new Set(frames.map(signature)).size>=4,'Louis directional movement needs distinct frames');
+ for(let frame=0;frame<6;frame++)assert.equal(signature(textures.get('chibi-louis-'+facing+'-'+frame)),signature(frames[frame]));
+}
+assert.notEqual(signature(art.paintStoryLouis('down')),signature(art.paintStoryLouis('right')));
+assert.notEqual(signature(art.paintStoryLouis('down')),signature(art.paintStoryLouis('up')));
+assert.equal(signature(textures.get('story-person-louis')),signature(textures.get('chibi-louis-down-0')),'same actual sprite for dialogue');
+for(const color of ['#4b302b','#5d91b3','#344965','#a54551'])assert(art.paintStoryLouis().pixels.flat().includes(color),'recognizable Louis palette '+color);
 // Vale's new artwork must keep the existing runtime keys and frame counts.
 const intro=fs.readFileSync('src/demo/rescue-intro-art.ts','utf8');
 const introCode=ts.transpileModule(intro,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
@@ -107,5 +117,6 @@ assert(arcade.includes('this.story.locked()||luisMotionIsBlocking(this.storyLuis
  'dialogue and arrival/departure both lock input while NPC animations continue');
 assert(src.includes('return person===\'luis\'?paintLuisChibi')&&
  arcade.includes("'chibi-louis-down-0'"),
- 'Luis/ Louis identities remain distinct and old Louis sprite stays in use');
-console.log('PASS: 45 chibi Luis directional pose frames, glasses/tattoo, facial expressions, blinks, animation during dialogue and unchanged Corazones/Louis integration.');
+ 'Luis and Louis stay distinct and the story uses the established NPC keys');
+assert(arcade.includes("if(this.story){\n   if(!CHARACTERS.louis.chibiSpriteSheet)installReferenceCharacter(this,'louis');\n   installProloguePeople(this);"),'new Louis frames only install for story');
+console.log('PASS: 45 Luis frames, 18 Louis frames, 8 Vale frames, actual portrait parity and classic protected.');

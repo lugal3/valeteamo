@@ -29,7 +29,7 @@ export function EmyFeeding({audio,onComplete,onCancel}:{audio:Sound;onComplete:(
    const dt=(now-last)/1000;last=now;
    const s=live.current;
    if(!document.hidden&&!s.done){
-    setClock(now);setBlink(now%4200>4010);
+    setClock(Math.floor(now/150)*150);setBlink(now%4200>4010);
     // Never display 100% while the completion state is still 99.6%.
     // A player releasing the treat at the displayed 100% would leave the
     // Churu dialog stuck forever. Snap the final half-percent to done.
@@ -69,9 +69,10 @@ export function EmyFeeding({audio,onComplete,onCancel}:{audio:Sound;onComplete:(
  const full=progress>=100,eating=holding&&churuInReach(tip.x,tip.y)&&!full;
  const expression=full?'love':blink?'blink':eating&&Math.floor(clock/150)%2?'lick':'idle';
  return <section className={'emy-feeding'+(full?' is-full':'')} role="dialog" aria-modal="true" aria-labelledby="emy-title" data-progress={Math.round(progress)} data-eating={eating}>
-  <header><div><span>UN RATITO CON EMY</span><h2 id="emy-title">{full?'¡Emy te quiere!':'Un Churu para Emy'}</h2></div>
-   <button type="button" onClick={onCancel} disabled={full} aria-label="Volver al jardín">Cerrar</button></header>
-  <p className="emy-instruction" role="status">{full?'Gracias por cuidarla ♡':'Arrastra la punta del Churu hasta su boquita y mantenla cerca.'}</p>
+  <div className="emy-card">
+  <header><div><span className="emy-kicker">♡ Un ratito juntas</span><h2 id="emy-title">{full?'¡Emy te quiere!':'Un Churu para Emy'}</h2></div>
+   <button type="button" className="emy-close" onClick={onCancel} disabled={full} aria-label="Volver al jardín">×</button></header>
+  <p className="emy-instruction" role="status">{full?'Gracias por cuidarla ♡':eating?'¡Qué rico!':'Acerca el Churu a su boquita.'}</p>
   <div className="emy-stage" ref={stage}>
    <div className={'emy-pet'+(eating?' is-eating':'')}><img src={`./sprites/emy-${expression}.png`} alt="Emy, gatita gris de pelo largo y ojos verdes" draggable={false}/></div>
    {full&&<div className="emy-love" aria-hidden="true">♥　♡　♥</div>}
@@ -93,7 +94,8 @@ export function EmyFeeding({audio,onComplete,onCancel}:{audio:Sound;onComplete:(
     <i className="emy-paste"/><span className="emy-wrapper"><b>Churu</b><small>♡</small></span><span className="emy-kitty-paw"/>
    </button>
   </div>
-  <footer><div className="emy-meter" role="progressbar" aria-label="Emy alimentada" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}><span style={{width:progress+'%'}}/></div><strong>{Math.floor(progress)}%</strong></footer>
-  <p id="emy-keys" className="emy-keys">PC: mueve con las flechas y mantén espacio. En celular: arrastra y mantén el Churu.</p>
+  <footer><div className="emy-meter-caption"><span>♡ Cariño</span><strong>{full?'¡Listo!':Math.floor(progress)+'%'}</strong></div><div className="emy-meter" role="progressbar" aria-label="Emy alimentada" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.floor(progress)}><span style={{width:progress+'%'}}/></div></footer>
+  <p id="emy-keys" className="emy-keys">Arrastra y mantén · PC: flechas + espacio</p>
+  </div>
  </section>;
 }

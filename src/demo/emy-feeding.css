@@ -1,10 +1,37 @@
-.emy-feeding{position:absolute;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:space-between;overflow:hidden;padding:max(12px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));background:radial-gradient(ellipse at 50% 40%,#f6e1e8,#d8bcca 75%);color:#51394b;font:16px system-ui;touch-action:none;overscroll-behavior:contain}
-.emy-feeding header{width:100%;display:flex;justify-content:space-between;align-items:center;gap:16px;z-index:2}.emy-feeding header span{font-size:12px;letter-spacing:.15em}.emy-feeding h2{margin:2px 0;font:700 clamp(20px,4vw,30px) Georgia,serif}.emy-feeding header button{border:1px solid #b1849b;border-radius:20px;background:#fff3ec;color:#51394b;padding:10px 18px;min-height:44px;font:700 14px system-ui;cursor:pointer}.emy-feeding button:focus-visible{outline:3px solid #774c70;outline-offset:4px}.emy-instruction{margin:4px;text-align:center;font-size:clamp(14px,2vw,17px);z-index:2}
-.emy-stage{position:relative;flex:0 1 auto;width:min(70dvh,84vw,600px);aspect-ratio:1;min-height:0;touch-action:none;user-select:none}.emy-pet{position:absolute;inset:0;pointer-events:none;transform-origin:50% 85%}.emy-pet img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated;user-select:none}.emy-pet.is-eating{animation:emy-nibble .32s ease-in-out infinite}.emy-mouth-guide{position:absolute;width:12%;height:10%;transform:translate(-50%,-50%);border:2px dashed #d78ca7;border-radius:50%;opacity:.55;pointer-events:none}.emy-mouth-guide.is-eating{opacity:0}
-.emy-churu{position:absolute;width:12%;height:35%;min-width:42px;transform:translateX(-50%);transform-origin:50% 0;z-index:3;border:0;background:transparent;padding:0;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}.emy-churu:active{cursor:grabbing}.emy-paste{position:absolute;top:-3%;left:43%;width:17%;height:9%;background:#d0a084;border:2px solid #9c6e66;border-radius:50% 50% 0 0}.emy-wrapper{display:flex;align-items:center;flex-direction:column;justify-content:center;position:absolute;top:5%;left:6%;width:88%;height:80%;background:linear-gradient(90deg,#bc557c,#ef90ae 30%,#ce648c 80%);border:3px solid #843c60;border-top:5px solid #ffe2cd;box-shadow:inset 4px 0 #ffbdd2;transform:scaleY(var(--remaining,1));transform-origin:50% 0;color:#fff7e9}.emy-wrapper b{font:700 clamp(12px,2vw,18px) Georgia;writing-mode:vertical-rl}.emy-wrapper small{font-size:22px}.emy-kitty-paw{position:absolute;top:57%;left:-12%;width:90%;height:25%;border:3px solid #b9a8b3;border-radius:45%;background:#fff8ed;box-shadow:inset -5px -4px #eadbe5}
-.emy-feeding footer{display:flex;gap:12px;width:min(500px,88vw);align-items:center;z-index:4}.emy-meter{flex:1;height:15px;background:#a3879c4d;border:2px solid #fff3e8;border-radius:20px;overflow:hidden}.emy-meter span{display:block;height:100%;background:linear-gradient(90deg,#b9678b,#db9cb2);border-radius:20px}.emy-feeding footer strong{min-width:46px;font-size:16px}.emy-keys{margin:5px 0 0;font-size:12px;text-align:center;color:#74576c}.emy-love{position:absolute;top:6%;left:0;right:0;text-align:center;color:#be4b7e;font-size:clamp(25px,7vw,45px);animation:emy-hearts 1.4s ease-out both}.emy-feeding.is-full{animation:emy-shake .4s ease-in-out}
-@keyframes emy-nibble{50%{transform:translateY(2px) scaleY(.995)}}@keyframes emy-shake{20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}@keyframes emy-hearts{from{transform:translateY(20px);opacity:0}to{transform:translateY(-10px);opacity:1}}
-@media(max-height:500px) and (min-width:600px){.emy-feeding{padding-top:8px;padding-bottom:6px}.emy-feeding header{position:absolute;top:10px;left:18px;right:18px;width:auto}.emy-feeding header span{display:none}.emy-instruction{position:absolute;left:15px;top:70px;width:25%;text-align:left;line-height:1.5}.emy-stage{width:min(87dvh,48vw);margin-top:0;margin-left:10vw}.emy-feeding footer{position:absolute;bottom:35px;left:25px;width:23%}.emy-keys{position:absolute;right:18px;bottom:15px;width:25%;text-align:right;font-size:12px}}
-@media(prefers-reduced-motion:reduce){.emy-feeding,.emy-feeding *{animation:none!important;transition:none!important}}
-
+/* Compact scrapbook overlay, the real garden remains visible behind it. */
+.emy-feeding{position:absolute;inset:0;z-index:90;display:grid;place-items:center;box-sizing:border-box;overflow:hidden;padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));background:#37263e80;color:#584052;font:14px system-ui;touch-action:none;overscroll-behavior:contain}
+.emy-card{box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto auto;justify-items:center;align-items:center;gap:5px;width:min(92vw,370px);max-height:100%;padding:14px 18px 12px;border:1px solid #fff8f0;border-radius:24px;background:#fff7ef;box-shadow:0 14px 42px #271c3e46,inset 0 0 0 4px #f4dce5;overflow:hidden}
+.emy-card header{display:flex;align-items:center;justify-content:space-between;width:100%;gap:8px}
+.emy-kicker{font:600 10px system-ui;letter-spacing:.09em;color:#a05c7d;text-transform:uppercase}
+.emy-feeding h2{margin:3px 0 0;font:700 clamp(17px,3.2vw,23px) Georgia,serif;letter-spacing:-.025em}
+.emy-close{display:grid;place-items:center;flex:none;width:44px;height:44px;border:0;border-radius:50%;background:#f4e3e7;color:#795469;font:26px/1 Georgia,serif;cursor:pointer}
+.emy-close:disabled{opacity:.35}.emy-feeding button:focus-visible{outline:3px solid #875674;outline-offset:2px}
+.emy-instruction{margin:0;min-height:20px;text-align:center;font:500 13px/1.4 system-ui;color:#79576c}
+.emy-stage{position:relative;width:min(100%,52dvh,300px);aspect-ratio:1;min-height:0;touch-action:none;user-select:none;background:radial-gradient(ellipse at 50% 68%,#f4dfdf 0%,#f8eae8 45%,#fff7ef 72%);border-radius:20px}
+.emy-pet{position:absolute;inset:0;pointer-events:none;transform-origin:50% 85%}
+.emy-pet img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated;user-select:none}
+.emy-pet.is-eating{animation:emy-nibble .32s ease-in-out infinite}
+.emy-mouth-guide{position:absolute;width:13%;height:11%;transform:translate(-50%,-50%);border:1.5px dashed #c87999;border-radius:50%;opacity:.65;pointer-events:none}
+.emy-mouth-guide.is-eating{opacity:0}
+.emy-churu{position:absolute;width:13%;height:32%;min-width:34px;min-height:44px;transform:translateX(-50%);transform-origin:50% 0;z-index:3;border:0;background:transparent;padding:0;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+.emy-churu:active{cursor:grabbing}.emy-paste{position:absolute;top:-3%;left:43%;width:17%;height:9%;background:#d9aa8a;border:1px solid #a77668;border-radius:50% 50% 0 0}
+.emy-wrapper{display:flex;align-items:center;flex-direction:column;justify-content:center;position:absolute;top:5%;left:6%;width:88%;height:80%;box-sizing:border-box;background:linear-gradient(90deg,#d66d90,#f6b1c2 40%,#df7898);border:1.5px solid #9f5875;border-top:4px solid #fff2df;border-radius:4px;box-shadow:inset 2px 0 #ffd1da;transform:scaleY(var(--remaining,1));transform-origin:50% 0;color:#fffaf1}
+.emy-wrapper b{font:700 clamp(10px,1.6vw,14px) Georgia;writing-mode:vertical-rl}.emy-wrapper small{font-size:16px}
+.emy-kitty-paw{position:absolute;top:57%;left:-12%;width:90%;height:25%;box-sizing:border-box;border:1.5px solid #c1a8b6;border-radius:45%;background:#fff9f0;box-shadow:inset -3px -3px #eadbe5}
+.emy-feeding footer{width:100%;display:grid;gap:5px}
+.emy-meter-caption{display:flex;justify-content:space-between;align-items:baseline;color:#986582;font:600 11px system-ui}
+.emy-meter-caption strong{color:#774966;font-variant-numeric:tabular-nums}
+.emy-meter{height:8px;background:#f0dce4;border-radius:20px;overflow:hidden}
+.emy-meter span{display:block;height:100%;background:linear-gradient(90deg,#ce7b9f,#e6a6b5);border-radius:20px}
+.emy-keys{margin:0;text-align:center;font:11px/1.3 system-ui;color:#8a6a7e}
+.emy-love{position:absolute;top:5%;left:0;right:0;text-align:center;color:#be4b7e;font-size:clamp(25px,7vw,38px);animation:emy-hearts 1.1s ease-out both}
 .emy-churu.is-empty{opacity:0;pointer-events:none}
+@keyframes emy-nibble{50%{transform:translateY(2px) scaleY(.995)}}@keyframes emy-hearts{from{transform:translateY(12px);opacity:0}to{transform:translateY(-6px);opacity:1}}
+@media(max-height:500px) and (min-width:600px){
+ .emy-card{width:min(72vw,560px);grid-template-columns:minmax(140px,1fr) auto;grid-template-rows:auto 1fr auto auto;column-gap:18px;row-gap:8px;justify-items:stretch;padding:16px 18px}
+ .emy-card header{grid-column:1;grid-row:1}.emy-instruction{grid-column:1;grid-row:2;align-self:start;text-align:left;max-width:180px}
+ .emy-stage{grid-column:2;grid-row:1/5;width:min(78dvh,36vw,280px)}
+ .emy-feeding footer{grid-column:1;grid-row:3}.emy-keys{grid-column:1;grid-row:4;text-align:left}
+}
+@media(max-height:320px){.emy-card{padding:8px 12px;gap:4px}.emy-stage{width:min(56dvh,64vw,220px)}}
+@media(prefers-reduced-motion:reduce){.emy-feeding,.emy-feeding *{animation:none!important;transition:none!important}}
