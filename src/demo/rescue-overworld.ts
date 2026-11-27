@@ -77,7 +77,37 @@ export function routeCenter(u:number){
  if(map==='dusk_search')return 4.6+Math.sin((u-46)*.50)*.82;
  return nightRouteCenter(u);
 }
-export function routeLimits(u:number):{min:number;max:number}{
+// V3.7: each side trail reconnects to the main route. The same layout drives
+// terrain, path paint, landmark placement and collision, not a second map engine.
+type SideTrail={id:string;map:RescueMapId;start:number;end:number;offset:number;title:string;
+ landmark:'rock'|'picnic'|'planter'|'lantern';radius:number};
+export const SIDE_TRAILS:readonly SideTrail[]=[
+ {id:'flower-nook',map:'morning_garden',start:2,end:9,offset:3.7,title:'Rincón floral',landmark:'planter',radius:.48},
+ {id:'river-lookout',map:'morning_garden',start:16.3,end:20.3,offset:-3.6,title:'Mirador del río',landmark:'picnic',radius:.58},
+ {id:'cherry-court',map:'afternoon_meeting',start:25,end:33,offset:-4.5,title:'Plaza de cerezos',landmark:'planter',radius:.50},
+ {id:'quiet-grove',map:'afternoon_meeting',start:36.5,end:43,offset:4.1,title:'Claro tranquilo',landmark:'picnic',radius:.58},
+ {id:'woodland-loop',map:'dusk_search',start:47,end:54,offset:-3.8,title:'Sendero del bosque',landmark:'rock',radius:.48},
+ {id:'lantern-clearing',map:'dusk_search',start:55,end:62,offset:3.8,title:'Claro del farol',landmark:'lantern',radius:.37}
+];
+const trailWeight=(trail:SideTrail,u:number)=>u<=trail.start||u>=trail.end?0:
+ Math.sin(Math.PI*(u-trail.start)/(trail.end-trail.start))**2;
+export function sideTrailPoint(trail:SideTrail,u:number):IsoPoint{
+ return {u,v:routeCenter(u)+trail.offset*trailWeight(trail,u)};
+}
+export function sideTrailLandmark(trail:SideTrail):IsoPoint{
+ const u=(trail.start+trail.end)/2;
+ // Set furniture to the outside of the path, with a clear walking lane.
+ return {u,v:sideTrailPoint(trail,u).v+Math.sign(trail.offset)*1.0};
+}
+export function rescueLandmarks(map:RescueMapId){
+ return SIDE_TRAILS.filter(trail=>trail.map===map).map(trail=>({
+  ...trail,point:sideTrailLandmark(trail)
+ }));
+}
+export function rescueLandmarkBlocks(p:IsoPoint,map:RescueMapId):boolean{
+ return rescueLandmarks(map).some(o=>Math.hypot(p.u-o.point.u,p.v-o.point.v)<o.radius+.17);
+}
+function baseRouteLimits(u:number):{min:number;max:number}{
  const center=routeCenter(u),map=sceneForPosition(u);
  if(map==='morning_garden'){
   if(u>=10&&u<16)return {min:3.05,max:5.85};
@@ -94,12 +124,37 @@ export function routeLimits(u:number):{min:number;max:number}{
  }
  return nightRouteLimits(u);
 }
+export function routeLimits(u:number):{min:number;max:number}{
+ const bounds=baseRouteLimits(u);
+ for(const trail of SIDE_TRAILS){
+  if(sceneForPosition(u)!==trail.map||u<=trail.start||u>=trail.end)continue;
+  const p=sideTrailPoint(trail,u),extra=trailWeight(trail,u)*2.05;
+  bounds.min=Math.min(bounds.min,p.v-extra);
+  bounds.max=Math.max(bounds.max,p.v+extra);
+ }
+ return bounds;
+}
 export function constrainRescue(
  p:IsoPoint,map:RescueMapId=sceneForPosition(p.u),previous?:IsoPoint
 ):IsoPoint{
  const def=RESCUE_SCENES[map],u=clamp(p.u,def.minU+.35,def.maxU-.5),limit=routeLimits(u);
  const next={u,v:clamp(p.v,limit.min+.20,limit.max-.20)};
- if(map!=='night_neighborhood'||!nightHouseBlocks(next))return next;
+ if(map!=='night_neighborhood'){
+  if(!rescueLandmarkBlocks(next,map))return next;
+  if(previous&&!rescueLandmarkBlocks(previous,map)){
+   const alongU={u:next.u,v:previous.v},alongV={u:previous.u,v:next.v};
+   const valid=(p:IsoPoint)=>{const b=routeLimits(p.u);return p.v>=b.min+.20&&p.v<=b.max-.20&&!rescueLandmarkBlocks(p,map);};
+   if(valid(alongU))return alongU;
+   if(valid(alongV))return alongV;
+   return {...previous};
+  }
+  // Loaded checkpoints / test positions inside a new prop are moved to
+  // its inner side, never through the map edge or onto the bridge water.
+  const blocked=rescueLandmarks(map).find(o=>Math.hypot(next.u-o.point.u,next.v-o.point.v)<o.radius+.17);
+  if(blocked)return {u:next.u,v:blocked.point.v-Math.sign(blocked.offset)*(blocked.radius+.20)};
+  return next;
+ }
+ if(!nightHouseBlocks(next))return next;
  // Slide against the house wall instead of teleporting Kitty or trapping her.
  if(previous){
   const alongU={u:next.u,v:previous.v},alongV={u:previous.u,v:next.v};
@@ -579,6 +634,26 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    g.lineStyle(1,0xa5a0a4,.25).lineBetween(p.x-11,p.y+5,p.x+10,p.y+5);
   }
  }
+ // Paint the actual secondary paths as continuous ground ribbons, using
+ // the same coordinates as collision and the expanded terrain bounds.
+ const trailPalette:Record<RescueMapId,readonly [number,number]>={
+  morning_garden:[0xd7c8a5,0xf3dfbb],afternoon_meeting:[0xc3a890,0xe8c9a8],
+  dusk_search:[0x7e8881,0xb2a5a6],night_neighborhood:[0x858c97,0xb0a8aa]
+ };
+ for(const trail of SIDE_TRAILS.filter(t=>t.map===map)){
+  const edge:Array<[number,number]>=[],other:Array<[number,number]>=[],inner:Array<[number,number]>=[],innerOther:Array<[number,number]>=[];
+  for(let i=0;i<=24;i++){
+   const u=trail.start+(trail.end-trail.start)*i/24,p=sideTrailPoint(trail,u);
+   const width=.69+.22*trailWeight(trail,u);
+   for(const [side,dest,scale] of [[-1,edge,1],[1,other,1],[-1,inner,.76],[1,innerOther,.76]] as const){
+    const xy=toScreen({u:p.u,v:p.v+side*width*scale});dest.push([xy.x,xy.y]);
+   }
+  }
+  poly(g,trailPalette[map][0],[...edge,...other.reverse()],.94);
+  poly(g,trailPalette[map][1],[...inner,...innerOther.reverse()],.92);
+  const p=sideTrailLandmark(trail),xy=toScreen(p);
+  g.fillStyle(trailPalette[map][1],.6).fillEllipse(xy.x,xy.y,92,42);
+ }
  // Irregular shoulders: no single rectangular floor exposed to the player.
  for(let u=low+1;u<high;u+=2){
   const lim=routeLimits(u);
@@ -730,6 +805,18 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    'VENTANA',{fontFamily:'monospace',fontSize:'10px',fontStyle:'bold',
     color:'#ffe7fa',stroke:'#4b3853',strokeThickness:3})
    .setOrigin(.5).setDepth(toScreen(NIGHT_HOUSE.window).y+18);
+ }
+ // Landmarks are drawn from the same world-space records used by collision.
+ for(const landmark of rescueLandmarks(map)){
+  const {u,v}=landmark.point;
+  gardenFeature(scene,u,v,landmark.landmark);
+  const p=toScreen({u,v}),side=Math.sign(landmark.offset);
+  scene.add.text(p.x,p.y-58,landmark.title,{
+   fontFamily:'Georgia',fontSize:'12px',color:'#fff0d2',stroke:'#655568',strokeThickness:3
+  }).setOrigin(.5).setDepth(p.y+1);
+  // Quiet edge flowers flank the path, not its walkable lane.
+  ornaments.flower(u-.65,v+side*.5);
+  ornaments.flower(u+.65,v+side*.5);
  }
  // Shared trail vocabulary at both ends of every chapter. The road keeps
  // going beyond the playable edge rather than ending against a flat void.

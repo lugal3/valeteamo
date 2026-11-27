@@ -94,6 +94,28 @@ assert(world.darknessAt(52,'ribbon','dusk_search')>.38);
 assert(world.darknessAt(78,'door','night_neighborhood')>.68);
 assert(world.darknessAt(78,'window','night_neighborhood')>
  world.darknessAt(56,'ribbon','dusk_search'),'night must be darker than dusk');
+// V3.7 side trails use one world-space contract for art and collision.
+assert.equal(world.SIDE_TRAILS.length,6);
+for(const trail of world.SIDE_TRAILS){
+ const mid=(trail.start+trail.end)/2,center=world.sideTrailPoint(trail,mid);
+ assert(Math.abs(center.v-world.routeCenter(mid))>=3.6,'a real lateral destination, not a recolored main road');
+ for(let i=0;i<=80;i++){
+  const p=world.sideTrailPoint(trail,trail.start+(trail.end-trail.start)*i/80);
+  const constrained=world.constrainRescue(p,trail.map);
+  assert(Math.hypot(p.u-constrained.u,p.v-constrained.v)<.001,'side trail is connected and walkable '+trail.id);
+  assert(!world.rescueLandmarkBlocks(p,trail.map),'landmark must not block the path');
+ }
+ const landmark=world.sideTrailLandmark(trail);
+ assert(world.rescueLandmarkBlocks(landmark,trail.map));
+ const corrected=world.constrainRescue(landmark,trail.map,center);
+ assert(!world.rescueLandmarkBlocks(corrected,trail.map),'player cannot walk through landmark '+trail.id);
+ assert(!world.rescueLandmarkBlocks(world.constrainRescue(landmark,trail.map),trail.map),'reload cannot strand player in furniture');
+}
+for(const stage of stages){
+ const p=world.STORY_POSITIONS[stage],map=world.mapForStage(stage);
+ assert(!world.rescueLandmarkBlocks(p,map),'mandatory story target remains accessible '+stage);
+}
+assert.equal(world.rescueLandmarks('night_neighborhood').length,0,'existing night navigation remains unchanged');
 const arcade=fs.readFileSync('src/iso-game.ts','utf8'),pro=fs.readFileSync('src/demo/GardenPrologue.tsx','utf8');
 assert(arcade.includes('buildRescueOverworld(this,this.floor')&&arcade.includes('constrainRescue(candidate,this.storyMap,this.p)'),
  'four maps belong to the original IsoAdventure and use its motion');
