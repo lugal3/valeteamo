@@ -1,6 +1,6 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {StoryGame} from '../StoryGame';
-import {Sound} from '../audio';
+import type {Sound} from '../audio';
 import type {IsoAdventure,IsoStoryBridge} from '../iso-game';
 import type {EpilogueStage} from './epilogue-progress.js';
 import {EPILOGUE_CHAPTERS} from './epilogue-route';
@@ -10,11 +10,10 @@ import {GardenPostcard,makeGardenPostcard} from './GardenPostcard';
 import {valeTexture} from './rescue-intro-art';
 import './garden-epilogue.css';
 
-type Props={stage:Exclude<EpilogueStage,'complete'>;onAdvance:(next:EpilogueStage)=>void;onExit:()=>void;muted:boolean;onMute:(muted:boolean)=>void};
+type Props={stage:Exclude<EpilogueStage,'complete'>;onAdvance:(next:EpilogueStage)=>void;onExit:()=>void;muted:boolean;onMute:(muted:boolean)=>void;audio:Sound};
 // Parent keys by stage; one StoryGame/Phaser instance at a time.
-export function GardenEpilogue({stage,onAdvance,onExit,muted,onMute}:Props){
+export function GardenEpilogue({stage,onAdvance,onExit,muted,onMute,audio}:Props){
  const chapter=EPILOGUE_CHAPTERS[stage],lines=EPILOGUE_DIALOGUES[stage];
- const [audio]=useState(()=>{const sound=new Sound();sound.muted=muted;return sound;});
  const [near,setNear]=useState(''),[leaving,setLeaving]=useState(false);
  const [line,setLine]=useState(-1),[letters,setLetters]=useState(0),[portraits,setPortraits]=useState<Record<string,string>>({});
  const [celebrating,setCelebrating]=useState(false),[candlesOut,setCandlesOut]=useState(false),[letterOpen,setLetterOpen]=useState(false);
@@ -82,7 +81,7 @@ export function GardenEpilogue({stage,onAdvance,onExit,muted,onMute}:Props){
   captureTimer.current=window.setTimeout(()=>done('',true),2200);
   try{const renderer=s.game.renderer;if(!renderer){done('',true);return;}renderer.snapshot(result=>{if(!(result instanceof HTMLImageElement)){done('',true);return;}try{done(makeGardenPostcard(result,'Feliz cumpleaños, Vale',true));}catch{done('',true);}});}catch{done('',true);}
  };
- useEffect(()=>()=>{captureToken.current++;window.clearTimeout(captureTimer.current);window.clearTimeout(timer.current);audio.destroy();},[audio]);
+ useEffect(()=>()=>{captureToken.current++;window.clearTimeout(captureTimer.current);window.clearTimeout(timer.current);},[]);
  return <main className="garden-epilogue" data-epilogue-stage={stage} data-epilogue-leaving={leaving}>
   <StoryGame level={1} character="kitty" story={story} audio={audio} muted={muted} audioNotice=""
    onUnlockAudio={()=>{void audio.start();}} onToggleAudio={()=>{audio.muted=!muted;onMute(!muted);if(muted)void audio.start();}}

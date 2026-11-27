@@ -27,7 +27,7 @@ export function StoryGame({level,character,onComplete,onExit,muted,audio,audioNo
   setLoading(true);setProgress(8);setError('');setDead(false);markPaused(false);portraitAutoPaused.current=false;userPaused.current=false;
   const boot=async()=>{try{
    const [{default:Engine},{IsoAdventure:Adventure}]=await Promise.all([import('phaser'),import('./iso-game')]);if(cancelled)return;setProgress(60);
-   const s=new Adventure(level,character,setHud,result=>{if(result==='win')complete.current();else setDead(true);},markPaused,audio,()=>{if(cancelled)return;setLoading(false);if(isPhonePortrait()){portraitAutoPaused.current=true;s.setPaused(true);}},setProgress,story);scene.current=s;onSceneReady?.(s);
+   const s=new Adventure(level,character,setHud,result=>{if(result==='win')complete.current();else setDead(true);},markPaused,audio,()=>{if(cancelled)return;setLoading(false);if(document.hidden){s.setPaused(true);}if(isPhonePortrait()){portraitAutoPaused.current=true;s.setPaused(true);}},setProgress,story);scene.current=s;onSceneReady?.(s);
    game=new Engine.Game({type:Engine.AUTO,parent:el,width:Math.max(1,el.clientWidth),height:Math.max(1,el.clientHeight),backgroundColor:'#f1e5d2',pixelArt:true,render:{antialias:false,roundPixels:true},audio:{noAudio:true},scale:{mode:Engine.Scale.NONE,autoCenter:Engine.Scale.NO_CENTER,expandParent:false},scene:s,input:{activePointers:4}});
    const handlePortrait=()=>{
     if(isPhonePortrait()){
@@ -40,7 +40,7 @@ export function StoryGame({level,character,onComplete,onExit,muted,audio,audioNo
      if(!document.hidden&&!userPaused.current)s.setPaused(false);
     }
    };
-   blur=()=>{if(document.hidden||isPhonePortrait())s.setPaused(true);};
+   blur=()=>{s.clearInput();if(document.hidden||isPhonePortrait())s.setPaused(true);};
    visibility=()=>{if(document.hidden)blur();else handlePortrait();};
    orientation=()=>{s.clearInput();if(game&&el.clientWidth&&el.clientHeight)game.scale.resize(el.clientWidth,el.clientHeight);handlePortrait();};
    observer=new ResizeObserver(()=>{if(game&&el.clientWidth&&el.clientHeight)game.scale.resize(el.clientWidth,el.clientHeight);});observer.observe(el);

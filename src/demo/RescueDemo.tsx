@@ -1,6 +1,8 @@
 import {useEffect,useRef,useState} from 'react';
 import {GardenPrologue,type PrologueCheckpoint} from './GardenPrologue';
 import {GardenEpilogue} from './GardenEpilogue';
+import {Sound} from '../audio';
+import {readCampaignMute,writeCampaignMute} from './campaign-audio';
 import {EPILOGUE_START,advanceEpilogue,openEpilogueSave,type EpilogueState,type EpilogueStage} from './epilogue-progress.js';
 import {resetPrologue} from './prologue-story.js';
 import {START,advanceRescue,loadRescue,saveRescue,resetRescue,openRescueHouseSave,type RescueState} from './progression.js';
@@ -32,7 +34,16 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
  const [epilogue,setEpilogue]=useState<EpilogueState>(()=>epilogueStore.current?.state??{...EPILOGUE_START,stage:test&&epilogueEntry?epilogueEntry:EPILOGUE_START.stage});
  const [mode,setMode]=useState<'garden'|'house'|'epilogue'|'end'>(test&&epilogueEntry?'epilogue':progress.rescued?(epilogue.stage==='complete'?'end':'epilogue'):progress.house?'house':'garden');
  const [houseReady,setHouseReady]=useState(false);
- const [error,setError]=useState(''),[saveWarning,setSaveWarning]=useState(false),[epilogueMuted,setEpilogueMuted]=useState(false);
+ const [error,setError]=useState(''),[saveWarning,setSaveWarning]=useState(false),[campaignMuted,setCampaignMuted]=useState(()=>test?false:readCampaignMute());
+ const muteRef=useRef(campaignMuted);
+ const [epilogueAudio]=useState(()=>{const sound=new Sound();sound.muted=campaignMuted;return sound;});
+ const updateMuted=(value:boolean)=>{
+  muteRef.current=value;setCampaignMuted(value);epilogueAudio.muted=value;
+  if(!test)writeCampaignMute(value);
+ };
+ // The same audio context and musical phrase continue through all four maps.
+ // Shut it down only when the epilogue itself is left.
+ useEffect(()=>{if(mode!=='epilogue')return;return()=>epilogueAudio.destroy();},[mode,epilogueAudio]);
  const phaseRef=useRef(progress),entering=useRef(false),finishing=useRef(false),epilogueRef=useRef(epilogue);
  const completeEpilogue=(next:EpilogueStage)=>{
   const current=epilogueRef.current,advanced=advanceEpilogue(current,next);
@@ -68,9 +79,12 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
     teardown=launchHouse(onExit,checkpoint,{
      demo:true,trial:test&&entry!=='garden',fieldTutorials:true,entry,
      checkpointStore,
-     onRescue:()=>{
+     initialMuted:test?undefined:muteRef.current,
+     onRescue:(houseMuted?:boolean)=>{
       if(cancelled||finishing.current)return;
-      finishing.current=true;phaseRef.current=advanceRescue(phaseRef.current,'rescue');
+      finishing.current=true;
+      if(typeof houseMuted==='boolean')updateMuted(houseMuted);
+      phaseRef.current=advanceRescue(phaseRef.current,'rescue');
       checkpointStore?.finish();
       // Only the existing successful 3D finish event can open the epilogue.
       // If storage is blocked or the lease is stale, keep this session playable
@@ -98,8 +112,8 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
 
  return <div className="rescue-demo" aria-label="Demo jugable de rescate">
   {mode==='garden'&&<GardenPrologue key={entry+(test?'-trial':'-story')}
-   test={test} checkpoint={checkpointFor(entry)} onExit={onExit} onEnterHouse={enterHouse} onPrepareHouse={()=>{void import('../lab/house.js').catch(()=>{});}}/>}
-  {mode==='epilogue'&&epilogue.stage!=='complete'&&<GardenEpilogue key={epilogue.stage} stage={epilogue.stage} onAdvance={completeEpilogue} onExit={onExit} muted={epilogueMuted} onMute={setEpilogueMuted}/>}
+   test={test} checkpoint={checkpointFor(entry)} onExit={onExit} onEnterHouse={enterHouse} muted={campaignMuted} onMute={updateMuted} onPrepareHouse={()=>{void import('../lab/house.js').catch(()=>{});}}/>}
+  {mode==='epilogue'&&epilogue.stage!=='complete'&&<GardenEpilogue key={epilogue.stage} stage={epilogue.stage} onAdvance={completeEpilogue} onExit={onExit} muted={campaignMuted} onMute={updateMuted} audio={epilogueAudio}/>}
   {mode==='end'&&<div className="rescue-transition rescue-final" data-epilogue-stage="complete">
    <span>♥ ✿ ♥</span><h1>Feliz cumpleaños, <em>Vale</em></h1>
    <p>Louis está a salvo. Emy, Kitty, Luis y Vale vuelven a estar juntos. Gracias por recorrer esta pequeña aventura.</p>

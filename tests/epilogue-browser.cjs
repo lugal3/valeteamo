@@ -29,11 +29,18 @@ async function main(){
   await page.evaluate(([k,v])=>localStorage.setItem(k,JSON.stringify(v)),[KEY,rescued]);
   const resume=async()=>{await openLP();await page.getByRole('button',{name:/Volver a Feliz cumpleaños/}).click();await page.getByRole('button',{name:/Continuar el rescate/}).click();};
   await resume();await waitScene(page,'outside');
+  // Persist only the mute preference; use the actual HUD, no handler shortcut.
+  if(await page.getByRole('button',{name:'Silenciar sonido'}).isVisible())await page.getByRole('button',{name:'Silenciar sonido'}).click();
+  await page.getByRole('button',{name:'Activar sonido'}).waitFor();
   for(const stage of stages){
    await completeChapter(page,stage,'artifacts');
    const expected=stages[stages.indexOf(stage)+1]??'complete';
    assert.equal((await read()).epilogue.stage,expected);
-   if(stage==='outside'){await resume();await waitScene(page,'return-path');}
+   if(stage==='outside'){
+    await page.getByRole('button',{name:'Activar sonido'}).waitFor();
+    await resume();await waitScene(page,'return-path');
+    await page.getByRole('button',{name:'Activar sonido'}).waitFor();
+   }
   }
   await page.getByRole('button',{name:'Regresar al universo'}).click();
   await page.locator('canvas.cosmos-video-canvas[data-arrival-stage="explore"]').waitFor({timeout:30000});

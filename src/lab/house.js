@@ -250,6 +250,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  let plushNoticeLeft=0;
  let rcViewSmoothed=null,hopAge=HOP_COOLDOWN,hopCancelled=false,previousEquipment=null,lastHapticThreat=false,lastHapticPhase='';
  let renderer,world,emyCompanion=null,emyShot=null,bathCircuit,puzzle=createHousePuzzle(config.entry),sound=new HouseSound(),s,raf=0,last=0,lastPaint=0,fps=0,elapsed=0,lookPointer=null,stickPointer=null;
+ if(typeof config.initialMuted==='boolean')sound.settings.muted=config.initialMuted;
  let active=true,ready=false,hasFocus=true,focus=null,lookLast={x:0,y:0},paused=false,modal='',intro=true,contextLost=false,stickPointerType=null,lookPointerType=null;
  let lookTarget={yaw:Math.PI,pitch:0},cinematic=null,poseTransition=null,handAction=0,clickAction=0,lastInteraction=-Infinity,audioPreview=false;
  const handDrift={x:0,y:0,vx:0,vy:0};
@@ -1210,7 +1211,7 @@ function runAction(act,node){
    world.entryWindow.latch.hiddenGeometry=true;poseFurniture(world.entryWindow,1);rebuild();sound.setThreat(true);resetInput();return;
   }
   if(act==='exit'){try{stop();}finally{onExit();}return;}
-  if(act==='finish'){config.onRescue?.();return;}
+  if(act==='finish'){config.onRescue?.(sound.settings.muted);return;}
   if(act.startsWith('rc:')&&(rc?.mode!=='driving'||isPaused()))return;
   if(act==='rc:stop'){
    if(stopRC(rc)){equipment='rc';equipmentAge=0;phone.equip('rc');resetInput();say('Tablet guardada · el autito queda en el suelo. Pulsa USAR para conducir de nuevo.',4);}

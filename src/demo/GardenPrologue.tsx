@@ -34,13 +34,13 @@ const initial=(test:boolean,checkpoint:PrologueCheckpoint):PrologueState=>
 
 const label=(speaker:string)=>speaker;
 
-export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHouse,onPrepareHouse}:{
- test?:boolean;checkpoint?:PrologueCheckpoint;onExit:()=>void;onEnterHouse:()=>void;onPrepareHouse?:()=>void;
+export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHouse,onPrepareHouse,muted=false,onMute}:{
+ test?:boolean;checkpoint?:PrologueCheckpoint;onExit:()=>void;onEnterHouse:()=>void;onPrepareHouse?:()=>void;muted?:boolean;onMute?:(muted:boolean)=>void;
 }){
  const [run,setRun]=useState<PrologueState>(()=>initial(test,checkpoint));
  const [dialog,setDialog]=useState<Dialog|null>(null),[letters,setLetters]=useState(0);
  const [feeding,setFeeding]=useState<Feeding|null>(null);
- const [near,setNear]=useState(''),[muted,setMuted]=useState(false);
+ const [near,setNear]=useState('');
  const [houseNav,setHouseNav]=useState<HouseNavigation|null>(null);
  const [guide,setGuide]=useState(''),[dusk,setDusk]=useState(0),[area,setArea]=useState<RouteArea>('sendero');
  const [map,setMap]=useState<RescueMapId>('morning_garden');
@@ -68,7 +68,8 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  const feedingRef=useRef<Feeding|null>(null);
  const lockedRef=useRef(false),enteringRef=useRef(false),nextDialogRef=useRef<()=>void>(()=>{});
  const travelingRef=useRef(false),travelTimers=useRef<number[]>([]);
- const [audio]=useState(()=>new Sound(RESCUE_SAMPLES,userSpriteUrl,userSpriteMP3Url));
+ const [audio]=useState(()=>{const sound=new Sound(RESCUE_SAMPLES,userSpriteUrl,userSpriteMP3Url);sound.muted=muted;return sound;});
+ useEffect(()=>{audio.muted=muted;},[audio,muted]);
  const showFeeding=useCallback((phase:Feeding|null)=>{
   feedingRef.current=phase;lockedRef.current=phase!==null;setFeeding(phase);
  },[]);
@@ -327,7 +328,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   }catch{finish('',true);}
  };
  const toggleAudio=()=>{
-  const next=!muted;audio.muted=next;setMuted(next);
+  const next=!muted;audio.muted=next;onMute?.(next);
   if(!next)void audio.start();
  };
  const restart=()=>{
