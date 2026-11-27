@@ -1,5 +1,6 @@
 // Preserve all puzzle gates, patrol objectives, RC behavior and endings.
 export const DIFFICULTIES=Object.freeze({
+ easy:Object.freeze({label:'Fácil · Emy te protege',patrol:1.45,chase:2.45,sight:.78,awareness:.68,grace:1.25,lost:1.35,trail:4,cooldown:8,rest:1.45,stun:2.8}),
  story:Object.freeze({label:'Historia',patrol:1.45,chase:2.45,sight:.78,awareness:.68,grace:1.25,lost:1.35,trail:4,cooldown:8,rest:1.45,stun:2.8}),
  normal:Object.freeze({label:'Equilibrado',patrol:1.85,chase:3.75,sight:1,awareness:1,grace:0,lost:2,trail:7,cooldown:5,rest:1,stun:2}),
  tense:Object.freeze({label:'Tensión',patrol:2.05,chase:4.05,sight:1.12,awareness:1.12,grace:0,lost:2.4,trail:8,cooldown:4,rest:.85,stun:1.65})
