@@ -16,7 +16,7 @@ import {valeTexture} from './rescue-intro-art';
 import {prologueProgress,HOUSE_HANDOFF_MS} from './prologue-beats.js';
 import {
  PROLOGUE_START,PROLOGUE_DIALOGUES,PROLOGUE_OBJECTIVES,
- advancePrologue,loadPrologue,savePrologue,resetPrologue,
+ advancePrologue,loadPrologue,savePrologue,resetPrologue,recordPrologueDiscovery,
  type PrologueState,type PrologueEvent,type PrologueLine
 } from './prologue-story.js';
 import {dialogueGlyphs,dialogueDelay,dialogueVoice,dialogueWords} from './dialogue-feel.js';
@@ -252,6 +252,12 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
   objective:(stage)=>PROLOGUE_OBJECTIVES[stage]??'Sigue la historia',
   locked:()=>lockedRef.current||enteringRef.current||travelingRef.current,
   near:(value)=>setNear(current=>current===value?current:value),
+  discoveries:()=>phaseRef.current.discoveries??[],
+  discover:(id)=>{
+   const current=phaseRef.current,next=recordPrologueDiscovery(current,id);
+   if(current===next)return;
+   phaseRef.current=next;setRun(next);if(!test)savePrologue(next);
+  },
   ready:()=>actions.current.ready(),
   interact:(stage)=>actions.current.interact(stage),
   victory:()=>actions.current.victory(),

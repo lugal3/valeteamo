@@ -24,3 +24,8 @@ El 2D es un prólogo breve y encantador que prepara un giro sorpresa al 3D, jueg
 ## Bloque A iteración 2 + inicio B
 - Se elimina tarjeta opaca de Emy: escena sobre jardín, PNG originales idle/blink/lick/love, respiración, curiosidad, lamidos, salto alegre, burbuja y corazones. No se modifican imágenes originales ni el contrato de alimentación. Prueba de overlay y sprite real.
 - Seis interacciones opcionales de los caminos laterales con reacción, sonido y observación; sin modal, sin alterar etapas ni requerir desvíos. Se recuerdan durante la sesión de Phaser; persistencia entre recargas pendiente. Prioridad de interacción principal y vehículo, sin opcionales en combate.
+
+## Bloques B/C — continuidad y pistas
+- Descubrimientos opcionales persistentes en el guardado del prólogo (IDs validados, deduplicados, compatibles con versión 2 y guardados antiguos), sin alterar objetivos o claves.
+- Louis sigue migas de la trayectoria real con colisiones y velocidad acotada, mira a Kitty al parar, parpadea y reacciona al paseo sin diálogo obligatorio.
+- Pulsera, pétalos pisados y huellas de ruedas dibujados como objetos físicos; destello discreto por proximidad o tras 12 s. El objetivo y las etapas se conservan. Pruebas geométricas y de migración agregadas; pendientes CI y revisión visual.

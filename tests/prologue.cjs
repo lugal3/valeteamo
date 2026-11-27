@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
  const story=await import('../src/demo/prologue-story.js');
  const {
   PROLOGUE_START,PROLOGUE_DIALOGUES,PROLOGUE_OBJECTIVES,PROLOGUE_SAVE_KEY,
-  parsePrologue,advancePrologue,hurtPrologue,healPrologue
+  parsePrologue,advancePrologue,hurtPrologue,healPrologue,recordPrologueDiscovery
  }=story;
  assert(PROLOGUE_SAVE_KEY!== 'valeteamo-rescue-v2','new storyline save must not touch old rescue save');
  assert(PROLOGUE_SAVE_KEY!== 'valeteamo-story-v1','new storyline save must not overwrite earlier chapters');
@@ -27,6 +27,13 @@ const assert=require('node:assert/strict');
  assert.deepEqual(parsePrologue(JSON.stringify(current)),current);
  assert.equal(current.fedGreyCat,true);
  assert.equal(current.metCouple,true);
+ const visited=recordPrologueDiscovery(current,'quiet-grove');
+ assert.equal(visited.stage,current.stage);
+ assert.equal(visited.clues,current.clues);
+ assert.equal(recordPrologueDiscovery(visited,'quiet-grove'),visited);
+ assert.equal(recordPrologueDiscovery(visited,'not-a-real-place'),visited);
+ assert.deepEqual(parsePrologue(JSON.stringify(visited)),visited);
+ assert.deepEqual(parsePrologue(JSON.stringify({...visited,discoveries:['quiet-grove','quiet-grove','invalid']})).discoveries,['quiet-grove']);
  const old=parsePrologue(JSON.stringify({version:1,stage:'talk-louis',hp:4}));
  assert.equal(old.stage,'talk-louis','old saves keep the current checkpoint');
  assert.equal(old.fedGreyCat,false,'the migration cannot award an unfinished new event');

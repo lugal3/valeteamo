@@ -2,7 +2,7 @@ export type PrologueStage='intro'|'feed-cat'|'cat-fed'|'meet-couple'|'defend'|'t
 export type PrologueEvent='churu'|'fed'|'arrived'|'met'|'victory'|'louis'|'luis'|'clearing'|'abducted'|'ribbon'|'petals'|'wheel'|'locked'|'enter';
 export type PrologueCharacter='Kitty'|'Luis'|'Vale'|'Louis';
 export type PrologueLine={speaker:PrologueCharacter;text:string;tone?:import('./dialogue-feel.js').DialogueTone};
-export type PrologueState={version:number;stage:PrologueStage;hp:number;clues:number;completed:boolean;fedGreyCat:boolean;metCouple:boolean};
+export type PrologueState={version:number;stage:PrologueStage;hp:number;clues:number;completed:boolean;fedGreyCat:boolean;metCouple:boolean;discoveries?:readonly string[]};
 export const PROLOGUE_SAVE_KEY:string;
 export const PROLOGUE_VERSION:number;
 export const PROLOGUE_START:Readonly<PrologueState>;
@@ -16,3 +16,6 @@ export function parsePrologue(raw:string|null):PrologueState;
 export function loadPrologue():PrologueState;
 export function savePrologue(state:PrologueState):boolean;
 export function resetPrologue():void;
+
+export const OPTIONAL_DISCOVERIES:readonly string[];
+export function recordPrologueDiscovery(state:PrologueState,id:string):PrologueState;

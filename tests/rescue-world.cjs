@@ -130,6 +130,20 @@ for(const id of ids.slice(0,3)){
   assert(!world.rescueLandmarkBlocks(p,id),'main route must remain clear '+id+' '+u);
  }
 }
+// Follow a full curved lateral trail using real collision and bounded steps.
+for(const trail of world.SIDE_TRAILS.filter(t=>t.map==='afternoon_meeting')){
+ let actor=world.sideTrailPoint(trail,trail.start),queue=[];
+ for(let i=0;i<=400;i++){
+  const player=world.sideTrailPoint(trail,trail.start+(trail.end-trail.start)*i/400);
+  const result=world.stepRescueFollower(actor,player,queue,16,trail.map);
+  assert(Math.hypot(result.position.u-actor.u,result.position.v-actor.v)<.06);
+  assert(!world.rescueLandmarkBlocks(result.position,trail.map));
+  actor=result.position;queue=result.trail;
+ }
+ const end=world.sideTrailPoint(trail,trail.end);
+ for(let i=0;i<500;i++){const r=world.stepRescueFollower(actor,end,queue,16,trail.map);actor=r.position;queue=r.trail;}
+ assert(Math.hypot(actor.u-end.u,actor.v-end.v)<1.2,'companion catches up without teleporting');
+}
 assert(src.includes('rail=scene.add.graphics().setDepth(p.y)'),'bridge railing uses local depth');
 assert(src.includes('neighbor.style'),'night houses have distinctive shared render records');
 const arcade=fs.readFileSync('src/iso-game.ts','utf8'),pro=fs.readFileSync('src/demo/GardenPrologue.tsx','utf8');

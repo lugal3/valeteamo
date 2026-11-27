@@ -153,6 +153,26 @@ export function rescueObstacleList(map:RescueMapId){
 export function rescueLandmarkBlocks(p:IsoPoint,map:RescueMapId):boolean{
  return rescueObstacleList(map).some(o=>Math.hypot(p.u-o.point.u,p.v-o.point.v)<o.radius+.17);
 }
+// A bounded breadcrumb queue follows the actual player path around obstacles.
+// No path planner runs every frame. Both actors use the same collision rules.
+export function stepRescueFollower(current:IsoPoint,player:IsoPoint,previous:readonly IsoPoint[],dtMs:number,map:RescueMapId){
+ const distance=(a:IsoPoint,b:IsoPoint)=>Math.hypot(a.u-b.u,a.v-b.v);
+ let trail=previous.slice();
+ const last=trail[trail.length-1];
+ if(!last||distance(last,player)>.28)trail.push({...player});
+ if(trail.length>100)trail=trail.slice(-100);
+ // Skip already reached samples, but retain the final personal-space target.
+ while(trail.length>1&&distance(current,trail[0])<.22)trail.shift();
+ const target=trail[0]??player,gap=distance(current,target);
+ const stop=trail.length===1?.82:.10;
+ const amount=Math.min(Math.max(0,gap-stop),Math.max(0,Math.min(65,dtMs))/1000*2.7);
+ const candidate=gap>1e-6?{u:current.u+(target.u-current.u)*amount/gap,v:current.v+(target.v-current.v)*amount/gap}:current;
+ const position=constrainRescue(candidate,map,current);
+ // If an early breadcrumb is blocked, try the next nearby sample rather than
+ // pushing through the obstacle. Do not teleport or discard distant paths.
+ if(amount>0&&distance(current,position)<.001&&trail.length>1&&distance(current,trail[1])<1.4)trail.shift();
+ return {position,trail,walking:distance(current,position)>.001};
+}
 function baseRouteLimits(u:number):{min:number;max:number}{
  const center=routeCenter(u),map=sceneForPosition(u);
  if(map==='morning_garden'){

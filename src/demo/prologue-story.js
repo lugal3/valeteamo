@@ -2,8 +2,13 @@
 // delete or overwrite the classic Phaser garden or the older rescue demo save.
 export const PROLOGUE_SAVE_KEY='valeteamo-story-acts-1-2-v1';
 export const PROLOGUE_VERSION=2;
+export const OPTIONAL_DISCOVERIES=Object.freeze(['flower-nook','river-lookout','cherry-court','quiet-grove','woodland-loop','lantern-clearing']);
+export function recordPrologueDiscovery(state,id){
+ if(!OPTIONAL_DISCOVERIES.includes(id)||(state.discoveries??[]).includes(id))return state;
+ return {...state,discoveries:[...(state.discoveries??[]),id]};
+}
 export const PROLOGUE_START=Object.freeze({
- version:PROLOGUE_VERSION,stage:'intro',hp:6,clues:0,completed:false,fedGreyCat:false,metCouple:false
+ version:PROLOGUE_VERSION,stage:'intro',hp:6,clues:0,completed:false,fedGreyCat:false,metCouple:false,discoveries:Object.freeze([])
 });
 export const STAGES=[
  'intro','feed-cat','cat-fed','meet-couple','defend','talk-louis','talk-luis','walk-together',
@@ -59,6 +64,7 @@ export function parsePrologue(raw){
    version:PROLOGUE_VERSION,stage,
    hp:Number.isFinite(hp)?Math.min(6,Math.max(1,Math.round(hp))):6,
    clues:maxClues,completed:source.stage==='house',
+   discoveries:Array.isArray(source.discoveries)?[...new Set(source.discoveries.filter(id=>OPTIONAL_DISCOVERIES.includes(id)))]:[],
    fedGreyCat:source.version===PROLOGUE_VERSION&&source.fedGreyCat===true&&!['intro','feed-cat'].includes(stage),
    metCouple:source.version===PROLOGUE_VERSION&&source.metCouple===true&&!['intro','feed-cat','cat-fed','meet-couple'].includes(stage)
   };
