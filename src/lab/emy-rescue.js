@@ -158,8 +158,8 @@ export function poseEscapeAmbush(shot,cat,enemy,reduced){
 // articulated performance. The caller supplies the collision-checked stage.
 export function poseEmyLastChance(shot,cat,enemy,reduced=false){
  const B=EMY_RESCUE_BEATS,t=shot.elapsed,pose=sampleEmergencyRescue(t,shot.stage),p=pose.cat;
- const appeared=t>=B.enter&&cat.hidden;
- if(t>=B.enter){
+ const visible=!shot.stage.compact&&(t>=B.enter||shot.stage.realStart),appeared=visible&&cat.hidden;
+ if(visible){
   cat.hidden=false;for(const {box} of cat.parts)box.hiddenGeometry=false;
   if(appeared){cat.footContacts=null;cat.lastFootRoot=null;}
   shot.emyAgeBase??=cat.age||0;
