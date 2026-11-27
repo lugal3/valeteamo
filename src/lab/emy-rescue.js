@@ -1,4 +1,5 @@
 import {poseEmy} from './emy-cat.js';
+import {EMY_RESCUE_BEATS,sampleEmergencyRescue} from './emy-emergency-shot.js';
 import {housePowered} from './house-lights.js';
 import {BATH_MIRROR} from './mirror.js';
 import {roomAt,lineBlocked} from './world.js';
@@ -153,31 +154,18 @@ export function poseEscapeAmbush(shot,cat,enemy,reduced){
  return appeared;
 }
 
-// An emergency rescue happens exactly ONCE when the fourth life marker
-// reaches zero. Emy leaps in from the side instead of teleporting Kitty or
-// swapping the existing pursuer mesh. This is a 3D pose on the SAME Emy rig.
+// Both the standard last chance and every easy-mode rescue use the same
+// articulated performance. The caller supplies the collision-checked stage.
 export function poseEmyLastChance(shot,cat,enemy,reduced=false){
- const t=Math.max(0,shot.elapsed),home=shot.kitty,threat=shot.attacker;
- const appear=t>=.55,leap=ease((t-.55)/.78),retreat=ease((t-1.40)/.72);
- if(!appear)return false;
- const wasHidden=cat.hidden;
- cat.hidden=false;
- for(const {box} of cat.parts)box.hiddenGeometry=false;
- const sideX=home.x-.92,sideZ=home.z+.58;
- const strikeX=threat.x-.16,strikeZ=threat.z+.13;
- Object.assign(cat,{
-  x:sideX+(strikeX-sideX)*leap-.20*retreat,
-  z:sideZ+(strikeZ-sideZ)*leap+.56*retreat,
-  y:home.y+(leap<1?Math.sin(Math.PI*leap)*.40:0),
-  yaw:Math.atan2(threat.x-sideX,threat.z-sideZ),
-  reaction:t<1.45?1:0
- });
- enemy.x=threat.x+(threat.x-home.x)*.55*retreat;
- enemy.y=threat.y;
- enemy.z=threat.z+(threat.z-home.z)*.55*retreat;
- enemy.facing=enemy.yaw=threat.yaw??0;
- enemy.speed=0;
- if(t>=1.4)enemy.mode='stunned';
- poseEmy(cat,{mode:t<1.45?'jump':'idle',walking:false,phase:t,reduced});
- return wasHidden;
+ const B=EMY_RESCUE_BEATS,t=shot.elapsed,pose=sampleEmergencyRescue(t,shot.stage),p=pose.cat;
+ const appeared=t>=B.enter&&cat.hidden;
+ if(t>=B.enter){
+  cat.hidden=false;for(const {box} of cat.parts)box.hiddenGeometry=false;
+  if(appeared){cat.footContacts=null;cat.lastFootRoot=null;}
+  shot.emyAgeBase??=cat.age||0;
+  Object.assign(cat,{x:p.x,y:p.y,z:p.z,yaw:p.yaw,alarm:p.alarm,earFlatten:p.alarm,earTurn:reduced?0:.20*p.alarm,age:shot.emyAgeBase+t,reaction:0});
+  poseEmy(cat,{mode:p.walking?'walk':'idle',walking:p.walking,phase:t,reduced,headYaw:reduced?0:.12*p.alarm,reunion:Math.max(0,Math.min(1,(t-B.protect)/.6)),leap:{compression:p.compression,flight:p.flight,airborne:p.airborne,strike:p.strike}});
+ }
+ Object.assign(enemy,{x:pose.foe.x,y:pose.foe.y,z:pose.foe.z,yaw:pose.foe.yaw,facing:pose.foe.yaw,speed:0,mode:t>=B.impact?'stunned':'chase',stunned:2*pose.foe.hit});
+ return appeared;
 }
