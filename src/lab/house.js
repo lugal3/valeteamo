@@ -1405,7 +1405,7 @@ function runAction(act,node){
   if(interactButton.dataset.icon!==actionIcon){interactButton.dataset.icon=actionIcon;interactButton.querySelector('.house-action-icon').innerHTML=feedbackIcon(actionIcon);}
   root.classList.toggle('house-immersive',options.immersive!==false&&!scenario);
   root.classList.toggle('house-action-ready',canInteract);
-  const focusLabel=padSession.mode==='gamepad'&&!isPaused()&&!remoteInUse()?'L · Mover  R · Mirar  ✕ · Interactuar  ○ · Agachar  △ · Usar  L1/R1 · Equipo':'';
+  const focusLabel=padSession.mode==='gamepad'&&!isPaused()&&!remoteInUse()?'L · Mover  R · Mirar  □ · Interactuar  ✕ · Saltar  ○ · Agachar  △ · Usar  L1/R1 · Equipo':'';
   if($('lab-focus').textContent!==focusLabel)$('lab-focus').textContent=focusLabel;
   const remote=rc?.mode==='driving';
   const deploying=rc?.mode==='deploying';
@@ -1477,7 +1477,7 @@ function runAction(act,node){
   const pad=padSession.poll();padState=EMPTY_PAD;
   if(padSession.mode!=='gamepad'||!hasFocus||document.hidden||isPortrait()||handoffFinishing||contextLost)return;
   if(manual.active){if(pad.pressed[0]||pad.pressed[1])manual.close();return;}
-  if(loisDialogue.active){if(pad.pressed[0])runAction('lois:next');if(pad.pressed[1])runAction('lois:close');return;}
+  if(loisDialogue.active){if(pad.pressed[0]||pad.pressed[2])runAction('lois:next');if(pad.pressed[1])runAction('lois:close');return;}
   if(modal||intro||emyMenuOpen||phone.open||phone.editing||$('lab-camera-settings').open){
    const scope=modal||intro?dialog:emyMenuOpen?($('house-emy-map').hidden?$('house-emy-menu'):$('house-emy-map')):phone.open||phone.editing?phone.host:$('lab-camera-settings');
    if(pad.pressed[1]){if(emyMenuOpen)closeEmyMenu();else if(phone.open&&!phone.editing){phone.close();resetInput();}else if(modal&&!intro&&events.phase!=='safe'&&events.phase!=='failed'){paused=false;modalClose();}return;}
@@ -1488,9 +1488,9 @@ function runAction(act,node){
   if(pad.pressed[9]){togglePause();return;}
   if(rc?.mode==='driving'){padState=pad;if(pad.pressed[0])runAction('rc:noise');if(pad.pressed[3])runAction('rc:trap');if(pad.pressed[1])runAction('rc:stop');return;}
   padState=pad;
-  if(pad.pressed[0])runAction('interact');
+  if(pad.pressed[2])runAction('interact');
   if(pad.pressed[1])runAction('crouch');
-  if(pad.pressed[2])runAction('hop');
+  if(pad.pressed[0])runAction('hop');
   if(pad.pressed[3])runAction('flash');
   if(pad.pressed[7])runAction('noise:throw');
   if(pad.pressed[8])runAction('bag');
@@ -2428,7 +2428,7 @@ function runAction(act,node){
   root.classList.toggle('house-desktop',padSession.mode==='keyboard');
   root.classList.toggle('house-keyboard',padSession.mode==='keyboard');
   root.classList.toggle('house-gamepad',padSession.mode==='gamepad');
-  $('lab-interact').querySelector('kbd').textContent=padSession.mode==='gamepad'?'✕':'E';
+  $('lab-interact').querySelector('kbd').textContent=padSession.mode==='gamepad'?'□':'E';
   $('house-lock-mouse').hidden=padSession.mode!=='keyboard'||!canvas.requestPointerLock;
   const locked=mouseLocked();
   root.classList.toggle('house-mouse-locked',locked);

@@ -712,7 +712,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    this.luisHeart(meeting);
   }else if(completed==='greeting'){
    this.storyLuisMotion=undefined;this.storyLuisReady=true;
-   this.story.guide(this.storyVale?'Luis y Vale están aquí. Pulsa E o toca el botón para saludarlos.':
+   this.story.guide(this.storyVale?'Luis y Vale están aquí. Acércate a saludarlos.':
     'Acércate a Luis y pulsa E para hablar.');
   }else if(completed==='farewell-wave'){
    this.storyLuisMotion=makeLuisMotion('farewell-walk',meeting,done);
@@ -965,7 +965,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
     for(const p of [{u:34.1,v:3.1},{u:35.6,v:5.75},{u:36.05,v:4.0}])
      this.spawnEnemy(p,false);
     this.audio.tone(460,.29,.055,'sawtooth');
-    this.story.guide('¡Defiéndelo! Dispara corazones con las flechas o el joystick derecho.');
+    this.story.guide('¡Defiéndelo con corazones!');
    }
   }
   if(stage==='intro'){
@@ -973,8 +973,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    if(step!==this.storyGuideStep){
     this.storyGuideStep=step;
     const hints=[
-     'Camina por el sendero · WASD o joystick izquierdo',
-     'Hay un Churu sobre el paño rosa. Pulsa E o toca el botón para recogerlo.',
+     'Camina por el sendero.',
+     'Hay un Churu sobre el paño rosa.',
      'El Churu quedó junto al sendero, antes del puente de madera.'
     ];
     this.story.guide(hints[step]);
@@ -1165,7 +1165,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  }
  updateStoryCameraFeel(dt:number){
   this.storyLookAhead=feelCameraOffset(this.storyLookAhead,this.storyVelocity,dt,this.reducedMotion);
-  // Preserve exactly the original zoom/follow formula; no camera shake or
+  // Preserve the narrative zoom; no camera shake or
   // dramatic forced pans during ordinary exploration.
   const abduction=this.storyAbduction,kitty=toScreen(this.p);
   const shot=abduction?abductionFrame(abduction.elapsed,abduction.origin):undefined;
@@ -1230,11 +1230,12 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  }
  fitCamera(width:number,height:number){if(width<=0||height<=0)return;
   const camera=this.cameras.main;
-  // Preserve classic zoom; only the narrative scene gets a 12% closer framing.
+  // Classic stays unchanged. Narrative framing limits wide displays to a
+  // maximum visible world width; no cropping or stretching of the canvas.
   camera.setZoom(Math.min(width/800,height/450)*1.08);
   if(this.story&&this.player){
-   // A modest narrative-only close-up improves character readability on phones.
-   camera.setZoom(camera.zoom*1.42);
+   // Keep Kitty large even on ultrawide phones without changing physics.
+   camera.setZoom(Math.max(camera.zoom*1.42,width/640));
    camera.startFollow(this.player,false,.12,.12);
   }
   else camera.centerOn(400,225);

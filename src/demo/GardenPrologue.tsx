@@ -183,7 +183,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
     setPortraits(avatars);
     if(test&&checkpoint==='feed-cat')scene.storyTeleportForTest(0);
    }
-   if(phaseRef.current.stage==='intro')setGuide('Camina por el sendero · WASD o joystick izquierdo');
+   if(phaseRef.current.stage==='intro')setGuide('Camina por el sendero.');
    // El inicio no tiene NPC ni diálogos bloqueantes. La aventura comienza al andar.
   },
   arrive:()=>{
@@ -393,6 +393,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  const phase=person==='vale'?710:person==='louis'?1570:person==='kitty'?2330:0;
  const blink=!reduce&&(portraitClock+phase)%4320>=4080;
  const portrait=(blink?portraits[person+'-blink']:mouth?portraits[person+'-talk-'+mouth]??portraits[person+'-talk-1']:undefined)??portraits[person];
+ useEffect(()=>{if(!guide)return;const timeout=window.setTimeout(()=>setGuide(''),6500);return()=>window.clearTimeout(timeout);},[guide]);
  const chapter=prologueProgress(run.stage);
 
  return <main className="story-prologue" aria-label="Rescate con el motor original de Corazones"
@@ -494,9 +495,9 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
      setHouseNav(previous=>previous?{...previous,guided:started}:previous);
     }}>{houseNav.guided?'✕ Detener guía':'♡ Guiarme caminando'}</button>}
   </aside>}
-  {!dialog&&!feeding&&!houseNav&&guide&&<div className="prologue-guide" role="status">{guide}</div>}
+  {!dialog&&!feeding&&!houseNav&&!near&&guide&&<div className="prologue-guide" role="status">{guide}</div>}
   {!dialog&&!feeding&&near&&<button type="button" className="prologue-interact"
-   onClick={()=>sceneRef.current?.storyInteract()}>{near}<span className="input-key-hint"> · E</span><span className="input-pad-hint"> · ✕</span></button>}
+   onClick={()=>sceneRef.current?.storyInteract()}>{near}<span className="input-key-hint"> · E</span><span className="input-pad-hint"> · □</span></button>}
   {moment&&!dialog&&!feeding&&!transition&&!houseHandoff&&!postcard&&<div className="prologue-moment" aria-label="Momentos opcionales">
    <button type="button" onClick={()=>sceneRef.current?.enjoyStoryMoment()}>{moment.label}</button>
    <button type="button" className="prologue-photo-button" aria-label="Crear postal del jardín" onClick={openPostcard}>▣ Postal</button>

@@ -42,11 +42,12 @@ async function play(){
   const realScene=await page.evaluate(()=>{
    const scene=window.__valePrologue.scene();
    return {key:scene.scene.key,zoom:scene.cameras.main.zoom,width:scene.scale.width,height:scene.scale.height,
-    usingOriginalFloor:!!scene.floor,usingOriginalCharacter:scene.player.texture.key.startsWith('chibi-kitty-')};
+    spriteHeight:scene.player.displayHeight*scene.cameras.main.zoom,usingOriginalFloor:!!scene.floor,usingOriginalCharacter:scene.player.texture.key.startsWith('chibi-kitty-')};
   });
+  assert(realScene.spriteHeight>realScene.height*.085,'Kitty must occupy a readable portion of the viewport');
   assert.equal(realScene.key,'iso-adventure','rescue must be the ACTUAL Corazones Phaser class');
-  assert(Math.abs(realScene.zoom-Math.min(realScene.width/800,realScene.height/450)*1.08*1.12)<.00001,
-   'story-only close-up preserves classic base zoom');
+  assert(Math.abs(realScene.zoom-Math.max(Math.min(realScene.width/800,realScene.height/450)*1.08*1.42,realScene.width/640))<.00001,
+   'story close-up and ultrawide cap');
   assert(realScene.usingOriginalFloor&&realScene.usingOriginalCharacter,
    'rescue must use the original diamond floor and Kitty sprite system');
   assert.equal(await game.getAttribute('data-prologue-stage'),'intro');

@@ -752,8 +752,9 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
   poly(g,0x9ecdc5,[waterBand(9.6,-14),waterBand(16.2,-14),waterBand(16.2,25),waterBand(9.6,25)],.90);
   poly(g,0x79bdc5,[waterBand(10.2,-14),waterBand(15.8,-14),waterBand(15.8,25),waterBand(10.2,25)],.75);
  }
- for(let u=low;u<=high;u++)for(let v=-4;v<=16;v++){
-  const lim=routeLimits(u);
+ for(let u=low-5;u<=high+5;u++)for(let v=-10;v<=22;v++){
+  const sample=clamp(u,low,high),lim=routeLimits(sample);
+  const extension=u<low||u>high||v<Math.floor(lim.min-1)||v>Math.ceil(lim.max+1);
   const rag=((u*7+v*13)%9===0?-.45:0)+((u*11+v*3)%11===0?.36:0);
   const onLand=v>=Math.floor(lim.min-1.0+rag)&&v<=Math.ceil(lim.max+1.0+rag);
   const bridge=map==='morning_garden'&&u>=10&&u<16;
@@ -772,7 +773,16 @@ export function buildRescueOverworld(scene:Phaser.Scene,ground:Phaser.GameObject
    }
    continue;
   }
-  if(!onLand)continue;
+  if(!onLand||extension){
+   // Noninteractive painted extension: keep the visual ground continuous
+   // without changing physical bounds, NPCs, particles or collision.
+   if(v>=lim.min-4.6&&v<=lim.max+4.6){
+    const n=hashCell(u,v,89),p=toScreen({u,v});
+    diamond(g,u,v,n>.55?inner:outer);
+    if(n>.8)g.fillStyle(canopy,.19).fillEllipse(p.x,p.y,28,12);
+   }
+   continue;
+  }
   tiles++;
   const p=toScreen({u,v}),center=routeCenter(u),distance=Math.abs(v-center);
   // Nonrepeating, seeded micro-palette avoids giant checkerboard squares.

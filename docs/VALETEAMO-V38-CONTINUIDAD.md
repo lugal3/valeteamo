@@ -75,3 +75,8 @@ Base publicada: d28fc0eaa26ddc348f60b4e9704aaf275f8fb4c0. Rama independiente fea
 
 ## Adaptador inicial 3D
 - Ejes del mando estándar integrados en la locomoción, cámara y auto RC reales; botones para interacción, agachar, salto, uso de equipo, lanzar, inventario, ranuras, sprint y pausa. Cruceta/confirmación en modales básicos, manual y conversaciones de Louis. UI de modo y hints RC adaptables. No se altera el mapa ni los puzzles. Faltan minijuegos y menús especializados, calibración no estándar, glifos por familia, pruebas de navegador y mando físico. No publicar.
+
+## Lectura y encuadre 2D — cierre del bloque
+- Cuadrado (estándar 2) interactúa en los dos motores; X (0) salta en 3D y confirma menús. El 2D no tiene salto jugable; no se introduce uno artificial. Auto RC conserva acciones contextuales. Hints y manual actualizados.
+- Se elimina el recordatorio permanente de teclado/táctil en el relato, quedan objetivo, interacción contextual y avisos breves de hasta 6.5 s. Manual inicial y ? se conservan. Zoom narrativo 1.42 y límite de anchura visible 640 unidades para ultrawide. Suelo decorativo se prolonga sin cambiar límites físicos. Epílogo reduce rótulos.
+- CI anterior falló por cargador de pruebas TS al importar adaptive-input.js; se admite extensión real. Pruebas de navegador actualizan fórmula y miden tamaño de sprite, y siguen generando capturas. Aún falta ejecutar CI e inspeccionar capturas, no se afirma revisión visual física. Calibración no estándar pendiente.

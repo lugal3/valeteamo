@@ -102,7 +102,7 @@ export function GardenEpilogue({stage,onAdvance,onExit,muted,onMute,audio,memory
    }} epilogueUI={<>
   <div className="epilogue-sunlight" aria-hidden="true"/>
   <div className="epilogue-location"><span>{candlesOut?'UN DÍA PARA RECORDAR':'ACTO IV · DE VUELTA A CASA'}</span><h1>{candlesOut?'Feliz cumpleaños, Vale':chapter.title}</h1><p>{candlesOut?'Ya están todos a salvo. Quédate cuanto quieras.':chapter.objective}</p></div>
-  {near&&!leaving&&!current&&!celebrating&&<button className="epilogue-action" style={{pointerEvents:'auto'}} onClick={()=>scene.current?.storyInteract()}>{near}<span className="input-key-hint"> · E</span><span className="input-pad-hint"> · ✕</span></button>}
+  {near&&!leaving&&!current&&!celebrating&&<button className="epilogue-action" style={{pointerEvents:'auto'}} onClick={()=>scene.current?.storyInteract()}>{near}<span className="input-key-hint"> · E</span><span className="input-pad-hint"> · □</span></button>}
   {current&&<section className="epilogue-dialog" style={{pointerEvents:'auto'}} aria-label={'Diálogo de '+current.speaker}>
    {portraits[current.speaker]&&<img src={portraits[current.speaker]} alt=""/>}
    <div><strong>{current.speaker}</strong><p aria-label={current.text}>{glyphs.slice(0,letters).join('')}</p><small>{line+1} / {lines.length}</small></div>

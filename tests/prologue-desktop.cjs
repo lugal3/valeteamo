@@ -28,8 +28,8 @@ async function verifyDesktop(){
     u:s.p.u,v:s.p.v};
   });
   assert.equal(scene.key,'iso-adventure','desktop uses original Phaser Corazones engine');
-  assert(Math.abs(scene.zoom-Math.min(scene.width/800,scene.height/450)*1.08*1.12)<.00001,
-   'desktop uses same original camera formula');
+  assert(Math.abs(scene.zoom-Math.max(Math.min(scene.width/800,scene.height/450)*1.08*1.42,scene.width/640))<.00001,
+   'desktop uses narrative close-up without stretching');
   assert.equal(scene.world,'morning_garden');
   const rect=await page.locator('.story-prologue .adventure-canvas canvas')
    .evaluate(x=>{const r=x.getBoundingClientRect();return {width:r.width,height:r.height}});
