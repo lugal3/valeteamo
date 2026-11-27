@@ -90,7 +90,7 @@ export function buildLoisPs2Model(piece,{quality='mobile'}={}){
   // Ears were buried INSIDE the wider Photo-A head (half-width ~.20 m).
   // Keep their matte geometry, but project a narrow rounded helix on each
   // profile so the silhouette reads correctly without stretching face UVs.
-  add('ear-'+side,side*.226,1.605,-.016,.075,.114,.071,'paper',
+  add('ear-'+side,side*.202,1.605,-.016,.047,.085,.058,'paper',
    photoMode?[.82,.63,.55]:skin,
    {shape:'round',segments:desktop?14:10,rings:desktop?8:6,rigGroup:'head'});
   if(!photoMode){add('ear-shadow-'+side,side*.197,1.603,.023,.011,.042,.013,'paper',[.69,.46,.40],

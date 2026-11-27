@@ -2,7 +2,10 @@
 const assert=require('node:assert/strict');
 (async()=>{
  const {buildLoisPs2Model}=await import('../src/lab/lois-ps2-model.js');
- const {loisFacePoint,loisFaceSurface}=await import('../src/lab/lois-ps2-face.js');
+ const {loisFacePoint,loisFaceSurface,loisPhotoFaceUV}=await import('../src/lab/lois-ps2-face.js');
+ const fs=require('node:fs'),shader=fs.readFileSync('src/lab/material-shaders.js','utf8');
+ assert(shader.includes('bool photoLois')&&shader.includes('if(!photoLois && uOcclude')&&!shader.includes('vec3(.88,.84,.82)'),'Matte photograph follows environmental light');
+ assert.deepEqual(loisPhotoFaceUV(0,1.656,-1,0),loisPhotoFaceUV(0,1.656,-1),'Rear UV unchanged');
  const {LOIS_VISUAL_ID,LOIS_PS2_PROFILE}=await import('../src/lab/lois-ps2-profile.js');
  const {louisModel}=await import('../src/lab/louis-escape.js');
  const {pickupGeometry,geometry}=await import('../src/lab/renderer.js');

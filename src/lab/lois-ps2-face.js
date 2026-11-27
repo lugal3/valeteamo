@@ -19,7 +19,7 @@ const smoothstep=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);};
 // cranium; another attempt sampled the nostril from x=540,y=620.
 // x,y are the unrotated world-space head coordinates used by renderer.js.
 // normalZ is the already computed local head-normal depth component.
-export function loisPhotoFaceUV(x,y,normalZ){
+export function loisPhotoFaceUV(x,y,normalZ,frontDepth=0){
  const projectedX=450+x*1300;
  const projectedY=470-(y-1.656)*1327;
  // Use BOTH feature-free cheek regions from the same reference:
@@ -34,7 +34,8 @@ export function loisPhotoFaceUV(x,y,normalZ){
  // the jaw, creating a false brown mouth line. Only SIDE/FACING-DOWN
  // polygons switch gradually to the cheek atlas, using the actual normal.
  const frontWeight=smoothstep(.02,.71,normalZ);
- const blend=frontWeight;
+ const planeWeight=smoothstep(.35,.85,frontDepth)*(1-smoothstep(.10,.18,Math.abs(x)))*smoothstep(-.05,.35,normalZ);
+ const blend=Math.max(frontWeight,planeWeight);
  const srcX=skinX+(projectedX-skinX)*blend;
  const srcY=skinY+(projectedY-skinY)*blend;
  return [

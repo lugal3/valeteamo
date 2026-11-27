@@ -23,12 +23,12 @@ export const LOIS_HEAD_ANATOMY_RINGS=Object.freeze([
  [-.900,.51,.54,.63,.025],
  [-.820,.65,.74,.81,.015],
  [-.720,.72,.910,.89,.009],
- [-.600,.845,.970,.98,.003],
- [-.470,.855,.98,1.04,.000],
+ [-.600,.815,.970,.98,.003],
+ [-.470,.840,.99,1.04,.000],
  [-.300,.915,1.02,1.08,-.003],
  [-.140,1.000,1.06,1.11,-.004],
- [ .080,1.070,1.075,1.12,-.004],
- [ .320,1.080,1.03,1.15,-.008],
+ [ .080,1.040,1.075,1.12,-.004],
+ [ .320,1.055,1.03,1.15,-.008],
  [ .560,.995,.965,1.17,-.013],
  [ .770,.840,.830,1.07,-.023],
  [ .900,.575,.610,.79,-.029],
@@ -67,17 +67,19 @@ export function loisAnatomicalHeadPoint(box,u,v){
 
  // Purpose-built facial planes, all part of the same watertight skin:
  // z relief is strongest at nose tip, bridge and alar wings.
- const socket=-.0085*(bell(x,y,-.079,.064,.043,.035)+bell(x,y,.079,.064,.043,.035));
- const brow=.0048*(bell(x,y,-.080,.103,.051,.027)+bell(x,y,.080,.103,.051,.027));
- const noseBridge=.016*bell(x,y,0,-.017,.024,.083);
- const noseTip=.035*bell(x,y,0,-.073,.035,.030);
- const noseWings=.009*(bell(x,y,-.035,-.085,.022,.026)+bell(x,y,.035,-.085,.022,.026));
- const cheekbones=.0135*(bell(x,y,-.107,-.024,.060,.066)+bell(x,y,.107,-.024,.060,.066));
- const temples=-.007*(bell(x,y,-.145,.066,.037,.068)+bell(x,y,.145,.066,.037,.068));
- const philtrum=.003*bell(x,y,0,-.124,.021,.023);
- const lips=.0088*bell(x,y,0,-.145,.058,.023);
- const underlip=-.004*bell(x,y,0,-.168,.060,.014);
- const chin=.020*bell(x,y,0,-.190,.067,.044);
+ // Align relief to the retained 384x502 portrait (eyes near y=283,
+ // nose tip near y=361, lips near y=409), not a second painted face.
+ const socket=-.013*(bell(x,y,-.076,.039,.044,.028)+bell(x,y,.094,.041,.044,.028));
+ const brow=.009*(bell(x,y,-.078,.080,.051,.024)+bell(x,y,.094,.081,.051,.024));
+ const noseBridge=.023*bell(x,y,.009,-.010,.023,.065);
+ const noseTip=.041*bell(x,y,.009,-.060,.028,.027);
+ const noseWings=.011*(bell(x,y,-.023,-.075,.019,.020)+bell(x,y,.041,-.075,.019,.020));
+ const cheekbones=.019*(bell(x,y,-.108,-.013,.051,.052)+bell(x,y,.111,-.013,.051,.052));
+ const temples=-.010*(bell(x,y,-.145,.066,.037,.068)+bell(x,y,.145,.066,.037,.068));
+ const philtrum=.003*bell(x,y,.009,-.099,.020,.019);
+ const lips=.0095*bell(x,y,.008,-.124,.056,.018);
+ const underlip=-.005*bell(x,y,.008,-.147,.055,.014);
+ const chin=.023*bell(x,y,.006,-.188,.063,.042);
  const jawCorners=.011*(bell(x,y,-.119,-.124,.048,.069)+bell(x,y,.119,-.124,.048,.069));
  // The jaw bone forms a real edge toward the ears, not an isolated blob.
  const mandibularShelf=.007*bell(Math.abs(x),y,.116,-.158,.065,.043);

@@ -42,10 +42,5 @@ export function installHolidayAmbience(add,obj,height){
  obj('inspect-toaster','inspect','Tostadora',11.91,1.12,.69,{text:'Dos ranuras vacías. Nadie ha preparado el desayuno.'});
  // Bath ceramic accents, a tiled backsplash and a glass-side vapor mask.
  for(let i=0;i<5;i++)decor('bath-tile-border-'+i,7.62,.45+i*.23,7.22,.024,.213,.28,'tile',{surface:'glaze',color:i%2?[.48,.63,.66]:[.63,.75,.77]});
- for(let i=0;i<4;i++)decor('bath-steam-'+i,9.38+(i%2)*.16,1.32+i*.21,6.04+(i%2)*.09,.24,.29,.035,'glass',{atmosphere:'steam',color:[.65,.74,.81]});
- // Small opaque motes only become visible inside the real flashlight beam
- // and are occluded by ordinary scene depth. No HUD overlay.
- for(const [id,x,y,z] of [['study',2.2,1.5,2.6],['hall',6.0,1.4,7.3],['reading',2.2,height+1.4,7.6],['music',10.6,height+1.4,2.1],['bath',8.7,1.5,5.6]]){
-  for(let i=0;i<5;i++)decor('beam-dust-'+id+i,x+Math.sin(i*2.3)*.42,y+(i%3-1)*.19,z+Math.cos(i*1.7)*.46,.009+(i%2)*.004,.014,.009,'paper',{atmosphere:'dust',color:[.87,.83,.69]});
- }
+ // No suspended dust or vapor geometry in the playable house.
 }

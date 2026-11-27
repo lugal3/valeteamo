@@ -4,7 +4,6 @@
 export const ENVIRONMENT_DECOR_IDS=Object.freeze([
  'v2-curtain-living-left','v2-curtain-living-right',
  'v2-curtain-reading-left','v2-curtain-reading-right',
- 'v2-dust-study','v2-dust-reading','v2-dust-hall',
  'v2-bedroom-letter','v2-bedroom-ribbon',
  'v2-study-binder','v2-kitchen-towel','v2-bath-towel','v2-music-program'
 ]);
@@ -18,13 +17,6 @@ export function installLivingHouseDetails(add,height){
   ['v2-curtain-reading-right',.22,height+1.73,8.62]
  ])visual(id,x,y,z,.055,1.22,.37,'velvet',
   {dynamic:false,ambient:'curtain-sway',ambientPhase:z*1.7,ambientAmplitude:.022});
- // Sparse floating motes that use the same opaque shader/geometry; no particles.
- for(const [id,x,y,z] of [
-  ['v2-dust-study',1.14,1.53,3.38],
-  ['v2-dust-reading',1.08,height+1.63,6.30],
-  ['v2-dust-hall',6.83,1.61,8.90]
- ])visual(id,x,y,z,.018,.018,.018,'paper',
-  {dynamic:false,ambient:'floating-dust',ambientPhase:x+z,ambientAmplitude:.045});
  // Still-life details remain on existing furniture or against walls.
  visual('v2-bedroom-letter',4.04,height+.978,1.36,.18,.008,.25,'paper',{yaw:.11});
  visual('v2-bedroom-ribbon',4.12,height+.992,1.39,.07,.012,.03,'bow',{yaw:-.2});
