@@ -116,3 +116,5 @@ Fase 8 — revisión visual real: el commit 5ec7ae2 supera epilogue-browser (WAS
 
 ## Contador diario (27 NOV–04 DIC)
 Ocho ediciones visuales y mensajes distintos, seleccionados por fecha civil America/Santiago. El reloj y desbloqueo del 05 DIC 00:00 siguen intactos. Cambio automático al refrescar el reloj, incluso pestaña abierta. Preview LP por fecha, sin escritura de guardado ni desbloqueo. Se reutiliza el contador real y CSS sin motor extra. 32 comprobaciones aisladas de fechas y preview superadas. CI navegador pendiente.
+
+QA contador: prueba pública cambia los ocho días en una misma pestaña, comprueba valores de días, bloqueo, mensajes distintos, ancho del reloj, ausencia de selector público y genera ocho PNG. LP comprueba ocho opciones, selección de extremos y que no puede desbloquear por preview. Se actualiza mensaje del cumpleaños al llegar a cero. No se adelanta el desbloqueo.

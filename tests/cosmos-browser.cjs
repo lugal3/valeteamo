@@ -26,7 +26,17 @@ async function main(){
   await menu.getByRole('button',{name:'Expandir',exact:true}).click();
   await menu.getByLabel('Filtrar checkpoints').fill('alimentacion');
   await menu.getByRole('button',{name:/Emy · Alimentación/}).waitFor();
-  await menu.getByLabel('Filtrar checkpoints').fill('');
+  await menu.getByLabel('Filtrar checkpoints').fill('ocho diseños');
+  await menu.getByRole('button',{name:/Ocho diseños diarios/}).click();
+  const styles=page.getByRole('navigation',{name:'Elegir diseño diario'});
+  assert.equal(await styles.getByRole('button').count(),8);
+  await styles.getByRole('button',{name:'04 DIC'}).click();
+  await page.locator('[data-daily-theme="finale"]').waitFor();
+  assert.equal(await page.getByRole('button',{name:'Abrir mi sorpresa'}).count(),0,'visual preview cannot unlock gift');
+  await styles.getByRole('button',{name:'27 NOV'}).click();
+  await page.locator('[data-daily-theme="blossom"]').waitFor();
+  await page.getByRole('button',{name:'Volver a pruebas',exact:true}).click();
+  await menu.waitFor();
   await menu.getByRole('button',{name:/Experiencia completa/}).click();
   await page.getByText('LP · SIMULACIÓN T−10 s',{exact:true}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Abrir mi sorpresa'}).count(),0,'simulation starts locked');

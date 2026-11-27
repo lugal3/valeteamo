@@ -81,7 +81,7 @@ export function BirthdayCountdown({children,simulation,stylePreview}:{children:R
    <span className="birthday-cosmic-label">{stylePreview?'LP · ESTILOS DIARIOS':simulation?'LP · SIMULACIÓN T−10 s':'UNA AVENTURA PARA DOS · ♡'}</span>
    <h1 id="birthday-countdown-title">Feliz cumpleaños <em>Vale</em></h1>
    <p><time dateTime="2026-12-05">5 de diciembre</time> · El universo espera por ti</p>
-   <div className="daily-message" key={theme.id}><span className="daily-edition">{theme.date} · {theme.name}</span><p>{theme.message}</p></div>
+   <div className="daily-message" key={seconds===0?'birthday':theme.id}><span className="daily-edition">{seconds===0?'05 DIC · Tu día':`${theme.date} · ${theme.name}`}</span><p>{seconds===0?'¡Llegó tu día, Vale! Que comience la sorpresa. Feliz cumpleaños. ♡':theme.message}</p></div>
    {seconds>0?<dl className="birthday-time" role="timer" aria-label="Tiempo para abrir el regalo">
     {parts.map(([label,value])=><div key={label} style={{'--dial':(value/(label==='Días'?8:label==='Horas'?24:60))*360+'deg'} as CSSProperties}>
      <dt>{label}</dt><dd>{String(value).padStart(2,'0')}</dd>
