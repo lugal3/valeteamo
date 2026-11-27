@@ -86,7 +86,7 @@ export function StoryApp({ClassicApp,initialRoute}:{ClassicApp:ComponentType;ini
    openDemo('garden',true);
   }}/></Suspense>;
  if(screen==='cosmos-return')return <Suspense fallback={<main role="status" className="playtest-loading">Regresando a las estrellas…</main>}><CosmosExperience preview={fullTrial} startAt="galaxy" onExit={()=>{setScreen(fullTrial?'tests':'cover');setFullTrial(false);}} onEnterGame={()=>openDemo('garden',fullTrial)}/></Suspense>;
- if(screen==='rescue')return <Suspense fallback={<main className="playtest-loading" role="status">Preparando el rescate 2D…</main>}><RescueDemo key={demoEntry+(demoTrial?'-trial':'-story')} entry={demoEntry} epilogueEntry={epilogueEntry} test={demoTrial} onComplete={()=>setScreen(demoTrial&&!fullTrial?'tests':'cosmos-return')} onExit={()=>{setScreen(demoTrial?'tests':'cover');if(!demoTrial)unlockAudio();}}/></Suspense>;
+ if(screen==='rescue')return <Suspense fallback={<main className="playtest-loading" role="status">Preparando el rescate 2D…</main>}><RescueDemo key={demoEntry+(demoTrial?'-trial':'-story')} entry={demoEntry} epilogueEntry={epilogueEntry} test={demoTrial} returnToUniverse={!demoTrial||fullTrial} onComplete={()=>setScreen(demoTrial&&!fullTrial?'tests':'cosmos-return')} onExit={()=>{setScreen(demoTrial?'tests':'cover');if(!demoTrial)unlockAudio();}}/></Suspense>;
  if(screen==='tests')return houseTrial?<PlaytestHouse key={houseTrial} id={houseTrial} onExit={closeHouseTrial}/>:<PlaytestMenu
   onExit={()=>{unlockAudio();setScreen('cover');}}
   onSelect={id=>{

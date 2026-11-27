@@ -26,7 +26,7 @@ const initial=(entry:Entry,test:boolean):RescueState=>{
 const checkpointFor=(entry:Entry):PrologueCheckpoint=>
  entry==='feeding'?'feed-cat':entry==='abduction'?'walk-together':entry==='trail'?'ribbon':'intro';
 
-export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,epilogueEntry}:{onExit:()=>void;onComplete?:()=>void;entry?:Entry;test?:boolean;epilogueEntry?:Exclude<EpilogueStage,'complete'>}){
+export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,epilogueEntry,returnToUniverse=!test}:{onExit:()=>void;onComplete?:()=>void;entry?:Entry;test?:boolean;epilogueEntry?:Exclude<EpilogueStage,'complete'>;returnToUniverse?:boolean}){
  const [progress]=useState(()=>initial(entry,test));
  const [epilogueStore]=useState(()=>({current:!test&&progress.rescued?openEpilogueSave():undefined}));
  const [epilogue,setEpilogue]=useState<EpilogueState>(()=>epilogueStore.current?.state??{...EPILOGUE_START,stage:test&&epilogueEntry?epilogueEntry:EPILOGUE_START.stage});
@@ -101,7 +101,7 @@ export function RescueDemo({onExit,onComplete=onExit,entry='garden',test=false,e
   {mode==='end'&&<div className="rescue-transition rescue-final" data-epilogue-stage="complete">
    <span>♥ ✿ ♥</span><h1>Feliz cumpleaños, <em>Vale</em></h1>
    <p>Louis está a salvo. Emy, Kitty, Luis y Vale vuelven a estar juntos. Gracias por recorrer esta pequeña aventura.</p>
-   <button onClick={onComplete}>{test?'Volver a pruebas':'Regresar al universo'}</button>
+   <button onClick={onComplete}>{returnToUniverse?'Regresar al universo':'Volver a pruebas'}</button>
    <button className="secondary" onClick={()=>{if(test||window.confirm('¿Volver a jugar desde el principio? Se reiniciará el progreso del rescate.'))reset();}}>Volver a jugar</button>
   </div>}
   {saveWarning&&<p className="rescue-save-warning" role="status">Puedes continuar, pero el avance de esta sesión no pudo guardarse.</p>}
