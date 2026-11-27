@@ -240,3 +240,52 @@
 @media(prefers-reduced-motion:reduce){
  .story-prologue .prologue-3d-handoff{animation:none}
 }
+
+/* V3.4 live dialogues — scoped to the rescue prologue, never Corazones classic. */
+.story-prologue .prologue-dialog-backdrop{cursor:pointer;touch-action:manipulation;user-select:none}
+.story-prologue .prologue-dialog{--dialog-ink:#634759;--dialog-accent:#a54f75;
+ grid-template-columns:86px minmax(0,1fr) auto;min-height:136px;
+ color:var(--dialog-ink);background:linear-gradient(160deg,#fff8ef,#f9e7e7);
+ border:2px solid #bd819b;box-shadow:0 0 0 3px #fff2e850 inset,0 6px 0 #7a5a6c,0 14px 25px #3a274680}
+.story-prologue .prologue-portrait{width:82px;height:88px;background:linear-gradient(155deg,#f4cbd8,#fff0e0);border:2px solid #c791aa;box-shadow:inset 0 0 0 2px #ffffff75}
+.story-prologue .prologue-portrait img{width:100%;height:100%;object-fit:contain;transform-origin:50% 80%;image-rendering:pixelated}
+.story-prologue .prologue-speaker{color:var(--dialog-accent);font-weight:850;letter-spacing:.025em}
+.story-prologue .prologue-live-text{font-size:clamp(13px,1.9vw,18px);line-height:1.45;overflow-wrap:anywhere}
+.story-prologue .prologue-word{display:inline-block;white-space:nowrap}
+.story-prologue .prologue-glyph{display:inline-block;visibility:hidden}
+.story-prologue .prologue-glyph.is-revealed{visibility:visible;animation:prologue-letter-pop 125ms cubic-bezier(.2,.8,.2,1.3) both}
+.story-prologue .prologue-glyph.is-settled{animation:none}
+.story-prologue .prologue-dialog-counter{display:flex;gap:8px;justify-content:space-between;margin-top:auto;color:var(--dialog-ink);opacity:.78}
+.story-prologue .prologue-next{min-height:44px;white-space:nowrap}
+.story-prologue .prologue-next-arrow{display:inline-block;opacity:.48}
+.story-prologue [data-complete="true"] .prologue-next-arrow{opacity:1;animation:prologue-arrow 900ms ease-in-out infinite}
+.story-prologue [data-tone="suspense"] .prologue-dialog,
+.story-prologue [data-tone="whisper"] .prologue-dialog,
+.story-prologue [data-tone="alarm"] .prologue-dialog{--dialog-ink:#fff1e8;--dialog-accent:#ffd0d8;background:linear-gradient(145deg,#342b43,#211f32);border-color:#ad849e;box-shadow:0 0 0 3px #f7d8e21a inset,0 6px 0 #191529,0 14px 25px #0c091d99}
+.story-prologue [data-tone="suspense"] .prologue-portrait,
+.story-prologue [data-tone="whisper"] .prologue-portrait,
+.story-prologue [data-tone="alarm"] .prologue-portrait{background:linear-gradient(155deg,#59465c,#302939);border-color:#a4849d}
+.story-prologue [data-tone="alarm"] .prologue-dialog{border-color:#d17d89}
+.story-prologue [data-tone="alarm"] .prologue-glyph.is-revealed:not(.is-settled){animation:prologue-letter-alarm 160ms ease-out both}
+.story-prologue [data-tone="suspense"] .prologue-glyph.is-revealed:not(.is-settled),
+.story-prologue [data-tone="whisper"] .prologue-glyph.is-revealed:not(.is-settled){animation:prologue-letter-suspense 210ms ease-out both}
+.story-prologue .prologue-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+@keyframes prologue-letter-pop{0%{transform:translateY(2px) scale(.7)}70%{transform:translateY(-1px) scale(1.08)}100%{transform:none}}
+@keyframes prologue-letter-alarm{0%{transform:translate(-2px,1px) scale(.83)}35%{transform:translate(2px,-1px) scale(1.09)}70%{transform:translate(-1px,1px)}100%{transform:none}}
+@keyframes prologue-letter-suspense{0%{opacity:.4;transform:translateY(4px) scale(.95)}100%{opacity:1;transform:none}}
+@keyframes prologue-arrow{50%{transform:translateY(3px)}}
+@media(max-height:440px),(max-width:540px){
+ .story-prologue .prologue-dialog{grid-template-columns:65px minmax(0,1fr) auto;min-height:112px;gap:8px;padding:8px 10px}
+ .story-prologue .prologue-portrait{width:62px;height:68px}
+ .story-prologue .prologue-live-text{font-size:13px;line-height:1.35}
+ .story-prologue .prologue-dialog-counter{font-size:9px}
+ .story-prologue .prologue-next{font-size:11px;padding:6px;min-height:44px}
+}
+@media(max-width:420px) and (orientation:portrait){
+ .story-prologue .prologue-dialog{grid-template-columns:58px minmax(0,1fr);gap:7px;max-height:65dvh;overflow-y:auto}
+ .story-prologue .prologue-portrait{width:55px;height:64px}
+ .story-prologue .prologue-next{grid-column:2;justify-self:end}
+}
+@media(prefers-reduced-motion:reduce){
+ .story-prologue .prologue-glyph,.story-prologue .prologue-next-arrow{animation:none!important;transform:none!important}
+}

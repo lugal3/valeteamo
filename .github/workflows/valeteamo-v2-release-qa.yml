@@ -88,7 +88,7 @@ jobs:
           HOUSE_INPUT_QA_DIR: artifacts/v2/mobile-input
         run: |
           case "${{ matrix.scenario }}" in
-            2d-story) node tests/prologue-browser.cjs ;;
+            2d-story) node tests/prologue-browser.cjs && node tests/prologue-desktop.cjs ;;
             3d-checkpoints) node tests/house-checkpoint-browser.cjs ;;
             rc-rescue) node tests/rc-browser.cjs ;;
             threat-hide) node tests/house-threat-browser.cjs ;;

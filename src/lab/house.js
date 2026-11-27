@@ -1090,6 +1090,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      const staying=['stay','distract','distract-recover'].includes(emyCompanion?.stage);
      const ok=staying?rejoinEmyInPerson(emyCompanion,world,s):commandEmyStay(emyCompanion);
      if(!ok){say('Acércate a Emy para cambiar su orden.');return;}
+     if(staying)pursuer.endEmyDistraction();
      closeEmyMenu();
      say(staying?'Emy vuelve a seguir a Kitty.':'Emy se quedará aquí hasta que le indiques que te siga.',3);
      resetInput();return;

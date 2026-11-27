@@ -113,6 +113,7 @@ export function sendEmyToTrunk(companion){
  // A shared closet animation may have temporarily moved the model inside
  // a closed prop. Resume at its recorded walkable entrance, not its camera.
  if(companion.stage==='closet-entry'&&companion.closetEntry)Object.assign(companion.cat,{x:companion.closetEntry.x,z:companion.closetEntry.z});
+ if(companion.sharedBed){Object.assign(companion.cat,companion.sharedBed.from);companion.sharedBed=null;}
  companion.stage='trunk-run';clearNavigation(companion);companion.distraction=null;companion.refuge=null;companion.hiddenAt=null;companion.closetEntry=null;companion.altarWait=false;
  companion.cat.reaction=0;
  setVisibility(companion,false);

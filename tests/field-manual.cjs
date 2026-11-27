@@ -42,6 +42,20 @@ const assert=require('node:assert/strict');
  assert(cat.sharedBed&&cat.cat.parts.some(p=>!p.box.hiddenGeometry),'Cat remains visually present under bed');
  hiding.hidden=null;for(let i=0;i<180&&cat.stage!=='following';i++)updateEmyCompanion(cat,1/60,{world,player:hiding,reduced:true});
  assert.equal(cat.stage,'following','Emy exits independently');
+ // Exercise the actual safe synth with a suspended context. The UI may
+ // sound while the world stays paused, and must respect the mute setting.
+ const fs=require('node:fs');
+ const {HouseSound}=new Function(fs.readFileSync('src/lab/sound.js','utf8').replace(/^import .*$/gm,'').replace(/\bexport /g,'')+'\nreturn {HouseSound}')();
+ const sound=new HouseSound();const tones=[];
+ sound.paused=true;sound.sequenceNodes=new Set();sound.channels={objects:{}};
+ sound.context={state:'suspended',currentTime:0,resume(){this.state='running';return Promise.resolve();},
+ createOscillator(){const o={frequency:{value:0},connect(){},start(){tones.push(this.frequency.value)},stop(){},disconnect(){}};return o;},
+ createGain(){return {gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){}};}};
+ sound.safeKeypad('digit',1);await Promise.resolve();assert.deepEqual(tones,[658]);
+ sound.safeKeypad('error');assert.deepEqual(tones.slice(-2),[175,135]);
+ sound.safeKeypad('success');assert.deepEqual(tones.slice(-3),[660,880,1180]);
+ assert(sound.paused,'Keypad sound must not unpause the simulated world');
+ const length=tones.length;sound.safeKeypad('digit',3,()=>false);sound.settings.muted=true;sound.safeKeypad('digit',5);assert.equal(tones.length,length);
  assert.equal(TUTORIALS.length,10);
  assert.equal(new Set(TUTORIALS.map(t=>t.id)).size,10);
  for(const t of TUTORIALS){for(const touch of [false,true]){const html=tutorialCardHTML(t.id,touch);assert(html.includes('data-field-close')&&html.includes('JUEGO PAUSADO')&&html.includes('viewBox='));}}
