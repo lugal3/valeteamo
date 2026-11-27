@@ -62,7 +62,11 @@ async function walkToMarker(page){
  await page.locator('.epilogue-action').waitFor({timeout:30000});
 }
 async function dialogue(page){
- await page.locator('.epilogue-action').click();
+ const action=page.locator('.epilogue-action');
+ await action.waitFor();
+ const hit=await action.evaluate(el=>{const r=el.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,top=document.elementFromPoint(x,y);return {ok:el.contains(top),top:top?.outerHTML.slice(0,240),stack:document.elementsFromPoint(x,y).slice(0,8).map(n=>({tag:n.tagName,cls:n.className,z:getComputedStyle(n).zIndex,position:getComputedStyle(n).position,pointer:getComputedStyle(n).pointerEvents}))};});
+ assert(hit.ok,'epilogue action must receive physical pointer: '+JSON.stringify(hit));
+ await action.click();
  const box=page.locator('.epilogue-dialog');
  await box.waitFor();
  for(let i=0;i<18&&await box.isVisible();i++){

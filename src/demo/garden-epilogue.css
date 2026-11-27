@@ -27,7 +27,11 @@
 .garden-epilogue .epilogue-action{z-index:20;pointer-events:auto;touch-action:manipulation;max-width:calc(100% - 28px);white-space:normal;text-align:center}
 .garden-epilogue .epilogue-dialog,.garden-epilogue .epilogue-celebration{z-index:30;pointer-events:auto;max-height:calc(100dvh - 78px);overflow:auto;overscroll-behavior:contain}
 .garden-epilogue .epilogue-dialog button,.garden-epilogue .epilogue-celebration button{touch-action:manipulation}
-.garden-epilogue:has(.adventure-overlay)>.adventure-wrap{z-index:70}
+/* Narrative interface now lives inside StoryGame above its isolated canvas.
+   The normal pause/loading overlay is a separate higher layer. */
+.garden-epilogue .adventure-epilogue-ui{isolation:isolate}
+.garden-epilogue .adventure-overlay{z-index:40}
+.garden-epilogue .adventure-hud{z-index:4}
 .garden-epilogue .epilogue-location{background:#503b49db;border:1px solid #eed4b370;box-shadow:0 3px 12px #34293626;max-width:min(54vw,380px)}
 .garden-epilogue .epilogue-location h1{color:#fff2d5}
 .garden-epilogue .epilogue-location p{line-height:1.4}
@@ -36,3 +40,6 @@
 .garden-epilogue .epilogue-celebration-actions button:last-child{background:#89536e;color:#fff5e9;border-color:#89536e}
 .garden-epilogue .epilogue-letter{padding:9px 12px;border:1px solid #e4c6b4;background:#fff9ee;border-radius:8px}
 @media(max-height:450px){.garden-epilogue .epilogue-location{max-width:47vw}.garden-epilogue .epilogue-location span{font-size:9px}.garden-epilogue .epilogue-location h1{font-size:17px}.garden-epilogue .epilogue-location p{font-size:10px}}
+
+/* Preserve the postcard's native dialog hit-testing even within the HUD. */
+.garden-epilogue .garden-postcard{pointer-events:auto}

@@ -94,16 +94,16 @@ export function GardenEpilogue({stage,onAdvance,onExit,muted,onMute}:Props){
      if(value)target.__valeEpilogue=()=>({p:{...value.p},target:{...value.storyTarget},map:value.storyMap,clock:value.clock,near:value.storyNear,velocity:{...value.storyVelocity},enemies:value.enemies.length,companions:[value.storyLouis,value.storyCat].map(actor=>!!actor?.active&&actor.visible),ready:!!value.player?.texture});
      else delete target.__valeEpilogue;
     }
-   }}/>
+   }} epilogueUI={<>
   <div className="epilogue-sunlight" aria-hidden="true"/>
   <div className="epilogue-location"><span>ACTO IV · DE VUELTA A CASA</span><h1>{chapter.title}</h1><p>{chapter.objective}</p></div>
-  {near&&!leaving&&!current&&!celebrating&&<button className="epilogue-action" onClick={()=>scene.current?.storyInteract()}>{near} ♡</button>}
-  {current&&<section className="epilogue-dialog" aria-label={'Diálogo de '+current.speaker}>
+  {near&&!leaving&&!current&&!celebrating&&<button className="epilogue-action" style={{pointerEvents:'auto'}} onClick={()=>scene.current?.storyInteract()}>{near} ♡</button>}
+  {current&&<section className="epilogue-dialog" style={{pointerEvents:'auto'}} aria-label={'Diálogo de '+current.speaker}>
    {portraits[current.speaker]&&<img src={portraits[current.speaker]} alt=""/>}
    <div><strong>{current.speaker}</strong><p aria-label={current.text}>{glyphs.slice(0,letters).join('')}</p><small>{line+1} / {lines.length}</small></div>
    <button onClick={next}>{letters<glyphs.length?'Mostrar todo':'Continuar'}</button>
   </section>}
-  {celebrating&&!postcard&&!leaving&&<section className="epilogue-celebration" aria-label="Celebración de cumpleaños">
+  {celebrating&&!postcard&&!leaving&&<section className="epilogue-celebration" style={{pointerEvents:'auto'}} aria-label="Celebración de cumpleaños">
    <span aria-hidden="true">♡ ✦ ♡</span><h2>Feliz cumpleaños, Vale</h2>
    {!candlesOut?<button onClick={()=>{setCandlesOut(true);scene.current?.blowEpilogueCandles();}}>Pide un deseo y sopla las velas</button>:<>
     <div className="epilogue-confetti" aria-hidden="true">{Array.from({length:16},(_,i)=><i key={i} style={{left:(i*37%100)+'%',animationDelay:i%5*.14+'s'}}/>)}</div>
@@ -113,5 +113,7 @@ export function GardenEpilogue({stage,onAdvance,onExit,muted,onMute}:Props){
   </section>}
   {postcard&&<GardenPostcard title="Feliz cumpleaños, Vale" image={postcard.image} error={postcard.error} onClose={closePostcard}/>}
   <div className="epilogue-fade" aria-hidden="true"/>
+  </>}/>
+
  </main>;
 }
