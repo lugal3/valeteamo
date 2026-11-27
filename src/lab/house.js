@@ -201,7 +201,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  let inspection=null;
  let safeInput='',activeSafe=null,noteLift=0,noteHold=0,notePresentation=false,capturePhoto=false,piano=null,phoneTurn=0;
  const objectives=createRescueObjectives();
- const tutorialEnabled=demo&&config.fieldTutorials===true&&!config.trial&&checkpoint==='ground';
+ // Real campaign and explicit LP entries share the same tutorial triggers.
+ const tutorialEnabled=demo&&config.fieldTutorials===true;
  let pendingTutorial=null;
  const manual=createFieldManual(root,{touch:()=>!desktop.matches,onSeen:()=>{if(phone.app==='manual')phone.last='';if(lastSafeCheckpoint){lastSafeCheckpoint={...lastSafeCheckpoint,tutorials:manual.seen};persistCheckpoint(lastSafeCheckpoint);}},onClose:()=>{resetInput();last=performance.now();if(!isSuspended())sound.resume();}});
  function tutorial(id,replay=false){if((!tutorialEnabled&&!replay)||(replay&&events.phase==='hide'))return false;if(!manual.show(id,replay))return false;releaseMouse();resetInput();sound.pause();return true;}
