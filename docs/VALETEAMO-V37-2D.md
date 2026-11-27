@@ -37,3 +37,8 @@ El interlocutor activo de la burbuja controla la pose real de los personajes. Lu
 - Seis bloques de presentación: tres capítulos cálidos, interludio, investigación y casa. Sin etapas extra ni pantallas de espera. Títulos iniciales no revelan el 3D.
 - El jardín no recupera su iluminación alegre tras el secuestro; el oscurecimiento enlaza con el bosque. Limpieza de tweens de marcadores al cambiar etapa y reacción breve durante la fuga.
 - Corregida la prueba de integración que esperaba el antiguo seguimiento por píxeles: exige el nuevo seguimiento en coordenadas del mundo y su conexión efectiva al sprite; se mantienen pruebas geométricas de ruta y colisión. No se toca el 3D.
+
+## Bloque D — combate y ambiente reactivo
+- El primer ataque de las sombras se programa desde su aparición (no desde el arranque del juego), con aviso de 650 ms y separación de 520 ms. Colisiones por deslizamiento para sombras. Se conserva Corazones 2.
+- Flor de práctica opcional en la mañana: reacciona al disparo de corazón, con sonido y efecto, sin alterar etapas ni duración obligatoria.
+- El jardín pierde los reflejos dorados tras el secuestro; animales se inquietan y cantos de aves dan paso a viento/insectos mediante ecología ya existente. Sin emisores nuevos. Pruebas unitarias y de navegador añadidas. No se modifica 3D.

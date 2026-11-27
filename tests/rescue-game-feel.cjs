@@ -81,6 +81,14 @@ const hold=F.feelCompanion({x:45,y:0},{x:50,y:0},40);
 assert.equal(hold.position.x,45,'NPC must not slide when Kitty is stationary');
 const still=F.feelCompanion({x:0,y:0},{x:90,y:0},33,true);
 assert(still.position.x>0&&!still.walking,'reduce motion keeps positions correct but disables gait');
+// Starting combat late in the story still grants the full warning interval.
+for(const clock of [0,3000,120000]){
+ const due=[0,1,2].map(i=>F.rescueFirstAttack(clock,i));
+ assert(due[0]-clock>=1300&&due[2]-due[1]>=500);
+ assert.equal(F.rescueAttackWarning(clock,due[0]),0);
+ assert(F.rescueAttackWarning(due[0]-325,due[0])>.45);
+ assert.equal(F.rescueAttackWarning(due[0],due[0]),1);
+}
 const original=fs.readFileSync('src/iso-game.ts','utf8').replace(/\r\n/g,'\n');
 const story=fs.readFileSync('src/demo/GardenPrologue.tsx','utf8');
 for(const key of ['feelMotion(this.storyVelocity','this.storyFootfall(traveled)',
@@ -89,6 +97,9 @@ for(const key of ['feelMotion(this.storyVelocity','this.storyFootfall(traveled)'
  assert(original.includes(key),'rescue must integrate actual story game feel: '+key);
 }
 assert(original.includes('this.storyFollowTrail=state.trail')&&original.includes('const xy=toScreen(state.position)')&&original.includes('npc.setPosition(xy.x,xy.y)'),'actual NPC consumes the collision-aware world trajectory; full path behavior covered in rescue-world.cjs');
+assert(original.includes('next:this.story?rescueFirstAttack(this.clock,this.enemies.length):1500+this.enemies.length*500'),'story timing relative to spawn and classic timing untouched');
+assert(original.includes('constrainRescue(proposed,this.storyMap,e.p)'),'story shadows cannot cut through furniture');
+assert(original.includes('this.storyPracticeDone=true')&&original.includes('this.storyPractice=undefined'),'optional heart practice reacts without advancing a story stage');
 assert(original.includes('else {\n   const frame=moving?1+Math.floor(this.moveClock/115)%4'),
  'classic Corazones animation branch must retain original animation expressions');
 assert(original.includes("camera.setZoom(Math.min(width/800,height/450)*1.08)"),

@@ -88,6 +88,13 @@ assert(Math.abs(sample(30)-sample(60))<.005,
  'animal alarm response is frame-independent 30/60Hz');
 assert(Math.abs(sample(60)-sample(120))<.005,
  'animal alarm response is frame-independent 60/120Hz');
+let alarm={alarm:0,heading:1};
+for(let i=0;i<60;i++)alarm=E.ecologyWildlifeStep(seed,alarm,i*16,16,{u:30,v:30},false,1).state;
+assert(alarm.alarm>.6,'the garden wildlife reacts to narrative tension even away from Kitty');
+for(let i=1;i<10;i++){
+ const cue=E.ecologyAmbientCue('afternoon_meeting',i*5600,{u:30,v:4},23,45,()=>4,1);
+ assert(['insects','night-breeze'].includes(cue.kind),'no cheerful birdsong after the kidnapping');
+}
 assert(E.ecologyHash(3,6,7)>=0&&E.ecologyHash(3,6,7)<1);
 const executable=source.split('\n').filter(line=>!line.trimStart().startsWith('//')).join('\n');
 assert(!executable.includes('Math.random(')&&!executable.includes('setTimeout('),

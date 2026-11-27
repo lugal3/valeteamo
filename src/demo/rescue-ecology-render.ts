@@ -156,6 +156,7 @@ export function createLivingEcology(
  const update=(elapsed:number,player:IsoPoint,night:number):AmbientCue|null=>{
   const dt=clamp(elapsed-previousElapsed,0,70);
   previousElapsed=elapsed;updates++;
+  const tension=map==='afternoon_meeting'?clamp((night-.22)/.16,0,1):0;
   visibleWildlife=0;reactiveFlora=0;alarmedWildlife=0;
   for(const item of flora){
    const range=Math.abs(item.seed.p.u-player.u);
@@ -170,7 +171,7 @@ export function createLivingEcology(
    item.graphics.setVisible(range<8.0);
    if(range>=8.0)continue;
    visibleWildlife++;
-   const next=ecologyWildlifeStep(item.seed,item.state,elapsed,dt,player,reducedMotion);
+   const next=ecologyWildlifeStep(item.seed,item.state,elapsed,dt,player,reducedMotion,tension);
    item.state=next.state;
    if(item.state.alarm>.25)alarmedWildlife++;
    const base=toScreen(item.seed.p);
@@ -194,9 +195,9 @@ export function createLivingEcology(
    // Long golden stripes in a clearing, without masking the grass path.
    for(let i=0;i<6;i++){
     const u=25+i*3.3,pos=toScreen({u,v:center(u)+(i%2?2.7:-2.4)});
-    light.fillStyle(0xffdfa5,.095+.027*Math.sin(t*.4+i))
+    light.fillStyle(tension>.35?0xbbb0cc:0xffdfa5,(.095+.027*Math.sin(t*.4+i))*(1-tension*.6))
      .fillEllipse(pos.x,pos.y+3,118,19);
-    light.lineStyle(1,0xffe5bf,.15).lineBetween(pos.x-24,pos.y-4,pos.x+36,pos.y-9);
+    light.lineStyle(1,tension>.35?0xc9b8cf:0xffe5bf,.15*(1-tension*.65)).lineBetween(pos.x-24,pos.y-4,pos.x+36,pos.y-9);
    }
   }else if(map==='dusk_search'){
    for(let i=0;i<8;i++){
@@ -262,7 +263,7 @@ export function createLivingEcology(
   const audioPeriod=Math.floor(elapsed/ECOLOGY_CAPS.minAmbientGapMs);
   if(audioPeriod>0&&audioPeriod!==lastAudioPeriod){
    lastAudioPeriod=audioPeriod;
-   return ecologyAmbientCue(map,elapsed,player,minU,maxU,center);
+   return ecologyAmbientCue(map,elapsed,player,minU,maxU,center,tension);
   }
   return null;
  };

@@ -230,6 +230,8 @@ async function play(){
   await page.evaluate(()=>window.__valePrologue.teleport(0));
   await page.waitForFunction(()=>window.__valePrologue.scene().storyLouis?.visible&&
    window.__valePrologue.scene().enemies.length===3,null,{timeout:4000});
+  const delays=await page.evaluate(()=>{const s=window.__valePrologue.scene();return s.enemies.map(e=>e.next-s.clock);});
+  assert(delays[0]>700&&delays[1]-delays[0]>=500&&delays[2]-delays[1]>=500,'shadows have readable staggered first attacks, even late in the story');
   await page.screenshot({path:'artifacts/story-louis-helped-after-distress-call.png'});
   // Original Corazones controls: WASD for movement, arrows for hearts.
   await page.keyboard.down('ArrowRight');
