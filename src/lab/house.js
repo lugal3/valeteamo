@@ -657,7 +657,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    return;
   }else if(o.kind==='noise-prop'){
    if(batterySwap!==null){say('Termina de cambiar la pila antes de recoger el objeto.');return;}
-   if(grabNoiseProp(o)){heldNoise=o;previousToolTarget=null;autoUseTarget=null;cancelEmote({immediate:true});play('pickup',o);say(o.label.replace('Recoger','Recogiste')+'. '+throwableHint(!desktop.matches),3);tutorial('throw');}
+   if(grabNoiseProp(o)){heldNoise=o;previousToolTarget=null;autoUseTarget=null;cancelEmote({immediate:true});play('pickup',o);say(o.label.replace('Recoger','Recogiste')+'. '+throwableHint(padSession.mode==='touch'),3);tutorial('throw');}
    return;
   }else if(o.kind==='holiday-switch'){
    if(!housePowered(world.lights.power)){say('Sin corriente · revisa el interruptor general');return;}
@@ -921,7 +921,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(!s.battery&&!startBatterySwap()){s.flashlight=false;play('light');say('La linterna se apagó · busca una pila o un interruptor.',5);}
   else if(before>FLASH_LOW&&s.battery<=FLASH_LOW)say('Batería baja · quedan '+FLASH_LOW+'%',4);
  }
- function togglePause(){if(!ready||contextLost)return;phone.close();$('lab-camera-settings').open=false;paused=!paused;if(paused){sound.pause();showModal('Pausa',`<p>El tiempo de la casa y sus sonidos se han detenido.</p>`,[['Continuar','resume'],[exitLabel,'exit']]);}else{modalClose();sound.resume();}}
+ function togglePause(){if(!ready||contextLost)return;phone.close();$('lab-camera-settings').open=false;paused=!paused;if(paused){sound.pause();showModal('Pausa',`<p>El tiempo de la casa y sus sonidos se han detenido.</p>`,[['Continuar','resume'],['Calibrar mando','pad-calibrate'],[exitLabel,'exit']]);}else{modalClose();sound.resume();}}
  const inBathroom=()=>roomAt(s.x,s.z,s.y)==='Baño';
  function useEquipment(){
   if(heldNoise){say('Lanza primero el objeto que llevas.');return;}
@@ -1113,6 +1113,7 @@ function syncLoisDialogue(delta=0){
 }
 function runAction(act,node){
  if(handoffFinishing)return;
+ if(act==='pad-calibrate'){releaseMouse();resetInput();padSession.calibrate();return;}
  if(act.startsWith('lois:')){
   if(act==='lois:close'){loisDialogue.close();syncLoisDialogue();return;}
   if(act==='lois:next'){loisDialogue.next();syncLoisDialogue();return;}
@@ -1475,9 +1476,19 @@ function runAction(act,node){
  }
  function pollHousePad(){
   const pad=padSession.poll();padState=EMPTY_PAD;
+  if(padSession.calibrating)return;
   if(padSession.mode!=='gamepad'||!hasFocus||document.hidden||isPortrait()||handoffFinishing||contextLost)return;
   if(manual.active){if(pad.pressed[0]||pad.pressed[1])manual.close();return;}
   if(loisDialogue.active){if(pad.pressed[0]||pad.pressed[2])runAction('lois:next');if(pad.pressed[1])runAction('lois:close');return;}
+  if(piano&&pianoRunning()){
+   if(pad.pressed[1]){modalClose();return;}
+   if(pad.pressed[12]||pad.pressed[13]||pad.pressed[14]||pad.pressed[15])padMenu(dialog,{...pad,pressed:pad.pressed.map((v,i)=>i===0?false:v)});
+   if(pad.pressed[0]){const key=document.activeElement;if(key?.matches('[data-act^="piano:"]'))playPiano(Number(key.dataset.act.slice(6)));else padMenu(dialog,pad);}return;
+  }
+  if(phone.open&&phone.app==='snake'){
+   for(const [i,key] of [[12,'ArrowUp'],[13,'ArrowDown'],[14,'ArrowLeft'],[15,'ArrowRight']])if(pad.pressed[i])phone.key(key);
+   if(pad.pressed[1]){phone.close();resetInput();}else if(pad.pressed[0])padMenu(phone.host,pad);return;
+  }
   if(modal||intro||emyMenuOpen||phone.open||phone.editing||$('lab-camera-settings').open){
    const scope=modal||intro?dialog:emyMenuOpen?($('house-emy-map').hidden?$('house-emy-menu'):$('house-emy-map')):phone.open||phone.editing?phone.host:$('lab-camera-settings');
    if(pad.pressed[1]){if(emyMenuOpen)closeEmyMenu();else if(phone.open&&!phone.editing){phone.close();resetInput();}else if(modal&&!intro&&events.phase!=='safe'&&events.phase!=='failed'){paused=false;modalClose();}return;}
@@ -2504,7 +2515,7 @@ function runAction(act,node){
  },{signal});
  root.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')root.classList.remove('house-keyboard');},true);
  window.addEventListener('keydown',e=>{
-  if(!active||e.altKey||e.ctrlKey||e.metaKey||e.isComposing)return;
+  if(!active||padSession.calibrating||e.altKey||e.ctrlKey||e.metaKey||e.isComposing)return;
   if(manual.key(e))return;
   if(loisDialogue.active&&['Escape','Enter',' '].includes(e.key)){e.preventDefault();if(!e.repeat)runAction(e.key==='Escape'?'lois:close':'lois:next');return;}
   if(e.key.toLowerCase()==='l'&&!e.repeat&&!isPaused()&&!phone.open&&!['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName)){e.preventDefault();runAction('lois:talk');return;}

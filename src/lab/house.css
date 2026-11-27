@@ -568,3 +568,5 @@
 #lab3d .lab-buttons .house-hide-peek svg{width:22px;height:22px}
 
 #lab3d.house-gamepad .lab-joystick{visibility:hidden;pointer-events:none}#lab3d.house-gamepad #lab-interact kbd{display:inline-block}#lab3d.house-gamepad .house-hotbar small{display:none}#lab3d.house-gamepad #lab-focus:not(:empty){position:absolute;left:50%;bottom:8px;transform:translateX(-50%);max-width:65vw;font:10px system-ui;color:#fff;background:#141019b8;padding:4px 8px;border-radius:6px;pointer-events:none;visibility:visible}#lab3d.house-gamepad :focus-visible{outline:2px solid #ffc9e5;outline-offset:3px}
+
+.vt-pad-calibration{position:fixed;inset:0;margin:auto;z-index:120000;max-width:min(540px,86vw);width:86vw;padding:20px;border:1px solid #b89bb8;border-radius:14px;background:#242230;color:#ffece0;font:14px/1.5 system-ui}.vt-pad-calibration::backdrop{background:#14131de6}.vt-pad-calibration h2{font:24px Georgia;margin:0 0 10px}.vt-pad-calibration button{min-height:44px;padding:8px 15px;border:1px solid #8c758e;border-radius:7px;background:#3e3146;color:#fff;margin:6px}.vt-pad-calibration button[hidden]{display:none}

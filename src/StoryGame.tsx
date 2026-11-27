@@ -18,6 +18,7 @@ export function StoryGame({level,character,onComplete,onExit,muted,audio,audioNo
  const surface=useRef<HTMLDivElement>(null),host=useRef<HTMLDivElement>(null),scene=useRef<IsoAdventure|undefined>(undefined);
  const [hud,setHud]=useState<AdventureHud>(),[paused,setPaused]=useState(false),[loading,setLoading]=useState(true),[progress,setProgress]=useState(8),[error,setError]=useState(''),[dead,setDead]=useState(false),[attempt,retry]=useState(0);
  const [inputMode,setInputMode]=useState<InputMode>(initialInputMode),[controlHelp,setControlHelp]=useState(()=>{if(!teachControls)return false;try{return sessionStorage.getItem('vt-2d-controls-v1')!=='1';}catch{return true;}}),[padInfo,setPadInfo]=useState('');
+ const inputSession=useRef<ReturnType<typeof createInputSession>|null>(null);
  const helpRef=useRef(controlHelp);helpRef.current=controlHelp;
  const [sceneBootMs,setSceneBootMs]=useState<number|undefined>();
  const complete=useRef(onComplete);complete.current=onComplete;
@@ -29,12 +30,13 @@ export function StoryGame({level,character,onComplete,onExit,muted,audio,audioNo
  useEffect(()=>{if(controlHelp&&!loading&&!error)pauseManually();},[controlHelp,loading,error]);
  useEffect(()=>{
   if(!story||!surface.current)return;const root=surface.current.closest('main')??surface.current;
-  const session=createInputSession(root,mode=>{scene.current?.clearInput();setInputMode(mode);});setInputMode(session.mode);
+  const session=createInputSession(root,mode=>{scene.current?.clearInput();setInputMode(mode);});setInputMode(session.mode);inputSession.current=session;
   let raf=0,lastDiagnostic=0;
   const frame=(now:number)=>{raf=requestAnimationFrame(frame);const pad=session.poll(),s=scene.current;if(!s)return;
+   if(session.calibrating){s.controllerInput=EMPTY_PAD;return;}
    if(helpRef.current&&now-lastDiagnostic>200){lastDiagnostic=now;setPadInfo(session.diagnostic().map(p=>p.id+' · '+p.mapping+' · ejes '+p.axes.join(', ')+' · botones '+p.buttons.join(', ')).join('\n'));}
-   const menu=Array.from(root.querySelectorAll<HTMLElement>('.adventure-controls-help,.prologue-dialog-backdrop,.epilogue-dialog,.emy-feeding,.item-backdrop,.adventure-overlay,[role="dialog"][aria-modal="true"]')).find(el=>el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden');
-   if(menu){s.controllerInput=EMPTY_PAD;padMenu(menu,pad);return;}
+   const menu=Array.from(root.querySelectorAll<HTMLElement>('.adventure-controls-help,.prologue-dialog-backdrop,.epilogue-dialog,.emy-feeding,.item-backdrop,.adventure-overlay,.garden-postcard[open],[role="dialog"][aria-modal="true"]')).find(el=>el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden');
+   if(menu){s.controllerInput=EMPTY_PAD;if(menu.matches('.emy-feeding'))menu.dispatchEvent(new CustomEvent('vt-pad-feed',{detail:pad}));else padMenu(menu,pad);return;}
    if(session.mode!=='gamepad'){s.controllerInput=EMPTY_PAD;return;}
    s.controllerInput=pad;
    if(pad.pressed[9]&&!s.story?.locked()){s.controllerInput=EMPTY_PAD;s.setPaused(!s.paused);return;}
@@ -44,7 +46,7 @@ export function StoryGame({level,character,onComplete,onExit,muted,audio,audioNo
    }
    if(pad.pressed[3])root.querySelector<HTMLElement>('.prologue-moment button:not(:disabled),.epilogue-picnic-tools button:not(:disabled)')?.click();
    if(pad.pressed[12]||pad.pressed[13]||pad.pressed[14]||pad.pressed[15])padMenu(root,pad);
-  };raf=requestAnimationFrame(frame);return()=>{cancelAnimationFrame(raf);session.destroy();};
+  };raf=requestAnimationFrame(frame);return()=>{cancelAnimationFrame(raf);session.destroy();inputSession.current=null;};
  },[story!==undefined,attempt]);
  const choose=useCallback((value:boolean)=>scene.current?.chooseItem(value),[]);
  useEffect(()=>{
@@ -84,7 +86,7 @@ export function StoryGame({level,character,onComplete,onExit,muted,audio,audioNo
   {epilogueUI&&!loading&&!paused&&!dead&&!error&&<div className="adventure-epilogue-ui" style={{position:'absolute',inset:0,zIndex:3,pointerEvents:'none'}}>{epilogueUI}</div>}
   {loading&&<div className="adventure-overlay"><div className="pixel-flower">✿</div><p role={error?'alert':'status'}>{error||'Preparando un pequeño mundo…'}</p>{error?<><button className="story-button" onClick={()=>retry(v=>v+1)}>Reintentar</button><button onClick={onExit}>Volver al capítulo</button></>:<div className="adventure-progress" role="progressbar" aria-label="Preparando el jardín" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><i style={{width:`${progress}%`}}/></div>}</div>}
   {audioNotice&&!loading&&<div className="adventure-audio-notice" role="status">{audioNotice}</div>}
-  {controlHelp&&!loading&&!error&&<div className="adventure-overlay adventure-controls-help" role="dialog" aria-modal="true"><div className="adventure-manual"><span>MANUAL DE CAMPO · 01</span><h2>Controles del jardín</h2><div className="adventure-manual-tabs">{inputMode==='touch'?'TÁCTIL':inputMode==='gamepad'?'MANDO':'TECLADO Y RATÓN'}</div><div className="adventure-manual-grid"><p><b>{inputMode==='gamepad'?'L':inputMode==='touch'?'◉ Izquierda':'W A S D'}</b>Caminar</p><p><b>{inputMode==='gamepad'?'R':inputMode==='touch'?'◉ Derecha':'↑ ↓ ← →'}</b>Corazones</p><p><b>{inputMode==='gamepad'?'□ / X':inputMode==='touch'?'Tocar botón':'E'}</b>Interactuar</p><p><b>{inputMode==='gamepad'?'OPTIONS':inputMode==='touch'?'Ⅱ':'Esc'}</b>Pausa</p></div><small>El mando estándar cambia la interfaz al moverlo. Para probar un mando alternativo, pulsa sus botones.</small>{padInfo&&<pre className="adventure-pad-info">{padInfo}</pre>}<button className="story-button" onClick={closeHelp}>Entendido</button></div></div>}
+  {controlHelp&&!loading&&!error&&<div className="adventure-overlay adventure-controls-help" role="dialog" aria-modal="true"><div className="adventure-manual"><span>MANUAL DE CAMPO · 01</span><h2>Controles del jardín</h2><div className="adventure-manual-tabs">{inputMode==='touch'?'TÁCTIL':inputMode==='gamepad'?'MANDO':'TECLADO Y RATÓN'}</div><div className="adventure-manual-grid"><p><b>{inputMode==='gamepad'?'L':inputMode==='touch'?'◉ Izquierda':'W A S D'}</b>Caminar</p><p><b>{inputMode==='gamepad'?'R':inputMode==='touch'?'◉ Derecha':'↑ ↓ ← →'}</b>Corazones</p><p><b>{inputMode==='gamepad'?'□ / X':inputMode==='touch'?'Tocar botón':'E'}</b>Interactuar</p><p><b>{inputMode==='gamepad'?'OPTIONS':inputMode==='touch'?'Ⅱ':'Esc'}</b>Pausa</p></div><small>El mando estándar cambia la interfaz al moverlo. Para probar un mando alternativo, pulsa sus botones.</small>{padInfo&&<pre className="adventure-pad-info">{padInfo}</pre>}<button onClick={()=>inputSession.current?.calibrate()}>Calibrar mando alternativo</button><button className="story-button" onClick={closeHelp}>Entendido</button></div></div>}
   {paused&&!controlHelp&&!dead&&!loading&&<div className="adventure-overlay"><span className="story-kicker">UN MOMENTO DE CALMA</span><h2>Una pequeña pausa</h2><p>Tu aventura te espera aquí.</p><button className="story-button" onClick={resumeManually}>Continuar</button><button onClick={onExit}>Volver al capítulo</button></div>}
   {hud?.offer&&!paused&&!dead&&!loading&&<OfferDialog offer={hud.offer} choose={choose}/>}
   {dead&&!loading&&<div className="adventure-overlay"><span className="pixel-flower">♡</span><h2>Un pequeño respiro</h2><p>Puedes volver a intentarlo desde el inicio de esta aventura.</p><button className="story-button" onClick={()=>retry(v=>v+1)}>Intentarlo otra vez</button><button onClick={onExit}>Volver al capítulo</button></div>}

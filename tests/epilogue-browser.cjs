@@ -5,12 +5,12 @@ const KEY='valeteamo-rescue-v2',PROLOGUE='valeteamo-story-acts-1-2-v1';
 async function main(){
  const {createServer}=await import('vite');
  const server=await createServer({configFile:false,logLevel:'silent',server:{host:'127.0.0.1',port:0}});
- let browser;
+ let browser;const errors=[];
  try{
   await server.listen();const url='http://127.0.0.1:'+server.httpServer.address().port+'/';
   browser=await chromium.launch({headless:true});
   const page=await browser.newPage({viewport:{width:960,height:540},reducedMotion:'reduce'});
-  page.setDefaultTimeout(30000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  page.setDefaultTimeout(30000);page.on('pageerror',e=>errors.push(e.message));
   fs.mkdirSync('artifacts',{recursive:true});
   const openLP=async()=>{await page.goto(url);await page.getByRole('button',{name:'Administración'}).click();await page.getByLabel('Código de acceso').fill('LP');await page.getByRole('button',{name:'Entrar',exact:true}).click();await page.locator('.lp-swagger').waitFor();};
   const read=()=>page.evaluate(key=>JSON.parse(localStorage.getItem(key)),KEY);
@@ -55,6 +55,6 @@ async function main(){
   fs.writeFileSync('artifacts/epilogue-load-timings.json',JSON.stringify(timings,null,2));
   assert.deepEqual(errors,[]);
   console.log('PASS epilogue: actual keyboard movement, companions, dialogue, candles, letter, real PNG, resume, save isolation and return');
- }finally{await browser?.close();await server.close();}
+ }catch(error){console.log('EPILOGUE_DIAGNOSTIC',JSON.stringify(errors));throw error;}finally{await browser?.close();await server.close();}
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});
