@@ -42,3 +42,6 @@ El interlocutor activo de la burbuja controla la pose real de los personajes. Lu
 - El primer ataque de las sombras se programa desde su aparición (no desde el arranque del juego), con aviso de 650 ms y separación de 520 ms. Colisiones por deslizamiento para sombras. Se conserva Corazones 2.
 - Flor de práctica opcional en la mañana: reacciona al disparo de corazón, con sonido y efecto, sin alterar etapas ni duración obligatoria.
 - El jardín pierde los reflejos dorados tras el secuestro; animales se inquietan y cantos de aves dan paso a viento/insectos mediante ecología ya existente. Sin emisores nuevos. Pruebas unitarias y de navegador añadidas. No se modifica 3D.
+
+## Revisión visual de capturas de navegador
+Se inspeccionaron fotogramas reales del run 46025507103, artefacto 15211573223 (37 PNG). La escena Emy conserva su sprite y aspecto de primer plano pero los indicadores del jardín competían; ahora se ocultan durante alimentación y conversación. Diálogo más compacto, mayor legibilidad, encuadre narrativo 12% más cercano manteniendo cámara original del arcade. Capturas previas no demuestran todavía fidelidad idéntica a la tarjeta; pendiente revisión de nuevas capturas. Pruebas de layout y zoom adaptadas a requisitos de la revisión, conservando límites de interacción y protección del arcade. No se modifica 3D.

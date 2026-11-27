@@ -965,9 +965,13 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
  }
  fitCamera(width:number,height:number){if(width<=0||height<=0)return;
   const camera=this.cameras.main;
-  // Zoom IDENTICO al original; únicamente la historia sigue a Kitty al explorar.
+  // Preserve classic zoom; only the narrative scene gets a 12% closer framing.
   camera.setZoom(Math.min(width/800,height/450)*1.08);
-  if(this.story&&this.player)camera.startFollow(this.player,false,.12,.12);
+  if(this.story&&this.player){
+   // A modest narrative-only close-up improves character readability on phones.
+   camera.setZoom(camera.zoom*1.12);
+   camera.startFollow(this.player,false,.12,.12);
+  }
   else camera.centerOn(400,225);
  }
  drawFloor(){

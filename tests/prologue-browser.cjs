@@ -45,8 +45,8 @@ async function play(){
     usingOriginalFloor:!!scene.floor,usingOriginalCharacter:scene.player.texture.key.startsWith('chibi-kitty-')};
   });
   assert.equal(realScene.key,'iso-adventure','rescue must be the ACTUAL Corazones Phaser class');
-  assert.equal(realScene.zoom,Math.min(realScene.width/800,realScene.height/450)*1.08,
-   'rescue must keep the IDENTICAL Corazones camera zoom formula');
+  assert(Math.abs(realScene.zoom-Math.min(realScene.width/800,realScene.height/450)*1.08*1.12)<.00001,
+   'story-only close-up preserves classic base zoom');
   assert(realScene.usingOriginalFloor&&realScene.usingOriginalCharacter,
    'rescue must use the original diamond floor and Kitty sprite system');
   assert.equal(await game.getAttribute('data-prologue-stage'),'intro');
@@ -138,6 +138,9 @@ async function play(){
      },null,{timeout:6000});
      assert.equal(await convo.locator('.prologue-portrait img').count(),1);
      assert.equal(await convo.getAttribute('data-complete'),'false');
+     const geometry=await convo.locator('.prologue-dialog').boundingBox();
+     assert(geometry.width<844*.85&&geometry.height<390*.42,'dialogue remains compact on landscape mobile');
+     assert.equal(await page.locator('.adventure-hud').isVisible(),false,'conversation hides competing HUD');
      await page.screenshot({path:'artifacts/story-dialogue-writing.png'});
      // Real touch on the scenery (outside the card) finishes, then advances.
      await page.touchscreen.tap(10,35);
@@ -202,6 +205,7 @@ async function play(){
   await feeding.waitFor();
   const compact=await feeding.evaluate(el=>{const scene=el.querySelector('.emy-scene'),stage=el.querySelector('.emy-stage'),pet=el.querySelector('.emy-pet img');const cr=scene.getBoundingClientRect(),sr=stage.getBoundingClientRect(),er=el.getBoundingClientRect();return {scene:cr.width,viewport:er.width,stage:sr.width,within:sr.top>=er.top&&sr.bottom<=er.bottom,original:pet.src.includes('/sprites/emy-'),noCard:!el.querySelector('.emy-card')};});
   assert(compact.scene<compact.viewport*.95&&compact.stage>=150&&compact.within&&compact.original&&compact.noCard,'garden overlay uses original sprite, no opaque card, usable stage');
+  assert.equal(await page.locator('.adventure-hud').isVisible(),false,'feeding hides competing HUD');
   await page.screenshot({path:'artifacts/story-emy-feeding-redesign.png'});
   await feeding.waitFor();
   assert.equal(await game.getAttribute('data-fed-grey-cat'),'false');

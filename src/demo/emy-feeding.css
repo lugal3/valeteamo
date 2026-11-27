@@ -32,3 +32,19 @@
 @media(max-height:500px) and (min-width:600px){.emy-scene{width:min(85vw,620px);height:100%;grid-template-columns:minmax(130px,1fr) minmax(0,auto);grid-template-rows:1fr 1fr;column-gap:16px}.emy-scene header{grid-column:1;grid-row:1;align-self:end;flex-wrap:wrap}.emy-stage{grid-column:2;grid-row:1/3;width:min(84dvh,49vw,360px)}.emy-feeding footer{grid-column:1;grid-row:2;align-self:start;padding-top:16px}.emy-keys{text-align:left}}
 @media(max-height:320px){.emy-stage{width:min(78dvh,60vw,250px)}}
 @media(prefers-reduced-motion:reduce){.emy-feeding,.emy-feeding *{animation:none!important;transition:none!important}}
+
+/* In the real mobile capture the scene HUD was competing with Emy.
+   Frame the existing sprite with a subtle glow and place the speech above it. */
+.emy-feeding{background:radial-gradient(ellipse at 55% 48%,#fbe1c93b 0%,#30263886 63%,#211a30c7 100%)}
+.emy-stage{isolation:isolate}
+.emy-pet{z-index:1}
+.emy-mouth-guide{z-index:2}
+.emy-speech{z-index:4;top:5%;left:66%;max-width:34%;font-size:clamp(11px,1.6vw,15px);padding:5px 9px}
+.emy-love{z-index:4}
+.emy-meter{height:9px;background:#2d233b85;box-shadow:0 1px 4px #20182d80}
+.emy-keys{font-weight:600;text-shadow:0 1px 3px #1b1426,0 0 6px #1b1426}
+@media(max-height:500px) and (min-width:600px){
+ .emy-scene{width:min(84vw,650px);grid-template-columns:minmax(170px,1fr) auto;column-gap:22px}
+ .emy-scene header{flex-wrap:nowrap}
+ .emy-stage{width:min(80dvh,48vw,350px)}
+}

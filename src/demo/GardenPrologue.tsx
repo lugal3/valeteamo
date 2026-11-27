@@ -331,7 +331,7 @@ export function GardenPrologue({test=false,checkpoint='intro',onExit,onEnterHous
  return <main className="story-prologue" aria-label="Rescate con el motor original de Corazones"
   data-prologue-stage={run.stage} data-rescue-map={map} data-transition={transition?.phase??'none'}
    data-story-act={chapter.id} data-house-handoff={houseHandoff}
-  data-fed-grey-cat={run.fedGreyCat}
+  data-fed-grey-cat={run.fedGreyCat} data-feeding={feeding??'none'} data-conversation={!!dialog}
   onClickCapture={event=>{
    if(!muted&&event.target instanceof Element&&!event.target.closest('.adventure-wrap')){
     void audio.start();
