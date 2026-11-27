@@ -37,6 +37,26 @@ module.exports=async()=>{
    assert.equal((slots.match(/kitty-life lost/g)||[]).length,1);
   }
   assert.deepEqual(JSON.parse(data.get(RESCUE_SAVE_KEY)),rescue);
+  // Easy must never debit a life or consume the standard one-time rescue.
+  for(const used of [false,true])for(const lives of [1,2,3]){
+   let state={version:2,stage:'encounter',picked:['key'],hide:'wardrobe',lives,emyRescueUsed:used};
+   for(let attempt=0;attempt<20;attempt++){
+    const loss=captureLoss(state.lives,state,'wardrobe',state.emyRescueUsed,true);
+    assert.equal(loss.lives,lives);assert.equal(loss.emyRescue,true);
+    assert.equal(loss.emyRescueUsed,used);assert.equal(loss.ending,null);
+    assert.equal(loss.checkpoint.hide,undefined);assert.deepEqual(loss.checkpoint.picked,['key']);
+    state=loss.checkpoint;
+   }
+   const standard=captureLoss(state.lives,state,null,state.emyRescueUsed,false);
+   assert.equal(standard.emyRescue,lives===1&&!used);
+   assert.equal(standard.ending,lives===1&&used?'captured':null);
+  }
+  const {difficultyProfile}=await import('../src/lab/difficulty.js');
+  const {readCameraSettings,writeCameraSettings}=await import('../src/lab/camera-controls.js');
+  assert.equal(difficultyProfile('easy').id,'easy');
+  writeCameraSettings(globalThis.localStorage,{sensitivity:1.05,difficulty:'easy'});
+  assert.equal(readCameraSettings(globalThis.localStorage).difficulty,'easy');
+
   assert.equal(checkpointLives(openRescueHouseSave().checkpoint?.lives),3);
  }finally{
   if(previous)Object.defineProperty(globalThis,'localStorage',previous);
