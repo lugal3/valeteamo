@@ -49,6 +49,7 @@ jobs:
       - run: node tests/emy-face-review-browser.mjs
       - run: npm run build
       - run: node tests/emy-face-runtime-browser.mjs
+      - run: node tests/emy-face-render-benchmark.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

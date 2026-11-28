@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
-import {installUpstairsEmy,poseEmy} from '../src/lab/emy-cat.js';
+import {installUpstairsEmy,installEmyModel,poseEmy} from '../src/lab/emy-cat.js';
 import {emySurface} from '../src/lab/emy-surface.js';
 import {applyReviewAppearance,sampleReview,reviewCat} from '../src/lab/review/face-review-model.js';
 const add=(id,x,y,z,w,h,d,material,solid,extra)=>({id,x,y,z,w,h,d,material,solid,...extra});
-const fresh=()=>installUpstairsEmy(add,3.15);
-for(const variant of ['soft','refined']){
- const a=fresh(),b=fresh(),original=sampleReview(a,{mode:'idle'});applyReviewAppearance(b,variant);
+const fresh=low=>{const cat=installUpstairsEmy(add,3.15);if(low){cat.parts=installEmyModel(add,{hidden:true});poseEmy(cat);for(const {box} of cat.parts)box.hiddenGeometry=false;}return cat;};
+for(const low of [false,true])for(const variant of ['soft','refined']){
+ const a=fresh(low),b=fresh(low),original=sampleReview(a,{mode:'idle'});applyReviewAppearance(b,variant);
  const updated=sampleReview(b,{mode:'idle'});
  assert(updated.count<=original.count);assert(updated.triangles<=original.triangles);
  for(let i=0;i<a.parts.length;i++){
@@ -15,7 +15,7 @@ for(const variant of ['soft','refined']){
  }
  const iris=b.parts.find(p=>p.id==='iris1').box;assert.equal(emySurface(iris).vertices[11],21.25);
  assert.equal(emySurface(a.parts.find(p=>p.id==='iris1').box).vertices[11],21);
- const c=fresh();applyReviewAppearance(c,'original');assert.deepEqual(sampleReview(c,{mode:'idle'}).vertices,original.vertices);
- console.log('PREVIEW_ACTOR '+JSON.stringify({variant,vertices:updated.count,triangles:updated.triangles}));
+ const c=fresh(low);applyReviewAppearance(c,'original');assert.deepEqual(sampleReview(c,{mode:'idle'}).vertices,original.vertices);
+ console.log('PREVIEW_ACTOR '+JSON.stringify({variant,low,vertices:updated.count,triangles:updated.triangles}));
 }
 console.log('PASS candidate applied before allocation; real actor anchors and original appearance preserved');
