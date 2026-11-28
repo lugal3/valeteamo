@@ -24,6 +24,17 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  const source=Float32Array.from({length:160},(_,i)=>Math.sin(i)*4),target=new Float32Array(160),expected=reflectMesh(source.slice());
  reflectVertexRange(source,target,0,160,reflectMesh);assert.deepEqual(target,expected);
  source[32]=5;source[102]=7;reflectVertexRange(source,target,32,48,reflectMesh);reflectVertexRange(source,target,96,112,reflectMesh);assert.deepEqual(target,reflectMesh(source.slice()),'partial mirror matches full reflection byte-for-byte');
+ const {buildStaticBatches,clipPlanes,batchOutside,visibleStaticRuns}=await import('../src/lab/static-visibility.js');
+ const verts=new Float32Array(9*16);const coords=[[-1,-1,5],[1,-1,5],[0,1,5],[100,0,5],[101,0,5],[100,1,5],[-100,0,5],[-99,0,5],[0,1,5]];
+ coords.forEach((p,i)=>verts.set(p,i*16));const idx=Uint16Array.from({length:9},(_,i)=>i);
+ const batches=buildStaticBatches(verts,idx,3),basis={right:[1,0,0],up:[0,1,0],forward:[0,0,1]},origin={x:0,y:0,z:0};
+ const planes=clipPlanes(basis,1,1);
+ assert(!batchOutside(batches[0],origin,planes));assert(batchOutside(batches[1],origin,planes));assert(!batchOutside(batches[2],origin,planes),'triangle crossing viewport must survive');
+ assert.deepEqual(visibleStaticRuns(batches,9,origin,basis,1,1),[[0,3],[6,9]]);
+ assert.deepEqual(visibleStaticRuns(batches,9,origin,basis,1,1,{maxDraws:1}),[[0,9]],'draw overhead fallback');
+ assert(!batchOutside(batches[1],{x:100,y:0,z:0},planes),'same geometry can cast a shadow from an offscreen lamp');
+ // Conservative guard includes geometry just outside the mathematical edge.
+ assert(!batchOutside({center:[5.01,0,5],half:[0,0,0]},origin,planes));
  const s=createFrameSampler(5);
  assert.equal(s.report().samples,0);
  for(let i=0;i<=5;i++)s.record(i*20,4);

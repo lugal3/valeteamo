@@ -1,4 +1,5 @@
 import {circuitPowered} from './house-lights.js';
+import {visibleStaticRuns} from './static-visibility.js';
 
 export const SHADOW_GRID=4;
 export const SHADOW_TILE=256;
@@ -93,11 +94,14 @@ export class HouseShadows{
   gl.uniform3f(u.uOrigin,origin.x,origin.y,origin.z);
   gl.uniform3fv(u.uRight,basis.right);gl.uniform3fv(u.uUp,basis.up);gl.uniform3fv(u.uForward,basis.forward);
   gl.uniform1f(u.uSpread,spread);gl.uniform1f(u.uReach,reach);
-  for(const {vertices,indices,count} of meshes){
+  for(const {vertices,indices,count,batches} of meshes){
    if(!count)continue;
    gl.bindBuffer(gl.ARRAY_BUFFER,vertices);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indices);
    gl.enableVertexAttribArray(this.position);gl.vertexAttribPointer(this.position,3,gl.FLOAT,false,16*4,0);
-   gl.drawElements(gl.TRIANGLES,count,gl.UNSIGNED_SHORT,0);
+   // Cull only immutable triangles outside the LIGHT frustum, never the
+   // camera frustum. Actors and doors continue to cast off-screen shadows.
+   const runs=visibleStaticRuns(batches,count,origin,basis,1/spread,1/spread,{maxDraws:6,minSavings:.35});
+   for(const [start,end] of runs)gl.drawElements(gl.TRIANGLES,end-start,gl.UNSIGNED_SHORT,start*2);
   }
  }
  end(width,height){

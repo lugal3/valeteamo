@@ -15,6 +15,7 @@ import {pursuerPieces,posePursuer} from './pursuer-model.js';
 import {pursuerShadowPieces,shadowRelevant,shadowNeedsUpdate} from './pursuer-shadow.js';
 import {houseRenderSize} from './frame-budget.js';
 import {createDirtyRanges,reflectVertexRange} from './dirty-ranges.js';
+import {buildStaticBatches,visibleStaticRuns} from './static-visibility.js';
 import {CAPTURE_FABRIC,pursuerInterior} from './pursuer-face.js';
 import {createPursuerTexture} from './pursuer-texture.js';
 import {captureBasis} from './capture-shot.js';
@@ -420,7 +421,7 @@ export class HouseRenderer {
   // This avoids shading the garden and neighboring houses behind interior walls.
   const order=b=>/^(west-|east-|north-|south-|music-west|music-south|kitchen-divider|bath-divider|stairwell-side)/.test(b.id)?0:/^(garden-|neighbor-|distant-|tree-|car-|moon|road|pavement|front-path)/.test(b.id)?4:/^(base|floor-up-|ceiling|roof)/.test(b.id)?3:1;
   const gl=this.gl,staticBoxes=boxes.filter(b=>!b.dynamic).sort((a,b)=>order(a)-order(b)),mesh=geometry(staticBoxes);
-  const {vertices,indices}=mesh;this.count=indices.length;
+  const {vertices,indices}=mesh;this.count=indices.length;this.staticBatches=buildStaticBatches(vertices,indices);
   this.dynamicBoxes=boxes.filter(b=>b.dynamic);
   if(this.dynamicBoxes.some(box=>box.emySpec))this.emyCoatTexture.enable();
   // Avoid fetching the face atlas in unrelated 3D scenes and editor previews.
@@ -445,7 +446,9 @@ export class HouseRenderer {
   this.fixtures=boxes.flatMap(box=>box.fixture?[box.fixture]:[]);
   this.dirtyLampShadows=new Set(this.fixtures);
   this.dynamicCasters=this.dynamicBoxes.map(castsShadow);
-  this.shadowMeshes[0].count=uploadShadowIndices(gl,this.shadowMeshes[0].indices,mesh,staticBoxes.map(castsShadow));
+  const staticShadowIndices=filteredIndices(mesh,staticBoxes.map(castsShadow));
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.shadowMeshes[0].indices);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,staticShadowIndices,gl.STATIC_DRAW);
+  this.shadowMeshes[0].count=staticShadowIndices.length;this.shadowMeshes[0].batches=buildStaticBatches(vertices,staticShadowIndices);
   this.shadowMeshes[1].count=uploadShadowIndices(gl,this.shadowMeshes[1].indices,dynamic,this.dynamicCasters);
   if(vertices.length/16>65530)throw Error('Demasiada geometría para WebGL1');
   gl.bindBuffer(gl.ARRAY_BUFFER,this.vbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);
@@ -590,6 +593,7 @@ export class HouseRenderer {
   gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamicVbo);
   const reduced=motion.reduced||false;
   this.dynamicRigKeys ||= [];
+  this.dynamicDirty??=createDirtyRanges(48,128);this.reflectionDirty??=createDirtyRanges(32,128);
   const rigCache=new Map(); // once per character each frame, never once per limb
   const shadowedRigs=new Set();
   // Adjacent rigid parts share one GPU upload instead of ~60 tiny calls.
@@ -980,7 +984,11 @@ export class HouseRenderer {
   // Closed doors are useful depth occluders too. All these surfaces are opaque.
   if(this.dynamicCount){this.bind(this.dynamicVbo,this.dynamicIbo);gl.drawElements(gl.TRIANGLES,this.dynamicCount,gl.UNSIGNED_SHORT,0);}
   this.bind(this.vbo,this.ibo);
-  gl.drawElements(gl.TRIANGLES,this.count,gl.UNSIGNED_SHORT,0);
+  // Main camera only: never suppress simulation, dynamic actors, the mirror
+  // or the independent shadow passes. Keep the original triangle order.
+  const runs=visibleStaticRuns(this.staticBatches,this.count,camera,basis,projection*this.canvas.height/this.canvas.width,projection);
+  this.staticDrawCalls=runs.length;this.staticSubmitted=0;
+  for(const [start,end] of runs){this.staticSubmitted+=end-start;gl.drawElements(gl.TRIANGLES,end-start,gl.UNSIGNED_SHORT,start*2);}
   this.drawNoiseProps();
   if(motion.pursuer?.active){
    if(motion.pursuerLight!==undefined)gl.uniform1f(this.uniform.uShot,motion.pursuerLight);
