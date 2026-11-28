@@ -27,10 +27,10 @@ async function run(){
    ['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']:[]});
   let page,screenshotSession;
   const errors=[];
-  const freshPage=async()=>{
+  const freshPage=async(storageState)=>{
    if(browser)await browser.close();
     browser=await launchBrowser();
-    page=await browser.newPage({viewport:{width:960,height:540},reducedMotion:'reduce'});
+    page=await browser.newPage({viewport:{width:960,height:540},reducedMotion:'reduce',...(storageState?{storageState}:{})});
    screenshotSession=browserType===chromium?await page.context().newCDPSession(page):null;
    page.setDefaultTimeout(60000);
    page.on('pageerror',error=>errors.push(error.message));
@@ -92,7 +92,27 @@ async function run(){
    assert.equal(await page.locator('#lab3d').count(),1);
    assert.equal(await page.locator('canvas').count(),1,'Only the WebGL house canvas remains');
   };
-  const reloadHouse=async()=>{await openMenu();await continueRescue();await waitForHouse();};
+  let reloadCount=0;
+  const reloadHouse=async()=>{
+   // Keep the first real same-page reload to test ordinary navigation and
+   // teardown. Subsequent checkpoint restores simulate closing/reopening
+   // the browser with its actual persisted origin storage, releasing the
+   // exhausted SwiftShader GPU process between long story scenarios.
+   const storage=await page.context().storageState();
+   const expected=await read(RESCUE_KEY);
+   if(++reloadCount>1){
+    await freshPage(storage);
+   }
+   try{
+    await openMenu();
+    assert.deepEqual(await read(RESCUE_KEY),expected,'Browser restart/reload preserves the exact saved rescue');
+    await continueRescue();await waitForHouse();
+    console.log('Checkpoint restore '+reloadCount+' — '+(reloadCount===1?'same browser':'fresh browser, persisted origin storage'));
+   }catch(error){
+    console.error('CHECKPOINT_RELOAD_DIAGNOSTIC',JSON.stringify({reload:reloadCount,expectedStage:expected?.houseCheckpoint?.stage,errors}));
+    throw error;
+   }
+  };
   // A mounted canvas can still be awaiting the sprite loads. Navigate only
   // once the prologue is playable, so the test doesn't cancel those requests.
   const waitForPrologue=()=>page.waitForFunction(()=>Boolean(window.__valePrologue?.scene()?.player?.texture));
