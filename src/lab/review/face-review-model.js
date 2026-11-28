@@ -9,7 +9,22 @@ export function reviewCat(variant='original',low=false){
  const cat={parts:installEmyModel(add,{hidden:low}),x:0,y:0,z:0,yaw:0,age:.7};
  if(variant!=='original'){
   const box=cat.parts.find(p=>p.id==='head').box;
-  box.emyMesh=sculptSurface(box.emySpec,candidateFace(box.emySpec.asset,variant));
+  const original=emySurface(box),candidate=sculptSurface(box.emySpec,candidateFace(box.emySpec.asset,variant));
+  // Eye/muzzle exclusions change accepted fibres after a sculpt. Cap the
+  // candidate to the exact existing strand budget, keeping whole fibres.
+  if(candidate.vertices.length>original.vertices.length){
+   const stride=7*16,base=candidate.baseCount*16,available=(candidate.vertices.length-base)/stride,limit=(original.vertices.length-base)/stride;
+   if(!Number.isInteger(available)||!Number.isInteger(limit)||candidate.baseIndexCount!==original.baseIndexCount)throw Error('Unexpected head fibre topology');
+   const vertices=new Float32Array(base+limit*stride),indices=candidate.indices.slice(0,candidate.baseIndexCount);
+   vertices.set(candidate.vertices.subarray(0,base));
+   const block=(candidate.indices.length-candidate.baseIndexCount)/available;
+   for(let j=0;j<limit;j++){
+    const k=Math.floor((j+.5)*available/limit),src=base+k*stride,dst=base+j*stride;
+    vertices.set(candidate.vertices.subarray(src,src+stride),dst);
+    for(let i=0;i<block;i++)indices.push(candidate.indices[candidate.baseIndexCount+k*block+i]+(j-k)*7);
+   }
+   box.emyMesh={...candidate,vertices,indices};
+  }else box.emyMesh=candidate;
  }
  return cat;
 }
