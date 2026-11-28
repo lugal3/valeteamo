@@ -48,8 +48,8 @@ function coatTint(p,head){
  const pale=clamp((p[2]-.07)/.18)*clamp((.47-p[1])/.13);
  return [.66+pale*.39,.69+pale*.38,.72+pale*.36];
 }
-export function sculptSurface(spec){
- const head=spec.asset.startsWith('head'),source=EMY_SCULPT[spec.asset],vertices=[],indices=[...source.indices],skin=[];
+export function sculptSurface(spec,source=EMY_SCULPT[spec.asset]){
+ const head=spec.asset.startsWith('head'),vertices=[],indices=[...source.indices],skin=[];
  for(let i=0;i<source.vertices.length;i+=6){
   const p=source.vertices.slice(i,i+3),n=source.vertices.slice(i+3,i+6),uv=uvFor(p,head),color=coatTint(p,head);
   vertices.push(...p,...color,...n,...uv,20,64,1,0,0);

@@ -2,7 +2,7 @@ name: Emy — revisión base 3D (sin publicar)
 on:
   pull_request:
     branches: [main]
-    paths: ['src/lab/assets/emy/face-candidate.js','scripts/emy/export-face-baseline.mjs','tests/emy-face-baseline.mjs','.github/workflows/emy-face-review.yml','docs/EMY-FACE-V2.md']
+    paths: ['src/lab/assets/emy/face-candidate.js','scripts/emy/export-face-baseline.mjs','tests/emy-face-baseline.mjs','.github/workflows/emy-face-review.yml','docs/EMY-FACE-V2.md','src/lab/review/**','src/lab/emy-sculpt.js','emy-face-review.html','tests/emy-face-review*.mjs']
   workflow_dispatch:
 permissions:
   contents: read
@@ -28,3 +28,21 @@ jobs:
         with:
           name: emy-original-geometry-and-views
           path: output/emy-face-baseline/
+
+  lab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: node tests/emy-face-review.mjs
+      - run: npx playwright install --with-deps chromium
+      - run: node tests/emy-face-review-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: emy-studio-six-views
+          path: output/emy-face-baseline/lab/
