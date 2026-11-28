@@ -148,7 +148,7 @@ function fetchKey(companion,world,player,dt,reduced){
  if(job.phase==='leap-in'||job.phase==='leap-out'){
   const entering=job.phase==='leap-in',from=job.start,to=entering?vent.entrance:vent.takeoff;
   job.time+=dt;leap=leapPose(cat,from,to,job.time,.64,.63,entering?Math.PI:undefined);mode='leap';
-  if(job.time>=1.14){job.phase=entering?'crawl':'return';job.time=0;}
+  if(job.time>=1.14){job.phase=entering?'crawl':'return';job.time=0;job.progressAge=0;job.progressOrigin=null;job.stuck=0;job.travelAge=0;job.nextPlan=0;}
  }else if(job.phase==='crawl'){
   job.time+=dt;
   const exit=vent.mode==='through'?vent.exit:vent.entrance;
@@ -186,12 +186,27 @@ function fetchKey(companion,world,player,dt,reduced){
      planRoute(companion,world,goal,(job.stuck||0)>.65);job.nextPlan=companion.age+1.1;
     }
     openRouteDoor(companion,world,player,reduced);
-    point=companion.route[0]||goal;
+    // A newly planned nearest lattice node can lie just behind the cat.
+    // Choose the furthest of the next few nodes reachable by a real sweep,
+    // preserving the route when a closed door or a corner blocks the leg.
+    // This eliminates short back-and-forth steps during repeated planning.
+    const route=companion.route;
+    for(let i=Math.min(route.length-1,5);i>0;i--){
+     if(clearPassage(world,cat,route[i])){route.splice(0,i);break;}
+    }
+    point=route[0]||goal;
    }else companion.route=[];
    const before={x:cat.x,z:cat.z};
    walking=moveToward(companion,world,point,dt,1.65);
-   job.stuck=distance(before,cat)>=dt*.12?0:(job.stuck||0)+dt;
-   if(job.stuck>14){
+   // Small oscillations must not reset the stall watchdog forever.
+   // Measure displacement over a window, not an individual footstep.
+   job.progressAge=(job.progressAge||0)+dt;
+   job.progressOrigin??={x:before.x,z:before.z};
+   if(distance(job.progressOrigin,cat)>.20){
+    job.progressOrigin={x:cat.x,z:cat.z};job.progressAge=0;job.stuck=0;
+   }else if(job.progressAge>.65)job.stuck=(job.stuck||0)+dt;
+   job.travelAge=(job.travelAge||0)+dt;
+   if(job.stuck>14||job.travelAge>60){
     // The mission stays retryable; never award a key or teleport the cat.
     key.carried=false;vent.interactable=true;companion.fetch=null;companion.stage='following';clearNavigation(companion);return 'fetch-failed';
    }

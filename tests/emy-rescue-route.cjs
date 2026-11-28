@@ -101,6 +101,18 @@ module.exports=async()=>{
  assert(removeVentCover(closedVent,false,'screwdriver'));advanceVentCover(closedVent,3.5);assert(requestRibbonKey(closedCat,closedVent,closedKey));
  let delivered=false;for(let i=0;i<1500;i++){const cue=updateEmyCompanion(closedCat,1/30,{world:closedWorld,player:s,reduced:true});if(cue==='delivered'){delivered=true;break;}if(cue==='fetch-failed')break;}
  assert(delivered,'Ribbon mission opens ordinary doors and returns to Kitty without teleport: '+JSON.stringify({x:closedCat.cat.x,y:closedCat.cat.y,z:closedCat.cat.z,phase:closedCat.fetch?.phase}));
+ // Actual failing browser position: Emy in the living-room lattice,
+ // Kitty next to the open vent with the desk drawer open. Keep the other
+ // doors closed as in the public checkpoint flow.
+ const entranceWorld=createHouse(),entranceCat=createEmyCompanion(entranceWorld.emy,{waiting:false}),entranceVent=entranceWorld.studyVent,entranceKey=entranceWorld.objects.find(o=>o.id==='key');
+ for(const id of ['salon','estudio'])setDoor(entranceWorld.objects.find(o=>o.id===id),true);
+ const {setDrawer}=await import('../src/lab/world.js');setDrawer(entranceWorld.objects.find(o=>o.id==='drawer'),true);
+ Object.assign(entranceCat.cat,{x:3,y:0,z:6.999597522683603,yaw:0});
+ const entrancePlayer={x:4.0087442310373085,y:0,z:.8005216961323365};
+ assert(removeVentCover(entranceVent,false,'screwdriver'));advanceVentCover(entranceVent,3.5);assert(requestRibbonKey(entranceCat,entranceVent,entranceKey));
+ let entranceDelivered=false;
+ for(let i=0;i<2400;i++){const cue=updateEmyCompanion(entranceCat,1/30,{world:entranceWorld,player:entrancePlayer,reduced:true});if(cue==='delivered'){entranceDelivered=true;break;}if(cue==='fetch-failed')break;}
+ assert(entranceDelivered,'Recorded public fetch position must reach the vent and return: '+JSON.stringify({x:entranceCat.cat.x,y:entranceCat.cat.y,z:entranceCat.cat.z,fetch:entranceCat.fetch?.phase,route:entranceCat.route}));
  state.puzzle.key=true;assert.equal(tracker.update(state).target,item('dormitorio'));
  assert.equal(changes,4);
  assert(world.pianoSheet.concealed);assert.equal(world.piano.reward,item('red-key'));

@@ -35,8 +35,10 @@ async function check(){
    });
    assert.equal(first.world,'morning_garden');
    const classicZoom=Math.min(first.width/800,first.height/450)*1.08;
-   assert(Math.abs(first.zoom-classicZoom*1.12)<1e-8,
-    'narrative camera keeps the approved 12% close-up over the classic zoom');
+   // Main already uses the larger 42% framing plus ultrawide minimum.
+   // Verify that current approved framing rather than the obsolete 12%.
+   assert(Math.abs(first.zoom-Math.max(classicZoom*1.42,first.width/640))<1e-8,
+    'narrative camera keeps current main framing and ultrawide minimum');
    await page.keyboard.down('d');
    // Software-backed Phaser can render fewer frames than wall-clock timing suggests.
    // Keep all displacement, velocity, and footstep assertions, but wait for
