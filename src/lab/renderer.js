@@ -14,6 +14,7 @@ import {drawViewModel} from './viewmodel.js';
 import {pursuerPieces,posePursuer} from './pursuer-model.js';
 import {pursuerShadowPieces,shadowRelevant,shadowNeedsUpdate} from './pursuer-shadow.js';
 import {houseRenderSize} from './frame-budget.js';
+import {createDirtyRanges,reflectVertexRange} from './dirty-ranges.js';
 import {CAPTURE_FABRIC,pursuerInterior} from './pursuer-face.js';
 import {createPursuerTexture} from './pursuer-texture.js';
 import {captureBasis} from './capture-shot.js';
@@ -433,6 +434,8 @@ export class HouseRenderer {
   this.dynamicRigBinds=this.dynamicBoxes.map(b=>b.rigBone&&b.source?[b.source.x,b.source.y,b.source.z]:null);
   this.dynamicRigKeys=new Array(this.dynamicBoxes.length);
   this.dynamicRevision=0;this.reflectedRevision=-1;this.reflectedUploads=0;
+  this.reflectionDirty=createDirtyRanges(32,128);this.reflectionDirty.add(0,this.dynamicVertices.length);this.reflectedBytes=0;
+  this.dynamicDirty=createDirtyRanges(48,128);this.dynamicUploads=0;this.dynamicUploadBytes=0;
   this.dynamicEyeScale=new Float32Array(this.dynamicBoxes.length);this.dynamicEyeScale.fill(-1);
   gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamicVbo);gl.bufferData(gl.ARRAY_BUFFER,this.dynamicVertices,gl.DYNAMIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.dynamicIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,dynamic.indices,gl.STATIC_DRAW);
@@ -533,7 +536,7 @@ export class HouseRenderer {
   this.mirrorMeshes=[geometry([{...BATH_MIRROR,x:BATH_MIRROR.x-.0005}]),geometry(boxes.filter(b=>!b.dynamic&&!b.id.includes('mirror'))),geometry(kittyMirrorPieces()),{vertices:new Float32Array(this.dynamicVertices.length),indices:dynamicIndices}];
   reflectMesh(this.mirrorMeshes[1].vertices);
   this.kittyVertices=new Float32Array(this.mirrorMeshes[2].vertices.length);this.mirrorPose=null;this.mirrorUploads=0;this.characterBinding=createRigBinding(this.mirrorMeshes[2].groups);
-  this.mirrorMeshes.forEach((mesh,i)=>{gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[i*2]);gl.bufferData(gl.ARRAY_BUFFER,mesh.vertices,i===2?gl.DYNAMIC_DRAW:gl.STATIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.mirrorBuffers[i*2+1]);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,mesh.indices,gl.STATIC_DRAW);});
+  this.mirrorMeshes.forEach((mesh,i)=>{gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[i*2]);gl.bufferData(gl.ARRAY_BUFFER,mesh.vertices,i>=2?gl.DYNAMIC_DRAW:gl.STATIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.mirrorBuffers[i*2+1]);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,mesh.indices,gl.STATIC_DRAW);});
  }
  drawMirror(camera,motion){
   const gl=this.gl;this.mirrorDrawn=false;
@@ -553,9 +556,12 @@ export class HouseRenderer {
   gl.uniform1f(this.uniform.uMirrorPass,1);gl.frontFace(gl.CW);draw(1);
   // The reflected dynamic batch is byte-identical until a real pose upload.
   if(this.reflectedRevision!==this.dynamicRevision){
-   this.mirrorMeshes[3].vertices.set(this.dynamicVertices);reflectMesh(this.mirrorMeshes[3].vertices);
-   gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[6]);gl.bufferData(gl.ARRAY_BUFFER,this.mirrorMeshes[3].vertices,gl.DYNAMIC_DRAW);
-   this.reflectedRevision=this.dynamicRevision;this.reflectedUploads++;
+   gl.bindBuffer(gl.ARRAY_BUFFER,this.mirrorBuffers[6]);
+   for(const [start,end] of this.reflectionDirty.drain()){
+    const view=reflectVertexRange(this.dynamicVertices,this.mirrorMeshes[3].vertices,start,end,reflectMesh);
+    gl.bufferSubData(gl.ARRAY_BUFFER,start*4,view);this.reflectedUploads++;this.reflectedBytes+=view.byteLength;
+   }
+   this.reflectedRevision=this.dynamicRevision;
   }
   draw(3);
   const animator=motion.animator;
@@ -592,7 +598,7 @@ export class HouseRenderer {
   const metrics=this.loisRigMetrics={samples:0,uploads:0,bytes:0,parts:0};
   const flushRig=()=>{
    if(rigStart<0)return;
-   gl.bufferSubData(gl.ARRAY_BUFFER,rigStart*4,this.dynamicVertices.subarray(rigStart,rigEnd));
+   this.dynamicDirty.add(rigStart,rigEnd);this.reflectionDirty.add(rigStart,rigEnd);
    this.dynamicRevision++;metrics.uploads++;metrics.bytes+=(rigEnd-rigStart)*4;
    rigStart=-1;rigEnd=-1;
   };
@@ -609,8 +615,10 @@ export class HouseRenderer {
     const {start,end}=this.dynamicRanges[i];
     writeEmySurface(this.dynamicVertices,start,box);
     if(rigStart<0)rigStart=start;rigEnd=end;
-    this.lightPose='';
-    for(const lamp of this.fixtures)if(!this.dirtyLampShadows.has(lamp)&&Math.hypot(lamp.x-box.x,lamp.y-box.y,lamp.z-box.z)<LAMP_REACH+1)this.dirtyLampShadows.add(lamp);
+    if(this.dynamicCasters[i]){
+     this.lightPose='';
+     for(const lamp of this.fixtures)if(!this.dirtyLampShadows.has(lamp)&&Math.hypot(lamp.x-box.x,lamp.y-box.y,lamp.z-box.z)<LAMP_REACH+1)this.dirtyLampShadows.add(lamp);
+    }
     continue;
    }
    // The PS2 option-B Lois uses a parented rigid rig. The legacy fallback
@@ -675,7 +683,7 @@ export class HouseRenderer {
    const {start,end}=this.dynamicRanges[i],glow=box.holidayPower?(box.holidayPower.on&&box.holidayPower.supply.on?48:0):circuitPowered(box.fixture?.circuit)||box.power?.on?32:0;
    const moved=Math.abs(eyeScale-(this.dynamicEyeScale?.[i]??1))>.00001||Math.fround(bx)!==this.dynamicPositions[at]||Math.fround(by)!==this.dynamicPositions[at+1]||Math.fround(bz)!==this.dynamicPositions[at+2]||Math.fround(byaw)!==this.dynamicPositions[at+3]||Math.fround(roll)!==this.dynamicPositions[at+4]||Math.fround(pitch)!==this.dynamicPositions[at+5];
    if(!moved&&this.dynamicVertices[start+12]===this.dynamicTemplate[start+12]+glow)continue;
-   this.dynamicPositions.set([bx,by,bz,byaw,roll,pitch],at);
+   this.dynamicPositions[at]=bx;this.dynamicPositions[at+1]=by;this.dynamicPositions[at+2]=bz;this.dynamicPositions[at+3]=byaw;this.dynamicPositions[at+4]=roll;this.dynamicPositions[at+5]=pitch;
    if(this.dynamicEyeScale)this.dynamicEyeScale[i]=eyeScale;
    const origin=this.dynamicOrigins[i];
    const angle=byaw-origin[3],c=Math.cos(angle),s=Math.sin(angle),cr=Math.cos(roll-origin[4]),sr=Math.sin(roll-origin[4]);
@@ -687,7 +695,7 @@ export class HouseRenderer {
     this.dynamicVertices[v+1]=by+y*cp-localZ*sp;
     this.dynamicVertices[v+2]=bz+x*s+z*c;
     this.dynamicVertices[v+12]=this.dynamicTemplate[v+12]+glow;
-    for(const offset of [6,13]){
+    for(let offset=6;offset<=13;offset+=7){
      const tx=this.dynamicTemplate[v+offset],ty=this.dynamicTemplate[v+offset+1];
      const nx=tx*cr-ty*sr,ny=tx*sr+ty*cr,tz=this.dynamicTemplate[v+offset+2],nz=ny*sp+tz*cp;
      this.dynamicVertices[v+offset]=nx*c-nz*s;
@@ -695,7 +703,7 @@ export class HouseRenderer {
      this.dynamicVertices[v+offset+2]=nx*s+nz*c;
     }
    }
-   gl.bufferSubData(gl.ARRAY_BUFFER,start*4,this.dynamicVertices.subarray(start,end));
+   this.dynamicDirty.add(start,end);this.reflectionDirty.add(start,end);
    this.dynamicRevision++;
    if(moved&&this.dynamicCasters[i]){
     this.lightPose='';
@@ -704,6 +712,11 @@ export class HouseRenderer {
    }
   }
   flushRig();
+  this.dynamicUploads=0;this.dynamicUploadBytes=0;
+  for(const [start,end] of this.dynamicDirty.drain()){
+   const view=this.dynamicVertices.subarray(start,end);gl.bufferSubData(gl.ARRAY_BUFFER,start*4,view);
+   this.dynamicUploads++;this.dynamicUploadBytes+=view.byteLength;
+  }
  }
  updatePursuerShadow(actor,time,reduced){
   if(!this.shadows.available)return;

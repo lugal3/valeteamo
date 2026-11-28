@@ -249,7 +249,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   sound.set('muted',false);root.querySelectorAll('[data-setting="mute"]').forEach(el=>el.checked=false);
   if(await sound.start()&&active&&isSuspended()&&!captureRunning())sound.pause();
  });
- const $=id=>root.querySelector('#'+id),canvas=$('lab-canvas'),dialog=$('lab-dialog'),captureLayer=$('lab-capture'),captureCaption=$('capture-caption');
+ const nodes=new Map();
+ const $=id=>{let node=nodes.get(id);if(!node||!root.contains(node)){node=root.querySelector('#'+id);if(node)nodes.set(id,node);else nodes.delete(id);}return node;},canvas=$('lab-canvas'),dialog=$('lab-dialog'),captureLayer=$('lab-capture'),captureCaption=$('capture-caption');
  const hudMessages=new HouseMessages(root);
  phone.onPresentationChange=()=>hudMessages.layout(phone.rect,phone.open);
  const controller=new AbortController(),signal=controller.signal;
@@ -1386,9 +1387,9 @@ function runAction(act,node){
   for(const button of phone.visibleSlots())if(button.disabled!==!!heldNoise)button.disabled=!!heldNoise;
   syncEquipmentControls();
   const canEmote=!heldNoise&&inBathroom()&&!notePresentation&&!noteLift;
-  root.querySelector('[data-act=emotes]').hidden=!canEmote;
-  if(!canEmote){$('house-emotes').hidden=true;
-   root.querySelector('[data-act=emotes]').setAttribute('aria-expanded','false');}
+  const emoteButton=root.querySelector('[data-act=emotes]');if(emoteButton.hidden===canEmote)emoteButton.hidden=!canEmote;
+  if(!canEmote){if(!$('house-emotes').hidden)$('house-emotes').hidden=true;
+   if(emoteButton.getAttribute('aria-expanded')!=='false')emoteButton.setAttribute('aria-expanded','false');}
   let objective=scenario?.objective??(config.entry==='mirror'?'Mira el reflejo':demo?(puzzle.rescued?'Louis está a salvo':!puzzle.key?'Recoge la llave del estudio':!puzzle.door?'Sube y abre el dormitorio':'Busca la trampilla de la cocina'):'Explora la casa');
   if(events.phase==='explore'&&demo&&!s.inventory.torch)objective='Busca la linterna en el descansillo';
   if(events.phase==='resting')objective='Espera a que termine la ronda';
@@ -1450,7 +1451,7 @@ function runAction(act,node){
    const strength=rcSignalStrength(rc,s);rc.signal=strength;
    const bars=Math.max(1,Math.ceil(strength*4));
    const status=(rc.noise>0?'📣 Señuelo · '+Math.ceil(rc.noise)+' s · ':'')+'Señal '+Math.round(strength*100)+'% · '+Math.round(Math.abs(rc.velocity)*10)/10+' m/s'+(rc.assist?' · Asistencia de túnel':'');
-   $('house-rc-status').dataset.bars=String(bars);
+   if($('house-rc-status').dataset.bars!==String(bars))$('house-rc-status').dataset.bars=String(bars);
    if($('house-rc-status').textContent!==status)$('house-rc-status').textContent=status;
    const help=padSession.mode==='gamepad'?'L · Conducir  ✕ · Bocina  △ · Escotilla  ○ · Guardar':rcControlHint(padSession.mode==='touch',rc.noise,canTrapPursuer(pursuer,world.hatch,rcTrap.armed));
    if($('house-rc-hint').textContent!==help)$('house-rc-hint').textContent=help;
@@ -1459,7 +1460,7 @@ function runAction(act,node){
   }
   const announce=deploying||louis&&(['untying','climb','hide'].includes(louis.phase)||(louis.phase==='hidden'&&louis.age<1.6))||!!finalCutscene;
   $('house-rc-caption').hidden=!announce;
-  if(announce)$('house-rc-caption').textContent=finalCutscene?(finalCutscene.gardenView?'':finalCutscene.playable?'¡Sigue a Emy hacia el jardín con Louis!':finalCutscene.elapsed<.36?'¿Qué ha sido ese ruido?':finalCutscene.elapsed<1.45?'¡Louis!':finalCutscene.elapsed<2.36?'¡Emy!':'¡Ahora, al jardín!'):louis?.phase==='untying'?'Kitty desata las cuerdas mientras Louis espera en silencio…':louis?.phase==='hidden'?'Louis se agacha tras la barra americana y mira alrededor…':louis&&['climb','hide'].includes(louis.phase)?'Louis sube del sótano y busca refugio tras la barra americana…':rc.elapsed<.53?'Colocando el autito…':'Conectando la tablet…';
+  if(announce){const rcCaption=finalCutscene?(finalCutscene.gardenView?'':finalCutscene.playable?'¡Sigue a Emy hacia el jardín con Louis!':finalCutscene.elapsed<.36?'¿Qué ha sido ese ruido?':finalCutscene.elapsed<1.45?'¡Louis!':finalCutscene.elapsed<2.36?'¡Emy!':'¡Ahora, al jardín!'):louis?.phase==='untying'?'Kitty desata las cuerdas mientras Louis espera en silencio…':louis?.phase==='hidden'?'Louis se agacha tras la barra americana y mira alrededor…':louis&&['climb','hide'].includes(louis.phase)?'Louis sube del sótano y busca refugio tras la barra americana…':rc.elapsed<.53?'Colocando el autito…':'Conectando la tablet…';if($('house-rc-caption').textContent!==rcCaption)$('house-rc-caption').textContent=rcCaption;}
   root.classList.toggle('house-finale-shot',!!finalCutscene&&!finalCutscene.playable);
   root.classList.toggle('house-finale-run',!!finalCutscene&&finalCutscene.playable&&!finalCutscene.gardenView);
   root.classList.toggle('house-finale-reunion',!!finalCutscene?.gardenView);
@@ -1668,7 +1669,7 @@ function runAction(act,node){
  const perfSampler=createFrameSampler(),fpsSampler=createFrameSampler(60);let perfEnabled=false,perfAt=0,idleWarm=null,fpsAt=0,fpsWasActive=false;
  const fpsNode=$('house-fps');
  function clearFPS(){fpsSampler.reset();fpsAt=0;fpsWasActive=false;fpsNode.hidden=true;fpsNode.textContent='';}
- const perfReport=()=>({...perfSampler.report(),quality:options.quality,qualityAuto:visualBudget.state().auto,renderScale:renderer.adaptiveScale,renderWidth:canvas.width,renderHeight:canvas.height,targetFPS:60,room:ctxRoom(s),vertices:renderer.vertexCount,triangles:renderer.triangleCount,shadowPasses:renderer.shadowPasses??0,reflectionUploads:renderer.reflectedUploads??0});
+ const perfReport=()=>({...perfSampler.report(),quality:options.quality,qualityAuto:visualBudget.state().auto,renderScale:renderer.adaptiveScale,renderWidth:canvas.width,renderHeight:canvas.height,targetFPS:60,room:ctxRoom(s),vertices:renderer.vertexCount,triangles:renderer.triangleCount,shadowPasses:renderer.shadowPasses??0,reflectionUploads:renderer.reflectedUploads??0,reflectionBytes:renderer.reflectedBytes??0,dynamicUploads:renderer.dynamicUploads??0,dynamicUploadBytes:renderer.dynamicUploadBytes??0});
  function warmPursuer(){
   if(!demo||config.trial||!renderer||idleWarm!==null||typeof window.requestIdleCallback!=='function')return;
   const name=!renderer.pursuerMeshes?.patrol?'patrol':!renderer.pursuerMeshes?.capture&&(events.phase==='rc-setup'||events.phase==='escape')?'capture':null;
@@ -2238,8 +2239,9 @@ function runAction(act,node){
   countdown.hidden=events.phase!=='hide'||!!manual.active; if(!countdown.hidden){const left=Math.ceil(events.remaining);const text=String(left).padStart(2,'0')+' s';if(countdown.querySelector('strong').textContent!==text)countdown.querySelector('strong').textContent=text;countdown.dataset.critical=String(left<=3);countdown.style.setProperty('--remaining',String(events.remaining/10));}
   danger.hidden=!['arrival','patrol','hunt'].includes(events.phase)&&!(events.phase==='evaded'&&(chasing||investigating));
   if(emyCompanion?.stage==='following'&&!scenario&&['patrol','hunt','evaded'].includes(events.phase)&&!chasing&&!investigating)danger.hidden=true;
-  danger.dataset.level=chasing?'chase':investigating?'watch':'search';
-   danger.setAttribute('aria-label',threatAccessibility(danger.dataset.level));
+  const threatLevel=chasing?'chase':investigating?'watch':'search';
+  if(danger.dataset.level!==threatLevel)danger.dataset.level=threatLevel;
+  const threatAria=threatAccessibility(threatLevel);if(danger.getAttribute('aria-label')!==threatAria)danger.setAttribute('aria-label',threatAria);
   const arrivalCaption=options.captions!==false&&events.time<CAR_ARRIVAL_SECONDS?'Se acerca un motor':'Alguien intenta entrar';
   const threatText=events.phase==='hide'?'Escóndete · '+Math.ceil(events.remaining)+' s':
    events.phase==='arrival'?arrivalCaption:
