@@ -4,13 +4,15 @@ import {sculptSurface} from '../emy-sculpt.js';
 import {emySurface,writeEmySurface} from '../emy-surface.js';
 import {candidateFace} from './face-anatomy.js';
 import {EYE_PART,refineEye} from './face-eyes.js';
+import {refineMuzzle,refineNose,tintMuzzle} from './face-muzzle.js';
 export const poses=['idle','walk','sit','groom','stretch','sleep','purr','alert','crouch','jump'];
-export function reviewCat(variant='original',low=false,eyes=false){
+export function reviewCat(variant='original',low=false,eyes=false,muzzle=false){
  const add=(id,x,y,z,w,h,d,material,solid,extra)=>({id,x,y,z,w,h,d,material,solid,...extra});
  const cat={parts:installEmyModel(add,{hidden:low}),x:0,y:0,z:0,yaw:0,age:.7};
  if(variant!=='original'){
   const box=cat.parts.find(p=>p.id==='head').box;
-  const original=emySurface(box),candidate=sculptSurface(box.emySpec,candidateFace(box.emySpec.asset,variant));
+  const original=emySurface(box),source=candidateFace(box.emySpec.asset,variant),edit=muzzle&&['soft','refined'].includes(variant);
+  const geometry=sculptSurface(box.emySpec,edit?refineMuzzle(source):source),candidate=edit?tintMuzzle(geometry):geometry;
   // Eye/muzzle exclusions change accepted fibres after a sculpt. Cap the
   // candidate to the exact existing strand budget, keeping whole fibres.
   if(candidate.vertices.length>original.vertices.length){
@@ -28,6 +30,7 @@ export function reviewCat(variant='original',low=false,eyes=false){
   }else box.emyMesh=candidate;
  }
  if(eyes&&['soft','refined'].includes(variant))for(const part of cat.parts)if(EYE_PART.test(part.id))part.box.emyMesh=refineEye(part,emySurface(part.box));
+ if(muzzle&&['soft','refined'].includes(variant))for(const part of cat.parts)if(part.id==='nose'||part.id.startsWith('nostril'))part.box.emyMesh=refineNose(part,emySurface(part.box));
  return cat;
 }
 export function sampleReview(cat,{mode='idle',phase=.7,alarm=0,blink=false,headYaw=0}={}){

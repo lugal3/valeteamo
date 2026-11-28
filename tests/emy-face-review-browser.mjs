@@ -28,5 +28,10 @@ try{
   await page.selectOption('#pose',mode);await page.locator('#alarm').evaluate((el,v)=>{el.value=v;el.dispatchEvent(new Event('input'));},alarm);await page.locator('#blink').setChecked(blink);
   await page.screenshot({path:'output/emy-face-baseline/lab/eyes-'+name+'.png'});
  }
+ await page.selectOption('#pose','idle');await page.selectOption('#view','three');await page.uncheck('#muzzle');
+ const oldMuzzle=await page.locator('#candidate').evaluate(c=>c.toDataURL());await page.screenshot({path:'output/emy-face-baseline/lab/muzzle-off.png'});await page.check('#muzzle');
+ assert.notEqual(oldMuzzle,await page.locator('#candidate').evaluate(c=>c.toDataURL()));
+ for(const view of ['front','three','left']){await page.selectOption('#view',view);await page.screenshot({path:'output/emy-face-baseline/lab/muzzle-'+view+'.png'});}
+ await page.selectOption('#pose','groom');await page.screenshot({path:'output/emy-face-baseline/lab/muzzle-groom.png'});
  assert.deepEqual(errors,[]);console.log('PASS actual WebGL: baseline six views, identical pixels, low LOD, poses and mobile viewport; 12 candidate views');
 }finally{await browser?.close();await server.close();}
