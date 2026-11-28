@@ -2562,13 +2562,29 @@ function runAction(act,node){
   window.addEventListener('mouseup',e=>{if(e.button!==0)return;if(stickPointerType==='mouse')endStick({pointerId:stickPointer});if(lookPointerType==='mouse')endLook({pointerId:lookPointer});},{signal,capture:true});
   for(const type of ['touchend','touchcancel'])window.addEventListener(type,e=>{if(stickPointerType==='touch'&&!hasControlTouch(e.touches,stick))endStick({pointerId:stickPointer});if(lookPointerType==='touch'&&!hasControlTouch(e.touches,lookOrigin||look))endLook({pointerId:lookPointer,type:e.type});},{signal,capture:true,passive:true});
  }
+ // Pointer lock retargets native mouse events to the locked canvas, but
+ // a compatibility click may be omitted or retargeted when a modal opens.
+ // Consume a primary physical press at document capture, exactly once.
+ let lockedPressUntil=0;
+ document.addEventListener('mousedown',e=>{
+  lockedPressUntil=0;
+  if(!mouseLocked()||!canLook()||e.button!==0||phone.open||!$('house-emotes').hidden)return;
+  // Never turn a genuine HTML control into a world action.
+  if(e.target instanceof Element&&e.target.closest('button,input,select,textarea,a,summary,[role="dialog"]'))return;
+  lockedPressUntil=performance.now()+700;
+  e.preventDefault();e.stopPropagation();
+  if(e.isTrusted)unlockSound();
+  runAction('interact');
+ },{signal,capture:true});
+ document.addEventListener('click',e=>{
+  if(!lockedPressUntil||e.button!==0||e.detail===0)return;
+  const pending=performance.now()<=lockedPressUntil;lockedPressUntil=0;
+  if(pending){e.preventDefault();e.stopImmediatePropagation();}
+ },{signal,capture:true});
  root.addEventListener('click',e=>{
   if(e.isTrusted)unlockSound();
   const button=e.target.closest('[data-act]');
   if(button){e.preventDefault();runAction(button.dataset.act,button);}
-  // The look surface covers the canvas on PC. Under pointer lock some
-  // browsers still dispatch the primary click to that overlay instead of
-  // the canvas. Both are game-world clicks; HTML controls stay excluded.
   else if((e.target===canvas||e.target===look)&&mouseLocked()&&canLook()&&e.button===0)
    runAction('interact');
  },{signal});

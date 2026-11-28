@@ -109,9 +109,15 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
       classes:document.querySelector('#lab3d')?.className,snapshot:window.__rescueHouse.snapshot()
      }))));
      expect('pcCapturedMouseLook',movedLook,{movedLook});
-     await aim('note-hall');await page.mouse.down();await page.mouse.up();
+     await aim('note-hall');
+     await page.evaluate(()=>{
+      window.__lockedClickEvents=[];
+      for(const type of ['mousedown','mouseup','click'])document.addEventListener(type,e=>{if(window.__lockedClickEvents.length<12)window.__lockedClickEvents.push({type,target:e.target?.id,locked:document.pointerLockElement?.id,button:e.button});},{capture:true});
+     });
+     await page.mouse.down();await page.mouse.up();
      const openedNote=await page.locator('#lab-dialog [role=dialog]').waitFor({timeout:4000}).then(()=>true,()=>false);
      const cursorFree=await page.evaluate(()=>document.pointerLockElement===null);
+     if(!openedNote||!cursorFree)console.error('LOCKED_CLICK_DIAGNOSTIC',JSON.stringify(await page.evaluate(()=>({events:window.__lockedClickEvents,snapshot:window.__rescueHouse.snapshot(),locked:document.pointerLockElement?.id}))));
      expect('pcCapturedClickOpensNoteAndFreesCursor',openedNote&&cursorFree,{openedNote,cursorFree});
      if(openedNote){
       await shot('pc-nota-cursor-libre');await page.keyboard.press('Escape');
