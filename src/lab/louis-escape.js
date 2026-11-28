@@ -50,7 +50,16 @@ function advanceLouisEscape(louis,dt,kitty,gardenGoal){
  advanceLoisReaction(louis,dt);
  louis.blink=sampleBlink(louis.age+.61,{reduced:false,firstAt:1.43});
  louis.speed=Math.max(0,louis.speed-dt*5);
- if(louis.phase==='follow')louis.crouch=Math.max(0,louis.crouch-dt*1.35);
+ if(louis.phase==='follow'){
+  // Mirror the eased descent when standing from the deep kitchen squat.
+  // A linear first-frame change in joint angles makes the head jump because
+  // the planted-ankle root correction is nonlinear. Keep the actor planted
+  // until the pose has almost returned to standing (exit route below).
+  if(louis.exitRouteActive&&louis.crouch>0){
+   const t=clamp(louis.age/1.35,0,1);
+   louis.crouch=1-t*t*(3-2*t);
+  }else louis.crouch=Math.max(0,louis.crouch-dt*1.35);
+ }
  if(louis.phase==='untying'){
   louis.crouch=.55*sampleLoisUntie(louis.age).seated;
   // Three one-shot, rig-native emotional beats: notice Kitty's hands,
