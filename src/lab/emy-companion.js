@@ -121,9 +121,8 @@ export function sendEmyToTrunk(companion){
 }
 export function requestRibbonKey(companion,vent,key){
  if(companion?.stage!=='following'||vent.coverAmount!==1||key.taken)return false;
+ clearNavigation(companion);companion.lastFetchFailure=null;
  companion.fetch={vent,key,phase:'approach',time:0};
- companion.route=[];
- companion.stuck=0;
  companion.stage='fetch';
  companion.cat.reaction=0;
  return true;
@@ -180,10 +179,12 @@ function fetchKey(companion,world,player,dt,reduced){
   }else{
    let point=goal;
    if(!clearPassage(world,cat,goal)){
-    consumeRoute(companion,world,goal);
+    consumeRoute(companion,world,goal,.004);
     const movedGoal=!companion.routeTarget||distance(companion.routeTarget,goal)>.8||Math.abs(companion.routeTarget.y-goal.y)>.35;
     if((!companion.route.length||movedGoal||(job.stuck||0)>.65)&&companion.age>=(job.nextPlan||0)){
-     planRoute(companion,world,goal,(job.stuck||0)>.65);job.nextPlan=companion.age+1.1;
+     // Alternate the grid after a stall rather than repeating a bad connector.
+     const stalled=(job.stuck||0)>.65;if(stalled)job.replans=(job.replans||0)+1;
+     planRoute(companion,world,goal,stalled&&job.replans%2===1);job.nextPlan=companion.age+1.1;
     }
     openRouteDoor(companion,world,player,reduced);
     // A newly planned nearest lattice node can lie just behind the cat.
@@ -197,7 +198,7 @@ function fetchKey(companion,world,player,dt,reduced){
     point=route[0]||goal;
    }else companion.route=[];
    const before={x:cat.x,z:cat.z};
-   walking=moveToward(companion,world,point,dt,1.65);
+   walking=moveToward(companion,world,point,dt,1.65,null,.004);
    // Small oscillations must not reset the stall watchdog forever.
    // Measure displacement over a window, not an individual footstep.
    job.progressAge=(job.progressAge||0)+dt;
@@ -207,6 +208,7 @@ function fetchKey(companion,world,player,dt,reduced){
    }else if(job.progressAge>.65)job.stuck=(job.stuck||0)+dt;
    job.travelAge=(job.travelAge||0)+dt;
    if(job.stuck>14||job.travelAge>60){
+    companion.lastFetchFailure={phase:job.phase,x:cat.x,y:cat.y,z:cat.z,yaw:cat.yaw,stuck:job.stuck,travelAge:job.travelAge,replans:job.replans||0,route:companion.route.slice(0,8),goal:{x:goal.x,y:goal.y,z:goal.z}};
     // The mission stays retryable; never award a key or teleport the cat.
     key.carried=false;vent.interactable=true;companion.fetch=null;companion.stage='following';clearNavigation(companion);return 'fetch-failed';
    }
@@ -315,10 +317,10 @@ function planRoute(companion,world,goal,fine=false){
 // Do not cut the corner of a cabinet or stair wall just because a node is
 // within the arrival radius. A close node may only be skipped when the
 // remaining leg is physically clear at the cat's actual height.
-function consumeRoute(companion,world,goal){
+function consumeRoute(companion,world,goal,arrival=.055){
  const {cat,route}=companion;
  while(route.length){const p=route[0],gap=distance(cat,p);if(Math.abs(cat.y-p.y)>.24||gap>.19)break;
-  if(gap>.055&&!clearPassage(world,cat,route[1]||goal))break;
+  if(gap>arrival&&!clearPassage(world,cat,route[1]||goal))break;
   route.shift();
  }
 }
@@ -344,9 +346,9 @@ function clearPassage(world,from,to){
  }
  return Math.abs(floor-to.y)<.23;
 }
-function moveToward(companion,world,goal,dt,speed,avoid=null){
+function moveToward(companion,world,goal,dt,speed,avoid=null,arrival=.055){
  const cat=companion.cat,dx=goal.x-cat.x,dz=goal.z-cat.z,d=Math.hypot(dx,dz);
- if(d<.055)return false;
+ if(d<arrival)return false;
  const turn=deltaAngle(cat.yaw,Math.atan2(dx,dz));
  cat.yaw+=turn*(1-Math.exp(-18*dt));
  const step=Math.min(d,speed*dt*Math.max(.12,Math.cos(turn))),pieces=Math.max(1,Math.ceil(step/.045));

@@ -113,6 +113,17 @@ module.exports=async()=>{
  let entranceDelivered=false;
  for(let i=0;i<2400;i++){const cue=updateEmyCompanion(entranceCat,1/30,{world:entranceWorld,player:entrancePlayer,reduced:true});if(cue==='delivered'){entranceDelivered=true;break;}if(cue==='fetch-failed')break;}
  assert(entranceDelivered,'Recorded public fetch position must reach the vent and return: '+JSON.stringify({x:entranceCat.cat.x,y:entranceCat.cat.y,z:entranceCat.cat.z,fetch:entranceCat.fetch?.phase,route:entranceCat.route}));
+ // Second recorded failure: hallway near open salon door.
+ for(const [label,delta] of [['30Hz',()=>1/30],['60Hz',()=>1/60],['irregular',i=>[.016,.055,.1,.025][i%4]]]){
+  const routeWorld=createHouse(),routeCat=createEmyCompanion(routeWorld.emy,{waiting:false}),routeVent=routeWorld.studyVent,routeKey=routeWorld.objects.find(o=>o.id==='key');
+  for(const id of ['salon','estudio'])setDoor(routeWorld.objects.find(o=>o.id===id),true);
+  setDrawer(routeWorld.objects.find(o=>o.id==='drawer'),true);
+  Object.assign(routeCat.cat,{x:4.994542840869033,y:0,z:6.200113907460332,yaw:Math.PI});
+  assert(removeVentCover(routeVent,false,'screwdriver'));advanceVentCover(routeVent,3.5);assert(requestRibbonKey(routeCat,routeVent,routeKey));
+  let elapsed=0,delivered=false;
+  for(let i=0;elapsed<75;i++){const dt=delta(i);elapsed+=dt;const cue=updateEmyCompanion(routeCat,dt,{world:routeWorld,player:entrancePlayer,reduced:true});if(cue==='delivered'){delivered=true;break;}if(cue==='fetch-failed')break;}
+  assert(delivered,'Hallway fetch '+label+': '+JSON.stringify(routeCat.lastFetchFailure??{x:routeCat.cat.x,z:routeCat.cat.z,phase:routeCat.fetch?.phase}));
+ }
  state.puzzle.key=true;assert.equal(tracker.update(state).target,item('dormitorio'));
  assert.equal(changes,4);
  assert(world.pianoSheet.concealed);assert.equal(world.piano.reward,item('red-key'));

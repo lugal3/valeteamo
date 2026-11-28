@@ -976,10 +976,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(legend.dataset.markers!==html){legend.dataset.markers=html;legend.innerHTML=html||'Toca o desliza la lista ↓';}
   }
  }
- const mapPointers=new Map();let mapDragged=false,mapSuppressUntil=0,mapRedraw=0,mapUnavailable={},mapRejected={},mapValidation=new Map(),mapPreview=null,mapReadOnly=false,mapReveal=false;
+ const mapPointers=new Map();let mapDragged=false,mapSuppressUntil=0,mapRedraw=0,mapUnavailable={},mapRejected={},mapValidation=new Map(),mapPreview=null,mapReadOnly=false,mapReveal=false,mapTouchTap=null;
  function scheduleMiniature(){if(!mapRedraw)mapRedraw=requestAnimationFrame(()=>{mapRedraw=0;drawEmyMiniature();});}
  function clearMiniatureInput(){
-  const ids=[...mapPointers.keys()];mapPointers.clear();
+  const ids=[...mapPointers.keys()];mapPointers.clear();mapTouchTap=null;
   for(const id of ids)releaseCapture(mapPanel,id);
   if(mapRedraw)cancelAnimationFrame(mapRedraw);mapRedraw=0;mapDragged=false;
  }
@@ -990,10 +990,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   if(!mapPointers.size){mapDragged=false;mapSuppressUntil=0;}
   const room=e.target.closest('[data-act^="emy:room:"]')?.dataset.act??null;
   mapPointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,room,touch:e.pointerType==='touch'});
-  // Touch browsers implicitly capture the SVG child. It is replaced on each
-  // redraw, so transfer capture to the stable dialog BEFORE the first move.
-  // A short touch tap is resolved explicitly on release below.
-  if(e.pointerType==='touch'){capture(mapPanel,e.pointerId);e.preventDefault();}
+  // Stationary touch stays on the SVG. Transfer capture only when dragging
+  // or pinching, before redrawing. Safari may cancel early transfers.
   if(mapPointers.size===2){mapDragged=true;for(const id of mapPointers.keys())capture(mapPanel,id);}
  },{signal,passive:false});
  window.addEventListener('pointermove',e=>{
@@ -1016,6 +1014,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   // when ownership transfers to the dialog. That is NOT the gesture end.
   if(type==='lostpointercapture'&&e.target!==mapPanel)return;
   const p=mapPointers.get(e.pointerId);if(!p)return;
+  if(type==='lostpointercapture'&&p.touch&&!mapDragged)return;
   mapPointers.delete(e.pointerId);
   if(type!=='pointerup'||mapDragged){mapSuppressUntil=performance.now()+320;return;}
   if(p.touch){
@@ -1029,24 +1028,24 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    // twice or select a different room after the SVG has been replaced.
    mapSuppressUntil=performance.now()+320;
   }
- },{signal});
+ },{signal,capture:true});
  // Some touch implementations lose pointer capture when the miniature's
  // SVG is redrawn. Keep a separate, single-touch tap fallback for the map.
  // A pinch, drag, cancel, or already handled pointerup never activates a room.
- let mapTouchTap=null;
- mapPanel.addEventListener('touchstart',e=>{
+ window.addEventListener('touchstart',e=>{
   if(mapPanel.hidden)return;
   if(e.touches.length!==1){mapTouchTap=null;return;}
-  const t=e.changedTouches[0],target=t?.target?.closest?.('#house-emy-miniature [data-act^="emy:room:"]');
+  const t=e.changedTouches[0],target=t?.target?.closest?.('#house-emy-miniature [data-act^="emy:room:"]')??(t?document.elementFromPoint(t.clientX,t.clientY)?.closest('#house-emy-miniature [data-act^="emy:room:"]'):null);
+  if(target&&!mapPointers.size){mapDragged=false;mapSuppressUntil=0;}
   mapTouchTap=target?{id:t.identifier,room:target.dataset.act,x:t.clientX,y:t.clientY}:null;
- },{signal,passive:true});
- mapPanel.addEventListener('touchmove',e=>{
+ },{signal,passive:true,capture:true});
+ window.addEventListener('touchmove',e=>{
   if(!mapTouchTap)return;
   const t=Array.from(e.touches).find(t=>t.identifier===mapTouchTap.id);
   if(e.touches.length!==1||!t||Math.hypot(t.clientX-mapTouchTap.x,t.clientY-mapTouchTap.y)>=5)mapTouchTap=null;
- },{signal,passive:true});
- mapPanel.addEventListener('touchcancel',()=>{mapTouchTap=null;},{signal,passive:true});
- mapPanel.addEventListener('touchend',e=>{
+ },{signal,passive:true,capture:true});
+ window.addEventListener('touchcancel',()=>{mapTouchTap=null;},{signal,passive:true,capture:true});
+ window.addEventListener('touchend',e=>{
   const tap=mapTouchTap;mapTouchTap=null;
   if(!tap||mapPanel.hidden||mapDragged||performance.now()<mapSuppressUntil)return;
   const t=Array.from(e.changedTouches).find(t=>t.identifier===tap.id);
@@ -1054,7 +1053,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   // If touchend arrives first, clear the pointer owner before dispatching;
   // the subsequent pointerup and compatibility click must not repeat it.
   clearMiniatureInput();runAction(tap.room);mapSuppressUntil=performance.now()+320;
- },{signal,passive:true});
+ },{signal,passive:true,capture:true});
  mapPanel.addEventListener('wheel',e=>{
   if(!e.target.closest('#house-emy-miniature'))return;
   e.preventDefault();miniatureView=changeMiniatureView(miniatureView,{zoom:Math.exp(-e.deltaY*.0015)});drawEmyMiniature();
@@ -2785,7 +2784,7 @@ function runAction(act,node){
    rc:()=>({projection:renderer.lastProjection,mode:rc.mode,elapsed:rc.elapsed,position:{x:rc.x,y:rc.y,z:rc.z,yaw:rc.yaw},noise:rc.noise,crashes:rc.crashes,driveSpeed:rc.driveSpeed,steerAngle:rc.steerAngle,roll:rc.roll,tilt:rc.tilt,suspension:rc.suspension,signal:rc.signal,inventory:!!s.inventory.rc,trap:{...rcTrap},pursuer:{x:pursuer.x,y:pursuer.y,z:pursuer.z,mode:pursuer.mode}}),
    loisDialogue:()=>loisDialogue.active?{context:loisDialogue.active.context,index:loisDialogue.active.index,shown:loisDialogue.active.shown,speaker:loisDialogue.active.line.speaker}:null,
    louis:()=>louis?{x:louis.x,y:louis.y,z:louis.z,phase:louis.phase,waypoint:louis.waypoint,age:louis.age,walk:louis.walk,speed:louis.speed,crouch:louis.crouch,reaction:louis.visualReaction?.type??null,motion:louis.visualMotion?{...louis.visualMotion}:null,cameraPhase:loisShotDirector?.phase??null}:null,
-   emy:()=>({x:world.emy.x,y:world.emy.y,z:world.emy.z,phase:world.emy.phase,reaction:world.emy.reaction,hidden:world.emy.hidden,mood:emyCompanion?.mood,alarm:world.emy.alarm||0,refuge:emyCompanion?.refuge?{...emyCompanion.refuge}:null,companion:emyCompanion?.stage,fetch:emyCompanion?.fetch?{phase:emyCompanion.fetch.phase,stuck:emyCompanion.fetch.stuck||0,travelAge:emyCompanion.fetch.travelAge||0,route:emyCompanion.route.slice(0,6),goal:emyCompanion.routeTarget,age:emyCompanion.age}:null,hiddenAt:emyCompanion?.hiddenAt,sharedBed:!!emyCompanion?.sharedBed,stay:emyCompanion?.stage==='stay',ventOpen:world.studyVent.coverAmount===1,entrance:emyShot?.elapsed,trunk:emyCompanion?.stage==='trunk'}),
+   emy:()=>({x:world.emy.x,y:world.emy.y,z:world.emy.z,phase:world.emy.phase,reaction:world.emy.reaction,hidden:world.emy.hidden,mood:emyCompanion?.mood,alarm:world.emy.alarm||0,refuge:emyCompanion?.refuge?{...emyCompanion.refuge}:null,companion:emyCompanion?.stage,lastFetchFailure:emyCompanion?.lastFetchFailure??null,fetch:emyCompanion?.fetch?{phase:emyCompanion.fetch.phase,stuck:emyCompanion.fetch.stuck||0,travelAge:emyCompanion.fetch.travelAge||0,route:emyCompanion.route.slice(0,6),goal:emyCompanion.routeTarget,age:emyCompanion.age}:null,hiddenAt:emyCompanion?.hiddenAt,sharedBed:!!emyCompanion?.sharedBed,stay:emyCompanion?.stage==='stay',ventOpen:world.studyVent.coverAmount===1,entrance:emyShot?.elapsed,trunk:emyCompanion?.stage==='trunk'}),
    emySkills:()=>({scanRendered:!!renderer?.lastScanOutline,scan:emyAbilities.scan,scanCooldown:emyAbilities.scanCooldown,distractCooldown:emyAbilities.distractCooldown,
     wave:emyAbilities.wave,stay:emyCompanion?.stage==='stay',menu:emyMenuOpen,mapOpen:!$('house-emy-map').hidden,mapReadOnly,miniatureView:{...miniatureView},mapPointers:mapPointers.size,preview:mapPreview?{goal:{...mapPreview.goal},seconds:mapPreview.seconds,waypoints:mapPreview.waypoints.map(p=>({...p}))}:null,stage:emyCompanion?.stage,
     distraction:emyCompanion?.distraction?{remaining:emyCompanion.distraction.remaining,arrived:emyCompanion.distraction.arrived,
