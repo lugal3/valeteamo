@@ -35,8 +35,21 @@ export function visibleStaticRuns(batches,count,origin,basis,px,py,{maxDraws=8,m
   if(batchOutside(batch,origin,planes))continue;
   kept+=batch.end-batch.start;
   const last=runs.at(-1);if(last&&last[1]===batch.start)last[1]=batch.end;else runs.push([batch.start,batch.end]);
-  // More draw calls can cost more than the saved triangles on mobile.
-  if(runs.length>maxDraws)return full;
  }
- return count-kept>=count*minSavings?runs:full;
+ if(count-kept<count*minSavings)return full;
+ // Preserve the biggest proven-invisible gaps and restore smaller ones if
+ // the draw budget would otherwise be exceeded. Never omit a visible run.
+ // This avoids reverting an entire scene just because small gaps are scattered.
+ if(runs.length>maxDraws){
+  const gaps=runs.slice(1).map((run,i)=>({i,size:run[0]-runs[i][1]})).sort((a,b)=>b.size-a.size||a.i-b.i);
+  const split=new Set(gaps.slice(0,Math.max(0,maxDraws-1)).map(g=>g.i));
+  const merged=[runs[0].slice()];kept=runs[0][1]-runs[0][0];
+  for(let i=1;i<runs.length;i++){
+   const run=runs[i],last=merged.at(-1);
+   if(split.has(i-1)){merged.push(run.slice());kept+=run[1]-run[0];}
+   else{kept+=run[1]-last[1];last[1]=run[1];}
+  }
+  return count-kept>=count*minSavings?merged:full;
+ }
+ return runs;
 }

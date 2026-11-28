@@ -46,6 +46,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  let seed=734;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
  const point=()=>({x:random()*8-4,y:random()*6-3,z:random()*8-4});
  for(let i=0;i<12000;i++){const a=point(),b=i%7===0?{...a}:point(),box={...point(),w:random()*3,h:random()*3,d:random()*3,yaw:i%3===0?0:random()*Math.PI*2,solid:i%11!==0},padding=i%2===0?0:random()*.2;assert.equal(segmentHitsBox(a,b,box,padding),original(a,b,box,padding),'exact slab parity '+i);}
+ const inside={center:[0,0,5],half:[0,0,0]},outside={center:[100,0,5],half:[0,0,0]};
+ const fragmented=[{...inside,start:0,end:3},{...outside,start:3,end:6},{...inside,start:6,end:9},{...outside,start:9,end:39},{...inside,start:39,end:42},{...outside,start:42,end:45},{...inside,start:45,end:48}];
+ assert.deepEqual(visibleStaticRuns(fragmented,48,origin,basis,1,1,{maxDraws:2}),[[0,9],[39,48]],'keep largest proven invisible gap while restoring smaller gaps');
  const s=createFrameSampler(5);
  assert.equal(s.report().samples,0);
  for(let i=0;i<=5;i++)s.record(i*20,4);
