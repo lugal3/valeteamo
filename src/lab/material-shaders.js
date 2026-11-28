@@ -172,6 +172,8 @@ void main(){
    // Fine fibre relief is restricted to the coat; highlights follow hair flow.
    float fibres=surfaceNoise(vUV*vec2(410.0,88.0));
    color*=.93+.13*fibres;
+   // The reconstructed coat carries its own fur and facial colors in the GLB.
+   if(vArt>20.1)color=coat*vColor;
    shine=.045*rim;
   }else{
    vec2 eye=(vUV-.5)*2.0;
