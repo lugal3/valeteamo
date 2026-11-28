@@ -851,7 +851,7 @@ export class HouseRenderer {
  }
  drawPursuer(actor,mirrored=false,reduced=false,scale=1){
   const gl=this.gl,name=actor.captureFace?'capture':'patrol';
-  const {mesh,posed,shell}=this.preparePursuerMesh(name);
+  const prepared=this.preparePursuerMesh(name),{mesh,posed,shell}=prepared;
   this.pursuerVbo??=gl.createBuffer();this.pursuerIbo??=gl.createBuffer();
   if(this.pursuerIndex!==name){
    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.pursuerIbo);
@@ -862,13 +862,30 @@ export class HouseRenderer {
   const {count,groups,vertices}=exposed
    ?{count:mesh.indices.length,groups:mesh.groups,vertices:posed}
    :shell;
-  posePursuer(mesh.vertices,posed,groups,actor,reduced);
-  if(scale!==1)for(let i=0;i<vertices.length;i+=16){
-   vertices[i]=actor.x+(vertices[i]-actor.x)*scale;
-   vertices[i+1]=actor.y+1.1+(vertices[i+1]-actor.y-1.1)*scale;
-   vertices[i+2]=actor.z+(vertices[i+2]-actor.z)*scale;
+  // Within this synchronous render call all passes use the same immutable
+  // actor snapshot. Never reuse a pose across frames or mutate the base pose.
+  const cached=this.pursuerFramePose;
+  if(!cached||cached.actor!==actor||cached.reduced!==reduced||cached.groups!==groups||cached.prepared!==prepared){
+   posePursuer(mesh.vertices,posed,groups,actor,reduced);
+   this.pursuerFramePose={actor,reduced,groups,prepared};this.pursuerPoseEvaluations=(this.pursuerPoseEvaluations||0)+1;
+   this.pursuerUploaded=null;
   }
-  if(mirrored)reflectMesh(vertices);gl.bindBuffer(gl.ARRAY_BUFFER,this.pursuerVbo);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.DYNAMIC_DRAW);this.bind(this.pursuerVbo,this.pursuerIbo);gl.drawElements(gl.TRIANGLES,count,gl.UNSIGNED_SHORT,0);
+  let upload=vertices;
+  if(mirrored||scale!==1){
+   if(!prepared.scratch||prepared.scratch.length!==posed.length)prepared.scratch=new Float32Array(posed.length);
+   upload=prepared.scratch.subarray(0,vertices.length);upload.set(vertices);
+   if(scale!==1)for(let i=0;i<upload.length;i+=16){
+    upload[i]=actor.x+(upload[i]-actor.x)*scale;
+    upload[i+1]=actor.y+1.1+(upload[i+1]-actor.y-1.1)*scale;
+    upload[i+2]=actor.z+(upload[i+2]-actor.z)*scale;
+   }
+   if(mirrored)reflectMesh(upload);
+  }
+  if(mirrored||scale!==1||this.pursuerUploaded!==this.pursuerFramePose){
+   gl.bindBuffer(gl.ARRAY_BUFFER,this.pursuerVbo);gl.bufferData(gl.ARRAY_BUFFER,upload,gl.DYNAMIC_DRAW);
+   this.pursuerUploaded=mirrored||scale!==1?null:this.pursuerFramePose;
+  }
+  this.bind(this.pursuerVbo,this.pursuerIbo);gl.drawElements(gl.TRIANGLES,count,gl.UNSIGNED_SHORT,0);
  }
  // Stencil-shell pass: a real contour of the pursuer's posed 3D mesh,
  // rather than an approximate 2D location icon. Ignore depth only for the rim.
@@ -935,6 +952,7 @@ export class HouseRenderer {
   this.tvFrame=frame;
  }
  render(camera,flash,time,showHand=false,motion={}){
+  this.pursuerFramePose=null;this.pursuerUploaded=null;this.pursuerPoseEvaluations=0;
   this.lastShowHand=showHand;
   this.lastScanOutline=!!motion.scanOutline&&!!motion.pursuer?.active;
   const beamPower=typeof flash==='number'?flash:Number(Boolean(flash));

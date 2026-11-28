@@ -35,6 +35,17 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  assert(!batchOutside(batches[1],{x:100,y:0,z:0},planes),'same geometry can cast a shadow from an offscreen lamp');
  // Conservative guard includes geometry just outside the mathematical edge.
  assert(!batchOutside({center:[5.01,0,5],half:[0,0,0]},origin,planes));
+ const {segmentHitsBox}=await import('../src/lab/world.js');
+ function original(from,to,box,padding=0){
+  if(!box.solid)return false;
+  if(box.yaw){const c=Math.cos(box.yaw),s=Math.sin(box.yaw),local=p=>({x:(p.x-box.x)*c+(p.z-box.z)*s,y:p.y,z:-(p.x-box.x)*s+(p.z-box.z)*c});return original(local(from),local(to),{...box,x:0,z:0,yaw:0},padding);}
+  let low=0,high=1;
+  for(const axis of ['x','y','z']){const center=box[axis],half=box[axis==='x'?'w':axis==='y'?'h':'d']/2+padding,start=from[axis],delta=to[axis]-start;if(Math.abs(delta)<1e-8){if(start<center-half||start>center+half)return false;continue;}const a=(center-half-start)/delta,c=(center+half-start)/delta;low=Math.max(low,Math.min(a,c));high=Math.min(high,Math.max(a,c));if(low>high)return false;}
+  return high>.001&&low<.995;
+ }
+ let seed=734;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+ const point=()=>({x:random()*8-4,y:random()*6-3,z:random()*8-4});
+ for(let i=0;i<12000;i++){const a=point(),b=i%7===0?{...a}:point(),box={...point(),w:random()*3,h:random()*3,d:random()*3,yaw:i%3===0?0:random()*Math.PI*2,solid:i%11!==0},padding=i%2===0?0:random()*.2;assert.equal(segmentHitsBox(a,b,box,padding),original(a,b,box,padding),'exact slab parity '+i);}
  const s=createFrameSampler(5);
  assert.equal(s.report().samples,0);
  for(let i=0;i<=5;i++)s.record(i*20,4);

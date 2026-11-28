@@ -48,14 +48,18 @@ export function blocked(boxes,x,footY,z,radius=.19,bodyHeight=1.65) {
 }
 export function segmentHitsBox(from,to,box,padding=0) {
   if(!box.solid)return false;
+  // Same local transform and slab order as the previous recursive path,
+  // without allocating two points, a cloned collider, or an axis array.
+  let fx=from.x,fz=from.z,tx=to.x,tz=to.z,cx=box.x,cz=box.z;
   if(box.yaw){
-   const c=Math.cos(box.yaw),s=Math.sin(box.yaw),local=p=>({x:(p.x-box.x)*c+(p.z-box.z)*s,y:p.y,z:-(p.x-box.x)*s+(p.z-box.z)*c});
-   return segmentHitsBox(local(from),local(to),{...box,x:0,z:0,yaw:0},padding);
+   const c=Math.cos(box.yaw),s=Math.sin(box.yaw);
+   fx=(from.x-box.x)*c+(from.z-box.z)*s;fz=-(from.x-box.x)*s+(from.z-box.z)*c;
+   tx=(to.x-box.x)*c+(to.z-box.z)*s;tz=-(to.x-box.x)*s+(to.z-box.z)*c;cx=cz=0;
   }
   let low=0, high=1;
-  for(const axis of ['x','y','z']) {
-    const center=box[axis], half=box[axis==='x'?'w':axis==='y'?'h':'d']/2+padding;
-    const start=from[axis], delta=to[axis]-start;
+  for(let axis=0;axis<3;axis++) {
+    const center=axis===0?cx:axis===1?box.y:cz,half=(axis===0?box.w:axis===1?box.h:box.d)/2+padding;
+    const start=axis===0?fx:axis===1?from.y:fz,delta=(axis===0?tx:axis===1?to.y:tz)-start;
     if(Math.abs(delta)<1e-8) {if(start<center-half||start>center+half)return false;continue;}
     const a=(center-half-start)/delta, c=(center+half-start)/delta;
     low=Math.max(low,Math.min(a,c));high=Math.min(high,Math.max(a,c));
