@@ -38,5 +38,11 @@ try{
  assert.notEqual(oldEars,await page.locator('#candidate').evaluate(c=>c.toDataURL()));
  for(const view of ['front','three','left','back']){await page.selectOption('#view',view);await page.screenshot({path:'output/emy-face-baseline/lab/ears-'+view+'.png'});}
  await page.selectOption('#pose','alert');await page.locator('#alarm').evaluate(el=>{el.value=1;el.dispatchEvent(new Event('input'));});await page.selectOption('#view','three');await page.screenshot({path:'output/emy-face-baseline/lab/ears-alert.png'});
+ await page.selectOption('#pose','idle');await page.locator('#alarm').evaluate(el=>{el.value=0;el.dispatchEvent(new Event('input'));});await page.selectOption('#view','three');await page.uncheck('#ruff');
+ const oldRuff=await page.locator('#candidate').evaluate(c=>c.toDataURL());await page.screenshot({path:'output/emy-face-baseline/lab/ruff-off.png'});await page.check('#ruff');
+ assert.notEqual(oldRuff,await page.locator('#candidate').evaluate(c=>c.toDataURL()));
+ for(const view of ['front','three','left']){await page.selectOption('#view',view);await page.screenshot({path:'output/emy-face-baseline/lab/ruff-'+view+'.png'});}
+ await page.selectOption('#crop','body');await page.selectOption('#view','three');await page.screenshot({path:'output/emy-face-baseline/lab/ruff-full-body.png'});
+ await page.selectOption('#pose','sleep');await page.screenshot({path:'output/emy-face-baseline/lab/ruff-sleep.png'});
  assert.deepEqual(errors,[]);console.log('PASS actual WebGL: baseline six views, identical pixels, low LOD, poses and mobile viewport; 12 candidate views');
 }finally{await browser?.close();await server.close();}

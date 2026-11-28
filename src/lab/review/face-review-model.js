@@ -6,8 +6,9 @@ import {candidateFace} from './face-anatomy.js';
 import {EYE_PART,refineEye} from './face-eyes.js';
 import {refineMuzzle,refineNose,tintMuzzle} from './face-muzzle.js';
 import {refineEar} from './face-ears.js';
+import {refineRuff} from './face-ruff.js';
 export const poses=['idle','walk','sit','groom','stretch','sleep','purr','alert','crouch','jump'];
-export function reviewCat(variant='original',low=false,eyes=false,muzzle=false,ears=false){
+export function reviewCat(variant='original',low=false,eyes=false,muzzle=false,ears=false,ruff=false){
  const add=(id,x,y,z,w,h,d,material,solid,extra)=>({id,x,y,z,w,h,d,material,solid,...extra});
  const cat={parts:installEmyModel(add,{hidden:low}),x:0,y:0,z:0,yaw:0,age:.7};
  if(variant!=='original'){
@@ -33,6 +34,7 @@ export function reviewCat(variant='original',low=false,eyes=false,muzzle=false,e
  if(eyes&&['soft','refined'].includes(variant))for(const part of cat.parts)if(EYE_PART.test(part.id))part.box.emyMesh=refineEye(part,emySurface(part.box));
  if(muzzle&&['soft','refined'].includes(variant))for(const part of cat.parts)if(part.id==='nose'||part.id.startsWith('nostril'))part.box.emyMesh=refineNose(part,emySurface(part.box));
  if(ears&&['soft','refined'].includes(variant))for(const part of cat.parts)if(part.id==='head'||part.id.startsWith('concha'))part.box.emyMesh=refineEar(part,emySurface(part.box));
+ if(ruff&&['soft','refined'].includes(variant))for(const part of cat.parts)if(part.id==='head'||part.id==='coat')part.box.emyMesh=refineRuff(part,emySurface(part.box));
  return cat;
 }
 export function sampleReview(cat,{mode='idle',phase=.7,alarm=0,blink=false,headYaw=0}={}){
