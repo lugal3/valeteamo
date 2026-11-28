@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1">
+ <title>Emy · modelo neuronal</title>
+ <link rel="icon" href="/vale-icon-v1-192.png">
+ <style>
+  :root { color-scheme:dark; font:1rem system-ui,sans-serif; background:#161922; color:#f2f3f6 }
+  main { max-width:1120px; margin:auto; padding:clamp(1rem,4vw,2.5rem) }
+  h1 { margin:0 0 1rem; font-size:clamp(1.55rem,4vw,2.3rem) }
+  .views { display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:.85rem }
+  button { font:inherit; color:inherit; background:#242a39; border:1px solid #525d73; border-radius:.5rem; padding:.55rem .8rem; cursor:pointer }
+  button[aria-pressed="true"] { background:#414f64; border-color:#a1b0c4 }
+  canvas { display:block; width:100%; height:clamp(300px,67vh,675px); border-radius:.75rem; background:#343b48; touch-action:none }
+  [role="status"] { color:#cad1e0; min-height:1.3em }
+ </style>
+</head>
+<body>
+ <main>
+  <h1>Emy · modelo neuronal</h1>
+  <div class="views" aria-label="Vistas del modelo">
+   <button type="button" data-view="face" aria-pressed="true">Rostro</button>
+   <button type="button" data-view="three" aria-pressed="false">Tres cuartos</button>
+   <button type="button" data-view="side" aria-pressed="false">Perfil</button>
+  </div>
+  <canvas aria-label="Modelo texturizado de Emy. Arrastra para girar." tabindex="0"></canvas>
+  <p role="status">Cargando malla y pelaje…</p>
+ </main>
+ <script type="module" src="/src/lab/review/emy-neural-review.js"></script>
+</body>
+</html>

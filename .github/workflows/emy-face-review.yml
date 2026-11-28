@@ -1,0 +1,59 @@
+name: Emy — revisión base 3D (sin publicar)
+on:
+  pull_request:
+    branches: [main]
+    paths: ['src/lab/assets/emy/face-candidate.js','scripts/emy/export-face-baseline.mjs','tests/emy-face-baseline.mjs','.github/workflows/emy-face-review.yml','docs/EMY-FACE-V2.md','src/lab/review/**','src/lab/emy-sculpt.js','emy-face-review.html','tests/emy-face-review*.mjs']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node tests/emy-face-baseline.mjs
+      - run: node scripts/emy/export-face-baseline.mjs
+      - run: node scripts/emy/export-review.mjs
+      - run: sudo apt-get update && sudo apt-get install -y blender
+      - name: Studio views from exact runtime vertices
+        run: |
+          EMY_REVIEW_OUTPUT="$PWD/output/emy-face-baseline/studio" blender --background --threads 4 --python scripts/emy/render-review.py -- --first
+          EMY_REVIEW_OUTPUT="$PWD/output/emy-face-baseline/studio-side" blender --background --threads 4 --python scripts/emy/render-review.py -- --side --first
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: emy-original-geometry-and-views
+          path: output/emy-face-baseline/
+
+  lab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: node tests/emy-face-review.mjs
+      - run: node tests/emy-face-anatomy.mjs
+      - run: node tests/emy-face-eyes.mjs
+      - run: node tests/emy-face-muzzle.mjs
+      - run: node tests/emy-face-ears.mjs
+      - run: node tests/emy-face-ruff.mjs
+      - run: node tests/emy-face-runtime-preview.mjs
+      - run: npx playwright install --with-deps chromium
+      - run: node tests/emy-face-review-browser.mjs
+      - run: npm run build
+      - run: node tests/emy-face-runtime-browser.mjs
+      - run: node tests/emy-face-render-benchmark.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: emy-studio-six-views
+          path: |
+            output/emy-face-baseline/lab/
+            output/emy-face-baseline/house/

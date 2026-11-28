@@ -1,8 +1,13 @@
-export function mountEmyPreview(canvas,onPhase,onPet){
+export function mountEmyPreview(canvas,onPhase,onPet,appearance='original'){
  let stopped=false,raf=0,dispose=()=>{};
- void Promise.all([import('./renderer.js'),import('./world.js'),import('./emy-cat.js')]).then(([{HouseRenderer,pickupGeometry},{createHouse,blocked},{updateUpstairsEmy,petEmy}])=>{
+ void Promise.all([import('./renderer.js'),import('./world.js'),import('./emy-cat.js')]).then(async([{HouseRenderer,pickupGeometry},{createHouse,blocked},{updateUpstairsEmy,petEmy}])=>{
   if(stopped)return;
-  const renderer=new HouseRenderer(canvas),world=createHouse(),cat=world.emy;
+  const world=createHouse(),cat=world.emy;
+  if(appearance!=='original'){
+   const {applyReviewAppearance}=await import('./review/face-review-model.js');
+   if(stopped)return;applyReviewAppearance(cat,appearance);
+  }
+  const renderer=new HouseRenderer(canvas);
   dispose=()=>renderer.destroy();
   renderer.rebuild([...world.boxes,...pickupGeometry(world.objects)]);renderer.quality='medium';
   const labels={walk:'Paseando por el piso de arriba',sit:'Descansando',groom:'Limpiando su patita',stretch:'Estirándose',sleep:'Durmiendo',purr:'Ronroneando ♡'};

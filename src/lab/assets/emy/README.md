@@ -17,3 +17,17 @@ blender --background --threads 6 --python scripts/emy/render-review.py
 ```
 
 La revisión de Blender usa exactamente los vértices e índices exportados del juego, con iluminación de estudio y un material que aproxima la transmisión del pelo fino. No es una captura dentro de la casa ni una imagen conceptual generada.
+
+## Malla neuronal de Emy para revisión
+
+`emy-neural-20k.glb` es la reconstrucción de TripoSR a partir de las referencias
+de arte. Conserva la geometría del cuerpo y ajusta el rostro y las orejas a
+la referencia de Tripo. La textura proyectada recoge su color, marcas y
+dirección del pelo en las zonas visibles, con una mezcla en las zonas ocultas.
+El GLB contiene 20.324 triángulos, incluidos los bigotes, índices de 16 bits
+y un atlas integrado de 1024 × 1024.
+
+Abre `/emy-neural-review.html` con `npm run dev` para verla de cerca y girarla
+con el ratón, el toque o las flechas. La página usa el renderizador WebGL1 de la
+casa. La malla estática se prueba en esta página de desarrollo. Para sustituir
+a Emy en la partida habrá que adaptar su malla al rig de caminata y gestos.

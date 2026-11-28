@@ -1,0 +1,73 @@
+// Development-only adapter. Production never imports candidate data.
+import {installEmyModel,poseEmy} from '../emy-cat.js';
+import {sculptSurface} from '../emy-sculpt.js';
+import {emySurface,writeEmySurface} from '../emy-surface.js';
+import {candidateFace} from './face-anatomy.js';
+import {EYE_PART,refineEye} from './face-eyes.js';
+import {refineMuzzle,refineNose,tintMuzzle} from './face-muzzle.js';
+import {refineEar} from './face-ears.js';
+import {refineRuff} from './face-ruff.js';
+export const poses=['idle','walk','sit','groom','stretch','sleep','purr','alert','crouch','jump'];
+export function reviewCat(variant='original',low=false,eyes=false,muzzle=false,ears=false,ruff=false){
+ const add=(id,x,y,z,w,h,d,material,solid,extra)=>({id,x,y,z,w,h,d,material,solid,...extra});
+ const cat={parts:installEmyModel(add,{hidden:low}),x:0,y:0,z:0,yaw:0,age:.7};
+ if(variant!=='original'){
+  const box=cat.parts.find(p=>p.id==='head').box;
+  const original=emySurface(box),source=candidateFace(box.emySpec.asset,variant),edit=muzzle&&['soft','refined'].includes(variant);
+  const geometry=sculptSurface(box.emySpec,edit?refineMuzzle(source):source),candidate=edit?tintMuzzle(geometry):geometry;
+  // Eye/muzzle exclusions change accepted fibres after a sculpt. Cap the
+  // candidate to the exact existing strand budget, keeping whole fibres.
+  if(candidate.vertices.length>original.vertices.length){
+   const stride=7*16,base=candidate.baseCount*16,available=(candidate.vertices.length-base)/stride,limit=(original.vertices.length-base)/stride;
+   if(!Number.isInteger(available)||!Number.isInteger(limit)||candidate.baseIndexCount!==original.baseIndexCount)throw Error('Unexpected head fibre topology');
+   const vertices=new Float32Array(base+limit*stride),indices=candidate.indices.slice(0,candidate.baseIndexCount);
+   vertices.set(candidate.vertices.subarray(0,base));
+   const block=(candidate.indices.length-candidate.baseIndexCount)/available;
+   for(let j=0;j<limit;j++){
+    const k=Math.floor((j+.5)*available/limit),src=base+k*stride,dst=base+j*stride;
+    vertices.set(candidate.vertices.subarray(src,src+stride),dst);
+    for(let i=0;i<block;i++)indices.push(candidate.indices[candidate.baseIndexCount+k*block+i]+(j-k)*7);
+   }
+   box.emyMesh={...candidate,vertices,indices};
+  }else box.emyMesh=candidate;
+ }
+ if(eyes&&['soft','refined'].includes(variant))for(const part of cat.parts)if(EYE_PART.test(part.id))part.box.emyMesh=refineEye(part,emySurface(part.box));
+ if(muzzle&&['soft','refined'].includes(variant))for(const part of cat.parts)if(part.id==='nose'||part.id.startsWith('nostril'))part.box.emyMesh=refineNose(part,emySurface(part.box));
+ if(ears&&['soft','refined'].includes(variant))for(const part of cat.parts)if(part.id==='head'||part.id.startsWith('concha'))part.box.emyMesh=refineEar(part,emySurface(part.box));
+ if(ruff&&['soft','refined'].includes(variant))for(const part of cat.parts)if(part.id==='head'||part.id==='coat')part.box.emyMesh=refineRuff(part,emySurface(part.box));
+ return cat;
+}
+export function sampleReview(cat,{mode='idle',phase=.7,alarm=0,blink=false,headYaw=0}={}){
+ Object.assign(cat,{age:blink?4.5:phase,alarm,earTurn:alarm*.45,earFlatten:alarm*.5,lastFootRoot:null,footContacts:null,walkTravel:phase*.55});
+ poseEmy(cat,{mode,phase,walking:mode==='walk',reduced:false,headYaw,blend:1});
+ const parts=cat.parts.map(({id,box})=>{
+  const mesh=box.emyTailMesh||emySurface(box),vertices=new Float32Array(mesh.vertices.length);
+  writeEmySurface(vertices,0,box);return {id,vertices,indices:mesh.indices};
+ });
+ const count=parts.reduce((a,p)=>a+p.vertices.length/16,0),indexCount=parts.reduce((a,p)=>a+p.indices.length,0);
+ if(count>65530)throw Error('WebGL1 index budget');
+ const vertices=new Float32Array(count*16),indices=new Uint16Array(indexCount);
+ let at=0,ii=0;
+ for(const p of parts){vertices.set(p.vertices,at*16);for(const i of p.indices)indices[ii++]=i+at;at+=p.vertices.length/16;}
+ return {parts,vertices,indices,count,triangles:indexCount/3,head:cat.landmarks.head};
+}
+
+// Apply an isolated candidate to a fresh actor BEFORE the renderer allocates
+// its dynamic geometry. Never call this on an active gameplay actor.
+// Original motion, world positions, ids, transforms and weights remain owned
+// by the actor installed by the production world.
+export function applyReviewAppearance(cat,variant='original'){
+ if(variant==='original')return cat;
+ if(!['soft','refined'].includes(variant))throw Error('Unknown review appearance');
+ const low=cat.parts.find(p=>p.id==='head').box.emySpec.asset==='headLow';
+ const source=reviewCat(variant,low,true,true,true,true);
+ const allowed=id=>id==='head'||id==='coat'||id==='nose'||id.startsWith('nostril')||id.startsWith('concha')||EYE_PART.test(id);
+ for(const part of cat.parts){
+  if(!allowed(part.id))continue;
+  const from=source.parts.find(p=>p.id===part.id);
+  if(!from||from.box.emySpec.asset!==part.box.emySpec.asset)throw Error('Candidate actor mismatch: '+part.id);
+  part.box.emyMesh=emySurface(from.box);
+  part.box.emyRevision=(part.box.emyRevision||0)+1;
+ }
+ return cat;
+}
