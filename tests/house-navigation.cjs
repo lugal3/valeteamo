@@ -17,8 +17,8 @@ const assert=require('node:assert/strict');
  const {animateFurniture:openDoor,updateFurniture:stepDoor}=await import('../src/lab/furniture-motion.js');
  const kitchen=w.createHouse(),leaf=kitchen.objects.find(o=>o.id==='cocina'),threshold={x:leaf.origin.x,y:0,z:leaf.origin.z};
  assert(leaf.box.solid);assert(openDoor(leaf,true,{player:threshold}).started);assert(!leaf.box.solid);
- const walker={x:leaf.origin.x-.55,y:0,z:leaf.origin.z};for(let i=0;i<20;i++){navigate(walker,kitchen,.055,0);stepDoor(kitchen.objects,1/60,walker);}
- assert(walker.x>leaf.origin.x+.25,'Kitchen doorway remains traversable during opening');
+ const kitchenWalker={x:leaf.origin.x-.55,y:0,z:leaf.origin.z};for(let i=0;i<20;i++){navigate(kitchenWalker,kitchen,.055,0);stepDoor(kitchen.objects,1/60,kitchenWalker);}
+ assert(kitchenWalker.x>leaf.origin.x+.25,'Kitchen doorway remains traversable during opening');
  for(let i=0;i<8;i++)stepDoor(kitchen.objects,.1);assert(leaf.open&&!leaf.box.solid);
  assert(openDoor(leaf,false,{actors:[threshold]}).reason==='blocked');
  const hall={x:5.95,y:0,z:9.2};for(let i=0;i<130;i++)navigate(hall,world,0,-.06);assert(hall.z<1.5&&hall.y===0,'No staircase or furniture interrupts the central hall');

@@ -1544,7 +1544,7 @@ function runAction(act,node){
  }
  function doorActors(){
   const others=[];
-  if(pursuer?.active)others.push({...pursuer,radius:.19,bodyHeight:1.72});
+  if(pursuer?.active)others.push({x:pursuer.x,y:pursuer.y,z:pursuer.z,radius:.19,bodyHeight:1.72});
   if(world?.emy&&!world.emy.hidden)others.push({x:world.emy.x,y:world.emy.y,z:world.emy.z,radius:.24,bodyHeight:.72});
   if(louis)others.push({x:louis.x,y:louis.y,z:louis.z,radius:.20,bodyHeight:1.70});
   if(rc&&['driving','deployed','broken','deploying'].includes(rc.mode))others.push({x:rc.x,y:rc.y,z:rc.z,radius:.22,bodyHeight:.38});
@@ -1951,6 +1951,7 @@ function runAction(act,node){
     }
     if(emyCompanion.stage==='distract'&&emyCompanion.distraction?.arrived)pursuer.trackEmyDistraction(world.emy);
     if(cue==='distract-done'){pursuer.endEmyDistraction();say(s.hidden||enteringHide?'Emy terminó y se mantiene a cubierto.':'Emy vuelve contigo.',4);}
+    if(cue==='fetch-failed'){world.studyVent.interactable=true;renderer.updateVisibility();say('Emy no pudo llegar. Acércate al estudio y vuelve a pedirle ayuda.',4);}
     if(cue==='distract-failed'){pursuer.endEmyDistraction();emyAbilities.distractCooldown=0;say('Emy no logró llegar. Puedes intentarlo de nuevo.',4);}
     if(cue==='delivered'){
      world.objects.find(o=>o.id==='key').taken=true;

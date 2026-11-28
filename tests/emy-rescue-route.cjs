@@ -97,6 +97,10 @@ module.exports=async()=>{
  assert.equal(cat.cat.y,0);
  assert(cues.length>=4&&cues.slice(0,-1).every(cue=>cue==='scratch'));assert.equal(cues.at(-1),'delivered');assert.equal(cat.stage,'following');
  assert(Math.hypot(cat.cat.x-s.x,cat.cat.z-s.z)<.86);
+ const closedWorld=createHouse(),closedCat=createEmyCompanion(closedWorld.emy,{waiting:false}),closedVent=closedWorld.objects.find(o=>o.id==='emy-vent'),closedKey=closedWorld.objects.find(o=>o.id==='key');
+ assert(removeVentCover(closedVent,false,'screwdriver'));advanceVentCover(closedVent,3.2);assert(requestRibbonKey(closedCat,closedVent,closedKey));
+ let delivered=false;for(let i=0;i<1500;i++){const cue=updateEmyCompanion(closedCat,1/30,{world:closedWorld,player:s,reduced:true});if(cue==='delivered'){delivered=true;break;}if(cue==='fetch-failed')break;}
+ assert(delivered,'Ribbon mission opens ordinary doors and returns to Kitty without teleport: '+JSON.stringify({x:closedCat.cat.x,y:closedCat.cat.y,z:closedCat.cat.z,phase:closedCat.fetch?.phase}));
  state.puzzle.key=true;assert.equal(tracker.update(state).target,item('dormitorio'));
  assert.equal(changes,4);
  assert(world.pianoSheet.concealed);assert.equal(world.piano.reward,item('red-key'));
