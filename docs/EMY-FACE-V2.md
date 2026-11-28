@@ -1,0 +1,22 @@
+# Emy — revisión localizada de rostro y cuello
+
+Base fijada: c5db1355001b97ee1a26241e090a7ef5e87523d0. Rama feature/emy-face-ruff-v2; independiente de PR #54 y #55. No publicar ni fusionar. Fotos privadas fuera de GitHub.
+
+Inspección real: no existe necesidad de reemplazar el renderer por glTF. Emy usa EMY_SCULPT, un esculpido de Blender generado como arrays. Base head 3301 vértices/6598 triángulos, headLow 1001/1998, coat 4397/8790, coatLow 1901/3798. Runtime principal 31060 vértices/48846 triángulos. 17 marcos de skin en cuerpo; cabeza y ojos/párpados/tongue por anclajes locales, orejas deformadas proceduralmente. Cuerpo y cola protegidos. El usuario acepta su estilo actual.
+
+Comparación (geometría real reconstruida en cuatro ángulos, sin atlas en la inspección preliminar): mejillas globosas, hocico tipo almohadilla adelantada, ojos almendrados demasiado geométricos y pupila vertical uniforme, orejas triangulares rígidas; melena superior continua pero poco diferenciada. Fotos: silueta facial estrecha, nariz cálida pequeña, ojos amarillo verdosos almendrados con párpados naturales, pelos internos de orejas, mentón plateado y mechones de cuello largos, no un collar blanco. Ajustar solo cabeza y cuello superior; no inferir marcas traseras ocultas en fotos.
+
+Copia inactiva exacta: src/lab/assets/emy/face-candidate.js (head y headLow). No se importa en runtime. Las pruebas de igualdad inicial se deben convertir a verificación de protección del original cuando empiece la edición. scripts/emy/export-face-baseline.mjs exporta OBJ locales de cabeza original/candidata, GLB estáticos de poses originales y atlas. Los GLB son revisión, no modelo animado ni reemplazo drop-in. Export-review.mjs y render-review.py siguen siendo la referencia de estudio. Workflow sin publicar produce ZIP de revisión. No copiar fotos al repo.
+
+Archivos de trabajo:
+- scripts/emy/build-sculpt.py (original, copiar variante de autoría; generar solo head/headLow)
+- src/lab/assets/emy/sculpt.js (original inmutable)
+- src/lab/assets/emy/face-candidate.js (variante)
+- src/lab/emy-cat.js (anclajes, poses, IDs críticos philtrum, tongue, iris, lid, socket, concha, whiskers)
+- src/lab/emy-sculpt.js (UV, tinte, fibras y pesos; cambios de ruff únicamente con máscara local; proteger coat y coatLow)
+- src/lab/emy-surface.js (superficies de ojos, nariz, oreja; deformación procedural)
+- src/lab/assets/emy/coat-v2.jpg (atlas original; nueva textura separada si se requiere)
+- src/lab/material-shaders.js / renderer.js (solo revisar; no tocar globalmente)
+- tests/emy-cat.cjs, tests/emy-surface-parity.cjs, tests/emy-companion.cjs, tests/emy-autonomy.cjs, tests/emy-abilities-noise.cjs, tests/emy-rescue-route.cjs y pruebas de navegador Emy.
+
+Fases: 1 baseline real con cámara/iluminación fija y vistas ortográficas; 2 anatomía y silueta de cabeza; 3 ojos/párpados/expresión; 4 hocico/nariz/bigotes; 5 orejas/tufts y deformación; 6 melena local, atlas facial conservando otras regiones y UV; 7 integración opt-in candidata (original intacto), LOD y rendimiento; 8 matriz de poses y escenarios (ventilación, llave sostenida en philtrum, miedo/altar, ventana, escondites, rescate, final); 9 QA y comparación final antes/después. No rehacer animaciones, no cambiar IA, no degradar rendimiento, sin merge hasta aprobación. Mantener <32000 vértices y <50000 triángulos por Emy, <=65530 vértices dinámicos de escena, no incrementar presupuesto original sin justificación y medición; cero diferencias en torso/patas/cola fuera de máscara cuello. Mantener WebGL1, sin dependencias nuevas. Revisión física en iPhone pendiente.
