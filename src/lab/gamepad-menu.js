@@ -41,7 +41,7 @@ function available(scope){
   const s=getComputedStyle(el);return s.visibility!=='hidden'&&s.display!=='none';
  });
 }
-const identity=el=>el.id?'id:'+el.id:[el.tagName,...['data-act','data-app','data-photo','data-photo-index','data-home-page','data-setting','data-hud','data-layout','data-dir','aria-label'].map(a=>el.getAttribute(a)||'')].join('|');
+const identity=el=>el.id?'id:'+el.id:[el.tagName,...['data-act','data-id','data-inspect','data-manual','data-app','data-photo','data-photo-index','data-home-page','data-setting','data-hud','data-layout','data-dir','aria-label'].map(a=>el.getAttribute(a)||'')].join('|');
 function adjust(el,dir){
  if(dir!=='left'&&dir!=='right')return false;
  const n=dir==='right'?1:-1;

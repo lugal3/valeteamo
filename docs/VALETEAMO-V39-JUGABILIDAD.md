@@ -31,3 +31,5 @@ Base: corrección multitáctil PR #52, SHA 5f79be8a83d0b6b1c20f60bb1ba8a3c6a2aea
 
 ## Fase 6 — mando (primer bloque)
 - Barra de ayuda inferior con top:auto y altura intrínseca; navegación espacial por cruceta y stick izquierdo con repetición, selección visible y restauración tras reconstruir controles. Menús Emy/mapa, teléfono, inventario/modal, emotes, ajustes y editor; círculo vuelve por nivel. Snake conserva dirección y reinicio; cruceta arriba abre emotes en baño. Se mantienen RC, X salto, cuadrado interacción y +34% cámara. Pruebas de navegación geométrica y repetición añadidas; falta validar navegador y mando real.
+
+- Fase 5 verificada: lógica y build PASS en SHA b310a83; altura de cabeza 1.031 m bajo mesón 1.10 m y subida inicial 0.0705 m. Fase 6 añade QA de navegador Chromium con mando estándar simulado (HUD, inventario, teléfono, foco tras reconstrucción); no sustituye prueba con mando físico.

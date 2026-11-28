@@ -1534,7 +1534,7 @@ function runAction(act,node){
     if(modal&&!intro&&events.phase!=='safe'&&events.phase!=='failed'){paused=false;modalClose();}
     else if(emyMenuOpen){if(!$('house-emy-map').hidden)runAction('emy:map:back');else closeEmyMenu();}
     else if(phone.editing)void phone.layoutAction('done');
-    else if(phone.open){if(phone.app==='home')phone.close();else phone.setApp('home');resetInput();}
+    else if(phone.open){if(phone.app==='home')phone.close();else if(phone.app==='photos'&&phone.selectedPhoto)phone.setApp('photos');else phone.setApp('home');resetInput();}
     else if(emotesOpen)runAction('emotes');
     else if($('lab-camera-settings').open){$('lab-camera-settings').open=false;resetInput();}
     return;
