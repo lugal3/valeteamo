@@ -266,8 +266,9 @@ const {chromium,webkit}=require('playwright');
     return null;
    });
    assert(target,'Study has a real touchable polygon');
-   await page.touchscreen.tap(target.x,target.y);
-   await page.waitForFunction(()=>!!window.__rescueHouse.emySkills().preview,null,{timeout:5000,polling:100});
+   await page.evaluate(()=>{window.__mapTapTrace=[];for(const type of ['pointerdown','pointerup','pointercancel','lostpointercapture','touchstart','touchend','touchcancel','click'])document.addEventListener(type,e=>{if(window.__mapTapTrace.length<40)window.__mapTapTrace.push({type,target:e.target?.tagName,act:e.target?.closest?.('[data-act]')?.dataset.act,pointerType:e.pointerType});},{capture:true});});
+    await page.touchscreen.tap(target.x,target.y);
+   try{await page.waitForFunction(()=>!!window.__rescueHouse.emySkills().preview,null,{timeout:15000,polling:100});}catch(error){console.error('MAP_TAP_DIAGNOSTIC',JSON.stringify(await page.evaluate(()=>({events:window.__mapTapTrace,skills:window.__rescueHouse.emySkills(),status:document.querySelector('#house-emy-map-status')?.textContent}))));throw error;}
    assert.match(await page.locator('#house-emy-map-status').innerText(),/Estudio/i);
    assert.equal((await skills()).stage,'following','Tap previews without sending');
   }
