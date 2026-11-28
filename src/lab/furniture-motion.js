@@ -16,8 +16,16 @@ function doorEase(u,opening){
  return 1.024-.024*(s*s*(3-2*s));
 }
 
+export function doorClosingClear(object,actors=[]){
+ // Test the final closed leaf, not the entire visual swing. Never mutate
+ // the live geometry just to ask whether the doorway is occupied.
+ const leaf={...object.box,x:object.origin.x,z:object.origin.z,yaw:0,solid:true};
+ return !actors.some(actor=>actor&&Number.isFinite(actor.x)&&Number.isFinite(actor.y)&&Number.isFinite(actor.z)&&overlaps(leaf,actor.x,actor.y,actor.z,actor.radius??.18,actor.bodyHeight??(actor.crouched?1.04:1.64)));
+}
+
 export function sweepClear(object,from,to,player){
  if(!player)return true;
+ if(object.kind==='door')return to>from||to!==0||doorClosingClear(object,[player]);
  const start=object.amount||0,steps=Math.max(1,Math.ceil(Math.abs(to-from)*Math.abs(object.slideDistance||1)/.035));
  let clear=true;
  for(let i=0;i<=steps;i++){
@@ -27,11 +35,11 @@ export function sweepClear(object,from,to,player){
  poseFurniture(object,start);return clear;
 }
 
-export function animateFurniture(object,open,{player=null,reducedMotion=false}={}){
+export function animateFurniture(object,open,{player=null,reducedMotion=false,actors=[]}={}){
  if(object.motion)return {started:false,reason:'moving'};
  const target=open?1:0,from=object.amount||0;
  if(from===target)return {started:false,reason:'settled'};
- if(!sweepClear(object,from,target,player))return {started:false,reason:'blocked'};
+ if(object.kind==='door'?!open&&!doorClosingClear(object,[player,...actors]):!sweepClear(object,from,target,player))return {started:false,reason:'blocked'};
  if(reducedMotion){
   poseFurniture(object,target);
   object.open=open;
@@ -40,10 +48,11 @@ export function animateFurniture(object,open,{player=null,reducedMotion=false}={
  }
  object.motion={from,target,elapsed:0,speed:0};
  object.state=open?'opening':'closing';
+ if(object.kind==='door')object.box.solid=false;
  return {started:true,complete:false};
 }
 
-export function updateFurniture(objects,delta,player=null){
+export function updateFurniture(objects,delta,player=null,actors=[]){
  let changed=false;
  const dt=Math.max(0,Math.min(.1,delta));
  for(const object of objects){
@@ -52,7 +61,11 @@ export function updateFurniture(objects,delta,player=null){
   const u=elapsed/FURNITURE_SECONDS;
   const factor=object.kind==='door'?doorEase(u,motion.target===1):ease(u);
   const amount=motion.from+(motion.target-motion.from)*factor;
-  if(!sweepClear(object,object.amount,amount,player))continue;
+  if(object.kind==='door'){
+   if(motion.target===0&&elapsed>=FURNITURE_SECONDS&&!doorClosingClear(object,[player,...actors])){
+    object.motion={from:object.amount,target:1,elapsed:0,speed:0};object.state='opening';object.open=true;object.box.solid=false;continue;
+   }
+  }else if(!sweepClear(object,object.amount,amount,player))continue;
   const prevAmount=object.amount||0;
   motion.speed=dt>0?Math.abs(amount-prevAmount)/dt:0;
   motion.elapsed=elapsed;

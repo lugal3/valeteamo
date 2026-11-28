@@ -372,7 +372,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function finishEmyShot(){
   const door=emyShot?.door;emyShot=null;
   if(!door)return;
-  if(door.motion)updateFurniture(world.objects,.1,s);
+  if(door.motion)updateFurniture(world.objects,.1,s,doorActors());
   resetInput();saveCheckpoint();say('¡Es Emy! Ha entrado de un salto y ahora te acompaña.',4);
  }
  function syncEmyInteraction(){
@@ -703,7 +703,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    if(o.id==='entrada'&&o.sealed&&events.phase==='escape'){
     if(!s.inventory.masterKey){say('Necesitas la llave maestra que cuelga junto a Louis.',5);play('latch',o);return;}
     const opened=animateFurniture(o,true,{player:s,reducedMotion:reducedMotion.matches});
-    if(!opened.started){say('Retrocede un poco para abrir la puerta.');return;}
+    if(!opened.started)return;
     keyTurn={kind:'master-key',time:0};o.sealed=false;
     // Let the trap buy time. Its latch gives way as Kitty unlocks the exit.
     world.hatch.open=true;poseHatch(world.hatch,1);play('latch',world.hatch);
@@ -713,8 +713,10 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
    }
    if(demo&&o.id==='dormitorio'&&!canOpenBedroom(puzzle)){say(housePuzzleHint(puzzle,'bedroom'),4);play('latch',o);return;}
    if(o.sealed||o.locked&&!s.inventory.key){say(o.sealed?'Cerró la puerta con un candado. Busca otra salida.':'La puerta tiene un pequeño candado. Busca una llave.');play('latch',o);return;}
-    const opening=!o.open;if(pursuer.active&&!sweepClear(o,o.amount,opening?1:0,pursuer)){say('No puedes mover la puerta mientras alguien ocupa el paso.');return;}const result=animateFurniture(o,opening,{player:s,reducedMotion:reducedMotion.matches});
-    if(!result.started){if(result.reason==='blocked')say('No puedes mover la puerta mientras estás en el paso.');return;}
+    const opening=!o.open;
+    if(o.kind!=='door'&&pursuer.active&&!sweepClear(o,o.amount,opening?1:0,pursuer))return;
+    const result=animateFurniture(o,opening,{player:s,reducedMotion:reducedMotion.matches,actors:o.kind==='door'?doorActors():[]});
+    if(!result.started)return;
     if(o.id==='dormitorio'&&opening&&o.locked){keyTurn={kind:'key',time:0};o.locked=false;s.inventory.key=false;if(equipment==='key')equip('empty');phone.setInventory(s.inventory);}
     if(demo&&o.id==='dormitorio'&&opening&&result.complete)puzzle=puzzleEvent(puzzle,'door');
     play(o.kind==='cupboard'?'drawer':opening?'door-open':'door-close',o);
@@ -1540,9 +1542,17 @@ function runAction(act,node){
    if(slots.length&&!remoteInUse())equip(slots[(i+(pad.pressed[4]?-1:1)+slots.length)%slots.length].dataset.equip,true);
   }
  }
+ function doorActors(){
+  const others=[];
+  if(pursuer?.active)others.push({...pursuer,radius:.19,bodyHeight:1.72});
+  if(world?.emy&&!world.emy.hidden)others.push({x:world.emy.x,y:world.emy.y,z:world.emy.z,radius:.24,bodyHeight:.72});
+  if(louis)others.push({x:louis.x,y:louis.y,z:louis.z,radius:.20,bodyHeight:1.70});
+  if(rc&&['driving','deployed','broken','deploying'].includes(rc.mode))others.push({x:rc.x,y:rc.y,z:rc.z,radius:.22,bodyHeight:.38});
+  return others;
+ }
  function tick(dt){
   if(isPaused()||finalCutscene&&!finalCutscene.playable)return;
-  updateFurniture(world.objects,dt,s);
+  updateFurniture(world.objects,dt,s,doorActors());
   const gifted=advanceGift(world.holiday,dt);if(gifted)showPlush(gifted);
   const wasUntying=louis?.phase==='untying',previousUntie=louis?.age||0;
   const louisCue=updateLouisEscape(louis,dt,s,finalCutscene?.playable?finaleLouisGoal(s):null);
@@ -1816,7 +1826,7 @@ function runAction(act,node){
    const hiding=s.hidden?world.objects.find(o=>o.id===s.hidden.objectId):poseTransition?.object;
    const previousMode=pursuer.mode;
    const deferredDoorSounds=[];
-   const pursuitSignals=pursuer.update(Math.min(.055,delta),{x:s.x,y:s.y,z:s.z,crouched:s.crouched,flashlight:flashlightBeam(),dark:!housePowered(power),hidden:!!s.hidden&&!poseTransition,entering:!!poseTransition?.entering,hideId:hiding?.id,hideExit:hiding?{x:poseTransition?.outside.x??s.hidden?.returnX??hiding.returnX,y:s.y,z:poseTransition?.outside.z??s.hidden?.returnZ??hiding.returnZ}:null},door=>{if(door.id!=='entrada'&&!door.sealed&&!door.locked&&!door.motion&&sweepClear(door,door.amount,1,pursuer)){const result=animateFurniture(door,true,{player:s,reducedMotion:reducedMotion.matches});if(result.started){deferredDoorSounds.push(door);return true;}}},decoy);
+   const pursuitSignals=pursuer.update(Math.min(.055,delta),{x:s.x,y:s.y,z:s.z,crouched:s.crouched,flashlight:flashlightBeam(),dark:!housePowered(power),hidden:!!s.hidden&&!poseTransition,entering:!!poseTransition?.entering,hideId:hiding?.id,hideExit:hiding?{x:poseTransition?.outside.x??s.hidden?.returnX??hiding.returnX,y:s.y,z:poseTransition?.outside.z??s.hidden?.returnZ??hiding.returnZ}:null},door=>{if(door.id!=='entrada'&&!door.sealed&&!door.locked&&!door.motion){const result=animateFurniture(door,true,{player:s,reducedMotion:reducedMotion.matches});if(result.started){deferredDoorSounds.push(door);return true;}}},decoy);
    // Priority: start the loud chase warning BEFORE any footstep, door, UI or capture cue.
    if(pursuitSignals.includes('spotted')){sound.playDangerAlert();phone.close();}
    for(const door of deferredDoorSounds)play('door-open',door);
@@ -1924,7 +1934,7 @@ function runAction(act,node){
     if(equipment==='screwdriver')equip('empty');
     phone.setInventory(s.inventory);
    }
-   if(emyShot||poseTransition)updateFurniture(world.objects,shotDelta,s);
+   if(emyShot||poseTransition)updateFurniture(world.objects,shotDelta,s,doorActors());
    const wasHidden=world.emy.hidden;
    if(emyCompanion){
     const enteringHide=poseTransition?.entering?{objectId:poseTransition.object.id,returnX:poseTransition.outside.x,returnZ:poseTransition.outside.z}:null;

@@ -436,7 +436,7 @@ export class HouseRenderer {
   gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamicVbo);gl.bufferData(gl.ARRAY_BUFFER,this.dynamicVertices,gl.DYNAMIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.dynamicIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,dynamic.indices,gl.STATIC_DRAW);
   this.vertexCount=(vertices.length+dynamic.vertices.length)/16;this.triangleCount=(indices.length+dynamic.indices.length)/3;
-  this.occluders=boxes.filter(b=>b.solid);this.lightPose='';
+  this.occluders=boxes.filter(b=>b.solid||b.doorLeaf);this.lightPose='';
   this.holidayPower=boxes.find(b=>b.holidayPower)?.holidayPower;
   this.fixtures=boxes.flatMap(box=>box.fixture?[box.fixture]:[]);
   this.dirtyLampShadows=new Set(this.fixtures);

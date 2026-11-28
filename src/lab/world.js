@@ -82,7 +82,7 @@ export function poseFurniture(obj,amount){
  }
  if(obj.hinge){
   const angle=obj.swingAngle*obj.amount,c=Math.cos(angle),s=Math.sin(angle),place=(box,origin)=>{const dx=origin.x-obj.hinge.x,dz=origin.z-obj.hinge.z;box.x=obj.hinge.x+dx*c-dz*s;box.z=obj.hinge.z+dx*s+dz*c;box.yaw=angle;};
-  place(obj.box,obj.origin);obj.box.solid=['door','safe','cupboard'].includes(obj.kind);
+  place(obj.box,obj.origin);obj.box.solid=obj.kind==='door'?!obj.motion&&obj.amount<.999:['safe','cupboard'].includes(obj.kind);
   for(const part of obj.parts||[])place(part.box,part.origin);
   obj.x=obj.box.x;obj.z=obj.box.z;
   if(obj.inside)obj.inside.concealed=obj.amount<.999||!!obj.motion;
@@ -90,7 +90,7 @@ export function poseFurniture(obj,amount){
  }
  const axis=obj.slideAxis,offset=obj.slideDistance*obj.amount;
  obj.box[axis]=obj.origin[axis]+offset;
- if(obj.kind==='door')obj.box.solid=obj.amount<.999;
+ if(obj.kind==='door')obj.box.solid=!obj.motion&&obj.amount<.999;
  for(const part of obj.parts||[])part.box[axis]=part.origin[axis]+offset;
  if(obj.kind==='drawer'){
   obj.z=obj.box.z+(obj.interactOffset??-.03);
