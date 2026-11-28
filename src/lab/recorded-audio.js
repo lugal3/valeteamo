@@ -1,4 +1,5 @@
 import {USER_AUDIO_SPRITE} from './audio/user-sprite-index.js';
+import {measurePCM,calibrationGain} from './audio-mastering.js';
 const spriteURL=new URL('./audio/user-sprite.ogg',import.meta.url).href;
 const spriteMP3URL=new URL('./audio/user-sprite.mp3',import.meta.url).href;
 import sample0 from './audio/door-open.wav';
@@ -57,12 +58,12 @@ export const SAMPLE_URLS=Object.fromEntries([
  ['upright-12',sample23]
 ]);
 export class RecordedAudio{
- constructor(ctx,effects,music,ambient=music){this.ctx=ctx;this.effects=effects;this.music=music;this.ambient=ambient;this.buffers=new Map();this.voices=new Set();this.loops=new Map();this.offsets={};this.indices={};this.abort=new AbortController();this.dead=false;this.mood='ambient';this.played=0;this.errors=[];this.sprite=null;this.userBufferCache=new Map();}
+ constructor(ctx,effects,music,ambient=music){this.ctx=ctx;this.effects=effects;this.music=music;this.ambient=ambient;this.buffers=new Map();this.voices=new Set();this.loops=new Map();this.offsets={};this.indices={};this.abort=new AbortController();this.dead=false;this.mood='ambient';this.played=0;this.errors=[];this.sprite=null;this.userBufferCache=new Map();this.calibration=new Map();}
  async load(){
   await Promise.all([
    ...Object.entries(SAMPLE_URLS).map(async([id,url])=>{
     try{const r=await fetch(url,{signal:this.abort.signal});if(!r.ok)throw Error('HTTP '+r.status);
-      const data=await this.ctx.decodeAudioData(await r.arrayBuffer());if(!this.dead)this.buffers.set(id,data);
+      const data=await this.ctx.decodeAudioData(await r.arrayBuffer());if(!this.dead){this.buffers.set(id,data);if(!/^(ambient|tension|emote-|upright-|piano|rc-motor)/.test(id))this.measure(id,data);}
     }catch(e){if(!this.dead)this.errors.push(id+': '+e.message);}
    }),
    (async()=>{
@@ -74,7 +75,7 @@ export class RecordedAudio{
       const response=await fetch(url,{signal:this.abort.signal});
       if(!response.ok)throw Error('HTTP '+response.status);
       const data=await this.ctx.decodeAudioData(await response.arrayBuffer());
-      if(!this.dead){this.sprite=data;this.spriteCodec=url===spriteURL?'opus':'mp3';}
+      if(!this.dead){this.sprite=data;this.spriteCodec=url===spriteURL?'opus':'mp3';for(const [id,clip] of Object.entries(USER_AUDIO_SPRITE)){const trim=clip.leadIn||0;this.measure(id,data,clip.start+trim,clip.duration-trim);}}
       failure=null;break;
      }catch(e){failure=e;}
     }
@@ -82,6 +83,7 @@ export class RecordedAudio{
    })()
   ]);
  }
+ measure(id,buffer,start=0,duration=buffer.duration-start){const metrics=measurePCM(buffer,start,duration);const entry={...metrics,gain:calibrationGain(id,metrics)};this.calibration.set(id,entry);return entry;}
  clipBuffer(id){
   const clip=USER_AUDIO_SPRITE[id];if(!clip||!this.sprite)return this.buffers.get(id)||null;
   if(this.userBufferCache.has(id))return this.userBufferCache.get(id);
@@ -98,7 +100,7 @@ export class RecordedAudio{
   const clip=USER_AUDIO_SPRITE[id];
   const buffer=clip&&this.sprite?this.sprite:this.buffers.get(id);
   if(this.dead||!buffer||this.ctx.state!=='running'||this.voices.size>=18)return false;
-  const source=this.ctx.createBufferSource(),vol=this.ctx.createGain(),stereo=this.ctx.createStereoPanner();source.buffer=buffer;source.playbackRate.value=rate;vol.gain.value=gain;stereo.pan.value=pan;source.connect(vol);vol.connect(stereo);stereo.connect(output);
+  const source=this.ctx.createBufferSource(),vol=this.ctx.createGain(),stereo=this.ctx.createStereoPanner();source.buffer=buffer;source.playbackRate.value=rate;vol.gain.value=gain*(this.calibration.get(id)?.gain??1);stereo.pan.value=pan;source.connect(vol);vol.connect(stereo);stereo.connect(output);
   const voice={stop:()=>{source.onended=null;try{source.stop();}catch{}source.disconnect();vol.disconnect();stereo.disconnect();this.voices.delete(voice);}};source.onended=voice.stop;this.voices.add(voice);if(clip&&this.sprite){const trim=Math.max(0,Math.min(clip.leadIn||0,clip.duration-.05));source.start(0,clip.start+trim,clip.duration-trim);}
   else source.start();this.lastPlayed=id;this.played++;return voice;
  }
@@ -114,5 +116,5 @@ export class RecordedAudio{
   loop.gain.gain.setTargetAtTime(id===audible?(id==='ambient'?.20:.27):0,this.ctx.currentTime,.35);
  }}
  pause(preserve=null){for(const v of this.voices)if(v!==preserve)v.stop();for(const [id,l]of this.loops){this.offsets[id]=(l.offset+this.ctx.currentTime-l.started)%l.source.buffer.duration;try{l.source.stop();}catch{}l.source.disconnect();l.gain.disconnect();}this.loops.clear();}
- destroy(){this.dead=true;this.abort.abort();this.pause();this.buffers.clear();this.userBufferCache.clear();this.sprite=null;}
+ destroy(){this.dead=true;this.abort.abort();this.pause();this.buffers.clear();this.userBufferCache.clear();this.calibration.clear();this.sprite=null;}
 }
