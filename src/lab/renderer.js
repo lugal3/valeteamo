@@ -13,6 +13,7 @@ import {samplePianoPose} from './piano-recital.js';
 import {drawViewModel} from './viewmodel.js';
 import {pursuerPieces,posePursuer} from './pursuer-model.js';
 import {pursuerShadowPieces,shadowRelevant,shadowNeedsUpdate} from './pursuer-shadow.js';
+import {houseRenderSize} from './frame-budget.js';
 import {CAPTURE_FABRIC,pursuerInterior} from './pursuer-face.js';
 import {createPursuerTexture} from './pursuer-texture.js';
 import {captureBasis} from './capture-shot.js';
@@ -380,7 +381,7 @@ function uploadShadowIndices(gl,buffer,mesh,flags){
 }
 export class HouseRenderer {
  constructor(canvas,quality='medium'){
-  this.canvas=canvas;this.quality=quality;
+  this.canvas=canvas;this.quality=quality;this.adaptiveScale=1;
   const gl=canvas.getContext('webgl',{alpha:false,stencil:true,antialias:false,powerPreference:'low-power',preserveDrawingBuffer:false});
   if(!gl)throw Error('El navegador no permite WebGL. Activa aceleración gráfica o prueba otro navegador.');
   this.gl=gl;this.programs={medium:program(gl),low:program(gl,true)};this.program=this.programs[quality==='low'?'low':'medium'];this.texture=createAtlas(gl);this.disposeArtwork=loadPosterTiles(gl,this.texture);this.materialQuality=quality;this.materialTextures=createMaterials(gl,quality);this.loisFaceTexture=createLoisFaceTexture(gl,quality);
@@ -898,14 +899,7 @@ export class HouseRenderer {
   gl.drawElements(gl.TRIANGLES,this.tentacles.indices.length,gl.UNSIGNED_SHORT,0);
  }
  resize(capture=false){
-  const low=this.quality==='low',detailed=capture&&!low;
-  const scale=low?(capture?.70:.55):detailed?1.12:.80;
-  const dpr=Math.min(window.devicePixelRatio||1,1.7)*scale;
-  const {clientWidth,clientHeight}=this.canvas,maxWidth=detailed?1600:1200,maxHeight=detailed?1000:760;
-  // Downsample both axes together so a close-up keeps its framing at the cap.
-  const density=capture?Math.min(dpr,maxWidth/Math.max(1,clientWidth),maxHeight/Math.max(1,clientHeight)):dpr;
-  const w=Math.min(maxWidth,Math.max(1,Math.round(clientWidth*density)));
-  const h=Math.min(maxHeight,Math.max(1,Math.round(clientHeight*density)));
+  const {width:w,height:h}=houseRenderSize(this.canvas.clientWidth,this.canvas.clientHeight,window.devicePixelRatio,this.quality,capture,this.adaptiveScale);
   if(w!==this.canvas.width||h!==this.canvas.height){this.canvas.width=w;this.canvas.height=h;this.gl.viewport(0,0,w,h);}
  }
  updateTelevision(television){

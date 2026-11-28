@@ -1,6 +1,22 @@
 const assert=require('node:assert/strict'),fs=require('node:fs');
 (async()=>{
  const {createFrameSampler}=await import('../src/lab/frame-sampler.js');
+ const {houseFrameLimit,houseRenderSize,createHouseBudget}=await import('../src/lab/frame-budget.js');
+ assert.equal(houseFrameLimit({ready:true,paused:false,pianoPractice:false,quality:'low'}),60,'low visual quality does not cap gameplay at 30 FPS');
+ assert.equal(houseFrameLimit({ready:false}),5);assert.equal(houseFrameLimit({ready:true,paused:true}),15);assert.equal(houseFrameLimit({ready:true,pianoPractice:true}),30);
+ const full=houseRenderSize(844,390,3,'medium'),scaled=houseRenderSize(844,390,3,'medium',false,.70),low=houseRenderSize(844,390,3,'low');
+ assert(scaled.width*scaled.height<full.width*full.height*.51);
+ assert(low.width<full.width&&Math.abs(scaled.width/scaled.height-844/390)<.02);
+ assert.deepEqual(houseRenderSize(844,390,3,'medium',true,.70),houseRenderSize(844,390,3,'medium',true,1),'capture resolution protected');
+ const wide=houseRenderSize(3000,800,2,'medium');assert(wide.width<=1200&&Math.abs(wide.width/wide.height-3.75)<.02);
+ const budget=createHouseBudget();let clock=0;
+ const run=(seconds,fps,active=true)=>{let change=0;for(let i=0;i<seconds*fps;i++){clock+=1000/fps;const sample=budget.record(clock,active);if(sample?.changed)change++;}return change;};
+ run(2,30);run(5,15,false);assert.equal(budget.state().scale,1);run(2,30);assert.equal(budget.state().scale,1);
+ run(2,30);assert.equal(budget.state().scale,.85);run(4,60);assert.equal(budget.state().scale,.85);
+ run(4,30);assert.equal(budget.state().scale,.70);run(4,30);assert.equal(budget.state().quality,'low');
+ budget.select('low');run(12,30);assert.deepEqual(budget.state(),{quality:'low',scale:1,auto:false});
+ budget.select('medium');assert.deepEqual(budget.state(),{quality:'medium',scale:1,auto:true});
+ run(2,30);clock+=3000;budget.record(clock,true);run(2,30);assert.equal(budget.state().scale,1,'a stall discards prior partial window');
  const s=createFrameSampler(5);
  assert.equal(s.report().samples,0);
  for(let i=0;i<=5;i++)s.record(i*20,4);
