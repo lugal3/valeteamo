@@ -2,14 +2,14 @@
 import {installEmyModel,poseEmy} from '../emy-cat.js';
 import {sculptSurface} from '../emy-sculpt.js';
 import {emySurface,writeEmySurface} from '../emy-surface.js';
-import {EMY_FACE_CANDIDATE} from '../assets/emy/face-candidate.js';
+import {candidateFace} from './face-anatomy.js';
 export const poses=['idle','walk','sit','groom','stretch','sleep','purr','alert','crouch','jump'];
 export function reviewCat(variant='original',low=false){
  const add=(id,x,y,z,w,h,d,material,solid,extra)=>({id,x,y,z,w,h,d,material,solid,...extra});
  const cat={parts:installEmyModel(add,{hidden:low}),x:0,y:0,z:0,yaw:0,age:.7};
- if(variant==='candidate'){
+ if(variant!=='original'){
   const box=cat.parts.find(p=>p.id==='head').box;
-  box.emyMesh=sculptSurface(box.emySpec,EMY_FACE_CANDIDATE[box.emySpec.asset]);
+  box.emyMesh=sculptSurface(box.emySpec,candidateFace(box.emySpec.asset,variant));
  }
  return cat;
 }

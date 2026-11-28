@@ -39,6 +39,7 @@ jobs:
           node-version: '22'
       - run: npm ci
       - run: node tests/emy-face-review.mjs
+      - run: node tests/emy-face-anatomy.mjs
       - run: npx playwright install --with-deps chromium
       - run: node tests/emy-face-review-browser.mjs
       - uses: actions/upload-artifact@v4

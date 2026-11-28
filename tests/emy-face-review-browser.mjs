@@ -5,10 +5,11 @@ import fs from 'node:fs';
 const server=await createServer({configFile:false,logLevel:'silent',server:{host:'127.0.0.1',port:0}});let browser;
 try{
  await server.listen();browser=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
- const page=await browser.newPage({viewport:{width:1240,height:900},deviceScaleFactor:1});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const page=await browser.newPage({viewport:{width:1240,height:900},deviceScaleFactor:1});const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error('PAGEERROR',e.message);});page.on('console',m=>{if(m.type()==='error')console.error('CONSOLE',m.text());});page.on('requestfailed',r=>console.error('REQUESTFAILED',r.url(),r.failure()));
  await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/emy-face-review.html');
- await page.waitForFunction(()=>window.__emyReview);
  fs.mkdirSync('output/emy-face-baseline/lab',{recursive:true});
+ try{await page.waitForFunction(()=>window.__emyReview,undefined,{timeout:30000});}catch(e){console.error('VIEWER_DIAGNOSTIC',await page.locator('#status').textContent(),errors);await page.screenshot({path:'output/emy-face-baseline/lab/error.png'});throw e;}
+ await page.selectOption('#variant','candidate');
  for(const view of ['front','three','left','right','back','top']){
   await page.selectOption('#view',view);
   const snapshot=await page.evaluate(()=>window.__emyReview.snapshot());assert(snapshot.equal);
@@ -17,5 +18,7 @@ try{
  }
  await page.selectOption('#pose','sleep');await page.check('#lod');assert((await page.evaluate(()=>window.__emyReview.snapshot())).equal);
  await page.setViewportSize({width:844,height:390});await page.selectOption('#pose','groom');await page.screenshot({path:'output/emy-face-baseline/lab/mobile.png'});
- assert.deepEqual(errors,[]);console.log('PASS actual WebGL: six views, identical pixels, low LOD, poses and mobile viewport');
+ await page.setViewportSize({width:1240,height:900});await page.uncheck('#lod');await page.selectOption('#pose','idle');
+ for(const variant of ['soft','refined']){await page.selectOption('#variant',variant);for(const view of ['front','three','left','right','back','top']){await page.selectOption('#view',view);const snap=await page.evaluate(()=>window.__emyReview.snapshot());assert(!snap.equal,variant+' actually differs');await page.screenshot({path:'output/emy-face-baseline/lab/'+variant+'-'+view+'.png'});}}
+ assert.deepEqual(errors,[]);console.log('PASS actual WebGL: baseline six views, identical pixels, low LOD, poses and mobile viewport; 12 candidate views');
 }finally{await browser?.close();await server.close();}
