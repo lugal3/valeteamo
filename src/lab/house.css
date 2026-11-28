@@ -574,3 +574,10 @@
 /* A touchscreen may use WASD with an external keyboard. The physical stick
    hit area stays stable while that same touchscreen switches back to touch. */
 @media(any-pointer:coarse){#lab3d.house-desktop .lab-stick-ring{width:clamp(108px,23vh,146px);height:clamp(108px,23vh,146px)} }@media(any-pointer:coarse) and (max-height:410px){#lab3d.house-desktop .lab-stick-ring{width:100px;height:100px}}
+
+/* Touch look accepts starts anywhere in the playable world, including HUD
+   gaps. Only the thumbstick and actual interactive menus own their gestures. */
+#lab3d[data-input-mode=touch]:not(.house-phone-open) .lab-look{left:0}
+#lab3d[data-input-mode=touch] :is(.lab-buttons,.house-hotbar,.house-noise-controls,.phone-notice,#lois-talk){touch-action:none}
+#lab3d[data-input-mode=touch] :is(.lab-buttons,.house-hotbar,.house-noise-controls) button{touch-action:none}
+#lab3d[data-input-mode=touch] :is(.lab-buttons,.house-hotbar) button:disabled{pointer-events:none}

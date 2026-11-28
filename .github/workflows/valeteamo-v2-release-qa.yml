@@ -94,7 +94,7 @@ jobs:
             rc-rescue) node tests/rc-browser.cjs ;;
             threat-hide) node tests/house-threat-browser.cjs ;;
             emy-emergency) node tests/emy-emergency-browser.cjs ;;
-            mobile-input) node tests/house-input-browser.cjs ;;
+            mobile-input) node tests/house-input-browser.cjs && node tests/house-touch-hud-browser.cjs ;;
             3d-production) node tests/house-css-production-browser.cjs ;;
             emy-mobile|emy-desktop|emy-webkit) node tests/emy-abilities-browser.cjs ;;
             altar) node tests/emy-abilities-browser.cjs ;;

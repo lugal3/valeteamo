@@ -22,7 +22,7 @@ import {createFrameSampler} from './frame-sampler.js';
 import {difficultyProfile,validDifficulty} from './difficulty.js';
 import {STARTING_LIVES,LIFE_NOTICE_SECONDS,captureLoss,lifeSlots} from './capture-lives.js';
 import {captureFrame,capturePath,captureTiming,captureBasis} from './capture-shot.js';
-import {movementKey,releasedPointer,hasControlTouch} from './movement-input.js';
+import {movementKey,releasedPointer,hasControlTouch,advanceHudDrag} from './movement-input.js';
 import {CharacterAnimator} from './animator.js';
 import {BATH_MIRROR} from './mirror.js';
 import {MirrorSafePuzzle,SAFE_CODE,MIRROR_HINT} from './mirror-safe.js';
@@ -256,6 +256,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  let renderer,world,emyCompanion=null,emyShot=null,bathCircuit,puzzle=createHousePuzzle(config.entry),sound=new HouseSound(),s,raf=0,last=0,lastPaint=0,fps=0,elapsed=0,lookPointer=null,stickPointer=null;
  if(typeof config.initialMuted==='boolean')sound.settings.muted=config.initialMuted;
  let active=true,ready=false,hasFocus=true,focus=null,lookLast={x:0,y:0},paused=false,modal='',intro=true,contextLost=false,stickPointerType=null,lookPointerType=null;
+ let lookCapture=null,lookOrigin=null,lookGesture=null,dragClick=null;
  let lookTarget={yaw:Math.PI,pitch:0},cinematic=null,poseTransition=null,handAction=0,clickAction=0,lastInteraction=-Infinity,audioPreview=false;
  const handDrift={x:0,y:0,vx:0,vy:0};
  const motionMedia=window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -305,8 +306,9 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  function resetInput(){
   endPeek();
   keys.clear();joystick.x=joystick.z=0;joystick.sprint=false;velocity.forward=velocity.side=0;velocity.speed=KITTY_SPEED.walk;
-  const pairs=[[$('lab-look'),lookPointer],[$('lab-joystick'),stickPointer]];
-  lookPointer=stickPointer=null;lookPointerType=stickPointerType=null;
+  endLook({pointerId:lookPointer,type:'reset'});
+  const pairs=[[$('lab-joystick'),stickPointer]];
+  stickPointer=null;stickPointerType=null;
   for(const [element,pointer] of pairs)releaseCapture(element,pointer);
   if($('lab-stick'))$('lab-stick').style.transform='translate(0,0)';
   if(s){lookTarget={yaw:s.yaw,pitch:s.pitch};s.sprinting=false;}
@@ -2426,17 +2428,51 @@ function runAction(act,node){
   e.preventDefault();
  }
  function endStick(e){if(e.pointerId!==stickPointer)return;const pointer=stickPointer;stickPointer=null;stickPointerType=null;joystick.x=0;joystick.z=0;joystick.sprint=false;releaseCapture($('lab-joystick'),pointer);$('lab-stick').style.transform='translate(0,0)';}
- function pointerLook(e){if(!canLook()||mouseLocked()||lookPointer!==null||e.button!==0)return;
-  lookPointer=e.pointerId;lookPointerType=e.pointerType||'mouse';lookLast={x:e.clientX,y:e.clientY};capture(e.currentTarget,e.pointerId);e.preventDefault();}
- function moveLook(e){if(e.pointerId!==lookPointer)return;if(releasedPointer(e,lookPointerType)){endLook(e);return;}if(isPaused())return;const dx=e.clientX-lookLast.x,dy=e.clientY-lookLast.y;
+ // A HUD tap retains its native click. A drag claims the camera and
+ // suppresses that click even if the finger returns to the same button.
+ function pointerLook(e){if(e.pointerType==='touch'||!canLook()||mouseLocked()||lookPointer!==null||e.button!==0)return;
+  lookPointer=e.pointerId;lookPointerType=e.pointerType||'mouse';lookLast={x:e.clientX,y:e.clientY};lookCapture=e.currentTarget;capture(lookCapture,e.pointerId);e.preventDefault();}
+ function beginTouchLook(e){
+  if(e.pointerType!=='touch'||!canLook()||mouseLocked()||lookPointer!==null||e.button!==0||e.pointerId===stickPointer)return;
+  const target=e.target;if(!(target instanceof Element)||!root.contains(target))return;
+  if(target.closest('#lab-joystick,.house-hide-peek,.phone-shell,.hud-editor,.hud-preview-tools,.house-emotes,#lois-chat,[role="dialog"],input,select,textarea,summary,a'))return;
+  if(phone.open&&!target.closest('#lab-look'))return;
+  const button=target.closest('button');
+  if(button&&!button.closest('.lab-buttons,.house-hotbar,.house-noise-controls,.phone-notice,#lois-talk'))return;
+  const tap=button&&!button.disabled?button:null;
+  lookPointer=e.pointerId;lookPointerType='touch';lookOrigin=target;
   lookLast={x:e.clientX,y:e.clientY};
-  aimLook(dx,dy);
-  e.preventDefault();}
+  lookGesture={button:tap,x:e.clientX,y:e.clientY,dragged:!tap};
+  // Retain the actual button as capture owner so a stationary tap preserves
+  // native accessibility/click behavior. Other touches go to the look surface.
+  lookCapture=tap||look;capture(lookCapture,e.pointerId);
+  if(!tap)e.preventDefault();
+  e.stopPropagation();
+ }
+ function moveLook(e){
+  if(e.pointerId!==lookPointer)return;
+  if(releasedPointer(e,lookPointerType)){endLook(e);return;}
+  if(!canLook()){endLook({pointerId:e.pointerId,type:'reset'});return;}
+  if(lookGesture&&!lookGesture.dragged){
+   if(!advanceHudDrag(lookGesture,e.clientX,e.clientY))return;
+   lookGesture.dragged=true;
+  }
+  const dx=e.clientX-lookLast.x,dy=e.clientY-lookLast.y;
+  lookLast={x:e.clientX,y:e.clientY};
+  aimLook(dx,dy);if(e.cancelable)e.preventDefault();
+ }
  function aimLook(dx,dy){
   lookTarget=applyLookDelta(lookTarget,dx,dy,options.sensitivity,options.invertX);
   if(s.hidden){const limits=hideLookBounds(s.hidden,peekHeld||s.hidePeek>.1);lookTarget.yaw=clamp(lookTarget.yaw,s.hidden.yaw-limits.yaw,s.hidden.yaw+limits.yaw);lookTarget.pitch=clamp(lookTarget.pitch,-limits.pitch,limits.pitch);}
  }
- function endLook(e){if(e.pointerId!==lookPointer)return;const pointer=lookPointer;lookPointer=null;lookPointerType=null;releaseCapture($('lab-look'),pointer);}
+ function endLook(e){
+  if(lookPointer===null||e.pointerId!==lookPointer)return;
+  if(lookGesture?.button&&e.type==='pointerup'&&Number.isFinite(e.clientX)&&advanceHudDrag(lookGesture,e.clientX,e.clientY)){
+   if(!lookGesture.dragged)moveLook(e);
+  }
+  if(lookGesture?.button&&(lookGesture.dragged||e.type!=='pointerup'))dragClick={button:lookGesture.button,id:lookPointer,until:performance.now()+750};
+  const pointer=lookPointer,owner=lookCapture;lookPointer=null;lookPointerType=null;lookCapture=lookOrigin=lookGesture=null;releaseCapture(owner,pointer);
+ }
  const stick=$('lab-joystick'),look=$('lab-look');
  function syncPointerMode(){
   root.classList.toggle('house-desktop',padSession.mode==='keyboard'&&desktop.matches);
@@ -2455,14 +2491,19 @@ function runAction(act,node){
  if(stick&&look){
   stick.addEventListener('pointerdown',pointerStick,{signal});stick.addEventListener('pointermove',moveStick,{signal});
   stick.addEventListener('pointerup',endStick,{signal});stick.addEventListener('pointercancel',endStick,{signal});
-  look.addEventListener('pointerdown',pointerLook,{signal});look.addEventListener('pointermove',moveLook,{signal});
+  look.addEventListener('pointerdown',pointerLook,{signal});look.addEventListener('pointermove',e=>{if(e.pointerType!=='touch')moveLook(e);},{signal});
+  root.addEventListener('pointerdown',beginTouchLook,{signal,capture:true});
+  root.addEventListener('lostpointercapture',e=>{if(e.target===lookCapture)endLook(e);},{signal,capture:true});
+  // A new genuine press may tap immediately after a drag, including the same button.
+  root.addEventListener('pointerdown',e=>{if(dragClick&&e.target instanceof Element&&dragClick.button.contains(e.target))dragClick=null;},{signal,capture:true});
+  root.addEventListener('click',e=>{if(!dragClick)return;if(performance.now()>dragClick.until){dragClick=null;return;}if((e.detail>0||e.pointerType==='touch')&&e.target instanceof Element&&(dragClick.button.contains(e.target)||e.pointerType==='touch'&&e.pointerId===dragClick.id)){dragClick=null;e.preventDefault();e.stopImmediatePropagation();}},{signal,capture:true});
   look.addEventListener('pointerup',endLook,{signal});look.addEventListener('pointercancel',endLook,{signal});look.addEventListener('lostpointercapture',endLook,{signal});
   stick.addEventListener('lostpointercapture',endStick,{signal});
   // Capture-phase fallback also receives releases outside the original control.
   for(const type of ['pointerup','pointercancel'])window.addEventListener(type,e=>{if(e.pointerId===peekPointer)endPeek();endStick(e);endLook(e);},{signal,capture:true});
-  window.addEventListener('pointermove',e=>{if(e.pointerId===stickPointer&&releasedPointer(e,stickPointerType))endStick(e);if(e.pointerId===lookPointer&&releasedPointer(e,lookPointerType))endLook(e);},{signal,capture:true});
+  window.addEventListener('pointermove',e=>{if(e.pointerId===stickPointer&&releasedPointer(e,stickPointerType))endStick(e);if(e.pointerId===lookPointer){if(releasedPointer(e,lookPointerType))endLook(e);else if(lookPointerType==='touch')moveLook(e);}},{signal,capture:true,passive:false});
   window.addEventListener('mouseup',e=>{if(e.button!==0)return;if(stickPointerType==='mouse')endStick({pointerId:stickPointer});if(lookPointerType==='mouse')endLook({pointerId:lookPointer});},{signal,capture:true});
-  for(const type of ['touchend','touchcancel'])window.addEventListener(type,e=>{if(stickPointerType==='touch'&&!hasControlTouch(e.touches,stick))endStick({pointerId:stickPointer});if(lookPointerType==='touch'&&!hasControlTouch(e.touches,look))endLook({pointerId:lookPointer});},{signal,capture:true,passive:true});
+  for(const type of ['touchend','touchcancel'])window.addEventListener(type,e=>{if(stickPointerType==='touch'&&!hasControlTouch(e.touches,stick))endStick({pointerId:stickPointer});if(lookPointerType==='touch'&&!hasControlTouch(e.touches,lookOrigin||look))endLook({pointerId:lookPointer,type:e.type});},{signal,capture:true,passive:true});
  }
  root.addEventListener('click',e=>{
   if(e.isTrusted)unlockSound();
@@ -2594,7 +2635,8 @@ function runAction(act,node){
  window.addEventListener('pagehide',()=>{hasFocus=false;haptics.stop();clearMiniatureInput();releaseMouse();resetInput();suspendPianoClock();sound.pause();},{signal});
  window.addEventListener('pageshow',()=>{hasFocus=document.hasFocus();resetInput();last=performance.now();resumeHouseAudio();},{signal});
  document.addEventListener('visibilitychange',()=>{last=performance.now();if(document.hidden){haptics.stop();resetInput();suspendPianoClock();sound.pause();}else resumeHouseAudio();},{signal});
- window.addEventListener('resize',()=>{last=performance.now();resetInput();if(isPortrait()){suspendPianoClock();sound.pause();}else resumeHouseAudio();},{signal});
+ let previousPortrait=isPortrait();
+ window.addEventListener('resize',()=>{last=performance.now();const portrait=isPortrait();if(portrait!==previousPortrait){previousPortrait=portrait;resetInput();}if(portrait){suspendPianoClock();sound.pause();}else resumeHouseAudio();},{signal});
  canvas.addEventListener('webglcontextlost',e=>{
   e.preventDefault();
   interruptGraphics('Gráficos interrumpidos','Si el navegador recupera los gráficos, podrás seguir desde aquí.');

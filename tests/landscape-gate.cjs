@@ -58,6 +58,7 @@ async function main(){
   const phaser=page.locator('.adventure-canvas canvas');
   await phaser.waitFor({timeout:25000});
   const fieldManual=page.getByRole('dialog',{name:'Manual de controles del jardín'});
+  if(!await fieldManual.isVisible())await page.getByRole('button',{name:'Controles y mando'}).click();
   await fieldManual.waitFor({timeout:12000});
   await fieldManual.getByRole('button',{name:'Entendido'}).click();
   await page.locator('.story-prologue .adventure-objective').waitFor({timeout:12000});
