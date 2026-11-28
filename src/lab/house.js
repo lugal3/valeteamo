@@ -36,6 +36,7 @@ import {createHouse,HEIGHT,HOUSE,blocked,groundHeight,lineBlocked,setDoor,setDra
 import {HouseRenderer,pickupGeometry} from './renderer.js';
 import {inspectionMesh,inspectionHTML,mountInspection} from './object-inspection.js';
 import {HouseSound,MIX_CHANNELS,mixLimit} from './sound.js';
+import {multiplierLabel} from './audio-mastering.js';
 import {applyLookDelta,followLook,readCameraSettings,writeCameraSettings,DEFAULT_CAMERA_SETTINGS,SENSITIVITY_MIN,SENSITIVITY_MAX,SENSITIVITY_STEP} from './camera-controls.js';
 import {WINDOW_SHOT_SECONDS,WINDOW_LANDING,windowIntroCamera,windowIntroState,windowIntroLighting,shouldPlayWindowIntro,WINDOW_ESTABLISH_SECONDS,windowEstablishCamera,windowSequenceCamera} from './window-intro.js';
 import {navigate,getStairDirection} from './navigation.js';
@@ -161,10 +162,13 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
      <label class="lab-preference"><input data-setting="immersive" type="checkbox" checked> HUD discreto</label>
      <label>Dificultad <select data-setting="difficulty" aria-label="Dificultad"><option value="easy">Fácil · Emy te protege</option><option value="story">Historia · recomendada</option><option value="normal">Equilibrado</option><option value="tense">Tensión</option></select></label>
      <label class="lab-preference"><input data-setting="adaptive" type="checkbox" checked> Ayuda adaptable tras perder vidas</label>
-     <details class="house-mixer"><summary>Mezclador de sonido</summary>
+     <details class="house-mixer"><summary>Audio · mezclador maestro</summary>
        <label class="lab-preference"><input data-setting="mute" type="checkbox"> Silenciar la casa</label>
+       <label>Perfil <select data-setting="audioProfile" aria-label="Perfil de audio"><option value="balanced">Equilibrado</option><option value="cinema">Cinematográfico</option><option value="clear">Alta claridad</option></select></label>
+       <div class="mixer-row"><label><span>Amplificación global <output data-level="boost"></output></span><input data-setting="boost" type="range" min="0" max="4" step=".05" aria-label="Amplificación global"></label><button data-act="audio:master" aria-label="Probar amplificación">▶</button></div>
+       <small>1× = sin amplificación extra. Aumenta gradualmente; protección digital no equivale a protección auditiva.</small>
        ${MIX_CHANNELS.map(([key,label,preview])=>`<div class="mixer-row"><label><span>${label} <output data-level="${key}"></output></span><input data-setting="${key}" type="range" min="0" max="${mixLimit(key)}" step=".01" aria-label="${label}"></label><button data-act="audio:${preview||key}" aria-label="Probar ${label}">▶</button></div>`).join('')}
-       <button data-act="copy-mix">Copiar mezcla</button>
+       <div class="mixer-row"><button data-act="audio:danger-alert">Probar alerta</button><button data-act="audio:capture-reveal">Probar susto</button></div><div class="mixer-meter" aria-label="Medición de salida digital"><meter min="-60" max="0" low="-30" high="-6" optimum="-12" value="-60"></meter><small class="mixer-meter-readout">Salida: — dBFS · pulsa probar</small></div><button data-act="audio-reset">Restablecer mezcla</button><button data-act="copy-mix">Copiar mezcla y mediciones</button>
        <textarea class="mixer-export" aria-label="Valores de la mezcla" readonly hidden></textarea>
        <small class="mixer-status" role="status"></small>
      </details>
@@ -952,13 +956,15 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   audioPreview=true;
   sound.stopEmote();
   sound.recordings?.setMood(kind==='music'?'tension':kind==='ambient'?'ambient':sound.threat?'tension':'ambient');
-  if(kind==='six-seven')sound.emote(kind,EMOTES.find(emote=>emote.id===kind).duration);
+  if(kind==='capture-reveal')sound.captureCue(kind);
+  else if(kind==='danger-alert')sound.playDangerAlert();
+  else if(kind==='six-seven')sound.emote(kind,EMOTES.find(emote=>emote.id===kind).duration);
   else if(kind==='notification')sound.sequence(kind);
   else if(kind!=='ambient'&&kind!=='music')play(kind==='master'||kind==='effects'?'door-open':kind);
  }
  async function copyMix(){
   const field=root.querySelector('.mixer-export'),status=root.querySelector('.mixer-status');
-  field.value=JSON.stringify(sound.settings,null,2);
+  field.value=JSON.stringify({settings:sound.settings,output:sound.meter(),recordings:Object.fromEntries(sound.recordings?.calibration??[])},null,2);
   try{await navigator.clipboard.writeText(field.value);field.hidden=true;status.textContent='Mezcla copiada.';}
   catch{field.hidden=false;field.select();status.textContent='Copia los valores seleccionados.';}
  }
@@ -1322,6 +1328,7 @@ function runAction(act,node){
   }
   if(act==='hud'&&ready&&!cinematic){$('lab-camera-settings').open=false;phone.edit();return;}
   if(act==='copy-mix'){void copyMix();return;}
+  if(act==='audio-reset'){sound.resetMix();syncMixer();return;}
   if(act==='perf-copy'&&config.trial){const report=JSON.stringify(perfReport(),null,2);if(navigator.clipboard?.writeText)void navigator.clipboard.writeText(report).then(()=>say('Informe de rendimiento copiado')).catch(()=>window.prompt('Copia el informe',report));else window.prompt('Copia el informe',report);return;}
   if(act.startsWith('audio:')){void previewAudio(act.slice(6));return;}
   if(isPaused()||finalCutscene)return;
@@ -1910,7 +1917,9 @@ function runAction(act,node){
   }
   if(events.phase==='arrival')poseArrivalCar(world.car,clamp(events.time/CAR_ARRIVAL_SECONDS,0,1));
  }
+ let audioMeterAt=0;
  function frame(now){
+  if(audioPreview&&now-audioMeterAt>125){audioMeterAt=now;const m=sound.meter();const meter=root.querySelector('.mixer-meter meter'),label=root.querySelector('.mixer-meter-readout');if(m){meter.value=Math.max(-60,m.peakDb);label.textContent='Pico '+m.peakDb.toFixed(1)+' dBFS · RMS '+m.rmsDb.toFixed(1)+' · compresión '+m.reduction.toFixed(1)+' dB';}}
   if(!active||contextLost)return;raf=requestAnimationFrame(frame);
   // The start card covers a static preview. Keep enough frames for resize
   // and recovery, but leave the main thread free for the actual Start click.
@@ -2603,7 +2612,7 @@ function runAction(act,node){
  }
  function endAudioPreview(){
   if(!audioPreview)return;
-  audioPreview=false;sound.stopEmote();sound.pause();
+  audioPreview=false;sound.stopEmote();sound.pause();const meter=root.querySelector('.mixer-meter meter');if(meter)meter.value=-60;const label=root.querySelector('.mixer-meter-readout');if(label)label.textContent='Salida: — dBFS · pulsa probar';
  }
  function suspendPianoClock(){if(piano)piano.last=null;}
  function resumeHouseAudio(){if(piano&&pianoRunning())sound.resumePiano();else if(captureRunning()||!isSuspended())sound.resume();}
@@ -2632,9 +2641,10 @@ function runAction(act,node){
    if(key==='captions'&&!field.checked)hudMessages.clearSound();
    if(key==='haptics'&&!field.checked)haptics.stop();
   }
-  if(MIX_CHANNELS.some(([channel])=>channel===key)){
+  if(key==='audioProfile'){sound.set('profile',field.value);syncMixer();return;}
+  if(key==='boost'||MIX_CHANNELS.some(([channel])=>channel===key)){
    sound.set(key,Number(field.value));
-   root.querySelector(`[data-level="${key}"]`).textContent=Math.round(sound.settings[key]*100)+'%';
+   root.querySelector(`[data-level="${key}"]`).textContent=multiplierLabel(sound.settings[key]);
   }
   if(key==='mute')sound.set('muted',field.checked);
   root.querySelectorAll('[data-setting="'+key+'"]').forEach(el=>{if(el!==field){if(field.type==='checkbox')el.checked=field.checked;else el.value=field.value;}});
@@ -2740,12 +2750,16 @@ function runAction(act,node){
   else if(demo&&!config.trial&&checkpoint==='ground')runAction('start');
   else showModal(demo?'Rescata a Louis':'Explora la casa',`<p>Modo ${escapeHTML(points[checkpoint]||'Planta baja')}. Camina con el joystick izquierdo, mira arrastrando a la derecha y pulsa USAR sobre objetos cercanos.</p><p>${demo?'Busca el lazo en el estudio y llama a Emy. La nota del pasillo contiene una pista. La linterna está sobre el mueble del descansillo.':'Hay dos plantas, recuerdos, una linterna y secretos pequeños.'}</p><p>Enciende las luces para ahorrar carga. Puedes cambiar la pila desde la mochila.</p>`,[['Entrar / activar sonido','start'],[exitLabel,'exit']]);
  }
- if(renderer){
-  for(const [key] of MIX_CHANNELS){
+ function syncMixer(){
+  for(const key of ['boost',...MIX_CHANNELS.map(([name])=>name)]){
    root.querySelectorAll('[data-setting="'+key+'"]').forEach(el=>el.value=sound.settings[key]);
-   root.querySelector(`[data-level="${key}"]`).textContent=Math.round(sound.settings[key]*100)+'%';
+   root.querySelector(`[data-level="${key}"]`).textContent=multiplierLabel(sound.settings[key]);
   }
+  root.querySelector('[data-setting="audioProfile"]').value=sound.settings.profile;
   root.querySelectorAll('[data-setting="mute"]').forEach(el=>el.checked=sound.settings.muted);
+ }
+ if(renderer){
+  syncMixer();
   root.querySelectorAll('[data-setting="bob"]').forEach(el=>el.checked=options.bob);
   root.querySelectorAll('[data-setting="sensitivity"]').forEach(el=>el.value=options.sensitivity);
   root.querySelector('[data-setting="invertX"]').checked=options.invertX;

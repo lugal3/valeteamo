@@ -4,17 +4,19 @@ import {HouseAtmosphere,playFoley} from './atmosphere.js';
 import {spookyFoley} from './spooky-foley.js';
 import {buildCaptureScream} from './capture-scream.js';
 import {RecordedAudio} from './recorded-audio.js';
+import {audioProfile,spatialGain,outputGuardCurve,meterPCM} from './audio-mastering.js';
 import {playEmoteRhythm} from './emote-audio.js';
 import pianoReference from './audio/piano-reference.wav';
 const PIANO_ROOTS=[0,4,7,12];
-const KEY='valeteamo-lab-sound-v1';
+const KEY='valeteamo-lab-sound-v2',LEGACY_KEY='valeteamo-lab-sound-v1';
 export const MIX_CHANNELS=[
  ['master','Volumen maestro'],['ambient','Ambiente'],['music','Música de tensión'],['effects','Todos los efectos'],
  ['doors','Puertas y armario','door-open'],['steps','Pasos y escalera','stair'],['creaks','Crujidos de la casa','floor-groan'],
  ['objects','Objetos e interacciones','light'],['alerts','Mensajes y alertas','notification'],['emotes','Música de emotes','six-seven']
 ];
-export const mixLimit=key=>key==='master'?3:MIX_CHANNELS.slice(4).some(([name])=>name===key)?2:1;
-const defaults={muted:false,master:1,ambient:.40,effects:.68,music:.34,doors:1.8,steps:1,creaks:1,objects:1,alerts:1,emotes:1};
+export const mixLimit=key=>key==='boost'?4:key==='master'?3:MIX_CHANNELS.slice(4).some(([name])=>name===key)?3:2;
+const defaults={muted:false,master:1,boost:1,profile:'balanced',ambient:.40,effects:.85,music:.34,doors:1.25,steps:1,creaks:1,objects:1,alerts:1,emotes:1};
+const legacyDefaults={effects:.68,doors:1.8};
 const captureLevels={'capture-bite':.60,'capture-swallow':.40,'capture-snare':.37,'capture-tug':.47,
  'capture-tear':.38,'capture-breath':.26,'capture-grab':.32,'capture-pulse':.15};
 const effectChannel=kind=>{
@@ -24,22 +26,35 @@ const effectChannel=kind=>{
  return ['notification','alert','danger-alert'].includes(kind)?'alerts':'objects';
 };
 export class HouseSound {
- constructor(){let saved;try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')}catch{}this.settings={...defaults};for(const key of Object.keys(defaults))if(saved?.[key]!==undefined)this.settings[key]=this.settingValue(key,saved[key]);this.context=null;this.ambientNodes=[];this.musicNodes=new Set();this.musicTimer=null;this.musicStep=0;this.tension=.55;this.paused=false;}
+ constructor(){let saved,legacy=false;try{const current=localStorage.getItem(KEY);legacy=!current;saved=JSON.parse(current||localStorage.getItem(LEGACY_KEY)||'{}')}catch{}this.settings={...defaults};for(const key of Object.keys(defaults))if(saved?.[key]!==undefined&&!(legacy&&key in legacyDefaults&&saved[key]===legacyDefaults[key]))this.settings[key]=this.settingValue(key,saved[key]);this.context=null;this.ambientNodes=[];this.musicNodes=new Set();this.musicTimer=null;this.musicStep=0;this.tension=.55;this.paused=false;}
  save(){try{localStorage.setItem(KEY,JSON.stringify(this.settings))}catch{}}
  async start(){
   if(!this.context){
    const C=window.AudioContext||window.webkitAudioContext;if(!C)return false;
-   this.context=new C();this.master=this.context.createGain();this.master.gain.value=.45*this.settings.master;
-   const limiter=this.context.createDynamicsCompressor();limiter.threshold.value=-10;limiter.ratio.value=8;this.master.connect(limiter);limiter.connect(this.context.destination);
+   this.context=new C();this.master=this.context.createGain();this.master.gain.value=this.masterLevel();
+   const limiter=this.limiter=this.context.createDynamicsCompressor();limiter.threshold.value=-6;limiter.knee.value=9;limiter.ratio.value=16;limiter.attack.value=.003;limiter.release.value=.16;this.master.connect(limiter);
+   // Compressor controls dynamics; the bounded final stage prevents full-scale clipping.
+   const guard=this.outputGuard=this.context.createWaveShaper();guard.curve=outputGuardCurve();guard.oversample='none';limiter.connect(guard);
+   this.outputMeter=this.context.createAnalyser();this.outputMeter.fftSize=2048;this.meterBuffer=new Float32Array(2048);guard.connect(this.outputMeter);this.outputMeter.connect(this.context.destination);
    this.roomBus=this.context.createGain();
    this.roomFilter=this.context.createBiquadFilter();this.roomFilter.type='lowpass';this.roomFilter.Q.value=.35;
    this.roomBus.connect(this.roomFilter);this.roomFilter.connect(this.master);
    this.updateRoomAcoustics(true);
-   this.musicBus=this.context.createGain();this.musicBus.gain.value=this.settings.muted?0:this.settings.music;this.musicBus.connect(this.roomBus);
-   this.effectsBus=this.context.createGain();this.effectsBus.gain.value=this.settings.muted?0:this.settings.effects;this.effectsBus.connect(this.master);this.sequenceNodes=new Set();
-   this.recordedMusicBus=this.context.createGain();this.recordedMusicBus.gain.value=this.settings.muted?0:this.settings.music;this.recordedMusicBus.connect(this.roomBus);
-   this.recordedAmbientBus=this.context.createGain();this.recordedAmbientBus.gain.value=this.settings.muted?0:this.settings.ambient;this.recordedAmbientBus.connect(this.roomBus);
-   this.channels=Object.fromEntries(MIX_CHANNELS.slice(4).map(([name])=>{const gain=this.context.createGain();gain.gain.value=this.settings[name];gain.connect(this.effectsBus);return [name,gain];}));
+   this.musicBus=this.context.createGain();this.musicBus.gain.value=this.channelLevel('music');this.musicBus.connect(this.roomBus);
+   this.effectsBus=this.context.createGain();this.effectsBus.gain.value=this.channelLevel('effects');this.effectsBus.connect(this.master);this.sequenceNodes=new Set();
+   this.recordedMusicBus=this.context.createGain();this.recordedMusicBus.gain.value=this.channelLevel('music');this.recordedMusicBus.connect(this.roomBus);
+   this.recordedAmbientBus=this.context.createGain();this.recordedAmbientBus.gain.value=this.channelLevel('ambient');this.recordedAmbientBus.connect(this.roomBus);
+   // Parallel, profile-dependent processing of ordinary cues only.
+   // Alerts, capture and emotes retain their separate direct path.
+   const ctxAudio=this.context;
+   this.presenceBus=ctxAudio.createGain();this.presenceDry=ctxAudio.createGain();this.presenceWet=ctxAudio.createGain();
+   this.presenceEQ=ctxAudio.createBiquadFilter();this.presenceEQ.type='highpass';this.presenceEQ.frequency.value=105;this.presenceEQ.Q.value=.707;
+   this.presenceMid=ctxAudio.createBiquadFilter();this.presenceMid.type='peaking';this.presenceMid.frequency.value=1800;this.presenceMid.Q.value=.85;this.presenceMid.gain.value=3;
+   this.presenceComp=ctxAudio.createDynamicsCompressor();this.presenceComp.threshold.value=-24;this.presenceComp.knee.value=12;this.presenceComp.ratio.value=4;this.presenceComp.attack.value=.004;this.presenceComp.release.value=.12;
+   this.presenceBus.connect(this.presenceDry);this.presenceDry.connect(this.effectsBus);
+   this.presenceBus.connect(this.presenceEQ);this.presenceEQ.connect(this.presenceMid);this.presenceMid.connect(this.presenceComp);this.presenceComp.connect(this.presenceWet);this.presenceWet.connect(this.effectsBus);
+   const clarity=this.settings.profile==='clear';this.presenceDry.gain.value=clarity?0:1;this.presenceWet.gain.value=clarity?3.2:0;
+   this.channels=Object.fromEntries(MIX_CHANNELS.slice(4).map(([name])=>{const gain=this.context.createGain();gain.gain.value=this.categoryLevel(name);gain.connect(['doors','steps','objects','creaks'].includes(name)?this.presenceBus:this.effectsBus);return [name,gain];}));
    this.recordings=new RecordedAudio(this.context,this.effectsBus,this.recordedMusicBus,this.recordedAmbientBus);const ctx=this.context;void this.recordings.load().then(()=>{if(this.context===ctx){this.applySettings();if(!this.paused)this.recordings.setMood(this.threat?'tension':'ambient');}});
    this.startAmbience();
   }
@@ -47,7 +62,7 @@ export class HouseSound {
  }
  startAmbience(){
   if(!this.context)return;const ctx=this.context;
-  this.atmosphere=new HouseAtmosphere(ctx,this.roomBus);this.atmosphere.setVolume(this.settings.muted?0:this.settings.ambient);
+  this.atmosphere=new HouseAtmosphere(ctx,this.roomBus);this.atmosphere.setVolume(this.channelLevel('ambient'));
  }
  locate(environment){this.atmosphere?.locate(environment);}
  startMusic(){
@@ -71,9 +86,9 @@ export class HouseSound {
   if(this.dangerLastAt!==undefined&&now-this.dangerLastAt<1.5)return false;
   this.dangerLastAt=now;
   const duck=[
-   [this.musicBus,this.recordings?.buffers.has('ambient')?0:this.settings.music],
-   [this.recordedMusicBus,this.settings.music],
-   [this.recordedAmbientBus,this.settings.ambient]
+   [this.musicBus,this.recordings?.buffers.has('ambient')?0:this.channelLevel('music')],
+   [this.recordedMusicBus,this.channelLevel('music')],
+   [this.recordedAmbientBus,this.channelLevel('ambient')]
   ];
   for(const [bus,normal] of duck){
    if(!bus)continue;
@@ -100,18 +115,25 @@ export class HouseSound {
   this.lastEffect='danger-alert';this.effectCount=(this.effectCount||0)+1;
   return true;
  }
+ masterLevel(){return this.settings.muted?0:.72*this.settings.master*this.settings.boost;}
+ channelLevel(key){return this.settings.muted?0:this.settings[key]*(audioProfile(this.settings.profile)[key]??1);}
+ categoryLevel(key){return this.settings[key]*(key==='alerts'&&this.settings.profile==='clear'?1/1.35:1);}
+ resetMix(){const muted=this.settings.muted;this.settings={...defaults,muted};if(this.context)this.applySettings();else this.save();}
+ meter(){if(!this.outputMeter||this.context?.state!=='running')return null;this.outputMeter.getFloatTimeDomainData(this.meterBuffer);return {...meterPCM(this.meterBuffer),reduction:this.limiter?.reduction??0};}
  applySettings(){
-  const now=this.context.currentTime,volume=key=>this.settings.muted?0:this.settings[key];
-  this.master.gain.setTargetAtTime(volume('master')*.45,now,.025);
+  const now=this.context.currentTime,volume=key=>this.channelLevel(key);
+  this.master.gain.setTargetAtTime(this.masterLevel(),now,.025);
   this.atmosphere?.setVolume(volume('ambient'));
   this.musicBus.gain.setTargetAtTime(this.recordings.buffers.has('ambient')?0:volume('music'),now,.06);
   this.recordedMusicBus.gain.setTargetAtTime(volume('music'),now,.06);
   this.recordedAmbientBus.gain.setTargetAtTime(volume('ambient'),now,.06);
   this.effectsBus.gain.setTargetAtTime(volume('effects'),now,.025);
-  for(const [key,bus] of Object.entries(this.channels))bus.gain.setTargetAtTime(this.settings[key],now,.025);
+  const clear=this.settings.profile==='clear';
+  this.presenceDry?.gain.setTargetAtTime(clear?0:1,now,.035);this.presenceWet?.gain.setTargetAtTime(clear?3.2:0,now,.035);
+  for(const [key,bus] of Object.entries(this.channels))bus.gain.setTargetAtTime(this.categoryLevel(key),now,.025);
   this.save();
  }
- settingValue(key,value){return key==='muted'?Boolean(value):Math.max(0,Math.min(mixLimit(key),Number(value)||0));}
+ settingValue(key,value){return key==='muted'?Boolean(value):key==='profile'?(['balanced','cinema','clear'].includes(value)?value:'balanced'):Math.max(0,Math.min(mixLimit(key),Number(value)||0));}
  set(kind,value){this.settings[kind]=this.settingValue(kind,value);if(this.context)this.applySettings();else this.save();}
  emote(id,duration){
   this.stopEmote();
@@ -305,9 +327,9 @@ export class HouseSound {
   const ctx=this.context;if(!ctx||this.paused||ctx.state!=='running'||this.settings.muted)return;
   const output=this.channels[effectChannel(kind)];
   const distance=origin?Math.hypot(origin.x-listener.x,origin.y-listener.y,origin.z-listener.z):0;
-  const atten=origin?1/(1+.15*distance*distance):1;
-  const floorMask=origin&&Math.abs(origin.y-listener.y)>1.85?.55:1;
-  const gain=.20*atten*floorMask*(occluded?.38:1)*Math.max(0,Math.min(1.5,level));
+  const otherFloor=!!origin&&Math.abs(origin.y-listener.y)>1.85;
+  const floorMask=otherFloor?.55:1;
+  const gain=spatialGain({distance,otherFloor,occluded,level,profile:this.settings.profile});
   if(gain<.0007)return;
   const yaw=listener.yaw||0,dx=origin?origin.x-listener.x:0,dz=origin?origin.z-listener.z:0;
   const stereo=Math.max(-.85,Math.min(.85,(dx*Math.cos(yaw)-dz*Math.sin(yaw))/Math.max(1,distance)));
@@ -396,7 +418,7 @@ export class HouseSound {
    playFoley(ctx,output,this.atmosphere.noise,kind,gain*(kind==='clock-tick'?.82:1.7),stereo);
    this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;
   }
-  if(this.recordings?.kind(kind,{gain:gain*(kind==='danger-alert'?.85:kind==='cat-purr'?.70:1.8),pan:stereo,output})){this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;}
+  if(this.recordings?.kind(kind,{gain:gain*(kind==='cat-purr'?.70:1.8),pan:stereo,output})){this.lastEffect=kind;this.effectCount=(this.effectCount||0)+1;return;}
   // Do not substitute artificial pitched tones for missing breathing recordings.
   if(kind==='kitty-breath-calm'||kind==='kitty-breath-fear'||kind==='rc-wheel-wood'||kind==='rc-wheel-tile'||kind==='rc-signal-loss'||kind==='rc-damage'||kind==='inspect-cloth')return;
   if(kind==='house-creak')kind='floor-groan';
