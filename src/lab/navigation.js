@@ -8,7 +8,7 @@ import {sweepClear} from './furniture-motion.js';
  */
 export const PLAYER_RADIUS=.155;
 export const PLAYER_HEIGHT=1.64;
-export function navigate(state,world,dx,dz,body=PLAYER_HEIGHT){
+export function navigate(state,world,dx,dz,body=PLAYER_HEIGHT,radius=PLAYER_RADIUS){
  const distance=Math.hypot(dx,dz);
  const pieces=Math.max(1,Math.ceil(distance/.042));
  let moved=0;
@@ -16,7 +16,7 @@ export function navigate(state,world,dx,dz,body=PLAYER_HEIGHT){
   const tryMove=(nx,nz)=>{
    const ny=groundHeight(nx,nz,state.y,world.hatch?.amount===1);
    if(!Number.isFinite(ny)||Math.abs(ny-state.y)>.35)return false;
-   if(blocked(world.boxes,nx,ny,nz,PLAYER_RADIUS,body))return false;
+   if(blocked(world.boxes,nx,ny,nz,radius,body))return false;
    // Reserve the remaining swing/slide while furniture moves, so the player
    // cannot enter its future path and leave both movement and animation stuck.
    if(world.objects?.some(o=>o.kind!=='door'&&o.motion&&o.box&&!sweepClear(o,o.amount,o.motion.target,{x:nx,y:ny,z:nz,crouched:body<1.2})))return false;

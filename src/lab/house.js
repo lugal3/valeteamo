@@ -195,7 +195,7 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  </div>
  <div class="house-emotes" id="house-emotes" hidden role="group" aria-label="Emotes"><span>En el espejo · moverte cancela</span>${EMOTES.map(e=>`<button data-act="emote:${e.id}">${e.key} · ${e.label}</button>`).join('')}<button data-act="emote:stop">Detener</button></div>
  <div class="house-rc-hud" id="house-rc-hud" hidden role="group" aria-label="Tablet de control RC">
-  <div class="house-rc-display"><strong>Kitty RC</strong><span class="house-rc-keys">W/S acelerar · A/D girar</span><output id="house-rc-status" aria-live="off">Señal conectada</output><small id="house-rc-hint" class="house-control-hint"></small></div>
+  <div class="house-rc-display"><strong>Kitty RC <span class="rc-live-dot" aria-hidden="true">●</span></strong><span class="house-rc-keys">W/S acelerar · A/D girar</span><output id="house-rc-status" aria-live="off">Señal conectada</output><small id="house-rc-hint" class="house-control-hint"></small></div>
   <div class="house-rc-actions"><button data-act="rc:noise" aria-keyshortcuts="Q" aria-label="Tocar bocina del auto RC para atraer al secuestrador">📣 Bocina <kbd>Q</kbd></button><button data-act="rc:trap" id="rc-trap-button" aria-keyshortcuts="T" hidden>Cerrar escotilla <kbd>T</kbd></button><button data-act="rc:stop" aria-keyshortcuts="X Escape">Guardar <kbd>Esc</kbd></button></div>
  </div>
  <div class="house-rc-caption" id="house-rc-caption" hidden role="status"></div>
@@ -1446,7 +1446,7 @@ function runAction(act,node){
   if(remote){
    const strength=rcSignalStrength(rc,s);rc.signal=strength;
    const bars=Math.max(1,Math.ceil(strength*4));
-   const status=(rc.noise>0?'📣 Señuelo · '+Math.ceil(rc.noise)+' s · ':'')+'Señal '+Math.round(strength*100)+'% · '+Math.round(Math.abs(rc.velocity)*10)/10+' m/s';
+   const status=(rc.noise>0?'📣 Señuelo · '+Math.ceil(rc.noise)+' s · ':'')+'Señal '+Math.round(strength*100)+'% · '+Math.round(Math.abs(rc.velocity)*10)/10+' m/s'+(rc.assist?' · Asistencia de túnel':'');
    $('house-rc-status').dataset.bars=String(bars);
    if($('house-rc-status').textContent!==status)$('house-rc-status').textContent=status;
    const help=padSession.mode==='gamepad'?'L · Conducir  ✕ · Bocina  △ · Escotilla  ○ · Guardar':rcControlHint(padSession.mode==='touch',rc.noise,canTrapPursuer(pursuer,world.hatch,rcTrap.armed));
@@ -1587,8 +1587,8 @@ function runAction(act,node){
   handAction=Math.max(0,handAction-dt*3.5);
   clickAction=Math.max(0,clickAction-dt*6.0);
   const turn=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0);
-  lookTarget.yaw+=(turn+padState.aimX)*dt*1.65;
-  lookTarget.pitch=clamp(lookTarget.pitch+((keys.has('ArrowUp')?1:0)-(keys.has('ArrowDown')?1:0)-padState.aimY)*dt*1.12,-1.10,1.10);
+  lookTarget.yaw+=(turn+padState.aimX*1.34)*dt*1.65;
+  lookTarget.pitch=clamp(lookTarget.pitch+((keys.has('ArrowUp')?1:0)-(keys.has('ArrowDown')?1:0)-padState.aimY*1.34)*dt*1.12,-1.10,1.10);
   if(s.hidden){const limits=hideLookBounds(s.hidden,peekHeld||s.hidePeek>.1);lookTarget.yaw=clamp(lookTarget.yaw,s.hidden.yaw-limits.yaw,s.hidden.yaw+limits.yaw);lookTarget.pitch=clamp(lookTarget.pitch,-limits.pitch,limits.pitch);}
   const follow=followLook(s,lookTarget,dt,20);s.yaw=follow.yaw;s.pitch=follow.pitch;
   const targetDriftX=clamp(-(lookTarget.yaw-s.yaw)*.04,-.03,.03);

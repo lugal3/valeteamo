@@ -17,3 +17,6 @@ Base: corrección multitáctil PR #52, SHA 5f79be8a83d0b6b1c20f60bb1ba8a3c6a2aea
 
 ## Fase 2 — navegación (primer bloque)
 - Corregido nombre duplicado `walker` del test de cocina (CI fase 1 falló por SyntaxError). Emy no omite nodo cercano si el siguiente tramo corta una esquina; replanifica con malla fina en estancamiento, mantiene puertas ordinarias accesibles, detecta progreso real. Búsqueda de cinta actualiza ruta si Kitty se mueve o si se bloquea y permite reintentar sin otorgar llave. Secuestrador prioriza puertas de su recorrido y replanifica antes. Pruebas nuevas de viaje desde mueble de linterna y cinta con puertas cerradas. Pendiente CI; no se afirma resolución completa del checkpoint real.
+
+## Fase 3 — RC y mando
+- Colocación alternativa local con muestreo de suelo y colisión; radio jugable .13 m, giro a baja velocidad y frenado contra paredes gradual. Centrado solo con aceleración voluntaria y orientación longitudinal en rampa/túnel abiertos, giro fuerte lo anula. Velocidad allí 2.25 m/s. Cámara busca posiciones libres y HUD compacto con indicador de asistencia. Stick derecho +34% en ambos ejes, teclado, ratón y táctil intactos. Prueba descenso descentrado añadida. Corregido fixture de rejilla (3.4 s, antes 3.2). CI pendiente.

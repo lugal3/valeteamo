@@ -581,3 +581,5 @@
 #lab3d[data-input-mode=touch] :is(.lab-buttons,.house-hotbar,.house-noise-controls,.phone-notice,#lois-talk){touch-action:none}
 #lab3d[data-input-mode=touch] :is(.lab-buttons,.house-hotbar,.house-noise-controls) button{touch-action:none}
 #lab3d[data-input-mode=touch] :is(.lab-buttons,.house-hotbar) button:disabled{pointer-events:none}
+
+#lab3d .house-rc-display{width:max-content;max-width:min(330px,52vw);padding:6px 10px;text-align:left;border-color:#e7b7d8b0;background:#292234dd;border-radius:10px;box-shadow:0 2px 10px #120b2455}#lab3d .house-rc-display strong{display:flex;align-items:center;justify-content:space-between;gap:12px}#lab3d .house-rc-display .rc-live-dot{color:#a1d2ad;font-size:10px}#lab3d .house-rc-actions{grid-template-columns:repeat(2,minmax(78px,110px));gap:6px}#lab3d .house-rc-actions button{border-radius:10px;background:#52384edc}#lab3d .house-rc-actions button[data-act="rc:trap"]{background:#82464ee8}#lab3d .house-rc-actions button[data-act="rc:stop"]{background:#272537e8}
