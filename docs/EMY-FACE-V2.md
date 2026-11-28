@@ -34,3 +34,6 @@ Fases 1/2: WebGL y paridad aprobados en 46161085541, artefacto 15269860796. Insp
 
 ## Fase 4 — hocico y nariz
 Fase 3 aprobada en Chromium run 46161375690 (80 casos y capturas). Deformación localizada de almohadillas y mentón por jacobiano, sin desplazar referencias centrales de boca, llave ni raíces de bigotes. Nariz cálida y punta superior más estrecha; tono plateado sutil de mentón sin mancha blanca artificial. Mantener todos los bigotes/filtrum/lengua y animaciones sin cambios. Toggle independiente en visor, capturas A/B frontal/perfil/3-4 y aseo. Prueba de 80 casos, normales y presupuesto gráfico. Pendiente CI.
+
+## Fase 5 — orejas y pelo interior
+Fase 4 aprobada en Chromium 46161591702 (artefacto 15269956299). Se estiliza suavemente la punta y el borde de las orejas con deformación común de cabeza y concha, cero cambio bajo bisagra y anclajes intactos. Se reutilizan las 42 fibras de cada oreja; raíces conservadas antes de la deformación, puntas más ascendentes, tono gris plateado, rosa interior tenue. No se modifica poseEmy ni el juego activo; sin nuevas caras/vértices. Prueba 80 combinaciones, geometría protegida y capturas con miedo. Auditoría general conserva fallo conocido emy-webkit de V3.9 (141029974975, línea 270); separado del trabajo de rostro y pendiente de integración del hotfix #54.

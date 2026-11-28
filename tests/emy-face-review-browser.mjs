@@ -33,5 +33,10 @@ try{
  assert.notEqual(oldMuzzle,await page.locator('#candidate').evaluate(c=>c.toDataURL()));
  for(const view of ['front','three','left']){await page.selectOption('#view',view);await page.screenshot({path:'output/emy-face-baseline/lab/muzzle-'+view+'.png'});}
  await page.selectOption('#pose','groom');await page.screenshot({path:'output/emy-face-baseline/lab/muzzle-groom.png'});
+ await page.selectOption('#pose','idle');await page.selectOption('#view','three');await page.uncheck('#ears');
+ const oldEars=await page.locator('#candidate').evaluate(c=>c.toDataURL());await page.screenshot({path:'output/emy-face-baseline/lab/ears-off.png'});await page.check('#ears');
+ assert.notEqual(oldEars,await page.locator('#candidate').evaluate(c=>c.toDataURL()));
+ for(const view of ['front','three','left','back']){await page.selectOption('#view',view);await page.screenshot({path:'output/emy-face-baseline/lab/ears-'+view+'.png'});}
+ await page.selectOption('#pose','alert');await page.locator('#alarm').evaluate(el=>{el.value=1;el.dispatchEvent(new Event('input'));});await page.selectOption('#view','three');await page.screenshot({path:'output/emy-face-baseline/lab/ears-alert.png'});
  assert.deepEqual(errors,[]);console.log('PASS actual WebGL: baseline six views, identical pixels, low LOD, poses and mobile viewport; 12 candidate views');
 }finally{await browser?.close();await server.close();}

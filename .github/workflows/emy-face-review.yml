@@ -42,6 +42,7 @@ jobs:
       - run: node tests/emy-face-anatomy.mjs
       - run: node tests/emy-face-eyes.mjs
       - run: node tests/emy-face-muzzle.mjs
+      - run: node tests/emy-face-ears.mjs
       - run: npx playwright install --with-deps chromium
       - run: node tests/emy-face-review-browser.mjs
       - uses: actions/upload-artifact@v4
