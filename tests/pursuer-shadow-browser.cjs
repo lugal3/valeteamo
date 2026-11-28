@@ -43,6 +43,49 @@ const {chromium}=require('playwright');
     if(a-b>16)nearer++;if(a!==b)changed++;if(Math.abs(a-c)>16)residual++;
    }
    const summary={nearer,changed,residual,triangles:present.count/3,steadyPasses:steady.passes,casterReused,removedCount:removed.count,errors:[absent.error,present.error,steady.error,removed.error]};
+   // Compare identical real frames and shadow atlases with and without
+   // static culling; no scene, camera, lighting, time or quality changes.
+   const batches=renderer.staticBatches,shadowBatches=renderer.shadowMeshes[0].batches;
+   const pixels=()=>{const a=new Uint8Array(canvas.width*canvas.height*4);gl.readPixels(0,0,canvas.width,canvas.height,gl.RGBA,gl.UNSIGNED_BYTE,a);return a;};
+   const different=(a,b)=>{let n=0;for(let i=0;i<a.length;i++)if(a[i]!==b[i])n++;return n;};
+   const parity=[];
+   for(const yaw of [0,Math.PI/2,Math.PI,-Math.PI/2]){
+    const view={...camera,yaw,pitch:0},motion={reduced:true,pursuer:actor,feetY:0};
+    const frame=enabled=>{
+     renderer.staticBatches=enabled?batches:null;renderer.shadowMeshes[0].batches=enabled?shadowBatches:null;
+     renderer.lightPose='';renderer.dirtyLampShadows=new Set(renderer.fixtures);
+     renderer.render(view,true,1,false,motion);
+     return {image:pixels(),tile:tile(),submitted:renderer.staticSubmitted,draws:renderer.staticDrawCalls,error:gl.getError()};
+    };
+    const full=frame(false),optimized=frame(true);
+    parity.push({yaw,changedPixels:different(full.image,optimized.image),changedShadowBytes:different(full.tile,optimized.tile),full:full.submitted,optimized:optimized.submitted,draws:optimized.draws,errors:[full.error,optimized.error]});
+   }
+   // Paired fixed-view samples, alternating A/B then B/A to reduce warm-up
+   // bias. A one-pixel readback synchronizes the actual software GPU work.
+   // Neither side changes quality, pose, animation, lights or camera.
+   const paired=[],probe=new Uint8Array(4);
+   renderer.quality='medium';
+   for(const yaw of [0,Math.PI/2,-Math.PI/2]){
+    const view={...camera,yaw,pitch:0},motion={reduced:true,pursuer:actor,feetY:0};
+    const measure=enabled=>{
+     renderer.staticBatches=enabled?batches:null;renderer.shadowMeshes[0].batches=enabled?shadowBatches:null;
+     renderer.lightPose='';renderer.dirtyLampShadows=new Set(renderer.fixtures);
+     const start=performance.now();
+     renderer.render(view,true,1,false,motion);
+     gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE,probe);
+     return {ms:performance.now()-start,indices:renderer.staticSubmitted,draws:renderer.staticDrawCalls};
+    };
+    measure(false);measure(true);
+    const before=[],after=[];
+    for(let i=0;i<6;i++){
+     if(i%2===0){before.push(measure(false));after.push(measure(true));}
+     else{after.push(measure(true));before.push(measure(false));}
+    }
+    const median=a=>{const sorted=a.map(x=>x.ms).sort((a,b)=>a-b);return (sorted[2]+sorted[3])/2;};
+    paired.push({yaw,beforeMs:median(before),afterMs:median(after),beforeIndices:before[0].indices,afterIndices:after[0].indices,beforeDraws:before[0].draws,afterDraws:after[0].draws,samples:6});
+   }
+   summary.fixedQualityPaired=paired;
+   summary.cullingParity=parity;
    renderer.destroy();return {summary,absent:absent.image,present:present.image,removed:removed.image};
   });
   for(const key of ['absent','present','removed'])await fs.writeFile(path.join(folder,'pursuer-shadow-'+key+'.png'),Buffer.from(result[key].split(',')[1],'base64'));
@@ -53,6 +96,7 @@ const {chromium}=require('playwright');
   assert(result.summary.residual<3,'Removing actor must clear stale light depth');
   assert.equal(result.summary.casterReused,true,'Stationary caster should reuse its pose (other dynamic objects may still invalidate lights)');
   assert.deepEqual(result.summary.errors,[0,0,0,0]);assert.deepEqual(errors,[]);
+  for(const frame of result.summary.cullingParity){assert.equal(frame.changedPixels,0,'Identical camera pixels '+JSON.stringify(frame));assert.equal(frame.changedShadowBytes,0,'Identical light atlas '+JSON.stringify(frame));assert(frame.optimized<=frame.full);assert.deepEqual(frame.errors,[0,0]);}
   console.log('PASS real pursuer shadow atlas: '+JSON.stringify(result.summary));
  }finally{await browser?.close();await server.close();}
 })().catch(error=>{console.error(error);process.exitCode=1});

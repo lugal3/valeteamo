@@ -284,7 +284,7 @@ function poseRigidRange(base,out,start,end,{r,t}){
   out[i]=r[0]*x+r[1]*y+r[2]*z+t[0];
   out[i+1]=r[3]*x+r[4]*y+r[5]*z+t[1];
   out[i+2]=r[6]*x+r[7]*y+r[8]*z+t[2];
-  for(const at of [i+6,i+13]){
+  for(let at=i+6;at<=i+13;at+=7){
    const a=base[at],b=base[at+1],d=base[at+2];
    out[at]=r[0]*a+r[1]*b+r[2]*d;
    out[at+1]=r[3]*a+r[4]*b+r[5]*d;
@@ -343,7 +343,8 @@ export function posePursuer(base,out,groups,actor,reduced=false){
   const attachment=flex?.release===undefined?1:1-ease(((actor.captureFace?.rupture||0)-flex.release)/.10);
   for(let i=start*16;i<end*16;i+=16){
    const weight=flex?clamp(flex.axis.reduce((n,v,k)=>n+v*(base[i+k]-flex.anchor[k]),0)/flexLength,0,1)*attachment:0;
-   for(const offset of [0,6,13]){
+   for(let pass=0;pass<3;pass++){
+    const offset=pass===0?0:pass===1?6:13;
     const at=i+offset,position=offset===0;
     let a=base[at],b=base[at+1],d=base[at+2];
     if(position&&cheekPressure){

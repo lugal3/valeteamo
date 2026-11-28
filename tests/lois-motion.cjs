@@ -19,6 +19,9 @@ const assert=require('node:assert/strict');
  const fake={...base,x:0,y:0,z:0,speed:0};
  for(let i=0;i<60;i++)advanceLoisMotion(fake,1/60,{x:0,y:0,z:0},{x:1,y:0,z:1});
  assert(fake.visualMotion.lookYaw<-.3&&fake.visualMotion.attention,'head acknowledges Kitty');
+ const stair={...base,phase:'climb',x:0,y:0,z:0,walk:0};
+ for(let i=0;i<60;i++){const previous={x:stair.x,y:stair.y,z:stair.z};stair.z+=.02;stair.y+=.012;stair.walk+=.02;advanceLoisMotion(stair,1/60,previous);}
+ assert(stair.gaitPhase>stair.walk*Math.PI*2/1.30,'Ascending uses shorter, continuous strides');
  const before=sampleLoisRig(fake).bones.head.rotation;
  fake.visualMotion=null;
  assert.notDeepEqual(before,sampleLoisRig(fake).bones.head.rotation,'target influences actual head bone');

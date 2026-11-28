@@ -567,10 +567,23 @@
 #lab3d .lab-buttons .house-hide-peek[hidden]{display:none!important}
 #lab3d .lab-buttons .house-hide-peek svg{width:22px;height:22px}
 
-#lab3d.house-gamepad .lab-joystick{visibility:hidden;pointer-events:none}#lab3d.house-gamepad #lab-interact kbd{display:inline-block}#lab3d.house-gamepad .house-hotbar small{display:none}#lab3d.house-gamepad #lab-focus:not(:empty){position:absolute;left:50%;bottom:8px;transform:translateX(-50%);max-width:65vw;font:10px system-ui;color:#fff;background:#141019b8;padding:4px 8px;border-radius:6px;pointer-events:none;visibility:visible}#lab3d.house-gamepad :focus-visible{outline:2px solid #ffc9e5;outline-offset:3px}
+#lab3d.house-gamepad .lab-joystick{visibility:hidden;pointer-events:none}#lab3d.house-gamepad #lab-interact kbd{display:inline-block}#lab3d.house-gamepad .house-hotbar small{display:none}#lab3d.house-gamepad #lab-focus:not(:empty){position:absolute;left:50%;top:auto;bottom:max(8px,env(safe-area-inset-bottom));height:auto;width:max-content;min-width:0;max-width:calc(100% - 24px);transform:translateX(-50%);font:500 10px/1.25 system-ui;color:#fff;background:#141019b8;padding:3px 8px;border-radius:6px;pointer-events:none;white-space:normal;text-align:center}#lab3d.house-gamepad :focus-visible{outline:2px solid #ffc9e5;outline-offset:3px}
 
 .vt-pad-calibration{position:fixed;inset:0;margin:auto;z-index:120000;max-width:min(540px,86vw);width:86vw;padding:20px;border:1px solid #b89bb8;border-radius:14px;background:#242230;color:#ffece0;font:14px/1.5 system-ui}.vt-pad-calibration::backdrop{background:#14131de6}.vt-pad-calibration h2{font:24px Georgia;margin:0 0 10px}.vt-pad-calibration button{min-height:44px;padding:8px 15px;border:1px solid #8c758e;border-radius:7px;background:#3e3146;color:#fff;margin:6px}.vt-pad-calibration button[hidden]{display:none}
 
 /* A touchscreen may use WASD with an external keyboard. The physical stick
    hit area stays stable while that same touchscreen switches back to touch. */
 @media(any-pointer:coarse){#lab3d.house-desktop .lab-stick-ring{width:clamp(108px,23vh,146px);height:clamp(108px,23vh,146px)} }@media(any-pointer:coarse) and (max-height:410px){#lab3d.house-desktop .lab-stick-ring{width:100px;height:100px}}
+
+/* Touch look accepts starts anywhere in the playable world, including HUD
+   gaps. Only the thumbstick and actual interactive menus own their gestures. */
+#lab3d[data-input-mode=touch]:not(.house-phone-open) .lab-look{left:0}
+#lab3d[data-input-mode=touch] :is(.lab-buttons,.house-hotbar,.house-noise-controls,.phone-notice,#lois-talk){touch-action:none}
+#lab3d[data-input-mode=touch] :is(.lab-buttons,.house-hotbar,.house-noise-controls) button{touch-action:none}
+#lab3d[data-input-mode=touch] :is(.lab-buttons,.house-hotbar) button:disabled{pointer-events:none}
+
+#lab3d .house-rc-display{width:max-content;max-width:min(330px,52vw);padding:6px 10px;text-align:left;border-color:#e7b7d8b0;background:#292234dd;border-radius:10px;box-shadow:0 2px 10px #120b2455}#lab3d .house-rc-display strong{display:flex;align-items:center;justify-content:space-between;gap:12px}#lab3d .house-rc-display .rc-live-dot{color:#a1d2ad;font-size:10px}#lab3d .house-rc-actions{grid-template-columns:repeat(2,minmax(78px,110px));gap:6px}#lab3d .house-rc-actions button{border-radius:10px;background:#52384edc}#lab3d .house-rc-actions button[data-act="rc:trap"]{background:#82464ee8}#lab3d .house-rc-actions button[data-act="rc:stop"]{background:#272537e8}
+
+/* Controller focus is explicit, including programmatic focus after redraw. */
+#lab3d.house-gamepad [data-pad-selected=true]{outline:2px solid #ffd5eb!important;outline-offset:2px;box-shadow:0 0 0 4px #9d527966!important}
+#lab3d.house-gamepad:is(.house-phone-open,.house-rc-driving) #lab-focus{visibility:hidden}

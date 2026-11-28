@@ -151,6 +151,15 @@ const assert=require('node:assert/strict');
   assert(Math.abs(walker.cat.y-expectedFloor)<.4,'Emy must finish on the requested floor of '+id);
   walker.stage='following';walker.distraction=null;walker.route=[];walker.trail=[];
  }
+ // Reproduce the flashlight cabinet landing: move from the upper hall
+ // to the kitchen with ordinary doors initially closed.
+ const landingWorld=createHouse(),landingCat=createEmyCompanion(landingWorld.emy,{waiting:false});
+ const cabinet=landingWorld.objects.find(o=>o.id==='landing-cabinet'),landingPlayer={x:6,y:HEIGHT,z:5.8};
+ const nearCabinet=[[-.65,0],[.65,0],[0,-.65],[0,.65]].map(([dx,dz])=>({x:cabinet.x+dx,y:HEIGHT,z:cabinet.z+dz})).find(p=>!blocked(landingWorld.boxes,p.x,p.y,p.z,.16,.62)&&Math.abs(groundHeight(p.x,p.z,p.y)-HEIGHT)<.05);
+ assert(nearCabinet,'A real floor point near flashlight cabinet');Object.assign(landingCat.cat,nearCabinet);
+ const kitchenRoom=roomChoices(landingWorld.rooms).find(r=>r.id==='kitchen');assert(roomDestinations(landingWorld,kitchenRoom).some(p=>sendEmyDistract(landingCat,landingWorld,p)),'Landing to kitchen plan');
+ let reached=false;for(let i=0;i<2400;i++){updateEmyCompanion(landingCat,1/30,{world:landingWorld,player:landingPlayer,reduced:true});if(landingCat.distraction?.arrived){reached=true;break;}if(landingCat.stage!=='distract')break;}
+ assert(reached,'Emy walks from the flashlight cabinet landing to kitchen: '+JSON.stringify({x:landingCat.cat.x,y:landingCat.cat.y,z:landingCat.cat.z,stage:landingCat.stage}));
  // Verify that the near-wall arrival tolerance cannot start a distraction
  // through a partition, and a malformed/airborne destination costs nothing.
  const wallWorld=createHouse(),wallCat=createEmyCompanion(wallWorld.emy,{waiting:false});

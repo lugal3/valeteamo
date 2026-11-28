@@ -123,7 +123,7 @@ export function buildHouse(spawn='ground'){
   // articulated pursuer shadow can reach the threshold. Player collision
   // still intersects the solid panel at every supported stance.
   const clearance=id==='entrada'?0:.055;
-  const shape=add('door-'+id,x,y+1.1+clearance/2,z,w,2.2-clearance,d,'wood',true,{dynamic:true});
+  const shape=add('door-'+id,x,y+1.1+clearance/2,z,w,2.2-clearance,d,'wood',true,{dynamic:true,castShadow:true,doorLeaf:true});
   const handle=add('handle-'+id,x+(alongX?width*.34:.09),y+1.03,z+(alongX?-.09:width*.34),.085,.085,.085,'brass',false,{dynamic:true,shape:'round',segments:6,rings:3});
   const plate=add('handle-plate-'+id,x+(alongX?width*.34:.068),y+1.03,z+(alongX?-.068:width*.34),alongX?.06:.01,alongX?.14:.14,alongX?.01:.06,'brass',false,{dynamic:true});
   const panel=add('panel-'+id,x+(alongX?0:.063),y+1.28,z+(alongX?-.063:0),alongX?width*.72:.025,1.4,alongX?.025:width*.72,'wood',false,{dynamic:true,color:[.49,.30,.26]});

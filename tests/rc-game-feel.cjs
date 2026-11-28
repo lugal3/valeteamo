@@ -24,6 +24,11 @@ const assert=require('node:assert/strict');
  assert.equal(rc.object.roll,rc.roll,'chassis lean reaches the actual model');
  assert.equal(rcSignalStrength(rc,rc),1);assert(rcSignalStrength(rc,{x:rc.x+12,y:rc.y+3.15,z:rc.z})<1);assert(rcSignalStrength(rc,{x:1000,y:100,z:1000})>=.30);
  assert(beepRC(rc)&&rc.noise===8,'original lure untouched');
+ const {createHouse,blocked}=await import('../src/lab/world.js'),{poseHatch}=await import('../src/lab/basement.js');
+ const basement=createHouse();basement.hatch.open=true;poseHatch(basement.hatch,1);
+ const toy=createRC({x:8.79,y:.14,z:2.20});Object.assign(toy,{mode:'driving',y:0,yaw:-.07});
+ let assisted=false;for(let i=0;i<480;i++){driveRC(toy,basement,{throttle:1,steer:0},1/60);assisted ||=toy.assist;assert(!blocked(basement.boxes,toy.x,toy.y,toy.z,.13,.38));if(toy.z>12)break;}
+ assert(assisted&&toy.y<-3&&toy.z>12,'RC follows collision-safe descent past tunnel supports: '+JSON.stringify({x:toy.x,y:toy.y,z:toy.z}));
  const goal={x:4,y:1,z:5,yaw:-3.12,pitch:-.2};
  const prev={x:3.8,y:1,z:4.9,yaw:3.12,pitch:-.3};
  const cam=advanceRCCamera(prev,goal,1/60);

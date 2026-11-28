@@ -243,7 +243,9 @@ async function main(){
   await page.screenshot({path:'artifacts/cosmos-to-2d-picnic.png'});
   await page.getByRole('button',{name:'Presiona cualquier botón para iniciar'}).click();
   await page.locator('.story-prologue .adventure-canvas canvas').waitFor({timeout:25000});
-  await page.locator('.story-prologue .prologue-guide').waitFor({timeout:12000});
+  const manual=page.getByRole('dialog',{name:'Manual de controles del jardín'});
+  if(await manual.isVisible())await manual.getByRole('button',{name:'Entendido'}).click();
+  await page.locator('.story-prologue .adventure-objective').waitFor({timeout:12000});
   assert.deepEqual(await page.evaluate(()=>['valeteamo-rescue-v2','valeteamo-story-acts-1-2-v1'].map(k=>localStorage.getItem(k))),saveBefore,'LP heart must not change real rescue saves');
   assert.deepEqual(errors,[],'Sin errores JavaScript');
   const video=page.video();

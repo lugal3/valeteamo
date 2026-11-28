@@ -178,9 +178,9 @@ export class PhoneUI{
   if(this.open&&this.app==='messages')this.readCount=this.messageCount;
   for(const message of events.messages)if(!this.messageTimes.has(message))this.messageTimes.set(message,formatPhoneTime());
   const latest=incoming.at(-1),unread=this.messageCount>this.readCount;
-  this.nav.querySelector('.phone-badge').hidden=!unread;
+  const badge=this.nav.querySelector('.phone-badge');if(badge.hidden===unread)badge.hidden=!unread;
   const notice=this.host.querySelector('.phone-notice');
-  if(!this.managedNotice)notice.hidden=!unread||this.open;
+  const noticeHidden=!unread||this.open;if(!this.managedNotice&&notice.hidden!==noticeHidden)notice.hidden=noticeHidden;
   if(latest&&latest!==this.latestNotice){notice.innerHTML=phoneNotice(latest,this.messageTimes.get(latest));this.latestNotice=latest;}
   if(!this.open)return;
   const minute=Math.floor(Date.now()/60000);
@@ -201,7 +201,12 @@ export class PhoneUI{
    }
    this.homeUnread=unread;
   }
-  if(this.app==='snake'){const c=this.host.querySelector('canvas').getContext('2d');c.fillStyle='#222b29';c.fillRect(0,0,240,240);c.fillStyle='#f49cba';c.fillRect(this.food[0]*20+2,this.food[1]*20+2,16,16);c.fillStyle='#bad59e';for(const [x,y]of this.snake)c.fillRect(x*20+1,y*20+1,18,18);}
+  if(this.app==='snake'){
+   const board=this.host.querySelector('canvas'),signature=this.food.join(',')+'|'+this.snake.map(p=>p.join(',')).join(';');
+   if(board!==this.snakeBoard||signature!==this.snakePaint){
+    this.snakeBoard=board;this.snakePaint=signature;const c=board.getContext('2d');c.fillStyle='#222b29';c.fillRect(0,0,240,240);c.fillStyle='#f49cba';c.fillRect(this.food[0]*20+2,this.food[1]*20+2,16,16);c.fillStyle='#bad59e';for(const [x,y]of this.snake)c.fillRect(x*20+1,y*20+1,18,18);
+   }
+  }
  }
  renderApp(events,unread){
   const shell=this.host.querySelector('.phone-shell'),main=shell.querySelector('main'),previous=shell.dataset.page;

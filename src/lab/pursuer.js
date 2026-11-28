@@ -294,7 +294,7 @@ export class Pursuer{
     else if(this.mode!=='rc-chase'){this.cooldown();}
    }
   }
-  for(const door of this.world.objects)if(door.kind==='door'&&door.state!=='open'&&Math.abs(door.y-1.1-this.y)<1.2&&Math.hypot(door.x-this.x,door.z-this.z)<1.6){
+  for(const door of this.world.objects)if(door.kind==='door'&&!door.open&&!door.motion&&!door.locked&&!door.sealed&&Math.abs(door.y-1.1-this.y)<1.2&&Math.hypot(door.origin.x-this.x,door.origin.z-this.z)<1.6&&(this.stuck>.35||this.path.slice(0,6).some(n=>dist(n,{...door.origin,y:door.y-1.1})<.85))){
    if(onDoor(door)===true){this.doorReach=.44;this.doorWait=.24;this.doorYaw=Math.atan2(door.x-this.x,door.z-this.z);break;}
   }
   if(this.doorWait>0){this.age+=dt;this.speed*=Math.exp(-10*dt);if(Number.isFinite(this.doorYaw)){const turn=Math.atan2(Math.sin(this.doorYaw-this.facing),Math.cos(this.doorYaw-this.facing));this.facing+=turn*(1-Math.exp(-10*dt));}return cues;}
@@ -312,7 +312,7 @@ export class Pursuer{
     if(after<.75&&after<before){Object.assign(this,old);moved=0;this.path=[];this.replan=.25;}
    }
    this.walk+=moved;this.stepDistance+=moved;this.stuck=moved<.003?this.stuck+dt:0;
-   if(this.stuck>1.5&&!this.navigationProfile){this.path=[];this.replan=.18;this.stuck=0;if(!this.task&&this.mode==='search')this.route=(this.route+1)%(this.quiet?QUIET_ROUTE_END:SEARCH_ROUTE.length);}
+   if(this.stuck>.75&&!this.navigationProfile){this.path=[];this.replan=.12;this.stuck=0;this.failedPlans++;if(this.failedPlans>=3&&!this.task&&this.mode==='search'){this.route=(this.route+1)%(this.quiet?QUIET_ROUTE_END:SEARCH_ROUTE.length);this.failedPlans=0;}}
    if(this.stepDistance>.65){this.stepDistance%=.65;cues.push('step');}
   }}else if(this.goal&&dist(this,this.goal)<.8){
    if(this.mode==='to-bed'){

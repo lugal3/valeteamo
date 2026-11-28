@@ -29,7 +29,7 @@ export function finaleStage(shot,enemy,reduced=false,emy=null){
  const catchFoot={x:start.x+.72,z:start.z+1.30};
  const lane=finaleLouisGoal(stop);
  const launchTime=clamp((t-b.lookOut)/(b.run-b.lookOut));
- const launch=launchTime*launchTime;
+ const launch=launchTime*launchTime*(2-launchTime);
  const passX=mix(catchFoot.x,lane.x,.68),passZ=mix(catchFoot.z,lane.z,.46);
  const captive={x:mix(mix(hold.x,catchFoot.x,release),passX,launch),
   z:mix(mix(hold.z,catchFoot.z,release),passZ,launch)};
@@ -44,14 +44,14 @@ export function finaleStage(shot,enemy,reduced=false,emy=null){
  const rt=clamp((t-b.release)/.68);
  const walkOut=escapeDistance*30*rt**2*(1-rt)**2/.68;
  const passDistance=Math.hypot(passX-catchFoot.x,passZ-catchFoot.z);
- const passSpeed=2*launchTime*passDistance/(b.run-b.lookOut);
+ const passSpeed=(4*launchTime-3*launchTime*launchTime)*passDistance/(b.run-b.lookOut);
  const face=-.28*struggle-.38*release*(1-launch)+Math.atan2(passX-catchFoot.x,passZ-catchFoot.z)*launch;
  const louis={x:mix(lx,exit.x+.42,run),y:0,z:mix(lz,exit.z-.42,run),
   yaw:turn(from?turn(from.yaw??0,face,approach):face,0,run),
   crouch:mix(from?.crouch??0,.22,approach)*(1-release)+.09*struggle,
   speed:run>0&&run<1?2.15:Math.min(3,walkIn+walkOut+passSpeed),followSpeed:passSpeed,
   walk:shot.louisStride+distance*approach+release*escapeDistance+launch*passDistance+run*2.8,
-  age:(shot.louisAge??0)+t,visualMotion:null,followMoving:false,
+  age:(shot.louisAge??0)+t,visualMotion:null,gaitPhase:(shot.louisStride+distance*approach+release*escapeDistance+launch*passDistance+run*2.8)*Math.PI*2/1.30,followMoving:false,
   visualReaction:t<b.run?{type:'finale-captive',age:t,duration:b.run}:null};
  const target={x:(enemy.x+louis.x)*.5,y:1.32,z:(enemy.z+louis.z)*.5};
  // Let the framing acknowledge Emy's approach and leap without losing

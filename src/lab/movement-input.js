@@ -6,3 +6,7 @@ export function movementKey(event){
 }
 export function releasedPointer(event,type){return (type==='mouse'||type==='pen')&&event.buttons===0;}
 export function hasControlTouch(touches,control){return Array.from(touches||[]).some(t=>control?.contains(t.target));}
+
+// CSS-pixel threshold absorbs ordinary thumb jitter. Once classified as a
+// drag, a return to the original point never converts it back into a tap.
+export function advanceHudDrag(gesture,x,y,threshold=8){return !!gesture.dragged||Math.hypot(x-gesture.x,y-gesture.y)>=threshold;}

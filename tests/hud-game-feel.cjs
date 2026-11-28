@@ -46,7 +46,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  for(const name of ['house-rc-hint','lab-interact'])assert(house.includes('id="'+name+'"'));
  assert(house.includes("rcControlHint(padSession.mode==='touch',rc.noise,canTrapPursuer("));
  assert(house.includes("throwableHint(padSession.mode==='touch')"));
- assert(house.includes("danger.setAttribute('aria-label',threatAccessibility("));
+ assert(house.includes("threatAccessibility(threatLevel)")&&house.includes("danger.setAttribute('aria-label',threatAria)"),'Threat accessibility remains intact with idempotent DOM writes');
  assert(css.includes('.house-rc-hud[hidden]')&&css.includes('#lab3d #lab-interact:disabled'));
  assert(!house.includes('data-act="noise:lob"')&&!house.includes('data-act="noise:drop"'));
  const throwDispatch=house.indexOf("if(heldNoise&&!s.hidden&&!s.lying){runAction('noise:throw');return;}");

@@ -28,11 +28,11 @@ const root=path.resolve(process.argv[2]||'.'),output=process.argv[3]||'frame-ben
    try{
     await page.addInitScript(()=>{
      const draw=WebGLRenderingContext.prototype.drawElements,raf=window.requestAnimationFrame.bind(window);
-     let draws=0,active=false,frames=[];
-     WebGLRenderingContext.prototype.drawElements=function(...args){if(this.canvas.id==='lab-canvas')draws++;return draw.apply(this,args);};
+     let draws=0,indices=0,active=false,frames=[];
+     WebGLRenderingContext.prototype.drawElements=function(...args){if(this.canvas.id==='lab-canvas'){draws++;indices+=args[1];}return draw.apply(this,args);};
      window.requestAnimationFrame=cb=>raf(now=>{
-      const before=draws,start=performance.now();cb(now);
-      if(active&&draws>before)frames.push({now,cpu:performance.now()-start,draws:draws-before});
+      const before=draws,beforeIndices=indices,start=performance.now();cb(now);
+      if(active&&draws>before)frames.push({now,cpu:performance.now()-start,draws:draws-before,indices:indices-beforeIndices});
      });
      window.frameBench={start(){frames=[];active=true;},stop(){active=false;return frames.slice();}};
     });
@@ -58,7 +58,7 @@ const root=path.resolve(process.argv[2]||'.'),output=process.argv[3]||'frame-ben
     if(scene.name==='mirror')assert(result.snapshot.mirror.drawn,'Mirror actually rendered');
     const sorted=intervals.slice().sort((a,b)=>a-b),pct=(a,p)=>a.slice().sort((x,y)=>x-y)[Math.ceil(a.length*p)-1];
     const slow=sorted.slice(-Math.max(1,Math.ceil(sorted.length*.01))),avg=a=>a.reduce((s,x)=>s+x,0)/a.length;
-    const report={scene:scene.name,quality:'low',samples:intervals.length,fps:1000/avg(intervals),p95:pct(intervals,.95),p99:pct(intervals,.99),low1:1000/avg(slow),hitches:intervals.filter(v=>v>50).length,cpuP95:pct(frames.map(f=>f.cpu),.95),meanDraws:avg(frames.map(f=>f.draws)),geometry:result.snapshot.geometry,mirror:result.snapshot.mirror};
+    const report={scene:scene.name,quality:'low',samples:intervals.length,fps:1000/avg(intervals),p95:pct(intervals,.95),p99:pct(intervals,.99),low1:1000/avg(slow),hitches:intervals.filter(v=>v>50).length,cpuP95:pct(frames.map(f=>f.cpu),.95),meanDraws:avg(frames.map(f=>f.draws)),meanSubmittedIndices:avg(frames.map(f=>f.indices)),geometry:result.snapshot.geometry,mirror:result.snapshot.mirror};
     reports.push(report);console.log(JSON.stringify(report));
    }finally{await page.close();}
   }

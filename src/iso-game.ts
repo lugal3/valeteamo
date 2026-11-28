@@ -17,7 +17,7 @@ import {ABDUCTION_TIMING,abductionFrame,captorFrame,captorTexture,
  installRescueAbductionTextures,vanTexture,VAN_NIGHT_POSITION,VAN_PLATE,
  type AbductionPhase} from './demo/abduction-van';
 import {NIGHT_INTERACTION_RADIUS,NIGHT_WINDOW_INTERACTION_RADIUS,nightAutoRoute,nightNavigationDistance} from './demo/night-house-layout';
-import {installProloguePeople,luisTextureKey,luisAnimationFrame,
+import {installProloguePeople,luisTextureKey,luisAnimationFrame,LUIS_WORLD_SCALE,VALE_WORLD_SCALE,LUIS_FOOT_ORIGIN,VALE_FOOT_ORIGIN,
  type LuisFacing,type LuisPose} from './demo/prologue-art';
 import {LUIS_BEATS,makeLuisMotion,luisEntryPoint,luisPointOnPath,
  luisMotionIsBlocking,type LuisMotion} from './demo/luis-choreography';
@@ -237,8 +237,8 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const actor=(id:'louis'|'luis',p:IsoPoint)=>{
    const xy=toScreen(p);
    const name=id==='louis'?'chibi-louis-down-0':luisTextureKey('down','idle',0);
-   const image=this.add.image(xy.x,xy.y,name).setOrigin(.5,.9)
-    .setScale(id==='louis'?1.3:.8).setDepth(xy.y);
+   const image=this.add.image(xy.x,xy.y,name).setOrigin(.5,id==='luis'?LUIS_FOOT_ORIGIN:.9)
+    .setScale(id==='louis'?1.3:LUIS_WORLD_SCALE).setDepth(xy.y);
    this.storyObjects.push(image);return image;
   };
   const marker=(symbol:string,p:IsoPoint)=>{
@@ -311,9 +311,9 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
    this.storyObjects.push(this.storyLuisShadow);
    if(stage==='meet-couple'){
     this.storyVale=this.add.image(xy.x-30,xy.y+2,valeTexture(false,0))
-     .setOrigin(.5,.9).setScale(.87).setDepth(xy.y+2);
+     .setOrigin(.5,VALE_FOOT_ORIGIN).setScale(VALE_WORLD_SCALE).setDepth(xy.y+2);
     this.storyHands=this.add.graphics().setDepth(xy.y+3);
-    this.storyValeShadow=this.add.ellipse(xy.x-30,xy.y+4,25,8,0x534859,.20).setDepth(xy.y+1);
+    this.storyValeShadow=this.add.ellipse(xy.x-30,xy.y+4,25*VALE_WORLD_SCALE/.87,8*VALE_WORLD_SCALE/.87,0x534859,.20).setDepth(xy.y+1);
     this.storyObjects.push(this.storyVale,this.storyValeShadow,this.storyHands);
     this.story.guide('Luis y Vale caminan por el sendero de los cerezos. Acércate a saludarlos.');
    }else{
@@ -367,7 +367,7 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   const add=(kind:'louis'|'emy'|'luis'|'vale',point:IsoPoint,follow:boolean)=>{
    const p=constrainRescue(point,this.storyMap),xy=toScreen(p);
    const key=kind==='louis'?'chibi-louis-down-0':kind==='emy'?greyCatTexture('idle',0):kind==='luis'?luisTextureKey('down','idle',0):valeTexture(false,0);
-   const actor=this.add.image(xy.x,xy.y,key).setOrigin(.5,.9).setScale(kind==='louis'?1.3:kind==='emy'?.72:kind==='luis'?.8:.87).setDepth(xy.y);
+   const actor=this.add.image(xy.x,xy.y,key) .setOrigin(.5,kind==='luis'?LUIS_FOOT_ORIGIN:kind==='vale'?VALE_FOOT_ORIGIN:.9).setScale(kind==='louis'?1.3:kind==='emy'?.72:kind==='luis'?LUIS_WORLD_SCALE:VALE_WORLD_SCALE).setDepth(xy.y);
    this.storyObjects.push(actor);
    if(follow)this.epilogueFollowers.push({actor,point:p,trail:[],kind,facing:'down',walk:0});
    if(kind==='louis')this.storyLouis=actor;
@@ -769,8 +769,11 @@ this.load.on('progress',(n:number)=>this.progress(60+n*30));}
   npc.setAlpha(alpha);this.storyLuisShadow?.setAlpha(alpha);
   npc.setAngle(this.reducedMotion?0:pose==='talk'?Math.sin(clock/160)*1.1:pose==='wave'?Math.sin(clock/230)*.7:0);
   hands.clear().setDepth(npc.y+3);
-  hands.lineStyle(4,0x634257,alpha).lineBetween(vale.x+12,vale.y-10,npc.x-12,npc.y-10);
-  hands.lineStyle(2,0xf6bf99,alpha).lineBetween(vale.x+12,vale.y-10,npc.x-12,npc.y-10);
+  // Join the actual inner hands after resizing rather than the old equal-height endpoints.
+  const vx=vale.x+11*VALE_WORLD_SCALE/.87,vy=vale.y-13*VALE_WORLD_SCALE;
+  const lx=npc.x-12,ly=npc.y-19*LUIS_WORLD_SCALE;
+  hands.lineStyle(3,0x634257,alpha).lineBetween(vx,vy,lx,ly);
+  hands.lineStyle(1.5,0xf6bf99,alpha).lineBetween(vx,vy,lx,ly);
  }
  playStoryFeeding(done:()=>void){
   if(!this.storyCat?.active){done();return;}

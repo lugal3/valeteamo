@@ -1,9 +1,10 @@
 import {navigate} from './navigation.js';
 import {blocked,groundHeight,lineBlocked} from './world.js';
-import {inHatch} from './basement.js';
+import {inHatch,basementDriveLane} from './basement.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export const RC_SPEED=3.4;
+export const RC_RADIUS=.13,RC_HEIGHT=.38;
 export const RC_ACCEL=9.5;
 export const RC_BRAKE=14;
 export const RC_IDLE_DECEL=11;
@@ -24,10 +25,15 @@ export function createRC(object){
 export function deployRC(rc,player,world){
  if(!['packed','parked'].includes(rc.mode))return false;
  if(rc.mode==='packed'){
-  const dx=Math.sin(player.yaw)*.75,dz=Math.cos(player.yaw)*.75;
-  const x=player.x+dx,z=player.z+dz,y=groundHeight(x,z,player.y,world.hatch?.amount===1);
-  if(!Number.isFinite(y)||Math.abs(y-player.y)>.30||blocked(world.boxes,x,y,z,.22,.30))return false;
-  Object.assign(rc,{x,z,y,yaw:player.yaw});
+  let placement=null;
+  for(const [forward,side] of [[.75,0],[.52,0],[.65,-.30],[.65,.30],[.36,0]]){
+   const dx=Math.sin(player.yaw)*forward+Math.cos(player.yaw)*side,dz=Math.cos(player.yaw)*forward-Math.sin(player.yaw)*side;
+   let y=player.y,clear=true;for(let i=1;i<=8;i++){const t=i/8,x=player.x+dx*t,z=player.z+dz*t,next=groundHeight(x,z,y,world.hatch?.amount===1);
+    if(!Number.isFinite(next)||Math.abs(next-player.y)>.30||blocked(world.boxes,x,next,z,RC_RADIUS,RC_HEIGHT)){clear=false;break;}y=next;}
+   if(clear){placement={x:player.x+dx,z:player.z+dz,y,yaw:player.yaw};break;}
+  }
+  if(!placement)return false;
+  Object.assign(rc,placement);
  }
  rc.mode='deploying';rc.elapsed=0;rc.driveSpeed=0;rc.steerAngle=0;rc.roll=0;rc.tilt=0;rc.suspension=0;rc.travel=0;rc.signal=1;rc.object.taken=false;rc.object.interactable=false;
  syncRCObject(rc);return true;
@@ -40,21 +46,31 @@ export function driveRC(rc,world,input,dt){
  const step=clamp(dt,0,.055);
  const steer=clamp(Number.isFinite(input?.steer)?input.steer:0,-1,1);
  const throttle=clamp(Number.isFinite(input?.throttle)?input.throttle:0,-1,1);
- const desired=RC_SPEED*throttle;
+ const lane=basementDriveLane(rc.x,rc.y,rc.z,world.hatch?.amount===1);
+ const desired=(lane?Math.min(RC_SPEED,2.25):RC_SPEED)*throttle;
  const current=Number.isFinite(rc.driveSpeed)?rc.driveSpeed:0;
  const rate=!throttle?RC_IDLE_DECEL:current*desired<0?RC_BRAKE:Math.abs(desired)<Math.abs(current)?RC_BRAKE:RC_ACCEL;
  rc.driveSpeed=current+clamp(desired-current,-rate*step,rate*step);
  if(Math.abs(rc.driveSpeed)<.025&&Math.abs(throttle)<.02)rc.driveSpeed=0;
  const steerBlend=1-Math.exp(-12*step);
  rc.steerAngle=(rc.steerAngle||0)+(steer-(rc.steerAngle||0))*steerBlend;
- const pace=Math.min(1,Math.abs(rc.driveSpeed)/.75);
- rc.yaw+=rc.steerAngle*step*2.65*pace*(rc.driveSpeed<0?-1:1);
- const speed=rc.driveSpeed,dx=Math.sin(rc.yaw)*speed*step,dz=Math.cos(rc.yaw)*speed*step;
+ const pace=Math.max(Math.abs(throttle)>.05?.34:0,Math.min(1,Math.abs(rc.driveSpeed)/.65));
+ rc.yaw+=rc.steerAngle*step*2.85*pace*(rc.driveSpeed<0?-1:1);
+ const speed=rc.driveSpeed;
+ let dx=Math.sin(rc.yaw)*speed*step,dz=Math.cos(rc.yaw)*speed*step;
+ rc.assist=false;
+ if(lane&&Math.abs(throttle)>.12&&Math.abs(steer)<.35&&Math.abs(Math.cos(rc.yaw))>.65){
+  const strength=1-Math.abs(steer)/.35,heading=Math.cos(rc.yaw)>=0?0:Math.PI;
+  const turn=Math.atan2(Math.sin(heading-rc.yaw),Math.cos(heading-rc.yaw));
+  rc.yaw+=turn*(1-Math.exp(-3.8*step))*strength;
+  dx=Math.sin(rc.yaw)*speed*step+clamp((lane.x-rc.x)*2,-.65,.65)*step*strength;
+  dz=Math.cos(rc.yaw)*speed*step;rc.assist=true;
+ }
  const before={x:rc.x,y:rc.y,z:rc.z},car={x:rc.x,y:rc.y,z:rc.z};
- const distance=navigate(car,world,dx,dz,.38);
+ const distance=navigate(car,world,dx,dz,RC_HEIGHT,RC_RADIUS);
  Object.assign(rc,{x:car.x,y:car.y,z:car.z});
  rc.velocity=distance/Math.max(step,.001);
- if(distance<Math.abs(speed*step)*.12&&Math.abs(speed)>.3)rc.driveSpeed*=.26;
+ if(distance<Math.abs(speed*step)*.12&&Math.abs(speed)>.3)rc.driveSpeed*=Math.exp(-10*step);
  const blend=1-Math.exp(-11*step);
  const targetRoll=clamp(-rc.steerAngle*rc.velocity*.045,-.14,.14);
  const targetTilt=clamp(-Math.atan2(rc.y-before.y,Math.max(.03,distance))*Math.sign(speed||1),-.34,.34);
@@ -97,8 +113,7 @@ export function rcCamera(rc,world){
  const target={x:rc.x,y:rc.y+.18,z:rc.z};
  const ideal={x:rc.x-forward.x*RC_CAMERA_DISTANCE,y:rc.y+1.05,z:rc.z-forward.z*RC_CAMERA_DISTANCE};
  // Avoid placing the chase camera behind a solid wall when going down stairs.
- const occluded=lineBlocked(world.boxes,ideal,target);
- const camera=occluded?{x:rc.x-forward.x*.62,y:rc.y+.62,z:rc.z-forward.z*.62}:ideal;
+ const camera=[ideal,...[1.35,.95,.62,.36].map(d=>({x:rc.x-forward.x*d,y:rc.y+.38+d*.27,z:rc.z-forward.z*d})),{x:rc.x,y:rc.y+.43,z:rc.z}].find(p=>!blocked(world.boxes,p.x,p.y-.05,p.z,.06,.10)&&!lineBlocked(world.boxes,p,target))||{x:rc.x,y:rc.y+.43,z:rc.z};
  const distance=Math.hypot(target.x-camera.x,target.z-camera.z);
  return {...camera,yaw:rc.yaw,pitch:Math.atan2(target.y-camera.y,distance)};
 }

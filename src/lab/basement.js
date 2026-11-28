@@ -6,6 +6,11 @@ const SECTIONS=[[START,THROAT,.64],[THROAT,5.8,.69],[5.8,8.5,.59],[8.5,11.5,.49]
 const clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
 const floor=z=>-2.08*clamp((z-START)/(THROAT-START),0,1)-1.47*clamp((z-THROAT)/(LANDING-THROAT),0,1);
 const sectionAt=z=>SECTIONS.find(([,end])=>z<end)||SECTIONS.at(-1);
+export function basementDriveLane(x,y,z,open){
+ if(!open||y>.15||z<START-.45||z>END-.6||Math.abs(x-X)>sectionAt(Math.max(START,z))[2])return null;
+ if(y>=-.01&&z>THROAT)return null;
+ return {x:X,halfWidth:sectionAt(Math.max(START,z))[2]};
+}
 export const inHatch=(x,z,margin=0)=>x>HATCH.minX-margin&&x<HATCH.maxX+margin&&z>START-margin&&z<THROAT+margin;
 
 // At the same X/Z, the kitchen and tunnel keep independent walking surfaces.

@@ -14,6 +14,8 @@ export function advanceLoisMotion(actor,dt,before,kitty){
  const d=close?Math.max(.3,Math.hypot(kitty.x-actor.x,kitty.z-actor.z)):1;
  const desiredYaw=close&&phase==='follow'?-clamp(angle(actor.yaw,Math.atan2(kitty.x-actor.x,kitty.z-actor.z)),-.66,.66):0;
  const desiredPitch=close&&phase==='follow'?-clamp(Math.atan2(kitty.y+.96-actor.y-1.65,d),-.32,.32):0;
+ // Shorter strides uphill, without changing the animation phase abruptly.
+ actor.gaitPhase=(actor.gaitPhase??(Math.max(0,actor.walk-distance)*Math.PI*2/1.30))+distance*Math.PI*2/(1.30-.28*Math.max(0,slope));
  actor.visualMotion={phase,rawSpeed:raw,speed,slope,lookYaw:smooth(previous?.lookYaw??0,desiredYaw,dt,5),
   lookPitch:smooth(previous?.lookPitch??0,desiredPitch,dt,5),attention:close&&phase==='follow'};
  return actor.visualMotion;
@@ -24,7 +26,7 @@ export function sampleLoisMotion(actor={},reduced=false){
  const speed=clamp(live?.speed??raw,0,4),slope=clamp(live?.slope??0,-.8,.8);
  const crouch=clamp(actor.crouch,0,1),mobile=phase==='climb'||phase==='follow';
  const weight=mobile?clamp(speed/1.65,0,1)*(reduced?.62:1)*(1-.7*crouch):0;
- const cycle=clamp(actor.walk,0,1e9)*(Math.PI*2/1.30),swing=Math.sin(cycle),stride=Math.cos(cycle)*weight;
+ const cycle=clamp(actor.gaitPhase??(actor.walk* (Math.PI*2/1.30)),0,1e9),swing=Math.sin(cycle),stride=Math.cos(cycle)*weight;
  const leftLift=Math.max(0,-swing)*weight,rightLift=Math.max(0,swing)*weight;
  const speaking=actor.visualReaction?.type==='speak';
  const state=phase==='untying'?'restrained':phase==='hide'?'lowering':phase==='hidden'?'concealed':

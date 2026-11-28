@@ -27,10 +27,10 @@ async function run(){
    ['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']:[]});
   let page,screenshotSession;
   const errors=[];
-  const freshPage=async()=>{
+  const freshPage=async(storageState)=>{
    if(browser)await browser.close();
     browser=await launchBrowser();
-    page=await browser.newPage({viewport:{width:960,height:540},reducedMotion:'reduce'});
+    page=await browser.newPage({viewport:{width:960,height:540},reducedMotion:'reduce',...(storageState?{storageState}:{})});
    screenshotSession=browserType===chromium?await page.context().newCDPSession(page):null;
    page.setDefaultTimeout(60000);
    page.on('pageerror',error=>errors.push(error.message));
@@ -92,7 +92,27 @@ async function run(){
    assert.equal(await page.locator('#lab3d').count(),1);
    assert.equal(await page.locator('canvas').count(),1,'Only the WebGL house canvas remains');
   };
-  const reloadHouse=async()=>{await openMenu();await continueRescue();await waitForHouse();};
+  let reloadCount=0;
+  const reloadHouse=async()=>{
+   // Keep the first real same-page reload to test ordinary navigation and
+   // teardown. Subsequent checkpoint restores simulate closing/reopening
+   // the browser with its actual persisted origin storage, releasing the
+   // exhausted SwiftShader GPU process between long story scenarios.
+   const storage=await page.context().storageState();
+   const expected=await read(RESCUE_KEY);
+   if(++reloadCount>1){
+    await freshPage(storage);
+   }
+   try{
+    await openMenu();
+    assert.deepEqual(await read(RESCUE_KEY),expected,'Browser restart/reload preserves the exact saved rescue');
+    await continueRescue();await waitForHouse();
+    console.log('Checkpoint restore '+reloadCount+' — '+(reloadCount===1?'same browser':'fresh browser, persisted origin storage'));
+   }catch(error){
+    console.error('CHECKPOINT_RELOAD_DIAGNOSTIC',JSON.stringify({reload:reloadCount,expectedStage:expected?.houseCheckpoint?.stage,errors}));
+    throw error;
+   }
+  };
   // A mounted canvas can still be awaiting the sprite loads. Navigate only
   // once the prologue is playable, so the test doesn't cancel those requests.
   const waitForPrologue=()=>page.waitForFunction(()=>Boolean(window.__valePrologue?.scene()?.player?.texture));
@@ -236,7 +256,21 @@ async function run(){
   await page.locator('.field-countdown').waitFor();
   await use('wardrobe');
   await page.waitForFunction(()=>window.__rescueHouse.snapshot().hidden);
-  await page.waitForFunction(()=>window.__rescueHouse.story().phase==='patrol',null,{timeout:60000});
+  // Wait for the actual survival outcome, not the software GPU's wall clock.
+  const awaitHideOutcome=async expected=>{
+   try{
+    const result=await page.waitForFunction(()=>{
+     const {phase}=window.__rescueHouse.story();
+     return phase==='patrol'||phase==='failed'?phase:false;
+    },null,{timeout:240000,polling:500});
+    const actual=await result.jsonValue();await result.dispose();
+    assert.equal(actual,expected,'Real ten-second hiding outcome');
+   }catch(error){
+    console.log('HIDE_DEADLINE_DIAGNOSTIC',JSON.stringify(await page.evaluate(()=>({story:window.__rescueHouse.story(),snapshot:window.__rescueHouse.snapshot(),emy:window.__rescueHouse.emy()}))));
+    throw error;
+   }
+  };
+  await awaitHideOutcome('patrol');
   assert.equal(await page.evaluate(()=>window.__rescueHouse.story().pursuer.y),3.15,'Pursuer has already climbed by the deadline');
   assert((await checkpoint()).tutorials.includes('hide'));
   await page.waitForFunction(()=>window.__rescueHouse.story().tutorial==='stealth');await shot('02c-tutorial-sigilo');await dismissField('stealth');
@@ -245,7 +279,7 @@ async function run(){
   await reloadHouse();
   await page.waitForFunction(()=>window.__rescueHouse.story().phase==='hide',null,{timeout:60000});
   assert.equal(await field().count(),0,'Hide tutorial does not repeat on retry');
-  await page.waitForFunction(()=>window.__rescueHouse.story().phase==='failed',null,{timeout:60000});
+  await awaitHideOutcome('failed');
   assert.equal(await page.evaluate(()=>window.__rescueHouse.story().pursuer.y),3.15);
   assert.equal((await checkpoint()).lives,2,'Exactly one life lost at zero');
   console.log('PASS field manual, paused reading, successful hiding and deadline capture');
