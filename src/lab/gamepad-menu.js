@@ -46,7 +46,7 @@ function adjust(el,dir){
  if(dir!=='left'&&dir!=='right')return false;
  const n=dir==='right'?1:-1;
  if(el.matches('input[type=range]')){const old=el.value;try{n>0?el.stepUp():el.stepDown();}catch{return false;}if(old!==el.value){el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}return true;}
- if(el.matches('select')){let i=el.selectedIndex+n;while(i>=0&&i<el.options.length&&el.options[i].disabled)i+=n;if(i>=0&&i<el.options.length){el.selectedIndex=i;el.dispatchEvent(new Event('change',{bubbles:true}));}return true;}
+ if(el.matches('select')){let i=el.selectedIndex+n;while(i>=0&&i<el.options.length&&el.options[i].disabled)i+=n;if(i>=0&&i<el.options.length){el.selectedIndex=i;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}return true;}
  return false;
 }
 export function createHouseMenu(){
