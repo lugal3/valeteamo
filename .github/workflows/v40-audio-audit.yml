@@ -1,0 +1,25 @@
+name: V4.0 — auditoría de audio real (sin publicar)
+on:
+  pull_request:
+    branches: [main]
+    paths: ['src/lab/audio/**','src/lab/audio-mastering.js','src/lab/sound.js','src/lab/recorded-audio.js','src/lab/house.js','scripts/audit-audio.mjs','tests/audio-mastering.cjs','.github/workflows/v40-audio-audit.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audio-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: node tests/audio-mastering.cjs
+      - run: node scripts/audit-audio.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vale-v40-audio-measurements
+          path: artifacts/audio-mastering.json
