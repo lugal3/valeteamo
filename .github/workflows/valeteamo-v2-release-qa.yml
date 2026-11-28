@@ -146,3 +146,35 @@ jobs:
         with:
           name: v32-real-frame-comparison
           path: frame-v*.json
+
+  v39-frame-comparison:
+    name: V3.9 — rendimiento antes y después
+    if: github.head_ref == 'feature/v39-playability-fixes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: d61c7ac0c594897613463ea97ff328446b152803
+          path: baseline-v39
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            baseline-v39/package-lock.json
+      - run: npm ci
+      - run: npm ci
+        working-directory: baseline-v39
+      - run: npx playwright install chromium --with-deps
+      - name: Antes de optimizaciones sin pérdida
+        run: node tests/house-frame-benchmark.cjs baseline-v39 frame-v39-before.json
+      - name: Después — mismas escenas y calidad
+        run: node tests/house-frame-benchmark.cjs . frame-v39-after.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v39-frame-comparison
+          path: frame-v39-*.json

@@ -17,12 +17,12 @@ const stages=Object.freeze([{quality:'medium',scale:1},{quality:'medium',scale:.
 // Pauses, cinematics, menus, background tabs and long stalls discard the
 // measurement window, instead of treating their deliberate cap as GPU load.
 export function createHouseBudget(){
- let index=0,manual=false,last=null,start=null,frames=0,slow=0;
- const state=()=>manual?{quality:'low',scale:1,auto:false}:{...stages[index],auto:true};
+ let index=0,manual=null,last=null,start=null,frames=0,slow=0;
+ const state=()=>manual?{quality:manual,scale:1,auto:false}:{...stages[index],auto:true};
  function pause(){last=start=null;frames=slow=0;}
  return {
   state,pause,
-  select(quality){manual=quality==='low';index=0;pause();return state();},
+  select(quality){manual=quality==='low'?'low':quality==='fixed'?'medium':null;index=0;pause();return state();},
   record(now,active){
    if(!active||!Number.isFinite(now)){pause();return null;}
    if(last===null||now-last>250||now<=last){pause();last=start=now;return null;}

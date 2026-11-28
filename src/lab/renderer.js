@@ -467,7 +467,7 @@ export class HouseRenderer {
   this.noiseIbo??=gl.createBuffer();
   const mesh=geometry(props.map(prop=>({...prop.box,yaw:0,pitch:0,roll:0})));
   if(mesh.vertices.length/16>65530)throw Error('Demasiados objetos ruidosos para WebGL1');
-  this.noiseTemplate=new Float32Array(mesh.vertices);
+  this.noiseTemplate=mesh.vertices;
   this.noiseVertices=new Float32Array(mesh.vertices);
   this.noiseRanges=mesh.ranges;
   this.noiseOrigins=props.map(prop=>({x:prop.box.x,y:prop.box.y,z:prop.box.z}));
@@ -619,7 +619,7 @@ export class HouseRenderer {
     const {start,end}=this.dynamicRanges[i];
     writeEmySurface(this.dynamicVertices,start,box);
     if(rigStart<0)rigStart=start;rigEnd=end;
-    if(this.dynamicCasters[i]){
+    if(this.dynamicCasters?.[i]??castsShadow(box)){
      this.lightPose='';
      for(const lamp of this.fixtures)if(!this.dirtyLampShadows.has(lamp)&&Math.hypot(lamp.x-box.x,lamp.y-box.y,lamp.z-box.z)<LAMP_REACH+1)this.dirtyLampShadows.add(lamp);
     }
@@ -731,7 +731,7 @@ export class HouseRenderer {
   if(!actor?.active){this.pursuerShadowPose=null;if(this.pursuerShadowCaster)this.pursuerShadowCaster.count=0;return;}
   const gl=this.gl;
   if(!this.pursuerShadowCaster){
-   const mesh=geometry(pursuerShadowPieces());
+   const mesh=this.preparePursuerShadowMesh();
    this.pursuerShadowCaster={vertices:gl.createBuffer(),indices:gl.createBuffer(),count:0,mesh,posed:new Float32Array(mesh.vertices.length)};
    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.pursuerShadowCaster.indices);
    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,mesh.indices,gl.STATIC_DRAW);
@@ -837,6 +837,8 @@ export class HouseRenderer {
   poseReflectedKitty(this.actorMesh.vertices,this.actorVertices,subject,{feetY:motion.actorPiano?.instrument.floor??motion.feetY,blink},(animator||motion.actorPose||motion.actorWalk||motion.actorPiano)?this.actorBinding:null);reflectMesh(this.actorVertices);
   gl.bindBuffer(gl.ARRAY_BUFFER,this.handVbo);gl.bufferData(gl.ARRAY_BUFFER,this.actorVertices,gl.DYNAMIC_DRAW);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.handIbo);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,this.actorMesh.indices,gl.STATIC_DRAW);this.handIndexKind='actor';this.bind(this.handVbo,this.handIbo);gl.drawElements(gl.TRIANGLES,this.actorMesh.indices.length,gl.UNSIGNED_SHORT,0);
  }
+ preparePursuerShadowMesh(){return this.pursuerShadowMesh??=geometry(pursuerShadowPieces());}
+ prepareLowMaterials(){if(!this.lowMaterialsPrepared){materialPixels('low');this.lowMaterialsPrepared=true;}}
  preparePursuerMesh(name){
   if(name!=='capture'&&name!=='patrol')return null;
   this.pursuerMeshes??={};

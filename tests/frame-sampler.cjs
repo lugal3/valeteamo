@@ -15,6 +15,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  run(2,30);assert.equal(budget.state().scale,.85);run(4,60);assert.equal(budget.state().scale,.85);
  run(4,30);assert.equal(budget.state().scale,.70);run(4,30);assert.equal(budget.state().quality,'low');
  budget.select('low');run(12,30);assert.deepEqual(budget.state(),{quality:'low',scale:1,auto:false});
+ budget.select('fixed');run(12,20);assert.deepEqual(budget.state(),{quality:'medium',scale:1,auto:false},'fixed quality never reduces resolution');
  budget.select('medium');assert.deepEqual(budget.state(),{quality:'medium',scale:1,auto:true});
  run(2,30);clock+=3000;budget.record(clock,true);run(2,30);assert.equal(budget.state().scale,1,'a stall discards prior partial window');
  const {createDirtyRanges,reflectVertexRange}=await import('../src/lab/dirty-ranges.js');
