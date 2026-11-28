@@ -236,7 +236,21 @@ async function run(){
   await page.locator('.field-countdown').waitFor();
   await use('wardrobe');
   await page.waitForFunction(()=>window.__rescueHouse.snapshot().hidden);
-  await page.waitForFunction(()=>window.__rescueHouse.story().phase==='patrol',null,{timeout:60000});
+  // Wait for the actual survival outcome, not the software GPU's wall clock.
+  const awaitHideOutcome=async expected=>{
+   try{
+    const result=await page.waitForFunction(()=>{
+     const {phase}=window.__rescueHouse.story();
+     return phase==='patrol'||phase==='failed'?phase:false;
+    },null,{timeout:240000,polling:500});
+    const actual=await result.jsonValue();await result.dispose();
+    assert.equal(actual,expected,'Real ten-second hiding outcome');
+   }catch(error){
+    console.log('HIDE_DEADLINE_DIAGNOSTIC',JSON.stringify(await page.evaluate(()=>({story:window.__rescueHouse.story(),snapshot:window.__rescueHouse.snapshot(),emy:window.__rescueHouse.emy()}))));
+    throw error;
+   }
+  };
+  await awaitHideOutcome('patrol');
   assert.equal(await page.evaluate(()=>window.__rescueHouse.story().pursuer.y),3.15,'Pursuer has already climbed by the deadline');
   assert((await checkpoint()).tutorials.includes('hide'));
   await page.waitForFunction(()=>window.__rescueHouse.story().tutorial==='stealth');await shot('02c-tutorial-sigilo');await dismissField('stealth');
@@ -245,7 +259,7 @@ async function run(){
   await reloadHouse();
   await page.waitForFunction(()=>window.__rescueHouse.story().phase==='hide',null,{timeout:60000});
   assert.equal(await field().count(),0,'Hide tutorial does not repeat on retry');
-  await page.waitForFunction(()=>window.__rescueHouse.story().phase==='failed',null,{timeout:60000});
+  await awaitHideOutcome('failed');
   assert.equal(await page.evaluate(()=>window.__rescueHouse.story().pursuer.y),3.15);
   assert.equal((await checkpoint()).lives,2,'Exactly one life lost at zero');
   console.log('PASS field manual, paused reading, successful hiding and deadline capture');
