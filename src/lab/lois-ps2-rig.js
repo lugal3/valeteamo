@@ -88,7 +88,7 @@ export function sampleLoisRig(source={},reduced=false){
  // slide folded the entire chest through the lap when Louis squatted.
  // Preserve the full spine and neck lengths; lower the pelvis by bending
  // both legs and solve the common root against the feet below.
- angle('spine',-.07*resist+.035*pulse,(rescue?(.07*rescue.seated+.42*rescue.lean):mix(untying?.055:phase==='climb'?.09+uphill*.36:weight*.075,.78,lowCover))+.13*brace-.21*recoil+.05*recover,0);
+ angle('spine',-.07*resist+.035*pulse,(rescue?(.07*rescue.seated+.42*rescue.lean):mix(untying?.055:phase==='climb'?.09+uphill*.36:weight*.075,.98,lowCover))+.13*brace-.21*recoil+.05*recover,0);
  angle('chest',(reduced?0:Math.sin(t*1.04)*.012)+.09*resist+.035*pulse,-.12*recoil,(reduced?0:Math.sin(t*.45)*.017)+.12*resist-gait.counterTwist*.83);
  shift('chest',0,breath,0);
  // A compact neck duck tucks the photographed head UNDER the 1.10 m
@@ -108,9 +108,9 @@ export function sampleLoisRig(source={},reduced=false){
   angle(name+'Shoulder',side*(.025+.20*brace+.12*recoil),reach-near*(.68*brace+.34*resist)+.10*side*pulse-.25*recover,side*(hiding?.19:untying?.13:.02)+side*.24*resist);
   angle(name+'Elbow',0,(untying?-.41:mix(-.18-lift*.24,-.78,lowCover))-near*(.82*brace+.28*resist)-.22*recoil-.22*recover,0);
   angle(name+'Wrist',0,(untying?-.13:hiding?.14:0)-.14*resist+.08*side*pulse,side*(.055+.12*brace));
-  angle(name+'Hip',0,(untying?-.22:mix(-legPhase*.49-lift*uphill*.43,-1.65,lowCover))-.22*brace+.12*side*recoil,0);
-  angle(name+'Knee',0,(untying?.34:mix(.08*weight+lift*(.68+uphill*.48),2.76,lowCover))+.34*brace+.12*recoil,0);
-  angle(name+'Ankle',0,(untying?-.12:mix(legPhase*.25-lift*(.31+uphill*.22),-1.19,lowCover))-.12*brace,0);
+  angle(name+'Hip',0,(untying?-.22:mix(-legPhase*.49-lift*uphill*.43,-1.70,lowCover))-.22*brace+.12*side*recoil,0);
+  angle(name+'Knee',0,(untying?.34:mix(.08*weight+lift*(.68+uphill*.48),2.82,lowCover))+.34*brace+.12*recoil,0);
+  angle(name+'Ankle',0,(untying?-.12:mix(legPhase*.25-lift*(.31+uphill*.22),-1.20,lowCover))-.12*brace,0);
   if(rescue){
    angle(name+'Shoulder',-side*.28*rescue.tied,-.68*rescue.seated,side*.10*rescue.tied);
    angle(name+'Elbow',-side*.26*rescue.tied,-.58*rescue.seated-.20*(1-rescue.tied),0);
