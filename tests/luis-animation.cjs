@@ -121,7 +121,7 @@ for(const facing of ['down','right','up']){
 const opaqueHeight=frame=>{const ys=frame.pixels.map((row,i)=>row.some(Boolean)?i:-1).filter(i=>i>=0);return Math.max(...ys)-Math.min(...ys)+1;};
 const valeIdle=vals.get(introContext.exports.valeTexture(false,0));
 const ratio=opaqueHeight(valeIdle)*art.VALE_WORLD_SCALE/(opaqueHeight(front)*art.LUIS_WORLD_SCALE);
-assert(Math.abs(ratio-.70)<.015,'Visible Vale height should be 70% of Luis: '+ratio);
+assert(Math.abs(ratio-.80)<.015,'Visible Vale height should be 80% of Luis: '+ratio);
 const arcade=fs.readFileSync('src/iso-game.ts','utf8');
 assert(arcade.includes('.setScale(VALE_WORLD_SCALE)')&&arcade.includes("kind==='luis'?LUIS_WORLD_SCALE:VALE_WORLD_SCALE"),'Prologue and epilogue use same scale');
 assert(arcade.includes('this.animateStoryLuis();')&&

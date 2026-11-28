@@ -48,7 +48,7 @@ const LUIS_CARD_COLORS=["","#282526","#343033","#3f393a","#c89775","#eab68c","#f
 // Painted idle silhouettes (excluding transparent padding): Luis 48px,
 // Vale 51px. Keep approved bitmaps intact and normalize visible world height.
 export const LUIS_WORLD_SCALE=.8;
-export const VALE_WORLD_SCALE=48*LUIS_WORLD_SCALE*.70/51;
+export const VALE_WORLD_SCALE=48*LUIS_WORLD_SCALE*.80/51;
 export const LUIS_FOOT_ORIGIN=61/64,VALE_FOOT_ORIGIN=54/58;
 export function paintLuisChibi(facing:LuisFacing='down',pose:LuisPose='idle',frame=0):HTMLCanvasElement{
  const canvas=document.createElement('canvas');canvas.width=48;canvas.height=64;
