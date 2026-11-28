@@ -20,7 +20,7 @@ module.exports=async page=>{
   await page.waitForTimeout(280);
  }
  await use('emy-vent');
- await page.waitForFunction(()=>window.__rescueHouse.snapshot().puzzle.key,null,{timeout:90000});
+ try{await page.waitForFunction(()=>window.__rescueHouse.snapshot().puzzle.key,null,{timeout:90000});}catch(error){console.log('RIBBON_FETCH_DIAGNOSTIC',JSON.stringify(await page.evaluate(()=>({emy:window.__rescueHouse.emy(),story:window.__rescueHouse.story(),snapshot:window.__rescueHouse.snapshot()}))));throw error;}
  await page.locator('.house-hotbar').waitFor({state:'visible'});
  await page.locator('.house-hotbar [data-equip=key]').waitFor({state:'visible'});
  return {puzzle:(await page.evaluate(()=>window.__rescueHouse.snapshot())).puzzle};

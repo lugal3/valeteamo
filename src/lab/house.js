@@ -1013,15 +1013,42 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
   mapPointers.delete(e.pointerId);
   if(type!=='pointerup'||mapDragged){mapSuppressUntil=performance.now()+320;return;}
   if(p.touch){
-   const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('[data-act^="emy:room:"]');
-   if(p.room&&target?.dataset.act===p.room&&target.closest('#house-emy-miniature')&&Math.hypot(e.clientX-p.startX,e.clientY-p.startY)<5){
-    runAction(p.room,target);
+   // The miniature is redrawn and its polygons can change between down/up.
+   // Resolve the original room for a stationary tap, never a different room
+   // under the release point. runAction still validates floor and availability.
+   if(p.room&&Math.hypot(e.clientX-p.startX,e.clientY-p.startY)<5){
+    runAction(p.room);
    }
    // A touch click, if the browser still generates one, must never select
    // twice or select a different room after the SVG has been replaced.
    mapSuppressUntil=performance.now()+320;
   }
  },{signal});
+ // Some touch implementations lose pointer capture when the miniature's
+ // SVG is redrawn. Keep a separate, single-touch tap fallback for the map.
+ // A pinch, drag, cancel, or already handled pointerup never activates a room.
+ let mapTouchTap=null;
+ mapPanel.addEventListener('touchstart',e=>{
+  if(mapPanel.hidden)return;
+  if(e.touches.length!==1){mapTouchTap=null;return;}
+  const t=e.changedTouches[0],target=t?.target?.closest?.('#house-emy-miniature [data-act^="emy:room:"]');
+  mapTouchTap=target?{id:t.identifier,room:target.dataset.act,x:t.clientX,y:t.clientY}:null;
+ },{signal,passive:true});
+ mapPanel.addEventListener('touchmove',e=>{
+  if(!mapTouchTap)return;
+  const t=Array.from(e.touches).find(t=>t.identifier===mapTouchTap.id);
+  if(e.touches.length!==1||!t||Math.hypot(t.clientX-mapTouchTap.x,t.clientY-mapTouchTap.y)>=5)mapTouchTap=null;
+ },{signal,passive:true});
+ mapPanel.addEventListener('touchcancel',()=>{mapTouchTap=null;},{signal,passive:true});
+ mapPanel.addEventListener('touchend',e=>{
+  const tap=mapTouchTap;mapTouchTap=null;
+  if(!tap||mapPanel.hidden||mapDragged||performance.now()<mapSuppressUntil)return;
+  const t=Array.from(e.changedTouches).find(t=>t.identifier===tap.id);
+  if(!t||Math.hypot(t.clientX-tap.x,t.clientY-tap.y)>=5)return;
+  // If touchend arrives first, clear the pointer owner before dispatching;
+  // the subsequent pointerup and compatibility click must not repeat it.
+  clearMiniatureInput();runAction(tap.room);mapSuppressUntil=performance.now()+320;
+ },{signal,passive:true});
  mapPanel.addEventListener('wheel',e=>{
   if(!e.target.closest('#house-emy-miniature'))return;
   e.preventDefault();miniatureView=changeMiniatureView(miniatureView,{zoom:Math.exp(-e.deltaY*.0015)});drawEmyMiniature();
