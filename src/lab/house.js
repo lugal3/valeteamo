@@ -1,4 +1,5 @@
-import {createInputSession,EMPTY_PAD,padMenu} from '../adaptive-input.js';
+import {createInputSession,EMPTY_PAD} from '../adaptive-input.js';
+ import {createHouseMenu,createMenuRepeat} from './gamepad-menu.js';
 import {trialCheckpoint,trialStartPose,trialEmyStage} from './trial-checkpoint.js';
 import {removeVentCover,advanceVentCover,poseVentCover} from './study-vent.js';
 import {HouseEvents} from './story-events.js';
@@ -278,7 +279,8 @@ export function launchHouse(onExit,checkpoint='ground',config={}){
  const torchMarker=$('torch-outline');
  const desktop=window.matchMedia('(any-hover: hover) and (any-pointer: fine)');
  let padState=EMPTY_PAD;
- const padSession=createInputSession(root,mode=>{resetInput();if(mode!=='keyboard')releaseMouse();syncPointerMode();});
+ const houseMenu=createHouseMenu(),snakePad=createMenuRepeat();
+ const padSession=createInputSession(root,mode=>{houseMenu.clear();snakePad.reset();resetInput();if(mode!=='keyboard')releaseMouse();syncPointerMode();});
  const remoteInUse=()=>['driving','deploying'].includes(rc?.mode);
  const canLook=()=>!isPaused()&&!finalCutscene?.gardenView&&(!finalCutscene||finalCutscene.playable)&&(!phone.open||phone.canWalk)&&events.phase!=='arrival'&&!remoteInUse();
  const canHop=()=>canLook()&&!phone.open&&!finalCutscene&&!loisShotDirector&&!s.hidden&&!s.lying&&!s.crouched&&!animator.performing&&$('house-emotes').hidden&&
@@ -1437,7 +1439,7 @@ function runAction(act,node){
   if(interactButton.dataset.icon!==actionIcon){interactButton.dataset.icon=actionIcon;interactButton.querySelector('.house-action-icon').innerHTML=feedbackIcon(actionIcon);}
   root.classList.toggle('house-immersive',options.immersive!==false&&!scenario);
   root.classList.toggle('house-action-ready',canInteract);
-  const focusLabel=padSession.mode==='gamepad'&&!isPaused()&&!remoteInUse()?'L · Mover  R · Mirar  □ · Interactuar  ✕ · Saltar  ○ · Agachar  △ · Usar  L1/R1 · Equipo':'';
+  const focusLabel=padSession.mode==='gamepad'&&!isPaused()&&!remoteInUse()&&!phone.open&&$('house-emotes').hidden?'L Mover · R Mirar · □ Interactuar · ✕ Saltar · ○ Agachar · △ Usar · L1/R1 Equipo':'';
   if($('lab-focus').textContent!==focusLabel)$('lab-focus').textContent=focusLabel;
   const remote=rc?.mode==='driving';
   const deploying=rc?.mode==='deploying';
@@ -1507,24 +1509,40 @@ function runAction(act,node){
  }
  function pollHousePad(){
   const pad=padSession.poll();padState=EMPTY_PAD;
-  if(padSession.calibrating)return;
-  if(padSession.mode!=='gamepad'||!hasFocus||document.hidden||isPortrait()||handoffFinishing||contextLost)return;
-  if(manual.active){if(pad.pressed[0]||pad.pressed[1])manual.close();return;}
-  if(loisDialogue.active){if(pad.pressed[0]||pad.pressed[2])runAction('lois:next');if(pad.pressed[1])runAction('lois:close');return;}
+  if(padSession.calibrating||padSession.mode!=='gamepad'||!hasFocus||document.hidden||isPortrait()||handoffFinishing||contextLost){houseMenu.clear();snakePad.reset();return;}
+  if(manual.active){houseMenu.clear();if(pad.pressed[0]||pad.pressed[1])manual.close();return;}
+  if(loisDialogue.active){houseMenu.clear();if(pad.pressed[0]||pad.pressed[2])runAction('lois:next');if(pad.pressed[1])runAction('lois:close');return;}
   if(piano&&pianoRunning()){
-   if(pad.pressed[1]){modalClose();return;}
-   if(pad.pressed[12]||pad.pressed[13]||pad.pressed[14]||pad.pressed[15])padMenu(dialog,{...pad,pressed:pad.pressed.map((v,i)=>i===0?false:v)});
-   if(pad.pressed[0]){const key=document.activeElement;if(key?.matches('[data-act^="piano:"]'))playPiano(Number(key.dataset.act.slice(6)));else padMenu(dialog,pad);}return;
+   if(pad.pressed[1]){houseMenu.clear();modalClose();return;}
+   houseMenu.step(dialog,pad,{page:'piano',preferred:'[data-act^="piano:"]',confirm:false});
+   if(pad.pressed[0]){const key=document.activeElement;if(key?.matches('[data-act^="piano:"]'))playPiano(Number(key.dataset.act.slice(6)));else if(dialog.contains(key))key.click();}return;
   }
-  if(phone.open&&phone.app==='snake'){
-   for(const [i,key] of [[12,'ArrowUp'],[13,'ArrowDown'],[14,'ArrowLeft'],[15,'ArrowRight']])if(pad.pressed[i])phone.key(key);
-   if(pad.pressed[1]){phone.close();resetInput();}else if(pad.pressed[0])padMenu(phone.host,pad);return;
+  if(phone.open&&phone.app==='snake'&&!modal&&!emyMenuOpen){
+   houseMenu.clear();
+   const dir=snakePad.step(pad,performance.now());
+   if(dir)phone.key('Arrow'+dir[0].toUpperCase()+dir.slice(1));
+   if(pad.pressed[1]){snakePad.reset();phone.setApp('home');resetInput();}
+   else if(pad.pressed[0]&&phone.dead)phone.setApp('snake');return;
   }
-  if(modal||intro||emyMenuOpen||phone.open||phone.editing||$('lab-camera-settings').open){
-   const scope=modal||intro?dialog:emyMenuOpen?($('house-emy-map').hidden?$('house-emy-menu'):$('house-emy-map')):phone.open||phone.editing?phone.host:$('lab-camera-settings');
-   if(pad.pressed[1]){if(emyMenuOpen)closeEmyMenu();else if(phone.open&&!phone.editing){phone.close();resetInput();}else if(modal&&!intro&&events.phase!=='safe'&&events.phase!=='failed'){paused=false;modalClose();}return;}
-   if(scope)padMenu(scope,pad);return;
+  snakePad.reset();
+  const emotesOpen=!$('house-emotes').hidden;
+  if(modal||intro||emyMenuOpen||phone.open||phone.editing||$('lab-camera-settings').open||emotesOpen){
+   const scope=modal||intro?dialog:emyMenuOpen?($('house-emy-map').hidden?$('house-emy-menu'):$('house-emy-map')):phone.editing?phone.host.querySelector(phone.preview?'.hud-preview-tools':'.hud-editor'):phone.open?phone.host.querySelector('.phone-screen'):emotesOpen?$('house-emotes'):$('lab-camera-settings');
+   const page=modal||intro?String(modal||'intro'):emyMenuOpen?String(emyMapFloor):phone.editing?'editor':phone.open?phone.app+':'+phone.homePage:'';
+   if(pad.pressed[1]){
+    houseMenu.clear();
+    if(modal&&!intro&&events.phase!=='safe'&&events.phase!=='failed'){paused=false;modalClose();}
+    else if(emyMenuOpen){if(!$('house-emy-map').hidden)runAction('emy:map:back');else closeEmyMenu();}
+    else if(phone.editing)void phone.layoutAction('done');
+    else if(phone.open){if(phone.app==='home')phone.close();else phone.setApp('home');resetInput();}
+    else if(emotesOpen)runAction('emotes');
+    else if($('lab-camera-settings').open){$('lab-camera-settings').open=false;resetInput();}
+    return;
+   }
+   const preferred=scope===$('house-emy-menu')?'.emy-card':scope===$('house-emy-map')?'[aria-selected=true]':phone.open&&!emyMenuOpen&&!modal?'main button,#lab-camera-settings input,#lab-camera-settings select':'';
+   houseMenu.step(scope,pad,{page,preferred});return;
   }
+  houseMenu.clear();
   if(cinematic){if(pad.pressed[9])runAction('pause');return;}
   if(isPaused()||finalCutscene&&!finalCutscene.playable)return;
   if(pad.pressed[9]){togglePause();return;}
@@ -1536,6 +1554,7 @@ function runAction(act,node){
   if(pad.pressed[3])runAction('flash');
   if(pad.pressed[7])runAction('noise:throw');
   if(pad.pressed[8])runAction('bag');
+  if(pad.pressed[12]&&!root.querySelector('[data-act=emotes]').hidden)runAction('emotes');
   if(pad.pressed[4]||pad.pressed[5]){
    const slots=Array.from(phone.visibleSlots()).filter(b=>!b.disabled);
    const i=slots.findIndex(b=>b.dataset.equip===equipment);
