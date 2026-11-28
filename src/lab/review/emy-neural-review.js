@@ -4,7 +4,7 @@ import {loadEmyNeural} from './emy-neural-glb.js';
 const canvas = document.querySelector('canvas');
 const status = document.querySelector('[role=status]');
 const views = {
- face:{angle:1.51, height:.10, distance:.55, center:[.055,.454,.345]},
+ face:{angle:1.062, height:.10, distance:.47, center:[.040,.443,.342]},
  three:{angle:.91, height:.15, distance:.99, center:[0,.29,0]},
  side:{angle:Math.PI/2, height:.07, distance:1.02, center:[0,.29,0]},
 };
