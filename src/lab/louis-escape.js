@@ -50,7 +50,7 @@ function advanceLouisEscape(louis,dt,kitty,gardenGoal){
  advanceLoisReaction(louis,dt);
  louis.blink=sampleBlink(louis.age+.61,{reduced:false,firstAt:1.43});
  louis.speed=Math.max(0,louis.speed-dt*5);
- if(louis.phase==='follow')louis.crouch=Math.max(0,louis.crouch-dt*1.6);
+ if(louis.phase==='follow')louis.crouch=Math.max(0,louis.crouch-dt*1.35);
  if(louis.phase==='untying'){
   louis.crouch=.55*sampleLoisUntie(louis.age).seated;
   // Three one-shot, rig-native emotional beats: notice Kitty's hands,
@@ -80,7 +80,9 @@ function advanceLouisEscape(louis,dt,kitty,gardenGoal){
   }
   const dx=target.x-louis.x,dz=target.z-louis.z,d=Math.hypot(dx,dz);
   if(d<.055){louis.waypoint++;return null;}
-  const step=Math.min(d,dt*2.10),distanceToMove=step/d;
+  const grade=Math.abs(louis.visualMotion?.slope??0);
+ const pace=louis.y<-.12?2.10-.70*Math.min(1,grade/.8):2.10;
+ const step=Math.min(d,dt*pace),distanceToMove=step/d;
   let moved=step;
   if(louis.waypoint>=FIRST_KITCHEN_WAYPOINT&&louis.y>-.12){
    // Same swept collision checks used by Kitty. This prevents the old
@@ -97,12 +99,14 @@ function advanceLouisEscape(louis,dt,kitty,gardenGoal){
   louis.yaw=turnTowards(louis.yaw,facing,dt,8);
   louis.walk+=moved;louis.speed=moved/Math.max(dt,.0001);
  }else if(louis.phase==='hide'){
-  const t=clamp(louis.age/1.1,0,1);louis.crouch=t*t*(3-2*t);
+  const t=clamp(louis.age/1.35,0,1);louis.crouch=t*t*(3-2*t);
   const angle=Math.atan2(Math.sin(LOUIS_HIDING_SPOT.yaw-louis.yaw),
    Math.cos(LOUIS_HIDING_SPOT.yaw-louis.yaw));
   louis.yaw+=angle*Math.min(1,dt*7);
-  if(louis.age>=1.5){louis.phase='hidden';louis.age=0;louis.concealed=true;startLoisReaction(louis,'listen');return 'hidden';}
+  if(louis.age>=1.65){louis.phase='hidden';louis.age=0;louis.concealed=true;startLoisReaction(louis,'listen');return 'hidden';}
  }else if(louis.phase==='follow'&&louis.exitRouteActive){
+  // Plant both feet and finish standing before walking out of cover.
+  if(louis.crouch>.12)return null;
   const target=LOUIS_EXIT_ROUTE[louis.exitWaypoint||0];
   if(!target)louis.exitRouteActive=false;
   else{

@@ -8,7 +8,7 @@ const assert=require('node:assert/strict');
   LOUIS_HIDING_SPOT,LOUIS_RESCUE_ROUTE,LOUIS_EXIT_ROUTE}=await import('../src/lab/louis-escape.js');
  const {KITCHEN_BAR,KITCHEN_HIDE_SPOT,KITCHEN_HIDE_APPROACH}=await import('../src/lab/kitchen-hide-layout.js');
  const {pickupGeometry,geometry}=await import('../src/lab/renderer.js');
- const {sampleLoisRig,writeLoisRigPart}=await import('../src/lab/lois-ps2-rig.js');
+ const {sampleLoisRig,writeLoisRigPart,loisJointPoint}=await import('../src/lab/lois-ps2-rig.js');
  const world=createHouse();
  const get=id=>world.boxes.find(b=>b.id===id);
  const top=get('kitchen-bar-top'),screen=get('kitchen-bar-screen'),key=world.objects.find(o=>o.id==='red-key');
@@ -67,6 +67,14 @@ const assert=require('node:assert/strict');
  const parts=pickupGeometry([actor]),mesh=geometry(parts);
  const bind=[actor.x,actor.y,actor.z],output=new Float32Array(mesh.vertices);
  const rig=sampleLoisRig(actor);
+ const length=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
+ const point=name=>loisJointPoint(actor,rig,name);
+ const standing={...actor,phase:'follow',crouch:0,visualReaction:null};const upright=sampleLoisRig(standing);
+ for(const [a,b] of [['pelvis','spine'],['spine','chest'],['chest','neck'],['neck','head'],['leftHip','leftKnee'],['leftKnee','leftAnkle']]){
+  const actual=length(point(a),point(b)),normal=length(loisJointPoint(standing,upright,a),loisJointPoint(standing,upright,b));
+  assert(Math.abs(actual-normal)<.035,'No collapsed skeletal segment '+a+' → '+b);
+ }
+ for(const name of ['leftAnkle','rightAnkle'])assert(Math.abs(point(name).y-.08)<.05,'Squat feet stay planted');
  let headTop=-Infinity,headCount=0;
  for(let i=0;i<parts.length;i++){
   const range=mesh.ranges[i],part=parts[i];

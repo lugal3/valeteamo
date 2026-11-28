@@ -97,7 +97,9 @@ async function main(){
   await page.screenshot({path:'artifacts/public-rescue-cover.png'});
   await rescueCover.getByRole('button',{name:'Presiona cualquier botón para iniciar'}).click();
   await page.locator('.story-prologue .adventure-canvas canvas').waitFor({timeout:25000});
-  await page.locator('.story-prologue .prologue-guide').waitFor({timeout:12000});
+  const manual=page.getByRole('dialog',{name:'Manual de controles del jardín'});
+  await manual.waitFor({timeout:12000});await manual.getByRole('button',{name:'Entendido'}).click();
+  await page.locator('.story-prologue .adventure-objective').waitFor({timeout:12000});
   assert.equal(await page.locator('.story-prologue').getAttribute('data-prologue-stage'),'intro');
   await page.screenshot({path:'artifacts/public-unified-story-prologue.png'});
   assert.deepEqual(errors,[],'No JavaScript exceptions in the locked → unlocked → 2D flow');

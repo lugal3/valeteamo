@@ -62,7 +62,9 @@ export function sampleLoisRig(source={},reduced=false){
  // A normal 18cm crouch left Louis' head poking above the stone bar.
  // Fold the torso below the screen while the feet stay planted. Continue
  // the same fold into 'follow' and release it as crouch reaches zero.
- const lowCover=(hiding||phase==='follow')?crouch:0;
+ const lowCover=(hiding||phase==='follow'&&reaction.type!=='finale-captive')?crouch:0;
+ const mix=(a,b,w)=>a+(b-a)*w;
+ const uphill=phase==='climb'?Math.max(0,gait.slope):0;
  const rescue=untying&&source.rescuePerformance?sampleLoisUntie(t):null;
  const fear=visual.face.fear;
  const blink=clamp(visual.face.blink,0,1);
@@ -77,22 +79,23 @@ export function sampleLoisRig(source={},reduced=false){
  const angles=Object.create(null),shifts=Object.create(null);
  const angle=(name,roll=0,pitch=0,yaw=0)=>{angles[name]={yaw,pitch,roll};};
  const shift=(name,x=0,y=0,z=0)=>{shifts[name]=[x,y,z];};
- shift('root',gait.sway,rescue?-.37*rescue.seated:-.25*crouch+gait.bob,rescue?rescue.lean*.12:0);
- shift('pelvis',0,0,rescue?0:crouch*.065);
- angle('pelvis',isMoving?gait.sway*.65:0,rescue?rescue.lean*.15:crouch*.30,gait.counterTwist*.48);
+ shift('root',gait.sway*(1-lowCover),rescue?-.37*rescue.seated:-.25*(crouch-lowCover)+gait.bob*(1-lowCover),rescue?rescue.lean*.12:0);
+ shift('pelvis',0,0,rescue?0:(crouch-lowCover)*.065);
+ angle('pelvis',isMoving?gait.sway*.65:0,rescue?rescue.lean*.15:mix((crouch-lowCover)*.30,.08,lowCover),gait.counterTwist*.48);
  // Lower the upper-body skeletal branch; unlike a global mesh offset, the
  // hips and ankles are retained, giving a crouch instead of a teleport.
  // Split the fold between pelvis, knees and torso; the former 72cm spine
  // slide folded the entire chest through the lap when Louis squatted.
- shift('spine',0,-.38*lowCover,0);
- angle('spine',-.07*resist+.035*pulse,(rescue?(.07*rescue.seated+.42*rescue.lean):hiding?.26:untying?.055:phase==='climb'?.09+Math.max(0,gait.slope)*.16:weight*.075)+.13*brace-.21*recoil+.05*recover,0);
+ // Preserve the full spine and neck lengths; lower the pelvis by bending
+ // both legs and solve the common root against the feet below.
+ angle('spine',-.07*resist+.035*pulse,(rescue?(.07*rescue.seated+.42*rescue.lean):mix(untying?.055:phase==='climb'?.09+uphill*.36:weight*.075,.78,lowCover))+.13*brace-.21*recoil+.05*recover,0);
  angle('chest',(reduced?0:Math.sin(t*1.04)*.012)+.09*resist+.035*pulse,-.12*recoil,(reduced?0:Math.sin(t*.45)*.017)+.12*resist-gait.counterTwist*.83);
  shift('chest',0,breath,0);
  // A compact neck duck tucks the photographed head UNDER the 1.10 m
  // counter while keeping the chest above the pelvis and legs bent naturally.
- shift('neck',0,-.265*lowCover,0);
+ // No vertical neck translation: it used to bury the head in the chest.
  angle('neck',0,hiding||untying?0:gazePitch*.18,hiding||untying?0:gazeYaw*.22);
- angle('head',reduced?0:Math.sin(t*.73)*.008,(untying?-.09:gazePitch*.42)+reaction.headPitch,gazeYaw*.63+reaction.headYaw);
+ angle('head',reduced?0:Math.sin(t*.73)*.008,(untying?-.09:gazePitch*.42)-.49*lowCover+reaction.headPitch,gazeYaw*.63+reaction.headYaw);
  shift('jaw',0,-jawOpen*.015,jawOpen*.006);
  angle('jaw',0,-jawOpen*.15,0);
  shift('leftEyelid',0,-blink*.034,0);
@@ -100,14 +103,14 @@ export function sampleLoisRig(source={},reduced=false){
  for(const [name,side,lift,legPhase] of [
   ['left',-1,liftedLeft,step],['right',1,liftedRight,-step]
  ]){
-  const reach=(untying?-.49:hiding?-.64:(legPhase*.34))-reaction.reach*.24;
+  const reach=mix(untying?-.49:legPhase*.34,-.60,lowCover)-reaction.reach*.24;
   const near=side===-1?1:.72;
   angle(name+'Shoulder',side*(.025+.20*brace+.12*recoil),reach-near*(.68*brace+.34*resist)+.10*side*pulse-.25*recover,side*(hiding?.19:untying?.13:.02)+side*.24*resist);
-  angle(name+'Elbow',0,(untying?-.41:hiding?-.31:-.18-lift*.24)-near*(.82*brace+.28*resist)-.22*recoil-.22*recover,0);
+  angle(name+'Elbow',0,(untying?-.41:mix(-.18-lift*.24,-.78,lowCover))-near*(.82*brace+.28*resist)-.22*recoil-.22*recover,0);
   angle(name+'Wrist',0,(untying?-.13:hiding?.14:0)-.14*resist+.08*side*pulse,side*(.055+.12*brace));
-  angle(name+'Hip',0,(hiding?-.72:untying?-.22:-legPhase*.49)-.22*brace+.12*side*recoil,0);
-  angle(name+'Knee',0,(hiding?1.16:untying?.34:.08*weight+lift*(.68+Math.max(0,gait.slope)*.17))+.34*brace+.12*recoil,0);
-  angle(name+'Ankle',0,(hiding?-.49:untying?-.12:legPhase*.25-lift*.31)-.12*brace,0);
+  angle(name+'Hip',0,(untying?-.22:mix(-legPhase*.49-lift*uphill*.43,-1.65,lowCover))-.22*brace+.12*side*recoil,0);
+  angle(name+'Knee',0,(untying?.34:mix(.08*weight+lift*(.68+uphill*.48),2.76,lowCover))+.34*brace+.12*recoil,0);
+  angle(name+'Ankle',0,(untying?-.12:mix(legPhase*.25-lift*(.31+uphill*.22),-1.19,lowCover))-.12*brace,0);
   if(rescue){
    angle(name+'Shoulder',-side*.28*rescue.tied,-.68*rescue.seated,side*.10*rescue.tied);
    angle(name+'Elbow',-side*.26*rescue.tied,-.58*rescue.seated-.20*(1-rescue.tied),0);
@@ -115,7 +118,7 @@ export function sampleLoisRig(source={},reduced=false){
    angle(name+'Hip',0,-1.35*rescue.seated-.12*rescue.lean,0);
    angle(name+'Knee',0,1.40*rescue.seated+.18*rescue.lean,0);
    angle(name+'Ankle',0,-.05*rescue.seated,0);
-  }else if(crouch)shift(name+'Hip',0,crouch*.09,crouch*.16);
+  }else if(crouch>lowCover)shift(name+'Hip',0,(crouch-lowCover)*.09,(crouch-lowCover)*.16);
  }
  const bones=Object.create(null);
  for(const bone of boneDefs){
@@ -132,10 +135,15 @@ export function sampleLoisRig(source={},reduced=false){
  }
  // Maintain ankle height through crouch and simple strides. Neither correction
  // changes physics, actor position or collision volume.
+ if(lowCover>0){
+  const ankles=['leftAnkle','rightAnkle'].map(name=>{const b=bones[name];return mv(b.rotation,...b.pivot)[1]+b.translation[1];});
+  const correction=(.08-Math.min(...ankles))*Math.min(1,lowCover*4);
+  for(const bone of Object.values(bones))bone.translation[1]+=correction;
+ }
  for(const [name,lift] of [['leftAnkle',liftedLeft],['rightAnkle',liftedRight]]){
   const b=bones[name],actual=mv(b.rotation,...b.pivot)[1]+b.translation[1];
   const desired=b.pivot[1]+(isMoving?lift*(.075+Math.max(0,gait.slope)*.045):0);
-  b.translation[1]+=clamp(desired-actual,-.22,.22);
+  b.translation[1]+=clamp(desired-actual,-.22,.22)*(1-lowCover);
  }
  return {phase,visual,bones,face:f,weight,crouch,posture:visual.posture,motionState:gait.state,gait,reducedMotion:!!reduced};
 }
