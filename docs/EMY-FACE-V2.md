@@ -40,3 +40,8 @@ Fase 4 aprobada en Chromium 46161591702 (artefacto 15269956299). Se estiliza sua
 
 ## Fase 6 — melena y textura facial
 Comparación visual real de fase 4: `muzzle-three.png` en artefacto 15269956299. La candidata mantiene la estética del gato y mejora ojos/hocico; falta romper uniformidad del cuello y suavizar el tinte facial. Variante melena V2 amplía fibras existentes por máscara de cuello delantero y mejillas inferiores, curva descendente, tinte plateado suave de cuello, mentón y cejas; sin atlas nuevo ni cambio de UV. Raíces, skin weights, posiciones/normales base, índices y fibras fuera de máscara exactos; sin polígonos adicionales. Prueba 80 poses/LOD/alarma, captura A/B cuello y cuerpo completo. Pendiente visual en Chromium; conservar original y main. No se han editado las zonas del torso ajenas al cuello.
+
+Validación independiente del commit 3702546: 80 casos, 413280 vértices fuera de cabeza/coat exactos, raíces y skin exactos; máxima extensión real de fibra cuello 34.14 mm, mejilla 11.28 mm. Fase 5 Chromium aprobada en 46161820269. El commit efectivo reutiliza 42 fibras de concha; no se debe sustituir por una variante divergente.
+
+## Fase 7 — primera integración opt-in (preview)
+Selector Original/A/B solo en emy-preview.html. Monta un actor nuevo y aplica mallas candidatas antes de que HouseRenderer reserve buffers; vuelve al original por defecto, sin persistir ni tocar partidas. Shader real reconoce iris 21.25; original 21 mantiene operaciones. Prueba de actor real y navegador con cambio de variante y acariciar. Pendientes build/Chromium, revisión visual, medición de rendimiento y corrección normales headLow en fase 7. No activar en house.js ni en el final hasta QA posterior.

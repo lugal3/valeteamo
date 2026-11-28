@@ -177,12 +177,16 @@ void main(){
    vec2 eye=(vUV-.5)*2.0;
    float radius=length(eye),angle=atan(eye.y,eye.x);
    float iris=.75+.14*sin(angle*61.0+radius*14.0)+.08*sin(angle*113.0-radius*21.0);
-   float pupil=1.0-smoothstep(.61,.69,length(eye*vec2(6.8,1.0)));
+   // Only the candidate iris carries the explicit 21.25 tag.
+   // Original material arithmetic stays identical for its 21.0 tag.
+   bool refined=vArt>21.1;
+   if(refined)iris=.87+.064*sin(angle*43.0+radius*9.0)+.036*sin(angle*77.0-radius*13.0)+.035*sin(radius*18.0);
+   float pupil=1.0-smoothstep(.61,.69,length(eye*vec2(refined?5.7:6.8,1.0)));
    float outer=smoothstep(.64,1.02,radius);
-   color=mix(vColor*iris,vec3(.15,.21,.12),outer*.67);
+   color=refined?mix(vColor*iris,vec3(.23,.26,.14),outer*.48):mix(vColor*iris,vec3(.15,.21,.12),outer*.67);
    color=mix(color,vec3(.018,.026,.021),pupil);
    float glint=1.0-smoothstep(.025,.10,length((eye-vec2(-.27,.34))*vec2(1.0,1.35)));
-   shine=glint*.48+pow(max(0.0,dot(surfaceNormal,normalize(key+viewDir))),80.0)*.20;
+   shine=glint*(refined?.58:.48)+pow(max(0.0,dot(surfaceNormal,normalize(key+viewDir))),80.0)*.20;
   }
   float exterior=smoothstep(.08,.7,max(max(-vWorld.x,vWorld.x-14.0),max(-vWorld.z,vWorld.z-12.0)));
   float exposure=clamp(.30+beam+.78*warmth+uShot+exterior*uDawn*.55,.30,1.4);

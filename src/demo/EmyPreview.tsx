@@ -8,13 +8,15 @@ import './emy-preview.css';
 import {mountEmyPreview} from '../lab/emy-preview.js';
 
 function Model(){
+ const [appearance,setAppearance]=useState<'original'|'soft'|'refined'>('original');
  const canvas=useRef<HTMLCanvasElement>(null),pet=useRef<()=>void>(()=>{}),[phase,setPhase]=useState('Cargando…');
  useEffect(()=>{
   if(!canvas.current)return;
-  return mountEmyPreview(canvas.current,setPhase,callback=>{pet.current=callback;});
- },[]);
+  pet.current=()=>{};setPhase('Cargando…');
+  return mountEmyPreview(canvas.current,setPhase,callback=>{pet.current=callback;},appearance);
+ },[appearance]);
 
- return <div className="emy-model-preview"><canvas ref={canvas} aria-label="Modelo 3D animado de Emy en el piso de arriba"/><div className="emy-model-label"><strong>Emy · piso de arriba</strong><p role="status">{phase}</p><button onClick={()=>pet.current()}>Acariciar a Emy</button></div></div>;
+ return <div className="emy-model-preview"><canvas key={appearance} ref={canvas} aria-label="Modelo 3D animado de Emy en el piso de arriba"/><div className="emy-model-label"><strong>Emy · piso de arriba</strong><label className="emy-appearance">Modelo <select aria-label="Modelo de Emy" value={appearance} onChange={e=>setAppearance(e.target.value as typeof appearance)}><option value="original">Original</option><option value="soft">V2 · Suave</option><option value="refined">V2 · Afinada</option></select></label><p role="status">{phase}</p><button onClick={()=>pet.current()}>Acariciar a Emy</button></div></div>;
 }
 function Preview(){
  const [mode,setMode]=useState<'menu'|'feed'|'model'|'garden'|'done'>('menu');

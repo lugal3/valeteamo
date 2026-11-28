@@ -51,3 +51,23 @@ export function sampleReview(cat,{mode='idle',phase=.7,alarm=0,blink=false,headY
  for(const p of parts){vertices.set(p.vertices,at*16);for(const i of p.indices)indices[ii++]=i+at;at+=p.vertices.length/16;}
  return {parts,vertices,indices,count,triangles:indexCount/3,head:cat.landmarks.head};
 }
+
+// Apply an isolated candidate to a fresh actor BEFORE the renderer allocates
+// its dynamic geometry. Never call this on an active gameplay actor.
+// Original motion, world positions, ids, transforms and weights remain owned
+// by the actor installed by the production world.
+export function applyReviewAppearance(cat,variant='original'){
+ if(variant==='original')return cat;
+ if(!['soft','refined'].includes(variant))throw Error('Unknown review appearance');
+ const low=cat.parts.find(p=>p.id==='head').box.emySpec.asset==='headLow';
+ const source=reviewCat(variant,low,true,true,true,true);
+ const allowed=id=>id==='head'||id==='coat'||id==='nose'||id.startsWith('nostril')||id.startsWith('concha')||EYE_PART.test(id);
+ for(const part of cat.parts){
+  if(!allowed(part.id))continue;
+  const from=source.parts.find(p=>p.id===part.id);
+  if(!from||from.box.emySpec.asset!==part.box.emySpec.asset)throw Error('Candidate actor mismatch: '+part.id);
+  part.box.emyMesh=emySurface(from.box);
+  part.box.emyRevision=(part.box.emyRevision||0)+1;
+ }
+ return cat;
+}

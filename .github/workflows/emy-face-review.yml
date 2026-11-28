@@ -44,10 +44,15 @@ jobs:
       - run: node tests/emy-face-muzzle.mjs
       - run: node tests/emy-face-ears.mjs
       - run: node tests/emy-face-ruff.mjs
+      - run: node tests/emy-face-runtime-preview.mjs
       - run: npx playwright install --with-deps chromium
       - run: node tests/emy-face-review-browser.mjs
+      - run: npm run build
+      - run: node tests/emy-face-runtime-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: emy-studio-six-views
-          path: output/emy-face-baseline/lab/
+          path: |
+            output/emy-face-baseline/lab/
+            output/emy-face-baseline/house/
