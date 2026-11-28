@@ -8,26 +8,28 @@ const assert=require('node:assert/strict'),{chromium}=require('playwright');
   page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{
    window.testPad={id:'QA Standard Controller',mapping:'standard',connected:true,index:0,axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))};
-   Object.defineProperty(navigator,'getGamepads',{configurable:true,value:()=>[window.testPad]});
+   window.padEpoch=0;window.padSeen=-1;Object.defineProperty(navigator,'getGamepads',{configurable:true,value:()=>{window.padSeen=window.padEpoch;return [window.testPad];}});
   });
   await page.emulateMedia({reducedMotion:'reduce'});
   await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/__gamepad');
   await page.click('#launch');await page.click('[data-act=start]');
   await page.waitForFunction(()=>!window.__rescueHouse.snapshot().paused);
   await page.evaluate(()=>window.__rescueHouse.setPose({x:6,y:0,z:8,yaw:0,pitch:0}));
-  const press=async i=>{
-   await page.evaluate(i=>{window.testPad.buttons[i]={pressed:true,value:1};},i);
-   await page.waitForTimeout(200);
-   await page.evaluate(i=>{window.testPad.buttons[i]={pressed:false,value:0};},i);
-   await page.waitForTimeout(200);
+  // Software WebGL can stall for longer than a physical tap. Hold each
+  // simulated input until the actual gamepad polling loop observes it;
+  // do not dispatch DOM clicks or bypass the production menu controller.
+  const sampled=async change=>{
+   const epoch=await page.evaluate(change=>{if(change.button!==undefined)window.testPad.buttons[change.button]={pressed:change.down,value:Number(change.down)};else window.testPad.axes[0]=change.axis;return ++window.padEpoch;},change);
+   await page.waitForFunction(epoch=>window.padSeen===epoch,epoch,{timeout:15000});
   };
-  await page.waitForTimeout(250);
+  const press=async i=>{await sampled({button:i,down:true});await sampled({button:i,down:false});};
+  await sampled({axis:0});
   // A real game poll consumes the synthetic standard pad, not a DOM click.
   await press(8);
   await page.waitForFunction(()=>document.querySelector('#lab3d').dataset.inputMode==='gamepad'&&!!document.querySelector('#lab-dialog [data-pad-selected=true]'));
   assert((await page.evaluate(()=>window.__rescueHouse.snapshot())).paused);
   await press(1);
-  await page.waitForFunction(()=>!window.__rescueHouse.snapshot().paused);
+  await page.waitForFunction(()=>!window.__rescueHouse.snapshot().paused).catch(async e=>{console.error('PAD_CLOSE_DIAGNOSTIC',JSON.stringify(await page.evaluate(()=>({mode:document.querySelector('#lab3d').dataset.inputMode,dialog:document.querySelector('#lab-dialog').innerText,seen:window.padSeen,epoch:window.padEpoch,snapshot:window.__rescueHouse.snapshot()}))));throw e;});
   const strip=await page.evaluate(()=>{const e=document.querySelector('#lab-focus'),r=e.getBoundingClientRect();return {top:r.top,bottom:r.bottom,height:r.height,text:e.textContent};});
   assert(strip.text&&strip.top>innerHeightFallback()*.65&&strip.bottom<=390&&strip.height<60,'compact bottom strip '+JSON.stringify(strip));
   function innerHeightFallback(){return 390;}
@@ -36,10 +38,7 @@ const assert=require('node:assert/strict'),{chromium}=require('playwright');
   await press(3);
   await page.waitForFunction(()=>window.__rescueHouse.story().phoneOpen&&!!document.querySelector('.phone-screen main [data-pad-selected=true]'));
   const first=await page.evaluate(()=>document.activeElement.getAttribute('data-app'));
-  await page.evaluate(()=>{window.testPad.axes[0]=.95;});
-  await page.waitForTimeout(200);
-  await page.evaluate(()=>{window.testPad.axes[0]=0;});
-  await page.waitForTimeout(200);
+  await sampled({axis:.95});await sampled({axis:0});
   const after=await page.evaluate(()=>document.activeElement.getAttribute('data-app'));
   assert(first&&after&&first!==after,'phone stick changes visual selection');
   await press(1);
