@@ -35,9 +35,17 @@ const assert=require('node:assert/strict'),{chromium,webkit}=require('playwright
     assert.equal(await button.getAttribute('aria-pressed'),original,name+' drag must not crouch');
     assert.equal((await snap()).controls.stick,41,name+' releasing look does not release walk');
    }
+   // A secondary finger's stationary tap activates exactly once while walking.
+   await dispatch('#lab-crouch','pointerdown',48,b.x,b.y);
+   await dispatch('#lab-crouch','pointerup',48,b.x,b.y);
+   await page.waitForFunction(original=>document.querySelector('#lab-crouch').getAttribute('aria-pressed')!==original,original);
+   const toggled=await button.getAttribute('aria-pressed');
+   await page.evaluate(()=>document.querySelector('#lab-crouch').dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,detail:1})));
+   assert.equal(await button.getAttribute('aria-pressed'),toggled,name+' secondary tap exactly once');
+   assert.equal((await snap()).controls.stick,41,name+' tap retains left finger');
    await dispatch('#lab-joystick','pointerup',41,stick.x,stick.y);
    // Native tap, without a preceding drag, still works.
-   await button.tap();await page.waitForFunction(original=>document.querySelector('#lab-crouch').getAttribute('aria-pressed')!==original,original);
+   await button.tap();await page.waitForFunction(toggled=>document.querySelector('#lab-crouch').getAttribute('aria-pressed')!==toggled,toggled);
    assert.equal((await snap()).controls.look,null);
    // One real Chromium multitouch sequence, including native click handling.
    if(name==='Chromium'){

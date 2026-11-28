@@ -2428,8 +2428,8 @@ function runAction(act,node){
   e.preventDefault();
  }
  function endStick(e){if(e.pointerId!==stickPointer)return;const pointer=stickPointer;stickPointer=null;stickPointerType=null;joystick.x=0;joystick.z=0;joystick.sprint=false;releaseCapture($('lab-joystick'),pointer);$('lab-stick').style.transform='translate(0,0)';}
- // A HUD tap retains its native click. A drag claims the camera and
- // suppresses that click even if the finger returns to the same button.
+ // A HUD tap dispatches one button activation on release, even for a
+ // non-primary touch. A drag can never become a tap again.
  function pointerLook(e){if(e.pointerType==='touch'||!canLook()||mouseLocked()||lookPointer!==null||e.button!==0)return;
   lookPointer=e.pointerId;lookPointerType=e.pointerType||'mouse';lookLast={x:e.clientX,y:e.clientY};lookCapture=e.currentTarget;capture(lookCapture,e.pointerId);e.preventDefault();}
  function beginTouchLook(e){
@@ -2443,10 +2443,10 @@ function runAction(act,node){
   lookPointer=e.pointerId;lookPointerType='touch';lookOrigin=target;
   lookLast={x:e.clientX,y:e.clientY};
   lookGesture={button:tap,x:e.clientX,y:e.clientY,dragged:!tap};
-  // Retain the actual button as capture owner so a stationary tap preserves
-  // native accessibility/click behavior. Other touches go to the look surface.
+  // Keep capture on the original button; a secondary finger may not produce
+  // a browser click. Activate explicitly on release and suppress its duplicate.
   lookCapture=tap||look;capture(lookCapture,e.pointerId);
-  if(!tap)e.preventDefault();
+  if(e.cancelable)e.preventDefault();
   e.stopPropagation();
  }
  function moveLook(e){
@@ -2470,8 +2470,11 @@ function runAction(act,node){
   if(lookGesture?.button&&e.type==='pointerup'&&Number.isFinite(e.clientX)&&advanceHudDrag(lookGesture,e.clientX,e.clientY)){
    if(!lookGesture.dragged)moveLook(e);
   }
-  if(lookGesture?.button&&(lookGesture.dragged||e.type!=='pointerup'))dragClick={button:lookGesture.button,id:lookPointer,until:performance.now()+750};
+  const button=lookGesture?.button;
+  const tap=button&&!lookGesture.dragged&&e.type==='pointerup'&&canLook()&&root.contains(button)&&!button.disabled&&!button.hidden&&button.getClientRects().length>0;
+  if(button)dragClick={button,id:lookPointer,until:performance.now()+750};
   const pointer=lookPointer,owner=lookCapture;lookPointer=null;lookPointerType=null;lookCapture=lookOrigin=lookGesture=null;releaseCapture(owner,pointer);
+  if(tap){if(e.cancelable)e.preventDefault();if(e.isTrusted)unlockSound();button.click();}
  }
  const stick=$('lab-joystick'),look=$('lab-look');
  function syncPointerMode(){
