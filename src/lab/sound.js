@@ -44,7 +44,17 @@ export class HouseSound {
    this.effectsBus=this.context.createGain();this.effectsBus.gain.value=this.channelLevel('effects');this.effectsBus.connect(this.master);this.sequenceNodes=new Set();
    this.recordedMusicBus=this.context.createGain();this.recordedMusicBus.gain.value=this.channelLevel('music');this.recordedMusicBus.connect(this.roomBus);
    this.recordedAmbientBus=this.context.createGain();this.recordedAmbientBus.gain.value=this.channelLevel('ambient');this.recordedAmbientBus.connect(this.roomBus);
-   this.channels=Object.fromEntries(MIX_CHANNELS.slice(4).map(([name])=>{const gain=this.context.createGain();gain.gain.value=this.settings[name];gain.connect(this.effectsBus);return [name,gain];}));
+   // Parallel, profile-dependent processing of ordinary cues only.
+   // Alerts, capture and emotes retain their separate direct path.
+   const ctxAudio=this.context;
+   this.presenceBus=ctxAudio.createGain();this.presenceDry=ctxAudio.createGain();this.presenceWet=ctxAudio.createGain();
+   this.presenceEQ=ctxAudio.createBiquadFilter();this.presenceEQ.type='highpass';this.presenceEQ.frequency.value=105;this.presenceEQ.Q.value=.707;
+   this.presenceMid=ctxAudio.createBiquadFilter();this.presenceMid.type='peaking';this.presenceMid.frequency.value=1800;this.presenceMid.Q.value=.85;this.presenceMid.gain.value=3;
+   this.presenceComp=ctxAudio.createDynamicsCompressor();this.presenceComp.threshold.value=-24;this.presenceComp.knee.value=12;this.presenceComp.ratio.value=4;this.presenceComp.attack.value=.004;this.presenceComp.release.value=.12;
+   this.presenceBus.connect(this.presenceDry);this.presenceDry.connect(this.effectsBus);
+   this.presenceBus.connect(this.presenceEQ);this.presenceEQ.connect(this.presenceMid);this.presenceMid.connect(this.presenceComp);this.presenceComp.connect(this.presenceWet);this.presenceWet.connect(this.effectsBus);
+   const clarity=this.settings.profile==='clear';this.presenceDry.gain.value=clarity?0:1;this.presenceWet.gain.value=clarity?3.2:0;
+   this.channels=Object.fromEntries(MIX_CHANNELS.slice(4).map(([name])=>{const gain=this.context.createGain();gain.gain.value=this.categoryLevel(name);gain.connect(['doors','steps','objects','creaks'].includes(name)?this.presenceBus:this.effectsBus);return [name,gain];}));
    this.recordings=new RecordedAudio(this.context,this.effectsBus,this.recordedMusicBus,this.recordedAmbientBus);const ctx=this.context;void this.recordings.load().then(()=>{if(this.context===ctx){this.applySettings();if(!this.paused)this.recordings.setMood(this.threat?'tension':'ambient');}});
    this.startAmbience();
   }
@@ -107,6 +117,7 @@ export class HouseSound {
  }
  masterLevel(){return this.settings.muted?0:.72*this.settings.master*this.settings.boost;}
  channelLevel(key){return this.settings.muted?0:this.settings[key]*(audioProfile(this.settings.profile)[key]??1);}
+ categoryLevel(key){return this.settings[key]*(key==='alerts'&&this.settings.profile==='clear'?1/1.35:1);}
  resetMix(){const muted=this.settings.muted;this.settings={...defaults,muted};if(this.context)this.applySettings();else this.save();}
  meter(){if(!this.outputMeter||this.context?.state!=='running')return null;this.outputMeter.getFloatTimeDomainData(this.meterBuffer);return {...meterPCM(this.meterBuffer),reduction:this.limiter?.reduction??0};}
  applySettings(){
@@ -117,7 +128,9 @@ export class HouseSound {
   this.recordedMusicBus.gain.setTargetAtTime(volume('music'),now,.06);
   this.recordedAmbientBus.gain.setTargetAtTime(volume('ambient'),now,.06);
   this.effectsBus.gain.setTargetAtTime(volume('effects'),now,.025);
-  for(const [key,bus] of Object.entries(this.channels))bus.gain.setTargetAtTime(this.settings[key],now,.025);
+  const clear=this.settings.profile==='clear';
+  this.presenceDry?.gain.setTargetAtTime(clear?0:1,now,.035);this.presenceWet?.gain.setTargetAtTime(clear?3.2:0,now,.035);
+  for(const [key,bus] of Object.entries(this.channels))bus.gain.setTargetAtTime(this.categoryLevel(key),now,.025);
   this.save();
  }
  settingValue(key,value){return key==='muted'?Boolean(value):key==='profile'?(['balanced','cinema','clear'].includes(value)?value:'balanced'):Math.max(0,Math.min(mixLimit(key),Number(value)||0));}

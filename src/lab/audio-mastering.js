@@ -5,7 +5,7 @@ const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
 export const AUDIO_PROFILES=Object.freeze({
  balanced:{effects:1,ambient:1,music:1,wall:.55,floor:.7,distance:.095},
  cinema:{effects:.9,ambient:1.15,music:1.1,wall:.38,floor:.55,distance:.15},
- clear:{effects:1.35,ambient:.55,music:.65,wall:.72,floor:.82,distance:.065}
+ clear:{effects:1.35,ambient:.42,music:.48,wall:.72,floor:.82,distance:.065,presence:1.65}
 });
 export const audioProfile=id=>AUDIO_PROFILES[id]||AUDIO_PROFILES.balanced;
 export function measurePCM(buffer,start=0,duration=buffer.duration-start){
@@ -37,7 +37,7 @@ export function calibrationGain(id,m){
 }
 export function spatialGain({distance=0,otherFloor=false,occluded=false,level=1,profile='balanced'}={}){
  const p=audioProfile(profile);
- return .40/(1+p.distance*Math.max(0,distance)**2)*(otherFloor?p.floor:1)*(occluded?p.wall:1)*clamp(level,0,1.5);
+ return .40*(p.presence??1)/(1+p.distance*Math.max(0,distance)**2)*(otherFloor?p.floor:1)*(occluded?p.wall:1)*clamp(level,0,1.5);
 }
 export function outputGuardCurve(){
  const a=new Float32Array(4097);

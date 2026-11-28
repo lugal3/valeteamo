@@ -2,7 +2,7 @@ name: V4.0 — auditoría de audio real (sin publicar)
 on:
   pull_request:
     branches: [main]
-    paths: ['src/lab/audio/**','src/lab/audio-mastering.js','src/lab/sound.js','src/lab/recorded-audio.js','src/lab/house.js','scripts/audit-audio.mjs','tests/audio-mastering.cjs','.github/workflows/v40-audio-audit.yml']
+    paths: ['src/lab/audio/**','src/lab/audio-mastering.js','src/lab/sound.js','src/lab/recorded-audio.js','src/lab/house.js','scripts/audit-audio.mjs','scripts/benchmark-house-audio.mjs','scripts/compare-house-audio.mjs','tests/audio-mastering.cjs','.github/workflows/v40-audio-audit.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -18,8 +18,20 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: node tests/audio-mastering.cjs
       - run: node scripts/audit-audio.mjs
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Render actual old and new sound graphs
+        run: |
+          git fetch --depth=1 origin c5db1355001b97ee1a26241e090a7ef5e87523d0
+          git worktree add --detach /tmp/vale-audio-baseline FETCH_HEAD
+          ln -s "$PWD/node_modules" /tmp/vale-audio-baseline/node_modules
+          node scripts/benchmark-house-audio.mjs /tmp/vale-audio-baseline artifacts/audio-output/legacy legacy
+          node scripts/benchmark-house-audio.mjs . artifacts/audio-output/current
+          node scripts/compare-house-audio.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: vale-v40-audio-measurements
-          path: artifacts/audio-mastering.json
+          path: |
+            artifacts/audio-mastering.json
+            artifacts/audio-output/
